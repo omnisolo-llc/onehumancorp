@@ -27,12 +27,8 @@ func NewHandlers(store *Store) *Handlers {
 
 // ── auth endpoints ────────────────────────────────────────────────────────────
 
-// loginRequest accepts either the legacy "username" field or the modern
-// "email" field used by the Flutter client.  Exactly one of the two must be
-// non-empty; "email" takes precedence when both are present.
 type loginRequest struct {
 	Username string `json:"username"`
-	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -42,8 +38,7 @@ type loginResponse struct {
 	ExpiresAt time.Time  `json:"expiresAt"`
 }
 
-// HandleLogin validates credentials and returns a signed JWT.
-// POST /api/auth/login  {"username":"…","password":"…"}  (or {"email":"…","password":"…"})
+// HandleLogin validates credentials and returns a signed JWT.  	POST /api/auth/login  {"username":"…","password":"…"}
 // Accepts parameters: h *Handlers (No Constraints).
 // Returns nothing.
 // Produces no errors.
@@ -55,14 +50,10 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	var req loginRequest
 	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
 		return
-	}
-	// Accept "email" as an alias for "username" so the Flutter client (which
-	// sends {"email":…}) works alongside legacy username-based clients.
-	if req.Email != "" && req.Username == "" {
-		req.Username = req.Email
 	}
 	req.Username = strings.TrimSpace(req.Username)
 	if req.Username == "" || req.Password == "" {

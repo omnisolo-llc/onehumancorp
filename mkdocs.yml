@@ -1,304 +1,51 @@
 site_name: One Human Corp Docs
-site_description: KAIROS Hybrid Agentic OS — canonical documentation
-site_url: https://docs.onehumancorp.com
+site_description: Markdown-first product, architecture, and operations documentation for the OHC monorepo.
 docs_dir: docs
-
+site_dir: site
+repo_name: onehumancorp/mono
+repo_url: https://github.com/onehumancorp/mono
+exclude_docs: |
+    /README.md
 theme:
   name: material
-  palette:
-    - scheme: slate
-      primary: indigo
-      accent: indigo
   features:
-    - navigation.tabs
     - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - search.suggest
-    - search.highlight
-
-plugins:
-  - search
-
+    - navigation.indexes
+    - content.code.copy
 markdown_extensions:
-  - pymdownx.highlight
+  - admonition
+  - tables
+  - toc:
+      permalink: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
-  - pymdownx.tabbed
-  - pymdownx.details
-  - admonition
-  - attr_list
-  - toc:
-      permalink: true
-
+validation:
+    nav:
+        omitted_files: ignore
 nav:
   - Home: index.md
-  - User Guide: user_guide.md
-
   - Architecture:
-    - Overview: architecture/index.md
-    - System Design: architecture/system-design.md
-    - Roadmap: architecture/roadmap.md
-    - Shared Context: architecture/shared-context.md
-    - KAIROS OS:
-      - Hybrid OS Design: architecture/kairos_hybrid_os_design.md
-      - Final Architecture: architecture/kairos_hybrid_os_final_architecture.md
-      - Comprehensive Blueprint: architecture/kairos_hybrid_os_comprehensive_blueprint.md
-      - Orchestration Design: architecture/kairos_hybrid_os_orchestration_design.md
-      - V4 Master Plan: architecture/kairos_hybrid_os_v4_master_plan.md
-      - Agentic OS Master Blueprint: architecture/kairos_hybrid_agentic_os_master_blueprint.md
-      - Master Orchestration: architecture/kairos_master_orchestration.md
-      - Orchestration Master Design: architecture/kairos_orchestration_master_design.md
-      - Orchestration Final Design: architecture/kairos_orchestration_final_design.md
-      - Orchestration Core V6: architecture/kairos_orchestration_core_v6.md
-      - Orchestration V5: architecture/kairos_ai_os_hybrid_orchestration_v5.md
-      - Orchestration Shared Mesh V2: architecture/kairos_orchestration_shared_mesh_v2.md
-      - V4 Orchestration: architecture/kairos_v4_orchestration_design.md
-      - Premium Master Design: architecture/kairos_premium_master_design.md
-      - Implementation Guide: architecture/kairos_implementation_guide.md
-      - AutoDream Pipeline: architecture/kairos_autodream_pipeline.md
-    - Sub-Agent Queue:
-      - Design: architecture/kairos_sub_agent_queue_design.md
-      - Overview: architecture/kairos_sub_agent_queue.md
-    - Shared Task & Mesh:
-      - Shared Task List: architecture/kairos_shared_task_list_design.md
-      - Shared Task Mesh: architecture/kairos_shared_task_mesh.md
-      - Mesh Queue Orchestration: architecture/kairos_shared_task_mesh_queue_orchestration.md
-      - Task Decomposition: architecture/kairos_task_decomposition_design.md
-      - Teammate Mesh API: architecture/kairos_teammate_mesh_api.md
-    - Design Hub:
-      - Kairos Master Design: architecture/kairos/master_design_doc.md
-      - Shared Task List Design: architecture/kairos/shared_task_list_design.md
-    - CRDT Sync Blueprint: architecture/hybrid_crdt_sync_blueprint.md
-    - Oracle Hybrid RAG: architecture/oracle_hybrid_rag_master_plan.md
-    - RAG Synthesis: architecture/rag_synthesis.md
-    - Competitive Analysis: architecture/ohc_hybrid_competitive_analysis.md
-
+      - architecture/index.md
   - Developer:
-    - Setup: developer/setup.md
-    - Developer Guide: developer/developer-guide.md
-    - Hybrid Development: developer/hybrid_development.md
-    - Hybrid MCP Playbook: developer/hybrid-mcp-playbook.md
-    - Interactive Tutorial: developer/interactive-tutorial.md
-    - UI Testing Guidelines: developer/ui_testing_guidelines.md
-
+      - developer/index.md
   - API:
-    - Overview: api/index.md
-    - API Playbook: api/kairos_api_playbook.md
-    - Orchestration API: api/kairos_orchestration_api.md
-    - Playbook: api/playbook.md
-
+      - api/index.md
   - Features:
-    - Overview: features/index.md
-    - Hybrid Architecture: features/hybrid-architecture.md
-    - Hybrid Agentic OS: features/hybrid_agentic_os_features.md
-    - Hybrid MCP RAG Protocol: features/hybrid_mcp_rag_protocol.md
-    - KAIROS Orchestration: features/kairos_orchestration.md
-    - Core Orchestration:
-      - Overview: features/core-orchestration/index.md
-    - AutoDream:
-      - Overview: features/kairos/index.md
-      - KAIROS Hybrid Orchestration: features/kairos/kairos-hybrid-orchestration.md
-    - Advanced Agentic Capabilities:
-      - Overview: features/advanced-agentic-capabilities/index.md
-    - Identity & Security:
-      - Overview: features/identity-security/index.md
-    - Billing & Finance:
-      - Overview: features/billing-finance/index.md
-    - Compute Optimization:
-      - Overview: features/compute-optimization/index.md
-    - Ecosystem Interop:
-      - Overview: features/ecosystem-interop/index.md
-    - Extensibility Framework:
-      - Overview: features/extensibility-framework/index.md
-    - MCP Tooling:
-      - Overview: features/tooling-mcp/cuj.md
-      - Design Doc: features/tooling-mcp/design-doc.md
-      - Gateway: features/tooling-mcp/mcp-gateway.md
-      - User Guide: features/tooling-mcp/user-guide.md
-      - Dynamic Registration Design: features/tooling-mcp/design-dynamic-registration.md
-      - SSRF Prevention Design: features/tooling-mcp/design-ssrf-prevention.md
-      - Test Plan: features/tooling-mcp/test-plan.md
-      - Dynamic Registration Test Plan: features/tooling-mcp/test-plan-dynamic-registration.md
-      - SSRF Prevention Test Plan: features/tooling-mcp/test-plan-ssrf-prevention.md
-      - CUJ Dynamic Registration: features/tooling-mcp/cuj-dynamic-registration.md
-      - CUJ Dynamic Tool: features/tooling-mcp/cuj-dynamic-tool.md
-      - CUJ MCP Integration: features/tooling-mcp/cuj-mcp-integration.md
-      - CUJ Skill Import: features/tooling-mcp/cuj-skill-import.md
-      - CUJ SSRF Prevention: features/tooling-mcp/cuj-ssrf-prevention.md
-    - Semver:
-      - Test Plan: features/semver/test-plan.md
-    - Marketplace:
-      - Overview: features/marketplace/index.md
-    - Dynamic Scaling UI:
-      - Overview: features/dynamic-scaling-ui/index.md
-    - HITL Handoff UI:
-      - Overview: features/hitl-handoff-ui/index.md
-    - B2B Collaboration:
-      - Overview: features/b2b-collaboration/index.md
-    - CEO Experience:
-      - Overview: features/ceo-experience/index.md
-    - Automated SDLC:
-      - Overview: features/automated-sdlc/index.md
-    - Autonomous SRE:
-      - Overview: features/autonomous-sre/index.md
-    - Modular Plugins:
-      - Overview: features/modular-plugins/index.md
-    - Omni Context Routing:
-      - Overview: features/omni-context-routing/index.md
-    - Omni Context Sub-Agent Routing:
-      - Overview: features/omni-context-sub-agent-routing/index.md
-    - Persistence & DR:
-      - Overview: features/persistence-dr/index.md
-    - Release Notes:
-      - Overview: features/release-notes/index.md
-
+      - features/index.md
   - Walkthroughs:
-    - Overview: walkthroughs/index.md
-    - Agent Lifecycle: walkthroughs/agent_lifecycle.md
-    - AutoDream CLI Guide: walkthroughs/autodream_cli_guide.md
-    - AutoDream Pipeline: walkthroughs/autodream_pipeline.md
-    - AutoDream Sync: walkthroughs/autodream_sync.md
-    - Custom Agent Creation: walkthroughs/custom_agent_creation_walkthrough.md
-    - Distributed State Machine: walkthroughs/distributed_state_machine.md
-    - Elastic Swarm Bursting: walkthroughs/elastic_swarm_bursting.md
-    - Git-Lock Coordination: walkthroughs/git_lock_coordination.md
-    - Help Portal: walkthroughs/help_portal.md
-    - Hybrid CRDT Sync MCP: walkthroughs/hybrid_crdt_sync_mcp.md
-    - Hybrid FS MCP Architecture: walkthroughs/hybrid_fs_mcp_architecture.md
-    - Hybrid Health Probe: walkthroughs/hybrid_health_probe.md
-    - Hybrid MCP RAG: walkthroughs/hybrid_mcp_rag.md
-    - Hybrid Observability Dashboard: walkthroughs/hybrid_observability_dashboard.md
-    - Hybrid Swarm Telemetry Mesh: walkthroughs/hybrid_swarm_telemetry_mesh.md
-    - Hybrid Telemetry Mesh: walkthroughs/hybrid_telemetry_mesh.md
-    - Hybrid Troubleshooting: walkthroughs/hybrid_troubleshooting.md
-    - KAIROS CLI: walkthroughs/kairos_cli.md
-    - KAIROS Interactive API Playbook: walkthroughs/kairos_interactive_api_playbook.md
-    - KAIROS Orchestration: walkthroughs/kairos_orchestration.md
-    - Omni Context Routing: walkthroughs/omni_context_routing.md
-    - Shared Task List Visual: walkthroughs/shared_task_list_visual_walkthrough.md
-    - SPIFFE Identity Onboarding: walkthroughs/spiffe_identity_onboarding.md
-    - Sub-Agent Orchestration: walkthroughs/sub_agent_orchestration.md
-    - Swarm Intelligence Protocol: walkthroughs/swarm_intelligence_protocol.md
-    - Teammate Mesh: walkthroughs/teammate_mesh.md
-    - Thin Client API Configuration: walkthroughs/thin_client_api_configuration.md
-    - Thin Client Integration: walkthroughs/thin_client_integration.md
-    - Ultraplan Deliberation: walkthroughs/ultraplan_deliberation.md
-    - Virtual Meeting Room: walkthroughs/virtual_meeting_room.md
-
-  - App:
-    - Server Roadmap: server/roadmap.md
-    - UI Roadmap: ui/roadmap.md
-
-  - Research:
-    - Agent Harness Analysis: research/agent_harness_analysis.md
-    - Cross-Cluster Handoff UI: research/2024-05-18-cross-cluster-handoff-ui.md
-    - Dynamic Scaling RFC: research/2024-05-18-dynamic-scaling-rfc.md
-    - Framework Ingestion: research/2026-03-20-framework-ingestion.md
-    - Framework Ingestion Addendum: research/2026-03-20-framework-ingestion-addendum.md
-    - Dynamic MCP: research/2026-03-28-unfair-advantage-dynamic-mcp.md
-    - Episodic Memory: research/2026-03-28-unfair-advantage-episodic-memory.md
-    - Hybrid Architecture: research/2026-03-29-hybrid-architecture.md
-    - Design Hook Dynamic Tool Discovery: research/design-hook-dynamic-tool-discovery.md
-    - Design Hook Episodic Memory: research/design-hook-episodic-memory.md
-    - Hybrid Agentic OS Audit: research/hybrid-agentic-os-audit.md
-    - Interop Blueprint: research/interop_blueprint.md
-    - SPIFFE MCP LangGraph Sync: research/spiffe_mcp_langgraph_sync.md
-    - Strategic Gaps and Blueprint: research/strategic_gaps_and_blueprint.md
-    - Top 5 Gaps Strategy: research/top_5_gaps_strategy.md
-    - UX Friction Report: research/ux/ux_friction_report.md
-
-  - Design Notes:
-    - Kairos Orchestrator Diagram: design/kairos_orchestrator_diagram.md
-    - Kairos Telemetry Research: design/kairos-telemetry-research.md
-    - Obsidian MCP Integration: design/obsidian_mcp_integration_research.md
-    - Telemetry Contention Research: design/telemetry_contention_research.md
-    - Queue Telemetry Design: design/2026-04-15T16-00-00Z_kairos_queue_telemetry.md
-    - Agent Harness Telemetry Research: design/2026-04-15T18-45-00Z_agent_harness_telemetry_research.md
-
+      - walkthroughs/index.md
   - Operations:
-    - Overview: operations/index.md
-    - Task Tracking: operations/task-tracking.md
-    - GitHub Issues Migration: operations/github-issues-migration.md
-
-  - Vision:
-    - Market Strategy: vision/market_strategy.md
-
-  - Public:
-    - Overview: public/index.md
-    - AutoDream: public/autodream.md
-    - Changelog: public/CHANGELOG.md
-    - OHC SIP Capabilities: public/ohc-sip-capabilities.md
-    - Teammate Mesh: public/teammate-mesh.md
-    - Visual Walkthrough: public/visual-walkthrough.md
-    - Vitality Dashboard: public/vitality-dashboard.md
-    - Vitality Dashboard (Alt): public/vitality_dashboard.md
-    - Release Notes: public/release_notes.md
-    - Social Announcement: public/social_announcement.md
-    - Social Post: public/social_post.md
-
-  - Templates:
-    - CUJ Template: templates/cuj-template.md
-    - Design Doc Template: templates/design-doc-template.md
-    - Test Plan Template: templates/test-plan-template.md
-    - User Guide Template: templates/user-guide-template.md
-
-  - Reports:
-    - Docs Site Audit: reports/docs-site-audit.md
-    - README MCP Bridge: reports/README_MCP_BRIDGE.md
-    - Observability Audit: reports/observability-audit-report.md
-    - C++ Migration Evaluation: reports/cplusplus-migration-evaluation.md
-    - Telemetry Report: reports/telemetry-report.md
-    - Risk Assessment: reports/risk-assessment.md
-    - Risk Assessment Report: reports/risk-assessment-report.md
-    - Research Report: reports/research-report.md
-    - Research Report Hybrid: reports/research-report-hybrid.md
-    - Research Report Hybrid FS MCP: reports/research-report-hybrid-fs-mcp.md
-    - Research Report Hybrid MCP Proxy: reports/research-report-hybrid-mcp-proxy.md
-    - Research Report Hybrid OS Audit: reports/research-report-hybrid-os-audit.md
-    - Research Report Hybrid RAG: reports/research-report-hybrid-rag.md
-    - Research Report Omni Context: reports/research-report-omni-context.md
-    - Research Report Standalone Metrics: reports/research-report-standalone-metrics.md
-
-  - Chaos Reports:
-    - 2026-04-05 Chaos Report: chaos_reports/2026-04-05_chaos_report.md
-
+      - operations/index.md
+      - Task Tracking: operations/task-tracking.md
+      - Issue Migration Seed: operations/github-issues-migration.md
+      - Docs Audit: reports/docs-site-audit.md
+  - Releases:
+      - public/index.md
+      - Changelog: public/CHANGELOG.md
+      - Release Notes: public/release_notes.md
   - Archive:
-    - Overview: archive/index.md
-    - Execution Plan: archive/execution-plan.md
-    - Growth Strategy Audit: archive/growth-strategy-audit.md
-    - Chaos Report: archive/chaos_report.md
-    - Mission: archive/mission.md
-    - Plan V2: archive/plan_v2.md
-    - Plan V3: archive/plan_v3.md
-    - KAIROS Archive:
-      - Cost Blueprint: archive/kairos/cost-blueprint.md
-      - Interactive API Playbook: archive/kairos/interactive-api-playbook.md
-      - Kairos AI OS Architecture: archive/kairos/kairos-ai-os-architecture.md
-      - Kairos AI OS Architecture V2: archive/kairos/kairos-ai-os-architecture-v2.md
-      - Kairos AI OS Design: archive/kairos/kairos-ai-os-design.md
-      - Kairos AI OS Design V3: archive/kairos/kairos-ai-os-design-v3.md
-      - Kairos AI OS Hybrid Arch Decomposition: archive/kairos/kairos-ai-os-hybrid-arch-decomposition.md
-      - Kairos AI OS Hybrid Core Design: archive/kairos/kairos-ai-os-hybrid-core-design.md
-      - Kairos AI OS Hybrid Implementation Design: archive/kairos/kairos-ai-os-hybrid-implementation-design.md
-      - Kairos AI OS Hybrid Orchestration Master: archive/kairos/kairos-ai-os-hybrid-orchestration-master.md
-      - Kairos AI OS Implementation Design: archive/kairos/kairos-ai-os-implementation-design.md
-      - Kairos AI OS Implementation Master: archive/kairos/kairos-ai-os-implementation-master.md
-      - Kairos AI OS Master Plan: archive/kairos/kairos-ai-os-master-plan.md
-      - Kairos AI OS Premium Design: archive/kairos/kairos-ai-os-premium-design.md
-      - Kairos Design Doc: archive/kairos/kairos-design-doc.md
-      - Kairos Hybrid AI OS Design: archive/kairos/kairos-hybrid-ai-os-design.md
-      - Kairos Hybrid AI OS Features Design V4: archive/kairos/kairos-hybrid-ai-os-features-design-v4.md
-      - Kairos Hybrid Foundation Design: archive/kairos/kairos-hybrid-foundation-design.md
-      - Kairos Hybrid OS Implementation Plan: archive/kairos/kairos-hybrid-os-implementation-plan.md
-      - Kairos Master Orchestration Doc: archive/kairos/kairos-master-orchestration-doc.md
-      - Kairos Orchestration Design: archive/kairos/kairos-orchestration-design.md
-      - Kairos Orchestration Features Design: archive/kairos/kairos-orchestration-features-design.md
-      - Kairos Orchestrator Design: archive/kairos/kairos-orchestrator-design.md
-      - Triage Report: archive/kairos/triage-report.md
-    - Old Design Docs:
-      - KAIROS AI OS Hybrid Architecture: archive/design/kairos-ai-os-hybrid-architecture.md
-      - Kairos Orchestration: archive/design/kairos_orchestration.md
+      - archive/index.md
+      - Legacy Design: archive/design/KAIROS_AI_OS_HYBRID_ARCHITECTURE.md

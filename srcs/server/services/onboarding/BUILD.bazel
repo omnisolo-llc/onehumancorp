@@ -4,7 +4,6 @@ go_library(
     name = "onboarding",
     srcs = [
         "audit.go",
-        "env_verifier.go",
         "dayone.go",
         "cli.go",
         "diagnostics.go",

@@ -22,11 +22,7 @@ while true; do
     echo -e "  3) Run Diagnostics"
     echo -e "  4) Launch Quick Start (Standalone)"
     echo -e "  5) Provision AI Agent"
-    echo -e "  6) Launch Cloud Start"
-    echo -e "  7) Seed Mock Data"
-    echo -e "  8) View Swarm Status"
-    echo -e "  9) Switch Development Mode Instructions"
-    echo -e "  0) Quit"
+    echo -e "  0) Exit"
     read -p "Choice: " choice
 
     case $choice in
@@ -35,13 +31,7 @@ while true; do
         3) bash "$SCRIPT_DIR/ohc-diagnostics.sh" || echo -e "${PURPLE}Diagnostics returned non-zero exit status.${RESET}" ;;
         4) bash "$SCRIPT_DIR/ohc-quick-start.sh" || echo -e "${PURPLE}Quick Start returned non-zero exit status.${RESET}" ;;
         5) bash "$SCRIPT_DIR/ohc-agent-wizard.sh" || echo -e "${PURPLE}Agent Provisioning returned non-zero exit status.${RESET}" ;;
-        6) bash "$SCRIPT_DIR/ohc-cloud-start.sh" || echo -e "${PURPLE}Cloud Start returned non-zero exit status.${RESET}" ;;
-        7) bash "$SCRIPT_DIR/ohc-seed-data.sh" || echo -e "${PURPLE}Seed Data returned non-zero exit status.${RESET}" ;;
-        8) bash "$SCRIPT_DIR/ohc-swarm-status.sh" || echo -e "${PURPLE}Swarm Status returned non-zero exit status.${RESET}" ;;
-        9) echo -e "${DIM}To switch development mode, source the mode script directly in your terminal:${RESET}"
-           echo -e "  source $SCRIPT_DIR/ohc-mode.sh [cloud|standalone|headless]"
-           ;;
-        0) echo "Exiting..."; break ;;
+        0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
 done

@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mesh",
+    srcs = ["mesh.go", "lock.go"],
+    importpath = "github.com/onehumancorp/mono/api/mesh",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "mesh_test",
+    srcs = ["mesh_test.go", "lock_test.go"],
+    embed = [":mesh"],
+    deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_google_uuid//:uuid",
+    ],
+)

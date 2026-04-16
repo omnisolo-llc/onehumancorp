@@ -56,9 +56,6 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	CategoryIssues Category = "issues"
-
-	// CategoryDatabase classifies the integration module under the Database domain taxonomy for structured discovery.
-	CategoryDatabase Category = "database"
 )
 
 // IntegrationType identifies the specific external service platform (e.g., github, slack).
@@ -141,9 +138,6 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	IntegrationTypeGitHubIssues IntegrationType = "github_issues"
-
-	// IntegrationTypePowerSync provides domain-specific context and typed constraints for PowerSync operations across the application.
-	IntegrationTypePowerSync IntegrationType = "powersync"
 )
 
 // ConnectionStatus reflects whether an integration is currently active and reachable.

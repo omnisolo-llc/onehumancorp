@@ -68,8 +68,6 @@ var (
 	AgentTransitionLatency             metric.Float64Histogram
 
 	SyncCompletedCount     metric.Int64Counter
-	SubAgentQueueDelayHistogram metric.Float64Histogram
-	TaskClaimContentionTotal    metric.Int64Counter
 	SyncFailedCount        metric.Int64Counter
 	SyncEscalationsCount   metric.Int64Counter
 	SyncLatency            metric.Float64Histogram
@@ -251,24 +249,7 @@ func InitWithMeter(m mockableMeter) error {
 
 	swarmTaskQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc_swarm_task_queue_length",
-		metric.WithDescription("Current number of tasks in the queue"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	SubAgentQueueDelayHistogram, err = m.Float64Histogram(
-		"sub_agent_queue_delay_seconds",
-		metric.WithDescription("Time spent by sub-agents in queue before being processed"),
-		metric.WithUnit("s"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	TaskClaimContentionTotal, err = m.Int64Counter(
-		"task_claim_contention_total",
-		metric.WithDescription("Total number of task claim contentions encountered"),
+		metric.WithDescription("Current number of pending swarm tasks"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1274,7 +1255,7 @@ func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "ohc_swarm_task_queue_length", string(payloadBytes))
+		_ = BufferMetricFunc(ctx, "swarm_task_queue_length", string(payloadBytes))
 	}
 	if swarmTaskQueueLengthGauge == nil {
 		return
@@ -1588,36 +1569,4 @@ func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorT
             attribute.String("error_type", errorType),
         ))
     }
-}
-
-// RecordSubAgentQueueDelay records the delay experienced by a sub-agent in queue.
-func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"delay": delay,
-		}
-		redactedMap := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "sub_agent_queue_delay_seconds", string(payloadBytes))
-	}
-	if SubAgentQueueDelayHistogram != nil {
-		SubAgentQueueDelayHistogram.Record(ctx, delay)
-	}
-}
-
-// RecordTaskClaimContention increments the task claim contention counter.
-func RecordTaskClaimContention(ctx context.Context, mode string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"mode": mode,
-		}
-		redactedMap := RedactInterfacePII(payloadMap)
-		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "task_claim_contention_total", string(payloadBytes))
-	}
-	if TaskClaimContentionTotal != nil {
-		TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("mode", mode),
-		))
-	}
 }

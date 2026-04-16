@@ -2,7 +2,6 @@ package integrations
 
 import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
-	"github.com/onehumancorp/mono/srcs/server/integrations/powersync"
 )
 
 // Integration represents a plugin blueprint defining how to instantiate connections.
@@ -26,7 +25,6 @@ var Catalog = []Integration{
 	&JiraIntegration{},
 	&PlaneIntegration{},
 	&GitHubIssuesIntegration{},
-	&powersync.PowerSyncIntegration{},
 }
 
 // GetCatalog returns all available integration providers.

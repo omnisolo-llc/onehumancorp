@@ -299,7 +299,7 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 	return u, nil
 }
 
-// Authenticate validates username-or-email + password and returns the matching user.
+// Authenticate validates username+password and returns the matching user.
 // Accepts parameters: s *Store (No Constraints).
 // Returns (*User, error).
 // Produces errors: Explicit error handling.
@@ -308,12 +308,7 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 	if s.repo != nil {
 		u, err := s.repo.GetByUsername(context.Background(), username)
 		if err != nil {
-			// Fall back to email lookup so clients that send an email address
-			// (e.g. the Flutter frontend) can still authenticate.
-			u, err = s.repo.GetByEmail(context.Background(), username)
-			if err != nil {
-				return nil, errors.New("invalid credentials")
-			}
+			return nil, errors.New("invalid credentials")
 		}
 		if !u.Active {
 			return nil, errors.New("account disabled")
@@ -326,10 +321,6 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 
 	s.mu.RLock()
 	u, ok := s.byName[username]
-	if !ok {
-		// Fall back to email lookup.
-		u, ok = s.byEmail[username]
-	}
 	s.mu.RUnlock()
 	if !ok {
 		return nil, errors.New("invalid credentials")

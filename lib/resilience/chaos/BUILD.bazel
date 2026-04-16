@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "chaos",
+    srcs = ["chaos.go"],
+    importpath = "onehumancorp.com/lib/resilience/chaos",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/promauto",
+    ],
+)
+
+go_test(
+    name = "chaos_test",
+    srcs = ["chaos_test.go"],
+    embed = [":chaos"],
+)

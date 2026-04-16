@@ -36,59 +36,19 @@ graph TD
 
 ### 1. Enqueue Task
 **POST** `/api/queue/subagent`
-
-```bash
-curl -X POST https://api.onehumancorp.com/api/queue/subagent \
-  -H "Authorization: Bearer <your_spiffe_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "parent_task_id": "T-123",
-    "action": "summarize"
-  }'
-```
+- **Payload**: `{"parent_task_id": "T-123", "action": "summarize"}`
 
 ### 2. Broadcast Message
 **POST** `/api/mesh/v2/broadcast`
-
-```bash
-curl -X POST https://api.onehumancorp.com/api/mesh/v2/broadcast \
-  -H "Authorization: Bearer <your_spiffe_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "channel": "swarm-events",
-    "data": {
-      "event": "status_update",
-      "status": "IN_PROGRESS"
-    }
-  }'
-```
+- **Payload**: `{"channel": "swarm-events", "data": {"event": "status_update", "status": "IN_PROGRESS"}}`
 
 ### 3. Hybrid Health Probe
 **GET** `/api/v1/health`
-
-```bash
-curl -X GET https://api.onehumancorp.com/api/v1/health \
-  -H "Authorization: Bearer <your_spiffe_token>"
-```
-**Response**: `{"mode": "cloud", "status": "healthy", "db_ping": 15000000, "sync_backlog": 0, "stuck_missions": 0, "mesh_active": true}`
+- **Response**: `{"mode": "cloud", "status": "healthy", "db_ping": 15000000, "sync_backlog": 0, "stuck_missions": 0, "mesh_active": true}`
 
 ### 4. Hybrid CRDT Sync MCP Tools
 **Tool Invoke**: `crdt_push`
-
-```bash
-curl -X POST https://api.onehumancorp.com/api/mcp/invoke \
-  -H "Authorization: Bearer <your_spiffe_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tool": "crdt_push",
-    "payload": {
-      "entity_id": "task_12345",
-      "mutations": [
-        {"clock": 42, "op": "set", "path": "status", "value": "COMPLETED"}
-      ]
-    }
-  }'
-```
+- **Payload**: `{"entity_id": "task_12345", "mutations": [{"clock": 42, "op": "set", "path": "status", "value": "COMPLETED"}]}`
 
 ### 5. Task Claiming
 **POST** `/api/v1/tasks/claim`

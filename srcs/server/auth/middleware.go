@@ -18,9 +18,6 @@ var publicPaths = []string{
 	"/api/auth/login",
 	"/api/auth/powersync/jwks",
 	"/api/v1/scale/stream", // Manually authenticated inside handler for SSE query token bypass
-	// Flutter web app static assets – the client-side app itself must load before
-	// the user can authenticate, so all non-API paths are served publicly.
-	// Route-level auth is enforced by the Flutter app itself.
 }
 
 // Middleware returns an HTTP middleware that enforces JWT authentication. Requests to public paths pass through unauthenticated. All other requests must carry a valid Bearer token in the Authorization header or an "ohc_token" cookie.
@@ -102,15 +99,11 @@ func isPublic(path string) bool {
 			return true
 		}
 	}
-	// Protect API routes (except those explicitly listed above).
-	if strings.HasPrefix(path, "/api/") {
-		return false
+	// Static assets
+	if strings.HasPrefix(path, "/app") || path == "/" {
+		return true
 	}
-	// Everything else is a static web asset (Flutter JS, WASM, fonts, icons,
-	// service worker, etc.) or a Flutter SPA route.  These are all served by
-	// handleApp and do not contain sensitive data – client-side authentication
-	// is enforced by the Flutter router.
-	return true
+	return false
 }
 
 func jsonError(w http.ResponseWriter, msg string, code int) {

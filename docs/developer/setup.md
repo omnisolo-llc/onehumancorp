@@ -50,14 +50,6 @@ Under the hood, `ohc-mode.sh` manages the following environment variables:
 | **standalone** | `false` | `false` | `standalone` |
 | **headless** | `false` | `true` | `cloud` |
 
-
-### 5. Master CLI Menu
-For an interactive experience to access all of these onboarding scripts (Setup, Diagnostics, Environment Wizard, Agent Provisioning), use the interactive CLI Master Menu:
-
-```bash
-./deploy/scripts/ohc_hybrid_cli.sh
-```
-
 ## Visual Excellence
 As outlined in the OHC Architecture guidelines, all interfaces (including the CLI setup logs) must maintain absolute clarity.
 
