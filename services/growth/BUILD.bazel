@@ -5,11 +5,13 @@ go_library(
     srcs = [
         "ab_test.go",
         "referral.go",
+        "quota_service.go",
     ],
     importpath = "github.com/onehumancorp/mono/services/growth",
     visibility = ["//visibility:public"],
     deps = [
         "//lib/analytics",
+        "@com_github_redis_go_redis_v9//:go-redis",
     ],
 )
 
@@ -18,9 +20,12 @@ go_test(
     srcs = [
         "ab_test_test.go",
         "referral_test.go",
+        "quota_service_test.go",
     ],
     embed = [":growth"],
     deps = [
         "//lib/analytics",
+        "@com_github_alicebob_miniredis_v2//:miniredis",
+        "@com_github_redis_go_redis_v9//:go-redis",
     ],
 )
