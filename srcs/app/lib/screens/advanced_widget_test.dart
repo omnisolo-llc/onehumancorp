@@ -23,6 +23,7 @@ import 'package:ohc_app/screens/skills_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
@@ -137,6 +138,14 @@ void main() {
         overrides: [
           authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
           backendUrlProvider.overrideWith((ref) => 'http://localhost'),
+          clientSettingsProvider.overrideWith(
+            (ref) => ClientSettingsNotifier.fromValue(
+              const ClientSettings(
+                backendUrl: 'http://localhost',
+                standaloneMode: false,
+              ),
+            ),
+          ),
         ],
       );
       addTearDown(container.dispose);
