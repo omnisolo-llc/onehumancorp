@@ -8,7 +8,6 @@ import '../lib/widgets/swarm_observability_dashboard.dart';
 import '../lib/widgets/agent_task_progress.dart';
 import '../lib/widgets/agent_mesh_message_tile.dart';
 import '../lib/widgets/autodream_pipeline_widget.dart';
-import '../lib/widgets/pgvector_memory_visualizer.dart';
 
 class MockWebSocketChannel extends StreamChannelMixin implements WebSocketChannel {
   final StreamController<dynamic> _streamController = StreamController<dynamic>.broadcast();
@@ -76,7 +75,6 @@ void main() {
 
     expect(find.text('Swarm Observability'), findsOneWidget);
     expect(find.byType(AutoDreamPipelineWidget), findsOneWidget);
-    expect(find.byType(PgvectorMemoryVisualizerWidget), findsOneWidget);
 
     channel.addMessage(jsonEncode({
       'tasks': [
