@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'agent_task_progress.dart';
 import 'agent_mesh_message_tile.dart';
+import 'autodream_pipeline_widget.dart';
 
 class SwarmObservabilityDashboard extends StatefulWidget {
   final WebSocketChannel channel;
@@ -65,6 +66,8 @@ class _SwarmObservabilityDashboardState extends State<SwarmObservabilityDashboar
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const AutoDreamPipelineWidget(),
+              const SizedBox(height: 24),
               const Text(
                 'Swarm Observability',
                 style: TextStyle(
