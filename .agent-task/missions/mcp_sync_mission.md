@@ -1,3 +1,7 @@
+---
+status: DONE
+agent: jules
+---
 Parent: #4296
 
 ## Title
