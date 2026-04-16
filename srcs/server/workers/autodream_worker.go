@@ -42,7 +42,7 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 	query := `SELECT id, organization_id, COALESCE(description, '') AS content
 	          FROM shared_tasks_decomposition
 	          WHERE status IN ('DONE', 'COMPLETED')
-	          AND id NOT IN (SELECT task_id FROM autodream_memories WHERE task_id IS NOT NULL)`
+	          AND id NOT IN (SELECT source_mission_id FROM autodream_memories WHERE source_mission_id IS NOT NULL)`
 
 	rows, err := w.pool.Query(ctx, query)
 	if err != nil {
@@ -99,13 +99,12 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 
 		memID := uuid.New().String()
 
-		// the test DB has columns: id, organization_id, task_id, content, embedding, metadata, created_at
-		insertQuery := `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, created_at)
-		               VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)`
+		insertQuery := `INSERT INTO autodream_memories (id, organization_id, source_mission_id, content, embedding, agent_id, source_type)
+		               VALUES ($1, $2, $3, $4, $5, 'autodream-worker', 'task-consolidation')`
 		_, err := w.pool.Exec(ctx, insertQuery, memID, t.OrganizationID, t.ID, t.Content, embStr)
 		if err != nil {
-			insertQueryPg := `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, created_at)
-			               VALUES ($1, $2, $3, $4, $5::vector, CURRENT_TIMESTAMP)`
+			insertQueryPg := `INSERT INTO autodream_memories (id, organization_id, source_mission_id, content, embedding, agent_id, source_type)
+			               VALUES ($1, $2, $3, $4, $5::vector, 'autodream-worker', 'task-consolidation')`
 			_, errPg := w.pool.Exec(ctx, insertQueryPg, memID, t.OrganizationID, t.ID, t.Content, embStr)
 			if errPg != nil {
 				slog.Error("AutoDreamWorker: failed to insert memory", "task_id", t.ID, "error", errPg)
