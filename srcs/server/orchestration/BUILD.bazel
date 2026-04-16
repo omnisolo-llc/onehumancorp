@@ -6,9 +6,7 @@ go_library(
     name = "orchestration",
     srcs = [
         "auth_interceptor.go",
-        "autodream.go",
-        "autodream_worker.go",
-        "autodream_advanced.go",
+        "autodream_service.go",
         "cached_minimax_client.go",
         "centrifuge_hub.go",
         "delegation.go",
@@ -63,22 +61,20 @@ go_library(
         "@org_modernc_sqlite//:sqlite",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
-            "//srcs/server/lib/resilience",
-],
+        "//srcs/server/lib/resilience",
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/promauto",
+    ],
 )
 
 go_test(
     name = "orchestration_test",
     srcs = [
         "auth_interceptor_test.go",
-        "autodream_test.go",
-        "autodream_worker_test.go",
-        "autodream_advanced_test.go",
-        "mission_ingestion_test.go",
+        "autodream_unified_test.go",
         "benchmark_test.go",
         "cached_minimax_client_test.go",
         "centrifuge_hub_test.go",
-        "chaos_integration_test.go",
         "chaos_test.go",
         "delegation_test.go",
         "eventlog_test.go",
@@ -101,7 +97,6 @@ go_test(
         "mesh_chaos_test.go",
         "lock_chaos_test.go",
         "chaos_thin_client_test.go",
-        "sentry_chaos_test.go",
     ],
     embed = [":orchestration"],
     deps = [
@@ -128,5 +123,7 @@ go_test(
         "@org_golang_google_protobuf//proto",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@org_modernc_sqlite//:sqlite",
-],
+        "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_prometheus_client_golang//prometheus/promauto",
+    ],
 )
