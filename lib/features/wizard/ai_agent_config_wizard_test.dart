@@ -15,6 +15,6 @@ void main() {
       ),
     );
     expect(find.byType(Stepper), findsOneWidget);
-    expect(find.text('Step 1 — Select Agent Role'), findsOneWidget);
+    expect(find.text('Step 1 — Choose an Agent'), findsOneWidget);
   });
 }

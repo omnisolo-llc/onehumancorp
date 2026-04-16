@@ -149,13 +149,15 @@ class _AiAgentConfigWizardState extends ConsumerState<AiAgentConfigWizard> {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: Column(
+                            child: SingleChildScrollView(
+                              child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(role['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
                                 Text(role['desc'], style: const TextStyle(fontSize: 12, fontFamily: 'Inter'), maxLines: 2, overflow: TextOverflow.ellipsis),
                               ],
+                            ),
                             ),
                           ),
                           if (isSelected) const Icon(Icons.check_circle, color: Colors.green),

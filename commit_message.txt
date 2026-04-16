@@ -1,5 +1,11 @@
-🧠 Researcher: Revert all changes to forbidden files
+🧙 Wizard: [Day One Business Setup Wizard]
 
-Reverted all local modifications to `.agent-task/*` and `.gitignore` as they matched the target repository's `.gitignore` and `.github/` restricted patterns.
+**What**
+- Added `lib/features/onboarding/business_setup_wizard.dart` containing the initial Day One stepper UI for business and goal setup.
+- Implemented state persistence via backend integration with `/api/provision`, including a new GET endpoint in `services/onboarding/server.go` to support resuming state on app init.
+- Fixed a `RenderFlex` overflow bug in the existing `AiAgentConfigWizard` UI.
+- Implemented OHC UI/UX guidelines: Glassmorphism, specific typography (`Outfit`/`Inter`), SVG icons on options, and tooltips.
+- Added a basic E2E Flutter test `business_setup_wizard_test.dart` to verify state transitions and form validation.
 
-This resolves the automated checks blocking the PR.
+**Why**
+To provide an intuitive, zero-technical-knowledge-required onboarding experience for new users provisioning the OHC hybrid agentic OS, per the Principal UX Wizard mission.
