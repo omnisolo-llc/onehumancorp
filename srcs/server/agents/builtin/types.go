@@ -18,6 +18,7 @@ type Message struct {
 	Content     string       `json:"content,omitempty"`
 	ToolCalls   []ToolCall   `json:"tool_calls,omitempty"`
 	ToolResults []ToolResult `json:"tool_results,omitempty"`
+	APIError    string       `json:"api_error,omitempty"` // For internal tracking (e.g., max_output_tokens)
 }
 
 // ToolCall represents a request from the assistant to call a tool.
