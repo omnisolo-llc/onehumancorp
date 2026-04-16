@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -33,8 +32,6 @@ const (
 	ConnectionDrop
 	// ResourceExhaustion returns errors simulating CPU/Memory limits.
 	ResourceExhaustion
-	// CorruptAgentLock corrupts the .agent-lock/ file.
-	CorruptAgentLock
 )
 
 // String returns the string representation of ChaosMode.
@@ -48,8 +45,6 @@ func (c ChaosMode) String() string {
 		return "connection_drop"
 	case ResourceExhaustion:
 		return "resource_exhaustion"
-	case CorruptAgentLock:
-		return "corrupt_agent_lock"
 	default:
 		return "unknown"
 	}
@@ -108,12 +103,6 @@ func (i *Injector) Inject(ctx context.Context) error {
 		if exhaust {
 			return &ChaosError{Message: "chaos: simulated resource exhaustion"}
 		}
-	case CorruptAgentLock:
-		lockPath := ".agent-lock/"
-		if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
-			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
-		}
-		return &ChaosError{Message: "chaos: simulated agent lock corruption"}
 	}
 	return nil
 }
