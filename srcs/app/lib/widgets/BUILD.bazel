@@ -1,4 +1,4 @@
-load("@rules_flutter//flutter:defs.bzl", "flutter_library")
+load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
 
 package(default_visibility = ["//srcs/app:__subpackages__"])
 
@@ -21,18 +21,22 @@ filegroup(
     visibility = ["//srcs/app:__pkg__"],
 )
 
+WIDGET_SRCS = glob(
+    ["*.dart"],
+    exclude = ["*_test.dart"],
+)
+
 # All widget sources in ONE library → single pub-prepare action.
 flutter_library(
     name = "widgets_lib",
-    srcs = glob(
-        ["*.dart"],
-        exclude = ["*_test.dart"],
-    ),
+    srcs = WIDGET_SRCS,
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         "//srcs/app/lib/models:models_lib",
+        "//srcs/app/lib/services:services_lib",
         "@flutter_sdk//flutter/packages/flutter",
+        "@pub_flutter_riverpod//:flutter_riverpod",
     ],
 )
 
@@ -44,4 +48,49 @@ alias(
 alias(
     name = "slide_to_approve",
     actual = ":widgets_lib",
+)
+
+# ── Test-only aggregate library ───────────────────────────────────────────────
+flutter_library(
+    name = "widgets_for_tests",
+    srcs = [],
+    pubspec = "//srcs/app:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    deps = [
+        ":widgets_lib",
+        "//srcs/app/lib/screens:screens_lib",
+        "@pub_mocktail//:mocktail",
+    ],
+)
+
+_DEFAULT_WIDGET_TEST_EMBED = [":widgets_for_tests"]
+
+WIDGET_TESTS = glob(["*_test.dart"])
+
+[
+    flutter_test(
+        name = file.replace(".dart", "").replace("/", "_"),
+        srcs = [file],
+        embed = _DEFAULT_WIDGET_TEST_EMBED,
+        test_files = [file],
+        workspace_pubspec = "//:pubspec.yaml",
+    )
+    for file in WIDGET_TESTS
+]
+
+test_suite(
+    name = "all_tests",
+    tags = ["manual"],
+    tests = [":" + file.replace(".dart", "").replace("/", "_") for file in WIDGET_TESTS],
+)
+
+flutter_test(
+    name = "coverage_test",
+    srcs = WIDGET_TESTS,
+    coverage = True,
+    coverage_min = 90,
+    embed = _DEFAULT_WIDGET_TEST_EMBED,
+    tags = ["manual"],
+    test_files = ["."],
+    workspace_pubspec = "//:pubspec.yaml",
 )

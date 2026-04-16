@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/widgets/vector_memory_visualizer.dart';
+import 'package:ohc_app/widgets/vector_memory_visualizer.dart';
 
 void main() {
   testWidgets('VectorMemoryVisualizerWidget renders correctly with OHC tokens', (WidgetTester tester) async {
