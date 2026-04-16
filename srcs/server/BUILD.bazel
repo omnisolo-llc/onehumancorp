@@ -18,6 +18,7 @@ go_library(
         "//srcs/server/settings",
         "//srcs/server/sync",
         "//srcs/server/telemetry",
+        "//srcs/server/integrations/mcp_sync",
         "//srcs/server/workers",
         "@org_golang_google_grpc//:grpc",
         "@com_github_redis_rueidis//:rueidis",
