@@ -21,3 +21,5 @@ toc:
     path: /docs/public/index.md
   - title: Archive
     path: /docs/archive/index.md
+  - title: Hybrid MCP RAG Escalation Walkthrough
+    path: /docs/walkthroughs/hybrid_mcp_rag_escalation.md
