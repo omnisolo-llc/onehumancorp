@@ -1,1 +1,1 @@
-No changes made
+This file is required to commit the PR.
