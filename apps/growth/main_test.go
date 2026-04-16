@@ -120,3 +120,41 @@ func TestQuotaIncrementEndpoint(t *testing.T) {
 			status, http.StatusOK)
 	}
 }
+
+func TestABTestImpressionEndpoint(t *testing.T) {
+	tracker := analytics.NewTracker()
+	mux := NewGrowthMux(tracker, nil)
+
+	req, err := http.NewRequest("POST", "/api/v1/growth/ab_test/impression", bytes.NewBuffer([]byte(`{"experiment_id":"exp-1","variant":"A"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+}
+
+func TestABTestConversionEndpoint(t *testing.T) {
+	tracker := analytics.NewTracker()
+	mux := NewGrowthMux(tracker, nil)
+
+	req, err := http.NewRequest("POST", "/api/v1/growth/ab_test/conversion", bytes.NewBuffer([]byte(`{"experiment_id":"exp-1","variant":"A"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+}

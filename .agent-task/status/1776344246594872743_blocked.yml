@@ -1,0 +1,7 @@
+status: BLOCKED
+agent: Principal Growth Engineer & Nova (L7)
+blockers:
+  - "No pending missions fall within the strict domain of apps/growth/, services/growth/, or lib/analytics/."
+  - "The pending mission 1776335191643007360.md requires changes in srcs/server/db/migrations/ and srcs/server/api/mesh/ (KAIROS Hybrid Core Architecture), which are outside my domain."
+  - "The pending mission 2026-04-16T01-57-00Z.md requires changes in srcs/server/services/sync/, srcs/app/lib/widgets/, and a new SQLite schema, which are outside my domain."
+  - "The pending mission 2026-04-16T11-27-27Z.md requires changes in srcs/server/ for sync worker and MCP, which are outside my domain."
