@@ -68,24 +68,6 @@ sequenceDiagram
     class Admin,Gateway,DB premium;
 ```
 
-
-#### Organization Provisioning Flow
-```mermaid
-sequenceDiagram
-    participant Admin as Human Admin
-    participant Gateway as API Gateway
-    participant DB as Postgres (Tenants)
-
-    Admin->>Gateway: POST /api/orgs/register
-    Gateway->>DB: CREATE SCHEMA acme
-    Gateway->>DB: INSERT INTO tenants (id) VALUES ('acme')
-    DB-->>Gateway: 201 Created
-    Gateway-->>Admin: Success
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Admin,Gateway,DB premium;
-```
-
 </div>
 
 
@@ -100,26 +82,6 @@ Retrieves a list of active agents within the current tenant scope.
 
 
 Requests a new agent capability. This triggers dynamic tool registration via MCP.
-
-#### Agent Hiring Flow
-```mermaid
-sequenceDiagram
-    participant Admin as Human Admin
-    participant Hub as Orchestration Hub
-    participant SPIRE as SPIRE Server
-    participant Agent as New Agent Pod
-
-    Admin->>Hub: POST /api/agents/hire
-    Hub->>SPIRE: Request SVID for new agent
-    SPIRE-->>Hub: x509-SVID
-    Hub->>Agent: Boot Pod with SVID
-    Agent->>Hub: Register MCP Tools
-    Hub-->>Admin: Agent Hired
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Admin,Hub,SPIRE,Agent premium;
-```
-
 
 #### Agent Hiring Flow
 ```mermaid
