@@ -3,144 +3,97 @@ package queue
 import (
 	"context"
 	"errors"
-	"sync"
 	"testing"
 	"time"
 )
 
-// mockQueue is a simple in-memory queue for testing the worker loop
-type mockQueue struct {
-	mu           sync.Mutex
-	jobsToReturn []*Job
-	dequeueErr   error
-	completed    []string
-	failed       map[string]string
+type mockHarness struct {
+	shouldFail bool
 }
 
-func (m *mockQueue) Enqueue(ctx context.Context, job *Job) error { return nil }
-
-func (m *mockQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if m.dequeueErr != nil {
-		return nil, m.dequeueErr
+func (m *mockHarness) Run(ctx context.Context, cmd string, args []string) error {
+	if m.shouldFail {
+		return errors.New("execution failed")
 	}
-	if len(m.jobsToReturn) > 0 {
-		j := m.jobsToReturn[0]
-		m.jobsToReturn = m.jobsToReturn[1:]
-		return j, nil
+	return nil
+}
+
+type mockQueue struct {
+	tasks    []*Task
+	acquired bool
+	failed   bool
+	complete bool
+}
+
+func (m *mockQueue) Enqueue(ctx context.Context, task *Task) error {
+	m.tasks = append(m.tasks, task)
+	return nil
+}
+
+func (m *mockQueue) Acquire(ctx context.Context) (*Task, error) {
+	if !m.acquired && len(m.tasks) > 0 {
+		m.acquired = true
+		return m.tasks[0], nil
 	}
 	return nil, nil
 }
 
-func (m *mockQueue) Complete(ctx context.Context, jobID string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.completed = append(m.completed, jobID)
+func (m *mockQueue) Complete(ctx context.Context, taskID string) error {
+	m.complete = true
 	return nil
 }
 
-func (m *mockQueue) Fail(ctx context.Context, jobID string, reason string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	if m.failed == nil {
-		m.failed = make(map[string]string)
-	}
-	m.failed[jobID] = reason
+func (m *mockQueue) Fail(ctx context.Context, taskID string, retryAfter time.Duration) error {
+	m.failed = true
 	return nil
 }
 
-func (m *mockQueue) getCompleted() []string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	res := make([]string, len(m.completed))
-	copy(res, m.completed)
-	return res
-}
-
-func (m *mockQueue) getFailed() map[string]string {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	res := make(map[string]string)
-	for k, v := range m.failed {
-		res[k] = v
+func TestWorkerPool_Success(t *testing.T) {
+	q := &mockQueue{
+		tasks: []*Task{
+			{ID: "task-1", Command: "echo", Args: []string{"hello"}},
+		},
 	}
-	return res
-}
+	h := &mockHarness{shouldFail: false}
 
-func TestWorkerLoop_Success(t *testing.T) {
-	mq := &mockQueue{
-		jobsToReturn: []*Job{{ID: "job-1", AgentRole: "test-role"}},
+	pool, err := NewWorkerPool(q, h, 1)
+	if err != nil {
+		t.Fatalf("Failed to create worker pool: %v", err)
 	}
-
-	done := make(chan struct{})
-
-	handler := func(ctx context.Context, job *Job) error {
-		if job.ID != "job-1" {
-			t.Errorf("Expected job ID 'job-1', got '%s'", job.ID)
-		}
-		close(done)
-		return nil
-	}
-
-	worker := NewWorker(mq, []string{"test-role"}, handler)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	pool.Start(ctx)
 
-	go worker.Start(ctx)
+	time.Sleep(100 * time.Millisecond) // Allow worker to process
+	cancel()
+	pool.Stop()
 
-	select {
-	case <-done:
-		// wait a tiny bit to ensure complete has run
-		time.Sleep(10 * time.Millisecond)
-	case <-time.After(2 * time.Second):
-		t.Fatal("Test timed out waiting for handler")
-	}
-
-	completed := mq.getCompleted()
-	if len(completed) != 1 || completed[0] != "job-1" {
-		t.Fatalf("Expected job-1 to be completed, got %v", completed)
+	if !q.complete {
+		t.Errorf("Expected task to be completed")
 	}
 }
 
-func TestWorkerLoop_Failure(t *testing.T) {
-	mq := &mockQueue{
-		jobsToReturn: []*Job{{ID: "job-2", AgentRole: "test-role"}},
+func TestWorkerPool_Failure(t *testing.T) {
+	q := &mockQueue{
+		tasks: []*Task{
+			{ID: "task-1", Command: "echo", Args: []string{"hello"}},
+		},
 	}
+	h := &mockHarness{shouldFail: true}
 
-	done := make(chan struct{})
-
-	handler := func(ctx context.Context, job *Job) error {
-		close(done)
-		return errors.New("processing failed")
+	pool, err := NewWorkerPool(q, h, 1)
+	if err != nil {
+		t.Fatalf("Failed to create worker pool: %v", err)
 	}
-
-	worker := NewWorker(mq, []string{"test-role"}, handler)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	pool.Start(ctx)
 
-	go worker.Start(ctx)
+	time.Sleep(100 * time.Millisecond) // Allow worker to process
+	cancel()
+	pool.Stop()
 
-	select {
-	case <-done:
-		// wait a tiny bit to ensure fail has run
-		time.Sleep(10 * time.Millisecond)
-	case <-time.After(2 * time.Second):
-		t.Fatal("Test timed out waiting for handler")
-	}
-
-	completed := mq.getCompleted()
-	if len(completed) != 0 {
-		t.Fatalf("Expected 0 completed jobs, got %v", completed)
-	}
-
-	failed := mq.getFailed()
-	if len(failed) != 1 || failed["job-2"] != "processing failed" {
-		t.Fatalf("Expected job-2 to be failed with 'processing failed', got %v", failed)
+	if !q.failed {
+		t.Errorf("Expected task to be failed and retried")
 	}
 }
