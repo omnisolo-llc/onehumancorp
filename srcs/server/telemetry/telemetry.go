@@ -1,13 +1,13 @@
 package telemetry
 
 import (
-	"reflect"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"time"
 
@@ -55,8 +55,8 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	AutoDreamIngestionErrorCounter metric.Int64Counter
-	AutoDreamCompressionErrorCounter metric.Int64Counter
+	AutoDreamIngestionErrorCounter     metric.Int64Counter
+	AutoDreamCompressionErrorCounter   metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
@@ -734,6 +734,7 @@ func Middleware(next http.Handler) http.Handler {
 		if r.URL.Path != "/healthz" && r.URL.Path != "/readyz" {
 			if requestCounter != nil && latencyHistogram != nil {
 				attributes := metric.WithAttributes(
+					attribute.String("EnvMode", getEnvMode()),
 					attribute.String("method", r.Method),
 					attribute.String("path", r.URL.Path),
 				)
@@ -782,6 +783,7 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		return
 	}
 	tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("model", model),
@@ -790,6 +792,7 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":  getEnvMode(),
 			"agent_id": agentID,
 			"role":     role,
 			"model":    model,
@@ -818,6 +821,7 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		return
 	}
 	agentApiCallsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("api", api),
@@ -825,6 +829,7 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":  getEnvMode(),
 			"agent_id": agentID,
 			"role":     role,
 			"api":      api,
@@ -851,6 +856,7 @@ func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
 		return
 	}
 	agentApiErrorsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("api", api),
@@ -858,6 +864,7 @@ func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":  getEnvMode(),
 			"agent_id": agentID,
 			"role":     role,
 			"api":      api,
@@ -882,12 +889,14 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 		return
 	}
 	humanInteractionsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("type", interactionType),
 	))
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"type": interactionType,
+			"EnvMode": getEnvMode(),
+			"type":    interactionType,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
@@ -909,12 +918,14 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 		return
 	}
 	meetingEventsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("type", eventType),
 	))
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"type": eventType,
+			"EnvMode": getEnvMode(),
+			"type":    eventType,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
@@ -965,6 +976,7 @@ var BufferMetricFunc func(ctx context.Context, metricType string, payload string
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":         getEnvMode(),
 			"organization_id": organizationID,
 			"rate":            rate,
 		}
@@ -974,6 +986,7 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 	}
 	if tokenBurnRateGauge != nil {
 		tokenBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
+			attribute.String("EnvMode", getEnvMode()),
 			attribute.String("organization_id", organizationID),
 		))
 	}
@@ -983,6 +996,7 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 func RecordUSDBurnRate(ctx context.Context, organizationID string, rate float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":         getEnvMode(),
 			"organization_id": organizationID,
 			"rate":            rate,
 		}
@@ -992,6 +1006,7 @@ func RecordUSDBurnRate(ctx context.Context, organizationID string, rate float64)
 	}
 	if usdBurnRateGauge != nil {
 		usdBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
+			attribute.String("EnvMode", getEnvMode()),
 			attribute.String("organization_id", organizationID),
 		))
 	}
@@ -1003,11 +1018,13 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 		return
 	}
 	swarmTasksCompletedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("mission_id", missionID),
 	))
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":    getEnvMode(),
 			"mission_id": missionID,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1020,6 +1037,7 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 func RecordTokensSaved(ctx context.Context, operation string, cacheType string, estimatedTokens int64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":          getEnvMode(),
 			"operation":        operation,
 			"cache_type":       cacheType,
 			"estimated_tokens": estimatedTokens,
@@ -1032,6 +1050,7 @@ func RecordTokensSaved(ctx context.Context, operation string, cacheType string, 
 		return
 	}
 	tokensSavedCounter.Add(ctx, estimatedTokens, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
@@ -1041,6 +1060,7 @@ func RecordTokensSaved(ctx context.Context, operation string, cacheType string, 
 func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":    getEnvMode(),
 			"operation":  operation,
 			"cache_type": cacheType,
 		}
@@ -1052,6 +1072,7 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 		return
 	}
 	cacheHitsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
@@ -1061,6 +1082,7 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":  getEnvMode(),
 			"endpoint": endpoint,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1071,6 +1093,7 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 		return
 	}
 	RateLimitExceededCount.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("endpoint", endpoint),
 	))
 }
@@ -1079,6 +1102,7 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":   getEnvMode(),
 			"operation": operation,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1089,6 +1113,7 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 		return
 	}
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1097,6 +1122,7 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":   getEnvMode(),
 			"operation": operation,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1107,6 +1133,7 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 		return
 	}
 	sqliteRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1115,6 +1142,7 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 func RecordPostgresRetryExhausted(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":   getEnvMode(),
 			"operation": operation,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1125,6 +1153,7 @@ func RecordPostgresRetryExhausted(ctx context.Context, operation string) {
 		return
 	}
 	postgresRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1135,6 +1164,7 @@ func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
 		return
 	}
 	TeammateMeshBroadcastsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("channel", channel),
 	))
 }
@@ -1144,7 +1174,7 @@ func RecordTeammateMeshDirectMessage(ctx context.Context) {
 	if TeammateMeshDirectMessagesCounter == nil {
 		return
 	}
-	TeammateMeshDirectMessagesCounter.Add(ctx, 1)
+	TeammateMeshDirectMessagesCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordAutoDreamMemoryIngested increments the counter when AutoDream ingests a memory.
@@ -1152,6 +1182,7 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 	if AutoDreamMemoriesIngestedCounter == nil {
 		if BufferMetricFunc != nil {
 			payloadMap := map[string]interface{}{
+				"EnvMode":  getEnvMode(),
 				"agent_id": agentID,
 			}
 			redactedMap := RedactInterfacePII(payloadMap)
@@ -1161,6 +1192,7 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 		return
 	}
 	AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("agent_id", agentID),
 	))
 }
@@ -1170,6 +1202,7 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 	if AutoDreamMemoriesCompressedCounter == nil {
 		if BufferMetricFunc != nil {
 			payloadMap := map[string]interface{}{
+				"EnvMode":  getEnvMode(),
 				"agent_id": agentID,
 			}
 			redactedMap := RedactInterfacePII(payloadMap)
@@ -1179,6 +1212,7 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 		return
 	}
 	AutoDreamMemoriesCompressedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("agent_id", agentID),
 	))
 }
@@ -1187,6 +1221,7 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 func RecordPostgresLockContention(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":   getEnvMode(),
 			"operation": operation,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1197,6 +1232,7 @@ func RecordPostgresLockContention(ctx context.Context, operation string) {
 		return
 	}
 	postgresLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1205,6 +1241,7 @@ func RecordPostgresLockContention(ctx context.Context, operation string) {
 func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode": getEnvMode(),
 			"model":   model,
 			"latency": latency,
 		}
@@ -1216,6 +1253,7 @@ func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64)
 		return
 	}
 	llmNetworkLatencyHistogram.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("model", model),
 	))
 }
@@ -1224,7 +1262,8 @@ func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64)
 func RecordTaskQueueLength(ctx context.Context, amount int64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"amount": amount,
+			"EnvMode": getEnvMode(),
+			"amount":  amount,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
@@ -1233,13 +1272,14 @@ func RecordTaskQueueLength(ctx context.Context, amount int64) {
 	if TaskQueueLengthGauge == nil {
 		return
 	}
-	TaskQueueLengthGauge.Add(ctx, amount)
+	TaskQueueLengthGauge.Add(ctx, amount, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordTaskProcessed Latency
 func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode": getEnvMode(),
 			"latency": latency.Seconds(),
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1249,13 +1289,14 @@ func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
 	if TaskProcessingLatency == nil {
 		return
 	}
-	TaskProcessingLatency.Record(ctx, latency.Seconds())
+	TaskProcessingLatency.Record(ctx, latency.Seconds(), metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordAgentTransitionLatency records the duration an agent spends in a specific state transition.
 func RecordAgentTransitionLatency(ctx context.Context, transitionType string, duration float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":         getEnvMode(),
 			"transition_type": transitionType,
 			"duration":        duration,
 		}
@@ -1267,6 +1308,7 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 		return
 	}
 	AgentTransitionLatency.Record(ctx, duration, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("transition", transitionType),
 	))
 }
@@ -1276,7 +1318,7 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 	if SyncEscalationsCount == nil {
 		return
 	}
-	SyncEscalationsCount.Add(ctx, count)
+	SyncEscalationsCount.Add(ctx, count, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordSyncLatency records the latency of the sync process.
@@ -1300,7 +1342,7 @@ func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
 	if syncDaemonBatchSize == nil {
 		return
 	}
-	syncDaemonBatchSize.Record(ctx, size)
+	syncDaemonBatchSize.Record(ctx, size, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
@@ -1309,6 +1351,7 @@ func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus 
 		return
 	}
 	swarmTaskTransitionsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("mission_id", missionID),
 		attribute.String("old_status", oldStatus),
 		attribute.String("new_status", newStatus),
@@ -1319,7 +1362,8 @@ func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus 
 func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"delta": delta,
+			"EnvMode": getEnvMode(),
+			"delta":   delta,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
@@ -1328,13 +1372,14 @@ func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
 	if swarmTaskQueueLengthGauge == nil {
 		return
 	}
-	swarmTaskQueueLengthGauge.Add(ctx, int64(delta))
+	swarmTaskQueueLengthGauge.Add(ctx, int64(delta), metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordSwarmTaskProcessingLatency records the processing time of a task.
 func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":    getEnvMode(),
 			"latency_ms": latencyMS,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1344,13 +1389,14 @@ func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 	if swarmTaskProcessingLatency == nil {
 		return
 	}
-	swarmTaskProcessingLatency.Record(ctx, latencyMS)
+	swarmTaskProcessingLatency.Record(ctx, latencyMS, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordTaskEnqueued increments the counter for tasks enqueued.
 func RecordTaskEnqueued(ctx context.Context, taskID string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode": getEnvMode(),
 			"task_id": taskID,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
@@ -1361,6 +1407,7 @@ func RecordTaskEnqueued(ctx context.Context, taskID string) {
 		return
 	}
 	taskEnqueuedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("task_id", taskID),
 	))
 }
@@ -1369,6 +1416,7 @@ func RecordTaskEnqueued(ctx context.Context, taskID string) {
 func RecordTaskFailed(ctx context.Context, taskID string, errStr string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode": getEnvMode(),
 			"task_id": taskID,
 			"error":   errStr,
 		}
@@ -1380,6 +1428,7 @@ func RecordTaskFailed(ctx context.Context, taskID string, errStr string) {
 		return
 	}
 	taskFailedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("task_id", taskID),
 		attribute.String("error", errStr),
 	))
@@ -1389,6 +1438,7 @@ func RecordTaskFailed(ctx context.Context, taskID string, errStr string) {
 func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":    getEnvMode(),
 			"operation":  operation,
 			"cache_type": cacheType,
 		}
@@ -1400,6 +1450,7 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 		return
 	}
 	cacheMissesCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
@@ -1409,6 +1460,7 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode string) {
 	if autoDreamSyncDuration != nil {
 		autoDreamSyncDuration.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("EnvMode", getEnvMode()),
 			attribute.String("deployment_mode", mode),
 		))
 	}
@@ -1418,6 +1470,7 @@ func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode strin
 func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode string) {
 	if autoDreamQueryDuration != nil {
 		autoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("EnvMode", getEnvMode()),
 			attribute.String("deployment_mode", mode),
 		))
 	}
@@ -1428,7 +1481,7 @@ func RecordSIPSyncLatency(ctx context.Context, latency time.Duration) {
 	if SIPSyncLatencyRecorder == nil {
 		return
 	}
-	SIPSyncLatencyRecorder.Record(ctx, latency.Seconds())
+	SIPSyncLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordSIPSyncPayloadSize records the payload size in bytes.
@@ -1436,13 +1489,14 @@ func RecordSIPSyncPayloadSize(ctx context.Context, bytes int) {
 	if SIPSyncPayloadSizeRecorder == nil {
 		return
 	}
-	SIPSyncPayloadSizeRecorder.Record(ctx, int64(bytes))
+	SIPSyncPayloadSizeRecorder.Record(ctx, int64(bytes), metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordMeshBroadcast increments the mesh broadcast counter.
 func RecordMeshBroadcast(ctx context.Context, mode string) {
 	if meshBroadcastTotal != nil {
 		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("EnvMode", getEnvMode()),
 			attribute.String("deployment_mode", mode),
 		))
 	}
@@ -1454,6 +1508,7 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 		return
 	}
 	MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1464,7 +1519,7 @@ func RecordQueueLength(ctx context.Context, delta int) {
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
-		subAgentQueueLengthGauge.Add(ctx, int64(delta))
+		subAgentQueueLengthGauge.Add(ctx, int64(delta), metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 	}
 }
 
@@ -1476,6 +1531,7 @@ func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success
 	}
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":  getEnvMode(),
 			"agent_id": agentID,
 			"role":     role,
 			"status":   status,
@@ -1488,6 +1544,7 @@ func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success
 		return
 	}
 	ToolAutoCorrectionTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("status", status),
@@ -1498,6 +1555,7 @@ func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success
 func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, durationSeconds float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":  getEnvMode(),
 			"plan_id":  planID,
 			"phase":    phase,
 			"duration": durationSeconds,
@@ -1510,12 +1568,23 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		return
 	}
 	DeliberationPhaseDuration.Record(ctx, durationSeconds, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("plan_id", planID),
 		attribute.String("phase", phase),
 	))
 }
 
 // envBoolDefault returns the boolean value of an environment variable, or a fallback if not set.
+
+// getEnvMode returns the current environment mode (cloud vs standalone).
+func getEnvMode() string {
+	mode := os.Getenv("OHC_ENV_MODE")
+	if mode == "" {
+		return "standalone"
+	}
+	return mode
+}
+
 func envBoolDefault(key string, fallback bool) bool {
 	val := os.Getenv(key)
 	if val == "" {
@@ -1539,12 +1608,14 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 		return
 	}
 	agentExecutionTracesTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("trace_type", traceType),
 	))
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
+			"EnvMode":    getEnvMode(),
 			"agent_id":   agentID,
 			"trace_type": traceType,
 		}
@@ -1556,14 +1627,14 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 // RecordSubAgentExecutionDuration records the duration of a sub-agent execution.
 func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
 	if SubAgentExecutionDuration != nil {
-		SubAgentExecutionDuration.Record(ctx, duration)
+		SubAgentExecutionDuration.Record(ctx, duration, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 	}
 }
 
 // RecordSubAgentFailure increments the counter for sub-agent failures.
 func RecordSubAgentFailure(ctx context.Context) {
 	if SubAgentFailuresTotal != nil {
-		SubAgentFailuresTotal.Add(ctx, 1)
+		SubAgentFailuresTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 	}
 }
 
@@ -1571,11 +1642,11 @@ func RecordSubAgentFailure(ctx context.Context) {
 func RecordIdentityVerification(ctx context.Context, success bool) {
 	if success {
 		if IdentityVerificationSuccessTotal != nil {
-			IdentityVerificationSuccessTotal.Add(ctx, 1)
+			IdentityVerificationSuccessTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 		}
 	} else {
 		if IdentityVerificationFailureTotal != nil {
-			IdentityVerificationFailureTotal.Add(ctx, 1)
+			IdentityVerificationFailureTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 		}
 	}
 }
@@ -1583,67 +1654,72 @@ func RecordIdentityVerification(ctx context.Context, success bool) {
 // RecordSyncConflictResolved increments the sync conflicts resolved counter.
 func RecordSyncConflictResolved(ctx context.Context) {
 	if SyncConflictsResolvedTotal != nil {
-		SyncConflictsResolvedTotal.Add(ctx, 1)
+		SyncConflictsResolvedTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 	}
 }
 
 // RecordOmniContextBytes increments the OmniContext bytes routed counter.
 func RecordOmniContextBytes(ctx context.Context, bytes int64) {
 	if OmniContextBytesRouted != nil {
-		OmniContextBytesRouted.Add(ctx, bytes)
+		OmniContextBytesRouted.Add(ctx, bytes, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 	}
 }
 
 // RecordRagEscalation increments the RAG escalation counter.
 func RecordRagEscalation(ctx context.Context) {
 	if RagEscalationCount != nil {
-		RagEscalationCount.Add(ctx, 1)
+		RagEscalationCount.Add(ctx, 1, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 	}
 }
 
 // RecordAutoDreamIngestionError records an ingestion error.
 func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
-    }
-    if AutoDreamIngestionErrorCounter != nil {
-        AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"EnvMode":    getEnvMode(),
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
+	}
+	if AutoDreamIngestionErrorCounter != nil {
+		AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("EnvMode", getEnvMode()),
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordAutoDreamCompressionError records a compression error.
 func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
-    }
-    if AutoDreamCompressionErrorCounter != nil {
-        AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"EnvMode":    getEnvMode(),
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
+	}
+	if AutoDreamCompressionErrorCounter != nil {
+		AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("EnvMode", getEnvMode()),
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordSubAgentQueueDelay records the duration from job enqueue to dequeue.
 func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"delay": delay,
+			"EnvMode": getEnvMode(),
+			"delay":   delay,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
@@ -1652,14 +1728,15 @@ func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
 	if SubAgentQueueDelayHistogram == nil {
 		return
 	}
-	SubAgentQueueDelayHistogram.Record(ctx, delay)
+	SubAgentQueueDelayHistogram.Record(ctx, delay, metric.WithAttributes(attribute.String("EnvMode", getEnvMode())))
 }
 
 // RecordTaskClaimContention tracks the number of failed task claim attempts.
 func RecordTaskClaimContention(ctx context.Context, mode string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"mode": mode,
+			"EnvMode": getEnvMode(),
+			"mode":    mode,
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
@@ -1669,6 +1746,7 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 		return
 	}
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("EnvMode", getEnvMode()),
 		attribute.String("mode", mode),
 	))
 }
