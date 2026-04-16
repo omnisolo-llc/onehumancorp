@@ -1,7 +1,8 @@
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:ohc_app/widgets/secure_input_field.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 class SecureAgentConfigScreen extends StatefulWidget {
   const SecureAgentConfigScreen({super.key});
@@ -13,6 +14,18 @@ class SecureAgentConfigScreen extends StatefulWidget {
 class _SecureAgentConfigScreenState extends State<SecureAgentConfigScreen> {
   final TextEditingController _spiffeIdController = TextEditingController();
   bool _isSaving = false;
+  String? _errorText;
+
+
+  void _validateToken(String value) {
+    if (value.isEmpty) {
+      setState(() => _errorText = 'Token cannot be empty');
+    } else if (!value.startsWith('spiffe://')) {
+      setState(() => _errorText = 'Token must start with spiffe://');
+    } else {
+      setState(() => _errorText = null);
+    }
+  }
 
   @override
   void dispose() {
@@ -66,18 +79,10 @@ class _SecureAgentConfigScreenState extends State<SecureAgentConfigScreen> {
         ),
       ),
       body: Center(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-            child: Container(
-              width: 400,
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(255, 255, 255, 0.03),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color.fromRGBO(255, 255, 255, 0.1)),
-              ),
+        child: SizedBox(
+          width: 400,
+          child: GlassCard(
+            padding: const EdgeInsets.all(32),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -105,6 +110,8 @@ class _SecureAgentConfigScreenState extends State<SecureAgentConfigScreen> {
                     controller: _spiffeIdController,
                     labelText: 'SPIFFE Enrollment Token',
                     hintText: 'e.g. spiffe://ohc.os/agent/1234',
+                    errorText: _errorText,
+                    onChanged: _validateToken,
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
@@ -118,7 +125,7 @@ class _SecureAgentConfigScreenState extends State<SecureAgentConfigScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: _isSaving ? null : _saveConfig,
+                      onPressed: (_isSaving || _errorText != null || _spiffeIdController.text.isEmpty) ? null : _saveConfig,
                       child: _isSaving
                         ? const SizedBox(
                             width: 24,
@@ -137,7 +144,6 @@ class _SecureAgentConfigScreenState extends State<SecureAgentConfigScreen> {
                   ),
                 ],
               ),
-            ),
           ),
         ),
       ),
