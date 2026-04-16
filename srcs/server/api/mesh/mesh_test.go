@@ -82,7 +82,7 @@ func TestMeshHandlerBroadcast(t *testing.T) {
 	svc := NewMemoryMeshService()
 	handler := NewMeshHandler(svc)
 
-	reqBody := []byte(`{"intent":"hello handler"}`)
+	reqBody := []byte(`{"agent_id":"test", "channel":"test", "event_type":"test", "data": {"intent":"hello handler"}}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer(reqBody))
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
@@ -106,13 +106,23 @@ func TestMeshHandlerStream(t *testing.T) {
 	defer server.Close()
 
 	url := "ws" + strings.TrimPrefix(server.URL, "http")
+
+	// Create a channel to catch the error from broadcast since Stream blocks
+	errCh := make(chan error, 1)
+
+	// Stream handles reading and writing for the duration of the request, wait a little before broadcasting
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		errCh <- svc.BroadcastIntent(ctx, "hello stream")
+	}()
+
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		t.Fatalf("could not dial websocket: %v", err)
 	}
 	defer conn.Close()
 
-	err = svc.BroadcastIntent(ctx, "hello stream")
+	err = <-errCh
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

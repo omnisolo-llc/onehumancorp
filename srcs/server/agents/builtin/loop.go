@@ -19,8 +19,21 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 
 	budgetTracker := &BudgetTracker{}
 	totalTurnTokens := 0
+	hasAttemptedReactiveCompact := false
+	maxOutputTokensRecoveryCount := 0
+	maxTurns := 50 // Enforce max turns limit to prevent infinite loops.
 
 	for {
+		if iteration >= maxTurns {
+			if cb != nil {
+				cb(AgentEvent{
+					Type:    AgentEventTypeError,
+					Error:   fmt.Errorf("agent exceeded max turns (%d)", maxTurns),
+				})
+			}
+			return messages, fmt.Errorf("agent exceeded max turns (%d)", maxTurns)
+		}
+
 		iteration++
 		if cb != nil {
 			cb(AgentEvent{
@@ -47,13 +60,11 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 		}
 
 		messages = append(messages, resp.Message)
-
 		totalTurnTokens += resp.Usage.OutputTokens
 
-		if len(resp.Message.ToolCalls) == 0 {
-			// Check if we stopped due to max length and should continue under budget
-			// We check for length/max_tokens as StopReason based on standard provider outputs
-			if a.MaxTaskBudget > 0 && (resp.StopReason == "max_tokens" || resp.StopReason == "length") {
+		// Handle error responses or max tokens reach (Prompt too long / length stop reason)
+		if resp.StopReason == "max_tokens" || resp.StopReason == "length" {
+			if a.MaxTaskBudget > 0 {
 				decision := CheckTokenBudget(budgetTracker, a.MaxTaskBudget, totalTurnTokens)
 				if decision.Action == "continue" {
 					messages = append(messages, Message{
@@ -70,8 +81,30 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 					}
 					break
 				}
+			} else {
+				// Fallback generic recovery for max tokens if budget isn't strictly used.
+				if maxOutputTokensRecoveryCount < 3 {
+					maxOutputTokensRecoveryCount++
+					messages = append(messages, Message{
+						Role:    RoleUser,
+						Content: "Output token limit hit. Resume directly — no apology, no recap of what you were doing. Pick up mid-thought if that is where the cut happened. Break remaining work into smaller pieces.",
+					})
+					continue
+				}
 			}
+		} else if resp.StopReason == "prompt_too_long" {
+			if !hasAttemptedReactiveCompact {
+				if len(messages) > 4 {
+					hasAttemptedReactiveCompact = true
+					compactedMessages := append([]Message{messages[0]}, messages[len(messages)-3:]...)
+					messages = compactedMessages
+					continue
+				}
+			}
+			return messages, fmt.Errorf("prompt_too_long: unable to recover")
+		}
 
+		if len(resp.Message.ToolCalls) == 0 {
 			// No tool calls and not forced to continue — the agent produced a final response.
 			if cb != nil {
 				cb(AgentEvent{
