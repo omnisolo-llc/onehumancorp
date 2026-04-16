@@ -23,6 +23,16 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   List<String> _roles = [];
   List<AgentProvider> _providers = [];
 
+  final Map<String, bool> _capabilities = {
+    'Internet Access': true,
+    'Local File System': false,
+    'Run Bash Commands': false,
+    'Teammate Mesh': true,
+  };
+  bool _advancedLimits = false;
+  double _maxRam = 2.0;
+  double _maxCpu = 2.0;
+
   @override
   void initState() {
     super.initState();
@@ -92,10 +102,19 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     try {
       final api = ref.read(apiServiceProvider);
       if (api != null) {
+        final selectedCaps = _capabilities.entries
+            .where((e) => e.value)
+            .map((e) => e.key)
+            .toList();
+
         await api.hireAgent(
           _nameController.text.trim(),
           _selectedRole,
           providerType: _selectedProvider,
+          capabilities: selectedCaps,
+          limits: _advancedLimits
+              ? {'ram_gb': _maxRam, 'cpu_cores': _maxCpu}
+              : null,
         );
         if (mounted) {
           context.go('/agents');
@@ -140,7 +159,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         type: StepperType.horizontal,
         currentStep: _step,
         onStepContinue: () {
-          if (_step < 3) {
+          if (_step < 5) {
             setState(() => _step++);
           } else {
             _handleDeploy();
@@ -156,7 +175,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             padding: const EdgeInsets.only(top: 24),
             child: Row(
               children: [
-                if (_step < 3)
+                if (_step < 5)
                   Semantics(
                     label: 'Proceed to next step',
                     child: Tooltip(
@@ -262,7 +281,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 if (_isLoading)
                   Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32.0),
+                      padding: const EdgeInsets.all(32.0),
                       child: CircularProgressIndicator(
                         color: Theme.of(context).colorScheme.primary,
                       ),
@@ -308,9 +327,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: const Text(
+                const ListTile(
+                  leading: Icon(Icons.info_outline),
+                  title: Text(
                     'This name will appear in transcripts and the org chart.',
                   ),
                 ),
@@ -318,13 +337,104 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             ),
           ),
           Step(
-            title: const Text('Confirm'),
+            title: const Text('Capabilities'),
             isActive: _step >= 3,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 4 — Confirm Deployment',
+                  'Step 4 — Select Capabilities',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Grant permissions and capabilities to this agent.',
+                ),
+                const SizedBox(height: 16),
+                ..._capabilities.entries.map((entry) {
+                  return CheckboxListTile(
+                    title: Text(entry.key),
+                    value: entry.value,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _capabilities[entry.key] = value ?? false;
+                      });
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+          Step(
+            title: const Text('Limits'),
+            isActive: _step >= 4,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Step 5 — Resource Limits',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Configure computation limits for this agent.',
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Advanced Resource Limits'),
+                  subtitle: const Text('Manually configure max RAM and CPU limits'),
+                  value: _advancedLimits,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _advancedLimits = value;
+                    });
+                  },
+                ),
+                if (_advancedLimits) ...[
+                  const SizedBox(height: 16),
+                  Text('Max RAM (GB): ${_maxRam.toStringAsFixed(1)}'),
+                  Slider(
+                    value: _maxRam,
+                    min: 0.5,
+                    max: 16.0,
+                    divisions: 31,
+                    label: '${_maxRam.toStringAsFixed(1)} GB',
+                    onChanged: (value) {
+                      setState(() {
+                        _maxRam = value;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text('Max CPU (Cores): ${_maxCpu.toStringAsFixed(1)}'),
+                  Slider(
+                    value: _maxCpu,
+                    min: 0.5,
+                    max: 8.0,
+                    divisions: 15,
+                    label: '${_maxCpu.toStringAsFixed(1)} Cores',
+                    onChanged: (value) {
+                      setState(() {
+                        _maxCpu = value;
+                      });
+                    },
+                  ),
+                ] else
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text('Default auto-scaling limits will be applied.'),
+                  ),
+              ],
+            ),
+          ),
+          Step(
+            title: const Text('Confirm'),
+            isActive: _step >= 5,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Step 6 — Confirm Deployment',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -332,7 +442,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   borderRadius: BorderRadius.circular(16),
                   child: BackdropFilter(
                     filter: ImageFilter.compose(
-                      outer: ColorFilter.matrix(const <double>[
+                      outer: const ColorFilter.matrix(<double>[
                         1.787, -0.715, -0.072, 0, 0,
                         -0.213, 1.285, -0.072, 0, 0,
                         -0.213, -0.715, 1.928, 0, 0,
