@@ -48,6 +48,7 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 	referralService := growth.NewReferralService(tracker)
 	referralsRepo := growth.NewReferralRepository(rdb)
 
+
 	teamInviteService := growth.NewTeamInviteService(tracker)
 
 	mux.HandleFunc("/growth/team_invite", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
