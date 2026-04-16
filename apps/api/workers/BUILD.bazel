@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "workers",
+    srcs = ["autodream.go"],
+    importpath = "github.com/onehumancorp/mono/apps/api/workers",
+    visibility = ["//visibility:public"],
+)
