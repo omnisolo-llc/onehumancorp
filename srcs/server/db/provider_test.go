@@ -135,3 +135,47 @@ func TestProvider_AcquireTask(t *testing.T) {
 		t.Errorf("Expected nil task, got %v", task3.ID)
 	}
 }
+
+func TestKairosTasksSchema(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
+
+	dbp, err := New(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to initialize standalone db: %v", err)
+	}
+	defer dbp.Close()
+
+	if err := dbp.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Verify missions table
+	_, err = dbp.Exec(context.Background(), "INSERT INTO missions (id, title, description, priority, status) VALUES ('123e4567-e89b-12d3-a456-426614174000', 'Test Mission', 'A test mission', 'P0', 'PENDING')")
+	if err != nil {
+		t.Fatalf("Failed to insert into missions table: %v", err)
+	}
+
+	var title string
+	err = dbp.QueryRow(context.Background(), "SELECT title FROM missions WHERE id = '123e4567-e89b-12d3-a456-426614174000'").Scan(&title)
+	if err != nil {
+		t.Fatalf("Failed to query missions table: %v", err)
+	}
+	if title != "Test Mission" {
+		t.Errorf("Expected title 'Test Mission', got '%s'", title)
+	}
+
+	// Verify agent_state table
+	_, err = dbp.Exec(context.Background(), "INSERT INTO agent_state (agent_id, current_mission_id, status) VALUES ('agent-1', '123e4567-e89b-12d3-a456-426614174000', 'WORKING')")
+	if err != nil {
+		t.Fatalf("Failed to insert into agent_state table: %v", err)
+	}
+
+	var status string
+	err = dbp.QueryRow(context.Background(), "SELECT status FROM agent_state WHERE agent_id = 'agent-1'").Scan(&status)
+	if err != nil {
+		t.Fatalf("Failed to query agent_state table: %v", err)
+	}
+	if status != "WORKING" {
+		t.Errorf("Expected status 'WORKING', got '%s'", status)
+	}
+}
