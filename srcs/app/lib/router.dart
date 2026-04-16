@@ -39,6 +39,7 @@ import 'package:flutter/foundation.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
   final settings = ref.watch(clientSettingsProvider).valueOrNull;
+  // Runtime user settings take precedence; compile-time env is the fallback.
   final standaloneMode =
       settings?.standaloneMode ??
       const bool.fromEnvironment('OHC_STANDALONE', defaultValue: false);

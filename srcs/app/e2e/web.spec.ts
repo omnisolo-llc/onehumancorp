@@ -19,12 +19,27 @@ async function loginAsSeededAdmin(page: Page): Promise<void> {
   await page.goto('/');
   await waitForFlutter(page);
 
-  await page.keyboard.press('Tab');
-  await page.keyboard.press('Tab');
-  await page.keyboard.type('admin@test.local');
-  await page.keyboard.press('Tab');
-  await page.keyboard.type('adminpass123');
-  await page.keyboard.press('Enter');
+  const emailByLabel = page.getByLabel(/email/i);
+  const passwordByLabel = page.getByLabel(/password/i);
+  const signInButton = page.getByRole('button', { name: /sign in/i });
+
+  if ((await emailByLabel.count()) > 0 && (await passwordByLabel.count()) > 0) {
+    await emailByLabel.first().fill('admin@test.local');
+    await passwordByLabel.first().fill('adminpass123');
+    if ((await signInButton.count()) > 0) {
+      await signInButton.first().click();
+    } else {
+      await page.keyboard.press('Enter');
+    }
+  } else {
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('admin@test.local');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('adminpass123');
+    await page.keyboard.press('Enter');
+  }
+
   await page.waitForTimeout(1000);
   await expect(page).not.toHaveURL(/\/login/);
 }

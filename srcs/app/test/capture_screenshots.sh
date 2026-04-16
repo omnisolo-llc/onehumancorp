@@ -13,6 +13,8 @@ is_complete_web_bundle() {
   [[ -d "${candidate}" ]] || return 1
   [[ -f "${candidate}/assets/FontManifest.json" ]] || return 1
   [[ -f "${candidate}/assets/fonts/MaterialIcons-Regular.otf" ]] || return 1
+  # Some optimized Flutter web bundles omit an explicit MaterialIcons family
+  # entry in FontManifest.json while still shipping the font file above.
   return 0
 }
 
