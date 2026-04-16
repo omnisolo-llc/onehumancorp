@@ -138,7 +138,11 @@ func init() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
-	logger := slog.New(handler)
+
+	// Ensure multi-tenant PII safety for all logs
+	safeHandler := telemetry.NewPIIRedactingHandler(handler)
+
+	logger := slog.New(safeHandler)
 	slog.SetDefault(logger)
 }
 

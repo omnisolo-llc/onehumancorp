@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "telemetry",
     srcs = [
+        "logger.go",
         "minimax_metrics.go",
         "rag_sync_metrics.go",
         "sync_worker.go",
@@ -28,6 +29,7 @@ go_test(
     name = "telemetry_test",
     srcs = [
         "buffer_test.go",
+        "logger_test.go",
         "privacy_test.go",
         "sync_worker_test.go",
         "telemetry_extra_test.go",
