@@ -2,8 +2,7 @@ package bash_sandbox
 
 import (
 	"context"
-	"time"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
+
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -67,7 +66,6 @@ func (s *Sandbox) ValidateContext(ctx context.Context, command string) error {
 	for _, pattern := range s.blockedPatterns {
 		if pattern.MatchString(command) {
 			violationCount.Add(ctx, 1, metric.WithAttributes(attribute.String("pattern", pattern.String())))
-			telemetry.RecordBubblewrapViolation(ctx)
 			return fmt.Errorf("command violates security policy: matched %s", pattern.String())
 		}
 	}
@@ -77,21 +75,16 @@ func (s *Sandbox) ValidateContext(ctx context.Context, command string) error {
 // ExecuteContext runs the command if it passes validation.
 func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir string) (string, error) {
 	execCount.Add(ctx, 1)
-	telemetry.RecordBubblewrapSpawn(ctx)
 
 	if err := s.ValidateContext(ctx, command); err != nil {
 		return "", err
 	}
 
-	startTime := time.Now()
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	if workDir != "" {
 		cmd.Dir = workDir
 	}
 	out, err := cmd.CombinedOutput()
-	latency := time.Since(startTime).Seconds()
-	telemetry.RecordBubblewrapExecutionLatency(ctx, latency)
-
 	if err != nil {
 		errorCount.Add(ctx, 1)
 		return string(out), fmt.Errorf("execution failed: %w", err)
