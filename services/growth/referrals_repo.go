@@ -30,13 +30,13 @@ type ReferralRepository struct {
 
 	// In-memory fallback
 	mu        sync.RWMutex
-	referrals map[string]*GrowthReferral
+	referrals     map[string]*GrowthReferral
 }
 
 func NewReferralRepository(rdb *redis.Client) *ReferralRepository {
 	return &ReferralRepository{
 		rdb:       rdb,
-		referrals: make(map[string]*GrowthReferral),
+		referrals:     make(map[string]*GrowthReferral),
 	}
 }
 
@@ -51,6 +51,9 @@ func (r *ReferralRepository) SaveReferral(ctx context.Context, referral *GrowthR
 		key := fmt.Sprintf("growth:referrals:%s", referral.InviterID)
 		data, err := json.Marshal(referral)
 		if err != nil {
+			return err
+		}
+		if err := r.rdb.Set(ctx, fmt.Sprintf("growth:referral_index:%s", referral.ID), referral.InviterID, 0).Err(); err != nil {
 			return err
 		}
 		return r.rdb.HSet(ctx, key, referral.ID, data).Err()
@@ -119,4 +122,72 @@ func (r *ReferralRepository) GetStats(ctx context.Context, inviterID string) (*R
 	}
 
 	return stats, nil
+}
+
+func (r *ReferralRepository) GetReferralByID(ctx context.Context, id string) (*GrowthReferral, error) {
+	var inviterID string
+	var err error
+
+	if r.rdb != nil {
+		inviterID, err = r.rdb.Get(ctx, fmt.Sprintf("growth:referral_index:%s", id)).Result()
+		if err == redis.Nil || inviterID == "" {
+			// Fallback for pre-existing referrals: scan all keys. This is slow but needed for backward compatibility.
+			keys, err := r.rdb.Keys(ctx, "growth:referrals:*").Result()
+			if err != nil {
+				return nil, fmt.Errorf("referral not found")
+			}
+			found := false
+			for _, k := range keys {
+				dataStr, err := r.rdb.HGet(ctx, k, id).Result()
+				if err == nil && dataStr != "" {
+					var ref GrowthReferral
+					if err := json.Unmarshal([]byte(dataStr), &ref); err == nil {
+						return &ref, nil
+					}
+				}
+			}
+			if !found {
+				return nil, fmt.Errorf("referral not found")
+			}
+		} else if err != nil {
+			return nil, fmt.Errorf("referral not found")
+		} else {
+			key := fmt.Sprintf("growth:referrals:%s", inviterID)
+			dataStr, err := r.rdb.HGet(ctx, key, id).Result()
+			if err != nil {
+				return nil, fmt.Errorf("referral data not found")
+			}
+
+			var ref GrowthReferral
+			if err := json.Unmarshal([]byte(dataStr), &ref); err != nil {
+				return nil, err
+			}
+			return &ref, nil
+		}
+	}
+
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	// Fallback for memory missing index
+	ref, ok := r.referrals[id]
+	if !ok {
+		return nil, fmt.Errorf("referral data not found")
+	}
+
+	// Return a copy so the memory fallback is safe from mutations
+	refCopy := *ref
+	return &refCopy, nil
+}
+
+func (r *ReferralRepository) AcceptReferral(ctx context.Context, id string) error {
+	ref, err := r.GetReferralByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	ref.Status = "SIGNED_UP"
+	ref.UpdatedAt = time.Now()
+
+	return r.SaveReferral(ctx, ref)
 }
