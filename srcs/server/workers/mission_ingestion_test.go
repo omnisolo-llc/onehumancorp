@@ -1,8 +1,6 @@
 package workers
 
 import (
-	"fmt"
-
 	"context"
 	"database/sql"
 	"os"
@@ -15,7 +13,7 @@ import (
 )
 
 func setupTestDB(t *testing.T) db.Provider {
-	sqlDB, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
+	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("failed to open sqlite in-memory db: %v", err)
 	}
