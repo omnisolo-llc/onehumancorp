@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "billing",
+    srcs = ["billing_handler.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/api/billing",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/services/billing",
+    ],
+)
+
+go_test(
+    name = "billing_test",
+    srcs = ["billing_handler_test.go"],
+    embed = [":billing"],
+    deps = [
+        "//srcs/server/services/billing",
+    ],
+)
