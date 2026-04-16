@@ -1,4 +1,19 @@
 # OHC Hybrid Agentic OS - Changelog
+## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
+### Cloud Scaling Improvements
+- Architected Hybrid Context Sync MCP Tool.
+- Added Teammate Mesh Threading benchmarks for Parallel Execution.
+- Refactored MeshMessage to comply with OHC-SIP.
+- Implemented KAIROS autoDream Vector Memory Consolidation Pipeline.
+- Implemented Shell Environment Snapshot & Restore for Agents.
+- Added Chaos Parity Engineering Test Suite and Visual Report.
+
+### Privacy/Offline Improvements
+- Implemented prompt caching and local embedding cost tracker.
+- Implemented Advanced Storage Compression & Cache Auditor.
+- Implemented Onboarding Diagnostics Endpoint.
+- Added React AutoDream Pipeline Widget for Hybrid UX improvements.
+
 
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 ### Cloud Scaling Improvements

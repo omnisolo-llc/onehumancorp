@@ -1,4 +1,8 @@
 # Release Notes
+## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
+- Scaling (Cloud): Architected Hybrid Context Sync MCP Tool, refactored MeshMessage, implemented KAIROS autoDream pipeline, shell snapshots, and chaos parity engineering testing.
+- Privacy/Offline (Standalone): Implemented prompt caching, local embedding cost tracker, advanced storage compression, cache auditor, and hybrid UX pipeline widget.
+
 
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 - Scaling (Cloud): Implement Bubblewrap Sandbox Telemetry and Implement Hybrid Parity Stress Tests.
