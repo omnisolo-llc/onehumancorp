@@ -27,6 +27,7 @@ case $MODE in
     export OHC_STANDALONE=true
     export GOMEMLIMIT="256MiB"
     export GOGC=50
+    mkdir -p .ohc/memory/auto/ .ohc/memory/team/
     export LOG_FORMAT="json"
     export LOG_LEVEL="info"
     echo "Configured for Standalone Desktop Mode."
