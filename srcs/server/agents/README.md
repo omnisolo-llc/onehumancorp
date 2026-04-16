@@ -21,3 +21,9 @@ This project uses Bazel for deterministic builds and testing.
 
 ## Configuration
 There are no mandatory environment variables or Kubernetes secrets required to run this module's tests locally. Future extensions may require secure injection of credentials.
+
+## Telemetry Proxy Configuration
+To capture agent outbound requests for telemetry, configure your agents to use the KAIROS proxy capture.
+Set the following environment variables when running agents:
+- `HTTP_PROXY=http://<proxy-address>:<proxy-port>`
+- `HTTPS_PROXY=http://<proxy-address>:<proxy-port>`
