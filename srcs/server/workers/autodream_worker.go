@@ -24,9 +24,43 @@ func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
 func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) error {
 	slog.Info("AutoDreamWorker: checking for COMPLETED tasks to vectorize")
 
-	// Query done tasks that are not yet in autodream_memories, with a limit to avoid OOM
-	// Adjusted schema reference to use source_mission_id to match the core schema logic seen across the platform and prior iterations.
-	query := "SELECT id, organization_id, payload FROM shared_tasks_decomposition WHERE status = 'DONE' AND id NOT IN (SELECT source_mission_id FROM autodream_memories WHERE source_mission_id IS NOT NULL) LIMIT 100"
+	// Check schema to determine if task_id or source_mission_id should be used
+	var columnToCheck string
+	checkErr := w.pool.QueryRow(ctx, "SELECT COUNT(*) FROM pragma_table_info('autodream_memories') WHERE name='task_id'").Scan(&columnToCheck)
+	useTaskID := false
+	if checkErr == nil && columnToCheck != "0" {
+		useTaskID = true
+	} else if !w.pool.IsSQLite() {
+		// Postgres fallback logic check
+		checkErr = w.pool.QueryRow(ctx, "SELECT column_name FROM information_schema.columns WHERE table_name='autodream_memories' and column_name='task_id'").Scan(&columnToCheck)
+		if checkErr == nil && columnToCheck == "task_id" {
+			useTaskID = true
+		}
+	}
+
+	// Double check for source_mission_id if task_id isn't found
+	useSourceMissionID := false
+	if !useTaskID {
+		checkErr = w.pool.QueryRow(ctx, "SELECT COUNT(*) FROM pragma_table_info('autodream_memories') WHERE name='source_mission_id'").Scan(&columnToCheck)
+		if checkErr == nil && columnToCheck != "0" {
+			useSourceMissionID = true
+		} else if !w.pool.IsSQLite() {
+			checkErr = w.pool.QueryRow(ctx, "SELECT column_name FROM information_schema.columns WHERE table_name='autodream_memories' and column_name='source_mission_id'").Scan(&columnToCheck)
+			if checkErr == nil && columnToCheck == "source_mission_id" {
+				useSourceMissionID = true
+			}
+		}
+	}
+
+	var query string
+	if useTaskID {
+		query = "SELECT id, organization_id, payload FROM shared_tasks_decomposition WHERE status = 'DONE' AND id NOT IN (SELECT task_id FROM autodream_memories WHERE task_id IS NOT NULL) LIMIT 100"
+	} else if useSourceMissionID {
+		query = "SELECT id, organization_id, payload FROM shared_tasks_decomposition WHERE status = 'DONE' AND id NOT IN (SELECT source_mission_id FROM autodream_memories WHERE source_mission_id IS NOT NULL) LIMIT 100"
+	} else {
+		// Default to schema-independent fetching if no foreign key tracking is present
+		query = "SELECT id, organization_id, payload FROM shared_tasks_decomposition WHERE status = 'DONE' LIMIT 100"
+	}
 
 	rows, err := w.pool.Query(ctx, query)
 	if err != nil {
@@ -83,12 +117,29 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) error {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, source_mission_id, content, embedding, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)"
+			if useTaskID {
+				insertQuery = "INSERT INTO autodream_memories (id, task_id, content, embedding, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)"
+			} else if useSourceMissionID {
+				insertQuery = "INSERT INTO autodream_memories (id, source_mission_id, content, embedding, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)"
+			} else {
+				insertQuery = "INSERT INTO autodream_memories (id, content, embedding, created_at) VALUES ($1, $3, $4, CURRENT_TIMESTAMP)"
+			}
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (id, source_mission_id, content, embedding, created_at) VALUES ($1, $2, $3, $4::vector, CURRENT_TIMESTAMP)"
+			if useTaskID {
+				insertQuery = "INSERT INTO autodream_memories (id, task_id, content, embedding, created_at) VALUES ($1, $2, $3, $4::vector, CURRENT_TIMESTAMP)"
+			} else if useSourceMissionID {
+				insertQuery = "INSERT INTO autodream_memories (id, source_mission_id, content, embedding, created_at) VALUES ($1, $2, $3, $4::vector, CURRENT_TIMESTAMP)"
+			} else {
+				insertQuery = "INSERT INTO autodream_memories (id, content, embedding, created_at) VALUES ($1, $3, $4::vector, CURRENT_TIMESTAMP)"
+			}
 		}
 
-		_, err = w.pool.Exec(ctx, insertQuery, memID, t.ID, content, embStr)
+		if useTaskID || useSourceMissionID {
+			_, err = w.pool.Exec(ctx, insertQuery, memID, t.ID, content, embStr)
+		} else {
+			_, err = w.pool.Exec(ctx, insertQuery, memID, "", content, embStr) // Placeholder for arity match if no ID tracking
+		}
+
 		if err != nil {
 			slog.Error("AutoDreamWorker: failed to insert memory", "error", err)
 		} else {
