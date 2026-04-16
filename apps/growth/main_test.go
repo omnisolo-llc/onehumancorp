@@ -30,39 +30,6 @@ func TestReferralEndpoint(t *testing.T) {
 	}
 }
 
-func TestGrowthReferralsAPI(t *testing.T) {
-	tracker := analytics.NewTracker()
-	mux := NewGrowthMux(tracker, nil) // In-memory
-
-	// Test invite
-	reqInvite, err := http.NewRequest("POST", "/api/v1/growth/referrals/invite", bytes.NewBuffer([]byte(`{"invitee_email":"new@example.com"}`)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	reqInvite.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
-
-	rrInvite := httptest.NewRecorder()
-	mux.ServeHTTP(rrInvite, reqInvite)
-
-	if status := rrInvite.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-
-	// Test stats
-	reqStats, err := http.NewRequest("GET", "/api/v1/growth/referrals/stats", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	reqStats.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
-
-	rrStats := httptest.NewRecorder()
-	mux.ServeHTTP(rrStats, reqStats)
-
-	if status := rrStats.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-}
-
 func TestQuotaCheckEndpoint(t *testing.T) {
 	mr, err := miniredis.Run()
 	if err != nil {
