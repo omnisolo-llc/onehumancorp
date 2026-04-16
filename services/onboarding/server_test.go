@@ -149,3 +149,82 @@ func TestWizardStateHandler(t *testing.T) {
         t.Errorf("handler returned unexpected body: got %v", res)
     }
 }
+
+func TestAuditSetupHandler(t *testing.T) {
+    tests := []struct {
+        name       string
+        env        map[string]string
+        wantStatus int
+    }{
+        {
+            name: "valid standalone",
+            env: map[string]string{
+                "OHC_SOURCE_MODE": "standalone",
+            },
+            wantStatus: http.StatusOK,
+        },
+        {
+            name: "invalid cloud",
+            env: map[string]string{
+                "OHC_SOURCE_MODE": "cloud",
+                "OHC_MULTITENANT": "false",
+            },
+            wantStatus: http.StatusBadRequest,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            for k, v := range tt.env {
+                t.Setenv(k, v)
+            }
+
+            reqBody, _ := json.Marshal(map[string]interface{}{"env": tt.env})
+            req := httptest.NewRequest(http.MethodPost, "/api/audit-setup", bytes.NewReader(reqBody))
+            req.Header.Set("Content-Type", "application/json")
+            rr := httptest.NewRecorder()
+            AuditSetupHandler(rr, req)
+
+            if status := rr.Code; status != tt.wantStatus {
+                t.Errorf("handler returned wrong status code: got %v want %v", status, tt.wantStatus)
+            }
+        })
+    }
+}
+
+func TestAutoDiscoverHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/autodiscover", nil)
+	rr := httptest.NewRecorder()
+
+	AutoDiscoverHandler(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res AutoDiscoverResponse
+	json.NewDecoder(rr.Body).Decode(&res)
+	if res.PostgresFound || res.RedisFound {
+		t.Errorf("handler returned unexpected body for empty env: got %v", res)
+	}
+}
+
+func TestAutoDiscoverHandlerWithEnv(t *testing.T) {
+	t.Setenv("OHC_POSTGRES_URL", "postgres://localhost:5432/db")
+	t.Setenv("OHC_REDIS_URL", "redis://localhost:6379")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/autodiscover", nil)
+	rr := httptest.NewRecorder()
+
+	AutoDiscoverHandler(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res AutoDiscoverResponse
+	json.NewDecoder(rr.Body).Decode(&res)
+	if !res.PostgresFound || !res.RedisFound {
+		t.Errorf("handler returned unexpected body with env set: got %v", res)
+	}
+}

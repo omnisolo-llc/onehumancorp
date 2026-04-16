@@ -170,3 +170,64 @@ func GetWizardStateHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(wizardState)
 }
+
+type AuditSetupResponse struct {
+    Status string `json:"status"`
+    Config *EnvConfig `json:"config,omitempty"`
+    Error  string `json:"error,omitempty"`
+}
+
+type AuditSetupRequest struct {
+    Env map[string]string `json:"env"`
+}
+
+func AuditSetupHandler(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+
+    var req AuditSetupRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
+
+    config, err := VerifyEnvironment(req.Env)
+    w.Header().Set("Content-Type", "application/json")
+    if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(AuditSetupResponse{
+            Status: "error",
+            Error:  err.Error(),
+        })
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(AuditSetupResponse{
+        Status: "success",
+        Config: config,
+    })
+}
+
+type AutoDiscoverResponse struct {
+	PostgresFound bool `json:"postgres_found"`
+	RedisFound    bool `json:"redis_found"`
+}
+
+func AutoDiscoverHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	resp := AutoDiscoverResponse{
+		PostgresFound: os.Getenv("OHC_POSTGRES_URL") != "",
+		RedisFound:    os.Getenv("OHC_REDIS_URL") != "",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
+}

@@ -7,6 +7,7 @@ const (
 	AgentEventTypeIterationStarted AgentEventType = iota
 	AgentEventTypeTaskComplete
 	AgentEventTypeToolCall
+	AgentEventTypeError
 )
 
 // AgentEvent is a structured event emitted by the agent loop.
@@ -18,7 +19,11 @@ type AgentEvent struct {
 	ToolName     string
 	ToolArgsJSON string
 	ToolResult   string
+	Error        error
 }
 
 // EventCallback is called for each AgentEvent during RunWithCallback.
 type EventCallback func(AgentEvent)
+
+// QuerySource identifies the context or tool that initiated an agent query.
+type QuerySource string
