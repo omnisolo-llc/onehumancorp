@@ -62,6 +62,8 @@ func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, 
 
 func TestAutoDreamEngine_Consolidate(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 	defer os.Unsetenv("OHC_STANDALONE")
 
 	prov, cleanup := setupAutoDreamDB(t)

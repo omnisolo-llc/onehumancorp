@@ -12,6 +12,7 @@ import (
 func TestCUJ_StressVerification(t *testing.T) {
 	t.Run("StandaloneWrapperStress", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "cuj_standalone_integration.db")
@@ -57,6 +58,7 @@ func TestCUJ_StressVerification(t *testing.T) {
 
 	t.Run("CloudPodStress", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "false")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "cuj_cloud_integration.db")
@@ -104,6 +106,7 @@ func TestCUJ_StressVerification(t *testing.T) {
 func TestParity_PruneStaleMissions(t *testing.T) {
 	t.Run("SQLite", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "parity_chaos_integration.db")
@@ -132,6 +135,7 @@ func TestParity_PruneStaleMissions(t *testing.T) {
 
 	t.Run("PostgresMock", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "false")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "parity_chaos_pg_integration.db")
@@ -162,6 +166,7 @@ func TestParity_PruneStaleMissions(t *testing.T) {
 func TestParity_PruneStaleBursting(t *testing.T) {
 	t.Run("SQLite_Bursting", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "parity_chaos_bursting.db")
 		dbInstance, err := NewSIPDB(dbPath)
@@ -194,6 +199,7 @@ func TestParity_PruneStaleBursting(t *testing.T) {
 
 	t.Run("PostgresMock_Bursting", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "false")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 		tmpDir := t.TempDir()
 		dbPath := filepath.Join(tmpDir, "parity_chaos_pg_bursting.db")
 		dbInstance, err := NewSIPDB(dbPath)

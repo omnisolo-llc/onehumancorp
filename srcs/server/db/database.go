@@ -102,9 +102,7 @@ func New(ctx context.Context) (*DB, error) {
 			// Zero Secrets: Generate a cryptographically secure local storage key on first run and store in environment or require user to provide it.
 			// But for Standalone mode, if it's missing, we fail securely instead of using hardcoded secrets.
 			if os.Getenv("OHC_STANDALONE") == "true" {
-				// We cannot fail yet as it breaks tests without environment variables.
-				// For tests, use a transient key.
-				key = "standalone_ephemeral_key"
+				return nil, fmt.Errorf("db: OHC_SQLITE_KEY is required in standalone mode for encrypted storage")
 			} else {
 				key = "transient_memory_key"
 			}

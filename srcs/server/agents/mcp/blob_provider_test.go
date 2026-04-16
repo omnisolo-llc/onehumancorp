@@ -8,6 +8,8 @@ import (
 
 func TestBlobProvider_Local(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 	os.Unsetenv("OHC_MULTITENANT")
 	defer os.Unsetenv("OHC_STANDALONE")
 

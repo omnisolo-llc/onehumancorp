@@ -35,7 +35,11 @@ func TestHandleSyncRules(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			originalStandalone := os.Getenv("OHC_STANDALONE")
 			os.Setenv("OHC_STANDALONE", tt.standaloneMode)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 			defer os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 
 			req := httptest.NewRequest(http.MethodGet, "/api/powersync/rules", nil)
 

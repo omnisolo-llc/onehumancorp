@@ -15,6 +15,7 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 
 	// Temporarily enable OHC_STANDALONE to trigger the throttle
 	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 
 	dbPath := filepath.Join(t.TempDir(), "throttle.db")
 	db, err := NewSIPDB(dbPath)

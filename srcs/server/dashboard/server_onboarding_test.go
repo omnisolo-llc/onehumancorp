@@ -10,6 +10,8 @@ import (
 
 func TestHandleHybridHealthCheck_Standalone(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "true")
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 	defer os.Unsetenv("OHC_STANDALONE")
 	os.Setenv("DATABASE_URL", "")
 
@@ -49,6 +51,8 @@ func TestHandleHybridHealthCheck_Standalone(t *testing.T) {
 }
 func TestHandleHybridHealthCheck_Cloud(t *testing.T) {
 	os.Setenv("OHC_STANDALONE", "false")
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 	defer os.Unsetenv("OHC_STANDALONE")
 	os.Setenv("DATABASE_URL", "postgres://user:pass@localhost:5432/db")
 	defer os.Unsetenv("DATABASE_URL")

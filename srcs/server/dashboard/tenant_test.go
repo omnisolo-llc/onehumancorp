@@ -83,6 +83,8 @@ func TestTenantRegistry_UnknownOrgIsLazyProvisioned(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -108,6 +110,8 @@ func TestTenantRegistry_TenantsAreIsolated(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -164,6 +168,8 @@ func TestTenantRegistry_AuthenticatedWithoutOrgGetsForbidden(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -193,6 +199,8 @@ func TestTenantRegistry_ServeHTTP_Fallback(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -226,6 +234,8 @@ func TestTenantRegistry_HandleOrgRegister_InvalidMethod(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -245,6 +255,8 @@ func TestTenantRegistry_HandleOrgRegister_NoAdminRole(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -270,6 +282,8 @@ func TestTenantRegistry_HandleOrgRegister_TenantAdminForbidden(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -295,6 +309,8 @@ func TestTenantRegistry_HandleOrgRegister_InvalidJSON(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -315,6 +331,8 @@ func TestTenantRegistry_HandleOrgRegister_MissingFields(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -342,6 +360,8 @@ func TestTenantRegistry_HandleOrgList(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -367,6 +387,8 @@ func TestTenantRegistry_HandleOrgList_NoAdminRole(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -391,6 +413,8 @@ func TestTenantRegistry_HandleOrgList_TenantAdminForbidden(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 
@@ -422,6 +446,8 @@ func TestTenantRegistry_ServeHTTP_HybridHealthFallback(t *testing.T) {
 	defer func() {
 		if originalStandalone != "" {
 			os.Setenv("OHC_STANDALONE", originalStandalone)
+		os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+		defer os.Unsetenv("OHC_SQLITE_KEY")
 		}
 	}()
 

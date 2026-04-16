@@ -23,6 +23,7 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 
 	// 1. Setup InMemory SQLite DB
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 	ctx := context.Background()
 	dbWrapper, err := db.New(ctx)
 	if err != nil {
@@ -76,6 +77,8 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 
 	// 4. Run the sync engine synchronously
 	os.Setenv("OHC_STANDALONE", "true") // Not strictly needed because Setenv("DATABASE_URL") controls IsSQLite()
+	os.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
+	defer os.Unsetenv("OHC_SQLITE_KEY")
 	engine := NewAutoDreamSyncEngine(dbWrapper, 1*time.Minute, cloudServer.URL)
 
 	engine.ProcessForecastTick(ctx)
@@ -129,6 +132,7 @@ func TestAutoDreamSyncEngine_syncAgentMissions_PIIRedaction(t *testing.T) {
 
 	// 1. Setup InMemory SQLite DB
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 	ctx := context.Background()
 	dbWrapper, err := db.New(ctx)
 	if err != nil {

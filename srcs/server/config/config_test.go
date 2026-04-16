@@ -11,6 +11,7 @@ func TestLoad_Defaults(t *testing.T) {
 	config.Reset()
 	t.Setenv("DATABASE_URL", "")
 	t.Setenv("OHC_STANDALONE", "")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 
 	cfg := config.Load()
 	if cfg == nil {
@@ -36,6 +37,7 @@ func TestLoad_EnvVars(t *testing.T) {
 	t.Setenv("DATABASE_URL", "postgres://localhost/testdb")
 	t.Setenv("REDIS_URL", "redis://localhost:6379")
 	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_SQLITE_KEY", "standalone_ephemeral_key")
 
 	cfg := config.Load()
 	if cfg.DatabaseURL != "postgres://localhost/testdb" {
