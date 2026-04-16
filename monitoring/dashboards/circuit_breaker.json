@@ -1,0 +1,14 @@
+{
+  "title": "OHC Circuit Breaker Resilience",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Circuit Breaker State Changes",
+      "targets": [
+        {
+          "expr": "ohc_circuit_breaker_state_changes_total"
+        }
+      ]
+    }
+  ]
+}

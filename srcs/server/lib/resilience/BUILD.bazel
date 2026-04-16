@@ -3,16 +3,21 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "resilience",
     srcs = [
+        "circuit_breaker.go",
         "distributed_locks.go",
         "mesh_fallback.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/lib/resilience",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_prometheus_client_golang//prometheus",
+    ],
 )
 
 go_test(
     name = "resilience_test",
     srcs = [
+        "circuit_breaker_test.go",
         "distributed_locks_test.go",
         "mesh_fallback_chaos_test.go",
     ],

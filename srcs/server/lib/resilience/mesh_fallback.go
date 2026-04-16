@@ -1,6 +1,7 @@
 package resilience
 
 import (
+	"errors"
 	"context"
 	"fmt"
 	"math/rand"
@@ -20,6 +21,9 @@ func WithRetry(ctx context.Context, maxRetries int, initialBackoff time.Duration
 		err = callback(ctx)
 		if err == nil {
 			return nil
+		}
+		if errors.Is(err, ErrCircuitOpen) {
+			return err
 		}
 
 		if attempt == maxRetries {
@@ -46,4 +50,13 @@ func WithRetry(ctx context.Context, maxRetries int, initialBackoff time.Duration
 	}
 
 	return fmt.Errorf("operation failed after %d retries: %w", maxRetries, err)
+}
+
+
+// WithCircuitBreakerRetry executes a callback function repeatedly using a Circuit Breaker.
+// If the circuit breaker is open, it fails fast without retrying.
+func WithCircuitBreakerRetry(ctx context.Context, cb *CircuitBreaker, maxRetries int, initialBackoff time.Duration, callback func(ctx context.Context) error) error {
+	return WithRetry(ctx, maxRetries, initialBackoff, func(c context.Context) error {
+		return cb.Execute(c, callback)
+	})
 }

@@ -1,0 +1,32 @@
+load("@rules_python//python:defs.bzl", "py_test")
+load("@rules_go//go:def.bzl", "go_test")
+
+py_test(
+    name = "day_one_audit_test",
+    srcs = ["day_one_audit_test.py"],
+)
+
+go_test(
+    name = "team_mesh_chaos_test",
+    srcs = ["team_mesh_chaos_test.go"],
+    deps = [
+        "//srcs/server/lib/resilience",
+    ],
+)
+
+go_test(
+    name = "parity_audit_test",
+    srcs = ["parity_audit_test.go"],
+    deps = [
+        "//srcs/server/orchestration",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)
+
+go_test(
+    name = "stress_test",
+    srcs = ["stress_test.go"],
+    deps = [
+        "//srcs/server/lib/resilience",
+    ],
+)
