@@ -59,3 +59,30 @@ func (r *InviteRepository) GetTotalInvitesCount(ctx context.Context) (int, error
 	}
 	return count, nil
 }
+
+func (r *InviteRepository) CreateInvites(ctx context.Context, invites []*TeamInvite) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`
+
+	for _, invite := range invites {
+		_, err := tx.Exec(ctx, query, invite.ID, invite.TeamID, invite.InviterID, invite.InviteeID, invite.Status)
+		if err != nil {
+			tx.Rollback(ctx)
+			return fmt.Errorf("failed to create team invite: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
