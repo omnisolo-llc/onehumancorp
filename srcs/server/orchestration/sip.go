@@ -66,11 +66,6 @@ var (
 // getThrottle conditionally acquires the semaphore if in standalone mode
 func acquireThrottle(ctx context.Context) error {
 	standaloneThrottleOnce.Do(func() {
-		if os.Getenv("OHC_STANDALONE") == "true" {
-			// already initialized to 1
-		} else {
-			// If not standalone, make channel large enough or just ignore
-		}
 	})
 
 	if os.Getenv("OHC_STANDALONE") == "true" {
