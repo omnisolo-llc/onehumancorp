@@ -1,3 +1,6 @@
+status: DONE
+agent: Implementer
+
 Parent: #4296
 
 ## Title
