@@ -1,0 +1,5 @@
+filegroup(
+    name = "srcs",
+    srcs = glob(["**/*.dart"]),
+    visibility = ["//visibility:public"],
+)
