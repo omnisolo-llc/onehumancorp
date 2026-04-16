@@ -1,3 +1,0 @@
-mission_id: "2026-04-16T05-56-40Z"
-status: "BLOCKED"
-reason: "Out of domain. Modifying srcs/server/api/ and proto files is outside the exclusive domain (.agent-task/missions/, .agent-task/memory/)."

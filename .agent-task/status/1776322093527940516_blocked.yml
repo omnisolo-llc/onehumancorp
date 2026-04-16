@@ -1,3 +1,0 @@
-mission_id: "2026-04-16T05-56-03Z"
-status: "BLOCKED"
-reason: "Out of domain. Modifying srcs/server/db/migrations/ is outside the exclusive domain (.agent-task/missions/, .agent-task/memory/)."

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/onehumancorp/mono/lib/analytics"
 	"github.com/onehumancorp/mono/services/growth"
@@ -45,6 +46,7 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 
 	quotaService := growth.NewQuotaService(tracker, rdb, 100)
 	referralService := growth.NewReferralService(tracker)
+	referralsRepo := growth.NewReferralRepository(rdb)
 
 	mux.HandleFunc("/growth/referral", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -69,6 +71,124 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		}
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Invite sent successfully\n")
+	}))
+
+	mux.HandleFunc("/api/v1/growth/referrals/invite", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		spiffeID := r.Header.Get("X-Spiffe-Id")
+		if spiffeID == "" {
+			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			InviteeEmail string `json:"invitee_email"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.InviteeEmail == "" {
+			http.Error(w, "missing invitee_email", http.StatusBadRequest)
+			return
+		}
+
+		referral := &growth.GrowthReferral{
+			InviterID:    spiffeID,
+			InviteeEmail: req.InviteeEmail,
+			Status:       "PENDING",
+			CreatedAt:    time.Now(),
+		}
+		referral.ID = fmt.Sprintf("ref-%d", time.Now().UnixNano())
+
+		err := referralsRepo.SaveReferral(context.Background(), referral)
+		if err != nil {
+			http.Error(w, "Failed to save referral", http.StatusInternalServerError)
+			return
+		}
+
+		// Also track the event
+		_ = referralService.ProcessInvite(context.Background(), spiffeID, req.InviteeEmail)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Invite sent successfully",
+			"link":    fmt.Sprintf("ohc://join?ref=%s", referral.ID),
+		})
+	}))
+
+
+	mux.HandleFunc("/api/v1/growth/referrals/accept", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		spiffeID := r.Header.Get("X-Spiffe-Id")
+		if spiffeID == "" {
+			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			InviteID string `json:"invite_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if req.InviteID == "" {
+			http.Error(w, "missing invite_id", http.StatusBadRequest)
+			return
+		}
+
+		err := referralsRepo.AcceptReferral(context.Background(), req.InviteID)
+		if err != nil {
+			http.Error(w, "Failed to accept referral", http.StatusBadRequest)
+			return
+		}
+
+		err = referralService.AcceptInvite(context.Background(), req.InviteID)
+		if err != nil {
+			http.Error(w, "Failed to track invite acceptance", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"message": "Referral accepted successfully",
+		})
+	}))
+
+	mux.HandleFunc("/api/v1/growth/referrals/stats", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		spiffeID := r.Header.Get("X-Spiffe-Id")
+		if spiffeID == "" {
+			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
+			return
+		}
+
+		stats, err := referralsRepo.GetStats(context.Background(), spiffeID)
+		if err != nil {
+			http.Error(w, "Failed to get stats", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(stats)
 	}))
 
 	mux.HandleFunc("/growth/quota/check", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
