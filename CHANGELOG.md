@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.0 (Cloud) / v0.4.0+1 (Standalone)
+### New Features
+- Implemented Prompt Tuning Wizard UI.
+- Distributed Redlock logic in API mesh.
+- KAIROS Hybrid Core Architecture planning.
+- Added AB testing and Invite Accept endpoints.
+- Added Infrastructure Scaling and SRE Observability dashboards.
+
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Bubblewrap Sandbox Telemetry.
