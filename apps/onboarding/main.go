@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
@@ -24,4 +25,12 @@ func main() {
 	}
 
 	fmt.Printf("Day One Environment Verification Passed!\nMode: %s\nMultiTenant: %v\nHeadless: %v\n", config.Mode, config.MultiTenant, config.Headless)
+
+	http.HandleFunc("/api/provision", onboarding.ProvisionHandler)
+
+	fmt.Println("Starting onboarding service on :8080...")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		fmt.Printf("Failed to start server: %v\n", err)
+		os.Exit(1)
+	}
 }
