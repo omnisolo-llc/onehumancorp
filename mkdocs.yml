@@ -35,6 +35,7 @@ nav:
       - api/index.md
   - Features:
       - features/index.md
+      - Dynamic Cloud Escalation: features/dynamic_cloud_escalation.md
   - Walkthroughs:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - walkthroughs/index.md
