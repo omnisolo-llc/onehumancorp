@@ -1190,3 +1190,70 @@ type TeammateMeshEvent struct {
 	Action  string `json:"action"`
 	Status  string `json:"status"`
 }
+
+
+func (rm *RedisMeshTransport) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	cmd := rm.client.B().Publish().Channel(channel).Message(string(data)).Build()
+	return meshWithRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
+}
+
+
+func (rm *RedisMeshTransport) SubscribeChannel(ctx context.Context, channel string) (<-chan map[string]interface{}, error) {
+	ch := make(chan map[string]interface{}, 100)
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
+			var payload map[string]interface{}
+			if err := json.Unmarshal([]byte(msg.Message), &payload); err == nil {
+				select {
+				case ch <- payload:
+				default:
+					slog.Warn("RedisMeshTransport.SubscribeChannel channel full, dropping message")
+				}
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisMeshTransport.SubscribeChannel error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
+
+func (lm *LocalTeammateMesh) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
+    data, err := json.Marshal(payload)
+    if err != nil {
+        return err
+    }
+    return lm.BroadcastMeshEvent(ctx, channel, data)
+}
+
+
+func (lm *LocalTeammateMesh) SubscribeChannel(ctx context.Context, channel string) (<-chan map[string]interface{}, error) {
+    bytesCh, err := lm.SubscribeMeshEvents(ctx, channel)
+    if err != nil {
+        return nil, err
+    }
+
+    ch := make(chan map[string]interface{}, 100)
+    go func() {
+        for data := range bytesCh {
+            var payload map[string]interface{}
+            if err := json.Unmarshal(data, &payload); err == nil {
+                select {
+                case ch <- payload:
+                default:
+                }
+            }
+        }
+        close(ch)
+    }()
+
+    return ch, nil
+}

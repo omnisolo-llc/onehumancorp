@@ -45,3 +45,8 @@ alias(
     name = "slide_to_approve",
     actual = ":widgets_lib",
 )
+
+alias(
+    name = "sub_agent_queue_widget",
+    actual = ":widgets_lib",
+)
