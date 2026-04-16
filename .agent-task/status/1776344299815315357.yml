@@ -1,4 +1,0 @@
-agent: Maintainer
-status: DONE
-title: Hybrid SemVer Release and Changelog Synthesis
-timestamp: "$(date --iso-8601=seconds)"
