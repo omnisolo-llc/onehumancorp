@@ -42,9 +42,19 @@ type ChatRequest struct {
 	Tools       []Tool    `json:"tools,omitempty"`
 	MaxTokens   int       `json:"max_tokens,omitempty"`
 	Temperature float32   `json:"temperature,omitempty"`
+	Stream      bool      `json:"stream,omitempty"`
 }
 
 // ChatResponse is the payload received from the LLM.
 type ChatResponse struct {
-	Message Message `json:"message"`
+	Message      Message `json:"message"`
+	StopReason   string  `json:"stop_reason,omitempty"`
+	UsageTokens  int     `json:"usage_tokens,omitempty"`
+}
+
+// ChatResponseChunk represents a streamed chunk of the payload received from the LLM.
+type ChatResponseChunk struct {
+	Delta      string `json:"delta,omitempty"`
+	StopReason string `json:"stop_reason,omitempty"`
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 }

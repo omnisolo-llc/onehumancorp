@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -84,4 +85,61 @@ func (c *OllamaClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 			Content: result.Message.Content,
 		},
 	}, nil
+}
+
+// ChatStream implements real SSE streaming for Ollama.
+func (c *OllamaClient) ChatStream(ctx context.Context, req ChatRequest, chunkChan chan<- ChatResponseChunk) error {
+	req.Stream = true
+	b, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", c.Endpoint+"/api/chat", bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "text/event-stream")
+
+	resp, err := c.Client.Do(httpReq)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("ollama streaming error: %s", resp.Status)
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		var chunk struct {
+			Message struct {
+				Content   string `json:"content"`
+				ToolCalls []struct {
+					Function struct {
+						Name      string `json:"name,omitempty"`
+						Arguments map[string]interface{} `json:"arguments,omitempty"`
+					} `json:"function,omitempty"`
+				} `json:"tool_calls,omitempty"`
+			} `json:"message"`
+			DoneReason string `json:"done_reason"`
+		}
+		if err := json.Unmarshal([]byte(line), &chunk); err == nil {
+			var tcs []ToolCall
+			for _, t := range chunk.Message.ToolCalls {
+				bArgs, _ := json.Marshal(t.Function.Arguments)
+				tcs = append(tcs, ToolCall{Name: t.Function.Name, Arguments: bArgs})
+			}
+			chunkChan <- ChatResponseChunk{
+				Delta:      chunk.Message.Content,
+				StopReason: chunk.DoneReason,
+				ToolCalls:  tcs,
+			}
+		}
+	}
+	return scanner.Err()
 }
