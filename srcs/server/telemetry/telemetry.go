@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"reflect"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -110,41 +111,107 @@ func RedactPII(input string) string {
 	return s
 }
 
-// RedactInterfacePII deeply scrubs maps, slices, and strings for PII.
+// RedactInterfacePII deeply scrubs maps, slices, structs, and strings for PII.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// RedactInterfacePII deeply scrubs maps, slices, structs, and strings for PII.
 func RedactInterfacePII(val interface{}) interface{} {
-	switch v := val.(type) {
-	case string:
-		return RedactPII(v)
-	case map[string]interface{}:
-		res := make(map[string]interface{}, len(v))
-		for k, val := range v {
-			res[k] = RedactInterfacePII(val)
+	if val == nil {
+		return nil
+	}
+
+	rv := reflect.ValueOf(val)
+	return redactValue(rv).Interface()
+}
+
+func redactValue(rv reflect.Value) reflect.Value {
+	if !rv.IsValid() {
+		return rv
+	}
+
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Interface:
+		if rv.IsNil() {
+			return rv
 		}
-		return res
-	case []interface{}:
-		res := make([]interface{}, len(v))
-		for i, val := range v {
-			res[i] = RedactInterfacePII(val)
+		elem := redactValue(rv.Elem())
+		if rv.Kind() == reflect.Ptr {
+			newPtr := reflect.New(rv.Type().Elem())
+			newPtr.Elem().Set(elem)
+			return newPtr
 		}
-		return res
-	case []string:
-		res := make([]string, len(v))
-		for i, str := range v {
-			res[i] = RedactPII(str)
+		return elem
+
+	case reflect.String:
+		s := rv.String()
+		redacted := RedactPII(s)
+		return reflect.ValueOf(redacted)
+
+	case reflect.Slice:
+		// Preserve []byte natively to prevent base64 marshaling corruption
+		if rv.Type().Elem().Kind() == reflect.Uint8 {
+			return rv
 		}
-		return res
-	case []map[string]interface{}:
-		res := make([]map[string]interface{}, len(v))
-		for i, m := range v {
-			newM := make(map[string]interface{}, len(m))
-			for k, val := range m {
-				newM[k] = RedactInterfacePII(val)
+
+		newSlice := reflect.MakeSlice(rv.Type(), rv.Len(), rv.Cap())
+		for i := 0; i < rv.Len(); i++ {
+			newSlice.Index(i).Set(redactValue(rv.Index(i)))
+		}
+		return newSlice
+
+	case reflect.Array:
+		newArray := reflect.New(rv.Type()).Elem()
+		for i := 0; i < rv.Len(); i++ {
+			newArray.Index(i).Set(redactValue(rv.Index(i)))
+		}
+		return newArray
+
+	case reflect.Map:
+		newMap := reflect.MakeMap(rv.Type())
+		iter := rv.MapRange()
+		for iter.Next() {
+			k := iter.Key()
+			var newK reflect.Value
+			// Prevent reflect.Value.String() from causing panic or returning "<int Value>"
+			if k.Kind() == reflect.String {
+				redactedK := RedactPII(k.String())
+				newK = reflect.ValueOf(redactedK)
+			} else {
+				newK = k
 			}
-			res[i] = newM
+
+			v := redactValue(iter.Value())
+			newMap.SetMapIndex(newK, v)
 		}
-		return res
+		return newMap
+
+	case reflect.Struct:
+		newStruct := reflect.New(rv.Type()).Elem()
+        // Copy the entire struct first to preserve unexported fields (e.g. in time.Time)
+        newStruct.Set(rv)
+		for i := 0; i < rv.NumField(); i++ {
+			field := rv.Type().Field(i)
+			if field.IsExported() {
+				newStruct.Field(i).Set(redactValue(rv.Field(i)))
+			}
+		}
+		return newStruct
+
 	default:
-		return val
+		return rv
 	}
 }
 

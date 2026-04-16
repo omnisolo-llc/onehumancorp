@@ -566,6 +566,45 @@ func TestRedactInterfacePII(t *testing.T) {
 		}
 	})
 
+
+	t.Run("Struct", func(t *testing.T) {
+		type TestStruct struct {
+			Email string
+			Safe  int
+			unexported string
+		}
+		s := TestStruct{Email: "user@example.com", Safe: 123, unexported: "secret"}
+		res := RedactInterfacePII(s).(TestStruct)
+		if res.Email != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res.Email)
+		}
+		if res.Safe != 123 {
+			t.Errorf("Expected 123, got %v", res.Safe)
+		}
+		// unexported fields are skipped, resulting in zero values in new struct
+		if res.unexported != "secret" {
+			t.Errorf("Expected unexported field to be preserved as 'secret', got %v", res.unexported)
+		}
+	})
+
+	t.Run("Arbitrary Map Keys", func(t *testing.T) {
+		m := map[int]string{
+			1: "user@example.com",
+		}
+		res := RedactInterfacePII(m).(map[int]string)
+		if res[1] != "[REDACTED_EMAIL]" {
+			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[1])
+		}
+	})
+
+	t.Run("Byte Slice Preservation", func(t *testing.T) {
+		b := []byte("user@example.com")
+		res := RedactInterfacePII(b).([]byte)
+		if string(res) != "user@example.com" {
+			t.Errorf("Expected byte slice to be unchanged, got %v", string(res))
+		}
+	})
+
 	t.Run("Default fallback", func(t *testing.T) {
 		res := RedactInterfacePII(123)
 		if res != 123 {
