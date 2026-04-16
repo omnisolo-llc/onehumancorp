@@ -17,6 +17,7 @@ echo ""
 echo -e "${DIM}[1/3] Verifying dependencies...${RESET}"
 command -v docker >/dev/null 2>&1 || { echo -e "${PURPLE}Docker is required.${RESET}"; false; }
 command -v helm >/dev/null 2>&1 || { echo -e "${PURPLE}Helm is required.${RESET}"; false; }
+command -v kubectl >/dev/null 2>&1 || { echo -e "${PURPLE}Kubectl is required.${RESET}"; false; }
 
 echo -e "${DIM}[2/3] Setting up cloud environment...${RESET}"
 if [ ! -f .env.cloud ]; then
@@ -32,3 +33,4 @@ export OHC_HEADLESS=true
 export OHC_SOURCE_MODE=cloud
 
 echo -e "${GREEN}✓ Cloud environment configured and ready for deployment.${RESET}"
+echo -e "${DIM}Run 'bazelisk run //:deploy_dev' to launch the K8s local backend.${RESET}"
