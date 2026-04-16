@@ -38,7 +38,7 @@ if [[ -z "${capture_script}" ]]; then
   echo "ERROR: could not locate capture_screenshots.mjs." >&2
   exit 1
 fi
-output_root="${workspace_root}/docs/app"
+output_root="${workspace_root}/docs/public/assets/screenshots/app"
 work_tmp="$(mktemp -d "${TMPDIR:-/tmp}/flutter-app-shots.XXXXXX")"
 
 export HOME="${work_tmp}/home"
@@ -168,7 +168,8 @@ port="$(python3 -c 'import socket; s = socket.socket(); s.bind(("", 0)); print(s
 export PLAYWRIGHT_BASE_URL="http://127.0.0.1:${port}"
 export APP_SCREENSHOT_OUTPUT_DIR="${output_root}"
 
-mkdir -p "${output_root}"
+mkdir -p \
+  "${output_root}/landing-page"
 
 python3 -m http.server "${port}" --directory "${web_artifacts}" >/dev/null 2>&1 &
 server_pid=$!

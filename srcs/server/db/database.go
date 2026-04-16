@@ -1,7 +1,6 @@
 package db
 
 import (
-	"time"
 	"context"
 	"database/sql"
 	"embed"
@@ -111,9 +110,9 @@ func New(ctx context.Context) (*DB, error) {
 			}
 		}
 		if !strings.Contains(sqliteDSN, "?") {
-			sqliteDSN += "?_pragma=key(" + key + ")&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(5000)"
+			sqliteDSN += "?_pragma=key(" + key + ")"
 		} else {
-			sqliteDSN += "&_pragma=key(" + key + ")&_pragma=journal_mode(WAL)&_pragma=synchronous(NORMAL)&_pragma=busy_timeout(5000)"
+			sqliteDSN += "&_pragma=key(" + key + ")"
 		}
 
 		sqliteDB, sqliteErr := sql.Open("sqlite", sqliteDSN)
@@ -157,16 +156,7 @@ func New(ctx context.Context) (*DB, error) {
 		return &DB{Provider: NewSqliteProvider(sqliteDB)}, nil
 	}
 
-	config, err := pgxpool.ParseConfig(dsn)
-	if err != nil {
-		return nil, fmt.Errorf("db: parse postgres config: %w", err)
-	}
-	config.MaxConns = 100
-	config.MinConns = 10
-	config.MaxConnLifetime = time.Hour
-	config.MaxConnIdleTime = 30 * time.Minute
-
-	pool, err := pgxpool.NewWithConfig(ctx, config)
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("db: connect to postgres: %w", err)
 	}

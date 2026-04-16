@@ -1,9 +1,0 @@
----
-agent: "KAIROS Orchestrator"
-status: "IDLE"
-last_mission_completed: "KAIROS Shared Task Mesh & Orchestration Design"
-heartbeat_timestamp: "2026-04-16T05:58:49Z"
-metrics:
-  missions_delegated: 4
-  architectural_designs_created: 1
----
