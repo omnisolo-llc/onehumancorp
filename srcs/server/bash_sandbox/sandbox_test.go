@@ -62,3 +62,19 @@ func TestSandboxExecutionViolation(t *testing.T) {
 		t.Errorf("ExecuteContext error = %v, want it to contain 'security policy'", err)
 	}
 }
+
+func TestSandboxExecutionExplicitDeny(t *testing.T) {
+	sandbox := NewSandbox()
+	ctx := context.Background()
+
+	// Simulate an operation that hits a sandbox boundary (e.g., trying to write to a protected file)
+	// We'll use a mock command that returns a "Permission denied" error
+	out, err := sandbox.ExecuteContext(ctx, `bash -c 'echo test > /root/protected.txt 2>&1 || (echo "Permission denied" >&2; bash -c "exit 1")'`, "")
+	if err == nil {
+		t.Fatalf("ExecuteContext expected error for boundary drop, got nil")
+	}
+
+	if !strings.Contains(out, "<sandbox_violations>") {
+		t.Errorf("ExecuteContext output = %v, want it to contain '<sandbox_violations>' block for sandbox drop", out)
+	}
+}

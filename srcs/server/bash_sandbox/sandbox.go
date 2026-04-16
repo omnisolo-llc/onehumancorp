@@ -17,6 +17,7 @@ var (
 	execCount     metric.Int64Counter
 	violationCount metric.Int64Counter
 	errorCount    metric.Int64Counter
+	sandboxDropRegex = regexp.MustCompile(`(?i)(permission denied|not permitted|operation not permitted|sandbox)`)
 )
 
 func init() {
@@ -87,6 +88,23 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		errorCount.Add(ctx, 1)
+
+		errStr := err.Error()
+		outStr := string(out)
+
+		// Extract reason from output or error string
+		var matchedReason string
+		if matches := sandboxDropRegex.FindStringSubmatch(outStr); len(matches) > 0 {
+			matchedReason = matches[0]
+		} else if matches := sandboxDropRegex.FindStringSubmatch(errStr); len(matches) > 0 {
+			matchedReason = matches[0]
+		}
+
+		// If we found a violation pattern, append it to stdout so callers matching XML can parse it explicitly
+		if matchedReason != "" {
+			out = append(out, []byte(fmt.Sprintf("\n<sandbox_violations>%s</sandbox_violations>", matchedReason))...)
+		}
+
 		return string(out), fmt.Errorf("execution failed: %w", err)
 	}
 
