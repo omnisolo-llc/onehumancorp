@@ -244,6 +244,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                         labelText: 'Admin Password',
                         suffixIcon: IconButton(
                           icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                          tooltip: _obscurePassword ? 'Show Password' : 'Hide Password',
                           onPressed: () {
                             setState(() {
                               _obscurePassword = !_obscurePassword;
@@ -258,23 +259,35 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       if (state.step > 0)
-                        TextButton(
-                          onPressed: state.isLoading ? null : notifier.prevStep,
-                          child: const Text('Back', style: TextStyle(fontFamily: 'Inter')),
+                        Semantics(
+                          label: 'Go back to previous step',
+                          child: Tooltip(
+                            message: 'Previous step',
+                            child: TextButton(
+                              onPressed: state.isLoading ? null : notifier.prevStep,
+                              child: const Text('Back', style: TextStyle(fontFamily: 'Inter')),
+                            ),
+                          ),
                         )
                       else
                         const SizedBox(),
-                      ElevatedButton(
-                        onPressed: state.isLoading ? null : () {
-                          if (state.step < 4) {
-                            notifier.nextStep();
-                          } else {
-                            notifier.launch(context, ref);
-                          }
-                        },
-                        child: state.isLoading
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                      Semantics(
+                        label: state.step == 4 ? 'Launch the business setup' : 'Proceed to next step',
+                        child: Tooltip(
+                          message: state.step == 4 ? 'Complete setup and launch dashboard' : 'Next step',
+                          child: ElevatedButton(
+                            onPressed: state.isLoading ? null : () {
+                              if (state.step < 4) {
+                                notifier.nextStep();
+                              } else {
+                                notifier.launch(context, ref);
+                              }
+                            },
+                            child: state.isLoading
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                          ),
+                        ),
                       ),
                     ],
                   ),
