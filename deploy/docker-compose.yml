@@ -225,3 +225,17 @@ services:
         limits:
           cpus: "0.2"
           memory: 128M
+
+  telemetry-mcp-bridge:
+    image: mcp/telemetry-bridge:latest
+    environment:
+      PROMETHEUS_URL: http://prometheus:9090
+      OHC_STANDALONE: ${OHC_STANDALONE:-false}
+    depends_on:
+      prometheus:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 64M
