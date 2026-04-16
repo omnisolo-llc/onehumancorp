@@ -55,7 +55,7 @@ func TestDelegateSubTask_Success(t *testing.T) {
 		t.Fatalf("no sub-agent with prefix 'sub-agent-SWE-' found; agents: %v", hub.agents)
 	}
 
-	msgs := hub.inbox[subAgentID]
+	msgs := hub.inbox.Read(subAgentID)
 	if len(msgs) != 1 {
 		t.Fatalf("expected 1 message in inbox, got %d", len(msgs))
 	}

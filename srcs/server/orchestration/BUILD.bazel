@@ -27,6 +27,7 @@ go_library(
         "mesh_api.go",
         "mesh.go",
         "shared_tasks.go",
+        "sharded_mailbox.go",
         "models.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",

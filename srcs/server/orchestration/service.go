@@ -253,7 +253,7 @@ type MeetingRoom struct {
 type Hub struct {
 	mu             sync.RWMutex
 	agents         map[string]Agent
-	inbox          map[string][]Message
+	inbox          *ShardedMailbox
 	meetings       map[string]MeetingRoom
 	minimaxAPIKey  string
 	subs           map[string][]chan struct{}
@@ -311,7 +311,7 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 
 	h := &Hub{
 		agents:        map[string]Agent{},
-		inbox:         map[string][]Message{},
+		inbox:         NewShardedMailbox(64),
 		meetings:      map[string]MeetingRoom{},
 		subs:          map[string][]chan struct{}{},
 		tokenTrackers: map[string]struct{}{},
@@ -829,7 +829,7 @@ func (h *Hub) FireAgent(id string) {
 	defer h.mu.Unlock()
 
 	delete(h.agents, id)
-	delete(h.inbox, id)
+	h.inbox.Clear(id)
 }
 
 // Publish validates and routes a message to a direct recipient, a meeting room, or both.
@@ -867,12 +867,7 @@ func (h *Hub) Publish(message Message) error {
 	}
 
 	if message.ToAgent != "" {
-		inbox := h.inbox[message.ToAgent]
-		if cap(inbox) == 0 {
-			inbox = getMessageSlice()
-		}
-
-		h.inbox[message.ToAgent] = append(inbox, message)
+		h.inbox.Send(message.ToAgent, message)
 
 		if subs, ok := h.subs[message.ToAgent]; ok {
 			for _, sub := range subs {
@@ -1185,18 +1180,9 @@ func (h *Hub) Inbox(agentID string) []Message {
 		return inbox
 	}
 
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	inbox := h.inbox[agentID]
-	if len(inbox) == 0 {
-		return nil
-	}
-
-	// ⚡ BOLT: [O(1) Inbox draining instead of O(N) slice copy] - Randomized Selection from Top 5
+	// ⚡ BOLT: [Parallel Execution] "Coordinator Mode" sharded mailbox for Team Mesh to eliminate global lock contention.
 	// To prevent memory leak of map keys over time, delete the key entirely.
-	delete(h.inbox, agentID)
-	return inbox
+	return h.inbox.Read(agentID)
 }
 
 var messageSlicePool = sync.Pool{
