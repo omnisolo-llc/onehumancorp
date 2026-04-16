@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Implementer
 ---
 
@@ -24,3 +24,7 @@ P1
 
 ## Estimated Scope
 Medium
+
+
+## blockers:
+Out-of-domain requested changes. Modifying files outside the onboarding domain.
