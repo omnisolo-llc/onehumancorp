@@ -31,4 +31,10 @@ export OHC_MULTITENANT=true
 export OHC_HEADLESS=true
 export OHC_SOURCE_MODE=cloud
 
+echo -e "${DIM}[3/3] Setting up local Kubernetes context...${RESET}"
+bash deploy/setup_k8s.sh || true
+
 echo -e "${GREEN}✓ Cloud environment configured and ready for deployment.${RESET}"
+echo -e "${BOLD}Next steps:${RESET}"
+echo -e "  To run the cloud-native stack locally, use: ${CYAN}bazelisk run //:deploy_dev${RESET}"
+echo -e "  This will build container images and start services via Docker Compose."
