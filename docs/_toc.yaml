@@ -3,6 +3,8 @@ toc:
     path: /docs/index.md
   - title: Architecture
     path: /docs/architecture/index.md
+  - title: Chaos Engineering Resilience Architecture
+    path: /docs/architecture/chaos_engineering.md
   - title: Developer
     path: /docs/developer/index.md
   - title: API
