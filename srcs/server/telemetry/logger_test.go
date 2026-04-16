@@ -47,3 +47,33 @@ func TestPIIRedactingHandler_WithAttrs(t *testing.T) {
 		t.Errorf("Expected [REDACTED_ANTHROPIC_KEY] in output, got: %s", output)
 	}
 }
+
+func TestPIIRedactingHandler_WithGroup(t *testing.T) {
+	var buf bytes.Buffer
+	baseHandler := slog.NewJSONHandler(&buf, nil)
+	handler := NewPIIRedactingHandler(baseHandler)
+	logger := slog.New(handler)
+
+	logger.Info("Nested user action",
+		slog.Group("user",
+			slog.String("email", "test@example.com"),
+			slog.Group("contact",
+				slog.String("phone", "555-123-4567"),
+			),
+		),
+	)
+
+	output := buf.String()
+	if strings.Contains(output, "test@example.com") {
+		t.Errorf("Expected email to be redacted in group, got: %s", output)
+	}
+	if !strings.Contains(output, "[REDACTED_EMAIL]") {
+		t.Errorf("Expected [REDACTED_EMAIL] in output group, got: %s", output)
+	}
+	if strings.Contains(output, "555-123-4567") {
+		t.Errorf("Expected phone to be redacted in nested group, got: %s", output)
+	}
+	if !strings.Contains(output, "[REDACTED_PHONE]") {
+		t.Errorf("Expected [REDACTED_PHONE] in nested output group, got: %s", output)
+	}
+}
