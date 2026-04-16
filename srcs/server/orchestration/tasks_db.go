@@ -50,64 +50,6 @@ func (to *SharedTaskOrchestrator) insertTransition(ctx context.Context, tx db.Tx
     return err
 }
 
-// Task matches the design doc requirement
-type Task struct {
-	ID string
-	Payload string
-	Status string
-}
-
-func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, error) {
-	tx, err := to.dbProvider.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	query := `
-		SELECT st.id, st.payload, st.status
-		FROM shared_tasks_v2 st
-		WHERE st.status = 'PENDING'
-		LIMIT 1
-		FOR UPDATE SKIP LOCKED
-	`
-
-	if to.dbProvider.IsSQLite() {
-		query = `
-			SELECT st.id, st.payload, st.status
-			FROM shared_tasks_v2 st
-			WHERE st.status = 'PENDING'
-			LIMIT 1
-		`
-		to.mu.Lock()
-		defer to.mu.Unlock()
-	}
-
-	row := tx.QueryRow(ctx, query)
-	var task Task
-	var payloadStr *string
-	if err := row.Scan(&task.ID, &payloadStr, &task.Status); err != nil {
-		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to query pending task: %w", err)
-	}
-	if payloadStr != nil {
-		task.Payload = *payloadStr
-	}
-
-	if _, err = tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = $1", task.ID); err != nil {
-		return nil, fmt.Errorf("failed to update task status: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	task.Status = "IN_PROGRESS"
-	return &task, nil
-}
-
 func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error) {
     claims := auth.ClaimsFromContext(ctx)
     if claims == nil {
@@ -134,12 +76,12 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
     defer tx.Rollback(ctx)
 
     query := `
-        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
-        FROM shared_tasks_v2 st
+        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.created_at, st.updated_at
+        FROM shared_tasks_master st
         WHERE st.status = 'PENDING' AND st.organization_id = $1
         AND NOT EXISTS (
             SELECT 1 FROM json_each(st.dependencies) AS dep
-            JOIN shared_tasks_v2 d ON d.id = dep.value
+            JOIN shared_tasks_master d ON d.id = dep.value
             WHERE d.status != 'COMPLETED'
         )
         LIMIT 1
@@ -154,11 +96,11 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
         if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
             var checkID string
             checkQuery := `
-                SELECT st.id FROM shared_tasks_v2 st
+                SELECT st.id FROM shared_tasks_master st
                 WHERE st.status = 'PENDING' AND st.organization_id = $1
                 AND NOT EXISTS (
                     SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
-                    JOIN shared_tasks_v2 d ON d.id::text = dep
+                    JOIN shared_tasks_master d ON d.id = dep
                     WHERE d.status != 'COMPLETED'
                 )
                 LIMIT 1
@@ -171,7 +113,7 @@ func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, ag
         return nil, fmt.Errorf("failed to query pending task: %w", err)
     }
 
-    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_master SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
         return nil, fmt.Errorf("failed to update task status: %w", err)
     }
 
@@ -196,12 +138,12 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
     defer tx.Rollback(ctx)
 
     query := `
-        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.assigned_agent_id, st.created_at, st.updated_at
-        FROM shared_tasks_v2 st
+        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.created_at, st.updated_at
+        FROM shared_tasks_master st
         WHERE st.status = 'PENDING' AND st.organization_id = $1
         AND NOT EXISTS (
             SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
-            JOIN shared_tasks_v2 d ON d.id::text = dep
+            JOIN shared_tasks_master d ON d.id = dep
             WHERE d.status != 'COMPLETED'
         )
         LIMIT 1
@@ -217,11 +159,11 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
         if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
             var checkID string
             checkQuery := `
-                SELECT st.id FROM shared_tasks_v2 st
+                SELECT st.id FROM shared_tasks_master st
                 WHERE st.status = 'PENDING' AND st.organization_id = $1
                 AND NOT EXISTS (
                     SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
-                    JOIN shared_tasks_v2 d ON d.id::text = dep
+                    JOIN shared_tasks_master d ON d.id = dep
                     WHERE d.status != 'COMPLETED'
                 )
                 LIMIT 1
@@ -234,7 +176,7 @@ func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, 
         return nil, fmt.Errorf("failed to query pending task: %w", err)
     }
 
-    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_master SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
         return nil, fmt.Errorf("failed to update task status: %w", err)
     }
 
@@ -259,7 +201,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
     defer tx.Rollback(ctx)
 
     var current string
-    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_v2 WHERE id = $1", taskID).Scan(&current); err != nil {
+    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_master WHERE id = $1", taskID).Scan(&current); err != nil {
         return fmt.Errorf("failed to fetch task %s: %w", taskID, err)
     }
 
@@ -267,7 +209,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
         return fmt.Errorf("task %s is in state %s, expected %s", taskID, current, fromState)
     }
 
-    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
+    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_master SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
         return err
     }
 
@@ -283,15 +225,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
         if to.autodream != nil {
             go func() {
                 var payloadText, deliberationLog string
-                var query string
-                if to.dbProvider.IsSQLite() {
-                    query = "SELECT COALESCE(payload, '{}') FROM shared_tasks_v2 WHERE id = $1"
-                } else {
-                    query = "SELECT COALESCE(payload::text, '{}') FROM shared_tasks_v2 WHERE id = $1"
-                }
-                err := to.dbProvider.QueryRow(context.Background(), query, taskID).Scan(&payloadText)
-                deliberationLog = "{}" // Add when deliberation log column exists
-
+                err := to.dbProvider.QueryRow(context.Background(), "SELECT COALESCE(payload, '{}'), COALESCE(deliberation_log, '{}') FROM shared_tasks_master WHERE id = $1", taskID).Scan(&payloadText, &deliberationLog)
                 if err != nil {
                     // Log error here in a real scenario
                     return

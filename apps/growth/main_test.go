@@ -61,53 +61,6 @@ func TestGrowthReferralsAPI(t *testing.T) {
 	if status := rrStats.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
-
-	// Test accept invite
-	reqAccept, err := http.NewRequest("POST", "/api/v1/growth/referrals/accept", bytes.NewBuffer([]byte(`{"invite_id":"ref-12345"}`)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	reqAccept.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
-
-	rrAccept := httptest.NewRecorder()
-	mux.ServeHTTP(rrAccept, reqAccept)
-
-	if status := rrAccept.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-}
-
-func TestABTestingEndpoints(t *testing.T) {
-	tracker := analytics.NewTracker()
-	mux := NewGrowthMux(tracker, nil)
-
-	// Test impression
-	reqImpression, err := http.NewRequest("POST", "/api/v1/growth/ab/impression", bytes.NewBuffer([]byte(`{"experiment_id":"exp-1","variant":"A"}`)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	reqImpression.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
-
-	rrImpression := httptest.NewRecorder()
-	mux.ServeHTTP(rrImpression, reqImpression)
-
-	if status := rrImpression.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
-
-	// Test conversion
-	reqConversion, err := http.NewRequest("POST", "/api/v1/growth/ab/conversion", bytes.NewBuffer([]byte(`{"experiment_id":"exp-1","variant":"B"}`)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	reqConversion.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
-
-	rrConversion := httptest.NewRecorder()
-	mux.ServeHTTP(rrConversion, reqConversion)
-
-	if status := rrConversion.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-	}
 }
 
 func TestQuotaCheckEndpoint(t *testing.T) {

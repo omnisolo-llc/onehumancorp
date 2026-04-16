@@ -1,81 +1,99 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# KAIROS AI OS: Premium Hybrid Orchestration Design
+# OHC KAIROS: Hybrid Agentic OS Orchestration Master Design
 
-## 1. Phase 1: Shared Task List (Decomposition)
-The Shared Task List serves as the central Nervous System for KAIROS, enabling an Architect to decompose High-Level Missions into concrete Executable Directives.
+## 1. Vision
+The One Human Corp (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation.
 
-**Database Schema (Cloud Native - PostgreSQL / SQLite Compatible):**
+## 2. Phase 1: Shared Task List (Decomposition)
+The Shared Task List relies on database-backed state machines to prevent race conditions during task claiming.
+
+### Database Schema (Cloud Native - PostgreSQL / SQLite Compatible):
 ```sql
-CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
-    id VARCHAR PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
+    description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING',
-    dependencies TEXT NOT NULL DEFAULT '[]'
+    assigned_agent_id VARCHAR,
+    priority VARCHAR NOT NULL DEFAULT 'P2',
+    payload JSONB,
+    parent_plan_id TEXT,
+    dependencies JSONB NOT NULL DEFAULT '[]',
+    locked_until TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-**Sequence Diagram:**
+### Shared Task Claiming Workflow
 ```mermaid
 sequenceDiagram
-    participant KAIROS
-    participant DB
-    participant Agent
-    KAIROS->>DB: INSERT INTO shared_tasks_v4 (status='PENDING')
-    Agent->>DB: SELECT id FROM shared_tasks_v4 WHERE status='PENDING' FOR UPDATE SKIP LOCKED
-    DB-->>Agent: Returns Task
-    Agent->>DB: UPDATE shared_tasks_v4 SET status='IN_PROGRESS' WHERE id=?
+    participant Agent as Worker Agent
+    participant DB as Postgres (shared_tasks_decomposition)
+    participant Hub as Teammate Mesh Gateway
+
+    Agent->>DB: BEGIN
+    Agent->>DB: SELECT id FROM shared_tasks_decomposition WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED LIMIT 1
+    alt Task Found
+        DB-->>Agent: Returns Task 123
+        Agent->>DB: UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = 'worker-1' WHERE id = 123
+        Agent->>DB: COMMIT
+        Agent->>Hub: Publish MeshEvent (TaskTransition -> IN_PROGRESS)
+    else No Task Found
+        DB-->>Agent: Returns 0 rows
+        Agent->>DB: ROLLBACK
+    end
 ```
 
-## 2. Phase 2: Orchestration (Teammate Mesh Architecture)
+## 3. Phase 2: Orchestration (Teammate Mesh Architecture)
 Realtime communication via Centrifuge node integration in `srcs/server/orchestration/centrifuge_hub.go` and transport components like `LocalTeammateMesh` in `srcs/server/orchestration/mesh.go`.
 
 - **Cloud-Native Mode:** Uses Redis Pub/Sub (`rueidis`) to manage highly concurrent distributed queues.
 - **Standalone Mode:** Degrades gracefully to an in-memory channel broadcast to ensure low-latency IPC.
 
-### 2.1 Broadcast API Contract (`POST /api/v1/mesh/broadcast`)
+### 3.1 Broadcast API Contract (`POST /api/v1/mesh/broadcast`)
 Agents use this endpoint to announce task state transitions.
 
 **Request Payload:**
 ```json
 {
-  "agent_id": "kairos-orchestrator-1",
+  "agent_id": "worker-1",
   "channel": "orchestration.tasks",
-  "action": "TASK_DECOMPOSED",
-  "status": "SUCCESS",
+  "action": "TaskTransition",
+  "status": "success",
   "payload": {
-    "task_id": "uuid-1234",
+    "task_id": "task_12345",
     "priority": "P0",
     "timestamp": "2026-04-14T17:02:23Z"
   }
 }
 ```
 
-## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
+## 4. Phase 3: autoDream (Memory Consolidation Pipeline)
 To continuously evolve the AI OS bit by bit, the AutoDream system wakes up periodically to vectorize architectural decisions and agent memories into pgvector. Background workers consolidate `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `autodream_memories` table, granting the swarm exact semantic search capabilities.
 
-### 3.1 pgvector Schema Definition
+### 4.1 pgvector Schema Definition
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
 
-CREATE TABLE IF NOT EXISTS agent_memory_embeddings (
+CREATE TABLE IF NOT EXISTS autodream_memories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
-    agent_id VARCHAR NOT NULL,
-    memory_type VARCHAR NOT NULL, -- e.g., 'ARCHITECTURAL_DECISION', 'CODE_PATTERN', 'FAILURE_ANALYSIS'
+    task_id UUID REFERENCES shared_tasks_decomposition(id),
     content TEXT NOT NULL,
     embedding vector(1536), -- Assuming OpenAI ada-002 dimensionality
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_agent_memory_embeddings ON agent_memory_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+CREATE INDEX idx_autodream_memories_embedding ON autodream_memories USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 ```
 
-## 4. Phase 4: Sub-Agent Orchestration Queue
+## 5. Phase 4: Sub-Agent Orchestration Queue
 Background worker system (`srcs/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
 
-### 4.1 Sub-Agent Task Queue Payload (BullMQ / Celery)
+### 5.1 Sub-Agent Task Queue Payload (BullMQ / Celery)
 When KAIROS decomposes a mission, it submits jobs to a distributed background queue.
 ```json
 {
@@ -88,5 +106,9 @@ When KAIROS decomposes a mission, it submits jobs to a distributed background qu
   }
 }
 ```
+
+---
+*Authored by: Principal Product Architect & KAIROS Orchestrator (L7)*
+*Identity: One Human Corp*
 
 </div>
