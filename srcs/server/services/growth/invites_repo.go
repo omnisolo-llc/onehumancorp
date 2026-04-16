@@ -38,6 +38,36 @@ func (r *InviteRepository) CreateInvite(ctx context.Context, invite *TeamInvite)
 	return nil
 }
 
+func (r *InviteRepository) CreateInvites(ctx context.Context, invites []*TeamInvite) error {
+	if len(invites) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	query := `
+		INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+	`
+
+	for _, invite := range invites {
+		_, err := tx.Exec(ctx, query, invite.ID, invite.TeamID, invite.InviterID, invite.InviteeID, invite.Status)
+		if err != nil {
+			tx.Rollback(ctx)
+			return fmt.Errorf("failed to create team invite in batch: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (r *InviteRepository) GetTeamInvitesCount(ctx context.Context, teamID string) (int, error) {
 	query := `SELECT COUNT(*) FROM team_invites WHERE team_id = $1`
 	var count int

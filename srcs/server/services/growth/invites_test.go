@@ -57,4 +57,27 @@ func TestInviteTracker(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("Expected 1 invite for team, got %d", count)
 	}
+
+	// Test RecordInvites (batch)
+	inviteeIDs := []string{"user3", "user4", "user5"}
+	err = tracker.RecordInvites(ctx, teamID, inviterID, inviteeIDs)
+	if err != nil {
+		t.Fatalf("failed to record batch invites: %v", err)
+	}
+
+	count, err = tracker.GetTotalInvitesCount(ctx)
+	if err != nil {
+		t.Fatalf("failed to get total invites count: %v", err)
+	}
+	if count != 4 {
+		t.Fatalf("Expected 4 total invites after batch record, got %d", count)
+	}
+
+	count, err = tracker.GetTeamInvitesCount(ctx, teamID)
+	if err != nil {
+		t.Fatalf("failed to get team invites count: %v", err)
+	}
+	if count != 4 {
+		t.Fatalf("Expected 4 invites for team, got %d", count)
+	}
 }

@@ -52,6 +52,32 @@ func (it *InviteTracker) RecordInvite(ctx context.Context, teamID, inviterID, in
 	return nil
 }
 
+func (it *InviteTracker) RecordInvites(ctx context.Context, teamID, inviterID string, inviteeIDs []string) error {
+	var invites []*TeamInvite
+	baseTime := time.Now().UnixNano()
+
+	for i, inviteeID := range inviteeIDs {
+		invites = append(invites, &TeamInvite{
+			ID:        fmt.Sprintf("inv-%d-%d", baseTime, i),
+			TeamID:    teamID,
+			InviterID: inviterID,
+			InviteeID: inviteeID,
+			Status:    "PENDING",
+		})
+	}
+
+	err := it.repo.CreateInvites(ctx, invites)
+	if err != nil {
+		return err
+	}
+
+	if invitesCounter != nil {
+		invitesCounter.Add(ctx, int64(len(inviteeIDs)))
+	}
+
+	return nil
+}
+
 func (it *InviteTracker) GetTeamInvitesCount(ctx context.Context, teamID string) (int, error) {
 	return it.repo.GetTeamInvitesCount(ctx, teamID)
 }
