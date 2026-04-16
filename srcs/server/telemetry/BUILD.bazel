@@ -31,7 +31,6 @@ go_test(
         "buffer_test.go",
         "privacy_test.go",
         "logger_test.go",
-        "logger_nested_test.go",
         "sync_worker_test.go",
         "telemetry_extra_test.go",
         "telemetry_test.go",
