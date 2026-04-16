@@ -27,6 +27,8 @@ func main() {
 	fmt.Printf("Day One Environment Verification Passed!\nMode: %s\nMultiTenant: %v\nHeadless: %v\n", config.Mode, config.MultiTenant, config.Headless)
 
 	http.HandleFunc("/api/provision", onboarding.ProvisionHandler)
+	http.HandleFunc("/api/wizard/state/save", onboarding.SaveWizardStateHandler)
+	http.HandleFunc("/api/wizard/state", onboarding.GetWizardStateHandler)
 	http.HandleFunc("/api/verify-environment", onboarding.VerifyEnvironmentHandler)
 	http.HandleFunc("/api/generate-config", onboarding.GenerateConfigHandler)
 
