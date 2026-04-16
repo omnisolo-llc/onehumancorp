@@ -33,7 +33,6 @@ go_test(
     name = "mcp_test",
     srcs = [
         "blob_provider_test.go",
-        "client_test.go",
         "crdt_provider_test.go",
         "hybrid_mcp_bridge_test.go",
     ],

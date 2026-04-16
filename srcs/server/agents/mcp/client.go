@@ -1,8 +1,6 @@
 package mcp
 
 import (
-	"context"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"encoding/json"
 	"errors"
 	"sync"
@@ -52,17 +50,4 @@ func IsTelemetryMCPBridgeRegistered(endpoint string) bool {
 	bridgesMu.RLock()
 	defer bridgesMu.RUnlock()
 	return registeredTelemetryBridges[endpoint]
-}
-
-type HybridContextTool struct{}
-
-func (t *HybridContextTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
-	}
-	if telemetry.BufferMetricFunc != nil {
-		_ = telemetry.BufferMetricFunc(ctx, "hybrid_ui_context", string(payloadBytes))
-	}
-	return FormatExecutionResult("hybrid_context", "success", payloadBytes, false), nil
 }
