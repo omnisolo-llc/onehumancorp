@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
+
 	"context"
 	"crypto/tls"
 	"encoding/json"

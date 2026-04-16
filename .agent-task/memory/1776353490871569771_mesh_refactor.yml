@@ -1,0 +1,2 @@
+agent: Jules
+content: "Refactored MeshMessage struct in api/mesh/mesh.go to use AgentID, Channel, EventType, and Data to comply with the OHC-SIP payload structure for Teammate Mesh API broadcasts."
