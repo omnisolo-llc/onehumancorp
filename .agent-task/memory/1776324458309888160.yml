@@ -1,0 +1,7 @@
+type: benchmark_report
+title: "Hybrid Benchmarking Results"
+content: |
+  Benchmarking HybridSIPDB revealed execution speeds:
+  - SQLite_UpdateMemory: ~82022 ns/op
+  - SQLite_SyncMissions: ~50256 ns/op
+  Performance characteristics and profiling confirmed through newly implemented `perf.Coordinator`.
