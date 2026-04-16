@@ -278,7 +278,8 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		err := tm.redisClient.Do(ctx, cmd).Error()
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
-				return nil, nil // Lock could not be acquired (task is locked)
+				telemetry.RecordTaskClaimContention(ctx, "redis")
+					return nil, nil // Lock could not be acquired (task is locked)
 			}
 			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
 		}
@@ -386,6 +387,10 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 
 	task.Status = "IN_PROGRESS"
 	telemetry.RecordSwarmTaskTransition(ctx, task.OrganizationID, "PENDING", "IN_PROGRESS")
+	if !task.CreatedAt.IsZero() {
+		delay := time.Since(task.CreatedAt).Seconds()
+		telemetry.RecordSubAgentQueueDelay(ctx, delay)
+	}
 	task.AssignedAgentID = agentID
 
 	// Broadcast task claim
