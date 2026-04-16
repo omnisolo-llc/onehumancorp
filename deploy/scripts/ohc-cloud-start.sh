@@ -10,13 +10,13 @@ GREEN="\033[38;5;120m"
 PURPLE="\033[38;5;141m"
 
 echo -e "${BOLD}${BLUE}======================================================${RESET}"
-echo -e "${BOLD}${CYAN}   🚀 OHC Cloud Native Quick Start (K8s)     ${RESET}"
+echo -e "${BOLD}${CYAN}   🚀 OHC Cloud Start (Cloud-Native K8s Onboarding)    ${RESET}"
 echo -e "${BOLD}${BLUE}======================================================${RESET}"
 echo ""
 
 echo -e "${DIM}[1/3] Verifying dependencies...${RESET}"
-command -v docker >/dev/null 2>&1 || { echo -e "${PURPLE}Docker is required.${RESET}"; false; }
-command -v helm >/dev/null 2>&1 || { echo -e "${PURPLE}Helm is required.${RESET}"; false; }
+command -v kubectl >/dev/null 2>&1 || { echo -e "${PURPLE}kubectl is required.${RESET}"; false; }
+command -v minikube >/dev/null 2>&1 || { echo -e "${PURPLE}minikube is required.${RESET}"; false; }
 
 echo -e "${DIM}[2/3] Setting up cloud environment...${RESET}"
 if [ ! -f .env.cloud ]; then
@@ -26,9 +26,7 @@ if [ ! -f .env.cloud ]; then
   chmod 0600 .env.cloud
 fi
 
-echo -e "${DIM}[3/3] Launching cloud backend...${RESET}"
-export OHC_MULTITENANT=true
-export OHC_HEADLESS=true
-export OHC_SOURCE_MODE=cloud
-
-echo -e "${GREEN}✓ Cloud environment configured and ready for deployment.${RESET}"
+echo -e "${DIM}[3/3] Deploying to Kubernetes...${RESET}"
+minikube start
+kubectl apply -f deploy/k8s/
+echo -e "${GREEN}✓ Cloud-native environment deployed.${RESET}"
