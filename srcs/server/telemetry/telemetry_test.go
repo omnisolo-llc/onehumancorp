@@ -721,3 +721,16 @@ func TestRecordTaskClaimContention(t *testing.T) {
 	// This should not panic
 	RecordTaskClaimContention(context.Background(), "Postgres")
 }
+
+func TestInitTelemetry_StandaloneEnvOptOut(t *testing.T) {
+	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "false")
+
+	cleanup, err := InitTelemetry()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if cleanup == nil {
+		t.Fatal("expected dummy cleanup function, got nil")
+	}
+}
