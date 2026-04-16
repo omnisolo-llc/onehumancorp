@@ -171,6 +171,21 @@ func GetWizardStateHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(wizardState)
 }
 
+func ResetWizardStateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	wizardMu.Lock()
+	wizardState = make(map[string]interface{})
+	wizardMu.Unlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "reset"})
+}
+
 type AuditSetupResponse struct {
     Status string `json:"status"`
     Config *EnvConfig `json:"config,omitempty"`
