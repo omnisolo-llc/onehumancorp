@@ -4,15 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui';
 
-class LandingScreen extends StatefulWidget {
+class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
-
-  @override
-  State<LandingScreen> createState() => _LandingScreenState();
-}
-
-class _LandingScreenState extends State<LandingScreen> {
-  bool _showVariantB = false;
 
   @override
   Widget build(BuildContext context) {
@@ -28,55 +21,34 @@ class _LandingScreenState extends State<LandingScreen> {
             ],
           ),
         ),
-        child: Stack(
-          children: [
-            Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 800),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(32),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _HeaderSection(isVariantB: _showVariantB),
-                      const SizedBox(height: 48),
-                      _ValuePropGrid(isVariantB: _showVariantB),
-                      const SizedBox(height: 48),
-                      ElevatedButton(
-                        onPressed: () => context.go('/business_setup'),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        ),
-                        child: const Text('Start Business Setup', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
-                      ),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: () => context.go('/login'),
-                        child: const Text('Or continue to Cloud Dashboard'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Row(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('A/B Test Variant:'),
-                  Switch(
-                    value: _showVariantB,
-                    onChanged: (val) {
-                      setState(() {
-                        _showVariantB = val;
-                      });
-                    },
+                  const _HeaderSection(),
+                  const SizedBox(height: 48),
+                  const _ValuePropGrid(),
+                  const SizedBox(height: 48),
+                  ElevatedButton(
+                    onPressed: () => context.go('/business_setup'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    ),
+                    child: const Text('Start Business Setup', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => context.go('/login'),
+                    child: const Text('Or continue to Cloud Dashboard'),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -84,8 +56,7 @@ class _LandingScreenState extends State<LandingScreen> {
 }
 
 class _HeaderSection extends StatelessWidget {
-  final bool isVariantB;
-  const _HeaderSection({required this.isVariantB});
+  const _HeaderSection();
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +83,7 @@ class _HeaderSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          isVariantB ? 'The Cloud-Native Agentic OS' : 'The Hybrid Agentic OS',
+          'The Hybrid Agentic OS',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: Theme.of(context).colorScheme.primary,
           ),
@@ -120,9 +91,7 @@ class _HeaderSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          isVariantB
-              ? 'Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform.'
-              : 'Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.',
+          'Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.',
           style: Theme.of(context).textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
@@ -132,39 +101,10 @@ class _HeaderSection extends StatelessWidget {
 }
 
 class _ValuePropGrid extends StatelessWidget {
-  final bool isVariantB;
-  const _ValuePropGrid({required this.isVariantB});
+  const _ValuePropGrid();
 
   @override
   Widget build(BuildContext context) {
-    if (isVariantB) {
-      return Wrap(
-        spacing: 24,
-        runSpacing: 24,
-        alignment: WrapAlignment.center,
-        children: const [
-          _GlassCard(
-            icon: Icons.speed,
-            title: 'Global Performance',
-            description:
-                'Deploy agents in a horizontally scalable multi-tenant environment. High-concurrency ready.',
-          ),
-          _GlassCard(
-            icon: Icons.people,
-            title: 'Instant Collaboration',
-            description:
-                'Invite team members instantly. Shared intelligence across your entire organization.',
-          ),
-          _GlassCard(
-            icon: Icons.sync,
-            title: 'Always Connected',
-            description:
-                'Never worry about host machine resources. Our cloud manages everything seamlessly.',
-          ),
-        ],
-      );
-    }
-
     return Wrap(
       spacing: 24,
       runSpacing: 24,
