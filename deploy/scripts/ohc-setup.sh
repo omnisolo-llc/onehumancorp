@@ -19,7 +19,7 @@ echo -e "${BOLD}${BLUE}===============================================${RESET}"
 if ! command -v bazelisk >/dev/null 2>&1; then echo -e "${PURPLE}Bazelisk is required but not installed. Aborting.${RESET}"; false; fi
 if ! command -v docker >/dev/null 2>&1; then echo -e "${PURPLE}Docker is required but not installed. Aborting.${RESET}"; false; fi
 
-echo -e "${DIM}[1/5] Checking environment configuration...${RESET}"
+echo -e "${DIM}[1/6] Checking environment configuration...${RESET}"
 if [ ! -f .env ]; then
   echo "Creating default .env file..."
   cat << 'ENV' > .env
@@ -36,19 +36,19 @@ ENV
   chmod 0600 .env
 fi
 
-echo -e "${DIM}[2/5] Verifying Standalone Mode...${RESET}"
+echo -e "${DIM}[2/6] Verifying Standalone Mode...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
 bazelisk test //srcs/server/api/...
 
-echo -e "${DIM}[3/5] Verifying Cloud Mode...${RESET}"
+echo -e "${DIM}[3/6] Verifying Cloud Mode...${RESET}"
 export OHC_MULTITENANT=true
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=cloud
 bazelisk test //srcs/server/api/...
 
-echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
+echo -e "${DIM}[4/6] Verifying Day One Audits...${RESET}"
 if [ -f deploy/scripts/ohc-audit-day-one.sh ]; then
     bash deploy/scripts/ohc-audit-day-one.sh || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
 else
