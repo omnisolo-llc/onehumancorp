@@ -6,8 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // State constants
@@ -68,6 +71,7 @@ func IsValidTransition(fromState, toState string) bool {
 
 // Transition performs a state transition for the given entity
 func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, toState, agentID, reason string) error {
+	start := time.Now()
 	tx, err := sm.dbProvider.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -82,6 +86,11 @@ func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, to
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	// Record metrics
+	mode := kairos.GetMode()
+	kairos.TransitionsTotal.With(prometheus.Labels{"mode": mode, "status": toState}).Inc()
+	kairos.TransitionDuration.With(prometheus.Labels{"mode": mode}).Observe(time.Since(start).Seconds())
 
 	// Broadcast transition
 	if broadcastFunc != nil {
