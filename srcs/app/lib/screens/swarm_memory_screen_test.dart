@@ -27,6 +27,10 @@ void main() {
     });
 
     testWidgets('renders basic UI structure with Glassmorphism', (tester) async {
+      tester.view.physicalSize = const Size(2400, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       when(() => mockCentrifugeService.subscribe('mesh:tasks'))
           .thenAnswer((_) => const Stream.empty());
 
@@ -49,6 +53,7 @@ void main() {
       expect(find.text('Swarm Memory Mesh'), findsOneWidget);
       expect(find.text('Live Mesh Activity'), findsOneWidget);
       expect(find.text('Durable Swarm Memory'), findsOneWidget);
+      expect(find.text('AutoDream Pipelines'), findsOneWidget);
 
       // Verify Scaffold and AppBar are transparent for Glassmorphism
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
@@ -59,6 +64,10 @@ void main() {
     });
 
     testWidgets('shows loading state for durable memory when db is null', (tester) async {
+      tester.view.physicalSize = const Size(2400, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       when(() => mockCentrifugeService.subscribe('mesh:tasks'))
           .thenAnswer((_) => const Stream.empty());
 
@@ -80,6 +89,10 @@ void main() {
     });
 
     testWidgets('shows empty state for durable memory', (tester) async {
+      tester.view.physicalSize = const Size(2400, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       when(() => mockCentrifugeService.subscribe('mesh:tasks'))
           .thenAnswer((_) => const Stream.empty());
 
@@ -98,7 +111,7 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(find.text('No memories found.'), findsOneWidget);
     });
