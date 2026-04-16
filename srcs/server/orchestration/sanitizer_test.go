@@ -80,6 +80,53 @@ func TestSanitizePayloadMap(t *testing.T) {
 		}
 	})
 
+
+	t.Run("Telemetry buffer PII deep leak check", func(t *testing.T) {
+		input := map[string]interface{}{
+			"agent_id": "agent-1",
+			"tool_call": map[string]interface{}{
+				"name": "lookup_user",
+				"parameters": map[string]interface{}{
+					"email": "customer@onehumancorp.com",
+					"phone": "+1-555-123-4567",
+					"social_security": "999-99-9999",
+					"credit_card": "4532-1234-5678-9012",
+					"api_key": "sk-123456789012345678901234567890123456789012345678",
+				},
+			},
+			"raw_logs": []interface{}{
+				"User customer@onehumancorp.com logged in.",
+				"API Key sk-123456789012345678901234567890123456789012345678 was used.",
+			},
+		}
+
+		got := SanitizePayloadMap(input).(map[string]interface{})
+
+		tool_call := got["tool_call"].(map[string]interface{})
+		params := tool_call["parameters"].(map[string]interface{})
+
+		if params["email"] != "[REDACTED_EMAIL]" {
+			t.Errorf("Email not redacted in parameters, got: %v", params["email"])
+		}
+		if params["social_security"] != "[REDACTED_SSN]" {
+			t.Errorf("SSN not redacted in parameters, got: %v", params["social_security"])
+		}
+		if params["credit_card"] != "[REDACTED_CREDIT_CARD]" {
+			t.Errorf("Credit card not redacted in parameters, got: %v", params["credit_card"])
+		}
+		if params["api_key"] != "[REDACTED_OPENAI_KEY]" {
+			t.Errorf("API key not redacted in parameters, got: %v", params["api_key"])
+		}
+
+		raw_logs := got["raw_logs"].([]interface{})
+		if raw_logs[0] != "User [REDACTED_EMAIL] logged in." {
+			t.Errorf("Email not redacted in array log, got: %v", raw_logs[0])
+		}
+		if raw_logs[1] != "API Key [REDACTED_OPENAI_KEY] was used." {
+			t.Errorf("Secret not redacted in array log, got: %v", raw_logs[1])
+		}
+	})
+
 	t.Run("Remove rag_context and complex redaction", func(t *testing.T) {
 		input := map[string]interface{}{
 			"email":       "test@example.com",

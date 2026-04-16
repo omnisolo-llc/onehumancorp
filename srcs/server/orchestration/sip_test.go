@@ -1091,3 +1091,44 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
 	}
 }
+
+
+func TestPruneTelemetryBuffer(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_prune.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// Insert old telemetry
+	err = db.BufferMetric(ctx, "test_metric", `{"value":1}`)
+	if err != nil {
+		t.Fatalf("BufferMetric failed: %v", err)
+	}
+
+	// Update created_at to be old
+	_, err = db.db.Exec(ctx, "UPDATE telemetry_buffer SET created_at = datetime('now', '-8 days')")
+	if err != nil {
+		t.Fatalf("Failed to update created_at: %v", err)
+	}
+
+	// Prune telemetry older than 7 days
+	err = db.PruneTelemetryBuffer(ctx, 7*24*time.Hour)
+	if err != nil {
+		t.Fatalf("PruneTelemetryBuffer failed: %v", err)
+	}
+
+	// Check that the telemetry is gone
+	var count int
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count telemetry_buffer: %v", err)
+	}
+
+	if count != 0 {
+		t.Errorf("Expected 0 telemetry_buffer items, got %d", count)
+	}
+}

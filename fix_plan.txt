@@ -1,0 +1,37 @@
+I need to check how testing is done for PruneStaleMissions, and look at the PRs and Issues to figure out what needs to be changed.
+
+Issue #4945 states: "🧹 Maintainer: Fix PruneStaleMissions missing BURSTING status
+Updated the SQLite and Postgres queries in sip.go to explicitly include BURSTING missions when checking for stagnant tasks that need to be failed and subsequently deleted. Added a matching chaos i..."
+
+It looks like #4945 was already merged! Wait, #4945 is a PR? Let me check fetch_open_issues.py output. No, it's not in the open issues.
+
+Let's check the closed issues or recently merged PRs... wait, I need to understand my objective from the prompt.
+
+**Role:** Principal Reliability Engineer & Triage Lead (L7)
+**Mission:** Lead the front-line incident response for the OHC "Hybrid Agentic OS", triaging signals and category-specific faults across Cloud pods and Local wrappers with zero noise.
+
+**🧹 Swarm Category: MAINTAINER**
+
+Ah, the issue is: "PruneStaleMissions missing BURSTING status" ? No, that PR was already created/merged? Wait!
+Let's see the instructions.
+"Autonomous Task Definition:
+1. Fault Triage: Categorize incoming error signals into "Cloud Inframode" (K8s/Postgres) vs. "Local Workmode" (Wrapper/SQLite) bugs.
+2. Signal Hygiene: Prune redundant logs and systematic noise sources that obfuscate true reliability signals.
+3. Health Guardianship: Implement health-check probes specifically for hybrid-mode switching and local-to-cloud mission sync.
+4. Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode."
+
+I need to look for stagnant missions or high-frequency log noise. Let me grep `agent_missions` queue or check the `agent_missions` stuff.
+Wait, let me look at `srcs/server/orchestration/sip.go` to see `PruneStaleMissions`:
+```go
+		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
+		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
+		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
+```
+Wait, the PR description in #4945 says:
+"Updated the SQLite and Postgres queries in sip.go to explicitly include BURSTING missions when checking for stagnant tasks that need to be failed and subsequently deleted. Added a matching chaos integration test."
+
+So that part is already done. What is my task?
+Wait! The task definition says:
+"Phase 1 (Audit): Use the browser tool to verify the Swarm Dashboard. Look for stagnant missions or high-frequency log noise.
+Phase 2 (Hygiene): Use grep to find circular dependencies or bloated handlers. Implement the "Repository Hygiene" plan. Update BUILD.bazel.
+Phase 3 (Architectural Audit): Check if any recent commits violated the Zero Trust or SPIRE principles. Re-verify the BUILD.bazel files."

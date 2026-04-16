@@ -392,6 +392,13 @@ func run(now time.Time, listen listenFunc) error {
 					} else {
 						slog.Debug("successfully pruned stale agent missions")
 					}
+
+					// Hygiene: Prune old telemetry buffer
+					if err := sipdb.PruneTelemetryBuffer(ctx, 7*24*time.Hour); err != nil {
+						slog.Error("failed to prune telemetry buffer", "error", err)
+					} else {
+						slog.Debug("successfully pruned telemetry buffer")
+					}
 				}
 			}
 		}()

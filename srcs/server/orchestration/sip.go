@@ -637,6 +637,24 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the agent_missions table and updates stuck records.
+
+// PruneTelemetryBuffer removes telemetry records older than the specified duration.
+func (s *SIPDB) PruneTelemetryBuffer(ctx context.Context, ageThreshold time.Duration) error {
+	return withSipRetry(ctx, func() error {
+		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
+
+		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
+		var err error
+		if s.db.IsSQLite() {
+			_, err = s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+		} else {
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+		}
+
+		return err
+	})
+}
+
 func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
 	return withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
