@@ -253,13 +253,21 @@ func run(now time.Time, listen listenFunc) error {
 		}()
 	}
 
+	// Initialize Rueidis client if REDIS_URL is provided
+	var redisClient rueidis.Client
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		if opts, err := rueidis.ParseURL(redisURL); err == nil {
+			redisClient, _ = rueidis.NewClient(opts)
+		}
+	}
+
 	// Set up the SIPDB instance to connect to Database via Provider.
 	// If we have a pool connection, use it for seamless SQLite / Postgres multi-target support.
 	var createdSIPDB *orchestration.SIPDB
 	var sipdbErr error
 
 	if pool != nil {
-		createdSIPDB, sipdbErr = orchestration.NewSIPDBWithProvider(pool.Provider, "system")
+		createdSIPDB, sipdbErr = orchestration.NewSIPDBWithProvider(pool.Provider, redisClient, "system")
 	} else {
 		var dbPath string
 		if os.Getenv("OHC_STANDALONE") == "true" {
@@ -279,14 +287,6 @@ func run(now time.Time, listen listenFunc) error {
 			dbPath = filepath.Join(openclawDir, "ohc.db")
 		}
 		createdSIPDB, sipdbErr = orchestration.NewSIPDB(dbPath)
-	}
-
-	// Initialize Rueidis client if REDIS_URL is provided
-	var redisClient rueidis.Client
-	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
-		if opts, err := rueidis.ParseURL(redisURL); err == nil {
-			redisClient, _ = rueidis.NewClient(opts)
-		}
 	}
 
 	if pool != nil {
@@ -423,7 +423,7 @@ func run(now time.Time, listen listenFunc) error {
 			tenantHub.SetSettingsStore(tenantSettings)
 			// Create a tenant-scoped SIPDB instance to enforce row-level tenant isolation.
 			if pool != nil {
-				if tenantSIPDB, err := orchestration.NewSIPDBWithProvider(pool.Provider, org.ID); err == nil {
+				if tenantSIPDB, err := orchestration.NewSIPDBWithProvider(pool.Provider, redisClient, org.ID); err == nil {
 					tenantHub.SetSIPDB(tenantSIPDB)
 				}
 			}

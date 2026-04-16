@@ -39,7 +39,7 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 	hub := orchestration.NewHub()
 
 	// Create a real SIPDB so the mock method gets bypassed or implement the mock setup correctly. Wait, we can construct one using orchestration.NewSIPDBWithProvider.
-	realSipDB, err := orchestration.NewSIPDBWithProvider(provider, "test-org")
+	realSipDB, err := orchestration.NewSIPDBWithProvider(provider, nil, "test-org")
 	if err != nil {
 		t.Fatalf("Failed to create SIPDB: %v", err)
 	}

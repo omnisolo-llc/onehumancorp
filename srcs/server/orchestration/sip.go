@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 
@@ -42,6 +43,7 @@ var (
 // Has no side effects.
 type SIPDB struct {
 	db              db.Provider
+	redisClient     rueidis.Client
 	orgID           string
 	ContextRoot     string
 	cachedGrounding string
@@ -140,14 +142,14 @@ func withSipRetry(ctx context.Context, op func() error) error {
 }
 
 // NewSIPDBWithProvider initializes a new database connection and creates required tables.
-func NewSIPDBWithProvider(provider db.Provider, orgID string) (*SIPDB, error) {
+func NewSIPDBWithProvider(provider db.Provider, redisClient rueidis.Client, orgID string) (*SIPDB, error) {
 	if err := initializeTables(provider); err != nil {
 		return nil, err
 	}
 	if orgID == "" {
 		orgID = "system"
 	}
-	return &SIPDB{db: provider, orgID: orgID, groundingOnce: new(sync.Once)}, nil
+	return &SIPDB{db: provider, redisClient: redisClient, orgID: orgID, groundingOnce: new(sync.Once)}, nil
 }
 
 // NewSIPDB initializes a new SQLite database connection and creates required tables.
@@ -216,7 +218,7 @@ func NewSIPDB(dbPath string) (*SIPDB, error) {
 	}
 
 	provider := db.NewSqliteProvider(sqlDB)
-	return NewSIPDBWithProvider(provider, "system")
+	return NewSIPDBWithProvider(provider, nil, "system")
 }
 
 func initializeTables(provider db.Provider) error {
@@ -288,6 +290,17 @@ func initializeTables(provider db.Provider) error {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
+	if s.redisClient != nil {
+		redisKey := fmt.Sprintf("sip_cache:sync_memory:%s:%s", s.orgID, key)
+		cmd := s.redisClient.B().Get().Key(redisKey).Build()
+		val, err := s.redisClient.Do(ctx, cmd).ToString()
+		if err == nil && val != "" {
+			telemetry.RecordCacheHit(ctx, "SyncMemory", "redis")
+			return val, nil
+		}
+	}
+	telemetry.RecordCacheMiss(ctx, "SyncMemory", "redis")
+
 	var value string
 	err := withSipRetry(ctx, func() error {
 		err := s.db.QueryRow(ctx, "SELECT value FROM swarm_memory WHERE key = $1 AND organization_id = $2", key, s.orgID).Scan(&value)
@@ -296,6 +309,13 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 		}
 		return err
 	})
+
+	if err == nil && s.redisClient != nil && value != "" {
+		redisKey := fmt.Sprintf("sip_cache:sync_memory:%s:%s", s.orgID, key)
+		cmd := s.redisClient.B().Set().Key(redisKey).Value(value).Ex(1 * time.Minute).Build()
+		_ = s.redisClient.Do(ctx, cmd)
+	}
+
 	return value, err
 }
 
@@ -305,7 +325,7 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
-	return withSipRetry(ctx, func() error {
+	err := withSipRetry(ctx, func() error {
 		// Update logic doesn't use simple INSERT ON CONFLICT easily with orgID without dropping PRIMARY KEY constraint,
 		// but since key is primary key globally in schema, we just update it.
 		// However, it's safer to ensure we set organization_id.
@@ -315,6 +335,14 @@ func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 		)
 		return err
 	})
+
+	if err == nil && s.redisClient != nil {
+		redisKey := fmt.Sprintf("sip_cache:sync_memory:%s:%s", s.orgID, key)
+		cmd := s.redisClient.B().Set().Key(redisKey).Value(value).Ex(1 * time.Minute).Build()
+		_ = s.redisClient.Do(ctx, cmd)
+	}
+
+	return err
 }
 
 // getMissionUpdatedAt fetches the updated_at or created_at timestamp for a mission.
@@ -330,6 +358,20 @@ func (s *SIPDB) getMissionUpdatedAt(ctx context.Context, missionID string) (time
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message, error) {
+	if s.redisClient != nil {
+		redisKey := fmt.Sprintf("sip_cache:pending_missions:%s:%s", s.orgID, role)
+		cmd := s.redisClient.B().Get().Key(redisKey).Build()
+		val, err := s.redisClient.Do(ctx, cmd).AsBytes()
+		if err == nil && len(val) > 0 {
+			var cachedMissions []Message
+			if err := json.Unmarshal(val, &cachedMissions); err == nil {
+				telemetry.RecordCacheHit(ctx, "GetPendingMissions", "redis")
+				return cachedMissions, nil
+			}
+		}
+	}
+	telemetry.RecordCacheMiss(ctx, "GetPendingMissions", "redis")
+
 	var missions []Message
 	err := withSipRetry(ctx, func() error {
 		missions = nil
@@ -385,6 +427,18 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 		}
 		return nil
 	})
+
+	if err == nil && s.redisClient != nil {
+		if missions == nil {
+			missions = []Message{}
+		}
+		if cacheBytes, marshalErr := json.Marshal(missions); marshalErr == nil {
+			redisKey := fmt.Sprintf("sip_cache:pending_missions:%s:%s", s.orgID, role)
+			cmd := s.redisClient.B().Set().Key(redisKey).Value(string(cacheBytes)).Ex(5 * time.Second).Build()
+			_ = s.redisClient.Do(ctx, cmd)
+		}
+	}
+
 	return missions, err
 }
 
@@ -697,6 +751,20 @@ func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityP
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) GetCapabilityPlugins(ctx context.Context, status string) ([]CapabilityPlugin, error) {
+	if s.redisClient != nil {
+		redisKey := fmt.Sprintf("sip_cache:capability_plugins:%s:%s", s.orgID, status)
+		cmd := s.redisClient.B().Get().Key(redisKey).Build()
+		val, err := s.redisClient.Do(ctx, cmd).AsBytes()
+		if err == nil && len(val) > 0 {
+			var cachedPlugins []CapabilityPlugin
+			if err := json.Unmarshal(val, &cachedPlugins); err == nil {
+				telemetry.RecordCacheHit(ctx, "GetCapabilityPlugins", "redis")
+				return cachedPlugins, nil
+			}
+		}
+	}
+	telemetry.RecordCacheMiss(ctx, "GetCapabilityPlugins", "redis")
+
 	var plugins []CapabilityPlugin
 	err := withSipRetry(ctx, func() error {
 		plugins = nil // reset slice
@@ -724,6 +792,18 @@ func (s *SIPDB) GetCapabilityPlugins(ctx context.Context, status string) ([]Capa
 		}
 		return nil
 	})
+
+	if err == nil && s.redisClient != nil {
+		if plugins == nil {
+			plugins = []CapabilityPlugin{}
+		}
+		if cacheBytes, marshalErr := json.Marshal(plugins); marshalErr == nil {
+			redisKey := fmt.Sprintf("sip_cache:capability_plugins:%s:%s", s.orgID, status)
+			cmd := s.redisClient.B().Set().Key(redisKey).Value(string(cacheBytes)).Ex(5 * time.Minute).Build()
+			_ = s.redisClient.Do(ctx, cmd)
+		}
+	}
+
 	return plugins, err
 }
 
@@ -761,6 +841,20 @@ func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) 
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) ([]EpisodicMemory, error) {
+	if s.redisClient != nil {
+		redisKey := fmt.Sprintf("sip_cache:episodic_memories:%s:%s", s.orgID, plugin)
+		cmd := s.redisClient.B().Get().Key(redisKey).Build()
+		val, err := s.redisClient.Do(ctx, cmd).AsBytes()
+		if err == nil && len(val) > 0 {
+			var cachedMemories []EpisodicMemory
+			if err := json.Unmarshal(val, &cachedMemories); err == nil {
+				telemetry.RecordCacheHit(ctx, "GetEpisodicMemoriesByPlugin", "redis")
+				return cachedMemories, nil
+			}
+		}
+	}
+	telemetry.RecordCacheMiss(ctx, "GetEpisodicMemoriesByPlugin", "redis")
+
 	var memories []EpisodicMemory
 	err := withSipRetry(ctx, func() error {
 		memories = nil // reset slice
@@ -788,6 +882,18 @@ func (s *SIPDB) GetEpisodicMemoriesByPlugin(ctx context.Context, plugin string) 
 		}
 		return nil
 	})
+
+	if err == nil && s.redisClient != nil {
+		if memories == nil {
+			memories = []EpisodicMemory{}
+		}
+		if cacheBytes, marshalErr := json.Marshal(memories); marshalErr == nil {
+			redisKey := fmt.Sprintf("sip_cache:episodic_memories:%s:%s", s.orgID, plugin)
+			cmd := s.redisClient.B().Set().Key(redisKey).Value(string(cacheBytes)).Ex(1 * time.Minute).Build()
+			_ = s.redisClient.Do(ctx, cmd)
+		}
+	}
+
 	return memories, err
 }
 

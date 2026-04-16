@@ -27,6 +27,9 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/telemetry",
+    ],
 )
 
 go_test(
