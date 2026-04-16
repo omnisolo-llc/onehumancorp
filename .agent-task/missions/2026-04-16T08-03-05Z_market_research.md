@@ -1,3 +1,24 @@
+# Feature Mission: Claude-Class Isolation for OHC Agent Harness
+
+## Problem Statement
+OHC currently lacks deep integration of isolated worktrees and robust background tool coordination compared to Claude-Class Agent Harnesses. We need parity in isolation, execution safety, and orchestration coordination.
+
+## Design Doc
+Implement an isolation abstraction layer supporting worktrees, process sandboxes, and specific telemetry tracking per subagent invocation. Utilize the Teammate Mesh API to sync subagent statuses and errors dynamically.
+- `IsolationStrategy` interface for Agent Harness.
+- `RunInIsolation(worktree string)` method in `Provider`.
+- Redis Pub/Sub integration for output stream piping.
+
+## Implementation Prompt
+Update `srcs/server/agents/provider.go` to implement the `IsolationStrategy` interface for the Agent Harness. Ensure it supports `RunInIsolation(worktree string)` logic and pipes output streams directly to Redis Pub/Sub. Ensure backward compatibility and extensive testing.
+
+## Priority
+P1
+
+## Estimated Scope
+Medium
+
+## Research Report
 # Competitive Audit: OHC Hybrid Architecture vs. Claude-Class Agents
 
 ## Executive Summary

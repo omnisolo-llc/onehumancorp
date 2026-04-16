@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 // Run executes the agent loop until completion or error.
@@ -19,6 +20,7 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 
 	budgetTracker := &BudgetTracker{}
 	totalTurnTokens := 0
+	maxOutputTokensRecoveryCount := 0
 
 	for {
 		iteration++
@@ -40,10 +42,20 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 			Temperature: a.Temperature,
 		}
 
-		// Call LLM
-		resp, err := a.Client.Chat(ctx, req)
-		if err != nil {
-			return messages, fmt.Errorf("llm chat error: %w", err)
+		var resp ChatResponse
+		var err error
+		for {
+			resp, err = a.Client.Chat(ctx, req)
+			if err != nil {
+				errMsg := err.Error()
+				// Retry logic mimicking claude-code max_output_tokens escalation
+				if (contains(errMsg, "prompt is too long") || contains(errMsg, "max_output_tokens")) && maxOutputTokensRecoveryCount < 3 {
+					maxOutputTokensRecoveryCount++
+					continue
+				}
+				return messages, fmt.Errorf("llm chat error: %w", err)
+			}
+			break
 		}
 
 		messages = append(messages, resp.Message)
@@ -69,6 +81,17 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 						})
 					}
 					break
+				}
+			} else if resp.StopReason == "max_tokens" || resp.StopReason == "length" {
+				// If max task budget is not set, or we hit limits outside budget checking
+				// implement the standard max_output_tokens recovery from claude-code
+				if maxOutputTokensRecoveryCount < 3 {
+					maxOutputTokensRecoveryCount++
+					messages = append(messages, Message{
+						Role:    RoleUser,
+						Content: "Output token limit hit. Resume directly — no apology, no recap of what you were doing. Pick up mid-thought if that is where the cut happened. Break remaining work into smaller pieces.",
+					})
+					continue
 				}
 			}
 
@@ -113,6 +136,11 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 			}
 		}
 
+		// claude-code handles missing tool calls in stream errors.
+		// if a tool error causes an early return or crash, we ensure
+		// all requested tools get an explicit error injection if they fail execution.
+		// (Above loop already captures standard execution errors)
+
 		// Append tool results to messages
 		messages = append(messages, Message{
 			Role:        RoleTool,
@@ -140,4 +168,8 @@ func (a *BuiltinAgent) executeToolCall(ctx context.Context, tc ToolCall) (ToolRe
 		}
 	}
 	return ToolResult{}, fmt.Errorf("tool %q not found", tc.Name)
+}
+
+func contains(s, substr string) bool {
+	return strings.Contains(s, substr)
 }
