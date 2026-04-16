@@ -21,3 +21,11 @@ toc:
     path: /docs/public/index.md
   - title: Archive
     path: /docs/archive/index.md
+  - title: AutoDream Pipeline
+    path: /docs/walkthroughs/autodream_pipeline.md
+  - title: AutoDream CLI
+    path: /docs/walkthroughs/autodream_cli_guide.md
+  - title: AutoDream Sync
+    path: /docs/walkthroughs/autodream_sync.md
+  - title: KAIROS AutoDream Walkthrough
+    path: /docs/walkthroughs/kairos_autodream_walkthrough.md

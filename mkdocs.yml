@@ -38,6 +38,9 @@ nav:
   - Walkthroughs:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
+      - AutoDream Pipeline: walkthroughs/autodream_pipeline.md
+      - AutoDream CLI: walkthroughs/autodream_cli_guide.md
+      - AutoDream Sync: walkthroughs/autodream_sync.md
       - walkthroughs/index.md
   - Operations:
       - operations/index.md

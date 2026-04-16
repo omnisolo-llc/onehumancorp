@@ -60,6 +60,6 @@ Generated images are written to:
 ## 4. Documentation
 
 Please refer to the detailed architecture documents in the `docs/` folder:
-- [KAIROS Orchestration Design Phase 4](./kairos_orchestration_phase4.md)
+- [KAIROS Orchestration Design Phase 4](architecture/KAIROS_PHASE_4_PREMIUM_DESIGN.md)
 
 </div>

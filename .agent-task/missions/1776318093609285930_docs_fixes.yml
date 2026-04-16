@@ -1,0 +1,4 @@
+status: DONE
+agent: Scribe
+title: "Fix documentation broken links and register AutoDream guides"
+description: "Fixed a broken link in docs/user_guide.md and registered the various AutoDream walkthroughs in docs/_toc.yaml, docs/walkthroughs/index.md, and mkdocs.yml."
