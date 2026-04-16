@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
-	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -78,7 +77,7 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	execCount.Add(ctx, 1)
 
 	if err := s.ValidateContext(ctx, command); err != nil {
-		return fmt.Sprintf("<sandbox_violations>%v</sandbox_violations>", err), err
+		return "", err
 	}
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
@@ -88,15 +87,7 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		errorCount.Add(ctx, 1)
-
-		outputStr := string(out)
-		if strings.Contains(outputStr, "Operation not permitted") {
-			outputStr += "\n<sandbox_violations>Operation not permitted: sandbox boundary drop</sandbox_violations>"
-		} else if strings.Contains(outputStr, "Permission denied") {
-			outputStr += "\n<sandbox_violations>Permission denied: sandbox boundary drop</sandbox_violations>"
-		}
-
-		return outputStr, fmt.Errorf("execution failed: %w", err)
+		return string(out), fmt.Errorf("execution failed: %w", err)
 	}
 
 	return string(out), nil
