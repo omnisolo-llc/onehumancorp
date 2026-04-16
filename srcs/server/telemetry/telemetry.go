@@ -60,6 +60,8 @@ var (
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
 	subAgentQueueLengthGauge           metric.Int64UpDownCounter
+	SubAgentQueueDelayHistogram        metric.Float64Histogram
+	TaskClaimContentionTotal           metric.Int64Counter
 	postgresLockContentionCounter      metric.Int64Counter
 	llmNetworkLatencyHistogram         metric.Float64Histogram
 	ToolAutoCorrectionTotal            metric.Int64Counter
@@ -468,6 +470,22 @@ func InitWithMeter(m mockableMeter) error {
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc_sub_agent_queue_length",
 		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentQueueDelayHistogram, err = m.Float64Histogram(
+		"ohc_sub_agent_queue_delay_seconds",
+		metric.WithDescription("Time from job enqueue to dequeue for sub-agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TaskClaimContentionTotal, err = m.Int64Counter(
+		"ohc_task_claim_contention_total",
+		metric.WithDescription("Number of failed task claim attempts or retries due to lock contention"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1569,4 +1587,38 @@ func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorT
             attribute.String("error_type", errorType),
         ))
     }
+}
+
+// RecordSubAgentQueueDelay records the duration from job enqueue to dequeue.
+func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"delay": delay,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sub_agent_queue_delay", string(payloadBytes))
+	}
+	if SubAgentQueueDelayHistogram == nil {
+		return
+	}
+	SubAgentQueueDelayHistogram.Record(ctx, delay)
+}
+
+// RecordTaskClaimContention tracks the number of failed task claim attempts.
+func RecordTaskClaimContention(ctx context.Context, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"mode": mode,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "task_claim_contention", string(payloadBytes))
+	}
+	if TaskClaimContentionTotal == nil {
+		return
+	}
+	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("mode", mode),
+	))
 }
