@@ -178,6 +178,7 @@ nav:
     - KAIROS CLI: walkthroughs/kairos_cli.md
     - KAIROS Interactive API Playbook: walkthroughs/kairos_interactive_api_playbook.md
     - KAIROS Orchestration: walkthroughs/kairos_orchestration.md
+    - MCP Tool Execution Playbook: walkthroughs/mcp_tool_execution_playbook.md
     - Omni Context Routing: walkthroughs/omni_context_routing.md
     - Shared Task List Visual: walkthroughs/shared_task_list_visual_walkthrough.md
     - SPIFFE Identity Onboarding: walkthroughs/spiffe_identity_onboarding.md
