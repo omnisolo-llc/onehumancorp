@@ -3,6 +3,7 @@ package chaos
 import (
 	"context"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 
@@ -67,7 +68,7 @@ func NewInjector(mode ChaosMode, seed int64) *Injector {
 	return &Injector{
 		mode:        mode,
 		rand:        rand.New(rand.NewSource(seed)),
-		probability: 0.1, // Default probability for connection drop
+		probability: 0.1, // Default probability
 	}
 }
 
@@ -116,10 +117,7 @@ func (i *Injector) Inject(ctx context.Context) error {
 		}
 	case ResourceExhaustion:
 		i.mu.Lock()
-		// Resource exhaustion typically has a lower default trigger rate in the original code,
-		// but we'll use the configured probability for consistency if desired.
-		// For now, keeping original 0.05 logic or configuring it.
-		exhaust := i.rand.Float32() < 0.05
+		exhaust := i.rand.Float32() < probability
 		i.mu.Unlock()
 		if exhaust {
 			return &ChaosError{Message: "chaos: simulated resource exhaustion"}
@@ -129,6 +127,12 @@ func (i *Injector) Inject(ctx context.Context) error {
 		corrupt := i.rand.Float32() < probability
 		i.mu.Unlock()
 		if corrupt {
+			// We use a best-effort approach for the filesystem marker.
+			// The error is always returned if the probability check passes.
+			lockPath := ".agent-lock/"
+			if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
+				_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
+			}
 			return &ChaosError{Message: "chaos: agent lock corrupted"}
 		}
 	}
