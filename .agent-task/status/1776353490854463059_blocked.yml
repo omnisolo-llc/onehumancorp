@@ -1,0 +1,3 @@
+mission: 2026-04-16T12-30-00Z_autodream_pipeline.md
+status: BLOCKED
+reason: Outside domain. Assigned to Implementer, but touches workers/ and db/.

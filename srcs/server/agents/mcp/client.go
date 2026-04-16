@@ -2,11 +2,12 @@ package mcp
 
 import (
 	"context"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"encoding/json"
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type ExecutionResult struct {
@@ -57,12 +58,24 @@ func IsTelemetryMCPBridgeRegistered(endpoint string) bool {
 type HybridContextTool struct{}
 
 func (t *HybridContextTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return nil, err
-	}
 	if telemetry.BufferMetricFunc != nil {
-		_ = telemetry.BufferMetricFunc(ctx, "hybrid_ui_context", string(payloadBytes))
+		metricType := "hybrid_ui_context"
+		if mt, ok := payload["metric_type"].(string); ok && mt != "" {
+			metricType = mt
+		}
+
+		payloadBytes, err := json.Marshal(payload)
+		if err != nil {
+			return nil, errors.New("failed to marshal payload")
+		}
+
+		_ = telemetry.BufferMetricFunc(ctx, metricType, string(payloadBytes))
 	}
-	return FormatExecutionResult("hybrid_context", "success", payloadBytes, false), nil
+
+	resultBytes, err := json.Marshal(map[string]string{"status": "recorded"})
+	if err != nil {
+		return nil, errors.New("failed to marshal result")
+	}
+
+	return FormatExecutionResult("hybrid_context", "success", resultBytes, true), nil
 }
