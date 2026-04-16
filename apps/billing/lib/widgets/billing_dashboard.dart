@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:billing/widgets/token_budget_visualizer.dart';
 
 class BillingDashboard extends StatelessWidget {
   @override
@@ -31,6 +32,8 @@ class BillingDashboard extends StatelessWidget {
               color: Colors.white70,
             ),
           ),
+          const SizedBox(height: 20),
+          const TokenBudgetVisualizer(tokenBudget: 500000),
           // Additional billing UI components would go here
         ],
       ),
