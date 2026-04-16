@@ -1,1 +1,2 @@
 # Flutter tests should go here
+# Assuming rules_flutter isn't perfectly handling the directory we leave this for manual test runs.
