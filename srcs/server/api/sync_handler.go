@@ -6,12 +6,14 @@ import (
 	"net/http"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/lib/integrations/hybridlock"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"time"
 	"go.opentelemetry.io/otel"
 )
 
 // HandleHybridSyncMissions handles receiving synced local missions from HybridMCPRAGDaemon.
-func HandleHybridSyncMissions(hub *orchestration.Hub) http.HandlerFunc {
+func HandleHybridSyncMissions(hub *orchestration.Hub, lockManager *hybridlock.HybridLockManager) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/api").Start(r.Context(), "HandleHybridSyncMissions")
 		defer span.End()
@@ -64,6 +66,17 @@ func HandleHybridSyncMissions(hub *orchestration.Hub) http.HandlerFunc {
 
 			// Use the UpsertMission method to store in Postgres
 			if hub.SIPDB() != nil {
+				var lock *hybridlock.Lock
+				if lockManager != nil {
+					var err error
+					lock, err = lockManager.Acquire(ctx, "mission:"+p.ID, "sync-handler", 10*time.Second)
+					if err != nil || lock == nil {
+						slog.Warn("skipping mission sync due to lock contention", "id", p.ID)
+						continue
+					}
+					defer lockManager.Release(ctx, lock)
+				}
+
 				err := hub.SIPDB().UpsertMission(ctx, p.ID, status, p.Payload, forceLocal)
 				if err != nil {
 					slog.Error("failed to upsert mission from sync daemon", "id", p.ID, "error", err)

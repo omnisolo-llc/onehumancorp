@@ -10,7 +10,10 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/orchestration",
+        "//srcs/server/lib/integrations/hybridlock",
         "//srcs/server/orchestration/hybrid_sync",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//peer",
         "//srcs/server/orchestration/queue",
         "//srcs/server/telemetry",
         "@io_opentelemetry_go_otel//:otel",
@@ -19,10 +22,13 @@ go_library(
 
 go_test(
     name = "api_test",
-    srcs = ["sync_escalation_handler_test.go"],
+    srcs = ["sync_escalation_handler_test.go", "sync_handler_test.go"],
     embed = [":api"],
     deps = [
         "//srcs/server/orchestration",
+        "//srcs/server/lib/integrations/hybridlock",
         "//srcs/server/orchestration/hybrid_sync",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//peer",
     ],
 )

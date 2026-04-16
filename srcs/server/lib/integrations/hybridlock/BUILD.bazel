@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybridlock",
+    srcs = ["hybrid_lock.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/lib/integrations/hybridlock",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
+
+go_test(
+    name = "hybridlock_test",
+    srcs = ["hybrid_lock_test.go"],
+    embed = [":hybridlock"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+    ],
+)
