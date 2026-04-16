@@ -7,6 +7,7 @@ const (
 	AgentEventTypeIterationStarted AgentEventType = iota
 	AgentEventTypeTaskComplete
 	AgentEventTypeToolCall
+	AgentEventTypeStreamChunk // Added for streaming support
 )
 
 // AgentEvent is a structured event emitted by the agent loop.
