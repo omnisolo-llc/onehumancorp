@@ -47,6 +47,7 @@ func (r *InviteRepository) CreateInvites(ctx context.Context, invites []*TeamInv
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
+	defer tx.Rollback(ctx)
 
 	query := `
 		INSERT INTO team_invites (id, team_id, inviter_id, invitee_id, status, created_at, updated_at)
@@ -56,7 +57,6 @@ func (r *InviteRepository) CreateInvites(ctx context.Context, invites []*TeamInv
 	for _, invite := range invites {
 		_, err := tx.Exec(ctx, query, invite.ID, invite.TeamID, invite.InviterID, invite.InviteeID, invite.Status)
 		if err != nil {
-			tx.Rollback(ctx)
 			return fmt.Errorf("failed to create team invite in batch: %w", err)
 		}
 	}
