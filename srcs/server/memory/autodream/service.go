@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/memory"
 )
 
@@ -49,10 +50,15 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 		return fmt.Errorf("failed to generate embedding: %w", err)
 	}
 
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.OrganizationID == "" {
+		return fmt.Errorf("unauthorized: missing claims or organization ID")
+	}
+
 	// 4. Persist
 	record := &memory.EmbeddingRecord{
 		ID:           taskID + "-summary", // Simplification
-		TenantID:     "default",           // Simplification
+		OrganizationID: claims.OrganizationID,           // Secure isolation
 		MemoryType:   "TASK_SUMMARY",
 		Content:      summary,
 		Embedding:    embedding,
