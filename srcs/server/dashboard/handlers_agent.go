@@ -49,7 +49,9 @@ func (s *Server) handleHireAgent(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate that the requested provider is registered.
-	if _, ok := s.agentProviderRegistry.Get(agents.ProviderType(providerType)); !ok {
+	if p, ok := s.agentProviderRegistry.Get(agents.ProviderType(providerType)); ok {
+		providerType = string(p.Type()) // It might have fallen back to builtin
+	} else {
 		http.Error(w, "unknown provider type: "+providerType, http.StatusBadRequest)
 		return
 	}
