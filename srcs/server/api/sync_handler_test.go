@@ -43,13 +43,13 @@ func TestVectorSyncHandler(t *testing.T) {
     ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/agent-1")
     req = req.WithContext(ctx)
     w := httptest.NewRecorder()
-    // HandleVectorSync(w, req)
+    HandleVectorSync(w, req)
 
     if w.Code != http.StatusOK {
         t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
     }
 
     if !strings.Contains(w.Body.String(), "vectors synced successfully") {
-        // t.Errorf("expected body to contain 'vectors synced successfully', got '%s'", w.Body.String())
+        t.Errorf("expected body to contain 'vectors synced successfully', got '%s'", w.Body.String())
     }
 }
