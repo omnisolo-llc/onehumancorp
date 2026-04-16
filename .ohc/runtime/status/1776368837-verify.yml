@@ -1,7 +1,0 @@
-type: audit
-metadata:
-  role: Setup Verification
-  timestamp: 1776368837
-health: ok
-observations:
-  - .env configuration validated successfully.
