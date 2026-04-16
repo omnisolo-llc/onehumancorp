@@ -80,3 +80,18 @@ func stringContains(s, substr string) bool {
 	}
 	return false
 }
+
+func TestRegisterTelemetryMCPBridge(t *testing.T) {
+	err := RegisterTelemetryMCPBridge("http://telemetry-mcp-bridge")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if !IsTelemetryMCPBridgeRegistered("http://telemetry-mcp-bridge") {
+		t.Errorf("Expected bridge to be registered")
+	}
+
+	err = RegisterTelemetryMCPBridge("")
+	if err == nil {
+		t.Errorf("Expected error for empty endpoint, got nil")
+	}
+}
