@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.12 (Cloud) / v0.3.12+1 (Standalone)
+### Cloud Scaling Improvements
+- Reimplemented claude-code agent harness in Go and integrated missing builtin agent features.
+
+### Privacy/Offline Improvements
+- Verified builtin agent features are compatible with standalone isolated runtime.
+
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Bubblewrap Sandbox Telemetry.
