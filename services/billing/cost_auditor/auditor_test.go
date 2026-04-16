@@ -2,7 +2,7 @@ package cost_auditor
 import (
   "context"
   "testing"
-  "ohc/lib/pricing/token_calculator"
+  "github.com/onehumancorp/mono/lib/pricing/token_calculator"
 )
 func TestCostAuditor(t *testing.T) {
   config := token_calculator.CostConfig{
@@ -10,6 +10,7 @@ func TestCostAuditor(t *testing.T) {
     CostPerOutputToken:      0.00003,
     CostPerCachedInputToken: 0.000005,
     CostPerLocalEmbedding:   0.000002,
+		CostPerGBMonth:          0.02,
     DiscountFactor:          0.0,
   }
   auditor := NewCostAuditor(config)
@@ -37,7 +38,18 @@ func TestCostAuditor(t *testing.T) {
   if savings != 0.01 {
     t.Errorf("expected savings %f, got %f", 0.01, savings)
   }
-  report := auditor.GenerateReport()
+
+	auditor.RecordStorageCompression(ctx, StorageEvent{
+		AgentID:         "miser-1",
+		OriginalBytes:   10 * 1024 * 1024 * 1024,
+		CompressedBytes: 2 * 1024 * 1024 * 1024,
+	})
+	storageSavings := auditor.GetTotalStorageSavings()
+	expectedStorageSavings := 0.16 // 8 GB * 0.02 = 0.16
+	if storageSavings != expectedStorageSavings {
+		t.Errorf("expected storage savings %f, got %f", expectedStorageSavings, storageSavings)
+	}
+	report := auditor.GenerateReport()
   if report == "" {
     t.Errorf("expected non-empty report")
   }
