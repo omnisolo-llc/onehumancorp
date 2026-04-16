@@ -57,6 +57,10 @@ var (
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	AutoDreamIngestionErrorCounter metric.Int64Counter
 	AutoDreamCompressionErrorCounter metric.Int64Counter
+	BubblewrapSpawnTotal metric.Int64Counter
+	BubblewrapExecutionLatency metric.Float64Histogram
+	BubblewrapViolationTotal metric.Int64Counter
+
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
@@ -263,6 +267,30 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+	BubblewrapSpawnTotal, err = m.Int64Counter(
+		"bubblewrap_spawn_total",
+		metric.WithDescription("Total number of Bubblewrap process spawns"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapExecutionLatency, err = m.Float64Histogram(
+		"bubblewrap_execution_latency",
+		metric.WithDescription("Latency of Bubblewrap execution in seconds"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapViolationTotal, err = m.Int64Counter(
+		"bubblewrap_violation_total",
+		metric.WithDescription("Total number of Bubblewrap execution violations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 
 	RagEscalationCount, err = m.Int64Counter(
 		"rag_escalation_count",
@@ -1671,4 +1699,25 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("mode", mode),
 	))
+}
+
+// RecordBubblewrapSpawn increments the bubblewrap spawn counter.
+func RecordBubblewrapSpawn(ctx context.Context) {
+	if BubblewrapSpawnTotal != nil {
+		BubblewrapSpawnTotal.Add(ctx, 1)
+	}
+}
+
+// RecordBubblewrapExecutionLatency records the latency of a bubblewrap execution.
+func RecordBubblewrapExecutionLatency(ctx context.Context, latency float64) {
+	if BubblewrapExecutionLatency != nil {
+		BubblewrapExecutionLatency.Record(ctx, latency)
+	}
+}
+
+// RecordBubblewrapViolation increments the bubblewrap violation counter.
+func RecordBubblewrapViolation(ctx context.Context) {
+	if BubblewrapViolationTotal != nil {
+		BubblewrapViolationTotal.Add(ctx, 1)
+	}
 }
