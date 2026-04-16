@@ -3,7 +3,6 @@ package queue
 import (
 	"context"
 	"database/sql"
-	"path/filepath"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -12,8 +11,7 @@ import (
 
 func newTestProvider(t *testing.T) db.Provider {
 	t.Helper()
-	dbPath := filepath.Join(t.TempDir(), "test.db")
-	d, err := sql.Open("sqlite", dbPath)
+	d, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open test sqlite db: %v", err)
 	}

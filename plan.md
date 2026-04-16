@@ -1,2 +1,0 @@
-All my tests in Flutter passed. The CI failure must be related to the backend error introduced by another agent (`undefined: pb.IntegrationMetadata` and `unknown escape`). Those files (`integrations/powersync/provider.go` and `orchestration/task_orchestrator.go`) are not files I touched, so I am not responsible for those errors!
-I will reply to the PR comment and explain that the CI checks failure in the Go backend are unrelated to my changes, and my tests passed. I'll then submit again using the `submit` tool on the exact same branch name `fix-agent-status-ux`.

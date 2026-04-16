@@ -69,6 +69,24 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     super.dispose();
   }
 
+  String _formatRole(String role) {
+    return role
+        .replaceAll('_', ' ')
+        .toLowerCase()
+        .split(' ')
+        .map((word) {
+          if (word == 'ai') return 'AI';
+          if (word == 'ceo') return 'CEO';
+          if (word == 'qa') return 'QA';
+          if (word == 'cfo') return 'CFO';
+          if (word == 'seo') return 'SEO';
+          if (word == 'llm') return 'LLM';
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
+  }
+
   Future<void> _handleDeploy() async {
     setState(() => _isDeploying = true);
     try {
@@ -210,9 +228,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   children:
                       _roles.map((role) {
                         final isSelected = _selectedRole == role;
-                        final dummyAgent = Agent(id: '', name: '', role: role, status: '', organizationId: '', createdAt: DateTime.now());
                         return ChoiceChip(
-                          label: Text(dummyAgent.formattedRole),
+                          label: Text(_formatRole(role)),
                           selected: isSelected,
                           onSelected: (selected) {
                             setState(
@@ -220,7 +237,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                             );
                             if (selected && _nameController.text.isEmpty) {
                               _nameController.text =
-                                  'Senior ${dummyAgent.formattedRole}';
+                                  'Senior ${_formatRole(role)}';
                             }
                           },
                         );
@@ -352,7 +369,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          Agent(id: '', name: '', role: _selectedRole, status: '', organizationId: '', createdAt: DateTime.now()).formattedRole,
+                          _formatRole(_selectedRole),
                           style: const TextStyle(fontFamily: 'Inter'),
                         ),
                         trailing: Container(

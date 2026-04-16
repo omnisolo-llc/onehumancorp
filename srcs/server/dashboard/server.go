@@ -23,7 +23,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
-	"github.com/redis/rueidis"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -457,7 +456,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		authHandlers:          auth.NewHandlers(store),
 		agentProviderRegistry: agents.DefaultRegistry(),
 		dynamicMCPTools:       append([]MCPTool(nil), defaultMcpTools...),
-		MeshBroker:            nil, // initialized below
+		MeshBroker:            orchmesh.NewLocalMeshBroker(),
 		rateLimitStates:       make(map[string]*RateLimitState),
 		staticDir:             os.Getenv("FRONTEND_STATIC_DIR"),
 		serveUI:               shouldServeUI(),
@@ -469,24 +468,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
-	}
-
-	mode := "cloud"
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		mode = "standalone"
-	}
-
-	if mode == "cloud" {
-		client, err := rueidis.NewClient(rueidis.ClientOption{
-			InitAddress: []string{os.Getenv("REDIS_URL")},
-		})
-		if err == nil {
-			server.MeshBroker = orchmesh.NewRedisMeshBroker(client)
-		} else {
-			server.MeshBroker = orchmesh.NewLocalMeshBroker()
-		}
-	} else {
-		server.MeshBroker = orchmesh.NewLocalMeshBroker()
 	}
 	server.bootstrapInternalDefaultAgent()
 	// Load initial settings.
@@ -782,11 +763,11 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 	}
 
 	details := map[string]interface{}{
-		"status":        status,
-		"mesh_active":   probe.MeshActive,
-		"sync_queue":    probe.SyncBacklog,
-		"last_sync_at":  probe.LastSyncTime,
-		"agent_workers": 0,
+		"status":         status,
+		"mesh_active":    probe.MeshActive,
+		"sync_queue":     probe.SyncBacklog,
+		"last_sync_at":   probe.LastSyncTime,
+		"agent_workers":  0,
 	}
 
 	details["stuck_missions"] = probe.StuckMissions
