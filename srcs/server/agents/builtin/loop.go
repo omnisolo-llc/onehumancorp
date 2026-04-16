@@ -27,6 +27,41 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 			})
 		}
 
+
+		// Compact context if it gets too large
+		if len(messages) > 80 {
+			var compacted []Message
+			if len(messages) > 0 && messages[0].Role == RoleSystem {
+				compacted = append(compacted, messages[0])
+			}
+
+			// Keep the last 40 messages to maintain recent context.
+			cutoff := len(messages) - 40
+			if cutoff < len(compacted) {
+				cutoff = len(compacted)
+			}
+
+			// Iterate forward to find a safe boundary (User message)
+			for cutoff < len(messages) && messages[cutoff].Role != RoleUser {
+				cutoff++
+			}
+
+			// If we didn't find a User message before the end, just keep what we have
+			if cutoff >= len(messages) {
+				cutoff = len(messages) - 40
+			}
+
+			// Ensure we don't start the compacted chunk with an Assistant message
+			// out of thin air, or a Tool message without its corresponding ToolCall.
+			// If we must cut, we prefix a User message explaining the compaction.
+			compacted = append(compacted, Message{
+				Role:    RoleUser,
+				Content: fmt.Sprintf("[... %d older conversation turns omitted for length ...]", cutoff-len(compacted)),
+			})
+			compacted = append(compacted, messages[cutoff:]...)
+			messages = compacted
+		}
+
 		// Prepare request
 		req := ChatRequest{
 			Model:       a.Model,
@@ -38,7 +73,35 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 		}
 
 		// Call LLM
-		resp, err := a.Client.Chat(ctx, req)
+		var resp ChatResponse
+		var err error
+
+		if streamClient, ok := a.Client.(LLMStreamClient); ok && cb != nil {
+			var fullContent string
+			var fullToolCalls []ToolCall
+
+			err = streamClient.ChatStream(ctx, req, func(chunk ChatStreamResponse) error {
+				if chunk.Content != "" {
+					fullContent += chunk.Content
+					cb(AgentEvent{
+						Type: AgentEventTypeStreamChunk,
+						ContentChunk: chunk.Content,
+					})
+				}
+				if len(chunk.ToolCalls) > 0 {
+					fullToolCalls = append(fullToolCalls, chunk.ToolCalls...)
+				}
+				return nil
+			})
+
+			resp.Message = Message{
+				Role:      RoleAssistant,
+				Content:   fullContent,
+				ToolCalls: fullToolCalls,
+			}
+		} else {
+			resp, err = a.Client.Chat(ctx, req)
+		}
 		if err != nil {
 			return messages, fmt.Errorf("llm chat error: %w", err)
 		}

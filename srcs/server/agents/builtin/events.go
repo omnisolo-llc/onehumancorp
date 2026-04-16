@@ -7,6 +7,8 @@ const (
 	AgentEventTypeIterationStarted AgentEventType = iota
 	AgentEventTypeTaskComplete
 	AgentEventTypeToolCall
+	AgentEventTypeError
+	AgentEventTypeStreamChunk
 )
 
 // AgentEvent is a structured event emitted by the agent loop.
@@ -18,6 +20,8 @@ type AgentEvent struct {
 	ToolName     string
 	ToolArgsJSON string
 	ToolResult   string
+	ErrorDetails string
+	ContentChunk string
 }
 
 // EventCallback is called for each AgentEvent during RunWithCallback.

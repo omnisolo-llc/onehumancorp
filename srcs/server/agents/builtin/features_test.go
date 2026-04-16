@@ -281,8 +281,9 @@ func TestAgentToolSpawn(t *testing.T) {
 	defer cancel()
 
 	args, _ := json.Marshal(map[string]interface{}{
-		"description": "noop task",
-		"prompt":      "Do nothing, just respond 'done'.",
+		"description":       "noop task",
+		"prompt":            "Do nothing, just respond 'done'.",
+		"run_in_background": true,
 	})
 	res, err := AgentTool.Execute(ctx, args)
 	if err != nil {
@@ -424,5 +425,22 @@ func TestAgentToolsWithSubagentSupport(t *testing.T) {
 		if !byName[name] {
 			t.Errorf("AgentToolsWithSubagentSupport missing %q", name)
 		}
+	}
+}
+
+func TestBashToolRunInBackground(t *testing.T) {
+	ctx := context.Background()
+
+	args, _ := json.Marshal(map[string]interface{}{
+		"command":           "echo 'hello from background'",
+		"run_in_background": true,
+	})
+	res, err := BashTool.Execute(ctx, args)
+	if err != nil {
+		t.Fatalf("BashTool background: %v", err)
+	}
+
+	if !strings.Contains(res, "Command launched in background") {
+		t.Errorf("expected background launch message, got %q", res)
 	}
 }

@@ -102,10 +102,10 @@ func heartbeatTimeout() time.Duration {
 // is marked as killed (no polling required).
 var AgentTool = Tool{
 	Name: "Agent",
-	Description: "Spawn a background agent to perform a task concurrently. " +
-		"Returns immediately with a task ID. The agent runs asynchronously " +
-		"and you will receive a SubagentLifecycleEvent via the SubagentBus " +
-		"when it completes. Use this to delegate work or run tasks in parallel.",
+	Description: "Spawn an agent to perform a task. " +
+		"If run_in_background is true, it returns immediately with a task ID, runs asynchronously, " +
+		"and you will receive a SubagentLifecycleEvent when it completes. " +
+		"If false, it runs synchronously and returns the final result.",
 	Parameters: json.RawMessage(`{
 		"type": "object",
 		"properties": {
@@ -120,15 +120,20 @@ var AgentTool = Tool{
 			"subagent_type": {
 				"type": "string",
 				"description": "Optional agent type (e.g., 'general-purpose'). Defaults to 'general-purpose'."
+			},
+			"run_in_background": {
+				"type": "boolean",
+				"description": "Set to true to run this agent in the background. You will be notified when it completes."
 			}
 		},
 		"required": ["description", "prompt"]
 	}`),
 	Execute: func(ctx context.Context, args json.RawMessage) (string, error) {
 		var input struct {
-			Description  string `json:"description"`
-			Prompt       string `json:"prompt"`
-			SubagentType string `json:"subagent_type"`
+			Description      string `json:"description"`
+			Prompt           string `json:"prompt"`
+			SubagentType     string `json:"subagent_type"`
+			RunInBackground  *bool  `json:"run_in_background"`
 		}
 		if err := json.Unmarshal(args, &input); err != nil {
 			return "", fmt.Errorf("Agent: invalid args: %w", err)
@@ -163,65 +168,99 @@ var AgentTool = Tool{
 		}
 		agentRegistry.Register(entry)
 
-		// Publish a "spawned" lifecycle event on the bus.
-		globalSubagentBus.Publish(SubagentLifecycleEvent{
-			EventType: SubagentEventSpawned,
-			TaskID:    taskState.ID,
-		})
+		isAsync := false
+		if input.RunInBackground != nil && *input.RunInBackground {
+			isAsync = true
+		}
 
-		// Watch for completion using Done() channel + heartbeat timeout.
-		// This avoids polling — the goroutine blocks until the task signals
-		// completion or the heartbeat deadline expires.
-		timeout := heartbeatTimeout()
-		go func() {
-			select {
-			case <-taskState.Done():
-				// Task entered a terminal state normally.
-			case <-time.After(timeout):
-				// Heartbeat timeout — force-kill the task.
-				taskState.Kill()
-			}
-
-			st := taskState.Status()
-			entry.Status = string(st)
-			entry.EndedAt = time.Now()
-			entry.Result = taskState.Result()
-			entry.Error = taskState.Err()
-			p := taskState.Progress()
-			entry.TokenCount = p.TokenCount
-			entry.ToolUses = int64(p.ToolUseCount)
-			agentRegistry.Register(entry)
-
-			// Build and publish the typed TaskNotification.
-			summary := fmt.Sprintf("Sub-agent %q finished with status %s", input.Description, entry.Status)
-			notif := BuildTaskNotificationMsg(
-				entry.TaskID, entry.ToolUseID, entry.OutputFile,
-				entry.Status, summary, entry.Result,
-				entry.TokenCount, entry.ToolUses,
-				entry.EndedAt.Sub(entry.StartedAt),
-			)
-
-			// Determine event type from final status.
-			evtType := SubagentEventCompleted
-			switch entry.Status {
-			case "failed":
-				evtType = SubagentEventFailed
-			case "killed":
-				evtType = SubagentEventKilled
-			}
-
+		if isAsync {
+			// Publish a "spawned" lifecycle event on the bus.
 			globalSubagentBus.Publish(SubagentLifecycleEvent{
-				EventType:    evtType,
-				TaskID:       entry.TaskID,
-				Notification: notif,
+				EventType: SubagentEventSpawned,
+				TaskID:    taskState.ID,
 			})
-		}()
+
+			// Watch for completion using Done() channel + heartbeat timeout.
+			timeout := heartbeatTimeout()
+			go func() {
+				select {
+				case <-taskState.Done():
+					// Task entered a terminal state normally.
+				case <-time.After(timeout):
+					// Heartbeat timeout — force-kill the task.
+					taskState.Kill()
+				}
+
+				st := taskState.Status()
+				entry.Status = string(st)
+				entry.EndedAt = time.Now()
+				entry.Result = taskState.Result()
+				entry.Error = taskState.Err()
+				p := taskState.Progress()
+				entry.TokenCount = p.TokenCount
+				entry.ToolUses = int64(p.ToolUseCount)
+				agentRegistry.Register(entry)
+
+				// Build and publish the typed TaskNotification.
+				summary := fmt.Sprintf("Sub-agent %q finished with status %s", input.Description, entry.Status)
+				notif := BuildTaskNotificationMsg(
+					entry.TaskID, entry.ToolUseID, entry.OutputFile,
+					entry.Status, summary, entry.Result,
+					entry.TokenCount, entry.ToolUses,
+					entry.EndedAt.Sub(entry.StartedAt),
+				)
+
+				// Determine event type from final status.
+				evtType := SubagentEventCompleted
+				switch entry.Status {
+				case "failed":
+					evtType = SubagentEventFailed
+				case "killed":
+					evtType = SubagentEventKilled
+				}
+
+				globalSubagentBus.Publish(SubagentLifecycleEvent{
+					EventType:    evtType,
+					TaskID:       entry.TaskID,
+					Notification: notif,
+				})
+			}()
+
+			out := map[string]interface{}{
+				"status":      "async_launched",
+				"agentId":     taskState.ID,
+				"description": input.Description,
+				"outputFile":  taskState.OutputFile,
+			}
+			b, _ := json.Marshal(out)
+			return string(b), nil
+		}
+
+		// Synchronous execution
+		timeout := heartbeatTimeout()
+		select {
+		case <-taskState.Done():
+		case <-time.After(timeout):
+			taskState.Kill()
+		}
+
+		st := taskState.Status()
+		entry.Status = string(st)
+		entry.EndedAt = time.Now()
+		entry.Result = taskState.Result()
+		entry.Error = taskState.Err()
+		p := taskState.Progress()
+		entry.TokenCount = p.TokenCount
+		entry.ToolUses = int64(p.ToolUseCount)
+		agentRegistry.Register(entry)
 
 		out := map[string]interface{}{
-			"status":      "async_launched",
+			"status":      entry.Status,
 			"agentId":     taskState.ID,
 			"description": input.Description,
 			"outputFile":  taskState.OutputFile,
+			"result":      entry.Result,
+			"error":       entry.Error,
 		}
 		b, _ := json.Marshal(out)
 		return string(b), nil
