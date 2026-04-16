@@ -1,6 +1,8 @@
 package telemetry
 
 import (
+	"reflect"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -54,8 +56,8 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	AutoDreamIngestionErrorCounter metric.Int64Counter
-	AutoDreamCompressionErrorCounter metric.Int64Counter
+	AutoDreamIngestionErrorCounter     metric.Int64Counter
+	AutoDreamCompressionErrorCounter   metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
@@ -112,37 +114,88 @@ func RedactPII(input string) string {
 
 // RedactInterfacePII deeply scrubs maps, slices, and strings for PII.
 func RedactInterfacePII(val interface{}) interface{} {
-	switch v := val.(type) {
-	case string:
-		return RedactPII(v)
-	case map[string]interface{}:
-		res := make(map[string]interface{}, len(v))
-		for k, val := range v {
-			res[k] = RedactInterfacePII(val)
+	if val == nil {
+		return nil
+	}
+
+	rv := reflect.ValueOf(val)
+
+	if rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return val
 		}
-		return res
-	case []interface{}:
-		res := make([]interface{}, len(v))
-		for i, val := range v {
-			res[i] = RedactInterfacePII(val)
+		newPtr := reflect.New(rv.Elem().Type())
+		redactedElem := RedactInterfacePII(rv.Elem().Interface())
+		if redactedElem != nil {
+			newPtr.Elem().Set(reflect.ValueOf(redactedElem))
 		}
-		return res
-	case []string:
-		res := make([]string, len(v))
-		for i, str := range v {
-			res[i] = RedactPII(str)
-		}
-		return res
-	case []map[string]interface{}:
-		res := make([]map[string]interface{}, len(v))
-		for i, m := range v {
-			newM := make(map[string]interface{}, len(m))
-			for k, val := range m {
-				newM[k] = RedactInterfacePII(val)
+		return newPtr.Interface()
+	}
+
+	switch rv.Kind() {
+	case reflect.String:
+		return RedactPII(rv.String())
+	case reflect.Map:
+		newMap := reflect.MakeMap(rv.Type())
+		for _, key := range rv.MapKeys() {
+			mapVal := rv.MapIndex(key)
+			var newKey reflect.Value
+			if key.Kind() == reflect.String {
+				newKey = reflect.ValueOf(RedactPII(key.String()))
+			} else {
+				newKey = key
 			}
-			res[i] = newM
+
+			elem := RedactInterfacePII(mapVal.Interface())
+			if elem == nil {
+				newMap.SetMapIndex(newKey, reflect.Zero(mapVal.Type()))
+			} else {
+				newMap.SetMapIndex(newKey, reflect.ValueOf(elem))
+			}
 		}
-		return res
+		return newMap.Interface()
+	case reflect.Slice:
+		if rv.Type().Elem().Kind() == reflect.Uint8 {
+			return val
+		}
+		if rv.Len() == 0 {
+			return val
+		}
+		newSlice := reflect.MakeSlice(rv.Type(), rv.Len(), rv.Cap())
+		for i := 0; i < rv.Len(); i++ {
+			elem := RedactInterfacePII(rv.Index(i).Interface())
+			if elem != nil {
+				newSlice.Index(i).Set(reflect.ValueOf(elem))
+			}
+		}
+		return newSlice.Interface()
+	case reflect.Array:
+		if rv.Type().Elem().Kind() == reflect.Uint8 {
+			return val
+		}
+		if rv.Len() == 0 {
+			return val
+		}
+		newArray := reflect.New(rv.Type()).Elem()
+		for i := 0; i < rv.Len(); i++ {
+			elem := RedactInterfacePII(rv.Index(i).Interface())
+			if elem != nil {
+				newArray.Index(i).Set(reflect.ValueOf(elem))
+			}
+		}
+		return newArray.Interface()
+	case reflect.Struct:
+		newStruct := reflect.New(rv.Type()).Elem()
+		for i := 0; i < rv.NumField(); i++ {
+			field := rv.Field(i)
+			if newStruct.Field(i).CanSet() && field.CanInterface() {
+				elem := RedactInterfacePII(field.Interface())
+				if elem != nil {
+					newStruct.Field(i).Set(reflect.ValueOf(elem))
+				}
+			}
+		}
+		return newStruct.Interface()
 	default:
 		return val
 	}
@@ -1535,38 +1588,38 @@ func RecordRagEscalation(ctx context.Context) {
 
 // RecordAutoDreamIngestionError records an ingestion error.
 func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
-    }
-    if AutoDreamIngestionErrorCounter != nil {
-        AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
+	}
+	if AutoDreamIngestionErrorCounter != nil {
+		AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordAutoDreamCompressionError records a compression error.
 func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
-    }
-    if AutoDreamCompressionErrorCounter != nil {
-        AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
+	}
+	if AutoDreamCompressionErrorCounter != nil {
+		AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
