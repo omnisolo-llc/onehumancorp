@@ -38,6 +38,7 @@ go_library(
     deps = [
         "//srcs/server/utils",
         "//srcs/server/agents/local",
+        "//srcs/server/bash_sandbox",
     ],
 )
 
