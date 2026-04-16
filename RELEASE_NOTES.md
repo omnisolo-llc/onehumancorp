@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.3.10 (Cloud) / v0.3.10+1 (Standalone)
+- Scaling (Cloud): Implement Viral Loop Referral Tracking Pipeline.
+- Privacy/Offline (Standalone): Premium Glassmorphism Agent Status Indicator and SQLite migration stability fixes.
+
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
 - Scaling (Cloud): Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.
 - Privacy/Offline (Standalone): Maintained Standalone telemetry consistency across single-user environments for the new MCP Bridge integration.

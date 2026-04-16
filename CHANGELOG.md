@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.10 (Cloud) / v0.3.10+1 (Standalone)
+### Cloud Scaling Improvements
+- [growth] Implement Viral Loop Referral Tracking Pipeline for improved user acquisition and network effect monitoring.
+
+### Privacy/Offline Improvements
+- [Hybrid UX improvement] Implement Premium Glassmorphism Agent Status Indicator for high-fidelity visual feedback in Standalone mode.
+- Fixed SQLite migration compatibility for local and test environments by removing unsupported 'IF NOT EXISTS' in ALTER TABLE statements.
+
 ## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
 ### Cloud Scaling Improvements
 - Integrated Telemetry-MCP Bridge securely via docker-compose and added a thread-safe registration implementation for the KAIROS orchestrator.
