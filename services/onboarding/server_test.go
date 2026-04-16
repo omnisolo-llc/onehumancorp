@@ -123,3 +123,20 @@ func TestVerifyEnvironmentHandler(t *testing.T) {
         })
     }
 }
+
+func TestAuditHandler(t *testing.T) {
+	reqBody, _ := json.Marshal(map[string]string{"mode": "cloud"})
+	req := httptest.NewRequest(http.MethodPost, "/api/audit", bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	AuditHandler(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+	var res map[string]string
+	json.NewDecoder(rr.Body).Decode(&res)
+	if res["status"] != "passed" {
+		t.Errorf("expected passed, got %v", res["status"])
+	}
+}

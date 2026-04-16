@@ -130,3 +130,27 @@ func VerifyEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
         Config: config,
     })
 }
+
+
+func AuditHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	status := "failed"
+	mode, ok := req["mode"]
+	if ok && (mode == "cloud" || mode == "standalone" || mode == "thin_client") {
+		status = "passed"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": status, "mode": mode})
+}
