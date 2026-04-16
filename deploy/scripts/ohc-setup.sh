@@ -55,7 +55,10 @@ else
     echo -e "${DIM}Audit script not found, skipping.${RESET}"
 fi
 
-echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
+echo -e "${DIM}[5/6] Verifying Setup Configuration...${RESET}"
+bash deploy/scripts/ohc-verify-setup.sh || { echo -e "${PURPLE}Setup Verification failed.${RESET}"; false; }
+
+echo -e "${DIM}[6/6] Generating Local Memory Log...${RESET}"
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
 MEMORY_DIR="${OHC_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
