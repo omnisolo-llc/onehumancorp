@@ -12,8 +12,8 @@ This report analyzes the Agent Harness architectures of top market competitorsâ€
 
 ### Claude Code
 Claude Code's leaked source (version 2.1.88) reveals a granular, application-layer harness.
-- **Isolation Strategy**: Strict policy mappers and semantic validators (`FsReadRestrictionConfig`, `FsWriteRestrictionConfig`, `NetworkRestrictionConfig`). Uses a dedicated `SandboxManager`.
-- **Security Checkers**: Validates individual Bash AST nodes (e.g., intercepting unsafe compound commands, redirection operators, Zsh dangerous commands).
+- **Isolation Strategy**: Strict policy mappers and semantic validators (`FsReadRestrictionConfig`, `FsWriteRestrictionConfig`, `NetworkRestrictionConfig`). Uses a dedicated `SandboxManager` utilizing Bubblewrap (bwrap) for deep OS-level namespace sandboxing on Linux.
+- **Security Checkers**: Token-Level AST validation validating individual Bash AST nodes (e.g., intercepting unsafe compound commands, redirection operators, Zsh dangerous commands). Uses an `--unshare-net` wrapper with socat bridges.
 - **Telemetry**: Violations are trapped by `SandboxManager` and tracked via `SandboxViolationStore`. However, it lacks robust cloud telemetry syncing, storing state ephemerally or in basic JSON caches.
 
 ### OpenClaw
@@ -55,7 +55,7 @@ graph TD
 Based on the research above, the following actionable missions have been identified for the Implementer agents:
 
 1. **Implement Hybrid Agent Harness with AST Validation and OpenTelemetry**
-   - **Status**: [GitHub Issue #4971 Created](https://github.com/onehumancorp/mono/issues/4971)
+   - **Status**: [GitHub Issue #5228 Created](https://github.com/onehumancorp/mono/issues/5228)
    - **Goal**: Merge granular AST-level command validation (inspired by Claude Code) with a flexible harness registry (inspired by OpenClaw).
    - **Key Components**:
      - `SandboxManager` with strict read/write configuration.
@@ -63,3 +63,19 @@ Based on the research above, the following actionable missions have been identif
      - OpenTelemetry Hooks emitting `ohc_sandbox_violation_total` to Prometheus.
      - SPIFFE integration for zero-trust authorization before execution.
    - **Implementer Prompt**: Available in the associated GitHub issue.
+
+2. **Implement Async Fork Subagents with Context Inheritance**
+   - **Status**: [GitHub Issue #5229 Created](https://github.com/onehumancorp/mono/issues/5229)
+   - **Goal**: Allow spawned sub-agents to inherit the parent's full conversational context but execute asynchronously in the background.
+
+3. **Implement Local Memory Directory (MemDir) Fallback for Standalone Mode**
+   - **Status**: [GitHub Issue #5230 Created](https://github.com/onehumancorp/mono/issues/5230)
+   - **Goal**: A robust, file-based local memory caching fallback.
+
+4. **Implement The Bridge Pattern for Remote Tool Execution**
+   - **Status**: [GitHub Issue #5231 Created](https://github.com/onehumancorp/mono/issues/5231)
+   - **Goal**: Implement a "Bridge" architecture decoupling local execution environment from remote model orchestration.
+
+5. **Implement Local Shell Task Management with Explicit Eviction**
+   - **Status**: [GitHub Issue #5232 Created](https://github.com/onehumancorp/mono/issues/5232)
+   - **Goal**: Strict, ID-tracked local task manager to guarantee clean eviction and prevent resource exhaustion.
