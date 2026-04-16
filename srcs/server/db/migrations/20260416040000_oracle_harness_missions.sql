@@ -1,41 +1,35 @@
 -- +goose Up
 -- +goose StatementBegin
-INSERT INTO agent_missions (title, description, status, priority, domain, created_at)
+INSERT INTO agent_missions (id, status, payload, created_at)
 VALUES (
-    '🔮 Oracle: [harness] Implement Claude-Class Agent Sandbox Manager for KAIROS',
-    'Based on market research, implement a SandboxManager module to isolate and wrap execution of shell commands, matching Claude Code''s capabilities.',
+    'mission_oracle_harness_1',
     'PENDING',
-    'P0',
-    'harness',
+    '{"title": "🔮 Oracle: [harness] Implement Claude-Class Agent Sandbox Manager for KAIROS", "description": "Based on market research, implement a SandboxManager module to isolate and wrap execution of shell commands, matching Claude Code''s capabilities.", "priority": "P0", "domain": "harness"}',
     CURRENT_TIMESTAMP
 );
 
-INSERT INTO agent_missions (title, description, status, priority, domain, created_at)
+INSERT INTO agent_missions (id, status, payload, created_at)
 VALUES (
-    '🔮 Oracle: [research] Implement Durable State Sync with pgvector for AutoDream',
-    'Enhance AutoDream to process and sync architectural findings directly into a pgvector enabled database for durable state synchronization.',
+    'mission_oracle_harness_2',
     'PENDING',
-    'P1',
-    'backend',
+    '{"title": "🔮 Oracle: [research] Implement Durable State Sync with pgvector for AutoDream", "description": "Enhance AutoDream to process and sync architectural findings directly into a pgvector enabled database for durable state synchronization.", "priority": "P1", "domain": "backend"}',
     CURRENT_TIMESTAMP
 );
 
-INSERT INTO agent_missions (title, description, status, priority, domain, created_at)
+INSERT INTO agent_missions (id, status, payload, created_at)
 VALUES (
-    '🔮 Oracle: [telemetry] Implement KAIROS Harness Telemetry and I/O Instrumentation',
-    'Add OpenTelemetry hooks to track execution time and I/O byte counters per tenant for commands executed inside the Agent Harness.',
+    'mission_oracle_harness_3',
     'PENDING',
-    'P1',
-    'telemetry',
+    '{"title": "🔮 Oracle: [telemetry] Implement KAIROS Harness Telemetry and I/O Instrumentation", "description": "Add OpenTelemetry hooks to track execution time and I/O byte counters per tenant for commands executed inside the Agent Harness.", "priority": "P1", "domain": "telemetry"}',
     CURRENT_TIMESTAMP
 );
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DELETE FROM agent_missions WHERE title IN (
-    '🔮 Oracle: [harness] Implement Claude-Class Agent Sandbox Manager for KAIROS',
-    '🔮 Oracle: [research] Implement Durable State Sync with pgvector for AutoDream',
-    '🔮 Oracle: [telemetry] Implement KAIROS Harness Telemetry and I/O Instrumentation'
+DELETE FROM agent_missions WHERE id IN (
+    'mission_oracle_harness_1',
+    'mission_oracle_harness_2',
+    'mission_oracle_harness_3'
 );
 -- +goose StatementEnd

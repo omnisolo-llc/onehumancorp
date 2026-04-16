@@ -37,7 +37,6 @@ nav:
       - features/index.md
   - Walkthroughs:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
-      - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - walkthroughs/index.md
   - Operations:
       - operations/index.md
