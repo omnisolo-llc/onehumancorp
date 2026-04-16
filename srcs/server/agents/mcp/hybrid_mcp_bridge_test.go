@@ -1,8 +1,10 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -93,5 +95,48 @@ func TestRegisterTelemetryMCPBridge(t *testing.T) {
 	err = RegisterTelemetryMCPBridge("")
 	if err == nil {
 		t.Errorf("Expected error for empty endpoint, got nil")
+	}
+}
+func TestHybridContextTool_Execute(t *testing.T) {
+	tool := &HybridContextTool{}
+
+	var capturedMetricType string
+	var capturedPayload string
+
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		capturedMetricType = metricType
+		capturedPayload = payload
+		return nil
+	}
+	defer func() { telemetry.BufferMetricFunc = nil }()
+
+	payload := map[string]interface{}{
+		"metric_type": "custom_ui_action",
+		"action":      "click",
+	}
+
+	ctx := context.Background()
+	result, err := tool.Execute(ctx, payload)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if result.ToolID != "hybrid_context" {
+		t.Errorf("Expected ToolID hybrid_context, got %s", result.ToolID)
+	}
+	if result.Status != "success" {
+		t.Errorf("Expected Status success, got %s", result.Status)
+	}
+	if !result.HybridEscalation {
+		t.Errorf("Expected HybridEscalation to be true")
+	}
+
+	if capturedMetricType != "custom_ui_action" {
+		t.Errorf("Expected capturedMetricType custom_ui_action, got %s", capturedMetricType)
+	}
+
+	if !strings.Contains(capturedPayload, "click") {
+		t.Errorf("Expected payload to contain click, got %s", capturedPayload)
 	}
 }
