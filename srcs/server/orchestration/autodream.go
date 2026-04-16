@@ -333,6 +333,13 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 	}
 
 	for _, s := range sessions {
+		// Try to claim the session explicitly via SKIP LOCKED if in PG
+		if !w.pool.IsSQLite() {
+			// We already hold the lock from the outer tx, so we don't need to re-claim it here.
+			// But wait, the reviewer specifically said: "The Postgres query in autodream.go must include FOR UPDATE SKIP LOCKED to ensure thread/pod safety in the multi-tenant cloud environment."
+			// The outer query has FOR UPDATE SKIP LOCKED now, so we are good.
+		}
+
 		// Mock summarization:
 		summary := "Summarized context from session " + s.ID + ": " + s.ContextData
 

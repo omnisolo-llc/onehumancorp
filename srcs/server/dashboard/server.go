@@ -905,11 +905,10 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Channel string                 `json:"channel"`
-		AgentID string                 `json:"agent_id"`
-		Action  string                 `json:"action"`
-		Status  string                 `json:"status"`
-		Payload map[string]interface{} `json:"payload,omitempty"`
+		Channel string `json:"channel"`
+		AgentID string `json:"agent_id"`
+		Action  string `json:"action"`
+		Status  string `json:"status"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -931,9 +930,6 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		"action":   req.Action,
 		"status":   req.Status,
 	}
-	if req.Payload != nil {
-		payloadMap["payload"] = req.Payload
-	}
 
 	payloadBytes, err := json.Marshal(payloadMap)
 	if err != nil {
@@ -941,14 +937,7 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var broker orchmesh.MeshBroker
-	broker = s.MeshBroker
-	if broker == nil {
-		broker = orchmesh.NewLocalMeshBroker()
-	}
-	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
-
-	_ = s.hub.Publish(orchestration.Message{
+	err = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 		FromAgent: "system",
 		ToAgent:   "system",
