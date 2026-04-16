@@ -1,0 +1,1 @@
+curl -s -H "Authorization: token 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" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/onehumancorp/mono/pulls/5398/commits | jq -r '.[].sha' > pr_commits.txt
