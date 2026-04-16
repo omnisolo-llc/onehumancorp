@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -31,9 +32,24 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 	defer dbWrapper.Close()
 
 	// 2. Setup schema
+
 	if err := dbWrapper.RunMigrations(ctx); err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
+
+	// Ensure autodream_memories table exists
+	_, err = dbWrapper.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS autodream_memories (
+			id TEXT PRIMARY KEY,
+			organization_id VARCHAR,
+			content TEXT NOT NULL,
+			synced BOOLEAN DEFAULT false
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create autodream_memories table: %v", err)
+	}
+
 
 	// Wait, run migrations might not run 011 properly if it doesn't support the ADD COLUMN correctly,
 	// but let's test it. SQLite does support standard ADD COLUMN.
@@ -117,5 +133,96 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 	}
 	if count != 0 {
 		t.Errorf("expected 0 unsynced missions, got %d", count)
+	}
+}
+
+func TestAutoDreamSyncEngine_Sync(t *testing.T) {
+	_, err := telemetry.InitTelemetry()
+	if err != nil {
+		t.Logf("failed to init telemetry: %v", err)
+	}
+
+	dbPath := filepath.Join(t.TempDir(), "test.db")
+	t.Setenv("DATABASE_URL", "sqlite://"+dbPath)
+	ctx := context.Background()
+	dbWrapper, err := db.New(ctx)
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer dbWrapper.Close()
+
+
+	if err := dbWrapper.RunMigrations(ctx); err != nil {
+		t.Fatalf("failed to run migrations: %v", err)
+	}
+
+	// Ensure autodream_memories table exists
+	_, err = dbWrapper.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS autodream_memories (
+			id TEXT PRIMARY KEY,
+			organization_id VARCHAR,
+			content TEXT NOT NULL,
+			synced BOOLEAN DEFAULT false
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create autodream_memories table: %v", err)
+	}
+
+
+	// Insert test data for autodream_memories
+	_, err = dbWrapper.Exec(ctx, `
+		INSERT INTO autodream_memories (id, organization_id, content, synced)
+		VALUES ('m-sync-1', 'default', 'test content 1', false), ('m-sync-2', 'default', 'test content 2', true)
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert autodream_memories test data: %v", err)
+	}
+
+	var receivedPayloads []AutoDreamPayload
+	cloudServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var payloads []AutoDreamPayload
+		if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		receivedPayloads = append(receivedPayloads, payloads...)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer cloudServer.Close()
+
+	os.Setenv("OHC_STANDALONE", "true")
+	os.Setenv("SPIFFE_IDENTITY_TOKEN", "fake-spiffe-token")
+	defer os.Unsetenv("SPIFFE_IDENTITY_TOKEN")
+
+	engine := NewAutoDreamSyncEngine(dbWrapper, 1*time.Minute, cloudServer.URL)
+
+	engine.Sync(ctx)
+
+	// Wait for the async sync to complete
+	time.Sleep(1 * time.Second)
+
+	memorySynced := false
+	for _, p := range receivedPayloads {
+		if p.Type == "memory" && p.ID == "m-sync-1" {
+			memorySynced = true
+		}
+	}
+
+	if !memorySynced {
+		t.Errorf("expected memory m-sync-1 to be synced. Got: %+v", receivedPayloads)
+	}
+
+	var count int
+	err = dbWrapper.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE synced = false").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count autodream_memories: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 unsynced memories, got %d", count)
 	}
 }

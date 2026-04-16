@@ -80,6 +80,9 @@ func (e *AutoDreamSyncEngine) ProcessForecastTick(ctx context.Context) {
 
 	// 3. Sync Agent Missions
 	e.syncAgentMissions(ctx)
+
+	// 4. Sync AutoDream Memories
+	e.Sync(ctx)
 }
 
 // synthesizeMemory consolidates recent memories by invoking AutoDreamWorker.
@@ -250,4 +253,80 @@ func (e *AutoDreamSyncEngine) sendToCloud(ctx context.Context, payloads []AutoDr
 	}
 
 	return nil
+}
+
+func (e *AutoDreamSyncEngine) Sync(ctx context.Context) {
+	if !e.dbWrapper.IsSQLite() {
+		return
+	}
+
+	rows, err := e.dbWrapper.Query(ctx, "SELECT id, content FROM autodream_memories WHERE synced = false LIMIT 50")
+	if err != nil {
+		slog.Error("sync: failed to query autodream_memories", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	var payloads []AutoDreamPayload
+	var ids []string
+
+	for rows.Next() {
+		var id, content string
+		if err := rows.Scan(&id, &content); err != nil {
+			slog.Error("sync: failed to scan autodream_memories", "error", err)
+			continue
+		}
+
+		payloads = append(payloads, AutoDreamPayload{
+			Type:     "memory",
+			ID:       id,
+			Data:     content,
+			Metadata: "",
+		})
+		ids = append(ids, id)
+	}
+
+	if len(payloads) == 0 {
+		return
+	}
+
+	go func() {
+		// Use a new background context since this runs asynchronously
+		bgCtx := context.Background()
+
+		// Exponential backoff retry logic
+		backoff := 1 * time.Second
+		maxBackoff := 30 * time.Second
+		maxRetries := 5
+
+		for i := 0; i < maxRetries; i++ {
+			if err := e.sendToCloud(bgCtx, payloads); err != nil {
+				slog.Error("sync: failed to send autodream_memories to cloud", "error", err, "attempt", i+1)
+				time.Sleep(backoff)
+				backoff *= 2
+				if backoff > maxBackoff {
+					backoff = maxBackoff
+				}
+				continue
+			}
+
+			// Mark as synced upon success
+			for _, id := range ids {
+				_, updateErr := e.dbWrapper.Exec(bgCtx, "UPDATE autodream_memories SET synced = true WHERE id = $1", id)
+				if updateErr != nil {
+					slog.Error("sync: failed to update autodream_memories status", "id", id, "error", updateErr)
+				}
+			}
+
+			if telemetry.SyncCompletedCount != nil {
+				telemetry.SyncCompletedCount.Add(bgCtx, int64(len(payloads)))
+			}
+			slog.Debug("sync: successfully synced autodream_memories", "count", len(payloads))
+			return
+		}
+
+		if telemetry.SyncFailedCount != nil {
+			telemetry.SyncFailedCount.Add(bgCtx, int64(len(payloads)))
+		}
+	}()
 }
