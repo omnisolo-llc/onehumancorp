@@ -1,8 +1,6 @@
 package orchestration
 
 import (
-	"fmt"
-
 	"database/sql"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"sync"
@@ -1189,7 +1187,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
 }
 
 func TestSIPDB_Caching(t *testing.T) {
-	sqliteDB, err := sql.Open("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name()))
+	sqliteDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
 		t.Fatalf("failed to open sqlite: %v", err)
 	}
