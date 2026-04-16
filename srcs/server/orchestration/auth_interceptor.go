@@ -70,9 +70,6 @@ func SPIFFEAuthInterceptor() grpc.UnaryServerInterceptor {
 			return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID format: %s", spiffeID)
 		}
 
-		// ⚡ BOLT: [Redundant SPIFFE SVID X.509 certificate validation on internal gRPC inter-agent calls] - Randomized Selection from Top 5
-		// Extracted zero-allocation string manipulations to parse SPIFFE IDs strictly without triggering O(N) memory allocations via strings.Split
-
 		// Authorization: ensure the caller matches the requested agent ID.
 		// Expected formats:
 		// ohc.local/org/{orgID}/agent/{agentID}
@@ -197,9 +194,6 @@ func SPIFFEStreamInterceptor() grpc.StreamServerInterceptor {
 		if !strings.HasPrefix(spiffeID, "spiffe://") {
 			return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID format: %s", spiffeID)
 		}
-
-		// ⚡ BOLT: [Redundant SPIFFE SVID X.509 certificate validation on internal gRPC inter-agent calls] - Randomized Selection from Top 5
-		// Extracted zero-allocation string manipulations to parse SPIFFE IDs strictly without triggering O(N) memory allocations via strings.Split
 
 		trimmed := spiffeID[len("spiffe://"):]
 		if strings.Contains(trimmed, "..") || strings.Contains(trimmed, "//") {
