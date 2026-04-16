@@ -289,6 +289,10 @@ func run(now time.Time, listen listenFunc) error {
 		}
 	}
 
+	if sipdbErr == nil && createdSIPDB != nil && redisClient != nil {
+		createdSIPDB.SetRedisClient(redisClient)
+	}
+
 	if pool != nil {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
@@ -424,6 +428,9 @@ func run(now time.Time, listen listenFunc) error {
 			// Create a tenant-scoped SIPDB instance to enforce row-level tenant isolation.
 			if pool != nil {
 				if tenantSIPDB, err := orchestration.NewSIPDBWithProvider(pool.Provider, org.ID); err == nil {
+					if redisClient != nil {
+						tenantSIPDB.SetRedisClient(redisClient)
+					}
 					tenantHub.SetSIPDB(tenantSIPDB)
 				}
 			}

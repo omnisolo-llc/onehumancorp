@@ -20,6 +20,8 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	_ "modernc.org/sqlite"
+
+	"github.com/redis/rueidis"
 )
 
 var (
@@ -40,6 +42,12 @@ var (
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+
+// SetRedisClient sets the redis client for the SIPDB.
+func (s *SIPDB) SetRedisClient(client rueidis.Client) {
+	s.redisClient = client
+}
+
 type SIPDB struct {
 	db              db.Provider
 	orgID           string
@@ -47,6 +55,7 @@ type SIPDB struct {
 	cachedGrounding string
 	groundingOnce   *sync.Once
 	cachedGroundErr error
+	redisClient   rueidis.Client
 }
 
 const (
@@ -330,6 +339,23 @@ func (s *SIPDB) getMissionUpdatedAt(ctx context.Context, missionID string) (time
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message, error) {
+	if s.redisClient != nil {
+		cacheKey := fmt.Sprintf("cache:pending_missions:%s", s.orgID)
+		cmd := s.redisClient.B().Hget().Key(cacheKey).Field(role).Build()
+		resp := s.redisClient.Do(ctx, cmd)
+		if err := resp.Error(); err == nil {
+			str, err := resp.ToString()
+			if err == nil {
+				var cachedMissions []Message
+				if err := json.Unmarshal([]byte(str), &cachedMissions); err == nil {
+					telemetry.RecordCacheHit(ctx, "GetPendingMissions", "redis")
+					return cachedMissions, nil
+				}
+			}
+		}
+		telemetry.RecordCacheMiss(ctx, "GetPendingMissions", "redis")
+	}
+
 	var missions []Message
 	err := withSipRetry(ctx, func() error {
 		missions = nil
@@ -383,7 +409,18 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 			}
 			missions = append(missions, msg)
 		}
-		return nil
+
+		if s.redisClient != nil && rows.Err() == nil {
+			if bytes, err := json.Marshal(missions); err == nil {
+				cacheKey := fmt.Sprintf("cache:pending_missions:%s", s.orgID)
+				cmd := s.redisClient.B().Hset().Key(cacheKey).FieldValue().FieldValue(role, string(bytes)).Build()
+				_ = s.redisClient.Do(ctx, cmd)
+				_ = s.redisClient.Do(ctx, s.redisClient.B().Expire().Key(cacheKey).Seconds(5).Build())
+				_ = s.redisClient.Do(ctx, cmd)
+			}
+		}
+
+		return rows.Err()
 	})
 	return missions, err
 }
@@ -407,6 +444,9 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	})
 	if err == nil && !prevTime.IsZero() {
 		telemetry.RecordAgentTransitionLatency(ctx, "running_to_completed", time.Since(prevTime).Seconds())
+	}
+	if err == nil {
+		s.invalidatePendingMissionsCache(ctx, "")
 	}
 	return err
 }
@@ -494,6 +534,20 @@ func envBoolDefault(key string, fallback bool) bool {
 }
 
 // UpsertMission inserts or updates a mission in the agent_missions table.
+
+// invalidatePendingMissionsCache clears the cache for a specific role or all roles.
+func (s *SIPDB) invalidatePendingMissionsCache(ctx context.Context, role string) {
+	if s.redisClient == nil {
+		return
+	}
+	cacheKey := fmt.Sprintf("cache:pending_missions:%s", s.orgID)
+	if role != "" {
+		_ = s.redisClient.Do(ctx, s.redisClient.B().Hdel().Key(cacheKey).Field(role).Build())
+	} else {
+		_ = s.redisClient.Do(ctx, s.redisClient.B().Del().Key(cacheKey).Build())
+	}
+}
+
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
 	var prevTime time.Time
 	var oldStatus string
@@ -564,6 +618,16 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 	if err == nil && !prevTime.IsZero() && oldStatus != status {
 		transition := strings.ToLower(oldStatus) + "_to_" + strings.ToLower(status)
 		telemetry.RecordAgentTransitionLatency(ctx, transition, time.Since(prevTime).Seconds())
+	}
+	if err == nil {
+		var role string
+		var payloadMap map[string]interface{}
+		if json.Unmarshal([]byte(payload), &payloadMap) == nil {
+			if r, ok := payloadMap["role"].(string); ok {
+				role = r
+			}
+		}
+		s.invalidatePendingMissionsCache(ctx, role)
 	}
 	return err
 }
