@@ -12,7 +12,6 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestHandleMissionsSync_PIIRedaction(t *testing.T) {
@@ -174,9 +173,6 @@ func TestHandleMCPInvoke_PIIRedactionInLogs(t *testing.T) {
 	defer hub.Close()
 
 	srv := NewServer(org, hub, nil, nil)
-
-	telemetry.Verbosity = 2
-	defer func() { telemetry.Verbosity = 1 }()
 
 	// Capture slog output
 	var buf bytes.Buffer

@@ -179,7 +179,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 		if err != nil {
 			if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
 				var exists bool
-				checkErr := tx.QueryRow(to.workerCtx, "SELECT EXISTS(SELECT 1 FROM shared_tasks WHERE status = 'PENDING' AND (priority = 'DELEGATED' OR payload->>'sub_agent_type' IS NOT NULL))").Scan(&exists)
+				checkErr := tx.QueryRow(to.workerCtx, "SELECT EXISTS(SELECT 1 FROM shared_tasks WHERE status = \'PENDING\' AND (priority = \'DELEGATED\' OR payload->>\'sub_agent_type\' IS NOT NULL))").Scan(&exists)
 				if checkErr == nil && exists {
 					telemetry.RecordPostgresLockContention(to.workerCtx, "poll_sub_agent_queue")
 				}
@@ -383,7 +383,7 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 		tx.Rollback(ctx)
 		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
 			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM swarm_tasks st WHERE st.status = 'READY' AND (SELECT COUNT(*) FROM swarm_task_dependencies td INNER JOIN swarm_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0)").Scan(&exists)
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM swarm_tasks st WHERE st.status = \'READY\' AND (SELECT COUNT(*) FROM swarm_task_dependencies td INNER JOIN swarm_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != \'COMPLETED\') = 0)").Scan(&exists)
 			if checkErr == nil && exists {
 				telemetry.RecordPostgresLockContention(ctx, "claim_task")
 			}
@@ -698,7 +698,7 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskSQLite(ctx context.Cont
 	); err != nil {
 		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = 'PENDING')").Scan(&exists)
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = \'PENDING\')").Scan(&exists)
 			if checkErr == nil && exists {
 				telemetry.RecordPostgresLockContention(ctx, "claim_decomposition_task_sqlite")
 			}
@@ -750,7 +750,7 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskPostgres(ctx context.Co
 	); err != nil {
 		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = 'PENDING')").Scan(&exists)
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = \'PENDING\')").Scan(&exists)
 			if checkErr == nil && exists {
 				telemetry.RecordPostgresLockContention(ctx, "claim_decomposition_task_postgres")
 			}

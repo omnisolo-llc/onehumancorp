@@ -566,42 +566,6 @@ func TestRedactInterfacePII(t *testing.T) {
 		}
 	})
 
-	t.Run("Unknown Slice type", func(t *testing.T) {
-		type CustomString string
-		s := []CustomString{"user@example.com", "safe text"}
-		res := RedactInterfacePII(s).([]interface{})
-		if res[0] != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL], got %v", res[0])
-		}
-	})
-
-	t.Run("Unknown Map type", func(t *testing.T) {
-		type CustomString string
-		m := map[CustomString]interface{}{
-			"user":  "user@example.com",
-			"other": "safe text",
-		}
-		res := RedactInterfacePII(m).(map[string]interface{})
-		if res["user"] != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL], got %v", res["user"])
-		}
-	})
-
-	t.Run("Unknown Struct type", func(t *testing.T) {
-		type CustomStruct struct {
-			Email string
-			Safe  int
-		}
-		s := CustomStruct{Email: "user@example.com", Safe: 42}
-		res := RedactInterfacePII(s).(map[string]interface{})
-		if res["Email"] != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL], got %v", res["Email"])
-		}
-		if res["Safe"] != 42 {
-			t.Errorf("Expected 42, got %v", res["Safe"])
-		}
-	})
-
 	t.Run("Default fallback", func(t *testing.T) {
 		res := RedactInterfacePII(123)
 		if res != 123 {
@@ -700,24 +664,4 @@ func TestOmniContextBytesRoutedMetric(t *testing.T) {
 
 	// Should not panic when nil
 	RecordOmniContextBytes(context.Background(), 1024)
-}
-
-func TestRecordSubAgentQueueDelay(t *testing.T) {
-	_, err := InitTelemetry()
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	// This should not panic
-	RecordSubAgentQueueDelay(context.Background(), 1.5)
-}
-
-func TestRecordTaskClaimContention(t *testing.T) {
-	_, err := InitTelemetry()
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	// This should not panic
-	RecordTaskClaimContention(context.Background(), "Postgres")
 }

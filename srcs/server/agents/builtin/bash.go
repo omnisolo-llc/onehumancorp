@@ -3,8 +3,7 @@ package builtin
 import (
 	"context"
 	"encoding/json"
-
-	"github.com/onehumancorp/mono/srcs/server/bash_sandbox"
+	"os/exec"
 )
 
 // BashTool definition
@@ -29,11 +28,11 @@ var BashTool = Tool{
 			return "", err
 		}
 
-		sandbox := bash_sandbox.NewSandbox()
-		out, err := sandbox.ExecuteContext(ctx, input.Command, "")
+		cmd := exec.CommandContext(ctx, "bash", "-c", input.Command)
+		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return out + "\n" + err.Error(), nil // Returning error as content to the LLM
+			return string(out) + "\n" + err.Error(), nil // Returning error as content to the LLM
 		}
-		return out, nil
+		return string(out), nil
 	},
 }

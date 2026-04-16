@@ -7,14 +7,10 @@ toc:
     path: /docs/developer/index.md
   - title: API
     path: /docs/api/index.md
-  - title: Hybrid MCP API Playbook
-    path: /docs/api/hybrid_mcp_api.md
   - title: Features
     path: /docs/features/index.md
   - title: Walkthroughs
     path: /docs/walkthroughs/index.md
-  - title: Hybrid MCP Telemetry Visual Guide
-    path: /docs/walkthroughs/hybrid_mcp_telemetry_visual_guide.md
   - title: Operations
     path: /docs/operations/index.md
   - title: Releases

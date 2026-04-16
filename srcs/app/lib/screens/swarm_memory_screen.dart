@@ -1,6 +1,4 @@
-import 'dart:ui';
-import 'package:ohc_app/widgets/glass_card.dart';
-import 'package:ohc_app/widgets/vector_memory_visualizer.dart';
+import 'dart:ui';import 'package:ohc_app/widgets/glass_card.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,26 +68,6 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
                   const Expanded(
                     child: _DurableMemoryWidget(),
                   ),
-                ],
-              ),
-            ),
-          ),
-
-          const VerticalDivider(width: 1),
-
-          // Third Side: AutoDream Vector Pipelines
-          Expanded(
-            flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('AutoDream Pipelines', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  const Text('Vector Memory Observability', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
-                  const SizedBox(height: 16),
-                  const VectorMemoryVisualizerWidget(),
                 ],
               ),
             ),

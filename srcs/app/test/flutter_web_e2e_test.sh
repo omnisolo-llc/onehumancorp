@@ -104,8 +104,21 @@ done
 
 if [ -z "$BACKEND_BIN" ]; then
   echo "ERROR: Go backend binary not found. Ensure //srcs/server:ohc is included in data." >&2
-  # Fallback to Python server if we can't find the backend binary (e.g. during local dev)
-  python3 -m http.server "${PORT}" --directory "${WEB_ARTIFACTS}" &
+  # Fallback: SPA-aware Python server so Flutter HTML5 history routing works.
+  python3 -c "
+import http.server, os, sys
+port = int(sys.argv[1])
+directory = sys.argv[2]
+class H(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        p = self.translate_path(self.path)
+        if not os.path.isfile(p):
+            self.path = '/index.html'
+        return super().do_GET()
+    def log_message(self, *a): pass
+os.chdir(directory)
+with http.server.HTTPServer(('', port), H) as s: s.serve_forever()
+" "${PORT}" "${WEB_ARTIFACTS}" &
   SERVER_PID=$!
 else
   export FRONTEND_STATIC_DIR="${WEB_ARTIFACTS}"
@@ -114,6 +127,7 @@ else
   export OHC_DB_PATH="${TMPDIR}/ohc_e2e.db"
   export ADMIN_USERNAME="admin"
   export ADMIN_PASSWORD="adminpass123"
+  export ADMIN_EMAIL="admin@localhost"
 
   # Seed the backend
   "${BACKEND_BIN}" &

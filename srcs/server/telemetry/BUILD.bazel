@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "minimax_metrics.go",
         "rag_sync_metrics.go",
-        "logger.go",
         "sync_worker.go",
         "telemetry.go",
         "telemetry_bridge.go",
@@ -30,7 +29,6 @@ go_test(
     srcs = [
         "buffer_test.go",
         "privacy_test.go",
-        "logger_test.go",
         "sync_worker_test.go",
         "telemetry_extra_test.go",
         "telemetry_test.go",

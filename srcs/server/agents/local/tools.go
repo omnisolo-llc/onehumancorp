@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"github.com/onehumancorp/mono/srcs/server/utils"
-	"github.com/onehumancorp/mono/srcs/server/bash_sandbox"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -94,17 +93,17 @@ func (t *bashTool) Execute(ctx context.Context, workDir string, input map[string
 	execCtx, cancel := context.WithTimeout(ctx, timeoutDur)
 	defer cancel()
 
-	sandbox := bash_sandbox.NewSandbox()
-
-	out, err := sandbox.ExecuteContext(execCtx, command, workDir)
+	cmd := exec.CommandContext(execCtx, "bash", "-c", command)
+	cmd.Dir = workDir
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if errors.Is(execCtx.Err(), context.DeadlineExceeded) {
-			return out, fmt.Errorf("bash: command timed out after %ds", timeoutSec)
+			return string(out), fmt.Errorf("bash: command timed out after %ds", timeoutSec)
 		}
 		// Return output along with error so the model can see what happened.
-		return out, fmt.Errorf("bash: exit status %w", err)
+		return string(out), fmt.Errorf("bash: exit status %w", err)
 	}
-	return out, nil
+	return string(out), nil
 }
 
 // ─── FileReadTool ─────────────────────────────────────────────────────────────

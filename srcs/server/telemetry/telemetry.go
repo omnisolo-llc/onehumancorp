@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"reflect"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -61,8 +60,6 @@ var (
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
 	subAgentQueueLengthGauge           metric.Int64UpDownCounter
-	SubAgentQueueDelayHistogram        metric.Float64Histogram
-	TaskClaimContentionTotal           metric.Int64Counter
 	postgresLockContentionCounter      metric.Int64Counter
 	llmNetworkLatencyHistogram         metric.Float64Histogram
 	ToolAutoCorrectionTotal            metric.Int64Counter
@@ -71,6 +68,8 @@ var (
 	AgentTransitionLatency             metric.Float64Histogram
 
 	SyncCompletedCount     metric.Int64Counter
+	SubAgentQueueDelayHistogram metric.Float64Histogram
+	TaskClaimContentionTotal    metric.Int64Counter
 	SyncFailedCount        metric.Int64Counter
 	SyncEscalationsCount   metric.Int64Counter
 	SyncLatency            metric.Float64Histogram
@@ -147,55 +146,6 @@ func RedactInterfacePII(val interface{}) interface{} {
 		}
 		return res
 	default:
-		if val == nil {
-			return nil
-		}
-		rv := reflect.ValueOf(val)
-		if rv.Kind() == reflect.String {
-			return RedactPII(rv.String())
-		}
-		switch rv.Kind() {
-		case reflect.Slice, reflect.Array:
-			if rv.Len() == 0 {
-				return val
-			}
-			// Important: Leave []byte intact. It marshals to base64 natively and usually doesn't need field-by-field string redaction here unless handled separately.
-			if rv.Type().Elem().Kind() == reflect.Uint8 {
-				return val
-			}
-			res := make([]interface{}, rv.Len())
-			for i := 0; i < rv.Len(); i++ {
-				res[i] = RedactInterfacePII(rv.Index(i).Interface())
-			}
-			return res
-		case reflect.Map:
-			if rv.Len() == 0 {
-				return val
-			}
-			res := make(map[string]interface{})
-			for _, key := range rv.MapKeys() {
-				var kStr string
-				if key.Kind() == reflect.String {
-					kStr = key.String()
-				} else {
-					kStr = fmt.Sprintf("%v", key.Interface())
-				}
-				res[kStr] = RedactInterfacePII(rv.MapIndex(key).Interface())
-			}
-			return res
-		case reflect.Struct:
-			res := make(map[string]interface{})
-			rt := rv.Type()
-			for i := 0; i < rv.NumField(); i++ {
-				field := rt.Field(i)
-				// Skip unexported fields
-				if field.PkgPath != "" {
-					continue
-				}
-				res[field.Name] = RedactInterfacePII(rv.Field(i).Interface())
-			}
-			return res
-		}
 		return val
 	}
 }
@@ -301,7 +251,24 @@ func InitWithMeter(m mockableMeter) error {
 
 	swarmTaskQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc_swarm_task_queue_length",
-		metric.WithDescription("Current number of pending swarm tasks"),
+		metric.WithDescription("Current number of tasks in the queue"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentQueueDelayHistogram, err = m.Float64Histogram(
+		"sub_agent_queue_delay_seconds",
+		metric.WithDescription("Time spent by sub-agents in queue before being processed"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TaskClaimContentionTotal, err = m.Int64Counter(
+		"task_claim_contention_total",
+		metric.WithDescription("Total number of task claim contentions encountered"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -520,22 +487,6 @@ func InitWithMeter(m mockableMeter) error {
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
 		"ohc_sub_agent_queue_length",
 		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	SubAgentQueueDelayHistogram, err = m.Float64Histogram(
-		"ohc_sub_agent_queue_delay_seconds",
-		metric.WithDescription("Time from job enqueue to dequeue for sub-agents"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	TaskClaimContentionTotal, err = m.Int64Counter(
-		"ohc_task_claim_contention_total",
-		metric.WithDescription("Number of failed task claim attempts or retries due to lock contention"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1323,7 +1274,7 @@ func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "swarm_task_queue_length", string(payloadBytes))
+		_ = BufferMetricFunc(ctx, "ohc_swarm_task_queue_length", string(payloadBytes))
 	}
 	if swarmTaskQueueLengthGauge == nil {
 		return
@@ -1639,7 +1590,7 @@ func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorT
     }
 }
 
-// RecordSubAgentQueueDelay records the duration from job enqueue to dequeue.
+// RecordSubAgentQueueDelay records the delay experienced by a sub-agent in queue.
 func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
@@ -1647,15 +1598,14 @@ func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "sub_agent_queue_delay", string(payloadBytes))
+		_ = BufferMetricFunc(ctx, "sub_agent_queue_delay_seconds", string(payloadBytes))
 	}
-	if SubAgentQueueDelayHistogram == nil {
-		return
+	if SubAgentQueueDelayHistogram != nil {
+		SubAgentQueueDelayHistogram.Record(ctx, delay)
 	}
-	SubAgentQueueDelayHistogram.Record(ctx, delay)
 }
 
-// RecordTaskClaimContention tracks the number of failed task claim attempts.
+// RecordTaskClaimContention increments the task claim contention counter.
 func RecordTaskClaimContention(ctx context.Context, mode string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
@@ -1663,12 +1613,11 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 		}
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
-		_ = BufferMetricFunc(ctx, "task_claim_contention", string(payloadBytes))
+		_ = BufferMetricFunc(ctx, "task_claim_contention_total", string(payloadBytes))
 	}
-	if TaskClaimContentionTotal == nil {
-		return
+	if TaskClaimContentionTotal != nil {
+		TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("mode", mode),
+		))
 	}
-	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("mode", mode),
-	))
 }

@@ -119,7 +119,6 @@ type SQLiteMutex struct {
 	ownerID  string
 }
 
-
 func (m *SQLiteMutex) Lock(ctx context.Context, ttl time.Duration) error {
 	tx, err := m.provider.db.Begin(ctx)
 	if err != nil {
@@ -150,6 +149,7 @@ func (m *SQLiteMutex) Lock(ctx context.Context, ttl time.Duration) error {
 	}
 	return nil
 }
+
 func (m *SQLiteMutex) Unlock(ctx context.Context) error {
 	query := `DELETE FROM distributed_locks WHERE lock_key = $1 AND owner_id = $2`
 	res, err := m.provider.db.Exec(ctx, query, m.key, m.ownerID)

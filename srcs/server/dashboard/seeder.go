@@ -36,7 +36,7 @@ func seededLaunchReadiness(now time.Time) (domain.Organization, *orchestration.H
 	hub.RegisterAgent(orchestration.Agent{ID: "ux-1", Name: "Design Lead", Role: "DESIGNER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "qa-1", Name: "QA Lead", Role: "QA_TESTER", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "sec-1", Name: "Security Auditor", Role: "SECURITY_ENGINEER", OrganizationID: org.ID})
-	hub.RegisterAgent(orchestration.Agent{ID: "news-1", Name: "AI News Collector", Role: "AI_NEWS_COLLECTOR", OrganizationID: org.ID, Status: orchestration.StatusActive})
+	hub.RegisterAgent(orchestration.Agent{ID: "news-1", Name: "AI News Collector", Role: "AI_NEWS_COLLECTOR", OrganizationID: org.ID})
 	hub.RegisterAgent(orchestration.Agent{ID: "CEO", Name: "Human CEO", Role: "CEO", OrganizationID: org.ID})
 	hub.OpenMeetingWithAgenda("launch-readiness", "Review launch blockers, sign-off on reliability checklist, assign post-launch owners.", []string{"pm-1", "swe-1", "ux-1", "qa-1", "sec-1", "CEO"})
 

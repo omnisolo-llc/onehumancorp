@@ -18,7 +18,6 @@ go_library(
         "//srcs/server/db",
         "//srcs/server/telemetry",
         "//srcs/server/utils",
-        "//srcs/server/bash_sandbox",
         "@com_github_google_uuid//:uuid",
         "@com_github_redis_rueidis//:rueidis",
     ],

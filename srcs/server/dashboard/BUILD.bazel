@@ -21,10 +21,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/dashboard",
     visibility = ["//visibility:public"],
     deps = [
-        "//api/mesh",
-        "@com_github_redis_go_redis_v9//:go-redis",
         "//srcs/server/api",
-        "@com_github_redis_rueidis//:rueidis",
         "//srcs/server/api/mesh",
         "//srcs/server/orchestration/mesh",
         "//srcs/server/services/growth",
@@ -65,7 +62,6 @@ go_test(
     embed = [":dashboard"],
     deps = [
         "//srcs/server/api",
-        "@com_github_redis_rueidis//:rueidis",
         "//srcs/server/api/mesh",
         "//srcs/server/orchestration/mesh",
         "//srcs/server/services/growth",

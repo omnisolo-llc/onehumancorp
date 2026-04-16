@@ -67,7 +67,6 @@ go_library(
         "migrations/20260415124000_shared_tasks_master.sql",
         "migrations/20260415124100_autodream_memories_master.sql",
         "migrations/20260416000000_shared_tasks_decomposition_pg.sql",
-        "migrations/20260416020000_hybrid_mcp_sync_queue.sql",
 
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",

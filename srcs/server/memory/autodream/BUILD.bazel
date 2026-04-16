@@ -10,7 +10,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/memory",
-        "//srcs/server/auth",
     ],
 )
 
@@ -21,7 +20,6 @@ go_test(
     deps = [
         "//srcs/server/db",
         "//srcs/server/memory",
-        "//srcs/server/auth",
         "@org_modernc_sqlite//:sqlite",
     ],
 )
