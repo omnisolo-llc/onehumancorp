@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 
@@ -38,6 +39,11 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// ExecutionEnvironment defines the interface for command execution.
+type ExecutionEnvironment interface {
+	ExecuteContext(ctx context.Context, command string, workDir string) (string, error)
 }
 
 // Sandbox defines the configuration for secure bash execution.
@@ -81,6 +87,14 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	}
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
+	cmd.Env = []string{} // Clear inherited environment explicitly to prevent secret leaks
+	// Pass through essential PATH and set HOME to isolated directory
+	for _, env := range os.Environ() {
+		if strings.HasPrefix(env, "PATH=") {
+			cmd.Env = append(cmd.Env, env)
+		}
+	}
+	cmd.Env = append(cmd.Env, "HOME=.agent-home/")
 	if workDir != "" {
 		cmd.Dir = workDir
 	}
