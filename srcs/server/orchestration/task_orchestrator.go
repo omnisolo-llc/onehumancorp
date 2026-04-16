@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/checkpointer"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/models"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
@@ -22,25 +21,6 @@ import (
 )
 
 // TaskOrchestrator abstracts the state machine and dependency tracking for the Teammate Mesh
-
-
-type SharedTaskDecompositionDB struct {
-	ID              string          `json:"id" db:"id"`
-	OrganizationID  string          `json:"organization_id" db:"organization_id"`
-	Title           string          `json:"title" db:"title"`
-	Description     *string         `json:"description" db:"description"`
-	Status          string          `json:"status" db:"status"`
-	AssignedAgentID *string         `json:"assigned_agent_id" db:"assigned_agent_id"`
-	Priority        string          `json:"priority" db:"priority"`
-	Payload         json.RawMessage `json:"payload" db:"payload"`
-	ParentPlanID    *string         `json:"parent_plan_id" db:"parent_plan_id"`
-	Dependencies    json.RawMessage `json:"dependencies" db:"dependencies"`
-	LockedUntil     *time.Time      `json:"locked_until" db:"locked_until"`
-	CreatedAt       time.Time       `json:"created_at" db:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at" db:"updated_at"`
-}
-
-
 type TaskOrchestrator interface {
 	ReceiveHighLevelRequest(ctx context.Context, orgID, title string) (string, error)
 	EnqueueTask(ctx context.Context, task *models.Task, dependsOn []string) (*models.Task, error)
@@ -50,7 +30,6 @@ type TaskOrchestrator interface {
 
 type DefaultTaskOrchestrator struct {
 	db           db.Provider
-	checkpointer checkpointer.CheckpointSaver
 	redisClient  rueidis.Client
 	hub          *CentrifugeNode
 	mesh         MeshTransport
@@ -77,11 +56,8 @@ func NewTaskOrchestrator(provider db.Provider, redisClient rueidis.Client, hub *
 
 	subWorker := NewSubAgentWorker(tq, spawner)
 
-	cp := checkpointer.NewPgCheckpointSaver(provider)
-
 	to := &DefaultTaskOrchestrator{
 		db:           provider,
-		checkpointer: cp,
 		redisClient:  redisClient,
 		hub:          hub,
 		mesh:         mesh,
@@ -177,14 +153,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 		`
 		err = tx.QueryRow(to.workerCtx, query).Scan(&taskID, &orgID)
 		if err != nil {
-			if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
-				var exists bool
-				checkErr := tx.QueryRow(to.workerCtx, "SELECT EXISTS(SELECT 1 FROM shared_tasks WHERE status = \'PENDING\' AND (priority = \'DELEGATED\' OR payload->>\'sub_agent_type\' IS NOT NULL))").Scan(&exists)
-				if checkErr == nil && exists {
-					telemetry.RecordPostgresLockContention(to.workerCtx, "poll_sub_agent_queue")
-				}
-			}
-			return
+			return // sql.ErrNoRows or locking issue
 		}
 	}
 
@@ -381,13 +350,7 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 
 	if err != nil {
 		tx.Rollback(ctx)
-		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
-			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM swarm_tasks st WHERE st.status = \'READY\' AND (SELECT COUNT(*) FROM swarm_task_dependencies td INNER JOIN swarm_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != \'COMPLETED\') = 0)").Scan(&exists)
-			if checkErr == nil && exists {
-				telemetry.RecordPostgresLockContention(ctx, "claim_task")
-			}
-		}
+		// sql.ErrNoRows is fine
 		return nil, nil // No task available
 	}
 
@@ -411,22 +374,6 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit: %w", err)
-	}
-
-	// Phase 8: Stateful Episodic Memory Checkpoint
-	if to.checkpointer != nil {
-		_ = to.checkpointer.PutCheckpoint(ctx, &checkpointer.Checkpoint{
-			ThreadID:     task.MissionID,
-			CheckpointID: task.ID,
-			Data: map[string]interface{}{
-				"status": "IN_PROGRESS",
-				"agent":  agentID,
-			},
-			Metadata: map[string]interface{}{
-				"action": "ACQUIRE",
-			},
-			CreatedAt: time.Now(),
-		})
 	}
 
 	// Broadcast
@@ -534,27 +481,6 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		return fmt.Errorf("failed to commit: %w", err)
 	}
 
-	// Phase 8: Stateful Episodic Memory Checkpoint
-	if to.checkpointer != nil {
-		// Load task mission_id for thread_id
-		var missionID string
-		_ = to.db.QueryRow(ctx, "SELECT mission_id FROM swarm_tasks WHERE id = $1", taskID).Scan(&missionID)
-
-		_ = to.checkpointer.PutCheckpoint(ctx, &checkpointer.Checkpoint{
-			ThreadID:     missionID,
-			CheckpointID: taskID + "_complete",
-			ParentID:     &taskID,
-			Data: map[string]interface{}{
-				"status": "COMPLETED",
-				"result": result,
-			},
-			Metadata: map[string]interface{}{
-				"action": "COMPLETE",
-			},
-			CreatedAt: time.Now(),
-		})
-	}
-
 	// Metrics
 	telemetry.RecordSwarmTaskCompleted(ctx, taskID)
 	taskPayload = string(updatedPayload)
@@ -658,116 +584,4 @@ func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, 
 	}
 
 	return taskID, nil
-}
-
-
-
-func (to *DefaultTaskOrchestrator) ClaimDecompositionTask(ctx context.Context, agentID string) (*SharedTaskDecompositionDB, error) {
-	if to.db.IsSQLite() {
-		return to.claimDecompositionTaskSQLite(ctx, agentID)
-	}
-	return to.claimDecompositionTaskPostgres(ctx, agentID)
-}
-
-func (to *DefaultTaskOrchestrator) claimDecompositionTaskSQLite(ctx context.Context, agentID string) (*SharedTaskDecompositionDB, error) {
-	to.mu.Lock()
-	defer to.mu.Unlock()
-
-	tx, err := to.db.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	query := `
-		SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
-		FROM shared_tasks_decomposition
-		WHERE status = 'PENDING'
-		LIMIT 1
-	`
-	row := tx.QueryRow(ctx, query)
-
-	var task SharedTaskDecompositionDB
-	var payloadStr, dependenciesStr string
-    var createdAtStr, updatedAtStr string
-    var lockedUntil *time.Time
-	if err := row.Scan(
-		&task.ID, &task.OrganizationID, &task.Title, &task.Description,
-		&task.Status, &task.AssignedAgentID, &task.Priority, &payloadStr, &task.ParentPlanID,
-		&dependenciesStr, &lockedUntil, &createdAtStr, &updatedAtStr,
-	); err != nil {
-		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = \'PENDING\')").Scan(&exists)
-			if checkErr == nil && exists {
-				telemetry.RecordPostgresLockContention(ctx, "claim_decomposition_task_sqlite")
-			}
-				return nil, nil
-		}
-		return nil, fmt.Errorf("failed to query pending task: %w", err)
-	}
-
-	task.Payload = []byte(payloadStr)
-	task.Dependencies = []byte(dependenciesStr)
-    task.LockedUntil = lockedUntil
-    task.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAtStr)
-    task.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAtStr)
-
-	if _, err = tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
-		return nil, fmt.Errorf("failed to update task status: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	task.Status = "IN_PROGRESS"
-	task.AssignedAgentID = &agentID
-	return &task, nil
-}
-
-func (to *DefaultTaskOrchestrator) claimDecompositionTaskPostgres(ctx context.Context, agentID string) (*SharedTaskDecompositionDB, error) {
-	tx, err := to.db.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	query := `
-		SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
-		FROM shared_tasks_decomposition
-		WHERE status = 'PENDING'
-		LIMIT 1
-		FOR UPDATE SKIP LOCKED
-	`
-	row := tx.QueryRow(ctx, query)
-
-	var task SharedTaskDecompositionDB
-	if err := row.Scan(
-		&task.ID, &task.OrganizationID, &task.Title, &task.Description,
-		&task.Status, &task.AssignedAgentID, &task.Priority, &task.Payload, &task.ParentPlanID,
-		&task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
-	); err != nil {
-		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = \'PENDING\')").Scan(&exists)
-			if checkErr == nil && exists {
-				telemetry.RecordPostgresLockContention(ctx, "claim_decomposition_task_postgres")
-			}
-				return nil, nil
-		}
-		return nil, fmt.Errorf("failed to query pending task: %w", err)
-	}
-
-	if _, err = tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
-		return nil, fmt.Errorf("failed to update task status: %w", err)
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	task.Status = "IN_PROGRESS"
-	task.AssignedAgentID = &agentID
-	return &task, nil
 }

@@ -482,10 +482,6 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
 
-	if currentStatus == statemachine.StateCompleted {
-		return errors.New("task already completed")
-	}
-
 	tx, err := tm.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
@@ -534,20 +530,6 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				"status":   "COMPLETED",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
-		}()
-	}
-
-	// Broadcast mesh events
-	if tm.mesh != nil {
-		go func() {
-			payload := map[string]interface{}{
-				"task_id":  taskID,
-				"action":   "COMPLETE",
-				"agent_id": agentID,
-				"status":   "COMPLETED",
-			}
-			payloadBytes, _ := json.Marshal(payload)
-			_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
 		}()
 	}
 

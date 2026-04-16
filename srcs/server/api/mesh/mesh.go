@@ -2,10 +2,7 @@ package mesh
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
@@ -130,72 +127,4 @@ func (s *MemoryMeshService) Subscribe(ctx context.Context) (<-chan string, error
 	}()
 
 	return out, nil
-}
-
-type MeshHandler struct {
-	Service TeammateMeshService
-}
-
-func NewMeshHandler(service TeammateMeshService) *MeshHandler {
-	return &MeshHandler{
-		Service: service,
-	}
-}
-
-func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req struct {
-		Intent string `json:"intent"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.Service.BroadcastIntent(r.Context(), req.Intent); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to broadcast: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func (h *MeshHandler) Stream(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "Streaming not supported", http.StatusInternalServerError)
-		return
-	}
-
-	sub, err := h.Service.Subscribe(r.Context())
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to subscribe: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-
-	for {
-		select {
-		case msg, ok := <-sub:
-			if !ok {
-				return
-			}
-			fmt.Fprintf(w, "data: %s\n\n", msg)
-			flusher.Flush()
-		case <-r.Context().Done():
-			return
-		}
-	}
 }

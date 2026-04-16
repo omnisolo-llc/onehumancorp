@@ -333,7 +333,7 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}, nil
 
 	// ── Issue tracker tools ───────────────────────────────────────────────────
-	case "jira-mcp":
+	case "jira-mcp", "linear-mcp":
 		var p issueToolParams
 		// ⚡ BOLT: [JSON serialization thrashing on tool payloads] - Randomized Selection from Top 5
 		// Eliminated json.NewDecoder allocations on hot native paths using json.Unmarshal.
@@ -345,6 +345,8 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		if integrationID == "" {
 			if req.ToolID == "jira-mcp" {
 				integrationID = "jira"
+			} else {
+				integrationID = "linear"
 			}
 		}
 

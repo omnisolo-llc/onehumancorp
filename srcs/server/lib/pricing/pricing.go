@@ -53,14 +53,3 @@ func (c *CostOptimizer) AnalyzeCost(tokens int) float64 {
 func (c *CostOptimizer) GetTokenEfficiency() string {
 	return fmt.Sprintf("Efficiency calculated for base cost: %.2f", c.BaseCost)
 }
-
-// OptimizePrompt unifies the prompt compression pipeline:
-// 1. Minifies JSON if applicable
-// 2. Reduces English stop words
-// 3. Truncates the total word count to the maximum boundary limit
-func (c *CostOptimizer) OptimizePrompt(prompt string, maxWords int) string {
-	prompt = MinifyJSONPrompt(prompt)
-	prompt = ReduceTokens(prompt)
-	prompt = TruncateByWordCount(prompt, maxWords)
-	return prompt
-}

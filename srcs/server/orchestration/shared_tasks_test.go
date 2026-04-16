@@ -90,13 +90,4 @@ func TestClaimTask(t *testing.T) {
     if status != "DONE" {
         t.Errorf("expected status DONE, got %v", status)
     }
-
-    // Test claiming when no tasks are available
-    noTask, err := ClaimTask(ctx, provider, "agent-1")
-    if err != nil {
-        t.Fatalf("expected nil error when no tasks are available, got %v", err)
-    }
-    if noTask != nil {
-        t.Errorf("expected nil task when no tasks are available, got %v", noTask)
-    }
 }

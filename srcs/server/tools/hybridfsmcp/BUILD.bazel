@@ -6,7 +6,6 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/tools/hybridfsmcp",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/agents/mcp/proxy",
         "//srcs/server/auth",
         "//srcs/server/utils",
         "@com_github_minio_minio_go_v7//:minio-go",

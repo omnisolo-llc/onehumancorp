@@ -9,13 +9,11 @@ go_library(
         "invites_repo.go",
         "experiments.go",
         "quota.go",
-        "viral_loop.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/services/growth",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "//srcs/server/lib/analytics",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
     ],
@@ -29,10 +27,6 @@ go_test(
         "invites_test.go",
         "experiments_test.go",
         "quota_test.go",
-        "viral_loop_test.go",
     ],
     embed = [":growth"],
-    deps = [
-        "//srcs/server/lib/analytics",
-    ],
 )

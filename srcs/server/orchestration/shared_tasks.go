@@ -30,9 +30,6 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' LIMIT 1`
 		err = tx.QueryRow(ctx, query).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
 			return nil, err
 		}
 
@@ -78,9 +75,6 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 			&task.UpdatedAt,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-				return nil, nil
-			}
 			return nil, err
 		}
 	}

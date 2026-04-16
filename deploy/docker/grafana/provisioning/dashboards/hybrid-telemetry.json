@@ -23,21 +23,6 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "text",
-      "title": "OHC Aesthetics",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<style>.panel-container { backdrop-filter: blur(20px); background: rgba(255, 255, 255, 0.05) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>"
-      },
-      "transparent": true
-    },
-    {
       "gridPos": {
         "h": 3,
         "w": 24,
@@ -1346,82 +1331,6 @@
           "refId": "A"
         }
       ]
-    },
-    {
-      "id": 1010,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 124
-      },
-      "type": "timeseries",
-      "title": "Swarm Task Queue Length",
-      "targets": [
-        {
-          "expr": "sum(ohc_swarm_task_queue_length)",
-          "legendFormat": "Queue Length",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 1011,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 132
-      },
-      "type": "timeseries",
-      "title": "Sub-Agent Queue Length",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "targets": [
-        {
-          "expr": "ohc_sub_agent_queue_length",
-          "refId": "A",
-          "legendFormat": "Queue Length"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "drawStyle": "line",
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single"
-        }
-      }
     }
   ],
   "refresh": "",

@@ -41,20 +41,15 @@ func (q *PostgresTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 
 	newPayload, _ := json.Marshal(payloadMap)
 
-	orgID := ""
-	if val, ok := payloadMap["organization_id"].(string); ok {
-		orgID = val
-	}
-
 	query := `
 		INSERT INTO sub_agent_queue (
-			id, organization_id, parent_task_id, payload, status, scheduled_at
+			id, parent_task_id, payload, status, scheduled_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6
+			$1, $2, $3, $4, $5
 		)
 	`
 	_, err := q.provider.Exec(ctx, query,
-		job.ID, orgID, job.ParentTaskID, string(newPayload),
+		job.ID, job.ParentTaskID, string(newPayload),
 		"PENDING", job.RunAfter,
 	)
 	return err
@@ -94,15 +89,14 @@ func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, 
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
-		RETURNING id, organization_id, parent_task_id, payload, status, scheduled_at
+		RETURNING id, parent_task_id, payload, status, scheduled_at
 	`, nowIdx, roleFilter)
 
 	var j Job
 	var scheduledAt time.Time
-	var orgID string
 
 	err := q.provider.QueryRow(ctx, query, args...).Scan(
-		&j.ID, &orgID, &j.ParentTaskID, &j.Payload, &j.Status, &scheduledAt,
+		&j.ID, &j.ParentTaskID, &j.Payload, &j.Status, &scheduledAt,
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {

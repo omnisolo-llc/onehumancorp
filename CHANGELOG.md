@@ -1,13 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
-### Cloud Scaling Improvements
-- Added MissionIngestionWorker to seamlessly vectorize mission artifacts into AutoDream long-term memory.
-
-### Privacy/Offline Improvements
-- Enhanced standalone AutoDream memory consistency using SQL-backed idempotent ingestion for mission artifacts.
-
-
 ## v0.3.7 (Cloud) / v0.3.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implemented Centrifuge WebSockets integration by hooking up CentrifugeNode to MeshTransport interface logic in orchestration.

@@ -508,23 +508,29 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 		// Fetch previous state for telemetry
 		_ = tx.QueryRow(ctx, "SELECT status, COALESCE(updated_at, created_at) FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&oldStatus, &prevTime)
 
-		// Standardize UpsertMission to ensure atomic status transitions and consistent forceLocal behavior.
-		// Use a common upsert pattern where possible, but handle Postgres locking explicitly.
 		if s.db.IsSQLite() {
+			// SQLite simple UPSERT
 			upsertQuery := `
 				INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
 				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
-				ON CONFLICT(id) DO UPDATE SET
-					status = CASE WHEN $5 THEN excluded.status ELSE agent_missions.status END,
-					payload = CASE WHEN $5 THEN excluded.payload ELSE agent_missions.payload END,
-					updated_at = CASE WHEN $5 THEN CURRENT_TIMESTAMP ELSE agent_missions.updated_at END
+				ON CONFLICT(id) DO NOTHING
 			`
-			_, err = tx.Exec(ctx, upsertQuery, missionID, status, payload, s.orgID, forceLocal)
+			if forceLocal {
+				upsertQuery = `
+					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+					ON CONFLICT(id) DO UPDATE SET
+						status=EXCLUDED.status,
+						payload=EXCLUDED.payload,
+						updated_at=CURRENT_TIMESTAMP
+				`
+			}
+			_, err = tx.Exec(ctx, upsertQuery, missionID, status, payload, s.orgID)
 			if err != nil {
 				return err
 			}
 		} else {
-			// Postgres mode parity: Use FOR UPDATE SKIP LOCKED for high-concurrency cloud nodes
+			// Postgres with FOR UPDATE SKIP LOCKED
 			var existingID string
 			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID)
 
@@ -533,29 +539,50 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			}
 
 			if err != nil && err.Error() == "sql: no rows in result set" {
-				// Row is either non-existent or locked by another transaction
+				// Row is either non-existent or locked
 				var checkID string
 				checkErr := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&checkID)
 				if checkErr == nil && checkID == missionID {
-					// Row exists but is locked
 					telemetry.RecordPostgresLockContention(ctx, "upsert_mission")
+					// It's locked. If forceLocal is true, we MUST update.
+					// We'll fallback to a regular UPDATE which will wait for the lock.
 					if forceLocal {
-						// Fallback to blocking update to ensure data integrity when forceLocal=true
 						_, errUpdate := tx.Exec(ctx, "UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4", status, payload, missionID, s.orgID)
 						return errUpdate
 					}
-					return nil // Skip to avoid contention if not forced
+					// If not forceLocal, we can safely skip to avoid contention
+					return nil
 				}
-				// Row truly doesn't exist, proceed to insert with DO NOTHING on conflict to be safe
-				_, errInsert := tx.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING", missionID, status, payload, s.orgID)
-				return errInsert
+				// Row truly doesn't exist, proceed to insert
 			}
 
-			if existingID != "" && forceLocal {
-				// We have the lock and it's forceLocal, perform the update
-				_, errUpdate := tx.Exec(ctx, "UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4", status, payload, missionID, s.orgID)
-				return errUpdate
+			if existingID != "" {
+				// We have the lock
+				if forceLocal {
+					_, errUpdate := tx.Exec(ctx, "UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4", status, payload, missionID, s.orgID)
+					return errUpdate
+				}
+				return nil
 			}
+
+			// Insert if it didn't exist
+			insertQuery := `
+				INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+				ON CONFLICT(id) DO NOTHING
+			`
+			if forceLocal {
+				insertQuery = `
+					INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
+					VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+					ON CONFLICT(id) DO UPDATE SET
+						status=EXCLUDED.status,
+						payload=EXCLUDED.payload,
+						updated_at=CURRENT_TIMESTAMP
+				`
+			}
+			_, errInsert := tx.Exec(ctx, insertQuery, missionID, status, payload, s.orgID)
+			return errInsert
 		}
 
 		return tx.Commit(ctx)
@@ -643,7 +670,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
-		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
+		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK') AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
 		if err != nil {
 			return err
 		}
@@ -651,9 +678,9 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		// 2. Remove COMPLETED, or very old FAILED missions
 		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
 		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
 		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
 		}
 
 		return err
@@ -1044,28 +1071,26 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 
 	var missions []struct {
 		id      string
-		status  string
 		payload string
 	}
 
 	err := withSipRetry(ctx, func() error {
 		missions = nil
-		rows, err := s.db.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE status IN ('PENDING', 'BURSTING') AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
+		rows, err := s.db.Query(ctx, "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 100", s.orgID)
 		if err != nil {
 			return err
 		}
 		defer rows.Close()
 
 		for rows.Next() {
-			var id, status, payload string
-			if err := rows.Scan(&id, &status, &payload); err != nil {
+			var id, payload string
+			if err := rows.Scan(&id, &payload); err != nil {
 				return err
 			}
 			missions = append(missions, struct {
 				id      string
-				status  string
 				payload string
-			}{id, status, payload})
+			}{id, payload})
 		}
 		return nil
 	})
@@ -1092,9 +1117,8 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		}
 
 		if payloadData, ok := rawData.(map[string]interface{}); ok {
-			// Add ID and Status to payload for synchronization endpoint
+			// Add ID to payload for synchronization endpoint
 			payloadData["id"] = m.id
-			payloadData["status"] = m.status
 		}
 
 		// Unconditionally apply unified sanitization

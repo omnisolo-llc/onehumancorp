@@ -1,8 +1,6 @@
 package telemetry
 
 import (
-	"encoding/json"
-
 	"context"
 	"os"
 
@@ -49,30 +47,18 @@ func initBridgeMetrics() {
 }
 
 func RecordBridgeMessageSent(ctx context.Context) {
-	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{}))
-		_ = BufferMetricFunc(ctx, "bridge_message_sent", string(payloadBytes))
-	}
 	if bridgeMessagesSentTotal != nil {
 		bridgeMessagesSentTotal.Add(ctx, 1)
 	}
 }
 
 func RecordBridgeMessageReceived(ctx context.Context) {
-	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{}))
-		_ = BufferMetricFunc(ctx, "bridge_message_received", string(payloadBytes))
-	}
 	if bridgeMessagesReceivedTotal != nil {
 		bridgeMessagesReceivedTotal.Add(ctx, 1)
 	}
 }
 
 func RecordBridgeStatus(ctx context.Context, active int64) {
-	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{"active": active}))
-		_ = BufferMetricFunc(ctx, "bridge_status", string(payloadBytes))
-	}
 	if bridgeStatusGauge != nil {
 		bridgeStatusGauge.Add(ctx, active)
 	}
