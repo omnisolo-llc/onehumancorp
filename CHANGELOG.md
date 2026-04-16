@@ -1,5 +1,14 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.3.9 (Cloud) / v0.3.9+1 (Standalone)
+### Cloud Scaling Improvements
+- Optimized multi-tenant pod scaling by increasing maxReplicas for backend and ohcCore in Helm charts.
+- Implemented KAIROS Sub-Agent Orchestration Queue to efficiently distribute load across the swarm.
+
+### Privacy/Offline Improvements
+- Reduced standalone desktop memory footprint by optimizing GOMEMLIMIT and GOGC.
+- Drafted Obsidian MCP for Local-First Knowledge Base Synchronization.
+
 ## v0.3.8 (Cloud) / v0.3.8+1 (Standalone)
 ### Cloud Scaling Improvements
 - Added MissionIngestionWorker to seamlessly vectorize mission artifacts into AutoDream long-term memory.
