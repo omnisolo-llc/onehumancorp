@@ -1,4 +1,0 @@
-status: done
-details: |
-  Created research mission `docs/claude_harness_research.md` detailing the Claude-Class Agent Harness.
-  Successfully created GitHub issue #5496 using `mcp_github` tools (curl).
