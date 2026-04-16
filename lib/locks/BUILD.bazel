@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "locks",
+    srcs = ["locks.go"],
+    importpath = "github.com/onehumancorp/mono/lib/locks",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
+
+go_test(
+    name = "locks_test",
+    srcs = ["locks_test.go"],
+    embed = [":locks"],
+    deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
