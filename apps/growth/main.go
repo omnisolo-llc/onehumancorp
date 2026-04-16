@@ -171,6 +171,69 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		})
 	}))
 
+	mux.HandleFunc("/api/v1/growth/referrals/bulk_invite", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		spiffeID := r.Header.Get("X-Spiffe-Id")
+		if spiffeID == "" {
+			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
+			return
+		}
+
+		var req struct {
+			InviteeEmails []string `json:"invitee_emails"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if len(req.InviteeEmails) == 0 {
+			http.Error(w, "missing invitee_emails", http.StatusBadRequest)
+			return
+		}
+
+		if len(req.InviteeEmails) > 100 {
+			http.Error(w, "too many emails in bulk invite, maximum is 100", http.StatusBadRequest)
+			return
+		}
+
+		var links []string
+		for _, email := range req.InviteeEmails {
+			referral := &growth.GrowthReferral{
+				InviterID:    spiffeID,
+				InviteeEmail: email,
+				Status:       "PENDING",
+				CreatedAt:    time.Now(),
+			}
+			referral.ID = fmt.Sprintf("ref-%d", time.Now().UnixNano())
+
+			err := referralsRepo.SaveReferral(r.Context(), referral)
+			if err != nil {
+				// Log but continue
+				log.Printf("Failed to save referral for email %s: %v", email, err)
+				continue
+			}
+			links = append(links, fmt.Sprintf("ohc://join?ref=%s", referral.ID))
+		}
+
+		err := referralService.ProcessBulkInvites(r.Context(), spiffeID, req.InviteeEmails)
+		if err != nil {
+			http.Error(w, "Failed to process bulk invites", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "Bulk invites sent successfully",
+			"links":   links,
+		})
+	}))
+
 	mux.HandleFunc("/api/v1/growth/referrals/stats", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
