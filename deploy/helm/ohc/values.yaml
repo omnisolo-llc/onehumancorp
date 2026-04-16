@@ -12,15 +12,15 @@ backend:
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "100m"
+      memory: "128Mi"
     limits:
-      cpu: "1"
-      memory: "1Gi"
+      cpu: "500m"
+      memory: "512Mi"
   # Set to "true" to enable the multi-tenant TenantRegistry.
   # In multi-tenant mode a single server instance handles all organisations;
   # each user can only see their own company's data after login.
-  multiTenant: true
+  multiTenant: false
 
   resourceQuota:
     enabled: true
@@ -50,11 +50,11 @@ ohcCore:
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "100m"
-      memory: "128Mi"
+      cpu: "50m"
+      memory: "64Mi"
     limits:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: "250m"
+      memory: "256Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -129,11 +129,11 @@ powersync:
     targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "100m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
     limits:
-      cpu: "500m"
-      memory: "512Mi"
+      cpu: "250m"
+      memory: "256Mi"
 
 # Kube-Prometheus-Stack for Cloud Observability
 kube-prometheus-stack:
