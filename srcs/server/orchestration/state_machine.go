@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"os"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"context"
 	"fmt"
 	"time"
@@ -147,6 +149,19 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 
 // TransitionState changes the state of a task and checks dependencies.
 func (sm *TaskStateMachine) TransitionState(ctx context.Context, taskID string, newState string) error {
+	startTime := time.Now()
+	defer func() {
+		mode := "standalone"
+		if os.Getenv("OHC_MULTITENANT") == "true" {
+			mode = "cloud"
+		} else if os.Getenv("OHC_HEADLESS") == "true" {
+			mode = "headless"
+		}
+		duration := time.Since(startTime).Seconds()
+		kairos.TransitionDuration.WithLabelValues(mode).Observe(duration)
+		kairos.TransitionsTotal.WithLabelValues(mode, newState).Inc()
+	}()
+
 	if sm.mutexProvider != nil {
 		mx := sm.mutexProvider.NewMutex("sm:" + taskID)
 		if err := mx.Lock(ctx, 30*time.Second); err != nil {
