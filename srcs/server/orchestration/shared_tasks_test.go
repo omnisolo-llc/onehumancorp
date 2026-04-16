@@ -5,6 +5,7 @@ import (
 	"testing"
     "encoding/json"
     "database/sql"
+    "strings"
     _ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -99,4 +100,32 @@ func TestClaimTask(t *testing.T) {
     if noTask != nil {
         t.Errorf("expected nil task when no tasks are available, got %v", noTask)
     }
+}
+
+type mockPGProvider struct {
+	db.Provider
+	lastQuery string
+}
+
+func (m *mockPGProvider) IsSQLite() bool { return false }
+func (m *mockPGProvider) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
+	m.lastQuery = query
+	return &mockPGRow{}
+}
+
+type mockPGRow struct{}
+func (m *mockPGRow) Scan(dest ...interface{}) error { return sql.ErrNoRows }
+
+func TestClaimTask_PostgresLocking(t *testing.T) {
+	ctx := context.Background()
+	provider := &mockPGProvider{}
+
+	_, err := ClaimTask(ctx, provider, "agent-1")
+	if err != nil {
+		t.Fatalf("expected nil error on sql.ErrNoRows, got %v", err)
+	}
+
+	if !strings.Contains(provider.lastQuery, "FOR UPDATE SKIP LOCKED") {
+		t.Errorf("expected query to contain FOR UPDATE SKIP LOCKED, got: %s", provider.lastQuery)
+	}
 }

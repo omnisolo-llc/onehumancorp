@@ -7,3 +7,5 @@ Use this section for guided narratives such as setup verification, orchestration
 - [Agent Lifecycle Walkthrough](./agent_lifecycle.md)
 - [Interactive API Docs Walkthrough](./interactive_api_docs.md)
 - [Teammate Mesh Demo Walkthrough](./teammate_mesh_demo.md)
+- [Day One Onboarding Walkthrough](./day_one_onboarding.md)
+- [Hybrid MCP RAG Dynamic Escalation Walkthrough](./hybrid_mcp_rag_escalation.md)
