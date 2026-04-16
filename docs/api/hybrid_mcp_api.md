@@ -1,8 +1,8 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+
 # Hybrid MCP Integration API Playbook
 
 This playbook documents the payload structure and gRPC/MCP client endpoints for the `telemetry-mcp-bridge` component of the KAIROS Orchestrator.
-
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
 ## 1. Telemetry-MCP Bridge Endpoints
 
