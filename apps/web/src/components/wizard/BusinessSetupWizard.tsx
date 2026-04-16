@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { theme } from '../../styles/theme';
 
 const BusinessSetupWizard = () => {
   const [step, setStep] = useState(1);
@@ -58,16 +57,16 @@ const BusinessSetupWizard = () => {
   };
 
   return (
-    <div style={{ ...theme.glassmorphism, ...theme.typography, borderRadius: '12px', padding: '30px', color: theme.colors.text }}>
+    <div style={{ backdropFilter: 'blur(20px)', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '30px', color: '#fff', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}>
       {step === 1 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <h1 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Your AI team, ready in minutes</h1>
+          <h1 style={{ fontFamily: 'Outfit, sans-serif' }}>Your AI team, ready in minutes</h1>
           <button onClick={nextStep}>Next</button>
         </div>
       )}
       {step === 2 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <h2 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Business Profile</h2>
+          <h2 style={{ fontFamily: 'Outfit, sans-serif' }}>Business Profile</h2>
           <input placeholder="Company Name" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} />
           <select value={profile.industry} onChange={e => setProfile({...profile, industry: e.target.value})}>
             <option value="">Select Industry</option>
@@ -88,7 +87,7 @@ const BusinessSetupWizard = () => {
       )}
       {step === 3 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <h2 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Goal Selection</h2>
+          <h2 style={{ fontFamily: 'Outfit, sans-serif' }}>Goal Selection</h2>
           <label><input type="checkbox" checked={goals.includes('support')} onChange={() => toggleGoal('support')} /> Automate customer support</label><br />
           <label><input type="checkbox" checked={goals.includes('software')} onChange={() => toggleGoal('software')} /> Build software faster</label><br />
           <label><input type="checkbox" checked={goals.includes('marketing')} onChange={() => toggleGoal('marketing')} /> Generate marketing content</label><br />
@@ -100,7 +99,7 @@ const BusinessSetupWizard = () => {
       )}
       {step === 4 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <h2 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Deployment Preference</h2>
+          <h2 style={{ fontFamily: 'Outfit, sans-serif' }}>Deployment Preference</h2>
           <select value={deployment} onChange={e => setDeployment(e.target.value)}>
             <option value="cloud">Cloud (managed)</option>
             <option value="desktop">Self-hosted Desktop</option>
@@ -112,7 +111,7 @@ const BusinessSetupWizard = () => {
       )}
       {step === 5 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <h2 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Administrator Account</h2>
+          <h2 style={{ fontFamily: 'Outfit, sans-serif' }}>Administrator Account</h2>
           <input placeholder="Name" value={admin.name} onChange={e => setAdmin({...admin, name: e.target.value})} />
           <input type="email" placeholder="Email" value={admin.email} onChange={e => setAdmin({...admin, email: e.target.value})} />
           <input type="password" placeholder="Password" value={admin.password} onChange={e => setAdmin({...admin, password: e.target.value})} />
@@ -122,7 +121,7 @@ const BusinessSetupWizard = () => {
       )}
       {step === 6 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <h2 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Review & Launch</h2>
+          <h2 style={{ fontFamily: 'Outfit, sans-serif' }}>Review & Launch</h2>
           <button onClick={prevStep}>Back</button>
           <button onClick={launch} disabled={isLoading}>{isLoading ? 'Launching...' : 'Launch My AI Team &gt;'}</button>
         </div>

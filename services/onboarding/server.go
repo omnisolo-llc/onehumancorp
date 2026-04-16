@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 )
 
 type ProvisionRequest struct {
@@ -127,85 +126,6 @@ func VerifyEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
 
     w.WriteHeader(http.StatusOK)
     json.NewEncoder(w).Encode(VerifyEnvResponse{
-        Status: "success",
-        Config: config,
-    })
-}
-
-var (
-	wizardState map[string]interface{} = make(map[string]interface{})
-	wizardMu    sync.RWMutex
-)
-
-func SaveWizardStateHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	wizardMu.Lock()
-	wizardState = req
-	wizardMu.Unlock()
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{"status": "saved"})
-}
-
-func GetWizardStateHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	wizardMu.RLock()
-	defer wizardMu.RUnlock()
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(wizardState)
-}
-
-type AuditSetupResponse struct {
-    Status string `json:"status"`
-    Config *EnvConfig `json:"config,omitempty"`
-    Error  string `json:"error,omitempty"`
-}
-
-type AuditSetupRequest struct {
-    Env map[string]string `json:"env"`
-}
-
-func AuditSetupHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
-
-    var req AuditSetupRequest
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-        http.Error(w, err.Error(), http.StatusBadRequest)
-        return
-    }
-
-    config, err := VerifyEnvironment(req.Env)
-    w.Header().Set("Content-Type", "application/json")
-    if err != nil {
-        w.WriteHeader(http.StatusBadRequest)
-        json.NewEncoder(w).Encode(AuditSetupResponse{
-            Status: "error",
-            Error:  err.Error(),
-        })
-        return
-    }
-
-    w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(AuditSetupResponse{
         Status: "success",
         Config: config,
     })

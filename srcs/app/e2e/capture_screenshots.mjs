@@ -64,13 +64,13 @@ const profiles = [
 ];
 
 const browser = await chromium.launch({ headless: true });
+const screenName = "landing-page";
 
 try {
   for (const profile of profiles) {
     const context = await browser.newContext(profile.context);
-
-    // Landing Page
     const page = await context.newPage();
+
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.waitForFunction(
       () =>
@@ -83,22 +83,10 @@ try {
     );
     await page.waitForTimeout(1500);
 
-    const landingDir = path.join(outputRoot, "landing-page");
-    await mkdir(landingDir, { recursive: true });
+    const targetDir = path.join(outputRoot, screenName);
+    await mkdir(targetDir, { recursive: true });
     await page.screenshot({
-      path: path.join(landingDir, `${profile.name}.png`),
-      fullPage: true,
-    });
-
-    // Login Page
-    // Navigate by clicking the button from the landing page.
-    await page.locator('text="Or continue to Cloud Dashboard"').click({ force: true });
-    await page.waitForTimeout(1500);
-
-    const loginDir = path.join(outputRoot, "login");
-    await mkdir(loginDir, { recursive: true });
-    await page.screenshot({
-      path: path.join(loginDir, `${profile.name}.png`),
+      path: path.join(targetDir, `${profile.name}.png`),
       fullPage: true,
     });
 

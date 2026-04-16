@@ -106,23 +106,13 @@ func TestMeshHandlerStream(t *testing.T) {
 	defer server.Close()
 
 	url := "ws" + strings.TrimPrefix(server.URL, "http")
-
-	// Create a channel to catch the error from broadcast since Stream blocks
-	errCh := make(chan error, 1)
-
-	// Stream handles reading and writing for the duration of the request, wait a little before broadcasting
-	go func() {
-		time.Sleep(100 * time.Millisecond)
-		errCh <- svc.BroadcastIntent(ctx, "hello stream")
-	}()
-
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		t.Fatalf("could not dial websocket: %v", err)
 	}
 	defer conn.Close()
 
-	err = <-errCh
+	err = svc.BroadcastIntent(ctx, "hello stream")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
