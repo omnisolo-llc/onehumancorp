@@ -37,6 +37,10 @@ spec:
           ports:
             - containerPort: {{ .Values.backend.service.port }}
           env:
+            - name: LOG_LEVEL
+              value: "info"
+            - name: LOG_FORMAT
+              value: "json"
             - name: PORT
               value: "{{ .Values.backend.service.port }}"
             {{- if .Values.redis.enabled }}

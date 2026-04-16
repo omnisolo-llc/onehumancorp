@@ -14,8 +14,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
         reservations:
           cpus: "0.1"
           memory: 64M
@@ -24,33 +24,30 @@ services:
       dockerfile: deploy/docker/ohc-core/Dockerfile
     environment:
       LISTEN_ADDR: "0.0.0.0:18789"
+      RUST_LOG: "info"
+      LOG_FORMAT: "json"
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
-      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: "info"
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     ports:
       - "18789:18789"
-
   server:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
         reservations:
           cpus: "0.2"
-          memory: 128M
+          memory: 64M
     image: onehumancorp/server:latest
     environment:
-      REDIS_ADDR: redis:6379
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
-      CHATWOOT_URL: http://chatwoot:3000
-      CHATWOOT_ADMIN_EMAIL: admin@ohc.local
-      CHATWOOT_ADMIN_PASSWORD: changeme
-      CHATWOOT_ENABLED: "true"
+      LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
+      CHATWOOT_ENABLED: "false"
       MANIMAX_API_KEY: ${MANIMAX_API_KEY}
       # Multi-tenant mode is disabled by default in single-docker deployment.
       # Set to "true" to enable the TenantRegistry for k8s-style multi-tenancy.
@@ -62,30 +59,8 @@ services:
     depends_on:
       ohc-core:
         condition: service_started
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      chatwoot:
-        condition: service_started
     ports:
       - "8080:8080"
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 128M
-
   postgres:
     image: postgres:16-alpine
     command: ["postgres", "-c", "wal_level=logical"]
@@ -106,8 +81,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   powersync:
     image: journeyapps/powersync-service:latest
@@ -124,65 +99,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
-
-  chatwoot-migrate:
-    image: chatwoot/chatwoot:latest
-    command: bundle exec rails db:chatwoot_prepare
-    environment:
-      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
-      DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://redis:6379
-      RAILS_ENV: production
-      INSTALLATION_ENV: docker
-      DEFAULT_LOCALE: en
-      FORCE_SSL: "false"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-  chatwoot:
-    image: chatwoot/chatwoot:latest
-    command: bundle exec rails s -p 3000 -b 0.0.0.0
-    environment:
-      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
-      DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://redis:6379
-      RAILS_ENV: production
-      INSTALLATION_ENV: docker
-      DEFAULT_LOCALE: en
-      FORCE_SSL: "false"
-    ports:
-      - "3002:3000"
-    depends_on:
-      - chatwoot-migrate
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 128M
-
-  chatwoot-worker:
-    image: chatwoot/chatwoot:latest
-    command: bundle exec sidekiq -C config/sidekiq.yml
-    environment:
-      SECRET_KEY_BASE: changeme_secret_key_base_at_least_64_chars_long_for_production
-      DATABASE_URL: postgres://ohc:ohc@postgres:5432/chatwoot?sslmode=disable
-      REDIS_URL: redis://redis:6379
-      RAILS_ENV: production
-      INSTALLATION_ENV: docker
-      DEFAULT_LOCALE: en
-      FORCE_SSL: "false"
-    depends_on:
-      - chatwoot
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   prometheus:
     image: prom/prometheus:latest
@@ -193,8 +111,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
   grafana:
     image: grafana/grafana:latest
@@ -210,8 +128,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
-          memory: 128M
+          cpus: "0.2"
+          memory: 64M
 
 
 
@@ -224,4 +142,4 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: 128M
+          memory: 64M
