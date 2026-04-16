@@ -9,3 +9,4 @@ This section groups API-facing playbooks and reference material.
 - `docs/api/kairos_orchestration_api.md`
 
 Use these pages for endpoint behavior, orchestration-specific API notes, and integration-facing contracts.
+- [Hybrid MCP API](./hybrid_mcp_api.md)

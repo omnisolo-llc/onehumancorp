@@ -6,3 +6,4 @@ Use this section for guided narratives such as setup verification, orchestration
 
 - [Agent Lifecycle Walkthrough](./agent_lifecycle.md)
 - [Git-Lock Coordination Walkthrough](./git_lock_coordination.md)
+- [Hybrid MCP Telemetry Walkthrough](./hybrid_mcp_telemetry_visual_guide.md)

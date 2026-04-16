@@ -76,6 +76,7 @@ filegroup(
 
 py_binary(
     name = "docs_build",
+    main = "//docs:mkdocs_runner.py",
     srcs = ["//docs:mkdocs_runner.py"],
     args = ["build"],
     data = [":docs_srcs"],
