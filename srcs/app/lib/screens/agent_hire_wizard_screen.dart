@@ -23,6 +23,11 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   List<String> _roles = [];
   List<AgentProvider> _providers = [];
 
+  bool _advancedMode = false;
+  final Set<String> _selectedCapabilities = {};
+  double _maxSessionsPerDay = 10;
+  double _maxTokensPerSession = 2000;
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +101,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           _nameController.text.trim(),
           _selectedRole,
           providerType: _selectedProvider,
+          capabilities: _selectedCapabilities.toList(),
+          maxSessionsPerDay: _maxSessionsPerDay,
+          maxTokensPerSession: _maxTokensPerSession,
         );
         if (mounted) {
           context.go('/agents');
@@ -140,7 +148,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         type: StepperType.horizontal,
         currentStep: _step,
         onStepContinue: () {
-          if (_step < 3) {
+          if (_step < 5) {
             setState(() => _step++);
           } else {
             _handleDeploy();
@@ -156,7 +164,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             padding: const EdgeInsets.only(top: 24),
             child: Row(
               children: [
-                if (_step < 3)
+                if (_step < 5)
                   Semantics(
                     label: 'Proceed to next step',
                     child: Tooltip(
@@ -289,13 +297,184 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             ),
           ),
           Step(
-            title: const Text('Details'),
+            title: const Text('Capabilities'),
             isActive: _step >= 2,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Step 3 — Agent Capabilities',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Text('Advanced'),
+                        Switch(
+                          value: _advancedMode,
+                          onChanged:
+                              (val) => setState(() => _advancedMode = val),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text('What permissions should this agent have?'),
+                const SizedBox(height: 16),
+                CheckboxListTile(
+                  title: const Text('Read my emails'),
+                  subtitle:
+                      _advancedMode ? const Text('Scope: EMAIL_READ') : null,
+                  value: _selectedCapabilities.contains('EMAIL_READ'),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedCapabilities.add('EMAIL_READ');
+                      } else {
+                        _selectedCapabilities.remove('EMAIL_READ');
+                      }
+                    });
+                  },
+                ),
+                CheckboxListTile(
+                  title: const Text('Send messages on my behalf'),
+                  subtitle:
+                      _advancedMode
+                          ? const Text('Scope: MESSAGING_SEND')
+                          : null,
+                  value: _selectedCapabilities.contains('MESSAGING_SEND'),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedCapabilities.add('MESSAGING_SEND');
+                      } else {
+                        _selectedCapabilities.remove('MESSAGING_SEND');
+                      }
+                    });
+                  },
+                ),
+                CheckboxListTile(
+                  title: const Text('Manage files'),
+                  subtitle:
+                      _advancedMode
+                          ? const Text('Scope: FILE_MANAGEMENT')
+                          : null,
+                  value: _selectedCapabilities.contains('FILE_MANAGEMENT'),
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedCapabilities.add('FILE_MANAGEMENT');
+                      } else {
+                        _selectedCapabilities.remove('FILE_MANAGEMENT');
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          Step(
+            title: const Text('Resources'),
+            isActive: _step >= 3,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Step 4 — Resource Limits',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Text('Advanced'),
+                        Switch(
+                          value: _advancedMode,
+                          onChanged:
+                              (val) => setState(() => _advancedMode = val),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text('How much should this agent work per day?'),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Slider(
+                        value: _maxSessionsPerDay,
+                        min: 1,
+                        max: 100,
+                        divisions: 99,
+                        label: _maxSessionsPerDay.round().toString(),
+                        onChanged:
+                            (val) => setState(() => _maxSessionsPerDay = val),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 120,
+                      child: Text(
+                        '\~ \$' +
+                            (_maxSessionsPerDay * 0.05).toStringAsFixed(2) +
+                            ' / day',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_advancedMode) ...[
+                  const SizedBox(height: 24),
+                  const Text('Max Tokens per Session'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Slider(
+                          value: _maxTokensPerSession,
+                          min: 500,
+                          max: 8000,
+                          divisions: 15,
+                          label: _maxTokensPerSession.round().toString(),
+                          onChanged:
+                              (val) =>
+                                  setState(() => _maxTokensPerSession = val),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 120,
+                        child: Text(
+                          '${_maxTokensPerSession.round()} tokens',
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Step(
+            title: const Text('Details'),
+            isActive: _step >= 4,
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 const Text(
-                  'Step 3 — Agent Details',
+                  'Step 5 — Agent Details',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -319,12 +498,12 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           ),
           Step(
             title: const Text('Confirm'),
-            isActive: _step >= 3,
+            isActive: _step >= 5,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 4 — Confirm Deployment',
+                  'Step 6 — Confirm Deployment',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -333,25 +512,47 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   child: BackdropFilter(
                     filter: ImageFilter.compose(
                       outer: ColorFilter.matrix(const <double>[
-                        1.787, -0.715, -0.072, 0, 0,
-                        -0.213, 1.285, -0.072, 0, 0,
-                        -0.213, -0.715, 1.928, 0, 0,
-                        0, 0, 0, 1, 0,
+                        1.787,
+                        -0.715,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        1.285,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        -0.715,
+                        1.928,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
                       ]),
                       inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                     ),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary.withValues(alpha: 0.2),
                           child: Text(
                             _selectedRole.isNotEmpty ? _selectedRole[0] : '?',
                             style: TextStyle(
@@ -373,9 +574,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                           style: const TextStyle(fontFamily: 'Inter'),
                         ),
                         trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.15),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.secondary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
