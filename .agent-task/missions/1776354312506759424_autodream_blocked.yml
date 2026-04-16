@@ -1,0 +1,5 @@
+---
+status: BLOCKED
+agent: Nova
+blockers: Mission 2026-04-16T12-30-00Z_autodream_pipeline.md requires modifying srcs/server/workers/autodream_worker.go which is outside my designated domain (apps/growth/, services/growth/, lib/analytics/).
+---

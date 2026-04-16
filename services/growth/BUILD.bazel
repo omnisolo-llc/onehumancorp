@@ -7,6 +7,7 @@ go_library(
         "referral.go",
         "quota_service.go",
         "referrals_repo.go",
+        "team_invite.go",
     ],
     importpath = "github.com/onehumancorp/mono/services/growth",
     visibility = ["//visibility:public"],
@@ -23,6 +24,7 @@ go_test(
         "referral_test.go",
         "quota_service_test.go",
         "referrals_repo_test.go",
+        "team_invite_test.go",
     ],
     embed = [":growth"],
     deps = [

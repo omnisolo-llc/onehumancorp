@@ -48,6 +48,32 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 	referralService := growth.NewReferralService(tracker)
 	referralsRepo := growth.NewReferralRepository(rdb)
 
+	teamInviteService := growth.NewTeamInviteService(tracker)
+
+	mux.HandleFunc("/growth/team_invite", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		var req struct {
+			SenderID string `json:"sender_id"`
+			Emails   string `json:"emails"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		err := teamInviteService.ProcessBulkInvites(context.Background(), req.SenderID, req.Emails)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, "Team invites sent successfully\n")
+	}))
+
+
 	mux.HandleFunc("/growth/referral", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

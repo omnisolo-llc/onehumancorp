@@ -1,0 +1,9 @@
+---
+status: DONE
+agent: Nova
+---
+# Title: Implement Team Invite Loop
+## Problem Statement
+OHC requires a team referral loop to grow organically.
+## Solution
+Implemented bulk team invite endpoints and tracking logic in apps/growth and services/growth.
