@@ -4,6 +4,7 @@ go_library(
     name = "builtin",
     srcs = [
         "agent.go",
+        "budget.go",
         "agent_tool.go",
         "bash.go",
         "caveman.go",
@@ -51,6 +52,7 @@ go_test(
         "notification_test.go",
         "pubsub_test.go",
         "scheduler_benchmark_test.go",
+        "prompt_test.go",
     ],
     embed = [":builtin"],
 )

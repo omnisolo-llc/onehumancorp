@@ -1,0 +1,30 @@
+{{- if and .Values.powersync.enabled .Values.powersync.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Release.Name }}-powersync
+  labels:
+    app: {{ .Release.Name }}-powersync
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Release.Name }}-powersync
+  minReplicas: {{ .Values.powersync.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.powersync.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.powersync.autoscaling.targetCPUUtilizationPercentage }}
+{{- if .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.powersync.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
+{{- end }}
