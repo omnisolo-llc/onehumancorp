@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os/exec"
+	"github.com/onehumancorp/mono/srcs/server/agents/harness"
 )
 
 // BashTool definition
@@ -25,6 +26,10 @@ var BashTool = Tool{
 			Command string `json:"command"`
 		}
 		if err := json.Unmarshal(args, &input); err != nil {
+			return "", err
+		}
+
+		if err := harness.GlobalInterceptor.Intercept(ctx, input.Command); err != nil {
 			return "", err
 		}
 

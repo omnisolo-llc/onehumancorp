@@ -36,8 +36,9 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/utils",
+        "//srcs/server/agents/harness",
         "//srcs/server/agents/local",
+        "//srcs/server/utils",
     ],
 )
 

@@ -9,6 +9,7 @@ import (
 	"os"
 	"github.com/onehumancorp/mono/srcs/server/utils"
 	"os/exec"
+	"github.com/onehumancorp/mono/srcs/server/agents/harness"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -93,7 +94,11 @@ func (t *bashTool) Execute(ctx context.Context, workDir string, input map[string
 	execCtx, cancel := context.WithTimeout(ctx, timeoutDur)
 	defer cancel()
 
-	cmd := exec.CommandContext(execCtx, "bash", "-c", command)
+	if err := harness.GlobalInterceptor.Intercept(ctx, command); err != nil {
+			return "", err
+		}
+
+		cmd := exec.CommandContext(execCtx, "bash", "-c", command)
 	cmd.Dir = workDir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
