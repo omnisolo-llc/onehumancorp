@@ -113,7 +113,7 @@ const PromptTuningWizard = () => {
     (examples.length > 0 && examples[0].q ? `Here are some examples of how to respond:\n${examples.map(e => `Q: ${e.q}\nA: ${e.a}`).join('\n\n')}` : '');
 
   return (
-    <div style={{ backdropFilter: 'blur(20px)', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '30px', color: '#fff', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}>
+    <div style={{ backdropFilter: 'blur(20px) saturate(200%)', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '12px', padding: '30px', color: '#fff', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}>
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
 
       {step === 1 && (

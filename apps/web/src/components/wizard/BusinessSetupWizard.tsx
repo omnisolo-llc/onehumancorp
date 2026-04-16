@@ -57,10 +57,54 @@ const BusinessSetupWizard = () => {
   };
 
   return (
-    <div style={{ backdropFilter: 'blur(20px)', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '12px', padding: '30px', color: '#fff', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}>
+    <>
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7); }
+          70% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0); }
+        }
+        .pulse-btn {
+          animation: pulse 2s infinite;
+          background: #007BFF;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-family: 'Outfit', sans-serif;
+          font-weight: bold;
+        }
+        .tile {
+          display: inline-block;
+          padding: 15px;
+          margin: 10px;
+          border-radius: 8px;
+          background: rgba(255,255,255,0.1);
+          cursor: pointer;
+          border: 1px solid transparent;
+          text-align: center;
+          width: 120px;
+        }
+        .tile.selected {
+          border-color: #007BFF;
+          background: rgba(0,123,255,0.2);
+        }
+        .tile input { display: none; }
+      `}</style>
+
+    <div style={{ backdropFilter: 'blur(20px) saturate(200%)', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '12px', padding: '30px', color: '#fff', fontFamily: 'Inter, sans-serif', boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}>
       {step === 1 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <h1 style={{ fontFamily: 'Outfit, sans-serif' }}>Your AI team, ready in minutes</h1>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '2.5rem', margin: '0' }}>Your AI team, ready in minutes.</h1>
+            <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '1.2rem', color: '#ccc' }}>Zero friction. Maximum visual delight.</p>
+          </div>
           <button onClick={nextStep}>Next</button>
         </div>
       )}
@@ -88,11 +132,20 @@ const BusinessSetupWizard = () => {
       {step === 3 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
           <h2 style={{ fontFamily: 'Outfit, sans-serif' }}>Goal Selection</h2>
-          <label><input type="checkbox" checked={goals.includes('support')} onChange={() => toggleGoal('support')} /> Automate customer support</label><br />
-          <label><input type="checkbox" checked={goals.includes('software')} onChange={() => toggleGoal('software')} /> Build software faster</label><br />
-          <label><input type="checkbox" checked={goals.includes('marketing')} onChange={() => toggleGoal('marketing')} /> Generate marketing content</label><br />
-          <label><input type="checkbox" checked={goals.includes('data')} onChange={() => toggleGoal('data')} /> Analyze data</label><br />
-          <label><input type="checkbox" checked={goals.includes('custom')} onChange={() => toggleGoal('custom')} /> Custom</label><br />
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {[
+              { id: 'support', label: 'Automate customer support', icon: '🎧' },
+              { id: 'software', label: 'Build software faster', icon: '💻' },
+              { id: 'marketing', label: 'Generate marketing content', icon: '📈' },
+              { id: 'data', label: 'Analyze data', icon: '📊' },
+              { id: 'custom', label: 'Custom', icon: '⚙️' }
+            ].map(g => (
+              <div key={g.id} className={`tile ${goals.includes(g.id) ? 'selected' : ''}`} onClick={() => toggleGoal(g.id)}>
+                <div style={{ fontSize: '2rem' }}>{g.icon}</div>
+                <div style={{ fontFamily: 'Inter, sans-serif', fontSize: '0.9rem', marginTop: '10px' }}>{g.label}</div>
+              </div>
+            ))}
+          </div>
           <button onClick={prevStep}>Back</button>
           <button onClick={nextStep}>Next</button>
         </div>
@@ -123,7 +176,7 @@ const BusinessSetupWizard = () => {
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
           <h2 style={{ fontFamily: 'Outfit, sans-serif' }}>Review & Launch</h2>
           <button onClick={prevStep}>Back</button>
-          <button onClick={launch} disabled={isLoading}>{isLoading ? 'Launching...' : 'Launch My AI Team &gt;'}</button>
+          <button className="pulse-btn" onClick={launch} disabled={isLoading}>{isLoading ? 'Launching...' : 'Launch My AI Team →'}</button>
         </div>
       )}
 
@@ -140,6 +193,7 @@ const BusinessSetupWizard = () => {
         )}
       </div>
     </div>
+    </>
   );
 };
 

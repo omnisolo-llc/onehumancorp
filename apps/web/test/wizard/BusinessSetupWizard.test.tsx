@@ -12,7 +12,7 @@ global.fetch = jest.fn(() =>
 
 test('renders welcome screen and navigates through wizard', async () => {
   render(<BusinessSetupWizard />);
-  expect(screen.getByText('Your AI team, ready in minutes')).toBeInTheDocument();
+  expect(screen.getByText('Your AI team, ready in minutes.')).toBeInTheDocument();
 
   fireEvent.click(screen.getByText('Next'));
   expect(screen.getByText('Business Profile')).toBeInTheDocument();
