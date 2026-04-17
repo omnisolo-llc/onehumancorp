@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mcp",
-    srcs = ["proxy.go"],
+    srcs = [
+        "proxy.go",
+        "secrets.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/interop/mcp",
     visibility = ["//visibility:public"],
     deps = [
@@ -13,7 +16,10 @@ go_library(
 
 go_test(
     name = "mcp_test",
-    srcs = ["proxy_test.go"],
+    srcs = [
+        "proxy_test.go",
+        "secrets_test.go",
+    ],
     embed = [":mcp"],
     deps = [
         "//srcs/server/db",
