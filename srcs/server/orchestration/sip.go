@@ -1320,3 +1320,13 @@ func (s *SIPDB) invalidateCache(ctx context.Context, key string) {
 		s.cacheExpirations.Delete(key)
 	}
 }
+
+
+// PruneLinear removes identified files in Linear (local Linear (internal orchestrator state is private) is for internal orchestrator use only) to align them with the Hybrid architecture.
+// Mode-aware cleanup
+func (s *SIPDB) PruneLinear(ctx context.Context, stateDir string) error {
+	if !s.db.IsSQLite() {
+		return nil
+	}
+	return os.RemoveAll(filepath.Join(stateDir, "Linear"))
+}

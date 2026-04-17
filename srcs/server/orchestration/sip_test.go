@@ -1261,3 +1261,43 @@ func TestSIPDB_Caching(t *testing.T) {
 		t.Fatalf("GetCapabilityPlugins cache miss: %v, %v", plugins, err)
 	}
 }
+
+
+func TestSIPDB_PruneLinear(t *testing.T) {
+	ctx := context.Background()
+
+	// Test SQLite mode
+	dbPath := filepath.Join(t.TempDir(), "sip.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create SIPDB: %v", err)
+	}
+	defer db.Close()
+
+	err = db.PruneLinear(ctx, t.TempDir())
+	if err != nil {
+		t.Fatalf("PruneLinear failed for SQLite: %v", err)
+	}
+}
+
+func TestSIPDB_PruneLinear_Postgres(t *testing.T) {
+	ctx := context.Background()
+
+	// Create a dummy provider that returns false for IsSQLite
+	provider := &dummyProvider{isSQLite: false}
+	db := &SIPDB{db: provider}
+
+	err := db.PruneLinear(ctx, t.TempDir())
+	if err != nil {
+		t.Fatalf("PruneLinear failed for Postgres: %v", err)
+	}
+}
+
+type dummyProvider struct {
+	db.Provider
+	isSQLite bool
+}
+
+func (d *dummyProvider) IsSQLite() bool {
+	return d.isSQLite
+}

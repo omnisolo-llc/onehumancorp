@@ -7,6 +7,9 @@ cleanup_tmp_files() {
     if [ -d "${STATE_DIR}" ]; then
       # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
       find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
+
+      # Pruned identified files in Linear (local Linear (internal orchestrator state is private) is for internal orchestrator use only) to align them with the Hybrid architecture.
+      rm -rf "${STATE_DIR}/Linear" || true
     fi
   fi
 }

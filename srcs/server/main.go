@@ -397,6 +397,11 @@ func run(now time.Time, listen listenFunc) error {
 						slog.Debug("successfully pruned stale agent missions and telemetry buffer")
 					}
 
+					// Prune identified files in Linear (local Linear (internal orchestrator state is private) is for internal orchestrator use only)
+					if err := sipdb.PruneLinear(ctx, os.Getenv("HOME")+"/.openclaw"); err != nil {
+						slog.Error("failed to prune Linear local files", "error", err)
+					}
+
 					// Prune buffered telemetry metrics older than 24 hours
 					if err := sipdb.PruneBufferedMetrics(ctx, 24*time.Hour); err != nil {
 						slog.Error("failed to prune stale telemetry metrics", "error", err)
