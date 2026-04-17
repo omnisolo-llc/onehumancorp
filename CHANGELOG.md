@@ -1,5 +1,15 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
+### Cloud Scaling Improvements
+- Architect Cross-Mode Database Schema Syncer via MCP.
+- Optimize PopMessages latency.
+
+### Privacy/Offline Improvements
+- Fix PII redaction for nested slog groups.
+- Bulk Team Invite UI in Flutter App.
+
+
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Bubblewrap Sandbox Telemetry.
