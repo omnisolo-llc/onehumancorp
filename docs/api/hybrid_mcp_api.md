@@ -52,6 +52,33 @@ Synchronizes a batch of local telemetry metrics to the OHC Central Database via 
 }
 ```
 
+### `POST /api/v1/orchestration/escalate`
+
+Dynamically escalates a local SQLite MCP RAG workload to the Cloud Swarm via PostgreSQL, bridging standalone mode with cloud orchestration.
+
+**Request Payload:**
+
+```json
+{
+  "task_id": "rag-task-9988",
+  "escalation_reason": "telemetry_threshold_exceeded",
+  "payload": {
+    "query": "Synthesize Q3 financial reports",
+    "context_size": 250000
+  }
+}
+```
+
+**Response Payload:**
+
+```json
+{
+  "escalation_status": "ACCEPTED",
+  "cloud_task_id": "cloud-swarm-rag-task-9988",
+  "message": "Task successfully handed off to Cloud Swarm PostgreSQL."
+}
+```
+
 ## 2. Resource Endpoints
 
 Exposes active system metrics and health probes to orchestration agents.
