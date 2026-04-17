@@ -1,9 +1,0 @@
---- srcs/server/domain/BUILD.bazel
-+++ srcs/server/domain/BUILD.bazel
-@@ -14,6 +14,7 @@
-         "@io_opentelemetry_go_otel//:otel",
-         "@io_opentelemetry_go_otel//attribute",
-         "@in_gopkg_yaml_v3//:yaml_v3",
-+        "//srcs/server/db",
-     ],
- )
