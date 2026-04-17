@@ -16,6 +16,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/onehumancorp/mono/srcs/server/agents/kairos"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
@@ -301,6 +302,8 @@ func run(now time.Time, listen listenFunc) error {
 
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
+		kairosWorker := kairos.NewAutoDreamWorker(pool.Provider, aiClient, 5*time.Minute)
+		go kairosWorker.Start(ctx)
 	}
 
 	// Run Token Burn Rate Forecasting Engine

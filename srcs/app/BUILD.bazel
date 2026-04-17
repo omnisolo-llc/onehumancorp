@@ -337,3 +337,12 @@ pkg_rpm(
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )
+
+flutter_test(
+    name = "autodream_kairos_e2e_test",
+    srcs = ["test/autodream_kairos_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/autodream_kairos_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
