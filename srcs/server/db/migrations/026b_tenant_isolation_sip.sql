@@ -1,4 +1,4 @@
--- 013_tenant_isolation_sip.sql
+-- 026b_tenant_isolation_sip.sql
 -- Add organization_id to SIP tables to prevent tenant data leakage in multi-tenant mode
 
 ALTER TABLE swarm_memory ADD COLUMN organization_id TEXT DEFAULT 'system';
