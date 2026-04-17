@@ -1,0 +1,17 @@
+--- lib/resilience/chaos/chaos_test.go
++++ lib/resilience/chaos/chaos_test.go
+@@ -104,8 +104,6 @@
+		t.Error("expected CorruptData to alter the dummy lock string, but it was unchanged")
+	}
+ }
+-<<<<<<< HEAD
+-=======
+
+ func TestCorruptAgentLockInjection(t *testing.T) {
+	inj := NewInjector(CorruptAgentLock, 1)
+@@ -147,5 +145,4 @@
+	if string(content) != "chaos corrupted this lock" {
+		t.Fatalf("unexpected content in corrupt.lock: %s", string(content))
+	}
+ }
+->>>>>>> 39afde58 (🧹 Maintainer: [harness] Implement Unified Tool Registry)

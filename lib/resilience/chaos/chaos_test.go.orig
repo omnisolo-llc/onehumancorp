@@ -104,6 +104,8 @@ func TestAllModeStrings(t *testing.T) {
 		}
 	}
 }
+<<<<<<< HEAD
+=======
 
 func TestCorruptAgentLockInjection(t *testing.T) {
 	inj := NewInjector(CorruptAgentLock, 1)
@@ -150,3 +152,4 @@ func TestCorruptAgentLockExists(t *testing.T) {
 		t.Fatalf("unexpected content in corrupt.lock: %s", string(content))
 	}
 }
+>>>>>>> 39afde58 (🧹 Maintainer: [harness] Implement Unified Tool Registry)

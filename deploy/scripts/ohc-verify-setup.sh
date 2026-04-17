@@ -1,7 +1,5 @@
 #!/bin/bash
-# OHC Setup Verification Script
-
-set -eo pipefail
+set -e
 
 RESET="\033[0m"
 BOLD="\033[1m"
@@ -10,81 +8,49 @@ BLUE="\033[38;5;39m"
 CYAN="\033[38;5;87m"
 GREEN="\033[38;5;120m"
 PURPLE="\033[38;5;141m"
-GLASSMORPHISM="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.05); color: #fff;"
 
-echo -e "${BOLD}${CYAN}🔍 Executing Setup Flow Audit...${RESET}"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo -e "${BOLD}${CYAN}      OHC: Interactive Setup Verification             ${RESET}"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo ""
 
 if [ ! -f .env ]; then
-  echo -e "${PURPLE}Error: .env file not found.${RESET}"
-  exit 1
-
+    echo -e "${PURPLE}✗ .env file not found. Run ohc-setup.sh first.${RESET}"
+    exit 1
 fi
 
+echo -e "${DIM}[1/2] Verifying .env configuration...${RESET}"
+
+# Load env variables (ignore error if any)
+set -a
 source .env
+set +a
 
-HEALTH_STATUS="ok"
-ISSUES=""
-MARKDOWN_OBSERVATIONS=""
+ERRORS=0
 
-echo -e "${DIM}Evaluating variables...${RESET}"
+if [ -z "$PORT" ]; then echo -e "  ${PURPLE}✗ PORT is missing${RESET}"; ERRORS=$((ERRORS+1)); else echo -e "  ${GREEN}✓ PORT=${PORT}${RESET}"; fi
+if [ -z "$LOG_LEVEL" ]; then echo -e "  ${PURPLE}✗ LOG_LEVEL is missing${RESET}"; ERRORS=$((ERRORS+1)); else echo -e "  ${GREEN}✓ LOG_LEVEL=${LOG_LEVEL}${RESET}"; fi
+if [ -z "$OHC_SOURCE_MODE" ]; then echo -e "  ${PURPLE}✗ OHC_SOURCE_MODE is missing${RESET}"; ERRORS=$((ERRORS+1)); else echo -e "  ${GREEN}✓ OHC_SOURCE_MODE=${OHC_SOURCE_MODE}${RESET}"; fi
 
-for var in PORT LOG_LEVEL OHC_SOURCE_MODE; do
-  if [ -z "${!var}" ]; then
-    echo -e "${PURPLE}❌ Missing $var in .env${RESET}"
-    HEALTH_STATUS="degraded"
-    ISSUES="${ISSUES}
-  - Missing $var"
-    MARKDOWN_OBSERVATIONS="${MARKDOWN_OBSERVATIONS}*   **$var**: ❌ Missing
-"
-  else
-    echo -e "${GREEN}✅ $var is set to ${!var}${RESET}"
-    MARKDOWN_OBSERVATIONS="${MARKDOWN_OBSERVATIONS}*   **$var**: ✅ ${!var}
-"
-  fi
-done
+if [ $ERRORS -gt 0 ]; then
+    echo -e "${PURPLE}✗ Configuration validation failed.${RESET}"
+    exit 1
+fi
 
+echo -e "${DIM}[2/2] Generating Audit Log...${RESET}"
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
 mkdir -p "${STATUS_DIR}"
-
 TIMESTAMP=$(date +%s)
-YAML_FILE="${STATUS_DIR}/audit-${TIMESTAMP}.yml"
-MD_FILE="${STATUS_DIR}/audit-${TIMESTAMP}.md"
 
-cat << YAML > "${YAML_FILE}"
+cat << STAT > "${STATUS_DIR}/${TIMESTAMP}-verify.yml"
 type: audit
 metadata:
-  role: Setup Audit
+  role: Setup Verification
   timestamp: ${TIMESTAMP}
-health: ${HEALTH_STATUS}
+health: ok
 observations:
-  - Validated .env file configuration
-YAML
+  - .env configuration validated successfully.
+STAT
 
-if [ "$HEALTH_STATUS" = "degraded" ]; then
-  cat << YAML >> "${YAML_FILE}"
-issues:${ISSUES}
-YAML
-fi
-
-cat << MD > "${MD_FILE}"
-<div markdown="1" style="${GLASSMORPHISM}">
-
-# 🔍 Setup Flow Audit Report
-
-**Timestamp**: ${TIMESTAMP}
-**Health**: ${HEALTH_STATUS}
-
-## Observations
-
-${MARKDOWN_OBSERVATIONS}
-</div>
-MD
-
-echo -e "${BLUE}Audit YAML saved to ${YAML_FILE}${RESET}"
-echo -e "${BLUE}Audit Markdown saved to ${MD_FILE}${RESET}"
-
-if [ "$HEALTH_STATUS" = "degraded" ]; then
-  exit 1
-
-fi
+echo -e "${GREEN}✓ Verification completed successfully. Audit log saved.${RESET}"
