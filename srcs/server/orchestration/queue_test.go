@@ -119,3 +119,49 @@ func TestJobQueue_MapHighLevelTask(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
+
+
+func TestTaskQueueService(t *testing.T) {
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	ctx := context.Background()
+	db.InitializeSchemas(ctx, prov)
+
+	q := NewTaskQueueService(prov)
+
+	task := SharedTaskDTO{
+		ID:            "task1",
+		Title:         "Test Task",
+		Status:        "PENDING",
+		AssignedAgent: nil,
+		Payload:       "{}",
+	}
+
+	err := q.Push(ctx, task)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	claimedTask, err := q.Claim(ctx, "agent1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if claimedTask == nil || claimedTask.ID != "task1" || claimedTask.Status != "IN_PROGRESS" || claimedTask.AssignedAgent == nil || *claimedTask.AssignedAgent != "agent1" {
+		t.Fatalf("task claim failed: %+v", claimedTask)
+	}
+
+	err = q.Complete(ctx, "task1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Double check nothing else can be claimed
+	claimedTask2, err := q.Claim(ctx, "agent2")
+	if err == nil {
+		t.Fatalf("expected error, got task: %+v", claimedTask2)
+	}
+}

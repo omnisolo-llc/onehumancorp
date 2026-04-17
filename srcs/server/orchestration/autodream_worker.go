@@ -270,3 +270,40 @@ func (d *AutoDreamWorkerDaemon) Stop() {
 		close(d.done)
 	})
 }
+
+
+type AutoDreamPipeline struct {
+	db db.Provider
+}
+
+func NewAutoDreamPipeline(db db.Provider) *AutoDreamPipeline {
+	return &AutoDreamPipeline{db: db}
+}
+
+func (a *AutoDreamPipeline) RunPipeline(ctx context.Context) error {
+	var query string
+	if a.db.IsSQLite() {
+		query = `SELECT id, payload FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 100`
+	} else {
+		query = `SELECT id, payload FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 100 FOR UPDATE SKIP LOCKED`
+	}
+
+	rows, err := a.db.Query(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var id string
+		var payload string
+		if err := rows.Scan(&id, &payload); err != nil {
+			continue
+		}
+
+		// Stub out vector embedding logic
+		embedding := []float32{0.1, 0.2, 0.3} // stub
+		_ = embedding
+	}
+	return nil
+}

@@ -1257,3 +1257,94 @@ func (lm *LocalTeammateMesh) SubscribeChannel(ctx context.Context, channel strin
 
     return ch, nil
 }
+
+
+type MeshCoordinatorService struct {
+	redisClient rueidis.Client
+	localBus    chan MeshMessageDTO
+	mu          sync.RWMutex
+	subs        []chan MeshMessageDTO
+}
+
+type MeshMessageDTO struct {
+	ID        string `json:"id"`
+	Sender    string `json:"sender"`
+	Recipient string `json:"recipient"`
+	Channel   string `json:"channel"`
+	Content   string `json:"content"`
+}
+
+func NewMeshCoordinatorService(redisClient rueidis.Client) *MeshCoordinatorService {
+	m := &MeshCoordinatorService{
+		redisClient: redisClient,
+		localBus:    make(chan MeshMessageDTO, 100),
+	}
+	if redisClient == nil {
+		go m.runLocalBus()
+	}
+	return m
+}
+
+func (m *MeshCoordinatorService) runLocalBus() {
+	for msg := range m.localBus {
+		m.mu.RLock()
+		for _, sub := range m.subs {
+			select {
+			case sub <- msg:
+			default:
+			}
+		}
+		m.mu.RUnlock()
+	}
+}
+
+func (m *MeshCoordinatorService) Publish(ctx context.Context, msg MeshMessageDTO) error {
+	if m.redisClient != nil {
+		data, _ := json.Marshal(msg)
+		cmd := m.redisClient.B().Publish().Channel(msg.Channel).Message(string(data)).Build()
+		return m.redisClient.Do(ctx, cmd).Error()
+	}
+	m.localBus <- msg
+	return nil
+}
+
+func (m *MeshCoordinatorService) Subscribe(ctx context.Context, channel string) (<-chan MeshMessageDTO, error) {
+	ch := make(chan MeshMessageDTO, 100)
+	if m.redisClient != nil {
+		go func() {
+			err := m.redisClient.Receive(ctx, m.redisClient.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
+				var payload MeshMessageDTO
+				if err := json.Unmarshal([]byte(msg.Message), &payload); err == nil {
+					select {
+					case ch <- payload:
+					default:
+					}
+				}
+			})
+			if err != nil && err != context.Canceled {
+				slog.Error("Redis sub error", "err", err)
+			}
+			close(ch)
+		}()
+		return ch, nil
+	}
+
+	m.mu.Lock()
+	m.subs = append(m.subs, ch)
+	m.mu.Unlock()
+
+	go func() {
+		<-ctx.Done()
+		m.mu.Lock()
+		for i, sub := range m.subs {
+			if sub == ch {
+				m.subs = append(m.subs[:i], m.subs[i+1:]...)
+				break
+			}
+		}
+		m.mu.Unlock()
+		close(ch)
+	}()
+
+	return ch, nil
+}

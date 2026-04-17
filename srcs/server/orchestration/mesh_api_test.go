@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"os"
 )
 
 type mockMeshTransport struct {
@@ -67,5 +69,40 @@ func TestMeshAPI_Stream(t *testing.T) {
 	body := w.Body.String()
 	if body != "data: {\"status\":\"test\"}\n\n" {
 		t.Errorf("expected correct SSE format, got %s", body)
+	}
+}
+
+
+func TestMeshCoordinatorService_Local(t *testing.T) {
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
+
+	m := NewMeshCoordinatorService(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ch, err := m.Subscribe(ctx, "test-channel")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	msg := MeshMessageDTO{
+		ID:      "1",
+		Sender:  "agent1",
+		Channel: "test-channel",
+		Content: "{}",
+	}
+	err = m.Publish(ctx, msg)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	select {
+	case received := <-ch:
+		if received.ID != "1" {
+			t.Fatalf("expected ID 1, got %v", received.ID)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for message")
 	}
 }

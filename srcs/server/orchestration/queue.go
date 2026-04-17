@@ -275,3 +275,73 @@ func (jq *JobQueue) MapHighLevelTask(ctx context.Context, task *QueuedTask) erro
 	_, err := jq.DB.Exec(ctx, query, id, orgID, title)
 	return err
 }
+
+
+type TaskQueueService struct {
+	db db.Provider
+}
+
+func NewTaskQueueService(db db.Provider) *TaskQueueService {
+	return &TaskQueueService{db: db}
+}
+
+type SharedTaskDTO struct {
+	ID            string
+	ParentID      *string
+	EpicID        *string
+	Title         string
+	Status        string
+	AssignedAgent *string
+	Payload       string
+}
+
+func (s *TaskQueueService) Push(ctx context.Context, task SharedTaskDTO) error {
+	query := `INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+	_, err := s.db.Exec(ctx, query, task.ID, task.ParentID, task.EpicID, task.Title, task.Status, task.AssignedAgent, task.Payload)
+	return err
+}
+
+func (s *TaskQueueService) Claim(ctx context.Context, agentID string) (*SharedTaskDTO, error) {
+	var query string
+	if s.db.IsSQLite() {
+		query = `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', assigned_agent = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM shared_tasks
+				WHERE status = 'PENDING'
+				ORDER BY created_at ASC
+				LIMIT 1
+			)
+			RETURNING id, parent_id, epic_id, title, status, assigned_agent, payload
+		`
+	} else {
+		query = `
+			UPDATE shared_tasks
+			SET status = 'IN_PROGRESS', assigned_agent = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM shared_tasks
+				WHERE status = 'PENDING'
+				ORDER BY created_at ASC
+				LIMIT 1
+				FOR UPDATE SKIP LOCKED
+			)
+			RETURNING id, parent_id, epic_id, title, status, assigned_agent, payload
+		`
+	}
+
+	row := s.db.QueryRow(ctx, query, agentID)
+	var t SharedTaskDTO
+	err := row.Scan(&t.ID, &t.ParentID, &t.EpicID, &t.Title, &t.Status, &t.AssignedAgent, &t.Payload)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func (s *TaskQueueService) Complete(ctx context.Context, taskID string) error {
+	query := `UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1`
+	_, err := s.db.Exec(ctx, query, taskID)
+	return err
+}
