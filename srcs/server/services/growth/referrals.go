@@ -53,49 +53,6 @@ func (rt *ReferralTracker) GenerateReferralCode(userID string) string {
 	return code
 }
 
-func (rt *ReferralTracker) GenerateBulkReferralCodes(userID string, count int) []string {
-	if count <= 0 {
-		return nil
-	}
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-
-	bytes := make([]byte, 4*count)
-	if _, err := rand.Read(bytes); err != nil {
-		panic("failed to read random bytes: " + err.Error())
-	}
-
-	codes := make([]string, 0, count)
-	for i := 0; i < count; i++ {
-		code := hex.EncodeToString(bytes[i*4 : (i+1)*4])
-		rt.UserCodes[userID] = code
-		rt.CodeToUser[code] = userID
-		codes = append(codes, code)
-	}
-	return codes
-}
-
-func (rt *ReferralTracker) RecordBulkReferrals(ctx context.Context, codes []string) int {
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-
-	recorded := 0
-	for _, code := range codes {
-		userID, exists := rt.CodeToUser[code]
-		if !exists {
-			continue
-		}
-		rt.UserReferrals[userID]++
-		rt.TotalReferrals++
-		recorded++
-	}
-
-	if recorded > 0 && referralsCounter != nil {
-		referralsCounter.Add(ctx, int64(recorded))
-	}
-	return recorded
-}
-
 func (rt *ReferralTracker) RecordReferral(ctx context.Context, code string) bool {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
