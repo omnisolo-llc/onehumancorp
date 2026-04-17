@@ -12,8 +12,6 @@ import (
 )
 
 var (
-	LockPath = ".agent-lock/"
-
 	chaosInjections = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "chaos_injections_total",
@@ -111,7 +109,7 @@ func (i *Injector) Inject(ctx context.Context) error {
 			return &ChaosError{Message: "chaos: simulated resource exhaustion"}
 		}
 	case CorruptAgentLock:
-		lockPath := LockPath
+		lockPath := ".agent-lock/"
 		if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
 			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
 		}
