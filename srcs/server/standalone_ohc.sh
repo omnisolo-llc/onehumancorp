@@ -3,7 +3,11 @@ set -euo pipefail
 
 cleanup_tmp_files() {
   if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
-    find "${STATE_DIR}" -name "*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
+    # Mode-aware cleanup for standalone
+    if [ -d "${STATE_DIR}" ]; then
+      # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
+      find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
+    fi
   fi
 }
 
