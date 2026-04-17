@@ -92,7 +92,7 @@ try {
 
     // Login Page
     // Navigate by clicking the button from the landing page.
-    await page.locator('text="Or continue to Cloud Dashboard"').click({ force: true });
+    await page.goto(baseUrl + "/#/login");
     await page.waitForTimeout(1500);
 
     const loginDir = path.join(outputRoot, "login");
