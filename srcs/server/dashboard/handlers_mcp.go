@@ -773,6 +773,7 @@ func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]string{"status": "success", "message": "rag sync accepted"})
 }
 
+
 // handleSecretsSyncUp handles receiving synced local secrets from standalone daemon.
 func (s *Server) handleSecretsSyncUp(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("github.com/onehumancorp/mono/srcs/server/dashboard").Start(r.Context(), "handleSecretsSyncUp")
@@ -828,7 +829,8 @@ func (s *Server) handleSecretsSyncDown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.org.ID == "" {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil || claims.OrganizationID == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -837,7 +839,7 @@ func (s *Server) handleSecretsSyncDown(w http.ResponseWriter, r *http.Request) {
 	if s.hub != nil && s.hub.SIPDB() != nil {
 		pool := s.hub.SIPDB().Provider()
 		if pool != nil {
-			rows, err := pool.Query(ctx, "SELECT org_id, key, value FROM cloud_secrets WHERE org_id = $1", s.org.ID)
+			rows, err := pool.Query(ctx, "SELECT org_id, key, value FROM cloud_secrets WHERE org_id = $1", claims.OrganizationID)
 			if err == nil {
 				defer rows.Close()
 				for rows.Next() {

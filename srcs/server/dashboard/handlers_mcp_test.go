@@ -419,6 +419,7 @@ func TestHandleSecretsSyncUp(t *testing.T) {
 
 	srv.ServeHTTP(rr, req)
 
+	// Since we mock claims to empty in test request without setup, expect 401
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", rr.Code)
 	}
@@ -436,6 +437,7 @@ func TestHandleSecretsSyncDown(t *testing.T) {
 
 	srv.ServeHTTP(rr, req)
 
+	// Since we mock claims to empty in test request without setup, expect 401
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", rr.Code)
 	}

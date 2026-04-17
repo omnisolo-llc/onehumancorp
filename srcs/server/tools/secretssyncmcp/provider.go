@@ -3,13 +3,17 @@ package secretssyncmcp
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
-	"encoding/base64"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -27,6 +31,121 @@ func NewDBSecretsSyncProvider(dbWrapper *db.DB, cloudAPIURL string) *DBSecretsSy
 		dbWrapper:   dbWrapper,
 		cloudAPIURL: cloudAPIURL,
 	}
+}
+
+func getOrGenerateKey() ([]byte, error) {
+	var homeDir string
+	if testTempDir := os.Getenv("TEST_TMPDIR"); testTempDir != "" {
+		homeDir = testTempDir
+	} else {
+		var err error
+		homeDir, err = os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("could not get home dir: %w", err)
+		}
+	}
+
+	ohcDir := filepath.Join(homeDir, ".ohc")
+	if err := os.MkdirAll(ohcDir, 0700); err != nil {
+		return nil, fmt.Errorf("could not create .ohc dir: %w", err)
+	}
+
+	keyPath := filepath.Join(ohcDir, "local_secrets.key")
+	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
+		// Generate 32-byte key
+		key := make([]byte, 32)
+		if _, err := io.ReadFull(rand.Reader, key); err != nil {
+			return nil, fmt.Errorf("could not generate key: %w", err)
+		}
+		if err := os.WriteFile(keyPath, key, 0600); err != nil {
+			return nil, fmt.Errorf("could not write key file: %w", err)
+		}
+		return key, nil
+	}
+
+	// Ensure permissions are strict
+	info, err := os.Stat(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not stat key file: %w", err)
+	}
+	if info.Mode().Perm() != 0600 {
+		if err := os.Chmod(keyPath, 0600); err != nil {
+			return nil, fmt.Errorf("could not fix key file permissions: %w", err)
+		}
+	}
+
+	key, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("could not read key file: %w", err)
+	}
+	if len(key) != 32 {
+		return nil, fmt.Errorf("invalid key length: expected 32 bytes, got %d", len(key))
+	}
+
+	return key, nil
+}
+
+func encryptValue(value string) (string, error) {
+	key, err := getOrGenerateKey()
+	if err != nil {
+		return "", err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	nonce := make([]byte, aesgcm.NonceSize())
+	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+		return "", err
+	}
+
+	ciphertext := aesgcm.Seal(nil, nonce, []byte(value), nil)
+
+	// Prepend nonce to ciphertext and base64 encode
+	combined := append(nonce, ciphertext...)
+	return base64.StdEncoding.EncodeToString(combined), nil
+}
+
+func decryptValue(encryptedValue string) (string, error) {
+	key, err := getOrGenerateKey()
+	if err != nil {
+		return "", err
+	}
+
+	combined, err := base64.StdEncoding.DecodeString(encryptedValue)
+	if err != nil {
+		return "", err
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", err
+	}
+
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	nonceSize := aesgcm.NonceSize()
+	if len(combined) < nonceSize {
+		return "", fmt.Errorf("ciphertext too short")
+	}
+
+	nonce, ciphertext := combined[:nonceSize], combined[nonceSize:]
+	plaintext, err := aesgcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return "", err
+	}
+
+	return string(plaintext), nil
 }
 
 func (p *DBSecretsSyncProvider) sendToCloud(ctx context.Context, endpoint string, method string, payload interface{}, claims *auth.Claims) ([]byte, error) {
@@ -109,8 +228,11 @@ func (p *DBSecretsSyncProvider) SyncSecretsDown(ctx context.Context, claims *aut
 					// Ensure the local secrets table exists
 					_, _ = p.dbWrapper.Exec(ctx, "CREATE TABLE IF NOT EXISTS local_secrets (id TEXT PRIMARY KEY, key TEXT, value TEXT, synced_to_cloud BOOLEAN DEFAULT true)")
 
-					// Basic obfuscation for Standalone local secrets DB via base64 encoded prefix
-					encryptedValue := base64.StdEncoding.EncodeToString([]byte("ENC:" + value))
+					// Real AES-GCM encryption for Standalone local secrets DB
+					encryptedValue, err := encryptValue(value)
+					if err != nil {
+						return nil, fmt.Errorf("failed to encrypt secret %s: %w", key, err)
+					}
 
 					_, _ = p.dbWrapper.Exec(ctx, "INSERT INTO local_secrets (id, key, value, synced_to_cloud) VALUES ($1, $2, $3, true) ON CONFLICT(id) DO UPDATE SET value = excluded.value, key = excluded.key", id, key, encryptedValue)
 				}
@@ -119,9 +241,9 @@ func (p *DBSecretsSyncProvider) SyncSecretsDown(ctx context.Context, claims *aut
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":  "success",
 		"message": "Secrets sync down completed successfully.",
-		"data": response,
+		"data":    response,
 	}, nil
 }
 
@@ -143,25 +265,30 @@ func (p *DBSecretsSyncProvider) SyncSecretsUp(ctx context.Context, claims *auth.
 	var ids []string
 
 	for rows.Next() {
-		var id, key, value string
-		if err := rows.Scan(&id, &key, &value); err != nil {
+		var id, key, encryptedValue string
+		if err := rows.Scan(&id, &key, &encryptedValue); err != nil {
 			continue
 		}
 
-		// In a real implementation we would decrypt here. We send back value directly.
+		decryptedValue, err := decryptValue(encryptedValue)
+		if err != nil {
+			// Skip or log if we can't decrypt
+			continue
+		}
+
 		secrets = append(secrets, map[string]interface{}{
-			"id": id,
-			"key": key,
-			"value": value, // Decrypted
+			"id":    id,
+			"key":   key,
+			"value": decryptedValue,
 		})
 		ids = append(ids, id)
 	}
 
 	if len(secrets) == 0 {
 		return map[string]interface{}{
-			"status": "success",
+			"status":       "success",
 			"synced_count": 0,
-			"message": "No pending secrets to sync up.",
+			"message":      "No pending secrets to sync up.",
 		}, nil
 	}
 
@@ -178,7 +305,7 @@ func (p *DBSecretsSyncProvider) SyncSecretsUp(ctx context.Context, claims *auth.
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":       "success",
 		"synced_count": len(secrets),
 	}, nil
 }

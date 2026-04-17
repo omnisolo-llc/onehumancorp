@@ -2,32 +2,31 @@ package secretssyncmcp
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 )
 
-// SecretsSyncProvider abstracts the local-to-cloud secrets synchronization logic.
+// Tool represents an MCP tool definition.
+type Tool struct {
+	Name        string
+	Description string
+	InputSchema map[string]interface{}
+}
+
+// SecretsSyncProvider defines the interface for syncing secrets.
 type SecretsSyncProvider interface {
 	SyncSecretsDown(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
 	SyncSecretsUp(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
 }
 
-// Tool represents an MCP tool definition.
-type Tool struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	InputSchema string `json:"inputSchema"`
-}
-
-// SecretsSyncMCP implements the MCP interface for local-to-cloud secrets sync.
+// SecretsSyncMCP implements the MCP interface for secrets sync.
 type SecretsSyncMCP struct {
 	provider SecretsSyncProvider
 	isLocal  bool
 }
 
-// NewSecretsSyncMCP creates a new SecretsSyncMCP instance.
+// NewSecretsSyncMCP creates a new SecretsSyncMCP.
 func NewSecretsSyncMCP(provider SecretsSyncProvider, isLocal bool) *SecretsSyncMCP {
 	return &SecretsSyncMCP{
 		provider: provider,
@@ -35,40 +34,46 @@ func NewSecretsSyncMCP(provider SecretsSyncProvider, isLocal bool) *SecretsSyncM
 	}
 }
 
-// ListTools returns the list of available tools.
+// ListTools returns the available tools.
 func (m *SecretsSyncMCP) ListTools() []Tool {
+	if !m.isLocal {
+		return []Tool{}
+	}
 	return []Tool{
 		{
-			Name:        "sync_secrets_down",
-			Description: "Synchronize secrets from the cloud to local.",
-			InputSchema: `{"type": "object", "properties": {}}`,
+			Name:        "secrets_sync_down",
+			Description: "Pull latest cloud secrets down to the local standalone database.",
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
 		},
 		{
-			Name:        "sync_secrets_up",
-			Description: "Synchronize local secrets to the cloud.",
-			InputSchema: `{"type": "object", "properties": {}}`,
+			Name:        "secrets_sync_up",
+			Description: "Push local unsynced secrets up to the cloud database.",
+			InputSchema: map[string]interface{}{
+				"type":       "object",
+				"properties": map[string]interface{}{},
+			},
 		},
 	}
 }
 
-// CallTool executes a tool by name.
+// CallTool executes a specific tool.
 func (m *SecretsSyncMCP) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (interface{}, error) {
 	if !m.isLocal {
-		return map[string]interface{}{
-			"status": "skipped",
-			"message": "Not running in Standalone/Local mode. Secrets sync is a no-op.",
-		}, nil
+		return nil, fmt.Errorf("secret sync tools are only available in standalone mode")
 	}
 
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
-		return nil, errors.New("unauthorized: missing claims")
+		claims = &auth.Claims{}
 	}
 
 	switch toolName {
-	case "sync_secrets_down":
+	case "secrets_sync_down":
 		return m.provider.SyncSecretsDown(ctx, claims)
-	case "sync_secrets_up":
+	case "secrets_sync_up":
 		return m.provider.SyncSecretsUp(ctx, claims)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", toolName)
