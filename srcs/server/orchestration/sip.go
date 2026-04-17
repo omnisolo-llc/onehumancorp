@@ -659,14 +659,28 @@ func (s *SIPDB) PruneBufferedMetrics(ctx context.Context, ageThreshold time.Dura
 	return withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
-		var err error
-		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
-		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+		for {
+			var err error
+			var rowsAffected int64
+			if s.db.IsSQLite() {
+				r, e := s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+				err = e
+				if e == nil { rowsAffected = r }
+			} else {
+				r, e := s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+				err = e
+				if e == nil { rowsAffected = r }
+			}
+			if err != nil {
+				return err
+			}
+			if rowsAffected < 1000 {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
 
-		return err
+		return nil
 	})
 }
 
@@ -688,14 +702,30 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		}
 
 		// 2. Remove COMPLETED, or very old FAILED missions
-		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
-		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
-		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency,
+		// but loop to clear the entire backlog.
+		for {
+			var err error
+			var rowsAffected int64
+			if s.db.IsSQLite() {
+				r, e := s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+				err = e
+				if e == nil { rowsAffected = r }
+			} else {
+				r, e := s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+				err = e
+				if e == nil { rowsAffected = r }
+			}
+			if err != nil {
+				return err
+			}
+			if rowsAffected < 1000 {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
 
-		return err
+		return nil
 	})
 }
 
@@ -925,13 +955,27 @@ func (s *SIPDB) PruneTelemetryBuffer(ctx context.Context, ageThreshold time.Dura
 	return withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
-		var err error
-		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
-		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+		for {
+			var err error
+			var rowsAffected int64
+			if s.db.IsSQLite() {
+				r, e := s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+				err = e
+				if e == nil { rowsAffected = r }
+			} else {
+				r, e := s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+				err = e
+				if e == nil { rowsAffected = r }
+			}
+			if err != nil {
+				return err
+			}
+			if rowsAffected < 1000 {
+				break
+			}
+			time.Sleep(10 * time.Millisecond)
 		}
-		return err
+		return nil
 	})
 }
 
