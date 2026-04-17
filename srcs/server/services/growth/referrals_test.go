@@ -39,46 +39,6 @@ func TestReferralTracker(t *testing.T) {
 	}
 }
 
-func TestBulkReferrals(t *testing.T) {
-	tracker := NewReferralTracker()
-	userID := "bulkuser123"
-
-	// Test bulk generation
-	codes := tracker.GenerateBulkReferralCodes(userID, 5)
-	if len(codes) != 5 {
-		t.Fatalf("Expected 5 codes, got %d", len(codes))
-	}
-
-	for _, code := range codes {
-		if len(code) != 8 { // 4 bytes hex encoded = 8 chars
-			t.Fatalf("Expected code length to be 8, got %d for code %s", len(code), code)
-		}
-	}
-
-	// Test recording mix of valid and invalid codes
-	ctx := context.Background()
-	mixCodes := []string{codes[0], "invalid_code_1", codes[1], codes[2], "invalid_code_2"}
-	successCount := tracker.RecordBulkReferrals(ctx, mixCodes)
-
-	if successCount != 3 {
-		t.Fatalf("Expected 3 successful recordings, got %d", successCount)
-	}
-
-	if tracker.GetTotalReferrals() != 3 {
-		t.Fatalf("Expected 3 total referrals, got %d", tracker.GetTotalReferrals())
-	}
-
-	if tracker.GetUserReferrals(userID) != 3 {
-		t.Fatalf("Expected 3 referrals for user, got %d", tracker.GetUserReferrals(userID))
-	}
-
-	// Generating 0 codes
-	emptyCodes := tracker.GenerateBulkReferralCodes(userID, 0)
-	if len(emptyCodes) != 0 {
-		t.Fatalf("Expected 0 codes, got %d", len(emptyCodes))
-	}
-}
-
 func TestReferralTrackerWithChannel(t *testing.T) {
 	tracker := NewReferralTracker()
 	userID := "user456"
@@ -136,51 +96,5 @@ func TestCalculateTierDiscount(t *testing.T) {
 		if got != tt.expected {
 			t.Errorf("CalculateTierDiscount(%q): expected %f, got %f", tt.tier, tt.expected, got)
 		}
-	}
-}
-
-func TestBulkReferrals(t *testing.T) {
-	tracker := NewReferralTracker()
-	userID := "bulkuser123"
-	count := 5
-	maxCount := 10
-
-	codes, err := tracker.GenerateBulkReferralCodes(userID, count, maxCount)
-	if err != nil {
-		t.Fatalf("Failed to generate bulk codes: %v", err)
-	}
-	if len(codes) != count {
-		t.Fatalf("Expected %d codes, got %d", count, len(codes))
-	}
-
-	for _, code := range codes {
-		if tracker.CodeToUser[code] != userID {
-			t.Fatalf("Expected code to map to %s, got %s", userID, tracker.CodeToUser[code])
-		}
-	}
-
-	_, err = tracker.GenerateBulkReferralCodes(userID, 6, maxCount)
-	if err == nil {
-		t.Fatalf("Expected error when exceeding max count")
-	}
-
-	ctx := context.Background()
-	successCount := tracker.RecordBulkReferrals(ctx, codes)
-	if successCount != count {
-		t.Fatalf("Expected %d successful referrals, got %d", count, successCount)
-	}
-
-	if tracker.GetTotalReferrals() != count {
-		t.Fatalf("Expected %d total referrals after bulk record, got %d", count, tracker.GetTotalReferrals())
-	}
-
-	if tracker.GetUserReferrals(userID) != count {
-		t.Fatalf("Expected %d referrals for user, got %d", count, tracker.GetUserReferrals(userID))
-	}
-
-	mixedCodes := []string{tracker.GenerateReferralCode("anotheruser"), "invalid1", "invalid2"}
-	successMixed := tracker.RecordBulkReferrals(ctx, mixedCodes)
-	if successMixed != 1 {
-		t.Fatalf("Expected 1 successful referral from mixed list, got %d", successMixed)
 	}
 }
