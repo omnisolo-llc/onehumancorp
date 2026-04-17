@@ -518,7 +518,7 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
 		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
-		for j := 0; j < 16; j++ {
+		for j := 0; j < 4; j++ {
 			go lm.run(i)
 			go lm.persistWorker(i)
 		}
@@ -872,7 +872,7 @@ func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
 		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
 		// Spawn multiple worker threads per shard
-		for j := 0; j < 16; j++ {
+		for j := 0; j < 4; j++ {
 			go lm.run(i)
 			go lm.persistWorker(i)
 		}

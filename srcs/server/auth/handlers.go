@@ -61,7 +61,7 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.store.Authenticate(req.Username, req.Password, "")
+	user, err := h.store.Authenticate(req.Username, req.Password)
 	if err != nil {
 		jsonError(w, "invalid credentials", http.StatusUnauthorized)
 		return
@@ -112,7 +112,7 @@ func (h *Handlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "not authenticated", http.StatusUnauthorized)
 		return
 	}
-	user, ok := h.store.GetUser(claims.Subject, claims.OrganizationID)
+	user, ok := h.store.GetUser(claims.Subject)
 	if !ok {
 		// OIDC user not yet materialised locally — return claims-derived info
 		writeJSON(w, http.StatusOK, UserPublic{
@@ -156,7 +156,7 @@ func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		users := h.store.ListUsers(claims.OrganizationID)
+		users := h.store.ListUsers()
 		out := make([]UserPublic, 0, len(users))
 		for _, u := range users {
 			out = append(out, u.PublicView())
@@ -174,7 +174,7 @@ func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 		if len(req.Roles) == 0 {
 			req.Roles = []string{RoleViewer}
 		}
-		user, err := h.store.CreateUser(req.Username, req.Email, req.Password, req.Roles, claims.OrganizationID)
+		user, err := h.store.CreateUser(req.Username, req.Email, req.Password, req.Roles)
 		if err != nil {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
@@ -214,7 +214,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		user, ok := h.store.GetUser(id, claims.OrganizationID)
+		user, ok := h.store.GetUser(id)
 		if !ok {
 			jsonError(w, "user not found", http.StatusNotFound)
 			return
@@ -234,7 +234,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			req.Roles = nil
 			req.Active = nil
 		}
-		user, err := h.store.UpdateUser(id, req.Email, req.Roles, req.Active, claims.OrganizationID)
+		user, err := h.store.UpdateUser(id, req.Email, req.Roles, req.Active)
 		if err != nil {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
@@ -246,7 +246,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, "forbidden", http.StatusForbidden)
 			return
 		}
-		if err := h.store.DeleteUser(id, claims.OrganizationID); err != nil {
+		if err := h.store.DeleteUser(id); err != nil {
 			jsonError(w, err.Error(), http.StatusNotFound)
 			return
 		}
