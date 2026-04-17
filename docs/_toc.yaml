@@ -23,7 +23,5 @@ toc:
     path: /docs/archive/index.md
   - title: Hybrid MCP RAG Escalation Walkthrough
     path: /docs/walkthroughs/hybrid_mcp_rag_escalation.md
-  - title: Harness Git Protection Report
-    path: /docs/reports/RESEARCH_REPORT_HARNESS_GIT_PROTECTION.md
   - title: KAIROS Orchestration
     path: /docs/architecture/kairos_orchestration.md
