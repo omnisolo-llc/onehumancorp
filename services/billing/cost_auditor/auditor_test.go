@@ -2,7 +2,7 @@ package cost_auditor
 
 import (
 	"context"
-	"ohc/lib/pricing/token_calculator"
+	"github.com/onehumancorp/mono/lib/pricing/token_calculator"
 	"testing"
 )
 
@@ -14,8 +14,8 @@ func TestCostAuditor(t *testing.T) {
 		CostPerLocalEmbedding:   0.000002,
 		DiscountFactor:          0.0,
 		CostPerGBMonth:          0.023,
-		CostPerComputeHour:      0.10,
-		CostPerNetworkGB:        0.05,
+		CostPerComputeHour:      0.05,
+		CostPerNetworkGB:        0.09,
 	}
 	auditor := NewCostAuditor(config)
 	ctx := context.Background()
@@ -50,22 +50,21 @@ func TestCostAuditor(t *testing.T) {
 	if totalStorageSavings != 0.115 {
 		t.Errorf("expected total storage savings 0.115, got %f", totalStorageSavings)
 	}
-	auditor.RecordComputeEvent(ctx, ComputeEvent{
-		AgentID:            "miser-1",
-		ComputeHours:       2.5,
-		NetworkEgressBytes: 2147483648, // 2GB
+
+	computeCost := auditor.RecordComputeEvent(ctx, ComputeEvent{
+		AgentID:       "miser-1",
+		DurationHours: 2.0,
 	})
+	if computeCost != 0.1000 {
+		t.Errorf("expected compute cost 0.1000, got %f", computeCost)
+	}
 
-	// Compute cost: 2.5 * 0.10 = 0.25
-	// Network cost: 2 * 0.05 = 0.10
-	// Total additional cost: 0.35
-	// Previous total cost for miser-1: 0.027
-	// New total cost for miser-1: 0.377
-
-	newAgentCost := auditor.GetAgentCost("miser-1")
-	expectedNewAgentCost := 0.377
-	if newAgentCost != expectedNewAgentCost {
-		t.Errorf("expected new agent cost %f, got %f", expectedNewAgentCost, newAgentCost)
+	networkCost := auditor.RecordNetworkEvent(ctx, NetworkEvent{
+		AgentID:   "miser-1",
+		NetworkGB: 1.0,
+	})
+	if networkCost != 0.0900 {
+		t.Errorf("expected network cost 0.0900, got %f", networkCost)
 	}
 
 	report := auditor.GenerateReport()

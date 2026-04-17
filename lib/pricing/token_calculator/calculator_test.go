@@ -34,10 +34,10 @@ func TestCalculateStorageSavings(t *testing.T) {
 
 func TestCalculateComputeCost(t *testing.T) {
 	config := CostConfig{
-		CostPerComputeHour: 0.10,
+		CostPerComputeHour: 0.05,
 	}
 	cost := CalculateComputeCost(2.5, config)
-	expected := 0.2500
+	expected := 0.1250
 	if cost != expected {
 		t.Errorf("expected %f, got %f", expected, cost)
 	}
@@ -45,10 +45,10 @@ func TestCalculateComputeCost(t *testing.T) {
 
 func TestCalculateNetworkCost(t *testing.T) {
 	config := CostConfig{
-		CostPerNetworkGB: 0.05,
+		CostPerNetworkGB: 0.09,
 	}
-	cost := CalculateNetworkCost(2147483648, config) // 2GB
-	expected := 0.1000
+	cost := CalculateNetworkCost(1.5, config)
+	expected := 0.1350
 	if cost != expected {
 		t.Errorf("expected %f, got %f", expected, cost)
 	}

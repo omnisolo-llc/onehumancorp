@@ -32,13 +32,12 @@ func CalculateStorageSavings(originalBytes, compressedBytes int64, config CostCo
 	return math.Round(savings*10000) / 10000
 }
 
-func CalculateComputeCost(hours float64, config CostConfig) float64 {
-	cost := hours * config.CostPerComputeHour
+func CalculateComputeCost(durationHours float64, config CostConfig) float64 {
+	cost := durationHours * config.CostPerComputeHour
 	return math.Round(cost*10000) / 10000
 }
 
-func CalculateNetworkCost(bytes int64, config CostConfig) float64 {
-	gb := float64(bytes) / (1024 * 1024 * 1024)
-	cost := gb * config.CostPerNetworkGB
+func CalculateNetworkCost(networkGB float64, config CostConfig) float64 {
+	cost := networkGB * config.CostPerNetworkGB
 	return math.Round(cost*10000) / 10000
 }
