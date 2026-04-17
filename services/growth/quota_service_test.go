@@ -20,7 +20,8 @@ func TestQuotaServiceCloud(t *testing.T) {
 	})
 
 	tracker := analytics.NewTracker()
-	service := NewQuotaService(tracker, rdb, 2)
+	repo := NewReferralRepository(rdb)
+	service := NewQuotaService(tracker, rdb, repo, 2)
 	ctx := context.Background()
 	tenantID := "tenant-123"
 
@@ -60,7 +61,8 @@ func TestQuotaServiceCloud(t *testing.T) {
 
 func TestQuotaServiceStandalone(t *testing.T) {
 	tracker := analytics.NewTracker()
-	service := NewQuotaService(tracker, nil, 2)
+	repo := NewReferralRepository(nil)
+	service := NewQuotaService(tracker, nil, repo, 2)
 	ctx := context.Background()
 	tenantID := "tenant-standalone"
 
@@ -90,5 +92,68 @@ func TestQuotaServiceStandalone(t *testing.T) {
 	allowed, err = service.CheckQuota(ctx, tenantID)
 	if err != nil || !allowed {
 		t.Errorf("Expected allowed for standalone check")
+	}
+}
+
+func TestQuotaServiceDynamicLimit(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mr.Close()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	tracker := analytics.NewTracker()
+	repo := NewReferralRepository(rdb)
+	service := NewQuotaService(tracker, rdb, repo, 2)
+	ctx := context.Background()
+	tenantID := "tenant-dynamic"
+
+	// Baseline limit is 2. Let's use 2.
+	service.IncrementUsage(ctx, tenantID)
+	service.IncrementUsage(ctx, tenantID)
+
+	// Now usage is 2, limit is 2 -> exceeded.
+	allowed, _ := service.CheckQuota(ctx, tenantID)
+	if allowed {
+		t.Errorf("Expected quota to be exceeded")
+	}
+
+	// Add a SIGNED_UP referral for this tenant
+	referral := &GrowthReferral{
+		ID:           "ref-dyn-1",
+		InviterID:    tenantID,
+		InviteeEmail: "dyn@example.com",
+		Status:       "SIGNED_UP",
+	}
+	err = repo.SaveReferral(ctx, referral)
+	if err != nil {
+		t.Fatalf("Failed to save referral: %v", err)
+	}
+
+	// Now dynamic limit should be 2 + 50 = 52.
+	allowed, err = service.CheckQuota(ctx, tenantID)
+	if err != nil || !allowed {
+		t.Errorf("Expected quota to be allowed dynamically, got err: %v", err)
+	}
+
+	// Let's use up to 51
+	for i := 0; i < 49; i++ {
+		service.IncrementUsage(ctx, tenantID)
+	}
+
+	allowed, _ = service.CheckQuota(ctx, tenantID)
+	if !allowed {
+		t.Errorf("Expected quota to be allowed at usage 51")
+	}
+
+	// Usage 52 -> exceeded
+	service.IncrementUsage(ctx, tenantID)
+	allowed, _ = service.CheckQuota(ctx, tenantID)
+	if allowed {
+		t.Errorf("Expected quota to be exceeded at usage 52")
 	}
 }
