@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+- Scaling (Cloud): Add premium design doc for KAIROS Hybrid Orchestration.
+- Privacy/Offline (Standalone): Add Edge LLM Offloading Protocol Help Portal and API Walkthrough.
+
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 - Scaling (Cloud): Architect Cross-Mode Database Schema Syncer via MCP, Optimize PopMessages latency.
 - Privacy/Offline (Standalone): Fix PII redaction for nested slog groups, Bulk Team Invite UI in Flutter App.
