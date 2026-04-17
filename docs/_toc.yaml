@@ -3,6 +3,8 @@ toc:
     path: /docs/index.md
   - title: Architecture
     path: /docs/architecture/index.md
+  - title: KAIROS Task Queue Design
+    path: /docs/architecture/KAIROS_TASK_QUEUE_DESIGN.md
   - title: Developer
     path: /docs/developer/index.md
   - title: API

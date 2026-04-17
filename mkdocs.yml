@@ -29,6 +29,7 @@ nav:
   - Home: index.md
   - Architecture:
       - architecture/index.md
+      - KAIROS Task Queue Design: architecture/KAIROS_TASK_QUEUE_DESIGN.md
       - Chaos Engineering: architecture/chaos_engineering.md
   - Developer:
       - developer/index.md
