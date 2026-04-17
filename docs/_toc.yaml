@@ -11,6 +11,16 @@ toc:
     path: /docs/api/hybrid_mcp_api.md
   - title: Features
     path: /docs/features/index.md
+  - title: Help Portal
+    path: /docs/help_portal/index.md
+  - title: Help Portal Details
+    path: /docs/walkthroughs/help_portal.md
+  - title: Agent Lifecycle
+    path: /docs/walkthroughs/agent_lifecycle.md
+  - title: Elastic Swarm Bursting
+    path: /docs/walkthroughs/elastic_swarm_bursting.md
+  - title: Hybrid Troubleshooting
+    path: /docs/walkthroughs/hybrid_troubleshooting.md
   - title: Walkthroughs
     path: /docs/walkthroughs/index.md
   - title: Hybrid MCP Telemetry Visual Guide

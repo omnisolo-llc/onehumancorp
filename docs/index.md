@@ -14,6 +14,7 @@ This site is the canonical documentation root for the repository. It follows a m
 - Read the architecture hub in `docs/architecture/`.
 - Use the developer hub in `docs/developer/` for setup and workflow guidance.
 - Use the API and walkthrough sections for operator-facing flows.
+- Access the [Help Portal](help_portal/index.md) for core documentation and operations guides.
 - Use the operations section for issue tracking, docs governance, and migration notes.
 
 ## Site Conventions
