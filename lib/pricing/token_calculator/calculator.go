@@ -42,9 +42,3 @@ func CalculateNetworkCost(bytes int64, config CostConfig) float64 {
 	cost := gb * config.CostPerNetworkGB
 	return math.Round(cost*10000) / 10000
 }
-
-func CalculatePromptCacheSavings(inputTokens, cachedInputTokens int, config CostConfig) float64 {
-	actualCost := float64(inputTokens)*config.CostPerInputToken + float64(cachedInputTokens)*config.CostPerCachedInputToken
-	uncachedCost := float64(inputTokens+cachedInputTokens)*config.CostPerInputToken
-	return math.Round((uncachedCost-actualCost)*10000) / 10000
-}
