@@ -342,6 +342,9 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordTokenUsage", func(t *testing.T) {
 		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
 	})
+	t.Run("RecordSandboxViolation", func(t *testing.T) {
+		RecordSandboxViolation(ctx, "fs_read", "agent-123", "/etc/shadow")
+	})
 	t.Run("RecordTokensSaved", func(t *testing.T) {
 		RecordTokensSaved(ctx, "reason", "db", 100)
 	})

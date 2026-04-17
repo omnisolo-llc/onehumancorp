@@ -29,6 +29,7 @@ var (
 
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
+	SandboxViolationTotal      metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
 	latencyHistogram           metric.Float64Histogram
@@ -703,6 +704,14 @@ func InitWithMeter(m mockableMeter) error {
 	SubAgentFailuresTotal, err = m.Int64Counter(
 		"ohc_sub_agent_failures_total",
 		metric.WithDescription("Total number of sub-agent failures"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SandboxViolationTotal, err = m.Int64Counter(
+		"telemetry.sandbox_violation_total",
+		metric.WithDescription("Total number of sandbox violations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1557,6 +1566,17 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
 	if SubAgentExecutionDuration != nil {
 		SubAgentExecutionDuration.Record(ctx, duration)
+	}
+}
+
+// RecordSandboxViolation records a sandbox violation event
+func RecordSandboxViolation(ctx context.Context, violationType string, agentID string, path string) {
+	if SandboxViolationTotal != nil {
+		SandboxViolationTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("type", violationType),
+			attribute.String("agent_id", agentID),
+			attribute.String("path", path),
+		))
 	}
 }
 
