@@ -57,6 +57,9 @@ func (r *Registry) Register(p Provider) {
 // Produces no errors.
 // Has no side effects.
 func (r *Registry) Get(t ProviderType) (Provider, bool) {
+	if t == "" {
+		t = ProviderTypeBuiltin
+	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	p, ok := r.providers[t]

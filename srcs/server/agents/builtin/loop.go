@@ -27,7 +27,7 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 		if iteration >= maxTurns {
 			if cb != nil {
 				cb(AgentEvent{
-					Type:    AgentEventTypeError,
+					Type:    AgentEventTypeMaxTurnsReached,
 					Error:   fmt.Errorf("agent exceeded max turns (%d)", maxTurns),
 				})
 			}
@@ -53,9 +53,20 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 			Temperature: a.Temperature,
 		}
 
+		if cb != nil {
+			cb(AgentEvent{
+				Type: AgentEventTypeStreamRequestStart,
+			})
+		}
+
 		// Call LLM
 		resp, err := a.Client.Chat(ctx, req)
 		if err != nil {
+			// Basic fallback logic: if sonnet fails, fallback to haiku
+			if a.Model == "claude-3-7-sonnet-20250219" {
+				a.Model = "claude-3-5-haiku-20241022"
+				continue
+			}
 			return messages, fmt.Errorf("llm chat error: %w", err)
 		}
 
@@ -92,7 +103,7 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 					continue
 				}
 			}
-		} else if resp.StopReason == "prompt_too_long" {
+		} else if resp.StopReason == "prompt_too_long" || resp.StopReason == "context_length_exceeded" {
 			if !hasAttemptedReactiveCompact {
 				if len(messages) > 4 {
 					hasAttemptedReactiveCompact = true

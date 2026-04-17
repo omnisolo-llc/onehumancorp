@@ -27,3 +27,9 @@ type EventCallback func(AgentEvent)
 
 // QuerySource identifies the context or tool that initiated an agent query.
 type QuerySource string
+
+const (
+	AgentEventTypeStreamRequestStart AgentEventType = iota + 4
+	AgentEventTypeMaxTurnsReached
+	AgentEventTypeHookStopped
+)

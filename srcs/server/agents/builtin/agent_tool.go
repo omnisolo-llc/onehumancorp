@@ -100,6 +100,9 @@ func heartbeatTimeout() time.Duration {
 // The parent agent is notified via the SubagentBus when the child completes.
 // If no completion signal is received within the heartbeat timeout, the task
 // is marked as killed (no polling required).
+// BuiltInAgents accessible via AgentTool
+var BuiltInAgents = []BuiltInAgentDefinition{ExploreAgent, PlanAgent}
+
 var AgentTool = Tool{
 	Name: "Agent",
 	Description: "Spawn a background agent to perform a task concurrently. " +

@@ -55,3 +55,28 @@ type ChatResponse struct {
 	Usage      Usage   `json:"usage"`
 	StopReason string  `json:"stop_reason,omitempty"`
 }
+type HookEvent string
+type StreamEvent struct {
+	Type string `json:"type"`
+}
+type SessionState struct {
+	SessionID string `json:"session_id"`
+}
+type RequestStartEvent struct {
+	Type string `json:"type"`
+}
+type ToolUseSummaryMessage struct {
+	Type    string `json:"type"`
+	Content string `json:"content"`
+}
+type BuiltInAgentDefinition struct {
+	AgentType       string
+	WhenToUse       string
+	Tools           []string
+	DisallowedTools []string
+	Source          string
+	BaseDir         string
+	Model           string
+	OmitClaudeMd    bool
+	GetSystemPrompt func() string
+}
