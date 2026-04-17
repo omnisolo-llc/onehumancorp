@@ -247,52 +247,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		json.NewEncoder(w).Encode(stats)
 	}))
 
-
-	mux.HandleFunc("/api/v1/growth/analytics/export", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		spiffeID := r.Header.Get("X-Spiffe-Id")
-		if spiffeID == "" {
-			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
-			return
-		}
-
-		if spiffeID != "admin" && spiffeID != "dashboard-service" {
-			http.Error(w, "Unauthorized: missing admin privileges", http.StatusForbidden)
-			return
-		}
-
-		referrals, err := referralsRepo.GetAllReferrals(r.Context())
-		if err != nil {
-			http.Error(w, "Failed to get analytics data", http.StatusInternalServerError)
-			return
-		}
-
-		totalSignups := 0
-		totalPending := 0
-		for _, ref := range referrals {
-			if ref.Status == "SIGNED_UP" {
-				totalSignups++
-			} else if ref.Status == "PENDING" {
-				totalPending++
-			}
-		}
-
-		exportData := map[string]interface{}{
-			"total_referrals": len(referrals),
-			"total_signups":   totalSignups,
-			"total_pending":   totalPending,
-			"referrals":       referrals,
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(exportData)
-	}))
-
 	mux.HandleFunc("/growth/quota/check", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
