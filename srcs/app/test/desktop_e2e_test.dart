@@ -368,6 +368,53 @@ void main() {
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
+    testWidgets('UndercoverModeToggle works in dashboard', (tester) async {
+      final mockClient = MockHttpClient();
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({
+            'organization': {
+              'id': 'org-1',
+              'name': 'One Human Corp',
+              'domain': 'onehumancorp.com',
+              'members': [],
+            },
+            'meetings': [],
+            'costs': {
+              'total': 1234.56,
+              'currency': 'USD',
+              'period': 'monthly',
+              'breakdown': {},
+            },
+            'agents': [],
+            'statuses': [],
+            'updatedAt': DateTime.now().toIso8601String(),
+          }),
+          200,
+        ),
+      );
+      final api = ApiService(
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          const DashboardScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.visibility), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.visibility));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.visibility_off), findsOneWidget);
+    });
+
     testWidgets('shows loading spinner then data', (tester) async {
       final mockClient = MockHttpClient();
       when(
