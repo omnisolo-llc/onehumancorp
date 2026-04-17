@@ -1,4 +1,4 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px;">
 
 # User Guide: OHC Flutter App
 
@@ -55,7 +55,7 @@ Generated images are written to:
 ![OHC Flutter app login with Linux profile](./app/linux/login.png)
 
 </div>
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px;">
 
 ## 4. Documentation
 
@@ -64,6 +64,6 @@ Please refer to the detailed architecture documents in the `docs/` folder:
 
 </div>
 
-<div markdown="1" style="font-family: Outfit, Inter, sans-serif; padding: 20px; font-size: 12px; color: #888;">
+<div markdown="1" style="font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; font-size: 12px; color: #888;">
 Last synced: 2026-04-17 03:42:41
 </div>
