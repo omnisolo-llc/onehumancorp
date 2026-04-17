@@ -1,0 +1,7 @@
+🧹 Maintainer: [Hybrid Agentic OS Security Hardening]
+
+- Added `ohc-core-network-policy.yaml` to restrict `ohc-core` traffic.
+- Added `networkPolicy.enabled` flag in `values.yaml` for `ohcCore`.
+- Added `ephemeral-storage` limits and requests to `resource-quota.yaml` and `values.yaml`.
+- Optimized `GOMEMLIMIT` (128MiB to 64MiB) and `GOGC` (30 to 20) in `srcs/server/standalone_ohc.sh`.
+- Updated CSS in dashboard JSON files to include `saturate(200%)` for Glassmorphism mandate.
