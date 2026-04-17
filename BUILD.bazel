@@ -58,11 +58,11 @@ gazelle(
 
 sh_binary(
     name = "deploy_dev",
-    srcs = ["//deploy:deploy_dev.sh"],
+    srcs = ["//srcs/deploy:deploy_dev.sh"],
     data = [
-        "//deploy:docker-compose.yml",
-        "//deploy:server_load",
-        "//deploy:setup_k8s.sh",
+        "//srcs/deploy:docker-compose.yml",
+        "//srcs/deploy:server_load",
+        "//srcs/deploy:setup_k8s.sh",
     ],
     tags = ["manual"],
 )

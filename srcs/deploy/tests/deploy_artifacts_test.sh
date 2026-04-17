@@ -4,10 +4,10 @@ set -euo pipefail
 repo_name="${TEST_WORKSPACE:-mono}"
 root="${TEST_SRCDIR}/${repo_name}"
 
-compose_file="${root}/deploy/docker-compose.yml"
-chart_file="${root}/deploy/helm/ohc/Chart.yaml"
-values_file="${root}/deploy/helm/ohc/values.yaml"
-build_file="${root}/deploy/BUILD.bazel"
+compose_file="${root}/srcs/deploy/docker-compose.yml"
+chart_file="${root}/srcs/deploy/helm/ohc/Chart.yaml"
+values_file="${root}/srcs/deploy/helm/ohc/values.yaml"
+build_file="${root}/srcs/deploy/BUILD.bazel"
 
 # Verify required deployment files are present and non-empty.
 for file in \
@@ -34,12 +34,12 @@ grep -q "onehumancorp/server:latest" "$compose_file"
 grep -q "backend" "$values_file"
 grep -q "redis" "$values_file"
 
-grep -q "Deployment" "${root}/deploy/helm/ohc/templates/backend-deployment.yaml"
-test ! -e "${root}/deploy/helm/ohc/templates/frontend-deployment.yaml"
-test ! -e "${root}/deploy/helm/ohc/templates/frontend-service.yaml"
+grep -q "Deployment" "${root}/srcs/deploy/helm/ohc/templates/backend-deployment.yaml"
+test ! -e "${root}/srcs/deploy/helm/ohc/templates/frontend-deployment.yaml"
+test ! -e "${root}/srcs/deploy/helm/ohc/templates/frontend-service.yaml"
 
 # Verify health probes are wired in the backend deployment template.
-grep -q "livenessProbe" "${root}/deploy/helm/ohc/templates/backend-deployment.yaml"
-grep -q "readinessProbe" "${root}/deploy/helm/ohc/templates/backend-deployment.yaml"
+grep -q "livenessProbe" "${root}/srcs/deploy/helm/ohc/templates/backend-deployment.yaml"
+grep -q "readinessProbe" "${root}/srcs/deploy/helm/ohc/templates/backend-deployment.yaml"
 
 echo "deployment artifact checks passed"

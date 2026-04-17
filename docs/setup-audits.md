@@ -12,7 +12,7 @@ LOG_LEVEL=info
 OHC_SOURCE_MODE=standalone
 ENV
 
-deploy/scripts/ohc-verify-setup.sh
+srcs/deploy/scripts/ohc-verify-setup.sh
 ```
 
-Audit reports are securely stored in `.ohc/runtime/status/`.
+Audit reports are securely stored in the XDG-compliant state directory (e.g., `~/.local/state/ohc/runtime/status/`).

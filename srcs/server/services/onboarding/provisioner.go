@@ -34,14 +34,17 @@ return v
 }
 }
 
-dataHome := os.Getenv("XDG_DATA_HOME")
-if dataHome == "" {
-if home := os.Getenv("HOME"); home != "" {
-dataHome = filepath.Join(home, ".local", "share")
-} else {
-dataHome = filepath.Join(os.TempDir(), "ohc-data")
-}
-}
+	dataHome := os.Getenv("TEST_TMPDIR")
+	if dataHome == "" {
+		dataHome = os.Getenv("XDG_DATA_HOME")
+	}
+	if dataHome == "" {
+		if home := os.Getenv("HOME"); home != "" {
+			dataHome = filepath.Join(home, ".local", "share")
+		} else {
+			dataHome = filepath.Join(os.TempDir(), "ohc-data")
+		}
+	}
 
 suffix := "local"
 if isCloud {
