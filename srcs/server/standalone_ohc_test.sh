@@ -23,11 +23,12 @@ export STATE_DIR=$(mktemp -d)
 export OHC_STANDALONE="true"
 
 # Mock files
-touch "${STATE_DIR}/importantLinearState.txt"
+touch "${STATE_DIR}/importantLinearState.tmp"
 touch "${STATE_DIR}/recent.tmp"
 touch "${STATE_DIR}/old.tmp"
 # Make old.tmp older than 60 mins
-touch -d "2 hours ago" "${STATE_DIR}/old.tmp"
+touch -t 200001010000 "${STATE_DIR}/old.tmp"
+touch -t 200001010000 "${STATE_DIR}/importantLinearState.tmp"
 
 # Extract the cleanup function using sed
 sed -n '/^cleanup_tmp_files() {/,/^}/p' "${SCRIPT_PATH}" > "${STATE_DIR}/test_env.sh"
@@ -36,7 +37,7 @@ source "${STATE_DIR}/test_env.sh"
 cleanup_tmp_files
 
 # Verification
-if [[ ! -f "${STATE_DIR}/importantLinearState.txt" ]]; then
+if [[ ! -f "${STATE_DIR}/importantLinearState.tmp" ]]; then
   echo "FAIL: Linear state file was deleted"
   exit 1
 fi
