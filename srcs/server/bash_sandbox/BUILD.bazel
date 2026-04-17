@@ -14,6 +14,9 @@ go_library(
 
 go_test(
     name = "bash_sandbox_test",
-    srcs = ["sandbox_test.go"],
+    srcs = [
+        "e2e_test.go",
+        "sandbox_test.go",
+    ],
     embed = [":bash_sandbox"],
 )

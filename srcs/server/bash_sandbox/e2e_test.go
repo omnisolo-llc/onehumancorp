@@ -17,7 +17,7 @@ func TestE2E_GitHookProtection(t *testing.T) {
 	}{
 		{
 			name:    "Happy Path: Safe Git Command",
-			command: "git status",
+			command: "git --version",
 			wantViolation: false,
 		},
 		{
