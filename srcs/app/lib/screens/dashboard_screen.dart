@@ -6,6 +6,7 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
+import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
@@ -456,10 +457,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    final formattedRole = Agent.formatRole(widget.role);
 
     return Semantics(
       label: 'Scale $formattedRole role',

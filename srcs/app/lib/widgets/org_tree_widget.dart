@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/dashboard.dart';
 
 /// A recursive widget for rendering the organization hierarchy.
@@ -55,7 +56,7 @@ class _OrgMemberRow extends StatelessWidget {
 
     return Semantics(
       label:
-          'Organization member: ${member.name}, Role: ${member.role.replaceAll('_', ' ')}${member.isHuman ? ', YOU' : ''}',
+          'Organization member: ${member.name}, Role: ${Agent.formatRole(member.role)}${member.isHuman ? ', YOU' : ''}',
       excludeSemantics: true,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -127,7 +128,7 @@ class _OrgMemberRow extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    member.role.replaceAll('_', ' '),
+                    Agent.formatRole(member.role),
                     style: TextStyle(
                       fontSize: 12,
                       color: colors.onSurfaceVariant.withValues(alpha: 0.7),

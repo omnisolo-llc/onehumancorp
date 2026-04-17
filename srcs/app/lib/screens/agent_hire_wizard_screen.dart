@@ -229,9 +229,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   children:
                       _roles.map((role) {
                         final isSelected = _selectedRole == role;
-                        final dummyAgent = Agent(id: '', name: '', role: role, status: '', organizationId: '', createdAt: DateTime.now());
                         return ChoiceChip(
-                          label: Text(dummyAgent.formattedRole),
+                          label: Text(Agent.formatRole(role)),
                           selected: isSelected,
                           onSelected: (selected) {
                             setState(
@@ -239,7 +238,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                             );
                             if (selected && _nameController.text.isEmpty) {
                               _nameController.text =
-                                  'Senior ${dummyAgent.formattedRole}';
+                                  'Senior ${Agent.formatRole(role)}';
                             }
                           },
                         );
@@ -630,7 +629,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                           ),
                         ),
                         subtitle: Text(
-                          Agent(id: '', name: '', role: _selectedRole, status: '', organizationId: '', createdAt: DateTime.now()).formattedRole,
+                          Agent.formatRole(_selectedRole),
                           style: const TextStyle(fontFamily: 'Inter'),
                         ),
                         trailing: Container(

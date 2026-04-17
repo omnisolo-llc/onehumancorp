@@ -1,5 +1,6 @@
 import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/models/agent.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -105,7 +106,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                         _roles.map((role) {
                           final isSelected = _selectedRole == role;
                           return ChoiceChip(
-                            label: Text(role.replaceAll('_', ' ')),
+                            label: Text(Agent.formatRole(role)),
                             selected: isSelected,
                             onSelected:
                                 _isProvisioning
