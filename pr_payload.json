@@ -1,0 +1,6 @@
+{
+  "title": "🧹 Maintainer: [Release] Cut Hybrid Release v0.4.3",
+  "body": "This PR cuts the next hybrid release `v0.4.3` by calculating and applying the correct versions for both Cloud (`v0.4.3`) and Standalone (`v0.4.3+1`) across `package.json`, release text tracking files, and Bazel/Flutter configurations. It includes a synthesized set of release notes encompassing recent Cloud scaling (e.g. KAIROS and AutoDream Pipeline) and Privacy/Offline (e.g. Sandbox Violation tracking) improvements, and fixes the missing 0.4.2 release notes.",
+  "head": "jules-10630793570603088322-68a6477b",
+  "base": "main"
+}

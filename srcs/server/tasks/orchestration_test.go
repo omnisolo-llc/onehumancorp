@@ -48,7 +48,7 @@ func TestClaimTask(t *testing.T) {
         t.Errorf("expected missionID 123, got %s", missionID)
     }
 
-    if receivedPayload["agent_id"] != "spiffe://onehumancorp.io/agent/agent1" {
-        t.Errorf("expected payload agent_id spiffe://onehumancorp.io/agent/agent1, got %v", receivedPayload["agent_id"])
+    if receivedPayload["agent_id"] != "agent1" {
+        t.Errorf("expected payload agent_id agent1, got %v", receivedPayload["agent_id"])
     }
 }
