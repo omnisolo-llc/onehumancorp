@@ -23,3 +23,9 @@ toc:
     path: /docs/archive/index.md
   - title: Hybrid MCP RAG Escalation Walkthrough
     path: /docs/walkthroughs/hybrid_mcp_rag_escalation.md
+  - title: Edge LLM Offloading Protocol Help
+    path: /docs/help_portal/edge_llm_offloading.md
+  - title: Edge LLM Offloading API
+    path: /docs/api/edge_llm_offloading.md
+  - title: Edge LLM Offloading Walkthrough
+    path: /docs/walkthroughs/edge_llm_offloading_walkthrough.md
