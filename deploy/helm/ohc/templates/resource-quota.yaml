@@ -7,9 +7,7 @@ spec:
   hard:
     requests.cpu: {{ .Values.backend.resourceQuota.requests.cpu | default "1" }}
     requests.memory: {{ .Values.backend.resourceQuota.requests.memory | default "1Gi" }}
-    requests.ephemeral-storage: {{ .Values.backend.resourceQuota.requests.ephemeralStorage | default "10Gi" }}
     limits.cpu: {{ .Values.backend.resourceQuota.limits.cpu | default "2" }}
     limits.memory: {{ .Values.backend.resourceQuota.limits.memory | default "2Gi" }}
-    limits.ephemeral-storage: {{ .Values.backend.resourceQuota.limits.ephemeralStorage | default "20Gi" }}
     pods: {{ .Values.backend.resourceQuota.limits.pods | default "20" | quote }}
 {{- end }}
