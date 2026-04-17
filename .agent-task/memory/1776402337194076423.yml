@@ -1,6 +1,0 @@
-category: chaos_engineering
-learnings: |
-  - Chaos injection probability is now configurable via the `SetProbability` method on `Injector`.
-  - The default probabilities are 0.1 for ConnectionDrop, 0.05 for ResourceExhaustion, and 1.0 for CorruptAgentLock.
-  - When testing `CorruptAgentLock`, it's critical to ensure the target directory (`.agent-lock/`) exists prior to executing the `Inject` method, as the current implementation silently passes (returns `nil`) if the directory is missing.
-timestamp: 1776402337194076423
