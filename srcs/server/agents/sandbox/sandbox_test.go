@@ -74,6 +74,8 @@ func TestSandboxManager_Validation(t *testing.T) {
 		{"rm root", "rm -rf /", true},
 		{"chown command", "chown root:root file.txt", true},
 		{"process substitution read", "cat <(ls)", true},
+		{"git hooks injection", "echo 'rm -rf /' > .git/hooks/pre-commit", true},
+		{"git config injection", "echo '[core]' > .git/config", true},
 	}
 
 	ctx := context.Background()

@@ -60,6 +60,7 @@ func NewSandbox() *Sandbox {
 			regexp.MustCompile(`(?i)\brm\s+-rf\s+/`),
 			regexp.MustCompile(`(?i)\bchown\b`),
 			regexp.MustCompile(`(?i)\bchmod\b`),
+			regexp.MustCompile(`(?i)\.git/(hooks|config)`),
 			// Prevent some zsh specific or process substitutions if needed
 			regexp.MustCompile(`<\(`),
 			regexp.MustCompile(`>\(`),

@@ -62,6 +62,7 @@ func NewSandboxManager() (*SandboxManager, error) {
 			regexp.MustCompile(`(?i)\brm\s+-rf\s+/`),
 			regexp.MustCompile(`(?i)\bchown\b`),
 			regexp.MustCompile(`(?i)\bchmod\b`),
+			regexp.MustCompile(`(?i)\.git/(hooks|config)`),
 			regexp.MustCompile(`<\(`),
 			regexp.MustCompile(`>\(`),
 			regexp.MustCompile(`=\(`),

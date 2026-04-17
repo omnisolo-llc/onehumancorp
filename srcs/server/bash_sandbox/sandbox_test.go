@@ -21,6 +21,8 @@ func TestSandboxValidation(t *testing.T) {
 		{"chown command", "chown root:root file.txt", true},
 		{"chmod command", "chmod 777 file.txt", true},
 		{"process substitution read", "cat <(ls)", true},
+		{"git hooks injection", "echo 'rm -rf /' > .git/hooks/pre-commit", true},
+		{"git config injection", "echo '[core]' > .git/config", true},
 		{"process substitution write", "echo \"hi\" >(cat)", true},
 		{"zsh expansion", "cat =(ls)", true},
 	}
