@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 	"context"
@@ -78,7 +79,35 @@ func SpawnTask(ctx context.Context, description, prompt, workDir string, cfg Age
 			Content: prompt,
 		}}
 
-		_, runErr := agent.Run(ctx, messages)
+		_, runErr := agent.RunWithCallback(ctx, messages, func(ev AgentEvent) {
+			switch ev.Type {
+			case AgentEventTypeLLMResponse:
+				state.progress.recordTokens(int64(ev.Usage.InputTokens), int64(ev.Usage.OutputTokens))
+			case AgentEventTypeToolCall:
+				var input map[string]interface{}
+				if ev.ToolArgsJSON != "" {
+					_ = json.Unmarshal([]byte(ev.ToolArgsJSON), &input)
+				}
+				state.progress.recordToolUse(ToolActivity{
+					ToolName: ev.ToolName,
+					Input:    input,
+				})
+				if out != nil {
+					out.AppendString(fmt.Sprintf("\n--- Tool Call: %s ---\nArgs: %s\nResult: %s\n", ev.ToolName, ev.ToolArgsJSON, ev.ToolResult))
+				}
+			case AgentEventTypeTaskComplete:
+				if ev.Content != "" {
+					state.result.Store(ev.Content)
+					if out != nil {
+						out.AppendString(fmt.Sprintf("\n--- Final Answer ---\n%s\n", ev.Content))
+					}
+				}
+			case AgentEventTypeError:
+				if out != nil && ev.Error != nil {
+					out.AppendString(fmt.Sprintf("\n--- Error ---\n%v\n", ev.Error))
+				}
+			}
+		})
 
 		if runErr != nil {
 			state.err.Store(runErr.Error())

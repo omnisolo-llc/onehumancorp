@@ -59,6 +59,13 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 			return messages, fmt.Errorf("llm chat error: %w", err)
 		}
 
+		if cb != nil {
+			cb(AgentEvent{
+				Type:  AgentEventTypeLLMResponse,
+				Usage: resp.Usage,
+			})
+		}
+
 		messages = append(messages, resp.Message)
 		totalTurnTokens += resp.Usage.OutputTokens
 

@@ -7,6 +7,7 @@ const (
 	AgentEventTypeIterationStarted AgentEventType = iota
 	AgentEventTypeTaskComplete
 	AgentEventTypeToolCall
+	AgentEventTypeLLMResponse
 	AgentEventTypeError
 )
 
@@ -19,6 +20,7 @@ type AgentEvent struct {
 	ToolName     string
 	ToolArgsJSON string
 	ToolResult   string
+	Usage        Usage
 	Error        error
 }
 

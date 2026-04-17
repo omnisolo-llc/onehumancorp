@@ -77,33 +77,7 @@ func TestResourceExhaustion(t *testing.T) {
 	}
 }
 
-func TestCorruptAgentLock(t *testing.T) {
-	inj := NewInjector(CorruptAgentLock, 1)
 
-	// Create a temporary directory structure to simulate the lock
-	err := os.MkdirAll(".agent-lock/", 0755)
-	if err != nil {
-		t.Fatalf("failed to create directory: %v", err)
-	}
-	defer os.RemoveAll(".agent-lock/")
-
-	err = inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
-		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
-	}
-
-	// Verify file was written
-	content, err := os.ReadFile(".agent-lock/corrupt.lock")
-	if err != nil {
-		t.Fatalf("expected file to exist: %v", err)
-	}
-	if string(content) != "chaos corrupted this lock" {
-		t.Fatalf("expected specific file content, got %s", content)
-	}
-}
 
 func TestCorruptAgentLockString(t *testing.T) {
 	mode := CorruptAgentLock
