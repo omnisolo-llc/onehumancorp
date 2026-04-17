@@ -7,8 +7,6 @@ cleanup_tmp_files() {
     if [ -d "${STATE_DIR}" ]; then
       # Force clean runaway tmp files more aggressively
       find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
-      # Prune bloated Linear artifacts if they exist
-      find "${STATE_DIR}" -name "*Linear*" -type f -delete 2>/dev/null || true
     fi
   else
     # Cloud-native mode: tmp files are typically ephemeral or managed by K8s
