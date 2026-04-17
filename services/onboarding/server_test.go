@@ -256,3 +256,30 @@ func TestResetWizardStateHandler(t *testing.T) {
 		t.Errorf("expected empty state, got %v", res)
 	}
 }
+
+func TestCompleteSetupHandler(t *testing.T) {
+	reqBody, _ := json.Marshal(CompleteSetupRequest{Completed: true})
+	req := httptest.NewRequest(http.MethodPost, "/api/setup/complete", bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	rr := httptest.NewRecorder()
+	CompleteSetupHandler(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res map[string]string
+	json.NewDecoder(rr.Body).Decode(&res)
+	if res["status"] != "success" {
+		t.Errorf("handler returned unexpected body: got %v", res)
+	}
+
+	wizardMu.RLock()
+	completed, ok := wizardState["setup_complete"].(bool)
+	wizardMu.RUnlock()
+
+	if !ok || !completed {
+		t.Errorf("expected wizardState setup_complete to be true")
+	}
+}

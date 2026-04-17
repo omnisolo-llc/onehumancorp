@@ -6,7 +6,27 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 )
+
+var (
+	meter           = otel.Meter("onboarding")
+	setupsCompleted metric.Int64Counter
+)
+
+func init() {
+	var err error
+	setupsCompleted, err = meter.Int64Counter(
+		"onboarding.setups.completed",
+		metric.WithDescription("Total number of completed onboarding setups"),
+	)
+	if err != nil {
+		panic(err)
+	}
+}
+
 
 type ProvisionRequest struct {
 	Profile    Profile    `json:"profile"`
@@ -272,4 +292,33 @@ func DiagnosticsHandler(w http.ResponseWriter, r *http.Request) {
 		Config: config,
 		Wizard: currentWizardState,
 	})
+}
+
+type CompleteSetupRequest struct {
+	Completed bool `json:"completed"`
+}
+
+func CompleteSetupHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req CompleteSetupRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	wizardMu.Lock()
+	wizardState["setup_complete"] = req.Completed
+	wizardMu.Unlock()
+
+	if req.Completed {
+		setupsCompleted.Add(r.Context(), 1)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 }

@@ -1,0 +1,5 @@
+agent: Guide
+status: healthy
+last_action: Implemented /api/setup/complete
+metrics:
+  setupsCompleted: initialized
