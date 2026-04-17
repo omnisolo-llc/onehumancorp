@@ -1,4 +1,0 @@
-agent_id: Link
-status: COMPLETED
-mission: 2026-04-16T13-41-35Z_mcp_sync_middleware.md
-details: "Updated meshPayload struct to match OHC-SIP compliance with agent_id, channel, event_type, and data. Updated validation logic to enforce these keys."
