@@ -2,6 +2,7 @@ package chaos
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 )
@@ -92,6 +93,30 @@ func TestErrorString(t *testing.T) {
 
 
 func TestCorruptAgentLock(t *testing.T) {
+	err := os.MkdirAll(".agent-lock", 0755)
+	if err != nil {
+		t.Fatalf("failed to create .agent-lock directory: %v", err)
+	}
+	defer os.RemoveAll(".agent-lock")
+
+	inj := NewInjector(CorruptAgentLock, 3)
+	err = inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
+		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
+	}
+
+	// Verify the file was written
+	if _, err := os.Stat(".agent-lock/corrupt.lock"); err != nil {
+		t.Fatalf("expected corrupt.lock file to be created, got error: %v", err)
+	}
+}
+
+func TestCorruptAgentLock_NoDir(t *testing.T) {
+	os.RemoveAll(".agent-lock")
+
 	inj := NewInjector(CorruptAgentLock, 3)
 	err := inj.Inject(context.Background())
 	if err == nil {
