@@ -3,7 +3,6 @@ go_library(
     name = "token_calculator",
     srcs = [
         "token_calculator/calculator.go",
-        "token_calculator/optimizer.go",
     ],
     importpath = "ohc/lib/pricing/token_calculator",
     visibility = ["//visibility:public"],
@@ -12,7 +11,6 @@ go_test(
     name = "token_calculator_test",
     srcs = [
         "token_calculator/calculator_test.go",
-        "token_calculator/optimizer_test.go",
     ],
     embed = [":token_calculator"],
 )
