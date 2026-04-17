@@ -15,6 +15,7 @@
 /*.py
 /*.txt
 /*.sh
+/bazelisk
 
 # Test binary, built with `go test -c`
 *.test
