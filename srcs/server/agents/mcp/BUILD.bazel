@@ -26,8 +26,8 @@ go_library(
         "client.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
-    visibility = ["//visibility:public"],
     deps = ["//srcs/server/telemetry"],
+    visibility = ["//visibility:public"],
 )
 
 go_test(
