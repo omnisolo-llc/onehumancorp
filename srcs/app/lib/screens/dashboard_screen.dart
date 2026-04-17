@@ -11,6 +11,7 @@ import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/widgets/undercover_mode_toggle.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -46,7 +47,26 @@ class DashboardScreen extends ConsumerWidget {
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
             ),
-        data: (data) => _DashboardContent(data: data, ref: ref),
+        data: (data) {
+          final isUndercover = ref.watch(undercoverModeProvider);
+          Widget content = _DashboardContent(data: data, ref: ref);
+          if (isUndercover) {
+            content = Semantics(
+              label: 'Undercover Mode Active',
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                child: ColorFiltered(
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withValues(alpha: 0.8),
+                    BlendMode.srcOver,
+                  ),
+                  child: content,
+                ),
+              ),
+            );
+          }
+          return content;
+        },
       ),
     );
   }
@@ -117,14 +137,25 @@ class _DashboardContent extends StatelessWidget {
           ),
         ),
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 16,
+          runSpacing: 16,
           children: [
             _SectionTitle('Overview'),
-            OutlinedButton.icon(
-              onPressed: () => context.go('/wizards/billing'),
-              icon: const Icon(Icons.credit_card),
-              label: const Text('Billing & Credits'),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const UndercoverModeToggle(),
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/wizards/billing'),
+                  icon: const Icon(Icons.credit_card),
+                  label: const Text('Billing & Credits'),
+                ),
+              ],
             ),
           ],
         ),

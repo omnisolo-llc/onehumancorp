@@ -103,6 +103,35 @@ test.describe('Flutter Web App – E2E', () => {
     // Wait a bit to ensure no crash
     await page.waitForTimeout(1000);
 
+    // 4.5 Verify Undercover Mode Toggle
+    // Verify the initial presence of the text.
+    let undercoverBodyHtml = await page.content();
+    expect(undercoverBodyHtml).toContain('Undercover Mode');
+
+    // Simulate clicking the toggle via semantic tree execution.
+    // The Flutter web app mounts semantic nodes when a11y is on.
+    await page.evaluate(() => {
+        // Broad search for semantic node text
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+        let node;
+        while ((node = walker.nextNode())) {
+            const el = node as HTMLElement;
+            if (el.tagName.toLowerCase().includes('flt-semantics') &&
+                (el.getAttribute('aria-label') === 'Undercover Mode Toggle' ||
+                 el.innerText?.includes('Undercover Mode'))) {
+                el.click();
+                break;
+            }
+        }
+    });
+
+    // Wait for the UI to update
+    await page.waitForTimeout(1000);
+
+    // Verify the Undercover Mode Active semantic marker exists
+    const activeHtml = await page.content();
+    expect(activeHtml).toContain('Undercover Mode Active');
+
     // 5. Verify Company Structure Scaling Section exists and can scale agents
     // Press Tab multiple times to navigate to the "Increase SOFTWARE ENGINEER count" button
     // It takes quite a few tabs to bypass the top bar and overview widgets,
