@@ -28,6 +28,7 @@ validation:
 nav:
   - Home: index.md
   - Architecture:
+      - Universal Transport Bridge: architecture/universal_transport_bridge.md
       - architecture/index.md
       - Chaos Engineering: architecture/chaos_engineering.md
   - Developer:
