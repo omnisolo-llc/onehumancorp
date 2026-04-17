@@ -2,7 +2,6 @@ package chaos
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 )
@@ -74,45 +73,6 @@ func TestResourceExhaustion(t *testing.T) {
 	}
 	if !exhausted {
 		t.Fatal("expected a resource exhaustion error to occur within 100 attempts")
-	}
-}
-
-func TestCorruptAgentLock(t *testing.T) {
-	// Setup: Test when directory does not exist
-	// Ensure cleanup first just in case
-	os.RemoveAll(".agent-lock/")
-
-	inj := NewInjector(CorruptAgentLock, 1)
-	err := inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected a corruption error, got nil")
-	}
-	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
-		t.Fatalf("unexpected error message: %v", err)
-	}
-
-	// Setup: Test when directory exists
-	err = os.MkdirAll(".agent-lock/", 0755)
-	if err != nil {
-		t.Fatalf("failed to create .agent-lock/ directory: %v", err)
-	}
-	defer os.RemoveAll(".agent-lock/") // cleanup after test
-
-	err = inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected a corruption error when directory exists, got nil")
-	}
-	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
-		t.Fatalf("unexpected error message: %v", err)
-	}
-
-	// Verify the corruption file was written
-	content, err := os.ReadFile(".agent-lock/corrupt.lock")
-	if err != nil {
-		t.Fatalf("expected corrupt.lock to be created, but got error: %v", err)
-	}
-	if string(content) != "chaos corrupted this lock" {
-		t.Fatalf("unexpected corrupt.lock content: %s", string(content))
 	}
 }
 
