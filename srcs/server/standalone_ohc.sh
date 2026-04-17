@@ -2,18 +2,12 @@
 set -euo pipefail
 
 cleanup_tmp_files() {
-  # Mode-aware cleanup for standalone and hybrid
   if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
+    # Mode-aware cleanup for standalone
     if [ -d "${STATE_DIR}" ]; then
-      # Force clean runaway tmp files more aggressively
+      # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
       find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
-      # Prune bloated Linear artifacts if they exist
-      find "${STATE_DIR}" -name "*Linear*" -type f -delete 2>/dev/null || true
     fi
-  else
-    # Cloud-native mode: tmp files are typically ephemeral or managed by K8s
-    # but clean up any leftover /tmp/ohc-* files older than 1 day just in case
-    find /tmp -name "ohc-*.tmp" -type f -mtime +1 -delete 2>/dev/null || true
   fi
 }
 
@@ -200,6 +194,7 @@ stop_daemon() {
   pid="$(cat "${PID_FILE}")"
 
   kill "${pid}" 2>/dev/null || true
+
   for attempt in $(seq 1 20); do
     if ! kill -0 "${pid}" 2>/dev/null; then
       rm -f "${PID_FILE}" "${LOG_FILE}"
@@ -209,6 +204,7 @@ stop_daemon() {
     fi
     sleep 0.25
   done
+
 
   kill -9 "${pid}" 2>/dev/null || true
   rm -f "${PID_FILE}" "${LOG_FILE}"
