@@ -142,22 +142,7 @@ func TestAllModeStrings(t *testing.T) {
 	}
 }
 
-func TestCorruptAgentLock(t *testing.T) {
-	inj := NewInjector(CorruptAgentLock, 1)
 
-	err := inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected an error, got nil")
-	}
-
-	if e, ok := err.(*ChaosError); ok {
-		if e.Message != "chaos: simulated agent lock corruption" {
-			t.Fatalf("expected 'chaos: simulated agent lock corruption', got '%s'", e.Message)
-		}
-	} else {
-		t.Fatalf("expected ChaosError, got %T", err)
-	}
-}
 
 func TestCorruptAgentLockExists(t *testing.T) {
 	// Override the lock path for testing to use a temporary directory

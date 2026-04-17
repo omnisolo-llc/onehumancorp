@@ -116,6 +116,29 @@ func RedactPII(input string) string {
 // RedactInterfacePII deeply scrubs maps, slices, and strings for PII.
 func RedactInterfacePII(val interface{}) interface{} {
 	switch v := val.(type) {
+	case slog.Attr:
+		if v.Equal(slog.Attr{}) {
+			return v
+		}
+		if v.Value.Kind() == slog.KindGroup {
+			attrs := v.Value.Group()
+			var redactedAttrs []any
+			for _, attr := range attrs {
+				redactedAttrs = append(redactedAttrs, RedactInterfacePII(attr))
+			}
+			return slog.Group(v.Key, redactedAttrs...)
+		}
+		return slog.Any(v.Key, RedactInterfacePII(v.Value.Any()))
+	case slog.Value:
+		if v.Kind() == slog.KindGroup {
+			attrs := v.Group()
+			var redactedAttrs []slog.Attr
+			for _, attr := range attrs {
+				redactedAttrs = append(redactedAttrs, RedactInterfacePII(attr).(slog.Attr))
+			}
+			return slog.GroupValue(redactedAttrs...)
+		}
+		return slog.AnyValue(RedactInterfacePII(v.Any()))
 	case string:
 		return RedactPII(v)
 	case map[string]interface{}:
