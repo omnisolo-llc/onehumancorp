@@ -30,7 +30,7 @@ func TestQueueManagerLoop(t *testing.T) {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	qm := NewQueueManager(provider, nil)
+	qm := NewQueueManager(provider)
 
 	job1 := &SubAgentJob{
 		ID:             "job-1",
