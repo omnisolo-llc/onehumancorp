@@ -256,4 +256,37 @@ test.describe('Flutter Web App – E2E', () => {
     const bodyHtml = await page.content();
     expect(bodyHtml.length).toBeGreaterThan(100);
   });
+
+  // ── Undercover Mode E2E ───────────────────────────────────────────────
+
+  test('user can toggle Undercover Mode on the Dashboard', async ({ page }) => {
+    // 1. Ensure we are on the login page
+    await expect(page.url()).toMatch(/\/login|^\/|http:\/\/localhost:\d+\/$/);
+
+    // 2. Login
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('flutter-first-frame'));
+    });
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('admin@test.local');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('adminpass123');
+    await page.keyboard.press('Enter');
+
+    await page.waitForTimeout(1000);
+    await expect(page).not.toHaveURL(/\/login/);
+
+    // We expect the dashboard is open. The undercover mode toggle is present.
+    // Ensure the toggle doesn't crash the UI and the semantic label exists.
+    const toggle = page.getByRole('switch', { name: 'Undercover Mode Toggle' });
+    await expect(toggle).toBeVisible();
+    await toggle.click();
+
+    // Give it a moment to animate the color theme change
+    await page.waitForTimeout(500);
+
+    // Verify it is now toggled on
+    await expect(toggle).toBeChecked();
+  });
 });

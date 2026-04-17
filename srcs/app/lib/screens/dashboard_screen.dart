@@ -10,6 +10,7 @@ import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/undercover_mode_toggle.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -117,14 +118,25 @@ class _DashboardContent extends StatelessWidget {
           ),
         ),
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 16,
+          runSpacing: 16,
           children: [
-            _SectionTitle('Overview'),
-            OutlinedButton.icon(
-              onPressed: () => context.go('/wizards/billing'),
-              icon: const Icon(Icons.credit_card),
-              label: const Text('Billing & Credits'),
+            const _SectionTitle('Overview'),
+            Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                const UndercoverModeToggle(),
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/wizards/billing'),
+                  icon: const Icon(Icons.credit_card),
+                  label: const Text('Billing & Credits'),
+                ),
+              ],
             ),
           ],
         ),
