@@ -1,13 +1,13 @@
 package telemetry
 
 import (
-	"reflect"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"time"
 
@@ -56,8 +56,8 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	AutoDreamIngestionErrorCounter metric.Int64Counter
-	AutoDreamCompressionErrorCounter metric.Int64Counter
+	AutoDreamIngestionErrorCounter     metric.Int64Counter
+	AutoDreamCompressionErrorCounter   metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
@@ -119,6 +119,10 @@ func RedactInterfacePII(val interface{}) interface{} {
 	switch v := val.(type) {
 	case string:
 		return RedactPII(v)
+	case slog.Attr:
+		return redactSlogAttr(v)
+	case slog.Value:
+		return redactSlogValue(v)
 	case map[string]interface{}:
 		res := make(map[string]interface{}, len(v))
 		for k, val := range v {
@@ -199,6 +203,51 @@ func RedactInterfacePII(val interface{}) interface{} {
 		}
 		return val
 	}
+}
+
+func redactSlogAttr(a slog.Attr) slog.Attr {
+	if a.Equal(slog.Attr{}) {
+		return a
+	}
+	if a.Value.Kind() == slog.KindGroup {
+		if len(a.Value.Group()) == 0 {
+			return a
+		}
+		attrs := a.Value.Group()
+		var redactedAttrs []any
+		for _, attr := range attrs {
+			redactedAttrs = append(redactedAttrs, RedactInterfacePII(attr))
+		}
+		return slog.Group(a.Key, redactedAttrs...)
+	}
+
+	val := a.Value.Any()
+	if val == nil {
+		return a
+	}
+	redactedVal := RedactInterfacePII(val)
+	return slog.Any(a.Key, redactedVal)
+}
+
+func redactSlogValue(v slog.Value) slog.Value {
+	if v.Kind() == slog.KindGroup {
+		attrs := v.Group()
+		var redactedAttrs []slog.Attr
+		for _, attr := range attrs {
+			redactedInterface := RedactInterfacePII(attr)
+			if rAttr, ok := redactedInterface.(slog.Attr); ok {
+				redactedAttrs = append(redactedAttrs, rAttr)
+			}
+		}
+		return slog.GroupValue(redactedAttrs...)
+	}
+
+	val := v.Any()
+	if val == nil {
+		return v
+	}
+	redactedVal := RedactInterfacePII(val)
+	return slog.AnyValue(redactedVal)
 }
 
 // InitTelemetry configures and starts the OpenTelemetry metrics provider with a Prometheus exporter.
@@ -1610,40 +1659,40 @@ func RecordRagEscalation(ctx context.Context) {
 
 // RecordAutoDreamIngestionError records an ingestion error.
 func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
-    }
-    if AutoDreamIngestionErrorCounter != nil {
-        AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
+	}
+	if AutoDreamIngestionErrorCounter != nil {
+		AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordAutoDreamCompressionError records a compression error.
 func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
-        redactedMap := RedactInterfacePII(payloadMap)
-        payloadBytes, _ := json.Marshal(redactedMap)
-        _ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
-    }
-    if AutoDreamCompressionErrorCounter != nil {
-        AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
+	}
+	if AutoDreamCompressionErrorCounter != nil {
+		AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordSubAgentQueueDelay records the duration from job enqueue to dequeue.
