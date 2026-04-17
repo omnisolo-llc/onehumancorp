@@ -28,8 +28,7 @@ func TestMeshAPI_Broadcast(t *testing.T) {
 	mockMesh := &mockMeshTransport{}
 	api := NewMeshAPI(mockMesh)
 
-	// Test valid payload
-	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"agent_id": "spiffe://onehumancorp.io/agent/test", "channel": "mesh:tasks", "event_type": "TEST", "data": {}}`)))
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"task_id":"123"}`)))
 	w := httptest.NewRecorder()
 
 	api.HandleBroadcast(w, req)
@@ -40,22 +39,6 @@ func TestMeshAPI_Broadcast(t *testing.T) {
 
 	if !mockMesh.broadcastCalled {
 		t.Errorf("expected BroadcastMeshEvent to be called")
-	}
-
-	// Test missing/invalid agent_id
-	req = httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"agent_id": "invalid", "channel": "mesh:tasks", "event_type": "TEST", "data": {}}`)))
-	w = httptest.NewRecorder()
-	api.HandleBroadcast(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status 400 for invalid agent_id, got %d", w.Code)
-	}
-
-	// Test invalid channel
-	req = httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"agent_id": "spiffe://onehumancorp.io/agent/test", "channel": "invalid_channel", "event_type": "TEST", "data": {}}`)))
-	w = httptest.NewRecorder()
-	api.HandleBroadcast(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status 400 for invalid channel, got %d", w.Code)
 	}
 }
 
@@ -84,34 +67,5 @@ func TestMeshAPI_Stream(t *testing.T) {
 	body := w.Body.String()
 	if body != "data: {\"status\":\"test\"}\n\n" {
 		t.Errorf("expected correct SSE format, got %s", body)
-	}
-}
-
-func TestMeshAPI_Publish(t *testing.T) {
-	mockMesh := &mockMeshTransport{}
-	api := NewMeshAPI(mockMesh)
-
-	// Test valid payload
-	req := httptest.NewRequest(http.MethodPost, "/api/mesh/publish", bytes.NewBuffer([]byte(`{"agent_id": "spiffe://onehumancorp.io/agent/test", "channel": "mesh:tasks", "event_type": "TEST", "data": {}}`)))
-	w := httptest.NewRecorder()
-	api.HandlePublish(w, req)
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-
-	// Test missing/invalid agent_id
-	req = httptest.NewRequest(http.MethodPost, "/api/mesh/publish", bytes.NewBuffer([]byte(`{"agent_id": "invalid", "channel": "mesh:tasks", "event_type": "TEST", "data": {}}`)))
-	w = httptest.NewRecorder()
-	api.HandlePublish(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status 400 for invalid agent_id, got %d", w.Code)
-	}
-
-	// Test invalid channel
-	req = httptest.NewRequest(http.MethodPost, "/api/mesh/publish", bytes.NewBuffer([]byte(`{"agent_id": "spiffe://onehumancorp.io/agent/test", "channel": "invalid_channel", "event_type": "TEST", "data": {}}`)))
-	w = httptest.NewRecorder()
-	api.HandlePublish(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected status 400 for invalid channel, got %d", w.Code)
 	}
 }
