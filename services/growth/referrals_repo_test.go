@@ -127,3 +127,44 @@ func TestReferralRepository_RewardTiers(t *testing.T) {
 		t.Errorf("Expected Gold tier, got %s", stats.RewardTier)
 	}
 }
+
+
+func TestGetAllReferrals(t *testing.T) {
+	s, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("failed to start miniredis: %v", err)
+	}
+	defer s.Close()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+
+	repo := NewReferralRepository(rdb)
+
+	ref1 := &GrowthReferral{
+		ID:           "ref1",
+		InviterID:    "user1",
+		InviteeEmail: "invitee1@example.com",
+		Status:       "PENDING",
+	}
+
+	ref2 := &GrowthReferral{
+		ID:           "ref2",
+		InviterID:    "user2",
+		InviteeEmail: "invitee2@example.com",
+		Status:       "SIGNED_UP",
+	}
+
+	repo.SaveReferral(context.Background(), ref1)
+	repo.SaveReferral(context.Background(), ref2)
+
+	all, err := repo.GetAllReferrals(context.Background())
+	if err != nil {
+		t.Fatalf("failed to get all referrals: %v", err)
+	}
+
+	if len(all) != 2 {
+		t.Errorf("expected 2 referrals, got %d", len(all))
+	}
+}
