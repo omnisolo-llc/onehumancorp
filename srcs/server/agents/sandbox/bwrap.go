@@ -1,6 +1,8 @@
 package sandbox
 
 import (
+	"os"
+	"fmt"
 	"bytes"
 	"context"
 	"os/exec"
@@ -12,7 +14,7 @@ type LinuxBwrapAdapter struct{}
 
 // BuildBwrapArgs builds the argument list for the bwrap command based on the configuration.
 // It is exported so that it can be unit-tested without actually running bwrap.
-func (a *LinuxBwrapAdapter) BuildBwrapArgs(cmdStr string, cfg Config) []string {
+func (a *LinuxBwrapAdapter) BuildBwrapArgs(cmdStr string, cfg Config, seccompFD int) []string {
 	args := []string{
 		"--unshare-pid",
 		"--unshare-net",
@@ -35,6 +37,25 @@ func (a *LinuxBwrapAdapter) BuildBwrapArgs(cmdStr string, cfg Config) []string {
 	sort.Strings(roBindKeys)
 	for _, hostPath := range roBindKeys {
 		args = append(args, "--ro-bind", hostPath, cfg.RoBind[hostPath])
+	}
+
+	if seccompFD >= 0 {
+		args = append(args, "--seccomp", fmt.Sprintf("%d", seccompFD))
+	}
+	if cfg.HTTPSocketPath != "" {
+		args = append(args, "--bind", cfg.HTTPSocketPath, cfg.HTTPSocketPath)
+	}
+	if cfg.SOCKSSocketPath != "" {
+		args = append(args, "--bind", cfg.SOCKSSocketPath, cfg.SOCKSSocketPath)
+	}
+
+	var envKeys []string
+	for k := range cfg.ProxyEnvVars {
+		envKeys = append(envKeys, k)
+	}
+	sort.Strings(envKeys)
+	for _, k := range envKeys {
+		args = append(args, "--setenv", k, cfg.ProxyEnvVars[k])
 	}
 
 	// Finally, append the actual command to run. We use bash -c to run the string.
@@ -67,9 +88,23 @@ func (w *limitedWriter) Write(p []byte) (n int, err error) {
 
 // Execute safely runs a shell command using bwrap for isolation.
 func (a *LinuxBwrapAdapter) Execute(ctx context.Context, cmdStr string, cfg Config) (*Result, error) {
-	args := a.BuildBwrapArgs(cmdStr, cfg)
+	var extraFiles []*os.File
+	seccompFD := -1
+
+	if cfg.SeccompBPFPath != "" {
+		f, err := os.Open(cfg.SeccompBPFPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open seccomp file: %w", err)
+		}
+		defer f.Close()
+		extraFiles = append(extraFiles, f)
+		seccompFD = 2 + len(extraFiles) // stderr is 2, first extra is 3
+	}
+
+	args := a.BuildBwrapArgs(cmdStr, cfg, seccompFD)
 
 	cmd := exec.CommandContext(ctx, "bwrap", args...)
+	cmd.ExtraFiles = extraFiles
 
 	// Cap standard output and standard error at 10 MB each to prevent memory exhaustion
 	const maxOutputSize = 10 * 1024 * 1024

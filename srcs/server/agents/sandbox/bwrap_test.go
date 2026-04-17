@@ -1,6 +1,7 @@
 package sandbox
 
 import (
+	"os"
 	"context"
 	"strings"
 	"testing"
@@ -47,7 +48,7 @@ func TestBuildBwrapArgs(t *testing.T) {
 
 	cmdStr := "echo 'hello world'"
 
-	args := adapter.BuildBwrapArgs(cmdStr, cfg)
+	args := adapter.BuildBwrapArgs(cmdStr, cfg, -1)
 
 	if !contains(args, "--unshare-pid") {
 		t.Errorf("Expected args to contain --unshare-pid")
@@ -70,6 +71,74 @@ func TestBuildBwrapArgs(t *testing.T) {
 	if n < 3 || args[n-3] != "bash" || args[n-2] != "-c" || args[n-1] != cmdStr {
 		t.Errorf("Expected args to end with bash -c '%s', got %v", cmdStr, args)
 	}
+}
+
+func TestBuildBwrapArgs_WithProxyAndSeccomp(t *testing.T) {
+	adapter := &LinuxBwrapAdapter{}
+
+	cfg := Config{
+		SeccompBPFPath:  "/tmp/seccomp.bpf",
+		HTTPSocketPath:  "/tmp/http.sock",
+		SOCKSSocketPath: "/tmp/socks.sock",
+		ProxyEnvVars: map[string]string{
+			"HTTP_PROXY":  "http://unix:/tmp/http.sock",
+			"HTTPS_PROXY": "http://unix:/tmp/http.sock",
+		},
+	}
+
+	cmdStr := "echo 'hello network'"
+
+	args := adapter.BuildBwrapArgs(cmdStr, cfg, -1)
+
+
+	if !containsFlagWithArgs(args, "--bind", "/tmp/http.sock", "/tmp/http.sock") {
+		t.Errorf("Expected args to contain --bind /tmp/http.sock /tmp/http.sock")
+	}
+	if !containsFlagWithArgs(args, "--bind", "/tmp/socks.sock", "/tmp/socks.sock") {
+		t.Errorf("Expected args to contain --bind /tmp/socks.sock /tmp/socks.sock")
+	}
+	if !containsFlagWithArgs(args, "--setenv", "HTTPS_PROXY", "http://unix:/tmp/http.sock") {
+		t.Errorf("Expected args to contain --setenv HTTPS_PROXY http://unix:/tmp/http.sock")
+	}
+	if !containsFlagWithArgs(args, "--setenv", "HTTP_PROXY", "http://unix:/tmp/http.sock") {
+		t.Errorf("Expected args to contain --setenv HTTP_PROXY http://unix:/tmp/http.sock")
+	}
+}
+
+
+
+func TestBuildBwrapArgs_WithSeccompFD(t *testing.T) {
+	adapter := &LinuxBwrapAdapter{}
+	cfg := Config{}
+	cmdStr := "echo 'seccomp'"
+	args := adapter.BuildBwrapArgs(cmdStr, cfg, 3)
+
+	if !containsFlagWithArgs(args, "--seccomp", "3") {
+		t.Errorf("Expected args to contain --seccomp 3")
+	}
+}
+
+
+
+func TestExecuteWithSeccomp(t *testing.T) {
+	// Create a temporary file to act as the seccomp BPF filter
+	// to cover the lines that open the file in Execute.
+	file, err := os.CreateTemp("", "seccomp.bpf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+	defer file.Close()
+
+	adapter := &LinuxBwrapAdapter{}
+	cfg := Config{
+		SeccompBPFPath: file.Name(),
+	}
+	cmdStr := "echo test"
+
+	// We don't care if it fails (due to bwrap not installed or seccomp format),
+	// just that it tries to open the file and append it to ExtraFiles.
+	_, _ = adapter.Execute(context.Background(), cmdStr, cfg)
 }
 
 func TestExecuteCoverage(t *testing.T) {

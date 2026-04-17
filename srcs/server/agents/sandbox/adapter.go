@@ -11,6 +11,14 @@ type Config struct {
 	Bind map[string]string
 	// RoBind maps host paths to virtual sandbox paths (read-only).
 	RoBind map[string]string
+	// SeccompBPFPath is the path to the compiled seccomp BPF filter file.
+	SeccompBPFPath string
+	// HTTPSocketPath is the path to the proxy socket for HTTP traffic.
+	HTTPSocketPath string
+	// SOCKSSocketPath is the path to the proxy socket for SOCKS traffic.
+	SOCKSSocketPath string
+	// ProxyEnvVars are environment variables injected to route traffic through the proxy.
+	ProxyEnvVars map[string]string
 }
 
 // Result holds the standard output and standard error from the execution.
