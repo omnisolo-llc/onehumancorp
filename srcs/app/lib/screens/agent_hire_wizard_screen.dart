@@ -34,6 +34,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   bool _showAdvanced = false;
   final _endpointUrlController = TextEditingController();
   final _tokenLimitController = TextEditingController();
+  bool _obscureApiKey = true;
 
   bool _isDeploying = false;
   bool _isLoading = true;
@@ -137,7 +138,13 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           onPressed: () => context.go('/agents'),
         ),
       ),
-      body: Stepper(
+      body: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          child: Container(
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+            child: Stepper(
         type: StepperType.horizontal,
         currentStep: _step,
         onStepContinue: () {
@@ -552,6 +559,22 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     ),
                     keyboardType: TextInputType.number,
                   ),
+                  const SizedBox(height: 16),
+                  Semantics(
+                    label: 'API Key Input',
+                    child: TextField(
+                      obscureText: _obscureApiKey,
+                      decoration: InputDecoration(
+                        labelText: 'API Key (Optional)',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscureApiKey ? Icons.visibility_off : Icons.visibility),
+                          tooltip: 'Toggle API Key Visibility',
+                          onPressed: () => setState(() => _obscureApiKey = !_obscureApiKey),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -671,6 +694,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             ),
           ),
         ],
+      ),
+          ),
+        ),
       ),
     );
   }

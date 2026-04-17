@@ -1,0 +1,46 @@
+--- srcs/app/lib/screens/agent_hire_wizard_screen.dart
++++ srcs/app/lib/screens/agent_hire_wizard_screen.dart
+@@ -165,6 +165,8 @@
+             child: Row(
+               children: [
+                 if (_step < 6)
++                  Semantics(
++                    label: 'Proceed to next step',
++                    child: Tooltip(
++                      message: 'Next step',
+                   ElevatedButton(
+                     onPressed:
+                         (_step == 0 && _selectedRole.isEmpty)
+                             ? null
+                             : details.onStepContinue,
+                     child: const Text('Next'),
+                   )
++                    ),
++                  )
+                 else
++                  Semantics(
++                    label: 'Deploy the configured agent',
++                    child: Tooltip(
++                      message: 'Deploy agent to orchestration hub',
+                   ElevatedButton(
+                     onPressed: _isDeploying ? null : _handleDeploy,
+                     child:
+@@ -178,10 +180,16 @@
+                               )
+                             : const Text('Deploy Agent'),
+                   ),
++                    ),
++                  ),
+                 const SizedBox(width: 12),
+                 if (_step > 0)
++                  Semantics(
++                    label: 'Go back to previous step',
++                    child: Tooltip(
++                      message: 'Previous step',
+                   TextButton(
+                     onPressed: details.onStepCancel,
+                     child: const Text('Back'),
+                   ),
++                    ),
++                  ),
+               ],
