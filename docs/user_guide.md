@@ -1,5 +1,3 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
-
 # User Guide: OHC Flutter App
 
 ## 1. Overview
@@ -53,17 +51,35 @@ Generated images are written to:
 
 ![OHC Flutter app with Linux profile](./app/linux/landing.png)
 ![OHC Flutter app login with Linux profile](./app/linux/login.png)
-
-</div>
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
-
 ## 4. Documentation
 
 Please refer to the detailed architecture documents in the `docs/` folder:
 - [KAIROS Orchestration Design Phase 4](./kairos_orchestration_phase4.md)
 
-</div>
-
-<div markdown="1" style="font-family: Outfit, Inter, sans-serif; padding: 20px; font-size: 12px; color: #888;">
 Last synced: 2026-04-17 03:42:41
-</div>
+
+
+## 5. Visual Rendering Specs
+
+The OHC visual styling mandate requires components to have premium glassmorphism styling as text-based implementation specs for downstream agents:
+* `backdrop-filter: blur(20px) saturate(200%);`
+* `background: rgba(255, 255, 255, 0.05);`
+* `border: 1px solid rgba(255, 255, 255, 0.1);`
+* `font-family: 'Outfit', 'Inter', sans-serif;`
+
+### 5.1 Architecture
+
+```mermaid
+graph TD;
+    CloudMode[Cloud-Native Mode] -->|Sync| SIP[(OHC-SIP Vector DB)];
+    StandaloneMode[Standalone Mode] -->|Sync| SIP;
+    ThinClientMode[Thin Client Mode] -->|API/OAuth| CloudMode;
+```
+
+### 5.2 Comparative Analysis
+
+| Feature | Cloud Mode | Standalone Mode | Thin Client Mode |
+| :--- | :--- | :--- | :--- |
+| **Orchestration** | K8s | SQLite Local | N/A |
+| **Resources** | High | Low | Very Low |
+| **Multi-tenant** | Yes | No | Yes |
