@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/onehumancorp/mono/services/growth"
+	"encoding/json"
 	"bytes"
 	"context"
 	"net/http"
@@ -218,5 +220,58 @@ func TestABTestEndpoints(t *testing.T) {
 
 	if status := rrConv.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+
+func TestExportEndpoint(t *testing.T) {
+	s, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("failed to start miniredis: %v", err)
+	}
+	defer s.Close()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: s.Addr(),
+	})
+	tracker := analytics.NewTracker()
+	mux := NewGrowthMux(tracker, rdb)
+
+	// Add test data
+	repo := growth.NewReferralRepository(rdb)
+	repo.SaveReferral(context.Background(), &growth.GrowthReferral{
+		ID: "test-1",
+		InviterID: "user-1",
+		InviteeEmail: "test1@ex.com",
+		Status: "SIGNED_UP",
+	})
+	repo.SaveReferral(context.Background(), &growth.GrowthReferral{
+		ID: "test-2",
+		InviterID: "user-2",
+		InviteeEmail: "test2@ex.com",
+		Status: "PENDING",
+	})
+
+	req, err := http.NewRequest(http.MethodGet, "/api/v1/growth/analytics/export", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Spiffe-Id", "admin")
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	if resp["total_referrals"].(float64) != 2 {
+		t.Errorf("expected 2 total referrals, got %v", resp["total_referrals"])
+	}
+	if resp["total_signups"].(float64) != 1 {
+		t.Errorf("expected 1 signup, got %v", resp["total_signups"])
 	}
 }
