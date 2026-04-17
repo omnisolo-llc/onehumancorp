@@ -28,7 +28,6 @@ validation:
 nav:
   - Home: index.md
   - Architecture:
-      - Universal Transport Bridge: architecture/universal_transport_bridge.md
       - architecture/index.md
       - Chaos Engineering: architecture/chaos_engineering.md
   - Developer:
@@ -41,6 +40,7 @@ nav:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
+      - Teammate Mesh Orchestration: walkthroughs/teammate_mesh_walkthrough.md
       - walkthroughs/index.md
   - Operations:
       - operations/index.md
