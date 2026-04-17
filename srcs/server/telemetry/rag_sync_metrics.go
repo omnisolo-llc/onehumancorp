@@ -2,6 +2,8 @@ package telemetry
 
 import (
 	"context"
+
+	"go.opentelemetry.io/otel/attribute"
 	"encoding/json"
 
 	"go.opentelemetry.io/otel/metric"
@@ -34,11 +36,14 @@ func RecordRAGRecordsSynced(ctx context.Context, count int64) {
 		payloadMap := map[string]interface{}{
 			"count": count,
 		}
+		payloadMap["env_mode"] = cachedEnvMode
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "rag_records_synced", string(payloadBytes))
 	}
 	if ragRecordsSyncedTotal != nil {
-		ragRecordsSyncedTotal.Add(ctx, count)
+		ragRecordsSyncedTotal.Add(ctx, count, metric.WithAttributes(
+			attribute.String("env_mode", cachedEnvMode),
+		))
 	}
 }
 
@@ -47,10 +52,13 @@ func RecordRAGSyncError(ctx context.Context, errStr string) {
 		payloadMap := map[string]interface{}{
 			"error": errStr,
 		}
+		payloadMap["env_mode"] = cachedEnvMode
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "rag_sync_error", string(payloadBytes))
 	}
 	if ragSyncErrorsTotal != nil {
-		ragSyncErrorsTotal.Add(ctx, 1)
+		ragSyncErrorsTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("env_mode", cachedEnvMode),
+		))
 	}
 }

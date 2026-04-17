@@ -56,6 +56,7 @@ func RecordMinimaxCall(ctx context.Context, operation string, durationSeconds fl
 			"operation":        operation,
 			"duration_seconds": durationSeconds,
 		}
+		payloadMap["env_mode"] = cachedEnvMode
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "minimax_call", string(payloadBytes))
 	}

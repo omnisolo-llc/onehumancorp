@@ -3,6 +3,8 @@ package telemetry
 import (
 	"encoding/json"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"context"
 	"os"
 
@@ -54,7 +56,9 @@ func RecordBridgeMessageSent(ctx context.Context) {
 		_ = BufferMetricFunc(ctx, "bridge_message_sent", string(payloadBytes))
 	}
 	if bridgeMessagesSentTotal != nil {
-		bridgeMessagesSentTotal.Add(ctx, 1)
+		bridgeMessagesSentTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("env_mode", cachedEnvMode),
+		))
 	}
 }
 
@@ -64,7 +68,8 @@ func RecordBridgeMessageReceived(ctx context.Context) {
 		_ = BufferMetricFunc(ctx, "bridge_message_received", string(payloadBytes))
 	}
 	if bridgeMessagesReceivedTotal != nil {
-		bridgeMessagesReceivedTotal.Add(ctx, 1)
+		bridgeMessagesReceivedTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("env_mode", cachedEnvMode)))
 	}
 }
 
@@ -74,7 +79,8 @@ func RecordBridgeStatus(ctx context.Context, active int64) {
 		_ = BufferMetricFunc(ctx, "bridge_status", string(payloadBytes))
 	}
 	if bridgeStatusGauge != nil {
-		bridgeStatusGauge.Add(ctx, active)
+		bridgeStatusGauge.Add(ctx, active, metric.WithAttributes(
+			attribute.String("env_mode", cachedEnvMode)))
 	}
 }
 
