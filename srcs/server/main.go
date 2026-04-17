@@ -293,6 +293,9 @@ func run(now time.Time, listen listenFunc) error {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
 
+		taskConsolidationWorker := workers.NewAutoDreamWorker(pool.Provider)
+		go taskConsolidationWorker.Start(ctx)
+
 		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
 		go missionIngestionWorker.Start(ctx)
 
