@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"os"
 	"time"
 )
 
@@ -77,4 +78,15 @@ type Message struct {
 	Content    string    `json:"content"`
 	MeetingID  string    `json:"meetingId,omitempty"`
 	OccurredAt time.Time `json:"occurredAt"`
+}
+
+// BaseSystemPrompt returns the base system prompt instructions for this agent.
+// In Standalone Mode, it injects the memory directory instructions.
+func (a *Agent) BaseSystemPrompt() string {
+	prompt := "You are an autonomous AI agent representing One Human Corp (OHC). You operate within the bounds of your Role: " + a.Role + ".\n"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		prompt += "\n# Memory Fallback (Standalone Mode)\n"
+		prompt += "The directories .ohc/memory/auto/ and .ohc/memory/team/ already exist. Write state to them directly.\n"
+	}
+	return prompt
 }
