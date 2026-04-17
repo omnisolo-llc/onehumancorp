@@ -223,27 +223,54 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   'Choose the primary capability profile for this new agent.',
                 ),
                 const SizedBox(height: 24),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children:
-                      _roles.map((role) {
-                        final isSelected = _selectedRole == role;
-                        final dummyAgent = Agent(id: '', name: '', role: role, status: '', organizationId: '', createdAt: DateTime.now());
-                        return ChoiceChip(
-                          label: Text(dummyAgent.formattedRole),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(
-                              () => _selectedRole = selected ? role : '',
-                            );
-                            if (selected && _nameController.text.isEmpty) {
-                              _nameController.text =
-                                  'Senior ${dummyAgent.formattedRole}';
-                            }
-                          },
-                        );
-                      }).toList(),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 2.5,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  itemCount: _roles.length,
+                  itemBuilder: (context, index) {
+                    final role = _roles[index];
+                    final isSelected = _selectedRole == role;
+                    final dummyAgent = Agent(id: '', name: '', role: role, status: '', organizationId: '', createdAt: DateTime.now());
+                    return Card(
+                      color: isSelected ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surface,
+                      elevation: isSelected ? 4 : 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                          width: 2,
+                        ),
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() => _selectedRole = role);
+                          if (_nameController.text.isEmpty) {
+                            _nameController.text = 'Senior ${dummyAgent.formattedRole}';
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              dummyAgent.formattedRole,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -333,14 +360,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 const Text('How does this agent interact with others?'),
                 const SizedBox(height: 16),
                 RadioListTile<String>(
-                  title: const Text('Independent Worker'),
+                  title: const Text('Independent Worker (No Sub-agents)'),
                   subtitle: const Text('Works alone without sub-agents.'),
                   value: 'Independent',
                   groupValue: _topologyPreset,
                   onChanged: (val) => setState(() => _topologyPreset = val!),
                 ),
                 RadioListTile<String>(
-                  title: const Text('Delegator / Supervisor'),
+                  title: const Text('Delegator / Supervisor (Manages Sub-agents)'),
                   subtitle: const Text(
                     'Can ask other agents for help (e.g. asking the Code Builder).',
                   ),
