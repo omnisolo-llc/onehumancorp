@@ -83,10 +83,10 @@ try {
     );
     await page.waitForTimeout(1500);
 
-    const landingDir = path.join(outputRoot, "landing-page");
-    await mkdir(landingDir, { recursive: true });
+    const profileDir = path.join(outputRoot, profile.name);
+    await mkdir(profileDir, { recursive: true });
     await page.screenshot({
-      path: path.join(landingDir, `${profile.name}.png`),
+      path: path.join(profileDir, "landing.png"),
       fullPage: true,
     });
 
@@ -95,10 +95,8 @@ try {
     await page.locator('text="Or continue to Cloud Dashboard"').click({ force: true });
     await page.waitForTimeout(1500);
 
-    const loginDir = path.join(outputRoot, "login");
-    await mkdir(loginDir, { recursive: true });
     await page.screenshot({
-      path: path.join(loginDir, `${profile.name}.png`),
+      path: path.join(profileDir, "login.png"),
       fullPage: true,
     });
 
