@@ -34,6 +34,7 @@ go_test(
         "sync_worker_test.go",
         "telemetry_extra_test.go",
         "telemetry_test.go",
+        "compliance_test.go",
         "token_forecast_worker_test.go",
     ],
     embed = [":telemetry"],
