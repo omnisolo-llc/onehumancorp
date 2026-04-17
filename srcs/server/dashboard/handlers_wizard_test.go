@@ -64,6 +64,118 @@ func TestHandleWizardConfigure(t *testing.T) {
 func TestHandleWizardOnboardingVerify(t *testing.T) {
 	s := &Server{}
 
+	// Test case 1: Method Not Allowed
+	t.Run("Method Not Allowed", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		if rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405, got %v", rr.Code)
+		}
+	})
+
+	// Test case 2: Cloud mode missing both DATABASE_URL and REDIS_URL
+	t.Run("Cloud missing env", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("DATABASE_URL", "")
+		t.Setenv("REDIS_URL", "")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %v", rr.Code)
+		}
+
+		var resp map[string]interface{}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
+
+		if resp["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		}
+	})
+
+	// Test case 3: Cloud mode missing DATABASE_URL only
+	t.Run("Cloud missing db", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("DATABASE_URL", "")
+		t.Setenv("REDIS_URL", "redis://localhost:6379")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		var resp map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+
+		if resp["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		}
+	})
+
+	// Test case 4: Cloud mode missing REDIS_URL only
+	t.Run("Cloud missing redis", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("DATABASE_URL", "postgres://localhost:5432")
+		t.Setenv("REDIS_URL", "")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		var resp map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+
+		if resp["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		}
+	})
+
+	// Test case 5: Cloud mode complete
+	t.Run("Cloud complete", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("DATABASE_URL", "postgres://localhost:5432")
+		t.Setenv("REDIS_URL", "redis://localhost:6379")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		var resp map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+
+		if resp["status"] != "healthy" {
+			t.Errorf("Expected status to be healthy, got %v", resp["status"])
+		}
+	})
+
+	// Test case 6: Standalone mode
+	t.Run("Standalone", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "true")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		var resp map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+
+		if resp["status"] != "healthy" {
+			t.Errorf("Expected status to be healthy, got %v", resp["status"])
+		}
+		if resp["mode"] != "standalone" {
+			t.Errorf("Expected mode to be standalone, got %v", resp["mode"])
+		}
+	})
+}
+
+func TestHandleWizardOnboardingVerify(t *testing.T) {
+	s := &Server{}
+
 	tests := []struct {
 		name           string
 		method         string

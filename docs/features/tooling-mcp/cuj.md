@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. User Journey Overview
-The CEO expands the capability of their AI workforce by linking an external tool (e.g., Slack or Plane) through the MCP Gateway.
+The CEO expands the capability of their AI workforce by linking an external tool (e.g., Slack or Linear) through the MCP Gateway.
 
 ## 2. Detailed Step-by-Step Breakdown
 
