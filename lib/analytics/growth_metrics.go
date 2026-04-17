@@ -13,8 +13,6 @@ var (
 	abTestConversionCounter metric.Int64Counter
 	quotaExceededCounter    metric.Int64Counter
 	quotaUsageCounter       metric.Int64Counter
-	teamInviteSentCounter   metric.Int64Counter
-	teamInviteAcceptedCounter metric.Int64Counter
 )
 
 func init() {
@@ -44,14 +42,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	teamInviteSentCounter, err = meter.Int64Counter("growth_viral_team_invite_sent_total")
-	if err != nil {
-		panic(err)
-	}
-	teamInviteAcceptedCounter, err = meter.Int64Counter("growth_viral_team_invite_accepted_total")
-	if err != nil {
-		panic(err)
-	}
 }
 
 type Tracker struct {
@@ -74,9 +64,5 @@ func (t *Tracker) TrackEvent(ctx context.Context, name string, props map[string]
 		quotaExceededCounter.Add(ctx, 1)
 	} else if name == "quota_usage_incremented" && quotaUsageCounter != nil {
 		quotaUsageCounter.Add(ctx, 1)
-	} else if name == "team_invite_sent" && teamInviteSentCounter != nil {
-		teamInviteSentCounter.Add(ctx, 1)
-	} else if name == "team_invite_accepted" && teamInviteAcceptedCounter != nil {
-		teamInviteAcceptedCounter.Add(ctx, 1)
 	}
 }
