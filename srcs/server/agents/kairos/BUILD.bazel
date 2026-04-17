@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "kairos",
+    srcs = ["task_decomposer.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/kairos",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "kairos_test",
+    srcs = ["task_decomposer_test.go"],
+    embed = [":kairos"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
