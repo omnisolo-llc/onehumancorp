@@ -1,6 +1,0 @@
-{
-  "title": "🧹 Maintainer: Sync Cloud vs Standalone Visual Rendering in User Guide",
-  "body": "Resolves #5889\n\nThis PR updates `docs/user_guide.md` to display correctly generated screenshots, ensuring that the visual truth of the hybrid OS UI is accurately captured in our documentation. It updates the visual links in `docs/user_guide.md` and tracks the correct screenshots inside the `docs/app/` folder, overriding the local `.gitignore` rules with a manual `--force` to make sure the app screenshots are appropriately synced to the documentation folder.",
-  "head": "jules-2000561245604438550-f49a6407",
-  "base": "main"
-}
