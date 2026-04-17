@@ -17,15 +17,15 @@ type UserRepository interface {
 	// email is already taken.
 	CreateUser(ctx context.Context, user *User) error
 	// GetByID returns a user by primary key.
-	GetByID(ctx context.Context, id string) (*User, error)
+	GetByID(ctx context.Context, organizationID, id string) (*User, error)
 	// GetByUsername returns the user matching the given username.
-	GetByUsername(ctx context.Context, username string) (*User, error)
+	GetByUsername(ctx context.Context, organizationID, username string) (*User, error)
 	// GetByEmail returns the user matching the given email address.
-	GetByEmail(ctx context.Context, email string) (*User, error)
+	GetByEmail(ctx context.Context, organizationID, email string) (*User, error)
 	// GetByOIDCSubject returns the user matching the given OIDC subject.
-	GetByOIDCSubject(ctx context.Context, sub string) (*User, error)
+	GetByOIDCSubject(ctx context.Context, organizationID, sub string) (*User, error)
 	// ListUsers returns every registered user.
-	ListUsers(ctx context.Context) ([]*User, error)
+	ListUsers(ctx context.Context, organizationID string) ([]*User, error)
 	// UpdateUser persists changes to a user record.
 	UpdateUser(ctx context.Context, user *User) error
 	// DeleteUser removes a user by ID.
