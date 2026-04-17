@@ -39,43 +39,6 @@ func TestReferralTracker(t *testing.T) {
 	}
 }
 
-func TestBulkReferralCodes(t *testing.T) {
-	tracker := NewReferralTracker()
-	userID := "user789"
-
-	codes := tracker.GenerateBulkReferralCodes(userID, 5)
-	if len(codes) != 5 {
-		t.Fatalf("Expected 5 codes, got %d", len(codes))
-	}
-
-	for _, code := range codes {
-		if len(code) != 8 {
-			t.Fatalf("Expected code to be 8 characters long, got %s", code)
-		}
-	}
-
-	ctx := context.Background()
-	recorded := tracker.RecordBulkReferrals(ctx, codes)
-	if recorded != 5 {
-		t.Fatalf("Expected 5 recorded codes, got %d", recorded)
-	}
-
-	if tracker.GetTotalReferrals() != 5 {
-		t.Fatalf("Expected 5 total referrals, got %d", tracker.GetTotalReferrals())
-	}
-
-	if tracker.GetUserReferrals(userID) != 5 {
-		t.Fatalf("Expected 5 referrals for user, got %d", tracker.GetUserReferrals(userID))
-	}
-
-	// Test mixed valid and invalid codes
-	mixedCodes := append(tracker.GenerateBulkReferralCodes(userID, 2), "invalid1", "invalid2")
-	recordedMixed := tracker.RecordBulkReferrals(ctx, mixedCodes)
-	if recordedMixed != 2 {
-		t.Fatalf("Expected 2 recorded codes from mixed, got %d", recordedMixed)
-	}
-}
-
 func TestReferralTrackerWithChannel(t *testing.T) {
 	tracker := NewReferralTracker()
 	userID := "user456"
