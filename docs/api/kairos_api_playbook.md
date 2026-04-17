@@ -88,7 +88,6 @@ The Shared Task List manages the distributed state machine, preventing race cond
 *   **Complete a Task**
     *   **Endpoint:** `POST /api/v1/tasks/{task_id}/complete`
     *   **Description:** Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
-
     *   **Payload Example:**
         ```json
         {
@@ -96,24 +95,6 @@ The Shared Task List manages the distributed state machine, preventing race cond
           "outcome_summary": "Successfully merged PR #124."
         }
         ```
-
-### Shared Task List Orchestration Flow
-```mermaid
-sequenceDiagram
-    participant Manager as Task Manager
-    participant DB as Postgres (Task Queue)
-    participant Worker as Worker Agent
-
-    Manager->>DB: POST /api/queue/subagent (Enqueue Task)
-    Worker->>DB: POST /api/v1/tasks/claim (FOR UPDATE SKIP LOCKED)
-    DB-->>Worker: Claimed Task
-    Worker->>Worker: Execute
-    Worker->>DB: POST /api/v1/tasks/{task_id}/complete
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Manager,DB,Worker premium;
-```
-
 
 ## 3. Hybrid Health Probes
 
