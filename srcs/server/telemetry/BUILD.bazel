@@ -10,6 +10,7 @@ go_library(
         "telemetry.go",
         "telemetry_bridge.go",
         "token_forecast_worker.go",
+        "logging.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",
     visibility = ["//visibility:public"],
@@ -35,6 +36,8 @@ go_test(
         "telemetry_extra_test.go",
         "telemetry_test.go",
         "token_forecast_worker_test.go",
+        "compliance_test.go",
+        "logging_test.go",
     ],
     embed = [":telemetry"],
     deps = [

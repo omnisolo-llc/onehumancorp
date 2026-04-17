@@ -540,7 +540,8 @@ func run(now time.Time, listen listenFunc) error {
 // Has no side effects.
 func main() {
 	// Set up global PII-redacting logger
-	baseHandler := slog.NewJSONHandler(os.Stdout, nil)
+	telemetry.InitUnifiedLogging(os.Getenv("OHC_DEPLOYMENT_MODE"))
+	baseHandler := slog.Default().Handler()
 	redactingHandler := telemetry.NewPIIRedactingHandler(baseHandler)
 	slog.SetDefault(slog.New(redactingHandler))
 
