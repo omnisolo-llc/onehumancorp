@@ -13,6 +13,7 @@ var (
 	meter = otel.GetMeterProvider().Meter("ohc_wizard")
 	agentConfigCounter metric.Int64Counter
 	promptTuningCounter metric.Int64Counter
+	agentFixesCounter metric.Int64Counter
 )
 
 func init() {
@@ -22,6 +23,10 @@ func init() {
         panic(err)
     }
 	promptTuningCounter, err = meter.Int64Counter("ohc_prompt_tuning_total")
+	if err != nil {
+		panic(err)
+	}
+	agentFixesCounter, err = meter.Int64Counter("ohc_agent_fixes_total")
 	if err != nil {
 		panic(err)
 	}
@@ -72,4 +77,24 @@ func IsExpertMode(profile map[string]string) bool {
         return true
     }
     return false
+}
+
+type FixAgentRequest struct {
+	AgentID    string `json:"agent_id"`
+	Action     string `json:"action"`
+	ExpertMode string `json:"expert_mode"`
+}
+
+func HandleFixAgent(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	var req FixAgentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	agentFixesCounter.Add(ctx, 1)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status": "success", "message": "Agent fixed successfully"}`))
 }

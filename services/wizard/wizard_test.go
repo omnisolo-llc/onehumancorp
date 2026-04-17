@@ -44,3 +44,19 @@ func TestIsExpertMode(t *testing.T) {
         t.Errorf("expected true")
     }
 }
+
+func TestHandleFixAgent(t *testing.T) {
+    payload := []byte(`{"agent_id": "current", "action": "restart_and_clear_cache", "expert_mode": "false"}`)
+    req, err := http.NewRequest("POST", "/api/wizard/fix", bytes.NewBuffer(payload))
+    if err != nil {
+        t.Fatal(err)
+    }
+
+    rr := httptest.NewRecorder()
+    handler := http.HandlerFunc(HandleFixAgent)
+    handler.ServeHTTP(rr, req)
+
+    if status := rr.Code; status != http.StatusOK {
+        t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+    }
+}
