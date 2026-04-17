@@ -9,10 +9,10 @@ import (
 )
 
 type ProvisionRequest struct {
-	Profile    Profile  `json:"profile"`
-	Goals      []string `json:"goals"`
-	Deployment string   `json:"deployment"`
-	Admin      Admin    `json:"admin"`
+	Profile    Profile    `json:"profile"`
+	Goals      []string   `json:"goals"`
+	Deployment string     `json:"deployment"`
+	Admin      Admin      `json:"admin"`
 }
 
 type Profile struct {
@@ -44,6 +44,7 @@ func ProvisionHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "provisioned", "message": "State persisted successfully"})
 }
+
 
 type ConfigRequest struct {
 	Mode string `json:"mode"`
@@ -94,41 +95,41 @@ func GenerateConfigHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type VerifyEnvResponse struct {
-	Status string     `json:"status"`
-	Config *EnvConfig `json:"config,omitempty"`
-	Error  string     `json:"error,omitempty"`
+    Status string `json:"status"`
+    Config *EnvConfig `json:"config,omitempty"`
+    Error  string `json:"error,omitempty"`
 }
 
 func VerifyEnvironmentHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodGet {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-	envVars := make(map[string]string)
-	for _, env := range os.Environ() {
-		parts := strings.SplitN(env, "=", 2)
-		if len(parts) == 2 {
-			envVars[parts[0]] = parts[1]
-		}
-	}
+    envVars := make(map[string]string)
+    for _, env := range os.Environ() {
+        parts := strings.SplitN(env, "=", 2)
+        if len(parts) == 2 {
+            envVars[parts[0]] = parts[1]
+        }
+    }
 
-	config, err := VerifyEnvironment(envVars)
-	w.Header().Set("Content-Type", "application/json")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(VerifyEnvResponse{
-			Status: "error",
-			Error:  err.Error(),
-		})
-		return
-	}
+    config, err := VerifyEnvironment(envVars)
+    w.Header().Set("Content-Type", "application/json")
+    if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(VerifyEnvResponse{
+            Status: "error",
+            Error:  err.Error(),
+        })
+        return
+    }
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(VerifyEnvResponse{
-		Status: "success",
-		Config: config,
-	})
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(VerifyEnvResponse{
+        Status: "success",
+        Config: config,
+    })
 }
 
 var (
@@ -186,43 +187,43 @@ func ResetWizardStateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type AuditSetupResponse struct {
-	Status string     `json:"status"`
-	Config *EnvConfig `json:"config,omitempty"`
-	Error  string     `json:"error,omitempty"`
+    Status string `json:"status"`
+    Config *EnvConfig `json:"config,omitempty"`
+    Error  string `json:"error,omitempty"`
 }
 
 type AuditSetupRequest struct {
-	Env map[string]string `json:"env"`
+    Env map[string]string `json:"env"`
 }
 
 func AuditSetupHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+    if r.Method != http.MethodPost {
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
 
-	var req AuditSetupRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+    var req AuditSetupRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, err.Error(), http.StatusBadRequest)
+        return
+    }
 
-	config, err := VerifyEnvironment(req.Env)
-	w.Header().Set("Content-Type", "application/json")
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(AuditSetupResponse{
-			Status: "error",
-			Error:  err.Error(),
-		})
-		return
-	}
+    config, err := VerifyEnvironment(req.Env)
+    w.Header().Set("Content-Type", "application/json")
+    if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(AuditSetupResponse{
+            Status: "error",
+            Error:  err.Error(),
+        })
+        return
+    }
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(AuditSetupResponse{
-		Status: "success",
-		Config: config,
-	})
+    w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(AuditSetupResponse{
+        Status: "success",
+        Config: config,
+    })
 }
 
 type DiagnosticsResponse struct {
@@ -270,93 +271,5 @@ func DiagnosticsHandler(w http.ResponseWriter, r *http.Request) {
 		Status: "success",
 		Config: config,
 		Wizard: currentWizardState,
-	})
-}
-
-type PreflightRequest struct {
-	Mode string `json:"mode"`
-}
-
-type PreflightCheck struct {
-	ID          string `json:"id"`
-	Label       string `json:"label"`
-	Status      string `json:"status"`
-	Description string `json:"description"`
-}
-
-type PreflightResponse struct {
-	Status string           `json:"status"`
-	Checks []PreflightCheck `json:"checks"`
-	Error  string           `json:"error,omitempty"`
-}
-
-func PreflightHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var req PreflightRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(PreflightResponse{
-			Status: "error",
-			Error:  err.Error(),
-		})
-		return
-	}
-
-	var checks []PreflightCheck
-
-	if req.Mode == "cloud" {
-		checks = append(checks, PreflightCheck{
-			ID:          "db_postgres",
-			Label:       "Database Connection",
-			Status:      "ok",
-			Description: "Verified PostgreSQL connectivity",
-		})
-		checks = append(checks, PreflightCheck{
-			ID:          "cache_redis",
-			Label:       "Cache Layer",
-			Status:      "ok",
-			Description: "Verified Redis availability",
-		})
-	} else if req.Mode == "standalone" {
-		checks = append(checks, PreflightCheck{
-			ID:          "db_sqlite",
-			Label:       "Database Setup",
-			Status:      "ok",
-			Description: "Verified SQLite file creation",
-		})
-	} else if req.Mode == "thin_client" {
-		checks = append(checks, PreflightCheck{
-			ID:          "api_endpoint",
-			Label:       "Remote API",
-			Status:      "ok",
-			Description: "Verified remote API endpoint connectivity",
-		})
-	} else if req.Mode == "headless" {
-		checks = append(checks, PreflightCheck{
-			ID:          "config_file",
-			Label:       "Configuration",
-			Status:      "ok",
-			Description: "Verified headless config file exists",
-		})
-	} else {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(PreflightResponse{
-			Status: "error",
-			Error:  "Invalid mode",
-		})
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(PreflightResponse{
-		Status: "success",
-		Checks: checks,
 	})
 }
