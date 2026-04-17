@@ -1,0 +1,6 @@
+[
+  {
+    "comment_id": 4264718944,
+    "reply": "Acknowledged. The `docs/...` path isn't a bazel target but I verified the `docs/mkdocs_via_bazel.sh build` completes successfully. Re-running final submit to close."
+  }
+]
