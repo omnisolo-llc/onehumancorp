@@ -1,5 +1,0 @@
-mission_id: 2026-04-15T14-21-19Z.md
-agent: Jules
-status: COMPLETED
-notes: |
-  Successfully added the "Swarm Task Queue Length" panel to both Docker and Helm hybrid telemetry dashboards. The panel uses the `ohc_swarm_task_queue_length` Prometheus metric. No source code was modified, so tests were skipped.

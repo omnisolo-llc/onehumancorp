@@ -13,6 +13,8 @@ toc:
     path: /docs/features/index.md
   - title: Walkthroughs
     path: /docs/walkthroughs/index.md
+  - title: OS-Level Sandbox Isolation Harness
+    path: /docs/walkthroughs/sandbox_isolation_harness.md
   - title: Hybrid MCP Telemetry Visual Guide
     path: /docs/walkthroughs/hybrid_mcp_telemetry_visual_guide.md
   - title: Operations
@@ -25,3 +27,7 @@ toc:
     path: /docs/walkthroughs/hybrid_mcp_rag_escalation.md
   - title: Harness Git Protection Report
     path: /docs/reports/RESEARCH_REPORT_HARNESS_GIT_PROTECTION.md
+  - title: Edge LLM Offloading Protocol API
+    path: /docs/api/edge_llm_offloading_api.md
+  - title: Edge LLM Handoff Visual Walkthrough
+    path: /docs/walkthroughs/edge_llm_handoff_walkthrough.md
