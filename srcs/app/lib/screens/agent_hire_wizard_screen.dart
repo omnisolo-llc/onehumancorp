@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/widgets/glass_card.dart';
-
 
 class AgentHireWizardScreen extends ConsumerStatefulWidget {
   const AgentHireWizardScreen({super.key});
@@ -569,9 +567,48 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                GlassCard(
-                  padding: EdgeInsets.zero,
-                  child: ListTile(
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.compose(
+                      outer: ColorFilter.matrix(const <double>[
+                        1.787,
+                        -0.715,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        1.285,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        -0.715,
+                        1.928,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                      ]),
+                      inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surface.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: ListTile(
                         leading: CircleAvatar(
                           backgroundColor: Theme.of(
                             context,
@@ -618,6 +655,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                           ),
                         ),
                       ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Text(
