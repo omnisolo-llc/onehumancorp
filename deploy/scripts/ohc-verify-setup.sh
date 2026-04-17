@@ -1,7 +1,7 @@
 #!/bin/bash
-# OHC Setup Verification Script
+# OHC Premium Setup Verification
 
-set -eo pipefail
+set -e
 
 RESET="\033[0m"
 BOLD="\033[1m"
@@ -10,81 +10,88 @@ BLUE="\033[38;5;39m"
 CYAN="\033[38;5;87m"
 GREEN="\033[38;5;120m"
 PURPLE="\033[38;5;141m"
-GLASSMORPHISM="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.05); color: #fff;"
+RED="\033[38;5;196m"
 
-echo -e "${BOLD}${CYAN}🔍 Executing Setup Flow Audit...${RESET}"
+echo -e "${BOLD}${BLUE}===============================================${RESET}"
+echo -e "${BOLD}${CYAN}   🔍 OHC Environment Audit                    ${RESET}"
+echo -e "${BOLD}${BLUE}===============================================${RESET}"
 
 if [ ! -f .env ]; then
-  echo -e "${PURPLE}Error: .env file not found.${RESET}"
+  echo -e "${BOLD}${RED}ERROR: .env file missing.${RESET}"
   exit 1
-
 fi
 
+# Load env safely
+set -a
 source .env
+set +a
 
-HEALTH_STATUS="ok"
-ISSUES=""
-MARKDOWN_OBSERVATIONS=""
+ISSUES=0
 
-echo -e "${DIM}Evaluating variables...${RESET}"
+echo -e "${DIM}Auditing parameters...${RESET}"
 
-for var in PORT LOG_LEVEL OHC_SOURCE_MODE; do
-  if [ -z "${!var}" ]; then
-    echo -e "${PURPLE}❌ Missing $var in .env${RESET}"
-    HEALTH_STATUS="degraded"
-    ISSUES="${ISSUES}
-  - Missing $var"
-    MARKDOWN_OBSERVATIONS="${MARKDOWN_OBSERVATIONS}*   **$var**: ❌ Missing
-"
-  else
-    echo -e "${GREEN}✅ $var is set to ${!var}${RESET}"
-    MARKDOWN_OBSERVATIONS="${MARKDOWN_OBSERVATIONS}*   **$var**: ✅ ${!var}
-"
-  fi
-done
+# Check PORT
+if [ -z "$PORT" ]; then
+    echo -e "${RED}✗ PORT is not set.${RESET}"
+    ISSUES=$((ISSUES+1))
+else
+    echo -e "${GREEN}✓ PORT is set to ${PORT}.${RESET}"
+fi
 
+# Check LOG_LEVEL
+if [ -z "$LOG_LEVEL" ]; then
+    echo -e "${RED}✗ LOG_LEVEL is not set.${RESET}"
+    ISSUES=$((ISSUES+1))
+else
+    echo -e "${GREEN}✓ LOG_LEVEL is set to ${LOG_LEVEL}.${RESET}"
+fi
+
+# Check OHC_SOURCE_MODE
+if [ -z "$OHC_SOURCE_MODE" ]; then
+    echo -e "${RED}✗ OHC_SOURCE_MODE is not set.${RESET}"
+    ISSUES=$((ISSUES+1))
+else
+    echo -e "${GREEN}✓ OHC_SOURCE_MODE is set to ${OHC_SOURCE_MODE}.${RESET}"
+fi
+
+# Generate telemetry-ready summary
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
 mkdir -p "${STATUS_DIR}"
-
 TIMESTAMP=$(date +%s)
-YAML_FILE="${STATUS_DIR}/audit-${TIMESTAMP}.yml"
-MD_FILE="${STATUS_DIR}/audit-${TIMESTAMP}.md"
 
-cat << YAML > "${YAML_FILE}"
+YAML_FILE="${STATUS_DIR}/audit-${TIMESTAMP}.yml"
+cat << YAMLEOF > "${YAML_FILE}"
 type: audit
 metadata:
-  role: Setup Audit
+  role: Environment Verification
   timestamp: ${TIMESTAMP}
-health: ${HEALTH_STATUS}
+health: $(if [ $ISSUES -eq 0 ]; then echo "ok"; else echo "degraded"; fi)
 observations:
-  - Validated .env file configuration
-YAML
+  - Checked .env file
+  - Found ${ISSUES} issues
+YAMLEOF
 
-if [ "$HEALTH_STATUS" = "degraded" ]; then
-  cat << YAML >> "${YAML_FILE}"
-issues:${ISSUES}
-YAML
-fi
+MD_FILE="${STATUS_DIR}/audit-${TIMESTAMP}.md"
+cat << MDEOF > "${MD_FILE}"
+# OHC Environment Audit
 
-cat << MD > "${MD_FILE}"
-<div markdown="1" style="${GLASSMORPHISM}">
-
-# 🔍 Setup Flow Audit Report
-
-**Timestamp**: ${TIMESTAMP}
-**Health**: ${HEALTH_STATUS}
+**Timestamp:** ${TIMESTAMP}
+**Health:** $(if [ $ISSUES -eq 0 ]; then echo "OK"; else echo "DEGRADED"; fi)
 
 ## Observations
+- Checked \`.env\` file
+- Found ${ISSUES} issues
 
-${MARKDOWN_OBSERVATIONS}
-</div>
-MD
+## Configuration Values
+- **PORT:** ${PORT:-Unset}
+- **LOG_LEVEL:** ${LOG_LEVEL:-Unset}
+- **OHC_SOURCE_MODE:** ${OHC_SOURCE_MODE:-Unset}
+MDEOF
 
-echo -e "${BLUE}Audit YAML saved to ${YAML_FILE}${RESET}"
-echo -e "${BLUE}Audit Markdown saved to ${MD_FILE}${RESET}"
-
-if [ "$HEALTH_STATUS" = "degraded" ]; then
+if [ $ISSUES -gt 0 ]; then
+  echo -e "${BOLD}${PURPLE}Audit failed with ${ISSUES} issues.${RESET}"
   exit 1
-
 fi
+
+echo -e "${BOLD}${GREEN}   ✅ Audit Complete! All parameters valid.    ${RESET}"
