@@ -3,7 +3,14 @@ import { theme } from '../../styles/theme';
 
 const BusinessSetupWizard = () => {
   const [step, setStep] = useState(1);
-      const [expertMode, setExpertMode] = useState(false);
+  const [profile, setProfile] = useState({ name: '', industry: '', size: '', language: '' });
+  const [goals, setGoals] = useState<string[]>([]);
+  const [deployment, setDeployment] = useState('cloud');
+  const [admin, setAdmin] = useState({ name: '', email: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Expert mode: persisted in localStorage so it survives page reloads.
+  const [expertMode, setExpertMode] = useState(false);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -21,11 +28,6 @@ const BusinessSetupWizard = () => {
       localStorage.setItem('expertMode', checked.toString());
     }
   };
-  const [profile, setProfile] = useState({ name: '', industry: '', size: '', language: '' });
-  const [goals, setGoals] = useState<string[]>([]);
-  const [deployment, setDeployment] = useState('cloud');
-  const [admin, setAdmin] = useState({ name: '', email: '', password: '' });
-  const [isLoading, setIsLoading] = useState(false);
 
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
