@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ func TestAutoDreamWorker_ProcessCompletedTasks(t *testing.T) {
 	_, err = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (id TEXT PRIMARY KEY, organization_id TEXT, status TEXT, payload TEXT)")
 	assert.NoError(t, err)
 
-	_, err = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS autodream_memories (id TEXT PRIMARY KEY, source_mission_id TEXT, content TEXT, embedding TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
+	_, err = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS autodream_memories (id TEXT PRIMARY KEY, source_mission_id TEXT, organization_id TEXT, content TEXT, embedding TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP)")
 	assert.NoError(t, err)
 
 	_, err = provider.Exec(ctx, "INSERT INTO shared_tasks_decomposition (id, organization_id, status, payload) VALUES ('task-1', 'org-1', 'DONE', 'test payload')")
