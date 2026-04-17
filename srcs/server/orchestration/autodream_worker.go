@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 )
 
 func formatFloat32SliceForVector(embedding []float32) string {
@@ -91,10 +90,7 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		embedding := make([]float32, 1536)
 		if client != nil {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			start := time.Now()
 			resp, err := client.GenerateEmbedding(ctxTimeout, contentToEmbed)
-			duration := time.Since(start).Seconds()
-			kairos.AutoDreamEmbeddingDuration.WithLabelValues(kairos.GetMode()).Observe(duration)
 			cancel()
 			if err == nil && len(resp) == 1536 {
 				embedding = resp
@@ -140,24 +136,16 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "background-pipeline"}
 
 		_, err = tx.Exec(ctx, query, args...)
-		dbType := "pgvector"
-		if w.pool.IsSQLite() {
-			dbType = "sqlite"
-		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert memory", "error", err)
-			kairos.AutoDreamStorageOpsTotal.WithLabelValues(kairos.GetMode(), dbType, "error").Inc()
 			tx.Rollback(ctx)
 			continue
 		}
-		kairos.AutoDreamStorageOpsTotal.WithLabelValues(kairos.GetMode(), dbType, "success").Inc()
 
 		if err := tx.Commit(ctx); err != nil {
 			slog.Error("AutoDream: failed to commit tx", "error", err)
-			kairos.AutoDreamWorkerTasksTotal.WithLabelValues(kairos.GetMode(), "error").Inc()
 		} else {
 			slog.Info("AutoDream: processed memory file", "file", file)
-			kairos.AutoDreamWorkerTasksTotal.WithLabelValues(kairos.GetMode(), "success").Inc()
 			os.Remove(file)
 		}
 	}
@@ -226,10 +214,7 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 		embedding := make([]float32, 1536)
 		if client != nil {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			start := time.Now()
 			resp, embedErr := client.GenerateEmbedding(ctxTimeout, e.content)
-			duration := time.Since(start).Seconds()
-			kairos.AutoDreamEmbeddingDuration.WithLabelValues(kairos.GetMode()).Observe(duration)
 			cancel()
 			if embedErr == nil && len(resp) == 1536 {
 				embedding = resp
@@ -248,18 +233,10 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 		}
 
 		_, updateErr := w.pool.Exec(ctx, query, embStr, e.id)
-		dbType := "pgvector"
-		if w.pool.IsSQLite() {
-			dbType = "sqlite"
-		}
 		if updateErr != nil {
 			slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
-			kairos.AutoDreamStorageOpsTotal.WithLabelValues(kairos.GetMode(), dbType, "error").Inc()
-			kairos.AutoDreamWorkerTasksTotal.WithLabelValues(kairos.GetMode(), "error").Inc()
 		} else {
 			slog.Debug("AutoDream: consolidated memory", "id", e.id)
-			kairos.AutoDreamStorageOpsTotal.WithLabelValues(kairos.GetMode(), dbType, "success").Inc()
-			kairos.AutoDreamWorkerTasksTotal.WithLabelValues(kairos.GetMode(), "success").Inc()
 		}
 	}
 
