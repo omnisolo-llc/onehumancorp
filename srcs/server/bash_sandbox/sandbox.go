@@ -15,10 +15,17 @@ import (
 )
 
 var (
-	meter         = otel.Meter("ohc_bash_sandbox")
-	execCount     metric.Int64Counter
+	meter          = otel.Meter("ohc_bash_sandbox")
+	execCount      metric.Int64Counter
 	violationCount metric.Int64Counter
-	errorCount    metric.Int64Counter
+	errorCount     metric.Int64Counter
+
+	// Git-internal path protection patterns
+	gitInternalPathPattern = regexp.MustCompile(`(?i)\.git/(hooks|HEAD|objects|refs)`)
+	// gitCommandPattern matches 'git' as a command (at start of line or after shell separators)
+	gitCommandPattern = regexp.MustCompile(`(?i)(^|[;&|])\s*git\b`)
+	// Pattern to detect potential write operations (redirection or common command names)
+	writeOperationPattern = regexp.MustCompile(`(\b(tee|sed|awk|printf|cp|mv|rm|touch|chmod|chown)\b|>>|>)`)
 )
 
 func init() {
@@ -76,6 +83,20 @@ func (s *Sandbox) ValidateContext(ctx context.Context, command string) error {
 			return fmt.Errorf("command violates security policy: matched %s", pattern.String())
 		}
 	}
+
+	// Git-internal path protection (Sandbox Escape Prevention)
+	// We block commands that target git-internal paths if they appear to be write operations,
+	// OR if they are combined with a git invocation (to prevent hook injection/triggering).
+	if gitInternalPathPattern.MatchString(command) {
+		isWrite := writeOperationPattern.MatchString(command)
+		hasGit := gitCommandPattern.MatchString(command)
+
+		if isWrite || hasGit {
+			violationCount.Add(ctx, 1, metric.WithAttributes(attribute.String("pattern", "git_internal_path_violation")))
+			return fmt.Errorf("command violates security policy: detected suspicious access to git-internal paths")
+		}
+	}
+
 	return nil
 }
 

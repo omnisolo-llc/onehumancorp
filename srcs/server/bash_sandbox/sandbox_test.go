@@ -23,6 +23,15 @@ func TestSandboxValidation(t *testing.T) {
 		{"process substitution read", "cat <(ls)", true},
 		{"process substitution write", "echo \"hi\" >(cat)", true},
 		{"zsh expansion", "cat =(ls)", true},
+		{"git hooks escape", "mkdir -p .git/hooks && echo \"evil\" > .git/hooks/pre-commit && git status", true},
+		{"git hooks direct write", "echo \"evil\" > .git/hooks/pre-push", true},
+		{"git HEAD direct write", "echo \"main\" > .git/HEAD", true},
+		{"git safe command", "git status", false},
+		{"git log safe", "git log -n 5", false},
+		{"git internal path mentioned but no git command", "echo .git/hooks is a sensitive directory", false},
+		{"bypass attempt with env var", "P=.git; echo evil > $P/hooks/pre-commit", false},
+		{"bypass attempt with alternative path", "echo evil > ./.git/hooks/pre-push", true},
+		{"multi-command attack", "echo evil > .git/hooks/pre-commit; git status", true},
 	}
 
 	for _, tt := range tests {
