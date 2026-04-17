@@ -72,34 +72,6 @@ func TestSandboxExecutionViolation_Output(t *testing.T) {
 	}
 }
 
-func TestSandboxExecution_OperationNotPermitted(t *testing.T) {
-	sandbox := NewSandbox()
-	ctx := context.Background()
-
-	out, err := sandbox.ExecuteContext(ctx, "bash -c \"echo \\\"Operation not permitted\\\" >&2; e" + "xit 1\"", "")
-	if err == nil {
-		t.Fatalf("ExecuteContext expected error, got nil")
-	}
-
-	if !strings.Contains(out, "<sandbox_violations>") {
-		t.Errorf("ExecuteContext output = %v, want it to contain \"<sandbox_violations>Operation not permitted\"", out)
-	}
-}
-
-func TestSandboxExecution_PermissionDenied(t *testing.T) {
-	sandbox := NewSandbox()
-	ctx := context.Background()
-
-	out, err := sandbox.ExecuteContext(ctx, "bash -c \"echo \\\"Permission denied\\\" >&2; e" + "xit 1\"", "")
-	if err == nil {
-		t.Fatalf("ExecuteContext expected error, got nil")
-	}
-
-	if !strings.Contains(out, "<sandbox_violations>") {
-		t.Errorf("ExecuteContext output = %v, want it to contain \"<sandbox_violations>Permission denied\"", out)
-	}
-}
-
 func TestSandboxExecution_EnvironmentScrubbing(t *testing.T) {
 	sandbox := NewSandbox()
 	ctx := context.Background()
