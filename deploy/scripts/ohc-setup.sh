@@ -22,7 +22,7 @@ if ! command -v docker >/dev/null 2>&1; then echo -e "${PURPLE}Docker is require
 echo -e "${DIM}[1/5] Checking environment configuration...${RESET}"
 if [ ! -f .env ]; then
   echo "Creating default .env file..."
-  cat << 'ENV' > .env
+  cat << 'ENV_FILE' > .env
 # Default Local Config
 LOG_LEVEL=info
 PORT=8080
@@ -32,7 +32,7 @@ OHC_SOURCE_MODE=standalone
 OHC_RUNTIME_DIR=.ohc/runtime
 OHC_MEMORY_DIR=.ohc/runtime/memory
 OHC_STATUS_DIR=.ohc/runtime/status
-ENV
+ENV_FILE
   chmod 0600 .env
 fi
 
@@ -48,10 +48,14 @@ export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=cloud
 bazelisk test //srcs/server/api/...
 
-echo -e "${DIM}[X] Verifying .env setup...${RESET}"
-bash deploy/scripts/ohc-verify-setup.sh || { echo -e "${PURPLE}Verification failed.${RESET}"; false; }
-
 echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
+
+if [ -f deploy/scripts/ohc-verify-setup.sh ]; then
+    bash deploy/scripts/ohc-verify-setup.sh || { echo -e "${PURPLE}Setup verification failed.${RESET}"; false; }
+else
+    echo -e "${DIM}Setup verification script not found, skipping.${RESET}"
+fi
+
 if [ -f deploy/scripts/ohc-audit-day-one.sh ]; then
     bash deploy/scripts/ohc-audit-day-one.sh || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
 else
