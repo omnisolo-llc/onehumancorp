@@ -16,7 +16,7 @@ sequenceDiagram
     participant LLM as Embedding Service (Ada/Minimax)
     participant DB as VectorDB (pgvector)
 
-    Worker->>FS: Write Context to .ohc/runtime/memory/
+    Worker->>FS: Write Context to ${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/
     loop Periodic Consolidation
         AutoDream->>FS: Scan for new session context
         AutoDream->>LLM: Generate 1536-dim Embedding

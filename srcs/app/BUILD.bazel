@@ -40,6 +40,7 @@ filegroup(
             "BUILD.bazel",
             "e2e/**",
             "ios/**",
+            "lib/features/**",
             "lib/*.dart",
             "linux/**",
             "macos/**",
@@ -175,7 +176,6 @@ flutter_test(
     name = "app_desktop_e2e_test",
     srcs = ["test/desktop_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/desktop_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -230,10 +230,7 @@ sh_test(
         "//:node_modules/@playwright/test",
         "//srcs/server:ohc",
     ],
-    tags = [
-        "manual",
-        "requires-network",
-    ],  # browser download may need network on first run
+    tags = ["requires-network"],
 )
 
 # ── Local Development targets ─────────────────────────────────────────────────

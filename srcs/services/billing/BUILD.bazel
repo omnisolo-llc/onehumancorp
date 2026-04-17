@@ -7,7 +7,7 @@ go_library(
     importpath = "ohc/services/billing/cost_auditor",
     visibility = ["//visibility:public"],
     deps = [
-        "//lib/pricing:token_calculator",
+        "//srcs/lib/pricing:token_calculator",
     ],
 )
 go_test(

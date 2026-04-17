@@ -17,7 +17,7 @@
 - Added g3doc-style navigation metadata: `_project.yaml`, `_book.yaml`, `_toc.yaml`.
 - Added an MkDocs site configuration and a GitHub Pages workflow.
 - Replaced local mission-file task tracking with a GitHub-issue policy.
-- Updated runtime defaults from `.agent-task` to `.ohc/runtime`.
+- Updated runtime defaults from `.agent-task` to `${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime`.
 
 ## Residual Cleanup
 

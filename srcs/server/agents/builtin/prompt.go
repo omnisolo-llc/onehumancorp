@@ -47,7 +47,7 @@ You have access to tools: Bash, Read (file_read), Write (file_write), Edit (file
 		prompt += `
 
 # Memory Fallback (Standalone Mode)
-The directories .ohc/memory/auto/ and .ohc/memory/team/ already exist. Write state to them directly for durable memory storage.`
+The directories ${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/auto/ and ${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/team/ already exist. Write state to them directly for durable memory storage.`
 	}
 
 	return prompt

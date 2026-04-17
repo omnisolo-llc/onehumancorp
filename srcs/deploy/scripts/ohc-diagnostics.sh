@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+DEFAULT_RUNTIME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime"
+
 RESET="\033[0m"
 BOLD="\033[1m"
 DIM="\033[2m"
@@ -39,7 +41,7 @@ done
 
 # Verify memory directory
 echo -e "\n${DIM}[Verifying Agent Memory Storage]${RESET}"
-RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
+RUNTIME_DIR="${OHC_RUNTIME_DIR:-${DEFAULT_RUNTIME_DIR}}"
 MEMORY_DIR="${OHC_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
 if [ -d "${RUNTIME_DIR}" ]; then

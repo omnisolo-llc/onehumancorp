@@ -6,7 +6,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/apps/wizard",
     visibility = ["//visibility:private"],
     deps = [
-        "//services/wizard",
+        "//srcs/services/wizard",
     ],
 )
 

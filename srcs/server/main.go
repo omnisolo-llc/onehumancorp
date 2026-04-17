@@ -34,6 +34,16 @@ const defaultAddress = ":8080"
 
 type listenFunc func(string, http.Handler) error
 
+func defaultOHCRuntimeDir() string {
+	if stateDir := os.Getenv("XDG_STATE_HOME"); stateDir != "" {
+		return filepath.Join(stateDir, "ohc", "runtime")
+	}
+	if home := os.Getenv("HOME"); home != "" {
+		return filepath.Join(home, ".local", "state", "ohc", "runtime")
+	}
+	return filepath.Join(os.TempDir(), "ohc", "runtime")
+}
+
 // Retrieves an environment variable or returns a fallback value.
 // Accepts parameters: key, fallback.
 // Returns string.
@@ -265,7 +275,7 @@ func run(now time.Time, listen listenFunc) error {
 		if os.Getenv("OHC_STANDALONE") == "true" {
 			runtimeDir := os.Getenv("OHC_RUNTIME_DIR")
 			if runtimeDir == "" {
-				runtimeDir = filepath.Join(".ohc", "runtime")
+				runtimeDir = defaultOHCRuntimeDir()
 			}
 			if err := os.MkdirAll(runtimeDir, 0700); err != nil {
 				slog.Warn("failed to create standalone runtime directory", "error", err)

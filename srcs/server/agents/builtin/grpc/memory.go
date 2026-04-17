@@ -4,7 +4,7 @@ package agentgrpc
 //
 // Memory entries are stored in-process (with optional Redis/Valkey sharing
 // across agents in the same cluster).  The former filesystem approach
-// (.ohc/runtime/memory/*.json) has been removed; all state lives in the
+// (${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/*.json) has been removed; all state lives in the
 // database or the message bus.
 //
 // The design:
@@ -154,4 +154,3 @@ func sanitizeID(id string) string {
 	}
 	return sb.String()
 }
-

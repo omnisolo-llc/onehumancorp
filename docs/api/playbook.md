@@ -462,7 +462,7 @@ Triggers an immediate AutoDream vector embedding workflow on newly generated age
 ```json
 {
   "target_memory_files": [
-    ".ohc/runtime/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.yml"
+    "${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/2026-04-04T12-00-02Z_kairos_autodream_pipeline.yml"
   ],
   "priority": "high"
 }

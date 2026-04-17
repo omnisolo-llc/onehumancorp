@@ -25,7 +25,7 @@ To initialize your development environment, start with the master setup script:
 - Validates system dependencies (Bazelisk, Docker).
 - Creates a default `.env` configuration file.
 - Verifies builds for both **Cloud Mode** and **Standalone Mode**.
-- Bootstraps your local `.ohc/runtime/` environment directories.
+- Bootstraps your local `${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/` environment directories.
 
 ## 3. The Interactive Environment Wizard
 

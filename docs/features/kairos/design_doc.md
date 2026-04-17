@@ -33,7 +33,7 @@ sequenceDiagram
 - **Goal:** Sub-millisecond realtime communication and background queuing.
 - **Architecture:**
   - Realtime coordination via Redis Pub/Sub in Cloud-Native Mode.
-  - Mocked runtime-memory logging under `.ohc/runtime/memory/mesh_mock.log` for Standalone Mode.
+  - Mocked runtime-memory logging under `${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/mesh_mock.log` for Standalone Mode.
   - Sub-Agent Queue to continuously monitor the Shared Task List DAG and distribute actionable tasks.
 
 ## 4. AutoDream Data Pipeline

@@ -3,6 +3,9 @@
 
 set -e
 
+DEFAULT_STATE_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/ohc"
+DEFAULT_RUNTIME_DIR="${DEFAULT_STATE_ROOT}/runtime"
+
 RESET="\033[0m"
 BOLD="\033[1m"
 DIM="\033[2m"
@@ -29,9 +32,9 @@ PORT=8080
 OHC_MULTITENANT=false
 OHC_HEADLESS=false
 OHC_SOURCE_MODE=standalone
-OHC_RUNTIME_DIR=.ohc/runtime
-OHC_MEMORY_DIR=.ohc/runtime/memory
-OHC_STATUS_DIR=.ohc/runtime/status
+OHC_RUNTIME_DIR=${DEFAULT_RUNTIME_DIR}
+OHC_MEMORY_DIR=${DEFAULT_RUNTIME_DIR}/memory
+OHC_STATUS_DIR=${DEFAULT_RUNTIME_DIR}/status
 ENV
   chmod 0600 .env
 fi
@@ -59,7 +62,7 @@ else
 fi
 
 echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
-RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
+RUNTIME_DIR="${OHC_RUNTIME_DIR:-${DEFAULT_RUNTIME_DIR}}"
 MEMORY_DIR="${OHC_MEMORY_DIR:-${RUNTIME_DIR}/memory}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
 mkdir -p "${MEMORY_DIR}" "${STATUS_DIR}"

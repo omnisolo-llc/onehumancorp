@@ -3,6 +3,8 @@
 
 set -e
 
+DEFAULT_RUNTIME_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime"
+
 RESET="\033[0m"
 BOLD="\033[1m"
 DIM="\033[2m"
@@ -54,8 +56,8 @@ else
     echo -e "${GREEN}✓ OHC_SOURCE_MODE is set to ${OHC_SOURCE_MODE}.${RESET}"
 fi
 
-# Generate telemetry-ready summary
-RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
+echo -e "${DIM}[2/2] Generating Audit Log...${RESET}"
+RUNTIME_DIR="${OHC_RUNTIME_DIR:-${DEFAULT_RUNTIME_DIR}}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
 mkdir -p "${STATUS_DIR}"
 TIMESTAMP=$(date +%s)
@@ -95,3 +97,4 @@ if [ $ISSUES -gt 0 ]; then
 fi
 
 echo -e "${BOLD}${GREEN}   ✅ Audit Complete! All parameters valid.    ${RESET}"
+echo -e "${GREEN}✓ Verification completed successfully. Audit log saved.${RESET}"

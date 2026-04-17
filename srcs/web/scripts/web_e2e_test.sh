@@ -21,11 +21,11 @@ export XDG_CACHE_HOME="${TMPDIR}/xdg-cache"
 mkdir -p "${HOME}" "${XDG_CONFIG_HOME}" "${XDG_CACHE_HOME}"
 
 # Locate the web app build artifacts
-WEB_BUILD_DIR="${RUNFILES}/${WORKSPACE}/apps/web/build"
+WEB_BUILD_DIR="${RUNFILES}/${WORKSPACE}/srcs/web/build"
 
 if [[ ! -d "${WEB_BUILD_DIR}" ]]; then
   echo "ERROR: Web app build directory not found at: ${WEB_BUILD_DIR}" >&2
-  echo "Run 'npm run build' in apps/web first." >&2
+  echo "Run 'npm run build' in srcs/web first." >&2
   exit 1
 fi
 
@@ -62,8 +62,8 @@ if [[ ! -f "${PLAYWRIGHT}" ]]; then
   PLAYWRIGHT="${RUNFILES}/node_modules/@playwright/test/cli.js"
 fi
 
-E2E_SPEC_DIR="${RUNFILES}/${WORKSPACE}/apps/web/e2e"
-CONFIG="${RUNFILES}/${WORKSPACE}/apps/web/playwright.config.ts"
+E2E_SPEC_DIR="${RUNFILES}/${WORKSPACE}/srcs/web/e2e"
+CONFIG="${RUNFILES}/${WORKSPACE}/srcs/web/playwright.config.ts"
 
 echo "Running Playwright E2E tests..."
 node "${PLAYWRIGHT}" test \

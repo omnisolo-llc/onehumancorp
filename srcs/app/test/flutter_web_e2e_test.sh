@@ -30,6 +30,8 @@ is_complete_web_bundle() {
 
   [[ -d "$candidate" ]] || return 1
   [[ -f "$candidate/assets/FontManifest.json" ]] || return 1
+  [[ -f "$candidate/flutter.js" || -f "$candidate/main.dart.js" || -f "$candidate/flutter_bootstrap.js" ]] || return 1
+  [[ -d "$candidate/assets" ]] || return 1
 }
 
 # ── Locate web build artifacts ─────────────────────────────────────────────

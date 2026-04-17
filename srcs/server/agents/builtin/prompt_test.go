@@ -16,17 +16,17 @@ func TestGetSystemPrompt_Standalone(t *testing.T) {
 	// Test Cloud Mode (should not contain fallback)
 	os.Setenv("OHC_STANDALONE", "false")
 	promptCloud := builtin.GetSystemPrompt()
-	if strings.Contains(promptCloud, ".ohc/memory/auto/") {
+	if strings.Contains(promptCloud, "/ohc/runtime/memory/auto/") {
 		t.Errorf("Cloud mode prompt should not contain standalone memory directories")
 	}
 
 	// Test Standalone Mode (should contain fallback)
 	os.Setenv("OHC_STANDALONE", "true")
 	promptStandalone := builtin.GetSystemPrompt()
-	if !strings.Contains(promptStandalone, ".ohc/memory/auto/") {
-		t.Errorf("Standalone mode prompt must contain .ohc/memory/auto/ instructions")
+	if !strings.Contains(promptStandalone, "/ohc/runtime/memory/auto/") {
+		t.Errorf("Standalone mode prompt must contain runtime memory auto instructions")
 	}
-	if !strings.Contains(promptStandalone, ".ohc/memory/team/") {
-		t.Errorf("Standalone mode prompt must contain .ohc/memory/team/ instructions")
+	if !strings.Contains(promptStandalone, "/ohc/runtime/memory/team/") {
+		t.Errorf("Standalone mode prompt must contain runtime memory team instructions")
 	}
 }

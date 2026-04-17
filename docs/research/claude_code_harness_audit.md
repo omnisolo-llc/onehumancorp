@@ -76,10 +76,10 @@ Based on this research, we need to introduce the following missions for the OHC 
 *   **Problem Statement**: OHC Standalone Desktop Mode (SQLite) lacks a robust, file-based memory caching system that mimics the durability of our cloud vector database, leading to slow context retrieval on local machines.
 *   **Design Doc**:
     *   Introduce a local filesystem fallback for the `OHCMemory` interface when running in Standalone Mode.
-    *   On project initialization, automatically create `.ohc/memory/auto/` and `.ohc/memory/team/`.
-    *   Inject a system prompt directive: "The directories `.ohc/memory/...` already exist. Write state to them directly."
+    *   On project initialization, automatically create `${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/auto/` and `${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/team/`.
+    *   Inject a system prompt directive: "The directories `${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/...` already exist. Write state to them directly."
 *   **Implementation Prompt**:
-    1. Modify `deploy/scripts/ohc-mode.sh` or the local startup logic to ensure `.ohc/memory/` directories are created.
+    1. Modify `deploy/scripts/ohc-mode.sh` or the local startup logic to ensure `${XDG_STATE_HOME:-$HOME/.local/state}/ohc/runtime/memory/` directories are created.
     2. Update the agent's base system prompt generator to include the memory directory instructions.
     3. Add tests verifying that the directories are created successfully on startup and that the system prompt contains the correct paths.
 *   **Priority**: P2

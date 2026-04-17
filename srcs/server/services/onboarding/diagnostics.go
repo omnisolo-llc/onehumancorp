@@ -12,6 +12,16 @@ type DiagnosticsResult struct {
 	Details []string
 }
 
+func defaultRuntimeDir() string {
+	if stateDir := os.Getenv("XDG_STATE_HOME"); stateDir != "" {
+		return filepath.Join(stateDir, "ohc", "runtime")
+	}
+	if home := os.Getenv("HOME"); home != "" {
+		return filepath.Join(home, ".local", "state", "ohc", "runtime")
+	}
+	return filepath.Join(os.TempDir(), "ohc", "runtime")
+}
+
 // RunDiagnostics checks for the existence of required Day One paths programmatically.
 func RunDiagnostics() DiagnosticsResult {
 	result := DiagnosticsResult{
@@ -20,7 +30,7 @@ func RunDiagnostics() DiagnosticsResult {
 	}
 	runtimeDir := os.Getenv("OHC_RUNTIME_DIR")
 	if runtimeDir == "" {
-		runtimeDir = filepath.Join(".ohc", "runtime")
+		runtimeDir = defaultRuntimeDir()
 	}
 	memoryDir := os.Getenv("OHC_MEMORY_DIR")
 	if memoryDir == "" {
