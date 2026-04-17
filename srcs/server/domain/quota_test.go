@@ -1,7 +1,6 @@
 package domain
 
 import (
-
 	"testing"
 
 	"github.com/redis/rueidis"
