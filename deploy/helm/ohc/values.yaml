@@ -4,8 +4,6 @@ backend:
   headless: false
   service:
     port: 8080
-  networkPolicy:
-    enabled: true
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -29,11 +27,9 @@ backend:
     requests:
       cpu: "2"
       memory: "2Gi"
-      ephemeralStorage: "10Gi"
     limits:
       cpu: "4"
       memory: "4Gi"
-      ephemeralStorage: "20Gi"
       pods: "20"
   networkPolicy:
     enabled: true
@@ -46,8 +42,6 @@ ohcCore:
   replicas: 1
   service:
     port: 18789
-  networkPolicy:
-    enabled: true
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -88,8 +82,6 @@ chatwoot:
   replicas: 1
   service:
     port: 3000
-  networkPolicy:
-    enabled: true
   autoscaling:
     enabled: true
     minReplicas: 1
@@ -129,8 +121,6 @@ powersync:
     type: ClusterIP
     port: 8081
     targetPort: 8080
-  networkPolicy:
-    enabled: true
   autoscaling:
     enabled: true
     minReplicas: 1
