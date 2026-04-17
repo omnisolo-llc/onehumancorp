@@ -207,7 +207,7 @@ Every component is tool-agnostic. The system uses Middleware Interfaces to allow
 | **Agent Framework** | OpenAI SDK | LangGraph (MIT) or CrewAI (MIT) | MCP (Model Context Protocol) |
 | **K8s Lifecycle** | AWS EKS | Self-hosted K8s / K3s (Apache 2.0) | Kubernetes Operator Pattern |
 | **Code Hosting** | GitHub | Gitea (MIT) or GitLab CE (MIT) | Git MCP Server |
-| **Task Management** | Jira / Linear | Plane (Apache 2.0) or Taiga (MIT) | taskmd / REST API |
+| **Task Management** | Jira / Asana | Plane (Apache 2.0) or Taiga (MIT) | taskmd / REST API |
 | **Identity** | Auth0 | Zitadel (Apache 2.0) or Keycloak (Apache 2.0) | SPIFFE/SPIRE |
 | **Observability** | Datadog | OpenObserve (AGPL) or Grafana (AGPL) | OpenTelemetry |
 
