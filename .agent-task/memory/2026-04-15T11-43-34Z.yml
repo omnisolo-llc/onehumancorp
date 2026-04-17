@@ -1,7 +1,0 @@
-timestamp: "2026-04-15T11-43-34Z"
-topic: ORCHESTRATION_BLUEPRINT_IMPLEMENTATION_DETAILS
-details:
-  - "The Shared Task List database schema requires two tables: shared_tasks_master and task_dependencies_master."
-  - "The AutoDream database schema requires autodream_memories_master with a vector(1536) embedding column."
-  - "The Teammate Mesh exposes two API contracts: POST /api/mesh/broadcast and GET /api/mesh/stream."
-  - "The status transition that triggers AutoDream is COMPLETED."
