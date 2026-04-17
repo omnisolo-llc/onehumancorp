@@ -16,7 +16,6 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
   int _step = 0;
   bool _isApplying = false;
   bool _expertMode = false;
-  bool _expertMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -36,21 +35,7 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
                         Text('Help me fix this', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-                        Row(
-                          children: [
-                            const Text('Expert Mode', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                            Switch(
-                              value: _expertMode,
-                              onChanged: (v) => setState(() => _expertMode = v),
-                            ),
-                          ],
-                        ),
-                      ],
-                    )),
                         Row(
                           children: [
                             const Text('Expert Mode', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
@@ -78,14 +63,6 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                         child: const Text('ERROR: postgresql connection timeout\n  at db.go:142\n  at agent.go:34\nCLI: psql -h localhost -U admin', style: TextStyle(fontFamily: 'monospace', fontSize: 12)),
                       ),
                     ],
-                      if (_expertMode) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          color: Colors.black12,
-                          child: const Text('ERROR: postgresql connection timeout\n  at db.go:142\n  at agent.go:34\nCLI: psql -h localhost -U admin', style: TextStyle(fontFamily: 'monospace', fontSize: 12)),
-                        ),
-                      ],
                     ] else if (_step == 1) ...[
                       const Text('Suggested fix: Restart the agent process and clear local cache to reconnect.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
                       const SizedBox(height: 24),
