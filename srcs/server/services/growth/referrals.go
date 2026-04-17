@@ -34,6 +34,35 @@ func NewReferralTracker() *ReferralTracker {
 	}
 }
 
+func (rt *ReferralTracker) GenerateBulkReferralCodes(userID string, count int) []string {
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+
+	if count <= 0 {
+		return nil
+	}
+
+	bytes := make([]byte, count*4)
+	if _, err := rand.Read(bytes); err != nil {
+		panic("failed to read random bytes: " + err.Error())
+	}
+
+	codes := make([]string, 0, count)
+	for i := 0; i < count; i++ {
+		code := hex.EncodeToString(bytes[i*4 : (i+1)*4])
+		codes = append(codes, code)
+		rt.CodeToUser[code] = userID
+	}
+
+	// Just for consistency with original behavior, store the first generated code
+	// into UserCodes if the user doesn't have one yet.
+	if _, exists := rt.UserCodes[userID]; !exists && count > 0 {
+		rt.UserCodes[userID] = codes[0]
+	}
+
+	return codes
+}
+
 func (rt *ReferralTracker) GenerateReferralCode(userID string) string {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
@@ -51,6 +80,28 @@ func (rt *ReferralTracker) GenerateReferralCode(userID string) string {
 	rt.UserCodes[userID] = code
 	rt.CodeToUser[code] = userID
 	return code
+}
+
+func (rt *ReferralTracker) RecordBulkReferrals(ctx context.Context, codes []string) int {
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+
+	successCount := 0
+	for _, code := range codes {
+		userID, exists := rt.CodeToUser[code]
+		if !exists {
+			continue
+		}
+		rt.UserReferrals[userID]++
+		successCount++
+	}
+
+	rt.TotalReferrals += successCount
+	if referralsCounter != nil && successCount > 0 {
+		referralsCounter.Add(ctx, int64(successCount))
+	}
+
+	return successCount
 }
 
 func (rt *ReferralTracker) RecordReferral(ctx context.Context, code string) bool {
