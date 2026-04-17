@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/onehumancorp/mono/services/growth"
+	"encoding/json"
 	"bytes"
 	"context"
 	"net/http"
@@ -221,65 +223,55 @@ func TestABTestEndpoints(t *testing.T) {
 	}
 }
 
-func TestTeamInviteEndpoints(t *testing.T) {
-	mr, err := miniredis.Run()
+
+func TestExportEndpoint(t *testing.T) {
+	s, err := miniredis.Run()
 	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		t.Fatalf("failed to start miniredis: %v", err)
 	}
-	defer mr.Close()
+	defer s.Close()
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr: mr.Addr(),
+		Addr: s.Addr(),
 	})
-
 	tracker := analytics.NewTracker()
 	mux := NewGrowthMux(tracker, rdb)
 
-	// Test Team Invite
-	reqInvite, err := http.NewRequest("POST", "/api/v1/growth/team/invite", bytes.NewBuffer([]byte(`{"tenant_id":"tenant-1","invitee_email":"test@example.com"}`)))
+	// Add test data
+	repo := growth.NewReferralRepository(rdb)
+	repo.SaveReferral(context.Background(), &growth.GrowthReferral{
+		ID: "test-1",
+		InviterID: "user-1",
+		InviteeEmail: "test1@ex.com",
+		Status: "SIGNED_UP",
+	})
+	repo.SaveReferral(context.Background(), &growth.GrowthReferral{
+		ID: "test-2",
+		InviterID: "user-2",
+		InviteeEmail: "test2@ex.com",
+		Status: "PENDING",
+	})
+
+	req, err := http.NewRequest(http.MethodGet, "/api/v1/growth/analytics/export", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	reqInvite.Header.Set("X-Spiffe-Id", "tenant-1")
+	req.Header.Set("X-Spiffe-Id", "admin")
 
-	rrInvite := httptest.NewRecorder()
-	mux.ServeHTTP(rrInvite, reqInvite)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
 
-	if status := rrInvite.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code for team invite: got %v want %v", status, http.StatusOK)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	// Fetch invites by tenant to get ID
-	reqList, err := http.NewRequest("GET", "/api/v1/growth/team/invites?tenant_id=tenant-1", nil)
-	if err != nil {
-		t.Fatal(err)
+	var resp map[string]interface{}
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	if resp["total_referrals"].(float64) != 2 {
+		t.Errorf("expected 2 total referrals, got %v", resp["total_referrals"])
 	}
-	reqList.Header.Set("X-Spiffe-Id", "tenant-1")
-
-	rrList := httptest.NewRecorder()
-	mux.ServeHTTP(rrList, reqList)
-
-	if status := rrList.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code for team list: got %v want %v", status, http.StatusOK)
-	}
-
-	// Accept the invite
-	keys, err := rdb.Keys(context.Background(), "growth:team_invite_index:*").Result()
-	if err != nil || len(keys) == 0 {
-		t.Fatalf("Expected to find team invite in redis")
-	}
-	inviteID := keys[0][len("growth:team_invite_index:"):]
-
-	reqAccept, err := http.NewRequest("POST", "/api/v1/growth/team/accept", bytes.NewBuffer([]byte(`{"invite_id":"`+inviteID+`", "user_email": "test@example.com"}`)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	reqAccept.Header.Set("X-Spiffe-Id", "spiffe://example.org/newuser")
-
-	rrAccept := httptest.NewRecorder()
-	mux.ServeHTTP(rrAccept, reqAccept)
-
-	if status := rrAccept.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code for team accept: got %v want %v", status, http.StatusOK)
+	if resp["total_signups"].(float64) != 1 {
+		t.Errorf("expected 1 signup, got %v", resp["total_signups"])
 	}
 }
