@@ -6,7 +6,8 @@ cleanup_tmp_files() {
     # Mode-aware cleanup for standalone
     if [ -d "${STATE_DIR}" ]; then
       # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
-      find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
+      # Exclude files containing 'Linear' to preserve orchestrator state
+      find "${STATE_DIR}" -name "*.tmp" ! -name "*Linear*" -type f -mmin +60 -delete 2>/dev/null || true
     fi
   fi
 }
