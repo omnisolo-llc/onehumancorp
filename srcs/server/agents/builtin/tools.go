@@ -3,14 +3,28 @@ package builtin
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/onehumancorp/mono/srcs/server/agents/tools"
 )
 
 // Tool represents an executable function the agent can call.
+// DEPRECATED: Use the interfaces in github.com/onehumancorp/mono/srcs/server/agents/tools instead.
+// This is kept for backwards compatibility during migration.
 type Tool struct {
 	Name        string
 	Description string
 	Parameters  json.RawMessage // JSON Schema of parameters
 	Execute     func(ctx context.Context, args json.RawMessage) (string, error)
+}
+
+// Convert adapts this legacy tool format to the new strongly typed tools.Tool interface.
+func (t *Tool) Convert() tools.Tool {
+	return &tools.LegacyWrapper{
+		NameVal:        t.Name,
+		DescriptionVal: t.Description,
+		ParametersVal:  t.Parameters,
+		ExecuteFn:      t.Execute,
+	}
 }
 
 // AllTools returns the full set of builtin tools available to general-purpose agents.

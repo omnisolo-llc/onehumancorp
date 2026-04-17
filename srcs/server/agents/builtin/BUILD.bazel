@@ -42,6 +42,7 @@ go_library(
     deps = [
         "//srcs/server/bash_sandbox",
         "//srcs/server/utils",
+        "//srcs/server/agents/tools",
         "@com_github_google_uuid//:uuid",
     ],
 )
@@ -58,4 +59,5 @@ go_test(
         "scheduler_benchmark_test.go",
     ],
     embed = [":builtin"],
+    deps = ["@com_github_google_uuid//:uuid"],
 )

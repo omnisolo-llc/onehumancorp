@@ -142,7 +142,7 @@ func TestAllModeStrings(t *testing.T) {
 	}
 }
 
-func TestCorruptAgentLock(t *testing.T) {
+func TestCorruptAgentLockInjection(t *testing.T) {
 	inj := NewInjector(CorruptAgentLock, 1)
 
 	err := inj.Inject(context.Background())
