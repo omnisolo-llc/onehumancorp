@@ -1,0 +1,33 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcp_secret_vault",
+    srcs = [
+        "cloud_adapter.go",
+        "local_adapter.go",
+        "mcp_secret_vault.go",
+        "mcp_tool.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/mcp/mcp_secret_vault",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_zalando_go_keyring//:go-keyring",
+        "@com_github_lib_pq//:pq",
+    ],
+)
+
+go_test(
+    name = "mcp_secret_vault_test",
+    srcs = [
+        "mcp_secret_vault_test.go",
+        "cloud_adapter_test.go",
+        "local_adapter_test.go",
+        "mcp_tool_test.go",
+    ],
+    embed = [":mcp_secret_vault"],
+    deps = [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//mock",
+        "@com_github_zalando_go_keyring//:go-keyring",
+    ],
+)
