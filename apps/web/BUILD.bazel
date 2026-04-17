@@ -1,0 +1,96 @@
+"""Build targets for the React web app (apps/web).
+
+Unit tests are run via Jest using the aspect_rules_js jest binary that is
+resolved from the pnpm workspace lock-file entry for this package.
+
+E2E tests use Playwright and are gated by the "requires-network" tag so that
+Chromium is only downloaded when a network connection is available.
+"""
+
+load("@npm//apps/web:jest/package_json.bzl", jest_bin = "bin")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+# Link all npm packages for this workspace member.
+npm_link_all_packages(name = "node_modules")
+
+# ---------------------------------------------------------------------------
+# Source filegroup
+# ---------------------------------------------------------------------------
+
+filegroup(
+    name = "srcs",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+        ],
+        allow_empty = True,
+    ),
+    visibility = ["//visibility:public"],
+)
+
+# ---------------------------------------------------------------------------
+# Jest unit tests
+# ---------------------------------------------------------------------------
+
+jest_bin.jest_test(
+    name = "jest_tests",
+    args = [
+        "--config",
+        "$(rootpath jest.config.js)",
+        "--no-coverage",
+        "--ci",
+    ],
+    data = [
+        "jest.config.js",
+        "jest.setup.ts",
+        "tsconfig.json",
+        ":node_modules",
+        ":srcs",
+    ] + glob(
+        [
+            "test/**/*.ts",
+            "test/**/*.tsx",
+        ],
+        allow_empty = True,
+    ),
+    env = {
+        "NODE_PATH": "./node_modules",
+    },
+)
+
+# ---------------------------------------------------------------------------
+# E2E tests (Playwright)
+# Requires a running web server and Chromium browser.
+# AI model responses are mocked via page.route() – no external API needed.
+# ---------------------------------------------------------------------------
+
+exports_files([
+    "playwright.config.ts",
+    "scripts/web_e2e_test.sh",
+])
+
+filegroup(
+    name = "e2e_srcs",
+    srcs = glob(
+        ["e2e/**/*.ts"],
+        allow_empty = True,
+    ) + [
+        "playwright.config.ts",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "web_e2e_test",
+    srcs = ["scripts/web_e2e_test.sh"],
+    data = [
+        ":e2e_srcs",
+        "//:node_modules/@playwright/test",
+    ],
+    tags = [
+        "manual",
+        "requires-network",
+    ],
+)
