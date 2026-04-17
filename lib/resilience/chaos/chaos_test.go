@@ -145,3 +145,46 @@ func TestAllModeStrings(t *testing.T) {
 		}
 	}
 }
+
+func TestSetProbability(t *testing.T) {
+	// Test probability 1.0 (always injects)
+	inj := NewInjector(ConnectionDrop, 1)
+	inj.SetProbability(1.0)
+
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error with probability 1.0, got nil")
+	}
+
+	// Test probability 0.0 (never injects)
+	inj = NewInjector(ResourceExhaustion, 1)
+	inj.SetProbability(0.0)
+
+	for i := 0; i < 100; i++ {
+		err = inj.Inject(context.Background())
+		if err != nil {
+			t.Fatalf("expected no error with probability 0.0, got %v", err)
+		}
+	}
+
+	// Test CorruptAgentLock probability
+	inj = NewInjector(CorruptAgentLock, 1)
+	inj.SetProbability(0.0)
+	err = inj.Inject(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error with probability 0.0, got %v", err)
+	}
+
+	// Setup directory for CorruptAgentLock test
+	err = os.MkdirAll(".agent-lock/", 0755)
+	if err != nil {
+		t.Fatalf("failed to create .agent-lock/ directory: %v", err)
+	}
+	defer os.RemoveAll(".agent-lock/") // cleanup after test
+
+	inj.SetProbability(1.0)
+	err = inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error with probability 1.0, got nil")
+	}
+}
