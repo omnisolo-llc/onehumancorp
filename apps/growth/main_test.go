@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -74,58 +73,6 @@ func TestGrowthReferralsAPI(t *testing.T) {
 
 	if status := rrBulkInvite.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code for bulk_invite: got %v want %v", status, http.StatusOK)
-	}
-}
-
-func TestReferralAcceptEndpoint(t *testing.T) {
-	mr, err := miniredis.Run()
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
-	}
-	defer mr.Close()
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr: mr.Addr(),
-	})
-
-	tracker := analytics.NewTracker()
-	mux := NewGrowthMux(tracker, rdb)
-
-	// Create an invite first to get a valid referral
-	reqInvite, err := http.NewRequest("POST", "/api/v1/growth/referrals/invite", bytes.NewBuffer([]byte(`{"invitee_email":"test@example.com"}`)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	reqInvite.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
-
-	rrInvite := httptest.NewRecorder()
-	mux.ServeHTTP(rrInvite, reqInvite)
-
-	if status := rrInvite.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code for invite: got %v want %v", status, http.StatusOK)
-	}
-
-	// Now fetch stats to get the referral ID (or just fetch directly if we could parse)
-	// We'll just rely on the repo since it's the easiest way to get the generated ID
-	keys, err := rdb.Keys(context.Background(), "growth:referral_index:*").Result()
-	if err != nil || len(keys) == 0 {
-		t.Fatalf("Expected to find referral in redis")
-	}
-	// Extract the ID from growth:referral_index:ref-12345
-	refID := keys[0][len("growth:referral_index:"):]
-
-	// Now accept the invite
-	reqAccept, err := http.NewRequest("POST", "/api/v1/growth/referrals/accept", bytes.NewBuffer([]byte(`{"referral_id":"`+refID+`"}`)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	reqAccept.Header.Set("X-Spiffe-Id", "spiffe://example.org/newuser")
-
-	rrAccept := httptest.NewRecorder()
-	mux.ServeHTTP(rrAccept, reqAccept)
-
-	if status := rrAccept.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code for accept: got %v want %v", status, http.StatusOK)
 	}
 }
 

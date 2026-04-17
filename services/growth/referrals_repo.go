@@ -53,48 +53,13 @@ func (r *ReferralRepository) SaveReferral(ctx context.Context, referral *GrowthR
 		if err != nil {
 			return err
 		}
-		err = r.rdb.HSet(ctx, key, referral.ID, data).Err()
-		if err != nil {
-			return err
-		}
-		indexKey := fmt.Sprintf("growth:referral_index:%s", referral.ID)
-		return r.rdb.Set(ctx, indexKey, referral.InviterID, 0).Err()
+		return r.rdb.HSet(ctx, key, referral.ID, data).Err()
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.referrals[referral.ID] = referral
 	return nil
-}
-
-func (r *ReferralRepository) GetReferralByID(ctx context.Context, referralID string) (*GrowthReferral, error) {
-	if r.rdb != nil {
-		indexKey := fmt.Sprintf("growth:referral_index:%s", referralID)
-		inviterID, err := r.rdb.Get(ctx, indexKey).Result()
-		if err != nil {
-			return nil, err
-		}
-
-		key := fmt.Sprintf("growth:referrals:%s", inviterID)
-		dataStr, err := r.rdb.HGet(ctx, key, referralID).Result()
-		if err != nil {
-			return nil, err
-		}
-
-		var ref GrowthReferral
-		if err := json.Unmarshal([]byte(dataStr), &ref); err != nil {
-			return nil, err
-		}
-		return &ref, nil
-	}
-
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	ref, exists := r.referrals[referralID]
-	if !exists {
-		return nil, fmt.Errorf("referral not found")
-	}
-	return ref, nil
 }
 
 func (r *ReferralRepository) GetReferralsByInviter(ctx context.Context, inviterID string) ([]*GrowthReferral, error) {
