@@ -1,7 +1,7 @@
 load("@rules_go//go:def.bzl", "go_test")
 
 go_test(
-    name = "standalone_test",
+    name = "tests_test",
     srcs = ["standalone_test.go"],
     data = ["//srcs/server:standalone_ohc.sh"],
 )
