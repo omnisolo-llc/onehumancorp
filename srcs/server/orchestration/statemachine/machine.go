@@ -22,6 +22,8 @@ const (
 	StateReview            = "REVIEW"
 	StateSuccess           = "SUCCESS"
 	StateTerminatedError   = "TERMINATED_ERROR"
+	StateQueued            = "QUEUED"
+	StateRunning           = "RUNNING"
 
 	StateInProgress = "IN_PROGRESS"
 	StateCompleted  = "COMPLETED"
@@ -36,6 +38,8 @@ var ValidTransitions = map[string][]string{
 	StateExecuting:         {StateReview, StateSuccess, StateTerminatedError},
 	StateWaitingDelegation: {StateExecuting, StateTerminatedError},
 	StateReview:            {StateCompleted, StateSuccess, StateTerminatedError, StateExecuting, StateInProgress},
+	StateQueued:            {StateRunning},
+	StateRunning:           {StateCompleted, StateFailed},
 }
 
 // StateMachine manages state transitions for entities
@@ -122,6 +126,20 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 			}
 			return nil, fmt.Errorf("failed to read current state: %w", err)
 		}
+	} else if entityType == "SUB_AGENT_JOB" {
+		if sm.dbProvider.IsSQLite() {
+			query = `SELECT status FROM sub_agent_queue WHERE id = $1`
+		} else {
+			query = `SELECT status FROM sub_agent_queue WHERE id = $1 FOR UPDATE`
+		}
+
+		err := tx.QueryRow(ctx, query, entityID).Scan(&currentState)
+		if err != nil {
+			if strings.Contains(err.Error(), "no rows in result set") {
+				return nil, fmt.Errorf("entity not found: %s", entityID)
+			}
+			return nil, fmt.Errorf("failed to read current state: %w", err)
+		}
 	} else {
 		return nil, fmt.Errorf("unsupported entity type: %s", entityType)
 	}
@@ -138,6 +156,12 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 	// Update entity state
 	if entityType == "SHARED_TASK" {
 		updateQuery := `UPDATE shared_tasks SET status = $1, agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update entity state: %w", err)
+		}
+	} else if entityType == "SUB_AGENT_JOB" {
+		updateQuery := `UPDATE sub_agent_queue SET status = $1, worker_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
 		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update entity state: %w", err)

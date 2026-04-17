@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"time"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 )
 
 type SubAgentJobHandler func(ctx context.Context, job *SubAgentJob) error
@@ -48,6 +49,9 @@ func (q *QueueManager) StartPolling(ctx context.Context, workerID string, interv
 
 // MarkCompleted updates the job status to COMPLETED
 func (q *QueueManager) MarkCompleted(ctx context.Context, jobID string) error {
+	if q.sm != nil {
+		return q.sm.Transition(ctx, jobID, "SUB_AGENT_JOB", statemachine.StateCompleted, "", "SUBAGENT_COMPLETED")
+	}
 	query := `UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = $1 WHERE id = $2`
 	_, err := q.provider.Exec(ctx, query, time.Now(), jobID)
 	return err
@@ -55,6 +59,9 @@ func (q *QueueManager) MarkCompleted(ctx context.Context, jobID string) error {
 
 // MarkFailed updates the job status to FAILED
 func (q *QueueManager) MarkFailed(ctx context.Context, jobID string, reason string) error {
+	if q.sm != nil {
+		return q.sm.Transition(ctx, jobID, "SUB_AGENT_JOB", statemachine.StateFailed, "", reason)
+	}
 	query := `UPDATE sub_agent_queue SET status = 'FAILED', updated_at = $1 WHERE id = $2` // In a real system, we'd also store the reason
 	_, err := q.provider.Exec(ctx, query, time.Now(), jobID)
 	return err

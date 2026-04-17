@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"strings"
 	"time"
 )
@@ -24,13 +25,24 @@ func TestQueueManagerLoop(t *testing.T) {
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
+	CREATE TABLE IF NOT EXISTS state_machine_transitions (
+		id TEXT PRIMARY KEY,
+		entity_id TEXT NOT NULL,
+		entity_type TEXT NOT NULL,
+		from_state TEXT NOT NULL,
+		to_state TEXT NOT NULL,
+		agent_id TEXT,
+		reason TEXT,
+		occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	);
 	`
 	_, err := provider.Exec(ctx, schema)
 	if err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	qm := NewQueueManager(provider)
+	sm := statemachine.NewStateMachine(provider, nil)
+	qm := NewQueueManager(provider, sm)
 
 	job1 := &SubAgentJob{
 		ID:             "job-1",

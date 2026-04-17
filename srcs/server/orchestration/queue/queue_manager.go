@@ -10,6 +10,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -35,11 +36,12 @@ type SubAgentJob struct {
 
 type QueueManager struct {
 	provider db.Provider
+	sm       *statemachine.StateMachine
 	mu       sync.Mutex
 }
 
-func NewQueueManager(provider db.Provider) *QueueManager {
-	return &QueueManager{provider: provider}
+func NewQueueManager(provider db.Provider, sm *statemachine.StateMachine) *QueueManager {
+	return &QueueManager{provider: provider, sm: sm}
 }
 
 func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
@@ -69,6 +71,14 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 		job.ID, job.OrganizationID, job.ParentTaskID, string(payloadBytes),
 		"QUEUED", job.CreatedAt, job.UpdatedAt,
 	)
+	if err == nil && q.sm != nil {
+		auditQuery := `
+			INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
+		`
+		transitionID := "t-" + job.ID
+		_, _ = q.provider.Exec(ctx, auditQuery, transitionID, job.ID, "SUB_AGENT_JOB", "", "QUEUED", "", "SUBAGENT_SPAWNED")
+	}
 	if err == nil {
 		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Inc()
 	}
@@ -81,91 +91,102 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 	if q.provider.IsSQLite() {
 		q.mu.Lock()
 		defer q.mu.Unlock()
+	}
 
-		query := `
+	tx, err := q.provider.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if q.provider.IsSQLite() {
+		query = `
 			SELECT id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
 			FROM sub_agent_queue
 			WHERE status = 'QUEUED'
 			ORDER BY created_at ASC
 			LIMIT 1
 		`
-		var j SubAgentJob
-		var payloadStr string
-		var wID sql.NullString
-		var createdAt, updatedAt string
+	} else {
+		query = `
+			SELECT id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
+			FROM sub_agent_queue
+			WHERE status = 'QUEUED'
+			ORDER BY created_at ASC
+			FOR UPDATE SKIP LOCKED
+			LIMIT 1
+		`
+	}
 
-		row := q.provider.QueryRow(ctx, query)
-		err := row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt)
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		} else if err != nil {
+	var j SubAgentJob
+	var payloadStr string
+	var wID sql.NullString
+	var createdAtStr, updatedAtStr string
+	var createdAt, updatedAt time.Time
+
+	row := tx.QueryRow(ctx, query)
+	if q.provider.IsSQLite() {
+		err = row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAtStr, &updatedAtStr)
+	} else {
+		err = row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt)
+	}
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	var broadcastFunc func()
+	if q.sm != nil {
+		broadcastFunc, err = q.sm.TransitionWithTx(ctx, tx, j.ID, "SUB_AGENT_JOB", statemachine.StateRunning, workerID, "SUBAGENT_EXECUTING")
+		if err != nil {
 			return nil, err
 		}
-
+	} else {
 		updateQuery := `
 			UPDATE sub_agent_queue
 			SET status = 'RUNNING', worker_id = $1, updated_at = $2
 			WHERE id = $3
 		`
-		_, err = q.provider.Exec(ctx, updateQuery, workerID, time.Now().Format(time.RFC3339Nano), j.ID)
+		var updatedTime interface{}
+		if q.provider.IsSQLite() {
+			updatedTime = time.Now().Format(time.RFC3339Nano)
+		} else {
+			updatedTime = time.Now()
+		}
+		_, err = tx.Exec(ctx, updateQuery, workerID, updatedTime, j.ID)
 		if err != nil {
 			return nil, err
 		}
+	}
 
-		if wID.Valid {
-			j.WorkerID = &wID.String
-		}
-		j.Status = "RUNNING"
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
 
-		if t, err := time.Parse(time.RFC3339Nano, createdAt); err == nil {
+	if broadcastFunc != nil {
+		broadcastFunc()
+	}
+
+	if wID.Valid {
+		j.WorkerID = &wID.String
+	}
+	j.WorkerID = &workerID // override since we just assigned it
+	j.Status = "RUNNING"
+
+	if q.provider.IsSQLite() {
+		if t, err := time.Parse(time.RFC3339Nano, createdAtStr); err == nil {
 			j.CreatedAt = t
 		}
-		if t, err := time.Parse(time.RFC3339Nano, updatedAt); err == nil {
-			j.UpdatedAt = t
-		}
-
-		json.Unmarshal([]byte(payloadStr), &j.Payload)
-		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Dec()
-		return &j, nil
+		j.UpdatedAt = time.Now()
 	} else {
-		// Postgres mode
-		query := `
-			UPDATE sub_agent_queue
-			SET status = 'RUNNING', worker_id = $1, updated_at = $2
-			WHERE id = (
-				SELECT id
-				FROM sub_agent_queue
-				WHERE status = 'QUEUED'
-				ORDER BY created_at ASC
-				FOR UPDATE SKIP LOCKED
-				LIMIT 1
-			)
-			RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
-		`
-		var j SubAgentJob
-		var payloadStr string
-		var wID sql.NullString
-		var createdAt, updatedAt time.Time
-
-		err := q.provider.QueryRow(ctx, query, workerID, time.Now()).Scan(
-			&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt,
-		)
-
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		} else if err != nil {
-			return nil, err
-		}
-
-		if wID.Valid {
-			j.WorkerID = &wID.String
-		}
-		j.Status = "RUNNING"
 		j.CreatedAt = createdAt
-		j.UpdatedAt = updatedAt
-
-		json.Unmarshal([]byte(payloadStr), &j.Payload)
-		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Dec()
-		return &j, nil
+		j.UpdatedAt = time.Now()
 	}
+
+	json.Unmarshal([]byte(payloadStr), &j.Payload)
+	kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Dec()
+	return &j, nil
 }
