@@ -1,6 +1,4 @@
 #!/bin/bash
-# OHC Premium Setup Verification
-
 set -e
 
 RESET="\033[0m"
@@ -10,88 +8,49 @@ BLUE="\033[38;5;39m"
 CYAN="\033[38;5;87m"
 GREEN="\033[38;5;120m"
 PURPLE="\033[38;5;141m"
-RED="\033[38;5;196m"
 
-echo -e "${BOLD}${BLUE}===============================================${RESET}"
-echo -e "${BOLD}${CYAN}   🔍 OHC Environment Audit                    ${RESET}"
-echo -e "${BOLD}${BLUE}===============================================${RESET}"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo -e "${BOLD}${CYAN}      OHC: Interactive Setup Verification             ${RESET}"
+echo -e "${BOLD}${BLUE}======================================================${RESET}"
+echo ""
 
 if [ ! -f .env ]; then
-  echo -e "${BOLD}${RED}ERROR: .env file missing.${RESET}"
-  exit 1
+    echo -e "${PURPLE}✗ .env file not found. Run ohc-setup.sh first.${RESET}"
+    exit 1
 fi
 
-# Load env safely
+echo -e "${DIM}[1/2] Verifying .env configuration...${RESET}"
+
+# Load env variables (ignore error if any)
 set -a
 source .env
 set +a
 
-ISSUES=0
+ERRORS=0
 
-echo -e "${DIM}Auditing parameters...${RESET}"
+if [ -z "$PORT" ]; then echo -e "  ${PURPLE}✗ PORT is missing${RESET}"; ERRORS=$((ERRORS+1)); else echo -e "  ${GREEN}✓ PORT=${PORT}${RESET}"; fi
+if [ -z "$LOG_LEVEL" ]; then echo -e "  ${PURPLE}✗ LOG_LEVEL is missing${RESET}"; ERRORS=$((ERRORS+1)); else echo -e "  ${GREEN}✓ LOG_LEVEL=${LOG_LEVEL}${RESET}"; fi
+if [ -z "$OHC_SOURCE_MODE" ]; then echo -e "  ${PURPLE}✗ OHC_SOURCE_MODE is missing${RESET}"; ERRORS=$((ERRORS+1)); else echo -e "  ${GREEN}✓ OHC_SOURCE_MODE=${OHC_SOURCE_MODE}${RESET}"; fi
 
-# Check PORT
-if [ -z "$PORT" ]; then
-    echo -e "${RED}✗ PORT is not set.${RESET}"
-    ISSUES=$((ISSUES+1))
-else
-    echo -e "${GREEN}✓ PORT is set to ${PORT}.${RESET}"
+if [ $ERRORS -gt 0 ]; then
+    echo -e "${PURPLE}✗ Configuration validation failed.${RESET}"
+    exit 1
 fi
 
-# Check LOG_LEVEL
-if [ -z "$LOG_LEVEL" ]; then
-    echo -e "${RED}✗ LOG_LEVEL is not set.${RESET}"
-    ISSUES=$((ISSUES+1))
-else
-    echo -e "${GREEN}✓ LOG_LEVEL is set to ${LOG_LEVEL}.${RESET}"
-fi
-
-# Check OHC_SOURCE_MODE
-if [ -z "$OHC_SOURCE_MODE" ]; then
-    echo -e "${RED}✗ OHC_SOURCE_MODE is not set.${RESET}"
-    ISSUES=$((ISSUES+1))
-else
-    echo -e "${GREEN}✓ OHC_SOURCE_MODE is set to ${OHC_SOURCE_MODE}.${RESET}"
-fi
-
-# Generate telemetry-ready summary
+echo -e "${DIM}[2/2] Generating Audit Log...${RESET}"
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
 STATUS_DIR="${OHC_STATUS_DIR:-${RUNTIME_DIR}/status}"
 mkdir -p "${STATUS_DIR}"
 TIMESTAMP=$(date +%s)
 
-YAML_FILE="${STATUS_DIR}/audit-${TIMESTAMP}.yml"
-cat << YAMLEOF > "${YAML_FILE}"
+cat << STAT > "${STATUS_DIR}/${TIMESTAMP}-verify.yml"
 type: audit
 metadata:
-  role: Environment Verification
+  role: Setup Verification
   timestamp: ${TIMESTAMP}
-health: $(if [ $ISSUES -eq 0 ]; then echo "ok"; else echo "degraded"; fi)
+health: ok
 observations:
-  - Checked .env file
-  - Found ${ISSUES} issues
-YAMLEOF
+  - .env configuration validated successfully.
+STAT
 
-MD_FILE="${STATUS_DIR}/audit-${TIMESTAMP}.md"
-cat << MDEOF > "${MD_FILE}"
-# OHC Environment Audit
-
-**Timestamp:** ${TIMESTAMP}
-**Health:** $(if [ $ISSUES -eq 0 ]; then echo "OK"; else echo "DEGRADED"; fi)
-
-## Observations
-- Checked \`.env\` file
-- Found ${ISSUES} issues
-
-## Configuration Values
-- **PORT:** ${PORT:-Unset}
-- **LOG_LEVEL:** ${LOG_LEVEL:-Unset}
-- **OHC_SOURCE_MODE:** ${OHC_SOURCE_MODE:-Unset}
-MDEOF
-
-if [ $ISSUES -gt 0 ]; then
-  echo -e "${BOLD}${PURPLE}Audit failed with ${ISSUES} issues.${RESET}"
-  exit 1
-fi
-
-echo -e "${BOLD}${GREEN}   ✅ Audit Complete! All parameters valid.    ${RESET}"
+echo -e "${GREEN}✓ Verification completed successfully. Audit log saved.${RESET}"

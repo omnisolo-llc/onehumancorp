@@ -30,6 +30,8 @@ is_complete_web_bundle() {
 
   [[ -d "$candidate" ]] || return 1
   [[ -f "$candidate/assets/FontManifest.json" ]] || return 1
+  [[ -f "$candidate/assets/fonts/MaterialIcons-Regular.otf" ]] || return 1
+  grep -q 'MaterialIcons' "$candidate/assets/FontManifest.json"
 }
 
 # ── Locate web build artifacts ─────────────────────────────────────────────
