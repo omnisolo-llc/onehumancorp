@@ -9,10 +9,14 @@ go_library(
         "federation.go",
         "organization.go",
         "sre.go",
+        "quota.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/domain",
     visibility = ["//visibility:public"],
-    deps = ["@in_gopkg_yaml_v3//:yaml_v3"],
+    deps = [
+        "@in_gopkg_yaml_v3//:yaml_v3",
+        "@com_github_redis_rueidis//:rueidis",
+    ],
 )
 
 go_test(
@@ -24,6 +28,10 @@ go_test(
         "federation_test.go",
         "organization_test.go",
         "sre_test.go",
+        "quota_test.go",
     ],
     embed = [":domain"],
+    deps = [
+        "@com_github_redis_rueidis//:rueidis",
+    ],
 )
