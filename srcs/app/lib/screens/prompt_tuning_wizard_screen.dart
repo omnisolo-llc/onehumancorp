@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/glass_card.dart';
+import 'dart:ui';
 
 class PromptTuningState {
   final int step;
@@ -62,20 +63,32 @@ class PromptTuningNotifier extends Notifier<PromptTuningState> {
   }
 
   void updateTone(String t) => state = state.copyWith(tone: t);
-  void addFocusTag(String tag) => state = state.copyWith(focusTags: [...state.focusTags, tag]);
-  void removeFocusTag(String tag) => state = state.copyWith(focusTags: state.focusTags.where((t) => t != tag).toList());
-  void addExample(String q, String a) => state = state.copyWith(examples: [...state.examples, {'q': q, 'a': a}]);
-  void toggleRawPrompt() => state = state.copyWith(showRawPrompt: !state.showRawPrompt);
+  void addFocusTag(String tag) =>
+      state = state.copyWith(focusTags: [...state.focusTags, tag]);
+  void removeFocusTag(String tag) => state = state.copyWith(
+    focusTags: state.focusTags.where((t) => t != tag).toList(),
+  );
+  void addExample(String q, String a) => state = state.copyWith(
+    examples: [
+      ...state.examples,
+      {'q': q, 'a': a},
+    ],
+  );
+  void toggleRawPrompt() =>
+      state = state.copyWith(showRawPrompt: !state.showRawPrompt);
 
   void save(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Your agent has been updated ✓")));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Your agent has been updated ✓")),
+    );
     GoRouter.of(context).go('/dashboard');
   }
 }
 
-final promptTuningProvider = NotifierProvider<PromptTuningNotifier, PromptTuningState>(() {
-  return PromptTuningNotifier();
-});
+final promptTuningProvider =
+    NotifierProvider<PromptTuningNotifier, PromptTuningState>(() {
+      return PromptTuningNotifier();
+    });
 
 class PromptTuningWizardScreen extends ConsumerWidget {
   final String agentId;
@@ -87,117 +100,293 @@ class PromptTuningWizardScreen extends ConsumerWidget {
     final notifier = ref.read(promptTuningProvider.notifier);
 
     return Scaffold(
-      appBar: AppBar(title: Text('Tune Agent: $agentId')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 800),
-          child: GlassCard(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: SingleChildScrollView(
-                child: Wrap(
-                  spacing: 24,
-                  runSpacing: 24,
-                  children: [
-                    Container(
-                      width: 350,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Prompt Tuning', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 16),
-                          if (state.step == 0) ...[
-                            const Text('Personality & tone', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
-                            ...['Formal', 'Friendly', 'Concise', 'Detailed', 'Custom'].map((t) => RadioListTile<String>(
-                              title: Text(t, style: const TextStyle(fontFamily: 'Inter')),
-                              value: t,
-                              groupValue: state.tone,
-                              onChanged: (val) { if (val != null) notifier.updateTone(val); },
-                            )),
-                          ] else if (state.step == 1) ...[
-                            const Text('Domain focus', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
-                            Wrap(
-                              spacing: 8.0,
-                              children: ['Only discuss business', 'Avoid competitors', 'Always reply in Spanish'].map((tag) => ChoiceChip(
-                                label: Text(tag, style: const TextStyle(fontFamily: 'Inter')),
-                                selected: state.focusTags.contains(tag),
-                                onSelected: (selected) {
-                                  if (selected) {
-                                    notifier.addFocusTag(tag);
-                                  } else {
-                                    notifier.removeFocusTag(tag);
-                                  }
-                                },
-                              )).toList(),
+      appBar: AppBar(
+        title: Text(
+          'Tune Agent: $agentId',
+          style: const TextStyle(
+            fontFamily: 'Outfit',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      extendBodyBehindAppBar: true,
+      backgroundColor: Colors.transparent,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF0D0D1A), Color(0xFF1A1A33)],
+          ),
+        ),
+        child: SafeArea(
+          child: Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: ClipRRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.compose(
+                      outer: ColorFilter.matrix(const <double>[
+                        1.787,
+                        -0.715,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        1.285,
+                        -0.072,
+                        0,
+                        0,
+                        -0.213,
+                        -0.715,
+                        1.928,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                      ]),
+                      inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    ),
+                    child: Stepper(
+                      type: StepperType.vertical,
+                      currentStep: state.step,
+                      onStepContinue: () {
+                        if (state.step < 3) {
+                          notifier.nextStep();
+                        } else {
+                          notifier.save(context);
+                        }
+                      },
+                      onStepCancel: () {
+                        if (state.step > 0) {
+                          notifier.previousStep();
+                        }
+                      },
+                      steps: [
+                        Step(
+                          title: const Text(
+                            'Personality & Tone',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.bold,
                             ),
-                          ] else if (state.step == 2) ...[
-                            const Text('Example interactions', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
-                            const Text('Provide up to 3 Q&A pairs.'),
-                            ElevatedButton(
-                              onPressed: state.examples.length < 3 ? () => notifier.addExample("Sample Q", "Sample A") : null,
-                              child: const Text('Add Example'),
-                            ),
-                            ...state.examples.map((ex) => ListTile(title: Text(ex['q'] ?? ''), subtitle: Text(ex['a'] ?? ''))),
-                          ] else if (state.step == 3) ...[
-                             const Text('Review & Save', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
-                             const Text('Ready to update the agent?'),
-                          ],
-                          const SizedBox(height: 16),
-                          Row(
+                          ),
+                          isActive: state.step >= 0,
+                          content: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              if (state.step > 0)
-                                TextButton(onPressed: notifier.previousStep, child: const Text('Back')),
-                              const Expanded(child: SizedBox()),
-                              ElevatedButton(
-                                onPressed: () {
-                                  if (state.step < 3) {
-                                    notifier.nextStep();
-                                  } else {
-                                    notifier.save(context);
-                                  }
-                                },
-                                child: Text(state.step == 3 ? 'Save' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                              ...[
+                                'Formal',
+                                'Friendly',
+                                'Concise',
+                                'Detailed',
+                                'Custom',
+                              ].map(
+                                (t) => RadioListTile<String>(
+                                  title: Text(
+                                    t,
+                                    style: const TextStyle(fontFamily: 'Inter'),
+                                  ),
+                                  value: t,
+                                  groupValue: state.tone,
+                                  onChanged: (val) {
+                                    if (val != null) notifier.updateTone(val);
+                                  },
+                                ),
                               ),
                             ],
-                          )
+                          ),
+                        ),
+                        Step(
+                          title: const Text(
+                            'Domain Focus',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          isActive: state.step >= 1,
+                          content: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Wrap(
+                                spacing: 8.0,
+                                children:
+                                    [
+                                          'Only discuss business',
+                                          'Avoid competitors',
+                                          'Always reply in Spanish',
+                                        ]
+                                        .map(
+                                          (tag) => ChoiceChip(
+                                            label: Text(
+                                              tag,
+                                              style: const TextStyle(
+                                                fontFamily: 'Inter',
+                                              ),
+                                            ),
+                                            selected: state.focusTags.contains(
+                                              tag,
+                                            ),
+                                            onSelected: (selected) {
+                                              if (selected) {
+                                                notifier.addFocusTag(tag);
+                                              } else {
+                                                notifier.removeFocusTag(tag);
+                                              }
+                                            },
+                                          ),
+                                        )
+                                        .toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Step(
+                          title: const Text(
+                            'Example Interactions',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          isActive: state.step >= 2,
+                          content: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Provide up to 3 Q&A pairs.',
+                                style: TextStyle(fontFamily: 'Inter'),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton(
+                                onPressed: state.examples.length < 3
+                                    ? () => notifier.addExample(
+                                        "Sample Q",
+                                        "Sample A",
+                                      )
+                                    : null,
+                                child: const Text(
+                                  'Add Example',
+                                  style: TextStyle(fontFamily: 'Inter'),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ...state.examples.map(
+                                (ex) => ListTile(
+                                  title: Text(ex['q'] ?? ''),
+                                  subtitle: Text(ex['a'] ?? ''),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Step(
+                          title: const Text(
+                            'Review & Save',
+                            style: TextStyle(
+                              fontFamily: 'Outfit',
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          isActive: state.step >= 3,
+                          content: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Ready to update the agent?',
+                                style: TextStyle(fontFamily: 'Inter'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Live Preview',
+                                style: TextStyle(
+                                  fontFamily: 'Outfit',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: notifier.toggleRawPrompt,
+                                child: Text(
+                                  state.showRawPrompt
+                                      ? 'Hide raw prompt'
+                                      : 'Edit raw prompt',
+                                  style: const TextStyle(fontFamily: 'Inter'),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          Expanded(
+                            child: state.showRawPrompt
+                                ? SingleChildScrollView(
+                                    child: TextField(
+                                      maxLines: null,
+                                      controller: TextEditingController(
+                                        text: state.generatePrompt(),
+                                      ),
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        color: Colors.white,
+                                      ),
+                                      decoration: const InputDecoration(
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    ),
+                                  )
+                                : Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.black26,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: Colors.white12),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        "Chat sandbox placeholder",
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                          ),
                         ],
                       ),
                     ),
-                    Container(
-                      width: 350,
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white24),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              spacing: 8,
-                              children: [
-                                const Text('Live Preview', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-                                TextButton(
-                                  onPressed: notifier.toggleRawPrompt,
-                                  child: Text(state.showRawPrompt ? 'Hide raw prompt' : 'Edit raw prompt'),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            if (state.showRawPrompt)
-                              Text(state.generatePrompt(), style: const TextStyle(fontFamily: 'Inter', fontSize: 14)),
-                            if (!state.showRawPrompt)
-                              Container(height: 200, child: const Center(child: Text("Chat sandbox placeholder"))),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
