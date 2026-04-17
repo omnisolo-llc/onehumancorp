@@ -33,7 +33,6 @@ nav:
       - developer/index.md
   - API:
       - api/index.md
-      - Kairos Orchestrator: api/kairos.md
   - Features:
       - features/index.md
   - Walkthroughs:
