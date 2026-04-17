@@ -1,5 +1,18 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+### Cloud Scaling Improvements
+- Architect Hybrid Integrations & State Synchronization protocols.
+- Implement Universal Transport Bridge for Agent Harness and Standalone-to-Cloud MCP Tool Discovery.
+- Implement Hybrid CRDT State Synchronization via MCP.
+- Implement Internal Sync Daemon for Hybrid MCP RAG.
+- Implement KAIROS Shared Task List & Decomposition State Machine.
+
+### Privacy/Offline Improvements
+- Enforce organization_id scoping for UserRepository and Store operations.
+- Implement Hybrid Privacy Audit and Compliance Guardrails.
+- Enforce Glassmorphism mandate in onboarding UI and implement Growth Viral Loops.
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 ### Cloud Scaling Improvements
 - Architect Cross-Mode Database Schema Syncer via MCP.

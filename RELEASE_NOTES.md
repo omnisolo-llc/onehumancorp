@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+- Scaling (Cloud): Architect Hybrid Integrations & State Synchronization protocols, Implement Universal Transport Bridge for Agent Harness and Standalone-to-Cloud MCP Tool Discovery, Implement Hybrid CRDT State Synchronization via MCP, Implement Internal Sync Daemon for Hybrid MCP RAG, Implement KAIROS Shared Task List & Decomposition State Machine.
+- Privacy/Offline (Standalone): Enforce organization_id scoping for UserRepository and Store operations, Implement Hybrid Privacy Audit and Compliance Guardrails, Enforce Glassmorphism mandate in onboarding UI and implement Growth Viral Loops.
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 - Scaling (Cloud): Architect Cross-Mode Database Schema Syncer via MCP, Optimize PopMessages latency.
 - Privacy/Offline (Standalone): Fix PII redaction for nested slog groups, Bulk Team Invite UI in Flutter App.
