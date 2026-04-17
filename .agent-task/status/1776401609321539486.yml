@@ -1,6 +1,0 @@
-agent: Jules
-status: HEALTHY
-metrics:
-  docs_updated: 2
-  tests_passed: true
-  mode: cloud
