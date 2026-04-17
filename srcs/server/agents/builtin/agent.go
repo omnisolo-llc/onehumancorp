@@ -43,7 +43,6 @@ func SpawnTask(ctx context.Context, description, prompt, workDir string, cfg Age
 	}
 
 	outputFile := taskOutputPath(id)
-	ctx = context.WithValue(ctx, workDirContextKey, workDir)
 	ctx, cancel := context.WithCancel(ctx)
 
 	state := newTaskState(id, description, prompt, workDir, outputFile, "", cancel)
