@@ -3,7 +3,6 @@ package cost_auditor
 import (
 	"context"
 	"fmt"
-	"math"
 	"ohc/lib/pricing/token_calculator"
 	"sync"
 )
@@ -25,6 +24,7 @@ type CostAuditor struct {
 	mu               sync.Mutex
 	config           token_calculator.CostConfig
 	agentCosts       map[string]float64
+	agentBudgets     map[string]float64
 	totalCost        float64
 	cachingSavings   float64
 	storageSavings   float64
@@ -34,8 +34,9 @@ type CostAuditor struct {
 
 func NewCostAuditor(config token_calculator.CostConfig) *CostAuditor {
 	return &CostAuditor{
-		config:     config,
-		agentCosts: make(map[string]float64),
+		config:       config,
+		agentCosts:   make(map[string]float64),
+		agentBudgets: make(map[string]float64),
 	}
 }
 func (a *CostAuditor) RecordEvent(ctx context.Context, event AuditEvent) float64 {
@@ -49,11 +50,25 @@ func (a *CostAuditor) RecordEvent(ctx context.Context, event AuditEvent) float64
 func (a *CostAuditor) RecordCacheHit(ctx context.Context, event AuditEvent) float64 {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	actualCost := token_calculator.CalculateCost(event.InputTokens, event.OutputTokens, event.CachedInputTokens, event.LocalEmbeddingTokens, a.config)
-	uncachedCost := token_calculator.CalculateCost(event.InputTokens+event.CachedInputTokens, event.OutputTokens, 0, event.LocalEmbeddingTokens, a.config)
-	savedCost := math.Round((uncachedCost-actualCost)*10000) / 10000
+	savedCost := token_calculator.CalculatePromptCacheSavings(event.InputTokens, event.CachedInputTokens, a.config)
 	a.cachingSavings += savedCost
 	return savedCost
+}
+
+func (a *CostAuditor) SetAgentBudget(agentID string, budget float64) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.agentBudgets[agentID] = budget
+}
+
+func (a *CostAuditor) CheckAgentBudget(agentID string) bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	budget, ok := a.agentBudgets[agentID]
+	if !ok {
+		return true // No budget set means ok
+	}
+	return a.agentCosts[agentID] <= budget
 }
 func (a *CostAuditor) GetAgentCost(agentID string) float64 {
 	a.mu.Lock()
