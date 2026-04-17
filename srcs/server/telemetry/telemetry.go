@@ -215,7 +215,12 @@ func redactSlogAttr(a slog.Attr) slog.Attr {
 		attrs := a.Value.Group()
 		var redactedAttrs []any
 		for _, attr := range attrs {
-			redactedAttrs = append(redactedAttrs, RedactInterfacePII(attr))
+			redactedInterface := RedactInterfacePII(attr)
+			if rAttr, ok := redactedInterface.(slog.Attr); ok {
+				redactedAttrs = append(redactedAttrs, rAttr)
+			} else {
+				redactedAttrs = append(redactedAttrs, redactedInterface)
+			}
 		}
 		return slog.Group(a.Key, redactedAttrs...)
 	}
@@ -230,6 +235,9 @@ func redactSlogAttr(a slog.Attr) slog.Attr {
 
 func redactSlogValue(v slog.Value) slog.Value {
 	if v.Kind() == slog.KindGroup {
+		if len(v.Group()) == 0 {
+			return v
+		}
 		attrs := v.Group()
 		var redactedAttrs []slog.Attr
 		for _, attr := range attrs {

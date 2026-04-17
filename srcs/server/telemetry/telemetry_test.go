@@ -791,3 +791,69 @@ func TestInitTelemetry_StandaloneOptIn_EnvVar(t *testing.T) {
 	}
 	cleanup()
 }
+
+func TestDeepNestedSlogGroup(t *testing.T) {
+	attr := slog.Group("l1",
+		slog.Group("l2",
+			slog.String("email", "nested@example.com"),
+		),
+	)
+	res := RedactInterfacePII(attr).(slog.Attr)
+	l1 := res.Value.Group()
+	if len(l1) == 0 {
+		t.Fatalf("Empty l1")
+	}
+	l2 := l1[0].Value.Group()
+	if len(l2) == 0 {
+		t.Fatalf("Empty l2")
+	}
+	if l2[0].Value.String() != "[REDACTED_EMAIL]" {
+		t.Fatalf("Expected [REDACTED_EMAIL], got %v", l2[0].Value.String())
+	}
+}
+
+func TestDeepNestedSlogGroupValue(t *testing.T) {
+	val := slog.GroupValue(
+		slog.Group("l2",
+			slog.String("email", "nested@example.com"),
+		),
+	)
+	res := RedactInterfacePII(val).(slog.Value)
+	l1 := res.Group()
+	if len(l1) == 0 {
+		t.Fatalf("Empty l1")
+	}
+	l2 := l1[0].Value.Group()
+	if len(l2) == 0 {
+		t.Fatalf("Empty l2")
+	}
+	if l2[0].Value.String() != "[REDACTED_EMAIL]" {
+		t.Fatalf("Expected [REDACTED_EMAIL], got %v", l2[0].Value.String())
+	}
+}
+
+func TestDeepNestedSlogGroup_Empty(t *testing.T) {
+	attr := slog.Group("l1")
+	res := RedactInterfacePII(attr).(slog.Attr)
+	l1 := res.Value.Group()
+	if len(l1) != 0 {
+		t.Fatalf("Expected empty l1")
+	}
+}
+
+func TestDeepNestedSlogGroupValue_Empty(t *testing.T) {
+	val := slog.GroupValue()
+	res := RedactInterfacePII(val).(slog.Value)
+	l1 := res.Group()
+	if len(l1) != 0 {
+		t.Fatalf("Expected empty l1")
+	}
+}
+
+func TestRedactInterfacePII_SlogAttr_EmptyAttr(t *testing.T) {
+	attr := slog.Attr{}
+	res := RedactInterfacePII(attr).(slog.Attr)
+	if !res.Equal(slog.Attr{}) {
+		t.Fatalf("Expected empty attr, got %v", res)
+	}
+}
