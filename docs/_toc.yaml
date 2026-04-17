@@ -29,3 +29,5 @@ toc:
     path: /docs/api/edge_llm_offloading_api.md
   - title: Edge LLM Handoff Visual Walkthrough
     path: /docs/walkthroughs/edge_llm_handoff_walkthrough.md
+  - title: Sandbox Isolation Harness Walkthrough
+    path: /docs/walkthroughs/sandbox_isolation_harness.md
