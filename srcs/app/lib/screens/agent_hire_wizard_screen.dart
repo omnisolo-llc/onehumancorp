@@ -34,6 +34,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   bool _showAdvanced = false;
   final _endpointUrlController = TextEditingController();
   final _tokenLimitController = TextEditingController();
+  final _apiKeyController = TextEditingController();
+  bool _obscureKey = true;
 
   bool _isDeploying = false;
   bool _isLoading = true;
@@ -137,7 +139,24 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           onPressed: () => context.go('/agents'),
         ),
       ),
-      body: Stepper(
+      body: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: ColorFilter.matrix(const <double>[
+              1.787, -0.715, -0.072, 0, 0,
+              -0.213, 1.285, -0.072, 0, 0,
+              -0.213, -0.715, 1.928, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            margin: const EdgeInsets.all(16),
+            child: Stepper(
         type: StepperType.horizontal,
         currentStep: _step,
         onStepContinue: () {
@@ -545,6 +564,30 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  Semantics(
+                    label: 'API Key Input',
+                    textField: true,
+                    child: TextField(
+                      controller: _apiKeyController,
+                      obscureText: _obscureKey,
+                      decoration: InputDecoration(
+                        labelText: 'API Key (Optional)',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureKey ? Icons.visibility : Icons.visibility_off,
+                          ),
+                          tooltip: _obscureKey ? 'Show API Key' : 'Hide API Key',
+                          onPressed: () {
+                            setState(() {
+                              _obscureKey = !_obscureKey;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const TextField(
                     decoration: InputDecoration(
                       labelText: 'Token Limit (Optional)',
@@ -672,7 +715,10 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           ),
         ],
       ),
-    );
+            ),
+          ),
+        ),
+      );
   }
 }
 
