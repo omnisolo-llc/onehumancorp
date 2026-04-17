@@ -72,6 +72,42 @@ func TestBuildBwrapArgs(t *testing.T) {
 	}
 }
 
+func TestBuildBwrapArgsProxy(t *testing.T) {
+	adapter := &LinuxBwrapAdapter{}
+
+	cfg := Config{
+		HTTPSocketPath:  "/tmp/http.sock",
+		SOCKSSocketPath: "/tmp/socks.sock",
+		ProxyEnvVars: map[string]string{
+			"HTTP_PROXY":  "http://127.0.0.1:8080",
+			"HTTPS_PROXY": "http://127.0.0.1:8080",
+		},
+	}
+
+	cmdStr := "echo 'hello proxy'"
+
+	args := adapter.BuildBwrapArgs(cmdStr, cfg)
+
+	if !containsFlagWithArgs(args, "--bind", "/tmp/http.sock", "/tmp/http.sock") {
+		t.Errorf("Expected args to contain --bind /tmp/http.sock /tmp/http.sock")
+	}
+	if !containsFlagWithArgs(args, "--bind", "/tmp/socks.sock", "/tmp/socks.sock") {
+		t.Errorf("Expected args to contain --bind /tmp/socks.sock /tmp/socks.sock")
+	}
+	if !containsFlagWithArgs(args, "--setenv", "HTTP_PROXY", "http://127.0.0.1:8080") {
+		t.Errorf("Expected args to contain --setenv HTTP_PROXY http://127.0.0.1:8080")
+	}
+	if !containsFlagWithArgs(args, "--setenv", "HTTPS_PROXY", "http://127.0.0.1:8080") {
+		t.Errorf("Expected args to contain --setenv HTTPS_PROXY http://127.0.0.1:8080")
+	}
+
+	// Check the final command arguments
+	n := len(args)
+	if n < 3 || args[n-3] != "bash" || args[n-2] != "-c" || args[n-1] != cmdStr {
+		t.Errorf("Expected args to end with bash -c '%s', got %v", cmdStr, args)
+	}
+}
+
 func TestExecuteCoverage(t *testing.T) {
 	// Instead of testing empty execute and making bad assumptions, we verify the limit writer handles it
 	// and we ensure that we either get an executable not found error, or an actual result.

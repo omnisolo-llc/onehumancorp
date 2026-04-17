@@ -37,6 +37,24 @@ func (a *LinuxBwrapAdapter) BuildBwrapArgs(cmdStr string, cfg Config) []string {
 		args = append(args, "--ro-bind", hostPath, cfg.RoBind[hostPath])
 	}
 
+	if cfg.HTTPSocketPath != "" {
+		args = append(args, "--bind", cfg.HTTPSocketPath, cfg.HTTPSocketPath)
+	}
+	if cfg.SOCKSSocketPath != "" {
+		args = append(args, "--bind", cfg.SOCKSSocketPath, cfg.SOCKSSocketPath)
+	}
+
+	if len(cfg.ProxyEnvVars) > 0 {
+		var proxyKeys []string
+		for k := range cfg.ProxyEnvVars {
+			proxyKeys = append(proxyKeys, k)
+		}
+		sort.Strings(proxyKeys)
+		for _, key := range proxyKeys {
+			args = append(args, "--setenv", key, cfg.ProxyEnvVars[key])
+		}
+	}
+
 	// Finally, append the actual command to run. We use bash -c to run the string.
 	args = append(args, "bash", "-c", cmdStr)
 	return args

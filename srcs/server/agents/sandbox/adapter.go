@@ -11,6 +11,12 @@ type Config struct {
 	Bind map[string]string
 	// RoBind maps host paths to virtual sandbox paths (read-only).
 	RoBind map[string]string
+	// HTTPSocketPath is the path to the HTTP proxy socket.
+	HTTPSocketPath string
+	// SOCKSSocketPath is the path to the SOCKS proxy socket.
+	SOCKSSocketPath string
+	// ProxyEnvVars are environment variables to inject into the sandbox.
+	ProxyEnvVars map[string]string
 }
 
 // Result holds the standard output and standard error from the execution.
