@@ -82,7 +82,7 @@ func TestMeshHandlerBroadcast(t *testing.T) {
 	svc := NewMemoryMeshService()
 	handler := NewMeshHandler(svc)
 
-	reqBody := []byte(`{"agent_id":"test", "channel":"test", "event_type":"test", "data": {"intent":"hello handler"}}`)
+	reqBody := []byte(`{"agent_id":"test", "channel":"mesh:tasks", "event_type":"TASK_COMPLETED", "data": {"task_id":"123"}}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer(reqBody))
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
@@ -113,7 +113,7 @@ func TestMeshHandlerStream(t *testing.T) {
 	// Stream handles reading and writing for the duration of the request, wait a little before broadcasting
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		errCh <- svc.BroadcastIntent(ctx, "hello stream")
+		errCh <- svc.BroadcastIntent(ctx, `{"agent_id":"test","channel":"test","event_type":"test","data":{}}`)
 	}()
 
 	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
@@ -133,7 +133,7 @@ func TestMeshHandlerStream(t *testing.T) {
 		t.Fatalf("could not read message: %v", err)
 	}
 
-	if string(msg) != "hello stream" {
-		t.Errorf("expected 'hello stream', got '%s'", string(msg))
+	if string(msg) != `{"agent_id":"test","channel":"test","event_type":"test","data":{}}` {
+		t.Errorf("expected JSON payload, got '%s'", string(msg))
 	}
 }
