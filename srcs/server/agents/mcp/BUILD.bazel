@@ -1,42 +1,30 @@
-load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_go//go:def.bzl", "go_library", "go_test")
-
-write_file(
-    name = "write_index",
-    out = "index.js",
-    content = ["require('@modelcontextprotocol/server-github/dist/index.js');"],
-)
-
-js_binary(
-    name = "github",
-    data = [
-        "//:node_modules/@modelcontextprotocol/server-github",
-        "//:node_modules/zod",
-    ],
-    entry_point = "index.js",
-    visibility = ["//visibility:public"],
-)
 
 go_library(
     name = "mcp",
     srcs = [
         "blob_provider.go",
-        "crdt_provider.go",
         "client.go",
+        "crdt_provider.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/mcp",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/domain",
+        "//srcs/server/telemetry",
+        "//srcs/server/utils",
+        "@com_github_google_uuid//:uuid",
+    ],
 )
 
 go_test(
     name = "mcp_test",
-    srcs = [
-        "blob_provider_test.go",
-        "client_test.go",
-        "crdt_provider_test.go",
-        "hybrid_mcp_bridge_test.go",
-    ],
+    srcs = ["crdt_provider_test.go"],
     embed = [":mcp"],
-    deps = ["//srcs/server/telemetry"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_stretchr_testify//assert",
+        "@org_modernc_sqlite//:sqlite",
+    ],
 )

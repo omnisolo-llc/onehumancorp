@@ -21,6 +21,7 @@ go_library(
         "//srcs/server/telemetry",
         "//srcs/server/integrations/mcp_sync",
         "//srcs/server/workers",
+        "//srcs/server/agents/kairos",
         "@org_golang_google_grpc//:grpc",
         "@com_github_redis_rueidis//:rueidis",
     ],
@@ -45,3 +46,4 @@ sh_test(
     srcs = ["standalone_ohc_test.sh"],
     data = ["standalone_ohc.sh"],
 )
+# Adding kairos to dependencies

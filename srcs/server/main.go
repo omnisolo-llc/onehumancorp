@@ -28,6 +28,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/workers"
+	"github.com/onehumancorp/mono/srcs/server/agents/kairos"
 )
 
 const defaultAddress = ":8080"
@@ -290,8 +291,13 @@ func run(now time.Time, listen listenFunc) error {
 	}
 
 	if pool != nil {
-		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
-		autodreamWorker.Start(ctx)
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		var llmClient orchestration.MinimaxClient
+		if minimaxKey != "" {
+			llmClient = orchestration.NewMinimaxClient(minimaxKey)
+		}
+		autodreamWorker := kairos.NewAutoDreamWorker(pool.Provider, llmClient)
+		go autodreamWorker.Start(ctx, 5*time.Minute)
 
 		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
 		go missionIngestionWorker.Start(ctx)
