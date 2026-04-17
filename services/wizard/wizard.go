@@ -10,33 +10,28 @@ import (
 )
 
 var (
-	meter               = otel.GetMeterProvider().Meter("ohc_wizard")
-	agentConfigCounter  metric.Int64Counter
+	meter = otel.GetMeterProvider().Meter("ohc_wizard")
+	agentConfigCounter metric.Int64Counter
 	promptTuningCounter metric.Int64Counter
-	agentFixesCounter   metric.Int64Counter
 )
 
 func init() {
-	var err error
-	agentConfigCounter, err = meter.Int64Counter("ohc_agent_configurations_total")
-	if err != nil {
-		panic(err)
-	}
+    var err error
+    agentConfigCounter, err = meter.Int64Counter("ohc_agent_configurations_total")
+    if err != nil {
+        panic(err)
+    }
 	promptTuningCounter, err = meter.Int64Counter("ohc_prompt_tuning_total")
-	if err != nil {
-		panic(err)
-	}
-	agentFixesCounter, err = meter.Int64Counter("ohc_agent_fixes_total")
 	if err != nil {
 		panic(err)
 	}
 }
 
 type AgentConfig struct {
-	Role         string          `json:"role"`
-	Provider     string          `json:"provider"`
+	Role         string `json:"role"`
+	Provider     string `json:"provider"`
 	Capabilities map[string]bool `json:"capabilities"`
-	WorkHours    float64         `json:"work_hours"`
+	WorkHours    float64 `json:"work_hours"`
 }
 
 func HandleConfigWizard(w http.ResponseWriter, r *http.Request) {
@@ -73,28 +68,8 @@ func HandlePromptTuning(w http.ResponseWriter, r *http.Request) {
 }
 
 func IsExpertMode(profile map[string]string) bool {
-	if v, ok := profile["expert_mode"]; ok && v == "true" {
-		return true
-	}
-	return false
-}
-
-type FixAgentRequest struct {
-	AgentID    string `json:"agent_id"`
-	Action     string `json:"action"`
-	ExpertMode string `json:"expert_mode"`
-}
-
-func HandleFixAgent(w http.ResponseWriter, r *http.Request) {
-	ctx := context.Background()
-	var req FixAgentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	agentFixesCounter.Add(ctx, 1)
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"status": "success", "message": "Agent fixed successfully"}`))
+    if v, ok := profile["expert_mode"]; ok && v == "true" {
+        return true
+    }
+    return false
 }
