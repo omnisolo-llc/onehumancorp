@@ -1,3 +1,0 @@
-mission: 2026-04-16T12-30-00Z_autodream_pipeline.md
-status: BLOCKED
-blockers: Mission requires modifying Go backend code outside of my exclusive domain (docs/, README.md, *.md).
