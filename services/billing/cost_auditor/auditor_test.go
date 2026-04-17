@@ -12,6 +12,8 @@ func TestCostAuditor(t *testing.T) {
     CostPerLocalEmbedding:   0.000002,
     DiscountFactor:          0.0,
     CostPerGBMonth:          0.023,
+    CostPerComputeHour:      0.05,
+    CostPerNetworkGB:        0.09,
   }
   auditor := NewCostAuditor(config)
   ctx := context.Background()
@@ -46,6 +48,23 @@ func TestCostAuditor(t *testing.T) {
   if totalStorageSavings != 0.115 {
     t.Errorf("expected total storage savings 0.115, got %f", totalStorageSavings)
   }
+
+  computeCost := auditor.RecordComputeEvent(ctx, ComputeEvent{
+    AgentID:       "miser-1",
+    DurationHours: 2.0,
+  })
+  if computeCost != 0.1000 {
+    t.Errorf("expected compute cost 0.1000, got %f", computeCost)
+  }
+
+  networkCost := auditor.RecordNetworkEvent(ctx, NetworkEvent{
+    AgentID:   "miser-1",
+    NetworkGB: 1.0,
+  })
+  if networkCost != 0.0900 {
+    t.Errorf("expected network cost 0.0900, got %f", networkCost)
+  }
+
   report := auditor.GenerateReport()
   if report == "" {
     t.Errorf("expected non-empty report")

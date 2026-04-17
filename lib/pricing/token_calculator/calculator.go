@@ -7,6 +7,8 @@ type CostConfig struct {
   CostPerLocalEmbedding   float64
   DiscountFactor          float64
   CostPerGBMonth          float64
+  CostPerComputeHour      float64
+  CostPerNetworkGB        float64
 }
 func CalculateCost(inputTokens, outputTokens, cachedInputTokens, localEmbeddingTokens int, config CostConfig) float64 {
   inputCost := float64(inputTokens) * config.CostPerInputToken
@@ -25,4 +27,14 @@ func CalculateStorageSavings(originalBytes, compressedBytes int64, config CostCo
   savedGB := savedBytes / (1024 * 1024 * 1024)
   savings := savedGB * config.CostPerGBMonth
   return math.Round(savings*10000) / 10000
+}
+
+func CalculateComputeCost(durationHours float64, config CostConfig) float64 {
+  cost := durationHours * config.CostPerComputeHour
+  return math.Round(cost*10000) / 10000
+}
+
+func CalculateNetworkCost(networkGB float64, config CostConfig) float64 {
+  cost := networkGB * config.CostPerNetworkGB
+  return math.Round(cost*10000) / 10000
 }

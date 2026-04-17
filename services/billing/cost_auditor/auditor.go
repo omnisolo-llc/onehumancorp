@@ -13,6 +13,17 @@ type AuditEvent struct {
   CachedInputTokens    int
   LocalEmbeddingTokens int
 }
+
+type ComputeEvent struct {
+  AgentID       string
+  DurationHours float64
+}
+
+type NetworkEvent struct {
+  AgentID   string
+  NetworkGB float64
+}
+
 type CostAuditor struct {
   mu             sync.Mutex
   config         token_calculator.CostConfig
@@ -20,6 +31,8 @@ type CostAuditor struct {
   totalCost      float64
   cachingSavings float64
   storageSavings float64
+  computeCost    float64
+  networkCost    float64
 }
 func NewCostAuditor(config token_calculator.CostConfig) *CostAuditor {
   return &CostAuditor{
@@ -27,6 +40,26 @@ func NewCostAuditor(config token_calculator.CostConfig) *CostAuditor {
     agentCosts: make(map[string]float64),
   }
 }
+func (a *CostAuditor) RecordComputeEvent(ctx context.Context, event ComputeEvent) float64 {
+  a.mu.Lock()
+  defer a.mu.Unlock()
+  cost := token_calculator.CalculateComputeCost(event.DurationHours, a.config)
+  a.agentCosts[event.AgentID] += cost
+  a.totalCost += cost
+  a.computeCost += cost
+  return cost
+}
+
+func (a *CostAuditor) RecordNetworkEvent(ctx context.Context, event NetworkEvent) float64 {
+  a.mu.Lock()
+  defer a.mu.Unlock()
+  cost := token_calculator.CalculateNetworkCost(event.NetworkGB, a.config)
+  a.agentCosts[event.AgentID] += cost
+  a.totalCost += cost
+  a.networkCost += cost
+  return cost
+}
+
 func (a *CostAuditor) RecordEvent(ctx context.Context, event AuditEvent) float64 {
   a.mu.Lock()
   defer a.mu.Unlock()
@@ -72,6 +105,8 @@ func (a *CostAuditor) GenerateReport() string {
   a.mu.Lock()
   defer a.mu.Unlock()
   report := fmt.Sprintf("Total Cost: $%.4f\n", a.totalCost)
+  report += fmt.Sprintf("Total Compute Cost: $%.4f\n", a.computeCost)
+  report += fmt.Sprintf("Total Network Cost: $%.4f\n", a.networkCost)
   report += fmt.Sprintf("Total Savings via Caching: $%.4f\n", a.cachingSavings)
   report += fmt.Sprintf("Total Savings via Storage Compression: $%.4f\n", a.storageSavings)
   report += "Agent Costs:\n"
