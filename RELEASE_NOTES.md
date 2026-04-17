@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
+- Scaling (Cloud): Architect Cross-Mode Database Schema Syncer via MCP, Optimize PopMessages latency.
+- Privacy/Offline (Standalone): Fix PII redaction for nested slog groups, Bulk Team Invite UI in Flutter App.
+
+
 ## v0.3.11 (Cloud) / v0.3.11+1 (Standalone)
 - Scaling (Cloud): Implement Bubblewrap Sandbox Telemetry and Implement Hybrid Parity Stress Tests.
 - Privacy/Offline (Standalone): Clean up dead Linear integration and harden standalone wrapper.
