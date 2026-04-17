@@ -9,7 +9,12 @@ import (
 
 
 // BuiltinAgent handles the core loop for the builtin agent.
+
+import "github.com/onehumancorp/mono/srcs/server/telemetry"
+
+
 type BuiltinAgent struct {
+	AgentID     string
 	Client      LLMClient
 	Model       string
 	System      string
@@ -17,6 +22,7 @@ type BuiltinAgent struct {
 	MaxTokens   int
 	Temperature float32
 	MaxTaskBudget int // Maximum output tokens permitted for an entire task
+	Tracker     *telemetry.CostTracker
 }
 
 // LLMClient is the interface for talking to the LLM backend.
@@ -56,11 +62,13 @@ func SpawnTask(ctx context.Context, description, prompt, workDir string, cfg Age
 	}
 
 	agent := &BuiltinAgent{
+		AgentID:   id,
 		Client:    cfg.LLM,
 		Model:     "claude-3-7-sonnet-20250219", // Default
 		System:    cfg.SystemPrompt + cfg.SystemPromptSuffix,
 		Tools:     cfg.Tools,
 		MaxTokens: cfg.MaxTokensPerTurn,
+		Tracker:   telemetry.NewCostTracker(nil),
 	}
 
 	go func() {

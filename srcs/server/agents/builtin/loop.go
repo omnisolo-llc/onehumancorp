@@ -2,6 +2,8 @@ package builtin
 
 import (
 	"context"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+
 	"encoding/json"
 	"fmt"
 )
@@ -44,9 +46,15 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 		}
 
 		// Prepare request
+		systemPrompt := a.System
+		if a.Tracker != nil {
+			_, _, _, costUSD := a.Tracker.GetMetrics()
+			systemPrompt += fmt.Sprintf("\n\n[System] Current Session Cost: $%.4f", costUSD)
+		}
+
 		req := ChatRequest{
 			Model:       a.Model,
-			System:      a.System,
+			System:      systemPrompt,
 			Messages:    messages,
 			Tools:       a.Tools,
 			MaxTokens:   a.MaxTokens,
@@ -61,6 +69,13 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 
 		messages = append(messages, resp.Message)
 		totalTurnTokens += resp.Usage.OutputTokens
+
+		if a.Tracker != nil {
+			a.Tracker.AddUsage(a.Model, int64(resp.Usage.InputTokens), int64(resp.Usage.OutputTokens), 0)
+			_, _, _, costUSD := a.Tracker.GetMetrics()
+			telemetry.RecordSessionCost(ctx, a.AgentID, costUSD)
+		}
+
 
 		// Handle error responses or max tokens reach (Prompt too long / length stop reason)
 		if resp.StopReason == "max_tokens" || resp.StopReason == "length" {

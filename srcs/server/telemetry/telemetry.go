@@ -38,6 +38,8 @@ var (
 
 	tokenUsageCounter                  metric.Int64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
+	SessionCostGauge metric.Float64Gauge
+
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
 	agentExecutionTracesTotal          metric.Int64Counter
@@ -407,6 +409,15 @@ func InitWithMeter(m mockableMeter) error {
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
 		metric.WithDescription("Total tokens used by agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+
+	SessionCostGauge, err = m.Float64Gauge(
+		"ohc_agent_cost_usd_total",
+		metric.WithDescription("Total session cost in USD for the agent"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1694,4 +1705,13 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("mode", mode),
 	))
+}
+
+// RecordSessionCost updates the total cost in USD for an agent session.
+func RecordSessionCost(ctx context.Context, agentID string, cost float64) {
+	if SessionCostGauge != nil {
+		SessionCostGauge.Record(ctx, cost, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+		))
+	}
 }
