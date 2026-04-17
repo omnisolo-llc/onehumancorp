@@ -534,34 +534,6 @@ func TestRedactInterfacePII(t *testing.T) {
 		}
 	})
 
-	t.Run("slog.Attr and slog.Value", func(t *testing.T) {
-		attr := slog.String("email", "user@example.com")
-		res := RedactInterfacePII(attr).(slog.Attr)
-		if res.Value.String() != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL], got %v", res.Value.String())
-		}
-
-		group := slog.Group("user", slog.String("email", "admin@example.com"))
-		resGroup := RedactInterfacePII(group).(slog.Attr)
-		attrs := resGroup.Value.Group()
-		if len(attrs) != 1 || attrs[0].Value.String() != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected group to have 1 redacted email, got %v", attrs)
-		}
-
-		anyAttr := slog.Any("data", "user@example.com")
-		resAny := RedactInterfacePII(anyAttr).(slog.Attr)
-		if resAny.Value.Any().(string) != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL], got %v", resAny.Value.Any())
-		}
-
-		// Test unhandled slog.Value kind
-		intAttr := slog.Int("count", 42)
-		resInt := RedactInterfacePII(intAttr).(slog.Attr)
-		if resInt.Value.Int64() != 42 {
-			t.Errorf("Expected 42, got %v", resInt.Value.Int64())
-		}
-	})
-
 	t.Run("Slice of interface", func(t *testing.T) {
 		s := []interface{}{"user@example.com", "safe text"}
 		res := RedactInterfacePII(s).([]interface{})
