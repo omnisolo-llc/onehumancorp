@@ -23,6 +23,11 @@ func TestSandboxValidation(t *testing.T) {
 		{"process substitution read", "cat <(ls)", true},
 		{"process substitution write", "echo \"hi\" >(cat)", true},
 		{"zsh expansion", "cat =(ls)", true},
+		{"git hooks access", "cat .git/hooks/pre-commit", true},
+		{"git config access", "echo '[core]' > .git/config", true},
+		{"git objects access", "ls .git/objects/12/3456", true},
+		{"git refs access", "rm -rf .git/refs/heads/main", true},
+		{"git HEAD access", "cat .git/HEAD", true},
 	}
 
 	for _, tt := range tests {
