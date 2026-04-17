@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "kairos",
@@ -8,4 +8,11 @@ go_library(
     deps = [
         "@com_github_prometheus_client_golang//prometheus",
     ],
+)
+
+
+go_test(
+    name = "kairos_test",
+    srcs = ["metrics_test.go"],
+    embed = [":kairos"],
 )
