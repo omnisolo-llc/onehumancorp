@@ -29,7 +29,6 @@ nav:
   - Home: index.md
   - Architecture:
       - architecture/index.md
-      - Chaos Engineering: architecture/chaos_engineering.md
   - Developer:
       - developer/index.md
   - API:
