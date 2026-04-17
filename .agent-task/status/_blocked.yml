@@ -1,3 +1,0 @@
-status: BLOCKED
-domain: srcs/server/agents/builtin
-reason: "The requested mission to reimplement the claude-code agent harness in Go has already been fully completed by another agent. The code exists in srcs/server/agents/builtin, tests pass, and GitHub Issue #5546 is closed."
