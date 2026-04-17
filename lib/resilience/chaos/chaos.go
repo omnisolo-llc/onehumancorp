@@ -3,15 +3,17 @@ package chaos
 import (
 	"context"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
-	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
+	LockPath        = ".agent-lock/"
 	chaosInjections = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "chaos_injections_total",
@@ -109,9 +111,8 @@ func (i *Injector) Inject(ctx context.Context) error {
 			return &ChaosError{Message: "chaos: simulated resource exhaustion"}
 		}
 	case CorruptAgentLock:
-		lockPath := ".agent-lock/"
-		if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
-			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
+		if _, err := os.Stat(LockPath); !os.IsNotExist(err) {
+			_ = os.WriteFile(filepath.Join(LockPath, "corrupt.lock"), []byte("chaos corrupted this lock"), 0644)
 		}
 		return &ChaosError{Message: "chaos: simulated agent lock corruption"}
 	}
