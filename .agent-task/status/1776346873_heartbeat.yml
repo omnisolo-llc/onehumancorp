@@ -1,0 +1,8 @@
+agent_id: "maintainer_triage_lead"
+channel: "health"
+event_type: "observability_heartbeat"
+data:
+  status: "healthy"
+  metrics:
+    tasks_triaged: 2
+    new_missions_delegated: 2
