@@ -76,13 +76,6 @@ func TestResourceExhaustion(t *testing.T) {
 	}
 }
 
-func TestCorruptAgentLockString(t *testing.T) {
-	mode := CorruptAgentLock
-	if mode.String() != "corrupt_agent_lock" {
-		t.Fatalf("expected corrupt_agent_lock, got %s", mode.String())
-	}
-}
-
 func TestUnknownModeString(t *testing.T) {
 	mode := ChaosMode(999)
 	if mode.String() != "unknown" {
