@@ -38,3 +38,5 @@ genrule(
     cmd = "cp $< $@ && chmod 0755 $@",
     visibility = ["//visibility:public"],
 )
+
+exports_files(["standalone_ohc.sh"])
