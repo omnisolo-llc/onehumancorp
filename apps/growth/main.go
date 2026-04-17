@@ -43,9 +43,9 @@ func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
 func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	referralsRepo := growth.NewReferralRepository(rdb)
-	quotaService := growth.NewQuotaService(tracker, rdb, referralsRepo, 100)
+	quotaService := growth.NewQuotaService(tracker, rdb, 100)
 	referralService := growth.NewReferralService(tracker)
+	referralsRepo := growth.NewReferralRepository(rdb)
 
 	abTestService := growth.NewABTestService(tracker)
 
@@ -221,57 +221,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"message": "Bulk invites sent successfully",
 			"links":   links,
-		})
-	}))
-
-	mux.HandleFunc("/api/v1/growth/referrals/accept", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Typically anyone with a link can accept, or it requires login. We assume authMiddleware is passed.
-		var req struct {
-			ReferralID string `json:"referral_id"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		if req.ReferralID == "" {
-			http.Error(w, "missing referral_id", http.StatusBadRequest)
-			return
-		}
-
-		ref, err := referralsRepo.GetReferralByID(r.Context(), req.ReferralID)
-		if err != nil {
-			http.Error(w, "Referral not found", http.StatusNotFound)
-			return
-		}
-
-		if ref.Status == "SIGNED_UP" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(map[string]string{
-				"message": "Referral already accepted",
-			})
-			return
-		}
-
-		ref.Status = "SIGNED_UP"
-		err = referralsRepo.SaveReferral(r.Context(), ref)
-		if err != nil {
-			http.Error(w, "Failed to accept referral", http.StatusInternalServerError)
-			return
-		}
-
-		_ = referralService.AcceptInvite(r.Context(), req.ReferralID)
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Referral accepted successfully",
 		})
 	}))
 
