@@ -1,11 +1,6 @@
 # Release Notes
 
-## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
-- Scaling (Cloud): Implemented Dynamic Viral Quota limits, added reverse indexing to Redis for efficient referral lookups, modified QuotaService to grant a +50 usage limit bonus, and exposed the /accept endpoint.
-- Privacy/Offline (Standalone): Verified graceful degradation of the dynamic viral quota tracking for Standalone configurations.
-
 ## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
-
 - Scaling (Cloud): Implement QueueOrchestrator for Shared Task List (KAIROS Phase 1), Finalize Phase 4 Sub-Agent Queue and update Epic, Architect KAIROS Orchestration & AutoDream Foundation.
 - Privacy/Offline (Standalone): Architect Hybrid MCP Tool for Blob Storage Sync, Fix flaky tests and nested group redaction.
 
