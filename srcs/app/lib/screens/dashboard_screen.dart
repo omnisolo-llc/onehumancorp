@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/undercover_mode_toggle.dart';
+
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
@@ -121,6 +123,7 @@ class _DashboardContent extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _SectionTitle('Overview'),
+            const UndercoverModeToggle(),
             OutlinedButton.icon(
               onPressed: () => context.go('/wizards/billing'),
               icon: const Icon(Icons.credit_card),
