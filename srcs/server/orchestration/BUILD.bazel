@@ -105,6 +105,7 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
+        "//srcs/server/orchestration/kairos",
         "//srcs/server/auth",
         "//srcs/server/checkpointer",
         "//srcs/server/utils",

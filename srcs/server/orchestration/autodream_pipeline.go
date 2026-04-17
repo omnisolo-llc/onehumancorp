@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 )
 
 // EmbeddingClient interface for dependency injection and testing
@@ -105,8 +106,10 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 			summary := s.ContextData
 			var embeddingStr string
 			if p.client != nil {
+				startEmbed := time.Now()
 				ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 				embedding, embedErr := p.client.GenerateEmbedding(ctxTimeout, summary)
+				kairos.AutoDreamEmbeddingDuration.WithLabelValues(kairos.GetMode()).Observe(time.Since(startEmbed).Seconds())
 				cancel()
 				if embedErr == nil && len(embedding) > 0 {
 					if bytes, err := json.Marshal(embedding); err == nil {
@@ -157,7 +160,10 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 				return tx.Commit(ctx)
 			}()
 			if err != nil {
+								kairos.AutoDreamWorkerTasksTotal.WithLabelValues(kairos.GetMode(), "fail").Inc()
 				slog.Error("AutoDreamPipeline: failed to consolidate DB memory", "error", err)
+			} else {
+								kairos.AutoDreamWorkerTasksTotal.WithLabelValues(kairos.GetMode(), "success").Inc()
 			}
 		}
 	}
@@ -210,8 +216,10 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 		embeddingStr := "[0.0, 0.0, 0.0]"
 		if p.client != nil {
+			startEmbed := time.Now()
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
 			resp, err := p.client.GenerateEmbedding(ctxTimeout, contentToEmbed)
+			kairos.AutoDreamEmbeddingDuration.WithLabelValues(kairos.GetMode()).Observe(time.Since(startEmbed).Seconds())
 			cancel()
 			if err == nil && len(resp) > 0 {
 				if bytes, err := json.Marshal(resp); err == nil {
@@ -242,10 +250,11 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 			`
 			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
 		}
-
 		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
+						kairos.AutoDreamWorkerTasksTotal.WithLabelValues(kairos.GetMode(), "fail").Inc()
 			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", memID, "error", err)
 		} else {
+						kairos.AutoDreamWorkerTasksTotal.WithLabelValues(kairos.GetMode(), "success").Inc()
 			slog.Debug("AutoDreamPipeline: consolidated memory", "id", memID)
 			os.Remove(file)
 		}

@@ -6,6 +6,7 @@ import (
     "fmt"
     "strings"
     "github.com/onehumancorp/mono/srcs/server/db"
+    "github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 )
 
 type PGVectorStore struct {
@@ -34,6 +35,11 @@ func (s *PGVectorStore) Store(ctx context.Context, id string, vector []float32, 
         ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding, metadata = EXCLUDED.metadata
     `
     _, err = s.provider.Exec(ctx, query, id, vecStr, metaJSON)
+    if err != nil {
+        kairos.AutoDreamStorageOpsTotal.WithLabelValues(kairos.GetMode(), "pgvector", "fail").Inc()
+    } else {
+        kairos.AutoDreamStorageOpsTotal.WithLabelValues(kairos.GetMode(), "pgvector", "success").Inc()
+    }
     return err
 }
 

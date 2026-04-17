@@ -12,6 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
+        "//srcs/server/orchestration/kairos",
     ],
 )
 
@@ -25,6 +26,7 @@ go_test(
     embed = [":autodream"],
     deps = [
         "//srcs/server/db",
+        "//srcs/server/orchestration/kairos",
         "@com_github_stretchr_testify//assert",
     ],
 )

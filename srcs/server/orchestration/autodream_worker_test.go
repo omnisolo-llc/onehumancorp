@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"gopkg.in/yaml.v3"
 )
 
@@ -185,4 +186,17 @@ func TestAutoDreamWorkerDaemon_StartStop(t *testing.T) {
 	daemon.Stop()
 	daemon.Stop()
 	cancel() // to clean up contexts and verify ctx.Done doesn't panic
+}
+
+func TestAutoDreamMetricsRegistered(t *testing.T) {
+	// Verify that the Prometheus metrics are registered and not nil
+	if kairos.AutoDreamEmbeddingDuration == nil {
+		t.Errorf("expected AutoDreamEmbeddingDuration metric to be registered, but it was nil")
+	}
+	if kairos.AutoDreamStorageOpsTotal == nil {
+		t.Errorf("expected AutoDreamStorageOpsTotal metric to be registered, but it was nil")
+	}
+	if kairos.AutoDreamWorkerTasksTotal == nil {
+		t.Errorf("expected AutoDreamWorkerTasksTotal metric to be registered, but it was nil")
+	}
 }

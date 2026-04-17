@@ -34,12 +34,43 @@ var (
 		},
 		[]string{"mode"},
 	)
+
+	// AutoDreamEmbeddingDuration tracks the latency of the embedding LLM endpoint.
+	AutoDreamEmbeddingDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "ohc_autodream_embedding_duration_seconds",
+			Help:    "Latency of AutoDream embedding generation in seconds.",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"mode"},
+	)
+
+	// AutoDreamStorageOpsTotal tracks Vector DB insert success/failures.
+	AutoDreamStorageOpsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ohc_autodream_storage_operations_total",
+			Help: "Total number of Vector DB storage operations.",
+		},
+		[]string{"mode", "db_type", "status"},
+	)
+
+	// AutoDreamWorkerTasksTotal tracks tasks processed by the AutoDream worker.
+	AutoDreamWorkerTasksTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ohc_autodream_worker_tasks_total",
+			Help: "Total number of tasks processed by the AutoDream worker.",
+		},
+		[]string{"mode", "status"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(TransitionsTotal)
 	prometheus.MustRegister(TransitionDuration)
 	prometheus.MustRegister(TaskQueueDepth)
+	prometheus.MustRegister(AutoDreamEmbeddingDuration)
+	prometheus.MustRegister(AutoDreamStorageOpsTotal)
+	prometheus.MustRegister(AutoDreamWorkerTasksTotal)
 }
 
 // GetMode returns the current execution mode of the OHC Hybrid OS.
