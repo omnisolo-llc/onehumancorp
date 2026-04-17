@@ -182,12 +182,12 @@ func newStore(repo UserRepository) *Store {
 		}
 	}
 
-	s.seedDefaultAdmin(now)
+	s.seedDefaultAdmin(context.Background(), now)
 
 	return s
 }
 
-func (s *Store) seedDefaultAdmin(now time.Time) {
+func (s *Store) seedDefaultAdmin(ctx context.Context, now time.Time) {
 	adminUser := envOr("ADMIN_USERNAME", "admin")
 	adminPass := envOr("ADMIN_PASSWORD", "admin")
 	adminEmail := envOr("ADMIN_EMAIL", "admin@localhost")
@@ -210,7 +210,6 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 	}
 
 	if s.repo != nil {
-		ctx := context.Background()
 		existing, err := s.repo.GetByUsername(ctx, adminUser)
 		switch {
 		case err == nil && existing != nil:
@@ -236,7 +235,7 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 // Returns (*User, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) CreateUser(username, email, password string, roles []string) (*User, error) {
+func (s *Store) CreateUser(ctx context.Context, username, email, password string, roles []string) (*User, error) {
 	if username == "" {
 		return nil, errors.New("username is required")
 	}
@@ -251,17 +250,23 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 		}
 
 		now := time.Now().UTC()
-		u := &User{
-			ID:           generateID(),
-			Username:     username,
-			Email:        email,
-			PasswordHash: string(hash),
-			Roles:        append([]string(nil), roles...),
-			Active:       true,
-			CreatedAt:    now,
-			UpdatedAt:    now,
+		orgID := orgIDFromContext(ctx)
+		if orgID == "sys" {
+			orgID = ""
 		}
-		if err := s.repo.CreateUser(context.Background(), u); err != nil {
+
+		u := &User{
+			ID:             generateID(),
+			Username:       username,
+			Email:          email,
+			PasswordHash:   string(hash),
+			Roles:          append([]string(nil), roles...),
+			Active:         true,
+			OrganizationID: orgID,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		}
+		if err := s.repo.CreateUser(ctx, u); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
 		}
 		return u, nil
@@ -283,15 +288,21 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 	}
 
 	now := time.Now().UTC()
+	orgID := orgIDFromContext(ctx)
+	if orgID == "sys" {
+		orgID = ""
+	}
+
 	u := &User{
-		ID:           generateID(),
-		Username:     username,
-		Email:        email,
-		PasswordHash: string(hash),
-		Roles:        append([]string(nil), roles...),
-		Active:       true,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		ID:             generateID(),
+		Username:       username,
+		Email:          email,
+		PasswordHash:   string(hash),
+		Roles:          append([]string(nil), roles...),
+		Active:         true,
+		OrganizationID: orgID,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	s.users[u.ID] = u
 	s.byName[username] = u
@@ -304,9 +315,9 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 // Returns (*User, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) Authenticate(username, password string) (*User, error) {
+func (s *Store) Authenticate(ctx context.Context, username, password string) (*User, error) {
 	if s.repo != nil {
-		u, err := s.repo.GetByUsername(context.Background(), username)
+		u, err := s.repo.GetByUsername(ctx, username)
 		if err != nil {
 			return nil, errors.New("invalid credentials")
 		}
@@ -339,9 +350,9 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 // Returns (*User, bool).
 // Produces no errors.
 // Has no side effects.
-func (s *Store) GetUser(id string) (*User, bool) {
+func (s *Store) GetUser(ctx context.Context, id string) (*User, bool) {
 	if s.repo != nil {
-		u, err := s.repo.GetByID(context.Background(), id)
+		u, err := s.repo.GetByID(ctx, id)
 		if err != nil {
 			return nil, false
 		}
@@ -351,6 +362,12 @@ func (s *Store) GetUser(id string) (*User, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	u, ok := s.users[id]
+	if ok {
+		orgID := orgIDFromContext(ctx)
+		if orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
+			return nil, false
+		}
+	}
 	return u, ok
 }
 
@@ -359,9 +376,9 @@ func (s *Store) GetUser(id string) (*User, bool) {
 // Returns []*User.
 // Produces no errors.
 // Has no side effects.
-func (s *Store) ListUsers() []*User {
+func (s *Store) ListUsers(ctx context.Context) []*User {
 	if s.repo != nil {
-		users, err := s.repo.ListUsers(context.Background())
+		users, err := s.repo.ListUsers(ctx)
 		if err != nil {
 			slog.Error("failed to list users from repository", "error", err)
 			return nil
@@ -372,7 +389,11 @@ func (s *Store) ListUsers() []*User {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	out := make([]*User, 0, len(s.users))
+	orgID := orgIDFromContext(ctx)
 	for _, u := range s.users {
+		if orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
+			continue
+		}
 		out = append(out, u)
 	}
 	return out
@@ -383,9 +404,8 @@ func (s *Store) ListUsers() []*User {
 // Returns (*User, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePtr *bool) (*User, error) {
+func (s *Store) UpdateUser(ctx context.Context, id string, emailPtr *string, roles []string, activePtr *bool) (*User, error) {
 	if s.repo != nil {
-		ctx := context.Background()
 		u, err := s.repo.GetByID(ctx, id)
 		if err != nil {
 			if errors.Is(err, ErrUserNotFound) {
@@ -416,6 +436,10 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 	if !ok {
 		return nil, errors.New("user not found")
 	}
+	orgID := orgIDFromContext(ctx)
+	if orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
+		return nil, errors.New("user not found")
+	}
 	if emailPtr != nil && *emailPtr != u.Email {
 		if _, exists := s.byEmail[*emailPtr]; exists {
 			return nil, errors.New("email already registered")
@@ -439,9 +463,8 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) DeleteUser(id string) error {
+func (s *Store) DeleteUser(ctx context.Context, id string) error {
 	if s.repo != nil {
-		ctx := context.Background()
 		if _, err := s.repo.GetByID(ctx, id); err != nil {
 			if errors.Is(err, ErrUserNotFound) {
 				return errors.New("user not found")
@@ -455,6 +478,10 @@ func (s *Store) DeleteUser(id string) error {
 	defer s.mu.Unlock()
 	u, ok := s.users[id]
 	if !ok {
+		return errors.New("user not found")
+	}
+	orgID := orgIDFromContext(ctx)
+	if orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
 		return errors.New("user not found")
 	}
 	delete(s.users, id)
@@ -570,9 +597,9 @@ func (s *Store) OIDCCfg() OIDCConfig { return s.oidcCfg }
 // Returns *User.
 // Produces no errors.
 // Has no side effects.
-func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string) *User {
+func (s *Store) GetOrCreateOIDCUser(ctx context.Context, sub, email, preferredUsername string) *User {
 	if s.repo != nil {
-		return s.getOrCreateOIDCUserInRepository(sub, email, preferredUsername)
+		return s.getOrCreateOIDCUserInRepository(ctx, sub, email, preferredUsername)
 	}
 
 	s.mu.Lock()
@@ -599,15 +626,21 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string) *User 
 	}
 
 	now := time.Now().UTC()
+	orgID := orgIDFromContext(ctx)
+	if orgID == "sys" {
+		orgID = ""
+	}
+
 	u := &User{
-		ID:          generateID(),
-		Username:    uname,
-		Email:       email,
-		Roles:       []string{RoleViewer},
-		Active:      true,
-		OIDCSubject: sub,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:             generateID(),
+		Username:       uname,
+		Email:          email,
+		Roles:          []string{RoleViewer},
+		Active:         true,
+		OIDCSubject:    sub,
+		OrganizationID: orgID,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	s.users[u.ID] = u
 	if uname != "" {
@@ -620,8 +653,7 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string) *User 
 	return u
 }
 
-func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername string) *User {
-	ctx := context.Background()
+func (s *Store) getOrCreateOIDCUserInRepository(ctx context.Context, sub, email, preferredUsername string) *User {
 
 	if u, err := s.repo.GetByOIDCSubject(ctx, sub); err == nil {
 		return u
@@ -648,15 +680,21 @@ func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername st
 	}
 
 	now := time.Now().UTC()
+	orgID := orgIDFromContext(ctx)
+	if orgID == "sys" {
+		orgID = ""
+	}
+
 	u := &User{
-		ID:          generateID(),
-		Username:    uname,
-		Email:       email,
-		Roles:       []string{RoleViewer},
-		Active:      true,
-		OIDCSubject: sub,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:             generateID(),
+		Username:       uname,
+		Email:          email,
+		Roles:          []string{RoleViewer},
+		Active:         true,
+		OIDCSubject:    sub,
+		OrganizationID: orgID,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 
 	for attempts := 0; attempts < 2; attempts++ {
@@ -715,4 +753,12 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+
+func orgIDFromContext(ctx context.Context) string {
+	if claims := ClaimsFromContext(ctx); claims != nil {
+		return claims.OrganizationID
+	}
+	return ""
 }
