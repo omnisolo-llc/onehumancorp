@@ -1,6 +1,0 @@
-curl -s -X POST -H "Authorization: token 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" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/onehumancorp/mono/pulls -d '{
-  "title": "🛡️ Sentinel: [Hybrid Security Fix] Enforce multi-tenant isolation in UserRepository",
-  "body": "Fixes #5874\n\n**Severity:** High\n**Vulnerability:** Cross-tenant data leakage in UserRepository due to missing organization_id scoping.\n**Impact:** Users from one tenant could access or modify users from another tenant.\n**Fix:** \n- `srcs/server/auth/store.go`: Added `orgIDFromContext` helper. Updated `GetUser`, `ListUsers`, `UpdateUser`, `DeleteUser`, `CreateUser`, `Authenticate`, `GetOrCreateOIDCUser` to accept `context.Context` and enforce tenant isolation in memory.\n- `srcs/server/auth/postgres_store.go`: Updated `GetByID`, `GetByUsername`, `GetByEmail`, `GetByOIDCSubject`, `DeleteUser`, `ListUsers`, `UpdateUser` to append `organization_id` filtering to SQL queries.\n- `srcs/server/auth/handlers.go`: Passed request context to Store methods.\n- `srcs/server/auth/*_test.go`: Passed `context.Background()` to Store method calls.",
-  "head": "jules-3271476929121034828-3d1fce9b",
-  "base": "main"
-}'
