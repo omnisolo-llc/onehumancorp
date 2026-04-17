@@ -108,35 +108,4 @@ Lists available observability resources for the current node.
 }
 ```
 
-## 3. Edge LLM Offloading Protocol
-
-Dynamic routing of LLM inference requests between the local edge device and the cloud.
-
-### `POST /api/v1/inference/route`
-
-Accepts a standard completion request payload and returns the routed response. Evaluates prompt size, machine resource utilization, and privacy flags to decide whether to offload to the cloud swarm.
-
-**Request Payload:**
-
-```json
-{
-  "prompt": "Analyze the attached architectural diagram...",
-  "max_tokens": 1500,
-  "is_sensitive": false,
-  "context": {
-    "node_id": "standalone-node-1234"
-  }
-}
-```
-
-**Response Payload:**
-
-```json
-{
-  "status": "success",
-  "routed_to": "cloud",
-  "response": "Based on the architectural diagram..."
-}
-```
-
 </div>
