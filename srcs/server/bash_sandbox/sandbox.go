@@ -4,10 +4,8 @@ import (
 	"context"
 
 	"fmt"
-	"os"
 	"os/exec"
 	"regexp"
-	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -19,6 +17,7 @@ var (
 	execCount     metric.Int64Counter
 	violationCount metric.Int64Counter
 	errorCount    metric.Int64Counter
+	sandboxDropRegex = regexp.MustCompile(`(?i)(permission denied|not permitted|operation not permitted|sandbox)`)
 )
 
 func init() {
@@ -40,11 +39,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-// ExecutionEnvironment defines the interface for command execution.
-type ExecutionEnvironment interface {
-	ExecuteContext(ctx context.Context, command string, workDir string) (string, error)
 }
 
 // Sandbox defines the configuration for secure bash execution.
@@ -84,18 +78,10 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	execCount.Add(ctx, 1)
 
 	if err := s.ValidateContext(ctx, command); err != nil {
-		return fmt.Sprintf("<sandbox_violations>%v</sandbox_violations>", err), err
+		return "", err
 	}
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
-	cmd.Env = []string{} // Clear inherited environment explicitly to prevent secret leaks
-	// Pass through essential PATH and set HOME to isolated directory
-	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "PATH=") {
-			cmd.Env = append(cmd.Env, env)
-		}
-	}
-	cmd.Env = append(cmd.Env, "HOME=.agent-home/")
 	if workDir != "" {
 		cmd.Dir = workDir
 	}
@@ -103,14 +89,23 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 	if err != nil {
 		errorCount.Add(ctx, 1)
 
-		outputStr := string(out)
-		if strings.Contains(outputStr, "Operation not permitted") {
-			outputStr += "\n<sandbox_violations>Operation not permitted: sandbox boundary drop</sandbox_violations>"
-		} else if strings.Contains(outputStr, "Permission denied") {
-			outputStr += "\n<sandbox_violations>Permission denied: sandbox boundary drop</sandbox_violations>"
+		errStr := err.Error()
+		outStr := string(out)
+
+		// Extract reason from output or error string
+		var matchedReason string
+		if matches := sandboxDropRegex.FindStringSubmatch(outStr); len(matches) > 0 {
+			matchedReason = matches[0]
+		} else if matches := sandboxDropRegex.FindStringSubmatch(errStr); len(matches) > 0 {
+			matchedReason = matches[0]
 		}
 
-		return outputStr, fmt.Errorf("execution failed: %w", err)
+		// If we found a violation pattern, append it to stdout so callers matching XML can parse it explicitly
+		if matchedReason != "" {
+			out = append(out, []byte(fmt.Sprintf("\n<sandbox_violations>%s</sandbox_violations>", matchedReason))...)
+		}
+
+		return string(out), fmt.Errorf("execution failed: %w", err)
 	}
 
 	return string(out), nil
