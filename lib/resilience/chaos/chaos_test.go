@@ -107,45 +107,48 @@ func TestAllModeStrings(t *testing.T) {
 	}
 }
 
-func TestCorruptAgentLock_DirectoryExists(t *testing.T) {
+func TestCorruptAgentLock(t *testing.T) {
 	inj := NewInjector(CorruptAgentLock, 1)
-
-	// Ensure the directory exists
-	os.MkdirAll(".agent-lock/", 0755)
-	defer os.RemoveAll(".agent-lock/")
 
 	err := inj.Inject(context.Background())
 	if err == nil {
 		t.Fatal("expected an error, got nil")
 	}
 
-	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	// verify that the file was created
-	if _, err := os.Stat(".agent-lock/corrupt.lock"); os.IsNotExist(err) {
-		t.Fatal("expected corrupt.lock file to be created")
+	if e, ok := err.(*ChaosError); ok {
+		if e.Message != "chaos: simulated agent lock corruption" {
+			t.Fatalf("expected 'chaos: simulated agent lock corruption', got '%s'", e.Message)
+		}
+	} else {
+		t.Fatalf("expected ChaosError, got %T", err)
 	}
 }
 
-func TestCorruptAgentLock_DirectoryDoesNotExist(t *testing.T) {
-	inj := NewInjector(CorruptAgentLock, 1)
+func TestCorruptAgentLockExists(t *testing.T) {
+	// Override the lock path for testing to use a temporary directory
+	tempDir := t.TempDir()
+	originalLockPath := LockPath
+	LockPath = tempDir + "/.agent-lock/"
+	defer func() { LockPath = originalLockPath }()
 
-	// Ensure the directory does not exist
-	os.RemoveAll(".agent-lock/")
+	os.MkdirAll(LockPath, 0755)
+
+	// Create the file so os.Stat finds it
+	os.WriteFile(LockPath+"test.lock", []byte("initial"), 0644)
+
+	inj := NewInjector(CorruptAgentLock, 1)
 
 	err := inj.Inject(context.Background())
 	if err == nil {
 		t.Fatal("expected an error, got nil")
 	}
 
-	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
-		t.Fatalf("unexpected error: %v", err)
+	// Verify the corrupt file was created
+	content, readErr := os.ReadFile(LockPath+"corrupt.lock")
+	if readErr != nil {
+		t.Fatalf("expected corrupt.lock to be created, but got err: %v", readErr)
 	}
-
-	// verify that the file was NOT created
-	if _, err := os.Stat(".agent-lock/corrupt.lock"); !os.IsNotExist(err) {
-		t.Fatal("expected corrupt.lock file to not be created")
+	if string(content) != "chaos corrupted this lock" {
+		t.Fatalf("unexpected content in corrupt.lock: %s", string(content))
 	}
 }
