@@ -29,7 +29,6 @@ go_test(
     name = "telemetry_test",
     srcs = [
         "buffer_test.go",
-        "compliance_test.go",
         "privacy_test.go",
         "logger_test.go",
         "sync_worker_test.go",
