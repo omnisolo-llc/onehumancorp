@@ -104,6 +104,19 @@ func (r *TenantRegistry) handler(orgID string) http.Handler {
 	return r.tenants[orgID]
 }
 
+var publicRoutes = map[string]bool{
+	"/api/auth/login":            true,
+	"/api/auth/powersync/jwks":   true,
+	"/api/auth/powersync/token":  true,
+	"/api/health/hybrid":         true,
+	"/healthz":                   true,
+	"/readyz":                    true,
+	"/metrics":                   true,
+	"/login":                     true,
+	"/favicon.ico":               true,
+	"/":                          true,
+}
+
 // ServeHTTP implements http.Handler.  It extracts the caller's organisation
 // ID from the JWT claims in the request context (populated by
 // auth.Middleware) and dispatches to the matching tenant handler.
@@ -157,7 +170,6 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		_, _ = w.Write([]byte(`{"error":"no organization assigned to this account"}`))
 		return
 	}
-
 	// Unauthenticated request — serve it using a fresh handler that doesn't leak
 	// tenant state. This handles public routes (login, healthz, readyz, metrics, /api/auth/login)
 	// without falling back to a random tenant. We use Provision to lazily create and reuse a static public handler
@@ -168,13 +180,14 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// If it's a public route like /api/auth/login, a 'public' tenant handles it gracefully.
 
 	// Only serve known public routes unauthenticated, block otherwise.
-	if req.URL.Path == "/api/auth/login" || req.URL.Path == "/api/health/hybrid" || req.URL.Path == "/healthz" || req.URL.Path == "/readyz" || req.URL.Path == "/metrics" || req.URL.Path == "/login" || req.URL.Path == "/favicon.ico" || req.URL.Path == "/" || strings.HasPrefix(req.URL.Path, "/assets/") {
+	if publicRoutes[req.URL.Path] || strings.HasPrefix(req.URL.Path, "/assets/") {
 		h := r.Provision(defaultTenantOrganization("public"))
 		h.ServeHTTP(w, req)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+
 	w.WriteHeader(http.StatusUnauthorized)
 	_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
 }
