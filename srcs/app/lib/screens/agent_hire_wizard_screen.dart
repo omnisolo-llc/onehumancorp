@@ -34,6 +34,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   bool _showAdvanced = false;
   final _endpointUrlController = TextEditingController();
   final _tokenLimitController = TextEditingController();
+  final _apiKeyController = TextEditingController();
+  bool _obscureApiKey = true;
 
   bool _isDeploying = false;
   bool _isLoading = true;
@@ -301,12 +303,16 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Agent Name',
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g. Senior Software Engineer',
+                Semantics(
+                  label: 'Agent Name Input',
+                  textField: true,
+                  child: TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Agent Name',
+                      border: OutlineInputBorder(),
+                      hintText: 'e.g. Senior Software Engineer',
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -512,14 +518,19 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: Slider(
-                        value: _maxSessionsPerDay,
-                        min: 10,
-                        max: 200,
-                        divisions: 19,
-                        label: _maxSessionsPerDay.round().toString(),
-                        onChanged:
-                            (val) => setState(() => _maxSessionsPerDay = val),
+                      child: Semantics(
+                        label: 'Max Sessions Per Day Slider',
+                        slider: true,
+                        value: _maxSessionsPerDay.toString(),
+                        child: Slider(
+                          value: _maxSessionsPerDay,
+                          min: 10,
+                          max: 200,
+                          divisions: 19,
+                          label: _maxSessionsPerDay.round().toString(),
+                          onChanged:
+                              (val) => setState(() => _maxSessionsPerDay = val),
+                        ),
                       ),
                     ),
                     Text('${_maxSessionsPerDay.round()} sessions'),
@@ -538,19 +549,53 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  const TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Custom Endpoint URL (Optional)',
-                      border: OutlineInputBorder(),
+                  Semantics(
+                    label: 'API Key Input',
+                    textField: true,
+                    child: TextField(
+                      controller: _apiKeyController,
+                      obscureText: _obscureApiKey,
+                      decoration: InputDecoration(
+                        labelText: 'API Key (Optional)',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+                          ),
+                          tooltip: _obscureApiKey ? 'Show API Key' : 'Hide API Key',
+                          onPressed: () {
+                            setState(() {
+                              _obscureApiKey = !_obscureApiKey;
+                            });
+                          },
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const TextField(
-                    decoration: InputDecoration(
-                      labelText: 'Token Limit (Optional)',
-                      border: OutlineInputBorder(),
+                  Semantics(
+                    label: 'Custom Endpoint URL Input',
+                    textField: true,
+                    child: TextField(
+                      controller: _endpointUrlController,
+                      decoration: const InputDecoration(
+                        labelText: 'Custom Endpoint URL (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
                     ),
-                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  Semantics(
+                    label: 'Token Limit Input',
+                    textField: true,
+                    child: TextField(
+                      controller: _tokenLimitController,
+                      decoration: const InputDecoration(
+                        labelText: 'Token Limit (Optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
                   ),
                 ],
               ],
@@ -571,27 +616,11 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   borderRadius: BorderRadius.circular(16),
                   child: BackdropFilter(
                     filter: ImageFilter.compose(
-                      outer: ColorFilter.matrix(const <double>[
-                        1.787,
-                        -0.715,
-                        -0.072,
-                        0,
-                        0,
-                        -0.213,
-                        1.285,
-                        -0.072,
-                        0,
-                        0,
-                        -0.213,
-                        -0.715,
-                        1.928,
-                        0,
-                        0,
-                        0,
-                        0,
-                        0,
-                        1,
-                        0,
+                      outer: const ColorFilter.matrix(<double>[
+                        1.168, -0.153, -0.015, 0, 0,
+                        -0.046, 1.061, -0.015, 0, 0,
+                        -0.046, -0.152, 1.198, 0, 0,
+                        0, 0, 0, 1, 0,
                       ]),
                       inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                     ),
