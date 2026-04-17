@@ -1,6 +1,29 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 24px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); color: #fff;">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); color: #FFFFFF;">
 
 # OHC KAIROS: Hybrid Agentic OS Orchestration Master Design
+
+## Introduction
+This document details the final premium design for the KAIROS AI OS Shared Task List and Teammate Mesh, enabling complex multi-agent orchestration for One Human Corp.
+
+## Components
+
+### 1. Shared Task List (Decomposition State Machine)
+KAIROS manages the lifecycle of tasks created via decomposition. The system leverages Hybrid Locking to ensure correct execution across Cloud (PostgreSQL) and Standalone (SQLite) modes.
+See Issue: #5902
+
+### 2. Teammate Mesh
+A realtime asynchronous coordination layer facilitating agent communication (Pub/Sub) and distributed locking.
+See Issue: #5903
+
+### 3. AutoDream Vector Consolidation
+A pipeline to vectorize and store the results of completed missions for long-term Swarm Intelligence memory, utilizing `pgvector`.
+See Issue: #5904
+
+### 4. Sub-Agent Orchestration Queue
+A robust queuing mechanism to spawn and manage sub-agents asynchronously, degrading gracefully based on the operating mode.
+See Issue: #5905
+
+---
 
 ## 1. Vision
 The One Human Corp (OHC) AI OS is powered by the **KAIROS Orchestrator**, a distributed system designed to manage complex agent swarms with zero friction. KAIROS ensures that a single human can orchestrate vast AI teams by providing a unified, aesthetics-first interface for task decomposition, real-time coordination, and long-term memory consolidation.
