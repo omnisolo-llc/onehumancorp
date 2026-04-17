@@ -1,7 +1,0 @@
----
-type: AUTO_DREAM_CONSOLIDATION
-timestamp: '2026-04-16T13-26-47Z'
-content: |
-  KAIROS Orchestrator Hybrid Core Design has been thoroughly architected.
-  The design specifies the use of Postgres with FOR UPDATE SKIP LOCKED for cloud-native setups and SQLite for local deployments.
----
