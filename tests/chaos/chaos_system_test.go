@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"onehumancorp.com/lib/resilience/chaos"
+	"github.com/onehumancorp/mono/lib/resilience/chaos"
 )
 
 func TestChaosSystem_LatencySpike(t *testing.T) {
