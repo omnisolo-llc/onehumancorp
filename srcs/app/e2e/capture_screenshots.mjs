@@ -92,7 +92,18 @@ try {
 
     // Login Page
     // Navigate by clicking the button from the landing page.
-    await page.locator('text="Or continue to Cloud Dashboard"').click({ force: true });
+
+    // First scroll to the bottom or let flutter render the button
+    await page.evaluate(() => {
+        const flt = document.querySelector('flt-glass-pane');
+        if (flt && flt.shadowRoot) {
+             const btns = Array.from(flt.shadowRoot.querySelectorAll('*')).filter(el => el.textContent && el.textContent.includes('Cloud Dashboard'));
+             if (btns.length > 0) btns[0].click();
+        }
+    });
+    // Wait for route change
+    await page.goto(baseUrl + '#/login', { waitUntil: "networkidle" });
+
     await page.waitForTimeout(1500);
 
     const loginDir = path.join(outputRoot, "login");
