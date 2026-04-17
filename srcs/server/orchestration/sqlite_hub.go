@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
@@ -180,51 +181,42 @@ func (r *SqliteHubRepository) PopMessages(ctx context.Context, agentID string) (
 		}
 	}
 
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("sqlite: begin pop: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	query := `SELECT message_id, from_agent, to_agent, type, content, meeting_id, occurred_at FROM agent_inbox WHERE agent_id = ?`
+	query := `DELETE FROM agent_inbox WHERE agent_id = ?`
 	args := []any{agentID}
 	if r.orgID != "" {
 		query += ` AND organization_id = ?`
 		args = append(args, r.orgID)
 	}
-	query += ` ORDER BY seq`
+	query += ` RETURNING seq, message_id, from_agent, to_agent, type, content, meeting_id, occurred_at`
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
-		return nil, fmt.Errorf("sqlite: peek messages for pop: %w", err)
+		return nil, fmt.Errorf("sqlite: pop messages: %w", err)
 	}
+	defer rows.Close()
 
-	var msgs []Message
+	type rowData struct {
+		seq int64
+		m   Message
+	}
+	var temp []rowData
+
 	for rows.Next() {
-		var m Message
-		if err := rows.Scan(&m.ID, &m.FromAgent, &m.ToAgent, &m.Type, &m.Content, &m.MeetingID, &m.OccurredAt); err != nil {
-			rows.Close()
+		var r rowData
+		if err := rows.Scan(&r.seq, &r.m.ID, &r.m.FromAgent, &r.m.ToAgent, &r.m.Type, &r.m.Content, &r.m.MeetingID, &r.m.OccurredAt); err != nil {
 			return nil, fmt.Errorf("sqlite: scan message: %w", err)
 		}
-		msgs = append(msgs, m)
-	}
-	rows.Close()
-
-	if len(msgs) > 0 {
-		delQuery := "DELETE FROM agent_inbox WHERE agent_id = ?"
-		delArgs := []any{agentID}
-		if r.orgID != "" {
-			delQuery += " AND organization_id = ?"
-			delArgs = append(delArgs, r.orgID)
-		}
-		_, err = tx.Exec(ctx, delQuery, delArgs...)
-		if err != nil {
-			return nil, fmt.Errorf("sqlite: delete popped messages: %w", err)
-		}
+		temp = append(temp, r)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("sqlite: commit pop: %w", err)
+	// Sort by seq to maintain order since DELETE ... RETURNING does not guarantee order
+	sort.Slice(temp, func(i, j int) bool {
+		return temp[i].seq < temp[j].seq
+	})
+
+	var msgs []Message
+	for _, r := range temp {
+		msgs = append(msgs, r.m)
 	}
 
 	return msgs, nil
