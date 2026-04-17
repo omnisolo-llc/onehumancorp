@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"testing"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestBuiltinAgent(t *testing.T) {
@@ -36,6 +37,42 @@ func TestBuiltinAgent(t *testing.T) {
 
 	if messages[1].Content != "Hello, world!" {
 		t.Fatalf("expected 'Hello, world!', got %q", messages[1].Content)
+	}
+}
+
+func TestBuiltinAgentTelemetry(t *testing.T) {
+	// Initialize telemetry with a mock meter to capture metrics
+	_, _ = telemetry.InitTelemetry()
+
+	mockClient := &MockClient{
+		Response: ChatResponse{
+			Message: Message{
+				Role:    RoleAssistant,
+				Content: "Hello!",
+			},
+			Usage: Usage{
+				InputTokens:  10,
+				OutputTokens: 20,
+			},
+		},
+	}
+
+	agent := &BuiltinAgent{
+		AgentID:        "test-agent",
+		OrganizationID: "test-org",
+		Role:           "tester",
+		Client:         mockClient,
+		Model:          "claude-3-7-sonnet",
+		System:         "test",
+		MaxTokens:      100,
+	}
+
+	// We don't have an easy way to assert on the telemetry side without complex mocks,
+	// but we can ensure it doesn't panic and we can look at the coverage/logs if needed.
+	// For this test, we just ensure it executes.
+	_, err := agent.Run(context.Background(), []Message{{Role: RoleUser, Content: "hi"}})
+	if err != nil {
+		t.Fatalf("agent run failed: %v", err)
 	}
 }
 

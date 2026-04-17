@@ -10,13 +10,16 @@ import (
 
 // BuiltinAgent handles the core loop for the builtin agent.
 type BuiltinAgent struct {
-	Client      LLMClient
-	Model       string
-	System      string
-	Tools       []Tool
-	MaxTokens   int
-	Temperature float32
-	MaxTaskBudget int // Maximum output tokens permitted for an entire task
+	AgentID        string
+	OrganizationID string
+	Role           string
+	Client         LLMClient
+	Model          string
+	System         string
+	Tools          []Tool
+	MaxTokens      int
+	Temperature    float32
+	MaxTaskBudget  int // Maximum output tokens permitted for an entire task
 }
 
 // LLMClient is the interface for talking to the LLM backend.
@@ -27,6 +30,9 @@ type LLMClient interface {
 
 // AgentConfig holds the configuration for a builtin agent run.
 type AgentConfig struct {
+	AgentID            string
+	OrganizationID     string
+	Role               string
 	LLM                LLMClient
 	Tools              []Tool
 	SystemPrompt       string
@@ -57,11 +63,14 @@ func SpawnTask(ctx context.Context, description, prompt, workDir string, cfg Age
 	}
 
 	agent := &BuiltinAgent{
-		Client:    cfg.LLM,
-		Model:     "claude-3-7-sonnet-20250219", // Default
-		System:    cfg.SystemPrompt + cfg.SystemPromptSuffix,
-		Tools:     cfg.Tools,
-		MaxTokens: cfg.MaxTokensPerTurn,
+		AgentID:        cfg.AgentID,
+		OrganizationID: cfg.OrganizationID,
+		Role:           cfg.Role,
+		Client:         cfg.LLM,
+		Model:          "claude-3-7-sonnet-20250219", // Default
+		System:         cfg.SystemPrompt + cfg.SystemPromptSuffix,
+		Tools:          cfg.Tools,
+		MaxTokens:      cfg.MaxTokensPerTurn,
 	}
 
 	go func() {

@@ -37,6 +37,8 @@ var (
 	SIPSyncPayloadSizeRecorder metric.Int64Histogram
 
 	tokenUsageCounter                  metric.Int64Counter
+	agentTokenUsageCounter             metric.Int64Counter
+	agentCostCounter                   metric.Float64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -288,6 +290,7 @@ func InitTelemetry() (func(), error) {
 // We take any interface that implements the needed method to allow easy mocking
 type mockableMeter interface {
 	Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error)
+	Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error)
 	Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error)
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
@@ -433,6 +436,22 @@ func InitWithMeter(m mockableMeter) error {
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
 		metric.WithDescription("Total tokens used by agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentTokenUsageCounter, err = m.Int64Counter(
+		"ohc_agent_token_usage_total",
+		metric.WithDescription("Total tokens used by agents, tagged by agent, model, and type"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	agentCostCounter, err = m.Float64Counter(
+		"ohc_agent_cost_estimate_usd",
+		metric.WithDescription("Estimated cost of agent execution in USD"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -848,6 +867,60 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
+	}
+}
+
+// RecordAgentTokenUsage increments the global counter for LLM tokens consumed by a specific agent.
+func RecordAgentTokenUsage(ctx context.Context, agentID, role, model, organizationID, tokenType string, count int64) {
+	if agentTokenUsageCounter == nil {
+		return
+	}
+	agentTokenUsageCounter.Add(ctx, count, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("role", role),
+		attribute.String("model", model),
+		attribute.String("organization_id", organizationID),
+		attribute.String("type", tokenType),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":        agentID,
+			"role":            role,
+			"model":           model,
+			"organization_id": organizationID,
+			"type":            tokenType,
+			"count":           count,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "agent_token_usage", string(payloadBytes))
+	}
+}
+
+// RecordAgentCost records the estimated cost of an agent execution.
+func RecordAgentCost(ctx context.Context, agentID, role, model, organizationID string, cost float64) {
+	if agentCostCounter == nil {
+		return
+	}
+	agentCostCounter.Add(ctx, cost, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("role", role),
+		attribute.String("model", model),
+		attribute.String("organization_id", organizationID),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":        agentID,
+			"role":            role,
+			"model":           model,
+			"organization_id": organizationID,
+			"cost":            cost,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "agent_cost_estimate", string(payloadBytes))
 	}
 }
 

@@ -201,7 +201,11 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 							fmt.Sprintf("plane issue %s", issue.ID),
 							payload,
 							workDir,
-							builtin.AgentConfig{},
+							builtin.AgentConfig{
+								AgentID:        agent.ID,
+								OrganizationID: agent.OrganizationID,
+								Role:           agent.Role,
+							},
 						)
 						if err != nil {
 							slog.Error("builtin agent run error", "err", err, "agent_id", agent.ID)

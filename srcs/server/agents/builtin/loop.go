@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/billing"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // Run executes the agent loop until completion or error.
@@ -57,6 +59,17 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 		resp, err := a.Client.Chat(ctx, req)
 		if err != nil {
 			return messages, fmt.Errorf("llm chat error: %w", err)
+		}
+
+		// Record telemetry for LLM interaction
+		telemetry.RecordAgentTokenUsage(ctx, a.AgentID, a.Role, a.Model, a.OrganizationID, "input", int64(resp.Usage.InputTokens))
+		telemetry.RecordAgentTokenUsage(ctx, a.AgentID, a.Role, a.Model, a.OrganizationID, "output", int64(resp.Usage.OutputTokens))
+
+		// Calculate and record cost estimate
+		if price, ok := billing.DefaultCatalog[a.Model]; ok {
+			cost := (float64(resp.Usage.InputTokens)/1_000_000.0)*price.InputPerMillionUSD +
+				(float64(resp.Usage.OutputTokens)/1_000_000.0)*price.OutputPerMillionUSD
+			telemetry.RecordAgentCost(ctx, a.AgentID, a.Role, a.Model, a.OrganizationID, cost)
 		}
 
 		messages = append(messages, resp.Message)
@@ -118,6 +131,7 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 		// Execute tool calls
 		var toolResults []ToolResult
 		for _, tc := range resp.Message.ToolCalls {
+			telemetry.RecordAgentApiCall(ctx, a.AgentID, a.Role, tc.Name)
 			result, err := a.executeToolCall(ctx, tc)
 			if err != nil {
 				toolResults = append(toolResults, ToolResult{
