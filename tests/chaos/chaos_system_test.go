@@ -2,6 +2,7 @@ package chaos_test
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -24,6 +25,22 @@ func TestChaosSystem_LatencySpike(t *testing.T) {
 	}
 }
 
+func TestChaosSystem_SqlSyncLag(t *testing.T) {
+	injector := chaos.NewInjector(chaos.SqlSyncLag, 123)
+
+	start := time.Now()
+	err := injector.Inject(context.Background())
+	duration := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if duration < 50*time.Millisecond || duration > 250*time.Millisecond {
+		t.Fatalf("expected duration between 50ms and 250ms, got %v", duration)
+	}
+}
+
 func TestChaosSystem_ConnectionDrop(t *testing.T) {
 	injector := chaos.NewInjector(chaos.ConnectionDrop, 123)
 
@@ -41,6 +58,26 @@ func TestChaosSystem_ConnectionDrop(t *testing.T) {
 
 	if !foundDrop {
 		t.Fatalf("expected connection drop to occur within 100 iterations")
+	}
+}
+
+func TestChaosSystem_NetworkPartition(t *testing.T) {
+	injector := chaos.NewInjector(chaos.NetworkPartition, 123)
+
+	foundPartition := false
+	for i := 0; i < 100; i++ {
+		err := injector.Inject(context.Background())
+		if err != nil {
+			if _, ok := err.(*chaos.ChaosError); !ok {
+				t.Fatalf("expected ChaosError, got %T", err)
+			}
+			foundPartition = true
+			break
+		}
+	}
+
+	if !foundPartition {
+		t.Fatalf("expected network partition to occur within 100 iterations")
 	}
 }
 
@@ -65,6 +102,9 @@ func TestChaosSystem_ResourceExhaustion(t *testing.T) {
 }
 
 func TestChaosSystem_CorruptAgentLock(t *testing.T) {
+	_ = os.MkdirAll(".agent-lock", 0755)
+	defer os.RemoveAll(".agent-lock")
+
 	injector := chaos.NewInjector(chaos.CorruptAgentLock, 123)
 
 	err := injector.Inject(context.Background())
@@ -74,5 +114,31 @@ func TestChaosSystem_CorruptAgentLock(t *testing.T) {
 
 	if _, ok := err.(*chaos.ChaosError); !ok {
 		t.Fatalf("expected ChaosError, got %T", err)
+	}
+
+	_, err = os.Stat(".agent-lock/corrupt.lock")
+	if os.IsNotExist(err) {
+		t.Fatal("expected corrupt.lock to be created")
+	}
+}
+
+func TestChaosSystem_CorruptMailbox(t *testing.T) {
+	_ = os.MkdirAll("mailbox", 0755)
+	defer os.RemoveAll("mailbox")
+
+	injector := chaos.NewInjector(chaos.CorruptMailbox, 123)
+
+	err := injector.Inject(context.Background())
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if _, ok := err.(*chaos.ChaosError); !ok {
+		t.Fatalf("expected ChaosError, got %T", err)
+	}
+
+	_, err = os.Stat("mailbox/corrupt.mbox")
+	if os.IsNotExist(err) {
+		t.Fatal("expected corrupt.mbox to be created")
 	}
 }
