@@ -1,0 +1,6 @@
+{
+  "title": "🧹 Maintainer: Implement Hybrid Privacy Audit and Compliance Guardrails",
+  "body": "Resolves hybrid privacy audit and adds compliance guardrails. Verified standalone opt-out default and cloud telemetry payload PII scrubbing.",
+  "head": "jules-2686339564214635432-021afa71",
+  "base": "main"
+}

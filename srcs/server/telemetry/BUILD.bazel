@@ -35,6 +35,7 @@ go_test(
         "telemetry_extra_test.go",
         "telemetry_test.go",
         "token_forecast_worker_test.go",
+        "compliance_test.go",
     ],
     embed = [":telemetry"],
     deps = [
