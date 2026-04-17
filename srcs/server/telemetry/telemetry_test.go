@@ -636,6 +636,16 @@ func TestRedactInterfacePII(t *testing.T) {
 		}
 	})
 
+
+	t.Run("slog.Value empty Group", func(t *testing.T) {
+		val := slog.GroupValue()
+		res := RedactInterfacePII(val).(slog.Value)
+		attrs := res.Group()
+		if len(attrs) != 0 {
+			t.Errorf("Expected empty group, got %v", attrs)
+		}
+	})
+
 	t.Run("Default fallback", func(t *testing.T) {
 		res := RedactInterfacePII(123)
 		if res != 123 {

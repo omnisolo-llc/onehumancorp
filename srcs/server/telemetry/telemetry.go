@@ -230,6 +230,9 @@ func redactSlogAttr(a slog.Attr) slog.Attr {
 
 func redactSlogValue(v slog.Value) slog.Value {
 	if v.Kind() == slog.KindGroup {
+		if len(v.Group()) == 0 {
+			return v
+		}
 		attrs := v.Group()
 		var redactedAttrs []slog.Attr
 		for _, attr := range attrs {
