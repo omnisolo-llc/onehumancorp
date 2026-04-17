@@ -1,50 +1,82 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# KAIROS Orchestrator: Master Design Document
+# KAIROS Master Orchestration Design
+**Author:** Principal Product Architect & KAIROS Orchestrator (L7)
 
-## 1. Shared Task List (Decomposition)
-KAIROS acts as the central brain for the Swarm, decomposing high-level intents into actionable Shared Tasks. The DB relies on PostgreSQL (`FOR UPDATE SKIP LOCKED`) and SQLite (Explicit Transactions).
+## Phase 1: Shared Task List (Decomposition)
+To manage deep-deliberation cycles, we need a robust database schema for task decomposition.
 
-### Database Schema (PostgreSQL):
+**PostgreSQL Schema:**
 ```sql
-CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    organization_id VARCHAR NOT NULL,
-    title VARCHAR NOT NULL,
-    description TEXT,
-    status VARCHAR NOT NULL DEFAULT 'PENDING',
-    assigned_agent_id VARCHAR,
-    priority VARCHAR NOT NULL DEFAULT 'P2',
+CREATE TABLE IF NOT EXISTS shared_tasks_v5 (
+    id UUID PRIMARY KEY,
+    epic_id UUID NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    status VARCHAR(50) DEFAULT 'PENDING',
+    assigned_agent_id UUID,
     payload JSONB,
-    parent_plan_id TEXT,
-    dependencies JSONB NOT NULL DEFAULT '[]',
-    locked_until TIMESTAMP,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- Worker claim using FOR UPDATE SKIP LOCKED
+```
+
+**Sequence Diagram:**
+```mermaid
+sequenceDiagram
+    participant KAIROS
+    participant TaskDB as Shared Task DB
+    participant SubAgent
+    KAIROS->>TaskDB: INSERT task
+    SubAgent->>TaskDB: SELECT ... FOR UPDATE SKIP LOCKED
+    TaskDB-->>SubAgent: Lock Task
+    SubAgent->>TaskDB: UPDATE status = 'IN_PROGRESS'
+```
+
+## Phase 2: Orchestration (Teammate Mesh API)
+Agents coordinate using a highly available realtime communication layer.
+
+- **Transport:** Redis Pub/Sub channels scoped by tenant.
+- **Protocol:** `POST /api/v1/mesh/broadcast` and SSE stream `GET /api/v1/mesh/stream`.
+
+**Sequence Diagram:**
+```mermaid
+sequenceDiagram
+    participant AgentA
+    participant API as Teammate Mesh API
+    participant Redis
+    participant AgentB
+    AgentB->>API: GET /api/v1/mesh/stream (Subscribe)
+    API->>Redis: SUBSCRIBE channel
+    AgentA->>API: POST /api/v1/mesh/broadcast
+    API->>Redis: PUBLISH channel
+    Redis-->>API: Message
+    API-->>AgentB: SSE Push
+```
+
+## Phase 3: autoDream (Memory Consolidation)
+Data pipelines converting episodic memory to long-term vector embeddings.
+
+**pgvector Schema:**
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+CREATE TABLE IF NOT EXISTS autodream_findings (
+    id UUID PRIMARY KEY,
+    timestamp TIMESTAMP,
+    content TEXT,
+    embedding VECTOR(1536)
 );
 ```
 
-```mermaid
-sequenceDiagram
-    participant Architect
-    participant Database
-    participant SubAgent
+## Phase 4: Sub-Agent Queue
+Scalable background queuing logic for spawning isolated agents.
 
-    Architect->>Database: Decompose Intent (State: PENDING)
-    SubAgent->>Database: Query PENDING Task FOR UPDATE SKIP LOCKED
-    Database-->>SubAgent: Lock Granted
-    SubAgent->>Database: UPDATE Task (State: IN_PROGRESS)
+**Payload:**
+```json
+{
+  "queue": "implementer_pool",
+  "job": "execute_task_123",
+  "timeout": 3600
+}
 ```
-
-## 2. Teammate Mesh Architecture
-Teammate Mesh ensures agents communicate seamlessly across hybrid deployments.
-- **Cloud:** Uses Redis Pub/Sub.
-- **Standalone:** Uses local Go memory channels.
-
-## 3. AutoDream Data Pipelines
-AutoDream sweeps ephemeral runtime memory from `OHC_MEMORY_DIR` and embeds it into `pgvector` enabled tables for long term queryability.
-
-## 4. Sub-Agent Orchestration Queue
-Manages asynchronous task routing, job retries, and exponential backoff.
 
 </div>

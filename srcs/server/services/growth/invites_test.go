@@ -57,46 +57,27 @@ func TestInviteTracker(t *testing.T) {
 	if count != 1 {
 		t.Fatalf("Expected 1 invite for team, got %d", count)
 	}
-}
 
-func TestRecordInvites(t *testing.T) {
-	ctx := context.Background()
-
-	os.Setenv("DATABASE_URL", "sqlite://:memory:")
-
-	database, err := db.New(ctx)
-	if err != nil {
-		t.Fatalf("failed to connect to memory db: %v", err)
-	}
-
-	if err := database.RunMigrations(ctx); err != nil {
-		t.Fatalf("failed to run migrations: %v", err)
-	}
-
-	tracker := NewInviteTracker(database)
-
-	teamID := "team456"
-	inviterID := "userA"
-	inviteeIDs := []string{"userB", "userC", "userD"}
-
+	// Test RecordInvites (batch)
+	inviteeIDs := []string{"user3", "user4", "user5"}
 	err = tracker.RecordInvites(ctx, teamID, inviterID, inviteeIDs)
 	if err != nil {
-		t.Fatalf("failed to record invites: %v", err)
+		t.Fatalf("failed to record batch invites: %v", err)
 	}
 
-	count, err := tracker.GetTotalInvitesCount(ctx)
+	count, err = tracker.GetTotalInvitesCount(ctx)
 	if err != nil {
 		t.Fatalf("failed to get total invites count: %v", err)
 	}
-	if count != 3 {
-		t.Fatalf("Expected 3 total invites after record, got %d", count)
+	if count != 4 {
+		t.Fatalf("Expected 4 total invites after batch record, got %d", count)
 	}
 
 	count, err = tracker.GetTeamInvitesCount(ctx, teamID)
 	if err != nil {
 		t.Fatalf("failed to get team invites count: %v", err)
 	}
-	if count != 3 {
-		t.Fatalf("Expected 3 invites for team, got %d", count)
+	if count != 4 {
+		t.Fatalf("Expected 4 invites for team, got %d", count)
 	}
 }

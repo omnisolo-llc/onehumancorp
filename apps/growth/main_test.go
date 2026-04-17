@@ -61,6 +61,19 @@ func TestGrowthReferralsAPI(t *testing.T) {
 	if status := rrStats.Code; status != http.StatusOK {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
+	// Test bulk invite
+	reqBulkInvite, err := http.NewRequest("POST", "/api/v1/growth/referrals/bulk_invite", bytes.NewBuffer([]byte(`{"invitee_emails":["bulk1@example.com", "bulk2@example.com"]}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqBulkInvite.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
+
+	rrBulkInvite := httptest.NewRecorder()
+	mux.ServeHTTP(rrBulkInvite, reqBulkInvite)
+
+	if status := rrBulkInvite.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code for bulk_invite: got %v want %v", status, http.StatusOK)
+	}
 }
 
 func TestQuotaCheckEndpoint(t *testing.T) {
