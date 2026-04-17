@@ -346,41 +346,78 @@ export PATH="$FLUTTER_ROOT/bin:$PATH"
 
 cd "$WORKSPACE_DIR_ABS"
 
-echo "=== Generating pub_deps.json ==="
-DART_BIN_LOCAL="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
-PUB_DEPS_ERR="$WORKSPACE_DIR_ABS/pub_deps.stderr.log"
-if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
-    :
-else
-    if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
-        if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
-            cat "$PUB_DEPS_ERR" >&2 || true
-            echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-            exit 1
-        fi
-    else
-        cat "$PUB_DEPS_ERR" >&2 || true
-        echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
-        exit 1
-    fi
-fi
-
-export PUB_DEPS_PATH="$WORKSPACE_DIR_ABS/pub_deps.json"
+echo "=== Generating pub_deps.json from available packages ==="
 "$PYTHON_BIN" <<'PY'
+import json
 import os
+import re
 
-path = os.environ.get("PUB_DEPS_PATH")
-if path and os.path.exists(path):
-    with open(path, "r", encoding="utf-8") as fh:
-        payload = fh.read()
-    start = None
-    for idx, ch in enumerate(payload):
-        if ch == "[" or ch == chr(123):
-            start = idx
-            break
-    if start and start > 0:
-        with open(path, "w", encoding="utf-8") as fh:
-            fh.write(payload[start:])
+pub_cache = os.environ.get("PUB_CACHE") or ""
+pubspec_path = os.environ.get("PUBSPEC_PATH") or ""
+flutter_root = os.environ.get("FLUTTER_ROOT") or ""
+
+packages = []
+
+# 1. Root package (from pubspec.yaml)
+root_name = ""
+root_version = ""
+if os.path.exists(pubspec_path):
+    with open(pubspec_path, "r", encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if stripped.startswith("name:") and not root_name:
+                root_name = stripped.split(":", 1)[1].strip().strip('"').strip("'")
+            elif stripped.startswith("version:") and not root_version:
+                root_version = stripped.split(":", 1)[1].strip().strip('"').strip("'")
+
+if root_name:
+    packages.append({
+        "name": root_name,
+        "source": "root",
+        "version": root_version or "0.0.0",
+        "kind": "root",
+    })
+
+# 2. Hosted packages already present in pub_cache (from dep_caches + own IS_PUB_PACKAGE copy)
+seen_hosted = {}
+hosted_dir = os.path.join(pub_cache, "hosted", "pub.dev")
+if os.path.isdir(hosted_dir):
+    for pkg_dir in sorted(os.listdir(hosted_dir)):
+        m = re.match(r'^(.+?)-(\d+\.\d+.*)$', pkg_dir)
+        if m:
+            pkg_name = m.group(1)
+            pkg_version = m.group(2)
+            # For duplicate versions keep the last one in sorted order (highest)
+            seen_hosted[pkg_name] = pkg_version
+
+for pkg_name, pkg_version in sorted(seen_hosted.items()):
+    packages.append({
+        "name": pkg_name,
+        "source": "hosted",
+        "version": pkg_version,
+        "kind": "transitive",
+    })
+
+# 3. SDK packages from the Flutter SDK
+if flutter_root:
+    for sdk_subdir in ["packages", os.path.join("bin", "cache", "pkg")]:
+        sdk_dir = os.path.join(flutter_root, sdk_subdir)
+        if not os.path.isdir(sdk_dir):
+            continue
+        for pkg_name in sorted(os.listdir(sdk_dir)):
+            pkg_path = os.path.join(sdk_dir, pkg_name)
+            if os.path.isdir(pkg_path) and os.path.exists(os.path.join(pkg_path, "pubspec.yaml")):
+                packages.append({
+                    "name": pkg_name,
+                    "source": "sdk",
+                    "version": "0.0.0",
+                    "kind": "transitive",
+                })
+
+with open("pub_deps.json", "w", encoding="utf-8") as f:
+    json.dump({"packages": packages}, f, indent=2)
+
+print("Generated synthetic pub_deps.json with {} packages".format(len(packages)))
 PY
 
 if [ ! -s pub_deps.json ]; then
