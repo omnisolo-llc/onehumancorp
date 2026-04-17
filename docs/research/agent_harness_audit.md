@@ -1,58 +1,78 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.05); color: #fff; border-radius: 12px; padding: 24px; border: 1px solid rgba(255,255,255,0.1);">
 
-<div style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border-radius: 12px; padding: 24px; background: rgba(255,255,255,0.05); color: #E0E0E0;">
+# 🔬 OHC Market Research: Agent Harness Architecture Analysis
+**Target:** Leaked Claude Code (v2.1.88), OpenClaw, Gstack
+**Analyst:** Principal Product Researcher & Oracle (L7)
 
-# 🔬 OHC Oracle Research Report: Agent Harness & Execution Isolation
+## Executive Summary
+This report analyzes the core architectural patterns and "Agent Harness" design of leading open source and leaked agent repositories (Claude Code, OpenClaw, Gstack) and compares them against One Human Corp's (OHC) current hybrid architecture (OHC-HA).
+The objective is to identify critical gaps and define actionable missions to elevate the OHC platform towards absolute autonomy and aesthetic excellence.
 
-**Date:** 2026-04-16
-**Target Analyzed:** Claude Code (v2.1.88)
-**Focus Area:** Agent Harness Environment, Sandboxing, Shell Execution Lifecycle
+## 1. Claude Code: Interactive Terminal Harness & Sandboxing
 
-## 1. Executive Summary
-This research investigates the operational harness of *Claude Code*, a leading CLI-based AI agent, to identify structural gaps in OHC's local and hybrid execution models. The analysis focused heavily on how the competitor isolates untrusted shell commands, manages execution state across turns, and handles security boundaries. The findings highlight immediate opportunities to harden OHC's `AgentWorker` and `TerminalCall` implementations to match industry-standard isolation and state persistence.
+The Claude Code repository (v2.1.88) utilizes a robust Agent Harness designed for stateful, interactive, and highly sandboxed execution:
 
-## 2. Competitive Architectural Analysis
+*   **Interactive Harness (`interactiveHelpers.tsx`, `dialogLaunchers.tsx`)**: Uses React (`.tsx` files) to render terminal UIs (via `ink`). This provides a rich, structured visual experience in a CLI environment.
+*   **Unified Tool Registry (`Tool.ts`, `tools.ts`)**: A highly modularized tool system. The presence of 44 subdirectories under `tools/` indicates a massive surface area of capabilities. Tools are strongly typed and self-describing.
+*   **Sandbox Adapter (`sandbox-adapter.ts`)**: Wraps `@anthropic-ai/sandbox-runtime` to intercept, isolate, and monitor interactions between the LLM and the host OS. Uses strict read/write permission mappers and intercepts network traffic (`sandboxAskCallback`).
+*   **Cost & Resource Tracking (`cost-tracker.ts`)**: Built-in mechanisms to track token usage and API costs in real-time within the harness.
 
-Claude Code utilizes a sophisticated **Sandbox Adapter** wrapping an external `@anthropic-ai/sandbox-runtime` package. This layer intercepts, isolates, and monitors all interactions between the LLM and the host OS.
+## 2. OpenClaw: The Plugin Harness Registry
 
-### Shell Provider Strategies
-- **Bash & PowerShell Isolation:** Instead of raw `exec` calls, Claude Code constructs intricate wrapper commands. For Bash, they enforce security by disabling extended globbing (`shopt -u extglob`) to prevent post-validation expansion attacks.
-- **Stateful REPL Simulation:** Agents require context (working directory, environment variables) to persist across command invocations. Claude Code solves this by writing environment snapshots (`declare -p`) and path snapshots (`pwd -P`) to temporary files, and `source`ing them before subsequent commands.
-- **TMPDIR Jailing:** Every spawned shell process has its `TMPDIR`, `CLAUDE_CODE_TMPDIR`, and `TMPPREFIX` (for zsh heredocs) overridden to point to a strictly permissioned (`0700`) temporary directory specific to that session.
+OpenClaw implements a dynamic **Agent Harness Plugin** architecture (`sdk-agent-harness.md`):
 
-### Network & File Restrictions
-- **Intercept Callbacks:** The sandbox utilizes a `sandboxAskCallback` to intercept unapproved network requests, allowing for graceful UI prompting ("Sandbox Violations") rather than raw crashes.
-- **Defensive Redirects:** The engine detects and rewrites dangerous LLM behaviors, such as Windows CMD-style `2>nul` redirects, which create literal files named `nul` on POSIX systems, breaking git operations.
+*   **Harness Registry**: It allows registering different low-level executors for prepared OpenClaw agent turns.
+*   **Dynamic Resolution**: The harness is selected after resolving the provider and model (e.g., falling back to a built-in PI harness if a native native coding-agent server fails).
+*   **Codex Harness (`codex-harness.md`)**: A bundled app-server harness specifically for executing native threads, compaction, and app-server execution, while OpenClaw still owns the visible transcript mirror and tools.
 
-## 3. OHC vs. Market Reality (Comparative Chart)
+## 3. Gstack: Parallel Workspace Isolation
 
-| Feature | OHC (Current State) | Claude Code (v2.1.88) | Gap Impact |
+Gstack's "Conductor" implements a different paradigm for harness isolation:
+
+*   **Parallel Sprint Workspaces**: To enable horizontal agent scaling, Conductor runs 10-15 parallel agent sprints by isolating each session in its own temporary workspace (similar to `git worktree`), preventing file collisions between agents.
+
+## 4. OHC vs. Market Reality (Comparative Analysis)
+
+| Feature | OHC Hybrid Architecture | Market Leader (Claude/OpenClaw/Gstack) | Gap Priority |
 | :--- | :--- | :--- | :--- |
-| **Command Execution** | Raw `exec.Command` | Wrapped via `ShellProvider` | High (Security/Stability) |
-| **State Persistence** | Stateless per command | Snapshot/Restore (`source` + `pwd`) | High (Agent UX) |
-| **TMPDIR Isolation** | Host Default (`/tmp`) | Session-isolated `0700` Jail | Medium (Security) |
-| **Network Interception** | Allowed (Host Network) | Hooked via `sandboxAskCallback` | Medium (Control) |
-| **Glob Attack Mitigation** | None | Explicitly disabled (`-u extglob`) | High (Security) |
+| **Harness Flexibility** | Direct execution | OpenClaw's dynamic Harness Plugin Registry | **Medium**: OHC needs a flexible registry for different execution backends. |
+| **Tool Modularity** | Fragmented | Claude's Unified Tool Registry (UTR). | **High**: OHC needs a unified, heavily typed tool registry. |
+| **Terminal/CLI UX** | Basic CLI | Claude's Interactive Terminal Harness (React/Ink). | **High**: Develop a "Premium" aesthetic CLI for Standalone mode. |
+| **Cost Awareness** | Backend/billing focused | Claude's real-time in-harness cost tracking. | **Medium**: Agents must be aware of their own burn rate. |
+| **Parallel Isolation** | Shared file system | Gstack's Parallel Workspace Isolation. | **High**: OHC needs `git worktree` isolation for swarm scaling. |
 
-## 4. Architectural Flow & Recommended Design
+## 5. Architectural Gap Visualization
 
 ```mermaid
-graph TD;
-    Agent[OHC Agent Logic] --> |Proposes Command| Harness[Sandbox Manager];
-    Harness --> |Generates Jail Dir| TmpDir[Session TmpDir 0700];
-    Harness --> |Injects Overrides| Env[TMPDIR / Network Policies];
-    Harness --> |Wraps Command| Wrap[State Sourcing + shopt -u extglob];
-    Wrap --> Exec[Host Shell Execution];
-    Exec --> |State Dump| TmpDir;
-    Exec --> |Output| Agent;
+graph TD
+    subgraph Market Standards
+        C_Harness[Interactive Harness] --> C_Cost[Cost Telemetry]
+        C_Harness --> C_UTR[Unified Tool Registry]
+        O_Harness[Harness Plugin Registry] --> O_Codex[Native App Server]
+        G_Harness[Conductor] --> G_Worktree[Parallel Workspaces]
+    end
+
+    subgraph OHC Future Architecture
+        T_Registry[Harness Plugin Registry]
+        T_Registry --> T_ITH[Interactive Terminal Harness - ITH]
+        T_ITH --> T_Cost[Real-Time Cost Telemetry]
+        T_ITH --> T_UTR[Unified Tool Registry - UTR]
+        T_Registry --> T_PW[Parallel Workspace Harness]
+        T_PW --> T_WT(Isolated Worktrees)
+    end
+
+    Market Standards -.->|Design Inspiration| OHC Future Architecture
 ```
 
-## 5. Actionable Roadmap (Missions Injected)
+## 6. Actionable Missions (GitHub Issues)
 
-The following missions have been created via OHC-GTP to close these gaps:
+The following missions have been extracted and submitted to the OHC GitHub repository (`onehumancorp/mono/issues`):
 
-1. **[backend] Implement Sandboxed Execution Environment for Agent Harness (#5295)**
-   - Introduces the `SandboxManager` to handle `TMPDIR` jailing, `0700` permissions, and security flags (`shopt -u extglob`) for Bash/PowerShell execution within the Go backend.
-2. **[backend] Implement Shell Environment Snapshot & Restore for Agents (#5296)**
-   - Introduces stateful REPL simulation by reading/writing `env_snapshot.sh` and `cwd_snapshot.txt` between command invocations.
+1.  **Mission 1: [backend] Implement Unified Tool Registry (UTR) with Strong Typing** (Created: #5884)
+    *   Goal: Standardize how agents discover and execute tools, inspired by Claude Code's `Tool.ts`.
+2.  **Mission 2: [harness] Implement Interactive Terminal Harness (ITH) with React/Ink for Standalone Mode** (Created: #5885)
+    *   Goal: Create a visually stunning, interactive CLI experience for Standalone mode, rivaling web UIs.
+3.  **Mission 3: [telemetry] Inject Real-time Token and Cost Tracking into Execution Loop** (Created: #5886)
+    *   Goal: Agents must track their own resource consumption in real-time, matching the `cost-tracker.ts` capability.
 
 </div>
