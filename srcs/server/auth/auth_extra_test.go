@@ -184,7 +184,7 @@ func TestStoreGetOrCreateOIDCUser_Fallback(t *testing.T) {
 	s := NewStore()
 	s.CreateUser("fallback1", "fallback1@test.com", "password", nil)
 
-	u := s.GetOrCreateOIDCUser("sub123", "fallback1@test.com", "fallback1")
+	u := s.GetOrCreateOIDCUser("", "sub123", "fallback1@test.com", "fallback1")
 	if u.OIDCSubject != "sub123" {
 		t.Errorf("expected sub123, got %s", u.OIDCSubject)
 	}
