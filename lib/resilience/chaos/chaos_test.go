@@ -90,12 +90,25 @@ func TestErrorString(t *testing.T) {
 	}
 }
 
+
+func TestCorruptAgentLock(t *testing.T) {
+	inj := NewInjector(CorruptAgentLock, 3)
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
+		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
+	}
+}
+
 func TestAllModeStrings(t *testing.T) {
 	modes := map[ChaosMode]string{
 		NoChaos:            "no_chaos",
 		LatencySpike:       "latency_spike",
 		ConnectionDrop:     "connection_drop",
 		ResourceExhaustion: "resource_exhaustion",
+		CorruptAgentLock:   "corrupt_agent_lock",
 	}
 
 	for mode, expected := range modes {
