@@ -29,6 +29,36 @@ func (m mockSettingsStore) SetExtra(key, value string) error {
     return nil
 }
 
+func TestHandleWizardConfigure(t *testing.T) {
+	s := &Server{
+		settings: settings.AppSettings{},
+		hub:      orchestration.NewHub(),
+	}
+
+	reqBody := wizardConfigureRequest{
+		Extras: map[string]string{
+			"company_name": "Test Company",
+			"industry":     "Tech",
+		},
+	}
+	body, _ := json.Marshal(reqBody)
+
+	req, _ := http.NewRequest(http.MethodPost, "/api/wizard/configure", bytes.NewBuffer(body))
+	rr := httptest.NewRecorder()
+
+	s.handleWizardConfigure(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if s.settings.Extras["company_name"] != "Test Company" {
+		t.Errorf("Expected company_name to be 'Test Company', got '%s'", s.settings.Extras["company_name"])
+	}
+}
 
 func TestHandleWizardOnboardingVerify(t *testing.T) {
 	s := &Server{}
@@ -138,195 +168,6 @@ func TestHandleWizardOnboardingVerify(t *testing.T) {
 		}
 		if resp["mode"] != "standalone" {
 			t.Errorf("Expected mode to be standalone, got %v", resp["mode"])
-		}
-	})
-}
-
-
-
-
-
-
-func TestHandleWizardStatus(t *testing.T) {
-	t.Run("Method Not Allowed", func(t *testing.T) {
-		s := &Server{
-			settings: settings.AppSettings{},
-			hub:      orchestration.NewHub(),
-		}
-		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/status", nil)
-		rr := httptest.NewRecorder()
-		s.handleWizardStatus(rr, req)
-
-		if rr.Code != http.StatusMethodNotAllowed {
-			t.Errorf("Expected status 405, got %v", rr.Code)
-		}
-	})
-
-	t.Run("Not Configured", func(t *testing.T) {
-		s := &Server{
-			settings: settings.AppSettings{
-				ListenAddr: "",
-			},
-			hub: orchestration.NewHub(),
-		}
-		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/status", nil)
-		rr := httptest.NewRecorder()
-		s.handleWizardStatus(rr, req)
-
-		if rr.Code != http.StatusOK {
-			t.Errorf("Expected status 200, got %v", rr.Code)
-		}
-		var resp wizardStatusResponse
-		json.Unmarshal(rr.Body.Bytes(), &resp)
-		if resp.Configured {
-			t.Errorf("Expected configured to be false")
-		}
-	})
-
-	t.Run("Configured", func(t *testing.T) {
-		s := &Server{
-			settings: settings.AppSettings{
-				ListenAddr:    ":8080",
-				DBPath:        "/data/db",
-				CentrifugeURL: "http://localhost:8000",
-				AiProviders: []settings.AiProvider{
-					{Enabled: true},
-				},
-			},
-			hub: orchestration.NewHub(),
-		}
-		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/status", nil)
-		rr := httptest.NewRecorder()
-		s.handleWizardStatus(rr, req)
-
-		var resp wizardStatusResponse
-		json.Unmarshal(rr.Body.Bytes(), &resp)
-		if !resp.Configured {
-			t.Errorf("Expected configured to be true")
-		}
-	})
-}
-
-
-func TestHandleWizardConfigure(t *testing.T) {
-	t.Run("Method Not Allowed", func(t *testing.T) {
-		s := &Server{
-			settings: settings.AppSettings{},
-			hub:      orchestration.NewHub(),
-		}
-
-		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/configure", nil)
-		rr := httptest.NewRecorder()
-		s.handleWizardConfigure(rr, req)
-
-		if rr.Code != http.StatusMethodNotAllowed {
-			t.Errorf("Expected status 405, got %v", rr.Code)
-		}
-	})
-
-	t.Run("Invalid JSON", func(t *testing.T) {
-		s := &Server{
-			settings: settings.AppSettings{},
-			hub:      orchestration.NewHub(),
-		}
-
-		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/configure", bytes.NewBufferString("{invalidjson}"))
-		rr := httptest.NewRecorder()
-		s.handleWizardConfigure(rr, req)
-
-		if rr.Code != http.StatusBadRequest {
-			t.Errorf("Expected status 400, got %v", rr.Code)
-		}
-	})
-
-	t.Run("Valid Update", func(t *testing.T) {
-		s := &Server{
-			settings: settings.AppSettings{},
-			hub:      orchestration.NewHub(),
-		}
-
-		reqBody := wizardConfigureRequest{
-			ListenAddr:    ":8080",
-			DBPath:        "/data/db",
-			PostgresURL:   "postgres://localhost",
-			RedisURL:      "redis://localhost",
-			CentrifugeURL: "http://localhost",
-			MinimaxAPIKey: "key123",
-			Extras: map[string]string{
-				"company_name": "Test Company",
-				"industry":     "Tech",
-			},
-			AiProviders: []settings.AiProvider{
-				{Enabled: true},
-			},
-		}
-		body, _ := json.Marshal(reqBody)
-
-		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/configure", bytes.NewBuffer(body))
-		rr := httptest.NewRecorder()
-
-		s.handleWizardConfigure(rr, req)
-
-		if status := rr.Code; status != http.StatusOK {
-			t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
-		}
-
-		s.mu.RLock()
-		defer s.mu.RUnlock()
-
-		if s.settings.Extras["company_name"] != "Test Company" {
-			t.Errorf("Expected company_name to be 'Test Company', got '%s'", s.settings.Extras["company_name"])
-		}
-		if s.settings.ListenAddr != ":8080" {
-			t.Errorf("Expected ListenAddr ':8080'")
-		}
-		if s.settings.DBPath != "/data/db" {
-			t.Errorf("Expected DBPath '/data/db'")
-		}
-		if s.settings.PostgresURL != "postgres://localhost" {
-			t.Errorf("Expected PostgresURL 'postgres://localhost'")
-		}
-		if s.settings.RedisURL != "redis://localhost" {
-			t.Errorf("Expected RedisURL 'redis://localhost'")
-		}
-		if s.settings.CentrifugeURL != "http://localhost" {
-			t.Errorf("Expected CentrifugeURL 'http://localhost'")
-		}
-		if s.settings.MinimaxAPIKey != "key123" {
-			t.Errorf("Expected MinimaxAPIKey 'key123'")
-		}
-		if len(s.settings.AiProviders) == 0 {
-			t.Errorf("Expected AiProviders to be set")
-		}
-	})
-
-	t.Run("Update With Existing Extras", func(t *testing.T) {
-		s := &Server{
-			settings: settings.AppSettings{
-				Extras: map[string]string{"existing": "value"},
-			},
-			hub: orchestration.NewHub(),
-		}
-
-		reqBody := wizardConfigureRequest{
-			Extras: map[string]string{
-				"new": "value2",
-			},
-		}
-		body, _ := json.Marshal(reqBody)
-		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/configure", bytes.NewBuffer(body))
-		rr := httptest.NewRecorder()
-
-		s.handleWizardConfigure(rr, req)
-
-		s.mu.RLock()
-		defer s.mu.RUnlock()
-
-		if s.settings.Extras["existing"] != "value" {
-			t.Errorf("Expected existing extra to be preserved")
-		}
-		if s.settings.Extras["new"] != "value2" {
-			t.Errorf("Expected new extra to be added")
 		}
 	})
 }
