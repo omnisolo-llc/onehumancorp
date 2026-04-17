@@ -28,7 +28,7 @@ func (r *TasksRepository) CreateTask(ctx context.Context, task *OrchestrationTas
 
 	_, err = tx.Exec(ctx, `
 		INSERT INTO tasks (id, epic_id, title, status, payload, locked_by, locked_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES (\$1, \$2, \$3, \$4, \$5, \$6, \$7, \$8, \$9)
 	`, task.ID, task.EpicID, task.Title, task.Status, task.Payload, task.LockedBy, task.LockedAt, task.CreatedAt, task.UpdatedAt)
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func (r *TasksRepository) UpdateTaskStatus(ctx context.Context, id, status strin
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, "UPDATE tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", status, id)
+	_, err = tx.Exec(ctx, "UPDATE tasks SET status = \$1, updated_at = CURRENT_TIMESTAMP WHERE id = \$2", status, id)
 	if err != nil {
 		return err
 	}
@@ -79,7 +79,7 @@ func (r *TasksRepository) getNextAvailableTaskSQLite(ctx context.Context, agentI
 	}
 
 	now := time.Now()
-	_, err = tx.Exec(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', locked_by = $1, locked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID)
+	_, err = tx.Exec(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', locked_by = \$1, locked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = \$2", agentID, task.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (r *TasksRepository) getNextAvailableTaskPostgres(ctx context.Context, agen
 	}
 
 	now := time.Now()
-	_, err = tx.Exec(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', locked_by = $1, locked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID)
+	_, err = tx.Exec(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', locked_by = \$1, locked_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = \$2", agentID, task.ID)
 	if err != nil {
 		return nil, err
 	}
