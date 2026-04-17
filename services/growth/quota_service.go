@@ -11,13 +11,15 @@ import (
 type QuotaService struct {
 	tracker *analytics.Tracker
 	rdb     *redis.Client
+	repo    *ReferralRepository
 	limit   int
 }
 
-func NewQuotaService(tracker *analytics.Tracker, rdb *redis.Client, limit int) *QuotaService {
+func NewQuotaService(tracker *analytics.Tracker, rdb *redis.Client, repo *ReferralRepository, limit int) *QuotaService {
 	return &QuotaService{
 		tracker: tracker,
 		rdb:     rdb,
+		repo:    repo,
 		limit:   limit,
 	}
 }
@@ -45,7 +47,15 @@ func (s *QuotaService) CheckQuota(ctx context.Context, tenantID string) (bool, e
 		return false, err
 	}
 
-	if usage >= s.limit {
+	currentLimit := s.limit
+	if s.repo != nil {
+		stats, err := s.repo.GetStats(ctx, tenantID)
+		if err == nil && stats != nil {
+			currentLimit += stats.Signups * 50
+		}
+	}
+
+	if usage >= currentLimit {
 		s.tracker.TrackEvent(ctx, "quota_exceeded", map[string]interface{}{
 			"tenant_id": tenantID,
 		})
