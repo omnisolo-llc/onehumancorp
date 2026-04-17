@@ -20,8 +20,8 @@ func TestHandleHandoffResolveExtraCoverage(t *testing.T) {
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 
-	_, _ = authStore.CreateUser("adminuser", "admin@test.com", "adminpass123", []string{"admin"}, "")
-	user, _ := authStore.Authenticate("adminuser", "adminpass123", "")
+	_, _ = authStore.CreateUser("adminuser", "admin@test.com", "adminpass123", []string{"admin"})
+	user, _ := authStore.Authenticate("adminuser", "adminpass123")
 	token, _ := authStore.IssueToken(user)
 
 	srv := &Server{
