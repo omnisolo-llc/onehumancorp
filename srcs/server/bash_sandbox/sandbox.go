@@ -64,6 +64,8 @@ func NewSandbox() *Sandbox {
 			regexp.MustCompile(`<\(`),
 			regexp.MustCompile(`>\(`),
 			regexp.MustCompile(`=\(`),
+			// Prevent git internal path mutations
+			regexp.MustCompile(`(?i)\.git/(hooks|config|objects|refs|HEAD)`),
 		},
 	}
 }

@@ -23,6 +23,8 @@ func TestSandboxValidation(t *testing.T) {
 		{"process substitution read", "cat <(ls)", true},
 		{"process substitution write", "echo \"hi\" >(cat)", true},
 		{"zsh expansion", "cat =(ls)", true},
+		{"git internal write", "echo \"foo\" > .git/hooks/pre-commit", true},
+		{"git internal read", "cat .git/config", true},
 	}
 
 	for _, tt := range tests {
