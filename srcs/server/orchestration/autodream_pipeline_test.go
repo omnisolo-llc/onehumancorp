@@ -41,7 +41,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE autodream_memories (
+		CREATE TABLE consolidated_memory (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			agent_id TEXT,
@@ -55,15 +55,19 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 
 	// Insert test data
 	_, err = provider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, title, status, organization_id, agent_id, payload)
-		VALUES ('task-1', 'Test Task', 'COMPLETED', 'org-1', 'agent-1', '{"result": "success"}')
+		CREATE TABLE IF NOT EXISTS agent_session_data (
+			session_id TEXT PRIMARY KEY,
+			agent_id TEXT NOT NULL,
+			context_data TEXT NOT NULL,
+			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
 	`)
 	require.NoError(t, err)
 
-	_, err = provider.Exec(ctx, `
-		INSERT INTO shared_tasks (id, title, status, organization_id, agent_id, payload)
-		VALUES ('task-2', 'Pending Task', 'PENDING', 'org-1', 'agent-1', '{"result": "waiting"}')
-	`)
+
+
+
+	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'))")
 	require.NoError(t, err)
 
 	pipeline := NewAutoDreamPipeline(provider)
@@ -74,35 +78,15 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	// Run process
 	pipeline.process(ctx)
 
-	// Verify only completed tasks were consolidated
-	rows, err := provider.Query(ctx, "SELECT id, content, source_type, embedding FROM autodream_memories")
+	// Verify DB sessions were consolidated
+	var count int
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_type = 'session_compression'").Scan(&count)
 	require.NoError(t, err)
-	defer rows.Close()
+	assert.Equal(t, 1, count)
 
-	var memories []struct {
-		id         string
-		content    string
-		sourceType string
-		embedding  string
-	}
-
-	for rows.Next() {
-		var m struct {
-			id         string
-			content    string
-			sourceType string
-			embedding  string
-		}
-		err := rows.Scan(&m.id, &m.content, &m.sourceType, &m.embedding)
-		require.NoError(t, err)
-		memories = append(memories, m)
-	}
-
-	assert.Len(t, memories, 1)
-	assert.Equal(t, "task-1", memories[0].id)
-	assert.Equal(t, `{"result": "success"}`, memories[0].content)
-	assert.Equal(t, "shared_task", memories[0].sourceType)
-	assert.Equal(t, "[0.1,0.2,0.3]", memories[0].embedding)
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data WHERE session_id = 's1'").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 0, count)
 }
 
 func TestAutoDreamPipeline_StartStop(t *testing.T) {
