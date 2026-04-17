@@ -220,3 +220,66 @@ func TestABTestEndpoints(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }
+
+func TestTeamInviteEndpoints(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mr.Close()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	tracker := analytics.NewTracker()
+	mux := NewGrowthMux(tracker, rdb)
+
+	// Test Team Invite
+	reqInvite, err := http.NewRequest("POST", "/api/v1/growth/team/invite", bytes.NewBuffer([]byte(`{"tenant_id":"tenant-1","invitee_email":"test@example.com"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqInvite.Header.Set("X-Spiffe-Id", "tenant-1")
+
+	rrInvite := httptest.NewRecorder()
+	mux.ServeHTTP(rrInvite, reqInvite)
+
+	if status := rrInvite.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code for team invite: got %v want %v", status, http.StatusOK)
+	}
+
+	// Fetch invites by tenant to get ID
+	reqList, err := http.NewRequest("GET", "/api/v1/growth/team/invites?tenant_id=tenant-1", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqList.Header.Set("X-Spiffe-Id", "tenant-1")
+
+	rrList := httptest.NewRecorder()
+	mux.ServeHTTP(rrList, reqList)
+
+	if status := rrList.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code for team list: got %v want %v", status, http.StatusOK)
+	}
+
+	// Accept the invite
+	keys, err := rdb.Keys(context.Background(), "growth:team_invite_index:*").Result()
+	if err != nil || len(keys) == 0 {
+		t.Fatalf("Expected to find team invite in redis")
+	}
+	inviteID := keys[0][len("growth:team_invite_index:"):]
+
+	reqAccept, err := http.NewRequest("POST", "/api/v1/growth/team/accept", bytes.NewBuffer([]byte(`{"invite_id":"`+inviteID+`", "user_email": "test@example.com"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqAccept.Header.Set("X-Spiffe-Id", "spiffe://example.org/newuser")
+
+	rrAccept := httptest.NewRecorder()
+	mux.ServeHTTP(rrAccept, reqAccept)
+
+	if status := rrAccept.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code for team accept: got %v want %v", status, http.StatusOK)
+	}
+}
