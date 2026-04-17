@@ -59,106 +59,115 @@ func TestHandleWizardConfigure(t *testing.T) {
 		t.Errorf("Expected company_name to be 'Test Company', got '%s'", s.settings.Extras["company_name"])
 	}
 }
+
 func TestHandleWizardOnboardingVerify(t *testing.T) {
-	s := &Server{
-		settings: settings.AppSettings{},
-		hub:      orchestration.NewHub(),
-	}
+	s := &Server{}
 
-	tests := []struct {
-		name           string
-		method         string
-		envVars        map[string]string
-		expectedStatus int
-		expectedMode   string
-		expectedHealth string
-	}{
-		{
-			name:           "Method Not Allowed",
-			method:         http.MethodPost,
-			expectedStatus: http.StatusMethodNotAllowed,
-		},
-		{
-			name:   "Standalone Mode",
-			method: http.MethodGet,
-			envVars: map[string]string{
-				"OHC_STANDALONE": "true",
-			},
-			expectedStatus: http.StatusOK,
-			expectedMode:   "standalone",
-			expectedHealth: "healthy",
-		},
-		{
-			name:   "Cloud Mode - Missing Database URL",
-			method: http.MethodGet,
-			envVars: map[string]string{
-				"REDIS_URL": "redis://localhost:6379",
-			},
-			expectedStatus: http.StatusOK,
-			expectedMode:   "cloud",
-			expectedHealth: "degraded",
-		},
-		{
-			name:   "Cloud Mode - Missing Redis URL",
-			method: http.MethodGet,
-			envVars: map[string]string{
-				"DATABASE_URL": "postgres://localhost:5432",
-			},
-			expectedStatus: http.StatusOK,
-			expectedMode:   "cloud",
-			expectedHealth: "degraded",
-		},
-		{
-			name:   "Cloud Mode - Both Missing",
-			method: http.MethodGet,
-			envVars: map[string]string{},
-			expectedStatus: http.StatusOK,
-			expectedMode:   "cloud",
-			expectedHealth: "degraded",
-		},
-		{
-			name:   "Cloud Mode - Valid URLs",
-			method: http.MethodGet,
-			envVars: map[string]string{
-				"DATABASE_URL": "postgres://localhost:5432",
-				"REDIS_URL":    "redis://localhost:6379",
-			},
-			expectedStatus: http.StatusOK,
-			expectedMode:   "cloud",
-			expectedHealth: "healthy",
-		},
-	}
+	// Test case 1: Method Not Allowed
+	t.Run("Method Not Allowed", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Save current env and set new ones for test
-			for k, v := range tt.envVars {
-				t.Setenv(k, v)
-			}
+		if rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405, got %v", rr.Code)
+		}
+	})
 
-			req, _ := http.NewRequest(tt.method, "/api/wizard/onboarding/verify", nil)
-			rr := httptest.NewRecorder()
+	// Test case 2: Cloud mode missing both DATABASE_URL and REDIS_URL
+	t.Run("Cloud missing env", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("DATABASE_URL", "")
+		t.Setenv("REDIS_URL", "")
 
-			s.handleWizardOnboardingVerify(rr, req)
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
 
-			if status := rr.Code; status != tt.expectedStatus {
-				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
-			}
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %v", rr.Code)
+		}
 
-			if tt.expectedStatus == http.StatusOK {
-				var resp map[string]interface{}
-				if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
-					t.Fatalf("Failed to parse JSON response: %v", err)
-				}
+		var resp map[string]interface{}
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
 
-				if resp["mode"] != tt.expectedMode {
-					t.Errorf("Expected mode %s, got %s", tt.expectedMode, resp["mode"])
-				}
+		if resp["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		}
+	})
 
-				if resp["status"] != tt.expectedHealth {
-					t.Errorf("Expected health status %s, got %s", tt.expectedHealth, resp["status"])
-				}
-			}
-		})
-	}
+	// Test case 3: Cloud mode missing DATABASE_URL only
+	t.Run("Cloud missing db", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("DATABASE_URL", "")
+		t.Setenv("REDIS_URL", "redis://localhost:6379")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		var resp map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+
+		if resp["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		}
+	})
+
+	// Test case 4: Cloud mode missing REDIS_URL only
+	t.Run("Cloud missing redis", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("DATABASE_URL", "postgres://localhost:5432")
+		t.Setenv("REDIS_URL", "")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		var resp map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+
+		if resp["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		}
+	})
+
+	// Test case 5: Cloud mode complete
+	t.Run("Cloud complete", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "false")
+		t.Setenv("DATABASE_URL", "postgres://localhost:5432")
+		t.Setenv("REDIS_URL", "redis://localhost:6379")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		var resp map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+
+		if resp["status"] != "healthy" {
+			t.Errorf("Expected status to be healthy, got %v", resp["status"])
+		}
+	})
+
+	// Test case 6: Standalone mode
+	t.Run("Standalone", func(t *testing.T) {
+		t.Setenv("OHC_STANDALONE", "true")
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/onboarding_verify", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardOnboardingVerify(rr, req)
+
+		var resp map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &resp)
+
+		if resp["status"] != "healthy" {
+			t.Errorf("Expected status to be healthy, got %v", resp["status"])
+		}
+		if resp["mode"] != "standalone" {
+			t.Errorf("Expected mode to be standalone, got %v", resp["mode"])
+		}
+	})
 }

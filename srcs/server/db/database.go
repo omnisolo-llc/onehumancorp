@@ -50,14 +50,6 @@ func New(ctx context.Context) (*DB, error) {
 		}
 
 		sqliteDSN := dbPath
-		if dbPath == ":memory:" || strings.Contains(dbPath, "mode=memory") {
-            if !strings.Contains(sqliteDSN, "?") {
-				sqliteDSN += "?"
-			} else {
-				sqliteDSN += "&"
-			}
-			sqliteDSN += "_pragma=busy_timeout(15000)"
-        }
 		if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
 			if !strings.Contains(sqliteDSN, "?") {
 				sqliteDSN += "?"
@@ -118,9 +110,9 @@ func New(ctx context.Context) (*DB, error) {
 			}
 		}
 		if !strings.Contains(sqliteDSN, "?") {
-			sqliteDSN += "?_pragma=key(" + key + ")&_pragma=busy_timeout(15000)"
+			sqliteDSN += "?_pragma=key(" + key + ")"
 		} else {
-			sqliteDSN += "&_pragma=key(" + key + ")&_pragma=busy_timeout(15000)"
+			sqliteDSN += "&_pragma=key(" + key + ")"
 		}
 
 		sqliteDB, sqliteErr := sql.Open("sqlite", sqliteDSN)
