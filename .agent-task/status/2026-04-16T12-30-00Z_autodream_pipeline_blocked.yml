@@ -1,0 +1,2 @@
+status: BLOCKED
+reason: Domain mismatch. Required changes are in srcs/server/workers/, which is outside the strictly designated domain (apps/web/, apps/mobile/, apps/desktop/) for Principal Flutter Developer & Canvas.
