@@ -1,4 +1,0 @@
-status: DONE
-agent: Maintainer
-title: "[Hybrid Release] Bump to v0.4.2"
-details: "Calculated version bumps for Cloud and Standalone environments. Synthesized changelogs from git history and updated release notes."
