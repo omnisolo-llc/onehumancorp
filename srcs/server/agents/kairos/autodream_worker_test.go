@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"errors"
 	"testing"
+	"strings"
 	"time"
 
-
+	_ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
@@ -42,7 +43,7 @@ func setupTestDB(t *testing.T) db.Provider {
 
 	CREATE TABLE IF NOT EXISTS autodream_memories (
 		id TEXT PRIMARY KEY,
-		task_id TEXT REFERENCES shared_tasks_decomposition(id),
+		task_id TEXT UNIQUE REFERENCES shared_tasks_decomposition(id),
 		content TEXT NOT NULL,
 		embedding TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -124,7 +125,7 @@ func TestAutoDreamWorker_RunConsolidationPipeline_LLMFailure(t *testing.T) {
 		t.Fatalf("RunConsolidationPipeline failed: %v", err)
 	}
 
-	// Verify insertion (should skip insertion)
+	// Verify insertion (should skip insertion to prevent zeros)
 	rows, err := provider.Query(ctx, "SELECT count(*) FROM autodream_memories")
 	if err != nil {
 		t.Fatalf("failed to query memories: %v", err)
@@ -168,8 +169,7 @@ func TestAutoDreamWorker_StartWorkerDaemon(t *testing.T) {
 }
 
 func TestAutoDreamWorker_RunConsolidationPipeline_PostgresMock(t *testing.T) {
-	// Let's create a fake Postgres provider to trigger the else branches for 100% coverage
-	// A simple wrapper around sqlite that returns false for IsSQLite
+	// Fake Postgres provider to trigger the else branches for 100% coverage
 	sqlDB, _ := sql.Open("sqlite", "file::memory:?cache=shared")
 	sqliteProvider := db.NewSqliteProvider(sqlDB)
 
@@ -185,7 +185,7 @@ func TestAutoDreamWorker_RunConsolidationPipeline_PostgresMock(t *testing.T) {
 
 	CREATE TABLE IF NOT EXISTS autodream_memories (
 		id TEXT PRIMARY KEY,
-		task_id TEXT REFERENCES shared_tasks_decomposition(id),
+		task_id TEXT UNIQUE REFERENCES shared_tasks_decomposition(id),
 		content TEXT NOT NULL,
 		embedding TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -198,8 +198,7 @@ func TestAutoDreamWorker_RunConsolidationPipeline_PostgresMock(t *testing.T) {
 	client := &MockLLMClient{}
 	worker := NewAutoDreamWorker(pgProvider, client)
 
-	// Because sqlite syntax doesn't support vector or FOR UPDATE SKIP LOCKED
-	// this will naturally fail, but it will execute the pg branches to get coverage!
+	// Will naturally fail but will execute pg branches
 	_ = worker.RunConsolidationPipeline(context.Background())
 }
 
@@ -209,4 +208,30 @@ type mockPGProvider struct {
 
 func (m *mockPGProvider) IsSQLite() bool {
 	return false
+}
+
+func (m *mockPGProvider) Begin(ctx context.Context) (db.Tx, error) {
+    return &mockTx{Tx: nil, provider: m}, nil
+}
+
+type mockTx struct {
+    db.Tx
+    provider *mockPGProvider
+}
+
+func (t *mockTx) Query(ctx context.Context, query string, args ...interface{}) (db.Rows, error) {
+    if strings.Contains(query, "FOR UPDATE SKIP LOCKED") {
+        return nil, errors.New("mock skip locked err")
+    }
+    return nil, errors.New("mock query err")
+}
+
+func (t *mockTx) Exec(ctx context.Context, query string, args ...interface{}) (int64, error) {
+    return 0, errors.New("mock exec err")
+}
+func (t *mockTx) Commit(ctx context.Context) error {
+    return nil
+}
+func (t *mockTx) Rollback(ctx context.Context) error {
+    return nil
 }

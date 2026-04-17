@@ -20,5 +20,6 @@ go_test(
     embed = [":kairos"],
     deps = [
         "//srcs/server/db",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )

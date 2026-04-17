@@ -23,7 +23,7 @@ var sharedAuthStore = auth.NewStore()
 // adminToken returns a valid JWT for the pre-seeded admin user.
 func adminToken(t *testing.T) string {
 	t.Helper()
-	u, err := sharedAuthStore.Authenticate("admin", "admin", "")
+	u, err := sharedAuthStore.Authenticate("admin", "admin")
 	if err != nil {
 		t.Fatalf("authenticate admin: %v", err)
 	}

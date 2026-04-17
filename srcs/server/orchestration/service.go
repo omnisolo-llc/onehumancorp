@@ -21,30 +21,15 @@ import (
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/redis/rueidis"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/storage"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"github.com/redis/rueidis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var telemetryJobChan = make(chan func(), 10000)
-var telemetryOnce sync.Once
-
-func initTelemetryWorkers() {
-	telemetryOnce.Do(func() {
-		for i := 0; i < 16; i++ {
-			go func() {
-				for job := range telemetryJobChan {
-					job()
-				}
-			}()
-		}
-	})
-}
 
 var (
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
@@ -1006,18 +991,12 @@ func (h *Hub) Publish(message Message) error {
 
 	// ⚡ BOLT: [Parallel Execution] Async worker for telemetry, PII redaction and logging
 	// Move heavy regex processing (redactPII) to a background goroutine to free up the Publisher thread
-	initTelemetryWorkers()
-	sID, sRole, mType, mContent := sender.ID, sender.Role, message.Type, message.Content
-	select {
-	case telemetryJobChan <- func() {
+	go func(sID, sRole, mType, mContent string) {
 		telemetry.RecordAgentApiCall(context.Background(), sID, sRole, "publish")
 		if mType != EventStatus {
 			telemetry.LogAgentExecution(context.Background(), sID, sRole, "publish", mType, telemetry.RedactPII(mContent))
 		}
-	}:
-	default:
-		// Drop telemetry if channel is full to prevent blocking
-	}
+	}(sender.ID, sender.Role, message.Type, message.Content)
 
 	if centrifugeNode != nil {
 		go func(m Message, cn *CentrifugeNode) {
