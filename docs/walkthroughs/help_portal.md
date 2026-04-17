@@ -135,8 +135,6 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Thin Client Integration Walkthrough](thin_client_integration.md)**: Visual guide to the UI-only Thin Client connection.
 - **[SPIFFE Identity Onboarding Walkthrough](spiffe_identity_onboarding.md)**: Visual guide to the zero-trust secure agent identity protocol.
 
-- **[Edge LLM Offloading Protocol API](../api/edge_llm_offloading_api.md)**: Interactive playbook for offloading LLM inference to the cloud.
-- **[Edge LLM Handoff Visual Walkthrough](edge_llm_handoff_walkthrough.md)**: Visual diagram illustrating the context transfer flow.
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
 </div>
