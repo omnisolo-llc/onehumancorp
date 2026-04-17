@@ -9,6 +9,7 @@
 - Verified graceful degradation of the dynamic viral quota tracking for Standalone configurations.
 
 ## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+
 ### Cloud Scaling Improvements
 - Implement QueueOrchestrator for Shared Task List (KAIROS Phase 1).
 - Finalize Phase 4 Sub-Agent Queue and update Epic.
