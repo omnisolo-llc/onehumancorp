@@ -11,6 +11,7 @@ import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/widgets/undercover_mode_toggle.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -31,6 +32,12 @@ class DashboardScreen extends ConsumerWidget {
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
         ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Center(child: UndercoverModeToggle()),
+          ),
+        ],
       ),
       body: snapshot.when(
         loading:
@@ -487,14 +494,17 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
-                                Text(
-                                  '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: colors.onSurfaceVariant,
-                                    fontFamily: 'Inter',
-                                  ),
-                                ),
+                                Consumer(builder: (context, ref, child) {
+                                  final isUndercover = ref.watch(undercoverModeProvider);
+                                  return Text(
+                                    isUndercover ? '*** Agents' : '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: colors.onSurfaceVariant,
+                                      fontFamily: 'Inter',
+                                    ),
+                                  );
+                                }),
                               ],
                             ),
                           ),
@@ -663,15 +673,19 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                                   children: [
                                     Icon(widget.icon, color: effectiveIconColor, size: 32),
                                     const SizedBox(height: 16),
-                                    Text(
-                                      widget.value,
-                                      style: TextStyle(
-                                        fontSize: 36,
-                                        fontWeight: FontWeight.bold,
-                                        color: effectiveIconColor,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
+                                    Consumer(builder: (context, ref, child) {
+                                      final isUndercover = ref.watch(undercoverModeProvider);
+                                      return Text(
+                                        isUndercover ? '***' : widget.value,
+                                        style: TextStyle(
+                                          fontSize: 36,
+                                          fontWeight: FontWeight.bold,
+                                          color: effectiveIconColor,
+                                          fontFamily: 'Inter',
+                                          decoration: isUndercover ? TextDecoration.none : null,
+                                        ),
+                                      );
+                                    }),
                                     const SizedBox(height: 6),
                                     Text(
                                       widget.label,

@@ -18,6 +18,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
+
+import 'package:ohc_app/widgets/undercover_mode_toggle.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/models/channel.dart';
@@ -975,6 +977,53 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
+    });
+
+    testWidgets('Undercover Mode toggle flow', (WidgetTester tester) async {
+      final mockClient = MockHttpClient();
+      when(() => mockClient.get(any(), headers: any(named: 'headers'))).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({
+            'agents': [{'id': '1', 'name': 'Agent', 'role': 'Sales', 'isRunning': true}],
+            'statuses': [],
+            'meetings': [],
+            'organization': {'members': []},
+            'recentMetrics': []
+          }),
+          200,
+        ),
+      );
+      final api = ApiService(
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          const DashboardScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Find UndercoverModeToggle
+      final toggleFinder = find.byType(UndercoverModeToggle);
+      expect(toggleFinder, findsOneWidget);
+
+      // Verify normal state
+      expect(find.byIcon(Icons.visibility), findsOneWidget);
+      // Wait, let's just check if '1 Agents' or '1 Agent' is displayed.
+      // Actually the text is formatted as `widget.count` Agents. If count is 1 it's '1 Agent'. Let's find by text.
+      expect(find.textContaining('Agent'), findsWidgets);
+
+      // Tap to activate Undercover Mode
+      await tester.tap(toggleFinder);
+      await tester.pumpAndSettle();
+
+      // Verify blurred state
+      expect(find.byIcon(Icons.visibility_off), findsOneWidget);
+      expect(find.text('***'), findsWidgets);
     });
   });
 }
