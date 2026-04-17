@@ -10,7 +10,7 @@ class BusinessSetupWizard extends ConsumerStatefulWidget {
   ConsumerState<BusinessSetupWizard> createState() => _BusinessSetupWizardState();
 }
 
-class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
+class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> with SingleTickerProviderStateMixin {
   int _step = 0;
   bool _isLoading = false;
 
@@ -31,6 +31,31 @@ class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
   final _adminNameCtrl = TextEditingController();
   final _adminEmailCtrl = TextEditingController();
   final _adminPasswordCtrl = TextEditingController();
+
+  late AnimationController _animController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    _companyNameCtrl.dispose();
+    _adminNameCtrl.dispose();
+    _adminEmailCtrl.dispose();
+    _adminPasswordCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _saveState() async {
     final stateData = {
@@ -96,7 +121,26 @@ class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
           TextField(controller: _companyNameCtrl, decoration: const InputDecoration(labelText: 'Company name')),
           DropdownButtonFormField<String>(
             value: _selectedIndustry,
-            items: ['Tech', 'Healthcare', 'Finance', 'Retail', 'Other'].map((i) => DropdownMenuItem(value: i, child: Text(i))).toList(),
+            items: ['Tech', 'Healthcare', 'Finance', 'Retail', 'Other'].map((i) {
+              IconData iconData;
+              switch (i) {
+                case 'Tech': iconData = Icons.computer; break;
+                case 'Healthcare': iconData = Icons.local_hospital; break;
+                case 'Finance': iconData = Icons.attach_money; break;
+                case 'Retail': iconData = Icons.store; break;
+                default: iconData = Icons.business;
+              }
+              return DropdownMenuItem(
+                value: i,
+                child: Row(
+                  children: [
+                    Icon(iconData, size: 16),
+                    const SizedBox(width: 8),
+                    Text(i),
+                  ],
+                ),
+              );
+            }).toList(),
             onChanged: (v) => setState(() => _selectedIndustry = v!),
             decoration: const InputDecoration(labelText: 'Industry'),
           ),
@@ -120,11 +164,31 @@ class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
   Widget _buildGoals() {
     return _buildGlassmorphism(
       child: Column(
-        children: _goals.keys.map((k) => CheckboxListTile(
-          title: Text(k, style: const TextStyle(fontFamily: 'Inter')),
-          value: _goals[k],
-          onChanged: (v) => setState(() => _goals[k] = v!),
-        )).toList(),
+        children: _goals.keys.map((k) {
+          IconData iconData;
+          switch (k) {
+            case 'Automate customer support':
+              iconData = Icons.support_agent;
+              break;
+            case 'Build software faster':
+              iconData = Icons.code;
+              break;
+            case 'Generate marketing content':
+              iconData = Icons.campaign;
+              break;
+            case 'Analyze data':
+              iconData = Icons.analytics;
+              break;
+            default:
+              iconData = Icons.extension;
+          }
+          return CheckboxListTile(
+            secondary: Icon(iconData, color: Theme.of(context).colorScheme.primary),
+            title: Text(k, style: const TextStyle(fontFamily: 'Inter')),
+            value: _goals[k],
+            onChanged: (v) => setState(() => _goals[k] = v!),
+          );
+        }).toList(),
       ),
     );
   }
@@ -132,12 +196,28 @@ class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
   Widget _buildDeployment() {
     return _buildGlassmorphism(
       child: Column(
-        children: ['Cloud', 'Self-hosted Desktop', 'Mobile-only'].map((m) => RadioListTile<String>(
-          title: Text(m, style: const TextStyle(fontFamily: 'Inter')),
-          value: m,
-          groupValue: _deploymentMode,
-          onChanged: (v) => setState(() => _deploymentMode = v!),
-        )).toList(),
+        children: ['Cloud', 'Self-hosted Desktop', 'Mobile-only'].map((m) {
+          String tooltipMsg;
+          switch (m) {
+            case 'Cloud':
+              tooltipMsg = 'Managed securely by OHC. Best for teams.';
+              break;
+            case 'Self-hosted Desktop':
+              tooltipMsg = 'Runs locally on your machine. Maximum privacy.';
+              break;
+            default:
+              tooltipMsg = 'Connects to APIs without a local database.';
+          }
+          return Tooltip(
+            message: tooltipMsg,
+            child: RadioListTile<String>(
+              title: Text(m, style: const TextStyle(fontFamily: 'Inter')),
+              value: m,
+              groupValue: _deploymentMode,
+              onChanged: (v) => setState(() => _deploymentMode = v!),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -170,12 +250,15 @@ class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
           ListTile(title: const Text('Company'), subtitle: Text(_companyNameCtrl.text)),
           ListTile(title: const Text('Deployment'), subtitle: Text(_deploymentMode)),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          ScaleTransition(
+            scale: _pulseAnimation,
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              ),
+              child: const Text('Launch My AI Team →', style: TextStyle(fontFamily: 'Inter', fontSize: 18)),
             ),
-            child: const Text('Launch My AI Team →', style: TextStyle(fontFamily: 'Inter', fontSize: 18)),
           ),
         ],
       ),
