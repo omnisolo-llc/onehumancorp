@@ -4,7 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"github.com/onehumancorp/mono/srcs/server/interop"
 )
+
+
+type SIPPayload struct {
+	AgentID   string          `json:"agent_id"`
+	Channel   string          `json:"channel"`
+	EventType string          `json:"event_type"`
+	Data      json.RawMessage `json:"data"`
+}
 
 type MeshAPI struct {
 	meshTransport MeshTransport
@@ -27,19 +36,28 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req map[string]interface{}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var sip SIPPayload
+	if err := json.NewDecoder(r.Body).Decode(&sip); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	payload, err := json.Marshal(req)
+	if err := interop.ValidateSPIFFEID(sip.AgentID); err != nil {
+		http.Error(w, "Invalid agent_id: must be a valid SPIFFE ID", http.StatusBadRequest)
+		return
+	}
+	if sip.Channel != "mesh:tasks" && sip.Channel != "mesh:coordination" && sip.Channel != "mesh:presence" {
+		http.Error(w, "Invalid channel: must be mesh:tasks, mesh:coordination, or mesh:presence", http.StatusBadRequest)
+		return
+	}
+
+	payload, err := json.Marshal(sip)
 	if err != nil {
 		http.Error(w, "Failed to marshal payload", http.StatusInternalServerError)
 		return
 	}
 
-	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", payload); err != nil {
+	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), sip.Channel, payload); err != nil {
 		http.Error(w, "Failed to broadcast", http.StatusInternalServerError)
 		return
 	}
@@ -96,19 +114,28 @@ func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var event MeshEvent
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	var sip SIPPayload
+	if err := json.NewDecoder(r.Body).Decode(&sip); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	payload, err := json.Marshal(event)
+	if err := interop.ValidateSPIFFEID(sip.AgentID); err != nil {
+		http.Error(w, "Invalid agent_id: must be a valid SPIFFE ID", http.StatusBadRequest)
+		return
+	}
+	if sip.Channel != "mesh:tasks" && sip.Channel != "mesh:coordination" && sip.Channel != "mesh:presence" {
+		http.Error(w, "Invalid channel: must be mesh:tasks, mesh:coordination, or mesh:presence", http.StatusBadRequest)
+		return
+	}
+
+	payload, err := json.Marshal(sip)
 	if err != nil {
 		http.Error(w, "Failed to marshal payload", http.StatusInternalServerError)
 		return
 	}
 
-	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", payload); err != nil {
+	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), sip.Channel, payload); err != nil {
 		http.Error(w, "Failed to publish", http.StatusInternalServerError)
 		return
 	}
