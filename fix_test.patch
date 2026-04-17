@@ -1,0 +1,20 @@
+--- srcs/server/domain/invite_test.go
++++ srcs/server/domain/invite_test.go
+@@ -6,7 +6,7 @@
+ )
+
+ func TestCreateInvite(t *testing.T) {
+-	svc := NewInviteService()
++	svc := NewInviteService(nil)
+
+	// Test successful creation
+	inv, err := svc.CreateInvite(context.Background(), "user1", "user2")
+@@ -32,7 +32,7 @@
+ }
+
+ func TestAcceptInvite(t *testing.T) {
+-	svc := NewInviteService()
++	svc := NewInviteService(nil)
+	inv, _ := svc.CreateInvite(context.Background(), "user1", "user2")
+
+	// Test successful acceptance

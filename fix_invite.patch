@@ -1,0 +1,85 @@
+--- srcs/server/domain/invite.go
++++ srcs/server/domain/invite.go
+@@ -4,6 +4,7 @@
+	"context"
+	"fmt"
+	"log/slog"
+	"sync"
+	"time"
+
++	"github.com/onehumancorp/mono/srcs/server/db"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+ )
+@@ -21,12 +22,14 @@
+
+ type InviteService struct {
+	mu      sync.RWMutex
+	invites []TeamInvite
++	pool    *db.DB
+ }
+
+-func NewInviteService() *InviteService {
++func NewInviteService(pool *db.DB) *InviteService {
+	return &InviteService{
+		invites: []TeamInvite{},
++		pool:    pool,
+	}
+ }
+
+@@ -46,9 +49,17 @@
+		CreatedAt: time.Now().UTC(),
+	}
+
+-	s.mu.Lock()
+-	s.invites = append(s.invites, invite)
+-	s.mu.Unlock()
++	if s.pool != nil {
++		query := `INSERT INTO team_invites (id, inviter_id, invitee_id, status, created_at, updated_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
++		_, err := s.pool.Exec(ctx, query, invite.ID, invite.InviterID, invite.InviteeID, invite.Status)
++		if err != nil {
++			return nil, fmt.Errorf("failed to create team invite in db: %w", err)
++		}
++	} else {
++		s.mu.Lock()
++		s.invites = append(s.invites, invite)
++		s.mu.Unlock()
++	}
+
+	slog.Info("invite created", "id", invite.ID, "inviter", inviterID, "invitee", inviteeID)
+	span.SetAttributes(attribute.String("invite.id", invite.ID))
+@@ -65,13 +76,26 @@
+	}
+
+	var updated *TeamInvite
+-	s.mu.Lock()
+-	defer s.mu.Unlock()
+-	for i, inv := range s.invites {
+-		if inv.ID == id {
+-			s.invites[i].Status = "ACCEPTED"
+-			updated = &s.invites[i]
+-			break
++	if s.pool != nil {
++		query := `UPDATE team_invites SET status = 'ACCEPTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, inviter_id, invitee_id, status, created_at`
++		var inv TeamInvite
++		err := s.pool.QueryRow(ctx, query, id).Scan(&inv.ID, &inv.InviterID, &inv.InviteeID, &inv.Status, &inv.CreatedAt)
++		if err != nil {
++			// Not found or error
++		} else {
++			updated = &inv
+		}
++	}
++
++	if updated == nil && s.pool == nil {
++		s.mu.Lock()
++		defer s.mu.Unlock()
++		for i, inv := range s.invites {
++			if inv.ID == id {
++				s.invites[i].Status = "ACCEPTED"
++				updated = &s.invites[i]
++				break
++			}
++		}
+	}
+
+	if updated == nil {

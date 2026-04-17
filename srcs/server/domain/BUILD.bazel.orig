@@ -17,7 +17,6 @@ go_library(
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
         "@in_gopkg_yaml_v3//:yaml_v3",
-        "//srcs/server/db",
     ],
 )
 

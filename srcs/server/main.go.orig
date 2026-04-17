@@ -456,7 +456,7 @@ func run(now time.Time, listen listenFunc) error {
 	}
 
 	// Integrate InviteService to main handler
-	inviteSvc := domain.NewInviteService(pool)
+	inviteSvc := domain.NewInviteService()
 	inviteHandler := api.NewInviteHandler(inviteSvc)
 	mux := http.NewServeMux()
 	mux.Handle("/", handler) // wrap the existing dashboard server
