@@ -73,6 +73,27 @@ class ApiService {
         .toList();
   }
 
+  Future<void> tuneAgent(String agentId, String prompt, String tone, List<String> focusTags) async {
+
+    final res = await _client.post(
+
+      Uri.parse('$baseUrl/api/agents/tune'),
+
+      headers: _headers,
+
+      body: jsonEncode({'agentId': agentId, 'prompt': prompt, 'tone': tone, 'focusTags': focusTags}),
+
+    );
+
+    if (res.statusCode != 200) {
+
+      throw Exception('Failed to tune agent');
+
+    }
+
+  }
+
+
   Future<void> fireAgent(String agentId) async {
     final res = await _client.post(
       Uri.parse('$baseUrl/api/agents/fire'),

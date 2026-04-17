@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/glass_card.dart';
+import '../services/api_service.dart';
 
 class PromptTuningState {
   final int step;
@@ -67,9 +68,19 @@ class PromptTuningNotifier extends Notifier<PromptTuningState> {
   void addExample(String q, String a) => state = state.copyWith(examples: [...state.examples, {'q': q, 'a': a}]);
   void toggleRawPrompt() => state = state.copyWith(showRawPrompt: !state.showRawPrompt);
 
-  void save(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Your agent has been updated ✓")));
-    GoRouter.of(context).go('/dashboard');
+  void save(BuildContext context, String agentId) async {
+    final api = ref.read(apiServiceProvider);
+    try {
+      if (api != null) await api.tuneAgent(agentId, state.generatePrompt(), state.tone, state.focusTags);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Your agent has been updated ✓")));
+        GoRouter.of(context).go('/dashboard');
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+    }
   }
 }
 
@@ -154,7 +165,7 @@ class PromptTuningWizardScreen extends ConsumerWidget {
                                   if (state.step < 3) {
                                     notifier.nextStep();
                                   } else {
-                                    notifier.save(context);
+                                    notifier.save(context, agentId);
                                   }
                                 },
                                 child: Text(state.step == 3 ? 'Save' : 'Next', style: const TextStyle(fontFamily: 'Inter')),

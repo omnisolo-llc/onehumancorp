@@ -79,6 +79,107 @@ func (s *Server) handleHireAgent(w http.ResponseWriter, r *http.Request) {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+type tuneAgentRequest struct {
+
+	AgentID   string `json:"agentId"`
+
+	Prompt    string `json:"prompt"`
+
+	Tone      string `json:"tone,omitempty"`
+
+	FocusTags []string `json:"focusTags,omitempty"`
+
+}
+
+
+
+// Handles tuning an agent prompt.
+
+// Accepts parameters: w, r.
+
+// Returns nothing.
+
+// Produces no errors.
+
+// Has no side effects.
+
+func (s *Server) handleTuneAgent(w http.ResponseWriter, r *http.Request) {
+
+	if r.Method != http.MethodPost {
+
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+
+		return
+
+	}
+
+
+
+	var req tuneAgentRequest
+
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+
+	dec.DisallowUnknownFields()
+
+	if err := dec.Decode(&req); err != nil {
+
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+
+		return
+
+	}
+
+	if req.AgentID == "" {
+
+		http.Error(w, "agentId is required", http.StatusBadRequest)
+
+		return
+
+	}
+
+	if exists, belongs := s.agentOrgStatus(req.AgentID); exists && !belongs {
+
+		http.Error(w, "agent does not belong to this organization", http.StatusForbidden)
+
+		return
+
+	}
+
+
+
+	s.mu.Lock()
+
+	agent, ok := s.hub.Agent(req.AgentID)
+
+	if !ok {
+
+		s.mu.Unlock()
+
+		http.Error(w, "agent not found", http.StatusNotFound)
+
+		return
+
+	}
+
+
+
+    agent.Role = req.Prompt
+
+    s.hub.RegisterAgent(agent)
+
+
+
+	snapshot := s.snapshotLocked()
+
+	s.mu.Unlock()
+
+
+
+	writeJSON(w, snapshot)
+
+}
+
+
 func (s *Server) handleFireAgent(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
