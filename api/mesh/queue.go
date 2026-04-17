@@ -5,7 +5,142 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 )
+
+// SubAgentTask represents a task in the ohc_tasks.sub_agent_queue
+type SubAgentTask struct {
+	ID           string          `json:"id"`
+	ParentTaskID string          `json:"parent_task_id"`
+	Payload      json.RawMessage `json:"payload"`
+	Status       string          `json:"status"`
+	WorkerID     *string         `json:"worker_id"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+}
+
+// QueueOrchestrator manages distributed queuing via Redis and PostgreSQL
+type QueueOrchestrator struct {
+	db     *sql.DB
+	redis  *redis.Client
+	isSQLite bool
+}
+
+// NewQueueOrchestrator creates a new queue orchestrator
+func NewQueueOrchestrator(db *sql.DB, redis *redis.Client, isSQLite bool) *QueueOrchestrator {
+	return &QueueOrchestrator{
+		db:     db,
+		redis:  redis,
+		isSQLite: isSQLite,
+	}
+}
+
+// EnqueueSubTask adds a task to the sub-agent queue
+func (q *QueueOrchestrator) EnqueueSubTask(ctx context.Context, parentTaskID string, payload json.RawMessage) (string, error) {
+	if q.db == nil {
+		return "", fmt.Errorf("db connection is nil")
+	}
+
+	query := `
+		INSERT INTO ohc_tasks.sub_agent_queue (parent_task_id, payload, status)
+		VALUES ($1, $2, 'QUEUED')
+		RETURNING id
+	`
+	var taskID string
+	err := q.db.QueryRowContext(ctx, query, parentTaskID, payload).Scan(&taskID)
+	if err != nil {
+		return "", fmt.Errorf("failed to enqueue sub-task: %w", err)
+	}
+
+	if q.redis != nil {
+		event := map[string]string{
+			"type": "new_sub_task",
+			"task_id": taskID,
+		}
+		data, _ := json.Marshal(event)
+		q.redis.Publish(ctx, "kairos:sub_tasks", data)
+	}
+
+	return taskID, nil
+}
+
+// ClaimSubTask claims a pending sub-task for a worker
+func (q *QueueOrchestrator) ClaimSubTask(ctx context.Context, workerID string) (*SubAgentTask, error) {
+	if q.db == nil {
+		return nil, fmt.Errorf("db connection is nil")
+	}
+
+	var query string
+	if q.isSQLite {
+		query = `
+			UPDATE ohc_tasks.sub_agent_queue
+			SET status = 'IN_PROGRESS', worker_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM ohc_tasks.sub_agent_queue WHERE status = 'QUEUED' LIMIT 1
+			)
+			RETURNING id, parent_task_id, payload, status, worker_id, created_at, updated_at
+		`
+	} else {
+		query = `
+			UPDATE ohc_tasks.sub_agent_queue
+			SET status = 'IN_PROGRESS', worker_id = $1, updated_at = NOW()
+			WHERE id = (
+				SELECT id FROM ohc_tasks.sub_agent_queue WHERE status = 'QUEUED' FOR UPDATE SKIP LOCKED LIMIT 1
+			)
+			RETURNING id, parent_task_id, payload, status, worker_id, created_at, updated_at
+		`
+	}
+
+	row := q.db.QueryRowContext(ctx, query, workerID)
+	var task SubAgentTask
+	err := row.Scan(
+		&task.ID,
+		&task.ParentTaskID,
+		&task.Payload,
+		&task.Status,
+		&task.WorkerID,
+		&task.CreatedAt,
+		&task.UpdatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, nil // No pending tasks
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to claim sub-task: %w", err)
+	}
+
+	return &task, nil
+}
+
+// CompleteSubTask marks a sub-task as completed
+func (q *QueueOrchestrator) CompleteSubTask(ctx context.Context, taskID, workerID string) error {
+	if q.db == nil {
+		return fmt.Errorf("db connection is nil")
+	}
+
+	query := `
+		UPDATE ohc_tasks.sub_agent_queue
+		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND worker_id = $2 AND status = 'IN_PROGRESS'
+	`
+	res, err := q.db.ExecContext(ctx, query, taskID, workerID)
+	if err != nil {
+		return fmt.Errorf("failed to complete sub-task: %w", err)
+	}
+
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rows == 0 {
+		return fmt.Errorf("sub-task not found, not in progress, or not assigned to worker")
+	}
+
+	return nil
+}
 
 // EnqueueMission adds a new mission to the ohc_tasks.mission_queue
 func EnqueueMission(ctx context.Context, db *sql.DB, title, priority string, payload json.RawMessage) (string, error) {
