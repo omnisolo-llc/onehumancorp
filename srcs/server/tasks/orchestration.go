@@ -58,7 +58,7 @@ func (o *Orchestrator) ClaimTask(ctx context.Context, agentID string) (string, e
 
     // Broadcast via Teammate Mesh Gateway
     payload := map[string]interface{}{
-        "agent_id":   "spiffe://onehumancorp.io/agent/" + agentID,
+        "agent_id":   agentID,
         "channel":    "mesh:tasks",
         "event_type": "TASK_TRANSITION",
         "data": map[string]interface{}{
