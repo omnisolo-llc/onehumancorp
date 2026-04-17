@@ -3,9 +3,9 @@ package chaos
 import (
 	"context"
 	"math/rand"
-	"os"
 	"sync"
 	"time"
+	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -57,36 +57,17 @@ func (c ChaosMode) String() string {
 
 // Injector is responsible for injecting chaos into operations.
 type Injector struct {
-	mode        ChaosMode
-	mu          sync.Mutex
-	rand        *rand.Rand
-	probability float32
+	mode ChaosMode
+	mu   sync.Mutex
+	rand *rand.Rand
 }
 
 // NewInjector creates a new Chaos Injector.
 func NewInjector(mode ChaosMode, seed int64) *Injector {
-	var prob float32 = 0.0
-	switch mode {
-	case ConnectionDrop:
-		prob = 0.1
-	case ResourceExhaustion:
-		prob = 0.05
-	case CorruptAgentLock:
-		prob = 1.0
-	}
-
 	return &Injector{
-		mode:        mode,
-		rand:        rand.New(rand.NewSource(seed)),
-		probability: prob,
+		mode: mode,
+		rand: rand.New(rand.NewSource(seed)),
 	}
-}
-
-// SetProbability updates the probability of chaos injection.
-func (i *Injector) SetProbability(p float32) {
-	i.mu.Lock()
-	defer i.mu.Unlock()
-	i.probability = p
 }
 
 // ChaosError is a custom error for chaos-induced failures.
@@ -115,26 +96,19 @@ func (i *Injector) Inject(ctx context.Context) error {
 		}
 	case ConnectionDrop:
 		i.mu.Lock()
-		drop := i.rand.Float32() < i.probability
+		drop := i.rand.Float32() < 0.1
 		i.mu.Unlock()
 		if drop {
 			return &ChaosError{Message: "chaos: simulated connection drop"}
 		}
 	case ResourceExhaustion:
 		i.mu.Lock()
-		exhaust := i.rand.Float32() < i.probability
+		exhaust := i.rand.Float32() < 0.05
 		i.mu.Unlock()
 		if exhaust {
 			return &ChaosError{Message: "chaos: simulated resource exhaustion"}
 		}
 	case CorruptAgentLock:
-		i.mu.Lock()
-		corrupt := i.rand.Float32() < i.probability
-		i.mu.Unlock()
-		if !corrupt {
-			return nil
-		}
-
 		lockPath := ".agent-lock/"
 		if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
 			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)

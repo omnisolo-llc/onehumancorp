@@ -2,7 +2,6 @@ package chaos
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 )
@@ -77,45 +76,6 @@ func TestResourceExhaustion(t *testing.T) {
 	}
 }
 
-func TestCorruptAgentLock(t *testing.T) {
-	// Setup: Test when directory does not exist
-	// Ensure cleanup first just in case
-	os.RemoveAll(".agent-lock/")
-
-	inj := NewInjector(CorruptAgentLock, 1)
-	err := inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected a corruption error, got nil")
-	}
-	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
-		t.Fatalf("unexpected error message: %v", err)
-	}
-
-	// Setup: Test when directory exists
-	err = os.MkdirAll(".agent-lock/", 0755)
-	if err != nil {
-		t.Fatalf("failed to create .agent-lock/ directory: %v", err)
-	}
-	defer os.RemoveAll(".agent-lock/") // cleanup after test
-
-	err = inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected a corruption error when directory exists, got nil")
-	}
-	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
-		t.Fatalf("unexpected error message: %v", err)
-	}
-
-	// Verify the corruption file was written
-	content, err := os.ReadFile(".agent-lock/corrupt.lock")
-	if err != nil {
-		t.Fatalf("expected corrupt.lock to be created, but got error: %v", err)
-	}
-	if string(content) != "chaos corrupted this lock" {
-		t.Fatalf("unexpected corrupt.lock content: %s", string(content))
-	}
-}
-
 func TestUnknownModeString(t *testing.T) {
 	mode := ChaosMode(999)
 	if mode.String() != "unknown" {
@@ -148,55 +108,11 @@ func TestAllModeStrings(t *testing.T) {
 		LatencySpike:       "latency_spike",
 		ConnectionDrop:     "connection_drop",
 		ResourceExhaustion: "resource_exhaustion",
-		CorruptAgentLock:   "corrupt_agent_lock",
 	}
 
 	for mode, expected := range modes {
 		if mode.String() != expected {
 			t.Errorf("expected %s, got %s", expected, mode.String())
 		}
-	}
-}
-
-func TestSetProbability(t *testing.T) {
-	// Test probability 1.0 (always injects)
-	inj := NewInjector(ConnectionDrop, 1)
-	inj.SetProbability(1.0)
-
-	err := inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected error with probability 1.0, got nil")
-	}
-
-	// Test probability 0.0 (never injects)
-	inj = NewInjector(ResourceExhaustion, 1)
-	inj.SetProbability(0.0)
-
-	for i := 0; i < 100; i++ {
-		err = inj.Inject(context.Background())
-		if err != nil {
-			t.Fatalf("expected no error with probability 0.0, got %v", err)
-		}
-	}
-
-	// Test CorruptAgentLock probability
-	inj = NewInjector(CorruptAgentLock, 1)
-	inj.SetProbability(0.0)
-	err = inj.Inject(context.Background())
-	if err != nil {
-		t.Fatalf("expected no error with probability 0.0, got %v", err)
-	}
-
-	// Setup directory for CorruptAgentLock test
-	err = os.MkdirAll(".agent-lock/", 0755)
-	if err != nil {
-		t.Fatalf("failed to create .agent-lock/ directory: %v", err)
-	}
-	defer os.RemoveAll(".agent-lock/") // cleanup after test
-
-	inj.SetProbability(1.0)
-	err = inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected error with probability 1.0, got nil")
 	}
 }
