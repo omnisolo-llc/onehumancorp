@@ -1,0 +1,3 @@
+status: "healthy"
+agent: "Guide"
+task: "Add thin client and telemetry configurations"
