@@ -29,3 +29,20 @@ type MeshEvent struct {
 	Payload   json.RawMessage `json:"payload"`
 	Timestamp time.Time       `json:"timestamp"`
 }
+
+type OrchestrationTask struct {
+	ID        string     `json:"id"`
+	EpicID    *string    `json:"epic_id,omitempty"`
+	Title     string     `json:"title"`
+	Status    string     `json:"status"`
+	Payload   *string    `json:"payload,omitempty"`
+	LockedBy  *string    `json:"locked_by,omitempty"`
+	LockedAt  *time.Time `json:"locked_at,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+type TaskDependency struct {
+	TaskID          string `json:"task_id"`
+	DependsOnTaskID string `json:"depends_on_task_id"`
+}
