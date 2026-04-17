@@ -11,7 +11,7 @@ is_complete_web_bundle() {
   local candidate="${1}"
 
   [[ -d "${candidate}" ]] || return 1
-  [[ -f "${candidate}/assets/FontManifest.json" ]] || return 1
+  [[ -f "${candidate}/index.html" ]] || return 1
 }
 
 resolve_capture_script() {
