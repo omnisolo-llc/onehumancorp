@@ -161,10 +161,6 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-
-	var req struct {
-		Intent string `json:"intent"`
-	}
 	var sipReq struct {
 		AgentID   string          `json:"agent_id"`
 		Channel   string          `json:"channel"`
@@ -172,15 +168,12 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		Data      json.RawMessage `json:"data"`
 	}
 
-	var intentStr string
-
-	if err := json.Unmarshal(bodyBytes, &sipReq); err == nil && sipReq.AgentID != "" && sipReq.EventType != "" {
-		intentStr = string(bodyBytes)
-	} else if err := json.Unmarshal(bodyBytes, &req); err == nil && req.Intent != "" {
-		intentStr = req.Intent
-	} else {
-		intentStr = string(bodyBytes)
+	if err := json.Unmarshal(bodyBytes, &sipReq); err != nil || sipReq.AgentID == "" || sipReq.Channel == "" || sipReq.EventType == "" || len(sipReq.Data) == 0 || string(sipReq.Data) == "null" {
+		http.Error(w, "Bad request: missing or invalid OHC-SIP payload fields", http.StatusBadRequest)
+		return
 	}
+
+	intentStr := string(bodyBytes)
 
 	if err := h.Service.BroadcastIntent(r.Context(), intentStr); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to broadcast: %v", err), http.StatusInternalServerError)

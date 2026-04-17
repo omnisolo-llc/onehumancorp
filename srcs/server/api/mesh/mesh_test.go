@@ -94,6 +94,23 @@ func TestMeshHandlerBroadcast(t *testing.T) {
 	}
 }
 
+func TestMeshHandlerBroadcastInvalid(t *testing.T) {
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
+	svc := NewMemoryMeshService()
+	handler := NewMeshHandler(svc)
+
+	reqBody := []byte(`{"intent":"hello handler"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer(reqBody))
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	handler.Broadcast(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
 func TestMeshHandlerStream(t *testing.T) {
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 	svc := NewMemoryMeshService()
