@@ -52,6 +52,33 @@ Synchronizes a batch of local telemetry metrics to the OHC Central Database via 
 }
 ```
 
+### `POST /api/v1/orchestration/escalate`
+
+Dynamically escalates a local SQLite MCP RAG workload to the Cloud Swarm via PostgreSQL, bridging standalone mode with cloud orchestration.
+
+**Request Payload:**
+
+```json
+{
+  "task_id": "rag-task-9988",
+  "escalation_reason": "telemetry_threshold_exceeded",
+  "payload": {
+    "query": "Synthesize Q3 financial reports",
+    "context_size": 250000
+  }
+}
+```
+
+**Response Payload:**
+
+```json
+{
+  "escalation_status": "ACCEPTED",
+  "cloud_task_id": "cloud-swarm-rag-task-9988",
+  "message": "Task successfully handed off to Cloud Swarm PostgreSQL."
+}
+```
+
 ## 2. Resource Endpoints
 
 Exposes active system metrics and health probes to orchestration agents.
@@ -78,6 +105,37 @@ Lists available observability resources for the current node.
       "mimeType": "application/json"
     }
   ]
+}
+```
+
+## 3. Edge LLM Offloading Protocol
+
+Dynamic routing of LLM inference requests between the local edge device and the cloud.
+
+### `POST /api/v1/inference/route`
+
+Accepts a standard completion request payload and returns the routed response. Evaluates prompt size, machine resource utilization, and privacy flags to decide whether to offload to the cloud swarm.
+
+**Request Payload:**
+
+```json
+{
+  "prompt": "Analyze the attached architectural diagram...",
+  "max_tokens": 1500,
+  "is_sensitive": false,
+  "context": {
+    "node_id": "standalone-node-1234"
+  }
+}
+```
+
+**Response Payload:**
+
+```json
+{
+  "status": "success",
+  "routed_to": "cloud",
+  "response": "Based on the architectural diagram..."
 }
 ```
 
