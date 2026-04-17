@@ -169,7 +169,6 @@ start_daemon() {
     GOMEMLIMIT="${GOMEMLIMIT:-128MiB}" \
     GOGC="${GOGC:-30}" \
     OHC_STANDALONE="true" \
-    OHC_TELEMETRY_ENABLED="false" \
     nohup "${SERVER_BIN}" >"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"
@@ -243,11 +242,9 @@ case "${1:-}" in
     print_doctor "${PORT_VALUE}"
     ;;
   "")
-    export OHC_TELEMETRY_ENABLED="false"
     exec "${SERVER_BIN}"
     ;;
   *)
-    export OHC_TELEMETRY_ENABLED="false"
     exec "${SERVER_BIN}" "$@"
     ;;
 esac
