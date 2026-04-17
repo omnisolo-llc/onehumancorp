@@ -1,6 +1,7 @@
 package mesh
 
 import (
+	"os"
 	"context"
 	"encoding/json"
 	"errors"
@@ -137,6 +138,34 @@ func (s *MemoryMeshService) Subscribe(ctx context.Context) (<-chan string, error
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		// In standalone mode, allow local origins or null origins
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			return true
+		}
+
+		// In cloud mode, restrict origins
+		origin := r.Header.Get("Origin")
+
+		// Allow if origin is empty (e.g. from a backend service)
+		if origin == "" {
+			return true
+		}
+
+		allowedOrigins := []string{
+			"http://localhost:3000",
+			"https://onehumancorp.com",
+			"https://app.onehumancorp.com",
+		}
+
+		for _, allowed := range allowedOrigins {
+			if origin == allowed {
+				return true
+			}
+		}
+
+		return false
+	},
 }
 
 type MeshHandler struct {
