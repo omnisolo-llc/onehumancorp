@@ -24,6 +24,8 @@ export OHC_STANDALONE="true"
 
 # Mock files
 touch "${STATE_DIR}/importantLinearState.txt"
+touch "${STATE_DIR}/oldLinear.txt"
+touch -d "2 hours ago" "${STATE_DIR}/oldLinear.txt"
 touch "${STATE_DIR}/recent.tmp"
 touch "${STATE_DIR}/old.tmp"
 # Make old.tmp older than 60 mins
@@ -48,6 +50,11 @@ fi
 
 if [[ -f "${STATE_DIR}/old.tmp" ]]; then
   echo "FAIL: Old tmp file was NOT deleted"
+  exit 1
+fi
+
+if [[ -f "${STATE_DIR}/oldLinear.txt" ]]; then
+  echo "FAIL: oldLinear txt file was NOT deleted"
   exit 1
 fi
 
