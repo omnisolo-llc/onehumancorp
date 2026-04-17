@@ -465,13 +465,6 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
     final colors = Theme.of(context).colorScheme;
     final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
       if (word.isEmpty) return '';
-      final w = word.toLowerCase();
-      if (w == 'ai') return 'AI';
-      if (w == 'ceo') return 'CEO';
-      if (w == 'qa') return 'QA';
-      if (w == 'cfo') return 'CFO';
-      if (w == 'seo') return 'SEO';
-      if (w == 'llm') return 'LLM';
       return word[0].toUpperCase() + word.substring(1).toLowerCase();
     }).join(' ');
 
