@@ -1,0 +1,6 @@
+timestamp: 1776239999999999999
+type: architecture_design
+content: >
+  Architected the KAIROS Core Features including Shared Task List,
+  Teammate Mesh, and autoDream pgvector consolidation. Created Mission for
+  implementation delegation.
