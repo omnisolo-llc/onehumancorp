@@ -1,13 +1,16 @@
 package dashboard
 
 import (
+	"bytes"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // Tests for missing coverage in handlers
@@ -941,5 +944,46 @@ func TestHandleBudgetAlerts_NotifyAtPctHandling(t *testing.T) {
 				t.Errorf("expected NotifyAtPct to be %v, got %v", tt.wantPct, app.budgetAlerts[0].NotifyAtPct)
 			}
 		})
+	}
+}
+
+func TestInvokeMCPTool_PIIRedaction(t *testing.T) {
+	app, _, _ := newTestServer(t)
+
+	var buf bytes.Buffer
+	handler := slog.NewTextHandler(&buf, nil)
+	originalLogger := slog.Default()
+	slog.SetDefault(slog.New(handler))
+	defer slog.SetDefault(originalLogger)
+
+	originalVerbosity := telemetry.Verbosity
+	telemetry.Verbosity = 2
+	defer func() { telemetry.Verbosity = originalVerbosity }()
+
+	req := mcpInvokeRequest{
+		ToolID: "telegram-mcp",
+		Action: "send message to user@example.com with phone 123-456-7890 and ssn 123-45-6789",
+		Params: json.RawMessage(`{"content": "hello", "channel": "test-channel"}`),
+	}
+	_, _ = app.invokeMCPTool(req)
+
+	output := buf.String()
+	if !bytes.Contains(buf.Bytes(), []byte("agent execution trace")) {
+		t.Errorf("Expected output to contain 'agent execution trace', got %q", output)
+	}
+	if bytes.Contains(buf.Bytes(), []byte("user@example.com")) {
+		t.Errorf("Expected email to be redacted, got %q", output)
+	}
+	if bytes.Contains(buf.Bytes(), []byte("123-456-7890")) {
+		t.Errorf("Expected phone to be redacted, got %q", output)
+	}
+	if bytes.Contains(buf.Bytes(), []byte("123-45-6789")) {
+		t.Errorf("Expected ssn to be redacted, got %q", output)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("[REDACTED_EMAIL]")) {
+		t.Errorf("Expected output to contain '[REDACTED_EMAIL]', got %q", output)
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("[REDACTED_PHONE]")) {
+		t.Errorf("Expected output to contain '[REDACTED_PHONE]', got %q", output)
 	}
 }
