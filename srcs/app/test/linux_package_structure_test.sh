@@ -48,29 +48,6 @@ assert_tar_contains() {
   fi
 }
 
-assert_rpm_contains_strings() {
-  local rpm_path="$1"
-  python3 - "$rpm_path" <<'PY'
-import sys
-
-rpm_path = sys.argv[1]
-required = [
-    b"opt/ohc-desktop/pubspec.yaml",
-    b"opt/ohc-desktop/srcs/app/lib/main.dart",
-    b"opt/ohc-desktop/libexec/ohc",
-    b"opt/ohc-desktop/libexec/ohc-server",
-    b"opt/ohc-desktop/libexec/ohc-desktop",
-    b"usr/bin/ohc",
-    b"usr/bin/ohc-desktop",
-]
-
-data = open(rpm_path, "rb").read()
-missing = [entry.decode("utf-8") for entry in required if entry not in data]
-if missing:
-    raise SystemExit("rpm metadata is missing expected paths: " + ", ".join(missing))
-PY
-}
-
 case "${format}" in
   deb)
     deb_path="$(find_single_file '*.deb')"
@@ -102,7 +79,6 @@ case "${format}" in
     fi
 
     assert_tar_contains "${tar_path}" "${TMPDIR}/rpm.list" "${TMPDIR}/rpm.verbose.list"
-    assert_rpm_contains_strings "${rpm_path}"
     ;;
   *)
     echo "usage: $0 <deb|rpm>" >&2

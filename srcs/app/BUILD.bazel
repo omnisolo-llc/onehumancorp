@@ -330,7 +330,6 @@ pkg_rpm(
     license = "Apache-2.0",
     release = "1",
     summary = "OHC standalone desktop runtime",
-    tags = ["manual"],
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )
