@@ -1,3 +1,4 @@
+
 package queue
 
 import (
@@ -145,7 +146,7 @@ func TestQueueManager(t *testing.T) {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	qm := NewQueueManager(provider)
+	qm := NewQueueManager(provider, nil) // SQLite without Redis
 
 	job := &SubAgentJob{
 		ID:             "job-1",
