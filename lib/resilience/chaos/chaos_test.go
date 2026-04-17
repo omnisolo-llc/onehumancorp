@@ -77,6 +77,41 @@ func TestResourceExhaustion(t *testing.T) {
 	}
 }
 
+func TestCorruptAgentLock(t *testing.T) {
+	inj := NewInjector(CorruptAgentLock, 1)
+
+	// Create a temporary directory structure to simulate the lock
+	err := os.MkdirAll(".agent-lock/", 0755)
+	if err != nil {
+		t.Fatalf("failed to create directory: %v", err)
+	}
+	defer os.RemoveAll(".agent-lock/")
+
+	err = inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
+		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
+	}
+
+	// Verify file was written
+	content, err := os.ReadFile(".agent-lock/corrupt.lock")
+	if err != nil {
+		t.Fatalf("expected file to exist: %v", err)
+	}
+	if string(content) != "chaos corrupted this lock" {
+		t.Fatalf("expected specific file content, got %s", content)
+	}
+}
+
+func TestCorruptAgentLockString(t *testing.T) {
+	mode := CorruptAgentLock
+	if mode.String() != "corrupt_agent_lock" {
+		t.Fatalf("expected corrupt_agent_lock, got %s", mode.String())
+	}
+}
+
 func TestUnknownModeString(t *testing.T) {
 	mode := ChaosMode(999)
 	if mode.String() != "unknown" {
@@ -107,7 +142,19 @@ func TestAllModeStrings(t *testing.T) {
 	}
 }
 
-func TestCorruptAgentLock(t *testing.T) {
+
+func TestCorruptAgentLockExists(t *testing.T) {
+	// Override the lock path for testing to use a temporary directory
+	tempDir := t.TempDir()
+	originalLockPath := LockPath
+	LockPath = tempDir + "/.agent-lock/"
+	defer func() { LockPath = originalLockPath }()
+
+	os.MkdirAll(LockPath, 0755)
+
+	// Create the file so os.Stat finds it
+	os.WriteFile(LockPath+"test.lock", []byte("initial"), 0644)
+
 	inj := NewInjector(CorruptAgentLock, 1)
 
 	err := inj.Inject(context.Background())
@@ -115,42 +162,12 @@ func TestCorruptAgentLock(t *testing.T) {
 		t.Fatal("expected an error, got nil")
 	}
 
-	if e, ok := err.(*ChaosError); ok {
-		if e.Message != "chaos: simulated agent lock corruption" {
-			t.Fatalf("expected 'chaos: simulated agent lock corruption', got '%s'", e.Message)
-		}
-	} else {
-		t.Fatalf("expected ChaosError, got %T", err)
+	// Verify the corrupt file was created
+	content, readErr := os.ReadFile(LockPath+"corrupt.lock")
+	if readErr != nil {
+		t.Fatalf("expected corrupt.lock to be created, but got err: %v", readErr)
 	}
-}
-
-func TestCorruptAgentLockDoesNotCorruptIfDirectoryExistsAndCreates(t *testing.T) {
-	err := os.MkdirAll(".agent-lock", 0755)
-	if err != nil {
-		t.Fatalf("failed to create .agent-lock dir: %v", err)
-	}
-	defer os.RemoveAll(".agent-lock")
-
-	inj := NewInjector(CorruptAgentLock, 1)
-	err = inj.Inject(context.Background())
-	if err == nil {
-		t.Fatal("expected an error, got nil")
-	}
-
-	if e, ok := err.(*ChaosError); ok {
-		if e.Message != "chaos: simulated agent lock corruption" {
-			t.Fatalf("expected 'chaos: simulated agent lock corruption', got '%s'", e.Message)
-		}
-	} else {
-		t.Fatalf("expected ChaosError, got %T", err)
-	}
-
-	content, err := os.ReadFile(".agent-lock/corrupt.lock")
-	if err != nil {
-		t.Fatalf("failed to read corrupt.lock: %v", err)
-	}
-
 	if string(content) != "chaos corrupted this lock" {
-		t.Fatalf("unexpected content: %s", content)
+		t.Fatalf("unexpected content in corrupt.lock: %s", string(content))
 	}
 }
