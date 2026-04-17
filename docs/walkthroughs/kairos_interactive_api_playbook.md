@@ -135,22 +135,4 @@ graph TD
     style E fill:#00ccff,stroke:#333,stroke-width:2px,color:#111
 ```
 
-### AutoDream Consolidation Flow
-
-```mermaid
-sequenceDiagram
-    participant Worker as Agent (Worker)
-    participant FS as Local Filesystem
-    participant AutoDream as AutoDream API
-    participant LLM as Embedding Model
-    participant DB as pgvector
-
-    Worker->>FS: Writes Session Context to OHC_MEMORY_DIR
-    AutoDream->>FS: Polling/Manual Sync Trigger
-    AutoDream->>LLM: Pass text to Minimax/Ada
-    LLM-->>AutoDream: Return 1536-dim Embedding
-    AutoDream->>DB: Upsert Vector to autodream_memories
-    AutoDream-->>Worker: Broadcast Consolidation Success
-```
-
 </div>
