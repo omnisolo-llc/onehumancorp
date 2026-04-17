@@ -1,15 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
-### Cloud Scaling Improvements
-- Implement QueueOrchestrator for Shared Task List (KAIROS Phase 1).
-- Finalize Phase 4 Sub-Agent Queue and update Epic.
-- Architect KAIROS Orchestration & AutoDream Foundation.
-
-### Privacy/Offline Improvements
-- Architect Hybrid MCP Tool for Blob Storage Sync.
-- Fix flaky tests and nested group redaction.
-
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 ### Cloud Scaling Improvements
 - Architect Cross-Mode Database Schema Syncer via MCP.
