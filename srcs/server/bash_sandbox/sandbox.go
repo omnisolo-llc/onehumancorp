@@ -29,7 +29,7 @@ func init() {
 		panic(err)
 	}
 
-	violationCount, err = meter.Int64Counter("ohc_sandbox_violation_total",
+	violationCount, err = meter.Int64Counter("telemetry.sandbox_violation_total",
 		metric.WithDescription("Total number of bash sandbox security violations"))
 	if err != nil {
 		panic(err)
