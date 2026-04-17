@@ -76,22 +76,6 @@ Agents use this endpoint to announce task state transitions.
 ```
 
 ## 4. Phase 3: autoDream (Memory Consolidation Pipeline)
-
-### Data Pipeline Sequence
-```mermaid
-sequenceDiagram
-    participant WorkerAgent as Worker Agent
-    participant DB as Postgres (shared_tasks)
-    participant AutoDream as autoDream Pipeline
-    participant VectorDB as Postgres (autodream_memories - pgvector)
-
-    WorkerAgent->>DB: UPDATE shared_tasks_decomposition SET status = 'DONE'
-    DB-->>AutoDream: Trigger Database Hook / PubSub Event
-    AutoDream->>AutoDream: Extract Task Payload and Result
-    AutoDream->>AutoDream: Generate LLM Embeddings
-    AutoDream->>VectorDB: INSERT INTO autodream_memories (embedding, content)
-```
-
 The state machine consolidates long-term memory into a vector database to retain architectural decisions and agent memories.
 
 ### Vector Schema Definition (pgvector)
@@ -111,27 +95,6 @@ CREATE INDEX idx_autodream_memories_embedding ON autodream_memories USING ivffla
 ```
 
 ## 5. Phase 4: Sub-Agent Orchestration Queue
-
-### Sub-Agent Orchestration Workflow
-```mermaid
-graph TD
-    subgraph KAIROS Orchestrator
-        A[Task Manager] -->|Enqueue| Q{Sub-Agent Queue Interface}
-    end
-
-    Q -->|Cloud| Redis[(Redis ZSETs)]
-    Q -->|Standalone| DB[(SQLite Mutexed Table)]
-
-    Redis -->|Dequeue| W1[Worker Pod]
-    DB -->|Dequeue| W2[Local Worker]
-
-    W1 -->|Transition Event| M[Teammate Mesh / Centrifuge]
-    W2 -->|Transition Event| M
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class A,Q,Redis,DB,W1,W2,M premium;
-```
-
 KAIROS manages distributed tasks via a background Sub-Agent Orchestration Queue.
 
 ### Sub-Agent Queue Schema
