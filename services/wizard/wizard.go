@@ -14,6 +14,8 @@ var (
 	agentConfigCounter  metric.Int64Counter
 	promptTuningCounter metric.Int64Counter
 	agentFixesCounter   metric.Int64Counter
+	agentUpgradesCounter  metric.Int64Counter
+	agentRollbacksCounter metric.Int64Counter
 )
 
 func init() {
@@ -27,6 +29,14 @@ func init() {
 		panic(err)
 	}
 	agentFixesCounter, err = meter.Int64Counter("ohc_agent_fixes_total")
+	if err != nil {
+		panic(err)
+	}
+	agentUpgradesCounter, err = meter.Int64Counter("ohc_agent_upgrades_total")
+	if err != nil {
+		panic(err)
+	}
+	agentRollbacksCounter, err = meter.Int64Counter("ohc_agent_rollbacks_total")
 	if err != nil {
 		panic(err)
 	}
@@ -97,4 +107,18 @@ func HandleFixAgent(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status": "success", "message": "Agent fixed successfully"}`))
+}
+
+func HandleUpgrade(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	agentUpgradesCounter.Add(ctx, 1)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status": "success", "message": "Upgraded successfully"}`))
+}
+
+func HandleRollback(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	agentRollbacksCounter.Add(ctx, 1)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status": "success", "message": "Rolled back successfully"}`))
 }

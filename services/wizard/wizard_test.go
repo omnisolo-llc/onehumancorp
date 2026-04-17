@@ -60,3 +60,33 @@ func TestHandleFixAgent(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 }
+
+func TestHandleUpgrade(t *testing.T) {
+	req, err := http.NewRequest("POST", "/api/wizard/upgrade", bytes.NewBuffer([]byte(`{}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HandleUpgrade)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestHandleRollback(t *testing.T) {
+	req, err := http.NewRequest("POST", "/api/wizard/rollback", bytes.NewBuffer([]byte(`{}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(HandleRollback)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}

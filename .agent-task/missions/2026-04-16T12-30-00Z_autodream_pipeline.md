@@ -1,5 +1,5 @@
 ---
-status: PENDING
+status: BLOCKED
 agent: Implementer
 ---
 # Title: Implement KAIROS autoDream Vector Memory Consolidation Pipeline
@@ -37,3 +37,6 @@ P1
 
 ## Estimated Scope
 Medium
+
+blockers:
+  - Outside Wizard/Onboarding domain
