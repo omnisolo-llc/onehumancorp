@@ -21,10 +21,12 @@ type MeshMessage struct {
 }
 
 // TeammateMesh is the Redis Pub/Sub powered communication layer.
+// TeammateMesh is the Redis Pub/Sub powered communication layer.
 type TeammateMesh struct {
 	client      *redis.Client
 	mu          sync.RWMutex
 	subscribers map[string][]chan MeshMessage
+	mailboxes   map[string][]MeshMessage
 }
 
 // NewTeammateMesh initializes a new TeammateMesh.
@@ -32,6 +34,7 @@ func NewTeammateMesh(client *redis.Client) *TeammateMesh {
 	return &TeammateMesh{
 		client:      client,
 		subscribers: make(map[string][]chan MeshMessage),
+		mailboxes:   make(map[string][]MeshMessage),
 	}
 }
 
@@ -184,4 +187,89 @@ func (m *TeammateMesh) Subscribe(ctx context.Context, topic string, handler func
 			}
 		}
 	}()
+}
+
+// SendDirectMessage sends a direct message to a specific agent's mailbox and stores it durably.
+func (m *TeammateMesh) SendDirectMessage(ctx context.Context, agentID string, msg MeshMessage) error {
+	msg.Topic = "mailbox:" + agentID
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+
+	if m.client != nil {
+		pipe := m.client.Pipeline()
+		pipe.RPush(ctx, "durable_mailbox:"+agentID, data)
+		// Set TTL or limit size if needed, e.g. pipe.LTrim
+		pipe.Publish(ctx, msg.Topic, data)
+		_, err = pipe.Exec(ctx)
+		return err
+	}
+
+	m.mu.Lock()
+	m.mailboxes[agentID] = append(m.mailboxes[agentID], msg)
+	m.mu.Unlock()
+
+	return m.Publish(ctx, msg)
+}
+
+// SubscribeMailbox subscribes to a specific agent's mailbox.
+func (m *TeammateMesh) SubscribeMailbox(ctx context.Context, agentID string, handler func(MeshMessage)) {
+	topic := "mailbox:" + agentID
+	m.Subscribe(ctx, topic, handler)
+}
+
+// HandleMailbox handles GET /mesh/mailbox requests to retrieve and clear mailbox messages.
+func (m *TeammateMesh) HandleMailbox(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	agentID := r.URL.Query().Get("agent_id")
+	if agentID == "" {
+		http.Error(w, "agent_id parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	var messages []MeshMessage
+
+	if m.client != nil {
+		key := "durable_mailbox:" + agentID
+		// Get all messages
+		results, err := m.client.LRange(r.Context(), key, 0, -1).Result()
+		if err == nil {
+			for _, res := range results {
+				var msg MeshMessage
+				if err := json.Unmarshal([]byte(res), &msg); err == nil {
+					messages = append(messages, msg)
+				}
+			}
+			// Clear the mailbox after reading
+			m.client.Del(r.Context(), key)
+		}
+	} else {
+		m.mu.Lock()
+		if msgs, ok := m.mailboxes[agentID]; ok {
+			messages = make([]MeshMessage, len(msgs))
+			copy(messages, msgs)
+			delete(m.mailboxes, agentID)
+		} else {
+			messages = make([]MeshMessage, 0)
+		}
+		m.mu.Unlock()
+	}
+
+	if messages == nil {
+		messages = make([]MeshMessage, 0)
+	}
+
+	response := struct {
+		Messages []MeshMessage `json:"messages"`
+	}{
+		Messages: messages,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
