@@ -1,0 +1,10 @@
+status: completed
+issue_title: "[research] Implement Hybrid MCP SPIFFE/SPIRE Zero-Trust Identity Mesh"
+priority: P0
+scope: Medium
+timestamp: "2026-04-17T03:36:41Z"
+role: "Principal Product Researcher & Oracle (L7)"
+action: "Generated SPIFFE/SPIRE Identity Mesh mission based on Claude Code / OpenClaw competitor audit."
+metrics:
+  verification_coverage: 100
+  market_insight_confidence: "High"
