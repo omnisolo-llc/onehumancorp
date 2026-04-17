@@ -33,7 +33,11 @@
       },
       "options": {
         "mode": "html",
+<<<<<<< HEAD
+        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.05) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>"
+=======
         "content": "<style>.panel-container { backdrop-filter: blur(20px); background: rgba(255, 255, 255, 0.05) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>"
+>>>>>>> c8cfb402 (🧹 Maintainer: [Hygiene] Enforce local sovereignty by disabling telemetry in standalone wrapper (#5910))
       },
       "transparent": true
     },

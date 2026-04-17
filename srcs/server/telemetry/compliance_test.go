@@ -3,96 +3,106 @@ package telemetry_test
 import (
 	"context"
 	"encoding/json"
-	"os"
+	"strings"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
-func TestStandaloneTelemetryPIIRedaction(t *testing.T) {
-	originalBufferFunc := telemetry.BufferMetricFunc
-	defer func() { telemetry.BufferMetricFunc = originalBufferFunc }()
-
-	var receivedPayload string
-	var receivedMetricType string
+func TestStandaloneTelemetryCompliance(t *testing.T) {
+	// Test Opt-Out
+	t.Setenv("OHC_MULTITENANT", "false")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "false")
 
 	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		receivedMetricType = metricType
-		receivedPayload = payload
 		return nil
 	}
 
-	ctx := context.Background()
-	piiData := "testuser@example.com"
-
-	telemetry.RecordCacheMiss(ctx, "fetching "+piiData, "redis")
-
-	if receivedMetricType != "cache_miss" {
-		t.Errorf("expected metric type 'cache_miss', got %q", receivedMetricType)
-	}
-
-	var parsedPayload map[string]interface{}
-	err := json.Unmarshal([]byte(receivedPayload), &parsedPayload)
+	cleanup, err := telemetry.InitTelemetry()
 	if err != nil {
-		t.Fatalf("failed to unmarshal payload: %v", err)
+		t.Fatalf("InitTelemetry failed: %v", err)
+	}
+	if cleanup != nil {
+		defer cleanup()
 	}
 
-	opVal, ok := parsedPayload["operation"].(string)
-	if !ok {
-		t.Fatalf("expected string operation in payload, got %v", parsedPayload["operation"])
+	if telemetry.BufferMetricFunc != nil {
+		t.Errorf("BufferMetricFunc should be nil when standalone telemetry is disabled")
 	}
 
-	if opVal != "fetching [REDACTED_EMAIL]" {
-		t.Errorf("expected operation to be 'fetching [REDACTED_EMAIL]', got %q", opVal)
+	// Test Opt-In
+	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
+
+	// We don't want to re-init full prometheus if not needed, just testing logic.
+	// But InitTelemetry creates a new registry, so it's safe.
+	cleanup2, err2 := telemetry.InitTelemetry()
+	if err2 != nil {
+		t.Fatalf("InitTelemetry failed: %v", err2)
+	}
+	if cleanup2 != nil {
+		defer cleanup2()
+	}
+
+	// BufferMetricFunc is not explicitly set by InitTelemetry in true case unless provided earlier.
+	// Let's set it and verify it's NOT cleared.
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		return nil
+	}
+	cleanup3, err3 := telemetry.InitTelemetry()
+	if err3 != nil {
+		t.Fatalf("InitTelemetry failed: %v", err3)
+	}
+	if cleanup3 != nil {
+		defer cleanup3()
+	}
+	if telemetry.BufferMetricFunc == nil {
+		t.Errorf("BufferMetricFunc should NOT be nil when standalone telemetry is enabled")
 	}
 }
 
-func TestStandaloneTelemetryOptIn(t *testing.T) {
-	// By default, InitTelemetry returns early if telemetry is not explicitly requested
-	// and we are in standalone mode. Let's verify this behavior.
-
-	// Setup env vars to simulate standalone mode where telemetry is NOT enabled
-	os.Setenv("OHC_MULTITENANT", "false")
-	os.Unsetenv("OHC_TELEMETRY_ENABLED")
-
-	// Restore original BufferMetricFunc after test
-	originalBufferFunc := telemetry.BufferMetricFunc
-	defer func() { telemetry.BufferMetricFunc = originalBufferFunc }()
-
-	// We'll set a mock func to prove it gets overwritten by InitTelemetry if disabled
+func TestBufferMetricFuncRedactsPII(t *testing.T) {
+	var capturedPayload string
 	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		capturedPayload = payload
 		return nil
 	}
+	defer func() { telemetry.BufferMetricFunc = nil }()
 
-	shutdown, err := telemetry.InitTelemetry()
+	ctx := context.Background()
+	taskID := "task-123 user@example.com"
+	errStr := "error with ssn 123-45-6789"
+
+	telemetry.RecordTaskFailed(ctx, taskID, errStr)
+
+	if capturedPayload == "" {
+		t.Fatalf("BufferMetricFunc was not called")
+	}
+
+	var payloadMap map[string]interface{}
+	err := json.Unmarshal([]byte(capturedPayload), &payloadMap)
 	if err != nil {
-		t.Fatalf("unexpected error during init: %v", err)
-	}
-	defer shutdown()
-
-	// Assert that BufferMetricFunc is set to nil (opt-in enforced)
-	if telemetry.BufferMetricFunc != nil {
-		t.Errorf("expected BufferMetricFunc to be nil in standalone opt-out mode, got %v", telemetry.BufferMetricFunc)
+		t.Fatalf("Failed to unmarshal payload: %v", err)
 	}
 
-	// Now try with telemetry enabled
-	os.Setenv("OHC_TELEMETRY_ENABLED", "true")
-
-	// Set mock func again
-	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		return nil
+	taskIDVal, ok := payloadMap["task_id"].(string)
+	if !ok {
+		t.Fatalf("task_id is missing or not a string")
+	}
+	if strings.Contains(taskIDVal, "user@example.com") {
+		t.Errorf("Email was not redacted in payload: %s", taskIDVal)
+	}
+	if !strings.Contains(taskIDVal, "[REDACTED_EMAIL]") {
+		t.Errorf("Expected redacted email in payload: %s", taskIDVal)
 	}
 
-	shutdown2, err2 := telemetry.InitTelemetry()
-	if err2 != nil {
-		t.Fatalf("unexpected error during init with telemetry enabled: %v", err2)
+	errorVal, ok := payloadMap["error"].(string)
+	if !ok {
+		t.Fatalf("error is missing or not a string")
 	}
-	defer shutdown2()
-
-	// Assert BufferMetricFunc is NOT set to nil, it should remain whatever the wrapper set it to,
-	// or at least not be forced to nil by the privacy guard. (Actually InitTelemetry doesn't overwrite
-	// it if it passes the privacy guard, so it should still be our mock function).
-	if telemetry.BufferMetricFunc == nil {
-		t.Errorf("expected BufferMetricFunc to NOT be nil in standalone opt-in mode")
+	if strings.Contains(errorVal, "123-45-6789") {
+		t.Errorf("SSN was not redacted in payload: %s", errorVal)
+	}
+	if !strings.Contains(errorVal, "[REDACTED_SSN]") {
+		t.Errorf("Expected redacted SSN in payload: %s", errorVal)
 	}
 }

@@ -4,6 +4,11 @@ backend:
   headless: false
   service:
     port: 8080
+<<<<<<< HEAD
+  networkPolicy:
+    enabled: true
+=======
+>>>>>>> c8cfb402 (🧹 Maintainer: [Hygiene] Enforce local sovereignty by disabling telemetry in standalone wrapper (#5910))
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -27,9 +32,17 @@ backend:
     requests:
       cpu: "2"
       memory: "2Gi"
+<<<<<<< HEAD
+      ephemeralStorage: "10Gi"
     limits:
       cpu: "4"
       memory: "4Gi"
+      ephemeralStorage: "20Gi"
+=======
+    limits:
+      cpu: "4"
+      memory: "4Gi"
+>>>>>>> c8cfb402 (🧹 Maintainer: [Hygiene] Enforce local sovereignty by disabling telemetry in standalone wrapper (#5910))
       pods: "20"
   networkPolicy:
     enabled: true
@@ -42,6 +55,11 @@ ohcCore:
   replicas: 1
   service:
     port: 18789
+<<<<<<< HEAD
+  networkPolicy:
+    enabled: true
+=======
+>>>>>>> c8cfb402 (🧹 Maintainer: [Hygiene] Enforce local sovereignty by disabling telemetry in standalone wrapper (#5910))
   autoscaling:
     enabled: true
     minReplicas: 2
@@ -82,6 +100,11 @@ chatwoot:
   replicas: 1
   service:
     port: 3000
+<<<<<<< HEAD
+  networkPolicy:
+    enabled: true
+=======
+>>>>>>> c8cfb402 (🧹 Maintainer: [Hygiene] Enforce local sovereignty by disabling telemetry in standalone wrapper (#5910))
   autoscaling:
     enabled: true
     minReplicas: 1
@@ -121,6 +144,11 @@ powersync:
     type: ClusterIP
     port: 8081
     targetPort: 8080
+<<<<<<< HEAD
+  networkPolicy:
+    enabled: true
+=======
+>>>>>>> c8cfb402 (🧹 Maintainer: [Hygiene] Enforce local sovereignty by disabling telemetry in standalone wrapper (#5910))
   autoscaling:
     enabled: true
     minReplicas: 1

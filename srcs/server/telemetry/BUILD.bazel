@@ -30,14 +30,14 @@ go_test(
     name = "telemetry_test",
     srcs = [
         "buffer_test.go",
+        "compliance_test.go",
+        "logging_test.go",
         "privacy_test.go",
         "logger_test.go",
         "sync_worker_test.go",
         "telemetry_extra_test.go",
         "telemetry_test.go",
         "token_forecast_worker_test.go",
-        "compliance_test.go",
-        "logging_test.go",
     ],
     embed = [":telemetry"],
     deps = [

@@ -170,6 +170,7 @@ start_daemon() {
     GOGC="${GOGC:-30}" \
     OHC_STANDALONE="true" \
     OHC_TELEMETRY_ENABLED="false" \
+>>>>>>> c8cfb402 (🧹 Maintainer: [Hygiene] Enforce local sovereignty by disabling telemetry in standalone wrapper (#5910))
     nohup "${SERVER_BIN}" >"${LOG_FILE}" 2>&1 &
   local pid=$!
   echo "${pid}" >"${PID_FILE}"
@@ -248,6 +249,7 @@ case "${1:-}" in
     ;;
   *)
     export OHC_TELEMETRY_ENABLED="false"
+>>>>>>> c8cfb402 (🧹 Maintainer: [Hygiene] Enforce local sovereignty by disabling telemetry in standalone wrapper (#5910))
     exec "${SERVER_BIN}" "$@"
     ;;
 esac
