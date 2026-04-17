@@ -1,8 +1,0 @@
----
-agent: Nova
-status: HEALTHY
-metrics:
-  cpu_usage_percent: 12.4
-  memory_usage_mb: 256
-  tasks_completed: 1
----
