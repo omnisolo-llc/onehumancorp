@@ -96,11 +96,45 @@ func TestAllModeStrings(t *testing.T) {
 		LatencySpike:       "latency_spike",
 		ConnectionDrop:     "connection_drop",
 		ResourceExhaustion: "resource_exhaustion",
+		CorruptAgentLock:   "corrupt_agent_lock",
 	}
 
 	for mode, expected := range modes {
 		if mode.String() != expected {
 			t.Errorf("expected %s, got %s", expected, mode.String())
 		}
+	}
+}
+
+func TestCorruptAgentLock(t *testing.T) {
+	inj := NewInjector(CorruptAgentLock, 1)
+
+	// Since .agent-lock/ won't exist naturally, it should return chaos error but NOT write
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
+		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
+	}
+}
+
+func TestCorruptAgentLockExists(t *testing.T) {
+	// Mock LockPath to a temp dir so it triggers the existence check
+	originalLockPath := LockPath
+	tmpDir := t.TempDir()
+	LockPath = tmpDir
+	defer func() { LockPath = originalLockPath }()
+
+	inj := NewInjector(CorruptAgentLock, 1)
+
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
+		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
 	}
 }
