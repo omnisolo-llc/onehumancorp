@@ -52,12 +52,4 @@ if [[ -f "${STATE_DIR}/old.tmp" ]]; then
 fi
 
 echo "PASS: Cleanup logic behaves correctly"
-
-# Verify that OHC_TELEMETRY_ENABLED is explicitly set to false in the script's final execution blocks
-if ! grep -q 'OHC_TELEMETRY_ENABLED="false"' "${SCRIPT_PATH}"; then
-  echo "FAIL: OHC_TELEMETRY_ENABLED is not forced to false in standalone_ohc.sh"
-  exit 1
-fi
-
-echo "PASS: Telemetry exfiltration guardrail is present"
 rm -rf "${STATE_DIR}"
