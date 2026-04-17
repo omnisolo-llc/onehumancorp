@@ -3,13 +3,9 @@ package builtin
 import (
 	"context"
 	"encoding/json"
-	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/agents/sandbox"
+	"github.com/onehumancorp/mono/srcs/server/bash_sandbox"
 )
-
-type workDirContextKeyType string
-const workDirContextKey workDirContextKeyType = "workDir"
 
 // BashTool definition
 var BashTool = Tool{
@@ -33,22 +29,8 @@ var BashTool = Tool{
 			return "", err
 		}
 
-		sm, err := sandbox.NewSandboxManager()
-		if err != nil {
-			return "", err
-		}
-		defer sm.Cleanup()
-
-		// Ensure robust timeouts
-		execCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-		defer cancel()
-
-		workDir := "" // allow the agent runner to set it or rely on existing behavior
-		if val, ok := ctx.Value(workDirContextKey).(string); ok {
-			workDir = val
-		}
-
-		out, err := sm.Execute(execCtx, input.Command, workDir)
+		sandbox := bash_sandbox.NewSandbox()
+		out, err := sandbox.ExecuteContext(ctx, input.Command, "")
 		if err != nil {
 			return out + "\n" + err.Error(), nil // Returning error as content to the LLM
 		}
