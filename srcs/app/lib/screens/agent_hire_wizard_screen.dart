@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/services/settings_service.dart';
 
 class AgentHireWizardScreen extends ConsumerStatefulWidget {
   const AgentHireWizardScreen({super.key});
@@ -31,7 +32,6 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
 
   // Resource limits state
   double _maxSessionsPerDay = 50.0;
-  bool _showAdvanced = false;
   final _endpointUrlController = TextEditingController();
   final _tokenLimitController = TextEditingController();
 
@@ -125,6 +125,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final expertMode = ref.watch(clientSettingsProvider).valueOrNull?.expertMode ?? false;
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -348,7 +349,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   groupValue: _topologyPreset,
                   onChanged: (val) => setState(() => _topologyPreset = val!),
                 ),
-                if (_showAdvanced) ...[
+                if (expertMode) ...[
                   const SizedBox(height: 16),
                   Container(
                     height: 250,
@@ -494,16 +495,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Row(
-                      children: [
-                        const Text('Advanced Settings'),
-                        Switch(
-                          value: _showAdvanced,
-                          onChanged:
-                              (val) => setState(() => _showAdvanced = val),
-                        ),
-                      ],
-                    ),
+
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -531,7 +523,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                if (_showAdvanced) ...[
+                if (expertMode) ...[
                   const SizedBox(height: 24),
                   const Text(
                     'Advanced Configuration',
