@@ -2,6 +2,7 @@ package chaos
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 )
@@ -96,11 +97,55 @@ func TestAllModeStrings(t *testing.T) {
 		LatencySpike:       "latency_spike",
 		ConnectionDrop:     "connection_drop",
 		ResourceExhaustion: "resource_exhaustion",
+		CorruptAgentLock:   "corrupt_agent_lock",
 	}
 
 	for mode, expected := range modes {
 		if mode.String() != expected {
 			t.Errorf("expected %s, got %s", expected, mode.String())
 		}
+	}
+}
+
+func TestCorruptAgentLock_DirectoryExists(t *testing.T) {
+	inj := NewInjector(CorruptAgentLock, 1)
+
+	// Ensure the directory exists
+	os.MkdirAll(".agent-lock/", 0755)
+	defer os.RemoveAll(".agent-lock/")
+
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// verify that the file was created
+	if _, err := os.Stat(".agent-lock/corrupt.lock"); os.IsNotExist(err) {
+		t.Fatal("expected corrupt.lock file to be created")
+	}
+}
+
+func TestCorruptAgentLock_DirectoryDoesNotExist(t *testing.T) {
+	inj := NewInjector(CorruptAgentLock, 1)
+
+	// Ensure the directory does not exist
+	os.RemoveAll(".agent-lock/")
+
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// verify that the file was NOT created
+	if _, err := os.Stat(".agent-lock/corrupt.lock"); !os.IsNotExist(err) {
+		t.Fatal("expected corrupt.lock file to not be created")
 	}
 }
