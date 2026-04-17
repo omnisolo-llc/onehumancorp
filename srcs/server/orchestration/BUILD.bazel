@@ -15,7 +15,6 @@ go_library(
         "event_log.go",
         "events.go",
         "health.go",
-        "harness.go",
         "hub.go",
         "postgres_hub.go",
         "repository.go",

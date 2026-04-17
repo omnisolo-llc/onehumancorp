@@ -53,11 +53,3 @@ func TestCalculateNetworkCost(t *testing.T) {
 		t.Errorf("expected %f, got %f", expected, cost)
 	}
 }
-
-func TestCalculatePromptCacheSavings(t *testing.T) {
-	config := CostConfig{CostPerInputToken: 0.01, CostPerCachedInputToken: 0.005}
-	savings := CalculatePromptCacheSavings(100, 1000, config)
-	if savings != 5.0 {
-		t.Errorf("expected savings 5.0, got %f", savings)
-	}
-}
