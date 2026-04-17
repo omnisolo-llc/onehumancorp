@@ -10,6 +10,7 @@ import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/undercover_mode_toggle.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -31,6 +32,10 @@ class DashboardScreen extends ConsumerWidget {
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
         ),
+        actions: const [
+          UndercoverModeToggle(),
+          SizedBox(width: 8),
+        ],
       ),
       body: snapshot.when(
         loading:
