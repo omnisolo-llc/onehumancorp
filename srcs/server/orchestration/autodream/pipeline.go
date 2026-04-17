@@ -83,7 +83,16 @@ func (p *AutoDreamPipeline) extractFromDB(ctx context.Context) ([]string, error)
 func (p *AutoDreamPipeline) extractFromFS() ([]string, error) {
 	memoryDir := os.Getenv("OHC_MEMORY_DIR")
 	if memoryDir == "" {
-		memoryDir = ".agent-task/memory"
+		// Default to XDG state home to avoid writing inside the repo.
+		stateHome := os.Getenv("XDG_STATE_HOME")
+		if stateHome == "" {
+			if home := os.Getenv("HOME"); home != "" {
+				stateHome = filepath.Join(home, ".local", "state")
+			} else {
+				stateHome = filepath.Join(os.TempDir(), "ohc-state")
+			}
+		}
+		memoryDir = filepath.Join(stateHome, "ohc", "runtime", "memory")
 	}
 
 	// Read workspace root properly to find the dir

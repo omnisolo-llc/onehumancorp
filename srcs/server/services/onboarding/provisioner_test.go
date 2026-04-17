@@ -1,106 +1,124 @@
 package onboarding
 
 import (
-	"context"
-	"os"
-	"path/filepath"
-	"testing"
+"context"
+"os"
+"path/filepath"
+"testing"
 )
 
+// setTestDataDirs configures isolated temporary directories for both local and
+// cloud OHC data so that tests never write inside the source tree.
+func setTestDataDirs(t *testing.T) (localDir, cloudDir string) {
+t.Helper()
+tmp := t.TempDir()
+localDir = filepath.Join(tmp, "local")
+cloudDir = filepath.Join(tmp, "cloud")
+t.Setenv("OHC_LOCAL_DATA_DIR", localDir)
+t.Setenv("OHC_CLOUD_DATA_DIR", cloudDir)
+return localDir, cloudDir
+}
+
 func TestProvisionEnvironment_Local(t *testing.T) {
-	err := ProvisionEnvironment(context.Background(), false)
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
-	}
+localDir, _ := setTestDataDirs(t)
 
-	expectedDirs := []string{
-		filepath.Join(".ohc-local-data", "db"),
-		filepath.Join(".ohc-local-data", "blob"),
-		filepath.Join(".ohc-local-data", "config"),
-	}
+err := ProvisionEnvironment(context.Background(), false)
+if err != nil {
+t.Fatalf("expected nil error, got %v", err)
+}
 
-	for _, dir := range expectedDirs {
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			t.Errorf("expected directory %s to exist", dir)
-		}
-	}
+expectedDirs := []string{
+filepath.Join(localDir, "db"),
+filepath.Join(localDir, "blob"),
+filepath.Join(localDir, "config"),
+}
 
-	os.RemoveAll(".ohc-local-data")
+for _, dir := range expectedDirs {
+if _, err := os.Stat(dir); os.IsNotExist(err) {
+t.Errorf("expected directory %s to exist", dir)
+}
+}
 }
 
 func TestProvisionEnvironment_Cloud(t *testing.T) {
-	err := ProvisionEnvironment(context.Background(), true)
-	if err != nil {
-		t.Fatalf("expected nil error, got %v", err)
-	}
+_, cloudDir := setTestDataDirs(t)
 
-	expectedDirs := []string{
-		filepath.Join(".ohc-cloud-data", "db"),
-		filepath.Join(".ohc-cloud-data", "blob"),
-		filepath.Join(".ohc-cloud-data", "config"),
-	}
+err := ProvisionEnvironment(context.Background(), true)
+if err != nil {
+t.Fatalf("expected nil error, got %v", err)
+}
 
-	for _, dir := range expectedDirs {
-		if _, err := os.Stat(dir); os.IsNotExist(err) {
-			t.Errorf("expected directory %s to exist", dir)
-		}
-	}
+expectedDirs := []string{
+filepath.Join(cloudDir, "db"),
+filepath.Join(cloudDir, "blob"),
+filepath.Join(cloudDir, "config"),
+}
 
-	os.RemoveAll(".ohc-cloud-data")
+for _, dir := range expectedDirs {
+if _, err := os.Stat(dir); os.IsNotExist(err) {
+t.Errorf("expected directory %s to exist", dir)
+}
+}
 }
 
 func TestCheckEnvironment_Local(t *testing.T) {
-	// Ensure clean state
-	os.RemoveAll(".ohc-local-data")
+setTestDataDirs(t)
 
-	err := CheckEnvironment(false)
-	if err == nil {
-		t.Fatalf("expected error for missing environment, got nil")
-	}
+err := CheckEnvironment(false)
+if err == nil {
+t.Fatalf("expected error for missing environment, got nil")
+}
 
-	ProvisionEnvironment(context.Background(), false)
-	err = CheckEnvironment(false)
-	if err != nil {
-		t.Fatalf("expected nil error for provisioned environment, got %v", err)
-	}
-	os.RemoveAll(".ohc-local-data")
+if err := ProvisionEnvironment(context.Background(), false); err != nil {
+t.Fatalf("provision failed: %v", err)
+}
+if err := CheckEnvironment(false); err != nil {
+t.Fatalf("expected nil error for provisioned environment, got %v", err)
+}
 }
 
 func TestCheckEnvironment_Cloud(t *testing.T) {
-	// Ensure clean state
-	os.RemoveAll(".ohc-cloud-data")
+setTestDataDirs(t)
 
-	err := CheckEnvironment(true)
-	if err == nil {
-		t.Fatalf("expected error for missing environment, got nil")
-	}
+err := CheckEnvironment(true)
+if err == nil {
+t.Fatalf("expected error for missing environment, got nil")
+}
 
-	ProvisionEnvironment(context.Background(), true)
-	err = CheckEnvironment(true)
-	if err != nil {
-		t.Fatalf("expected nil error for provisioned environment, got %v", err)
-	}
-	os.RemoveAll(".ohc-cloud-data")
+if err := ProvisionEnvironment(context.Background(), true); err != nil {
+t.Fatalf("provision failed: %v", err)
+}
+if err := CheckEnvironment(true); err != nil {
+t.Fatalf("expected nil error for provisioned environment, got %v", err)
+}
 }
 
 func TestCleanupEnvironment_Local(t *testing.T) {
-	ProvisionEnvironment(context.Background(), false)
-	err := CleanupEnvironment(context.Background(), false)
-	if err != nil {
-		t.Fatalf("expected nil error for cleanup environment, got %v", err)
-	}
-	if err := CheckEnvironment(false); err == nil {
-		t.Fatalf("expected error for missing environment after cleanup, got nil")
-	}
+setTestDataDirs(t)
+
+if err := ProvisionEnvironment(context.Background(), false); err != nil {
+t.Fatalf("provision failed: %v", err)
+}
+err := CleanupEnvironment(context.Background(), false)
+if err != nil {
+t.Fatalf("expected nil error for cleanup environment, got %v", err)
+}
+if err := CheckEnvironment(false); err == nil {
+t.Fatalf("expected error for missing environment after cleanup, got nil")
+}
 }
 
 func TestCleanupEnvironment_Cloud(t *testing.T) {
-	ProvisionEnvironment(context.Background(), true)
-	err := CleanupEnvironment(context.Background(), true)
-	if err != nil {
-		t.Fatalf("expected nil error for cleanup environment, got %v", err)
-	}
-	if err := CheckEnvironment(true); err == nil {
-		t.Fatalf("expected error for missing environment after cleanup, got nil")
-	}
+setTestDataDirs(t)
+
+if err := ProvisionEnvironment(context.Background(), true); err != nil {
+t.Fatalf("provision failed: %v", err)
+}
+err := CleanupEnvironment(context.Background(), true)
+if err != nil {
+t.Fatalf("expected nil error for cleanup environment, got %v", err)
+}
+if err := CheckEnvironment(true); err == nil {
+t.Fatalf("expected error for missing environment after cleanup, got nil")
+}
 }

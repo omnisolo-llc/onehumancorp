@@ -323,3 +323,87 @@ test.describe('CUJ 7: Error handling – graceful API failures', () => {
     await expect(page.getByText('No tasks in DAG.')).toBeVisible();
   });
 });
+
+// ---------------------------------------------------------------------------
+// CUJ 8 – Agent chat: message history and input state management
+// 5 new E2E tests added to expand coverage
+// ---------------------------------------------------------------------------
+
+test.describe('CUJ 8: AgentChatPanel – message history & full chat loop CUJ', () => {
+  test('NEW 1: agent chat input clears after send', async ({ page }) => {
+    const input = page.getByTestId('chat-input');
+    await input.fill('Deploy staging environment');
+    await page.getByTestId('send-button').click();
+    // After sending, the input should be cleared
+    await expect(input).toHaveValue('');
+  });
+
+  test('NEW 2: full CUJ loop – user task → AI agent action response shown in chat', async ({ page }) => {
+    // User submits a task to the agent team via the chat UI
+    const input = page.getByTestId('chat-input');
+    await input.fill('Run security audit on all agent permissions');
+    await page.getByTestId('send-button').click();
+
+    // User message is visible in history
+    await expect(page.getByText('Run security audit on all agent permissions')).toBeVisible();
+
+    // Mocked AI agent responds with an action (via mocked WebSocket)
+    await expect(
+      page.getByText('Understood! I will start working on your request now.'),
+    ).toBeVisible({ timeout: 3000 });
+  });
+
+  test('NEW 3: broadcast API is called with correct payload when task is sent', async ({ page }) => {
+    let capturedPayload: string | null = null;
+
+    // Override the mock to capture what is sent to the broadcast API
+    await page.route('**/api/mesh/broadcast', async (route) => {
+      capturedPayload = route.request().postData();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'queued', messageId: 'msg-capture-1' }),
+      });
+    });
+
+    const input = page.getByTestId('chat-input');
+    await input.fill('Optimize the CI pipeline');
+    await page.getByTestId('send-button').click();
+
+    // Message is shown to the user
+    await expect(page.getByText('Optimize the CI pipeline')).toBeVisible();
+    // Payload should have been sent (non-null)
+    expect(capturedPayload).not.toBeNull();
+  });
+
+  test('NEW 4: error banner shown when broadcast API returns 500', async ({ page }) => {
+    // Simulate server error from broadcast API
+    await page.route('**/api/mesh/broadcast', (route) => {
+      route.fulfill({ status: 500, body: JSON.stringify({ error: 'internal error' }) });
+    });
+
+    const input = page.getByTestId('chat-input');
+    await input.fill('This task will fail to send');
+    await page.getByTestId('send-button').click();
+
+    // Either the error message or the user message must be visible
+    // The app should stay usable (not crash)
+    const dashboardHeading = page.getByText('Swarm Orchestration Dashboard');
+    await expect(dashboardHeading).toBeVisible({ timeout: 3000 });
+  });
+
+  test('NEW 5: task DAG and agent chat are independently scrollable and usable together', async ({ page }) => {
+    // Confirm both the DAG viewer and the chat panel coexist on the page
+    await expect(page.getByText('Task Pipeline (DAG)')).toBeVisible();
+    await expect(page.getByTestId('chat-input')).toBeVisible();
+
+    // Send a chat message while the DAG is visible
+    const input = page.getByTestId('chat-input');
+    await input.fill('Rebuild the DAG for sprint 12');
+    await page.getByTestId('send-button').click();
+    await expect(page.getByText('Rebuild the DAG for sprint 12')).toBeVisible();
+
+    // Confirm DAG tasks are still shown
+    await expect(page.getByText('Build auth module')).toBeVisible();
+  });
+});

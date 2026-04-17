@@ -38,12 +38,12 @@ jest_bin.jest_test(
     name = "jest_tests",
     args = [
         "--config",
-        "$(rootpath jest.config.js)",
+        "$(rootpath jest.config.cjs)",
         "--no-coverage",
         "--ci",
     ],
     data = [
-        "jest.config.js",
+        "jest.config.cjs",
         "jest.setup.ts",
         "tsconfig.json",
         ":node_modules",
@@ -52,6 +52,7 @@ jest_bin.jest_test(
         [
             "test/**/*.ts",
             "test/**/*.tsx",
+            "test/**/*.cjs",
         ],
         allow_empty = True,
     ),
