@@ -32,25 +32,4 @@ graph TD
     style E fill:#00ccff,stroke:#333,stroke-width:2px,color:#111
 ```
 
-## 3. Interactive API Call Flow
-
-```mermaid
-sequenceDiagram
-    participant Agent as Standalone Agent (Local)
-    participant Sync as Sync Escalator Daemon
-    participant DB as SQLite DB
-    participant Gateway as API Gateway (Cloud)
-    participant CloudDB as PostgreSQL DB
-
-    Agent->>DB: Execute MCP RAG Query
-    DB-->>Agent: Result (Local State)
-    Note over Agent,DB: Telemetry metrics evaluated
-    Agent->>Sync: Trigger Escalate Workload
-    Sync->>Gateway: POST /api/v1/orchestration/escalate
-    Gateway->>CloudDB: Hand off RAG context to pgvector
-    CloudDB-->>Gateway: Handoff Confirmation
-    Gateway-->>Sync: Return 200 OK (escalation_status: ACCEPTED)
-    Sync-->>Agent: Notify Local Mode Cloud Handover
-```
-
 </div>
