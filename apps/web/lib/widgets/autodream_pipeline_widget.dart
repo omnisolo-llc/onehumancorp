@@ -35,28 +35,22 @@ class _AutoDreamPipelineWidgetState extends State<AutoDreamPipelineWidget> with 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Semantics(
-          label: label,
-          child: Tooltip(
-            message: 'Processing node: $label',
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                shape: BoxShape.circle,
-                border: Border.all(color: color.withOpacity(0.5), width: 2),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withOpacity(0.3),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  )
-                ],
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2),
+            shape: BoxShape.circle,
+            border: Border.all(color: color.withOpacity(0.5), width: 2),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.3),
+                blurRadius: 10,
+                spreadRadius: 2,
+              )
+            ],
           ),
+          child: Icon(icon, color: color, size: 24),
         ),
         const SizedBox(height: 8),
         Text(
