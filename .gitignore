@@ -7,6 +7,14 @@
 *.dll
 *.so
 *.dylib
+*.pyc
+*.pyo
+*.pyd
+
+# AI likes to create temporary files, which we don't want to commit
+/*.py
+/*.txt
+/*.sh
 
 # Test binary, built with `go test -c`
 *.test
