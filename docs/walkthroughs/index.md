@@ -9,4 +9,3 @@ Use this section for guided narratives such as setup verification, orchestration
 - [Teammate Mesh Demo Walkthrough](./teammate_mesh_demo.md)
 - [Day One Onboarding Walkthrough](./day_one_onboarding.md)
 - [Hybrid MCP RAG Dynamic Escalation Walkthrough](./hybrid_mcp_rag_escalation.md)
-- [OS-Level Sandbox Isolation Harness](./sandbox_isolation_harness.md)
