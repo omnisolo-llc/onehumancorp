@@ -1039,11 +1039,29 @@ export PUB_ENVIRONMENT="flutter_tool:bazel"
 export PUB_CACHE="$RUNTIME_PUB_CACHE"
 export ANDROID_HOME=""
 export ANDROID_SDK_ROOT=""
+export FLUTTER_ROOT="${{FLUTTER_WRITABLE}}"
 export PATH="$FLUTTER_BIN_DIR:$PATH"
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
     echo "✗ python interpreter not found on PATH" | tee -a "$TEST_LOG"
     exit 1
+fi
+
+# Merge the Flutter SDK's bundled .pub_cache directories into RUNTIME_PUB_CACHE.
+# This makes flutter_test transitive dependencies (test_api, matcher, etc.)
+# available for the package_config.json regeneration without network access.
+if [ -d "$FLUTTER_ROOT/packages" ]; then
+    mkdir -p "$RUNTIME_PUB_CACHE/hosted/pub.dev"
+    for _SDK_PKG_DIR in "$FLUTTER_ROOT/packages"/*/; do
+        _SDK_PUB_CACHE="$_SDK_PKG_DIR/.pub_cache/hosted/pub.dev"
+        if [ -d "$_SDK_PUB_CACHE" ]; then
+            if command -v rsync >/dev/null 2>&1; then
+                rsync -a "$_SDK_PUB_CACHE/" "$RUNTIME_PUB_CACHE/hosted/pub.dev/" 2>/dev/null || true
+            else
+                cp -RL "$_SDK_PUB_CACHE/." "$RUNTIME_PUB_CACHE/hosted/pub.dev/" 2>/dev/null || true
+            fi
+        fi
+    done
 fi
 
 # Regenerate package_config.json with correct paths to RUNTIME_PUB_CACHE
@@ -1110,6 +1128,20 @@ with open(deps_path, "r", encoding="utf-8") as fh:
     data = json.load(fh)
 
 packages = []
+seen = set()
+
+def add_package(pkg_name, root_path, lang_ver):
+    if pkg_name in seen or not os.path.isdir(root_path):
+        return
+    entry = dict()
+    entry["name"] = pkg_name
+    rel = os.path.relpath(os.path.realpath(root_path), os.path.dirname(os.path.realpath(config_path)))
+    entry["rootUri"] = rel.replace(os.sep, "/")
+    entry["packageUri"] = "lib/"
+    entry["languageVersion"] = lang_ver
+    packages.append(entry)
+    seen.add(pkg_name)
+
 for entry in data.get("packages", []):
     pkg_name = entry.get("name")
     source = entry.get("source")
@@ -1118,36 +1150,25 @@ for entry in data.get("packages", []):
         continue
     if source == "hosted" and version:
         root_path = os.path.join(cache_root, "hosted", "pub.dev", pkg_name + "-" + version)
-        if not os.path.isdir(root_path):
-            continue
-        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
-        packages.append(dict(
-            name = pkg_name,
-            rootUri = rel,
-            packageUri = "lib/",
-            languageVersion = language_version,
-        ))
+        add_package(pkg_name, root_path, language_version)
     elif source == "root":
-        packages.append(dict(
-            name = pkg_name,
-            rootUri = ".",
-            packageUri = "lib/",
-            languageVersion = language_version,
-        ))
+        add_package(pkg_name, workspace_root, language_version)
     elif source == "sdk" and flutter_root:
         if pkg_name == "sky_engine":
             root_path = os.path.join(flutter_root, "bin", "cache", "pkg", "sky_engine")
         else:
             root_path = os.path.join(flutter_root, "packages", pkg_name)
-        if not os.path.isdir(root_path):
-            continue
-        rel = os.path.relpath(root_path, workspace_root).replace(os.sep, "/")
-        packages.append(dict(
-            name = pkg_name,
-            rootUri = rel,
-            packageUri = "lib/",
-            languageVersion = language_version,
-        ))
+        add_package(pkg_name, root_path, language_version)
+
+# Also include ALL packages present in the runtime pub_cache that were not
+# listed in pub_deps.json (e.g. test_api and other packages pre-bundled in
+# the flutter SDK's own .pub_cache directories).
+hosted_dir = os.path.join(cache_root, "hosted", "pub.dev")
+if os.path.isdir(hosted_dir):
+    for pkg_dir in sorted(os.listdir(hosted_dir)):
+        parts = pkg_dir.rsplit("-", 1)
+        if len(parts) == 2 and parts[1] and parts[1][0].isdigit():
+            add_package(parts[0], os.path.join(hosted_dir, pkg_dir), language_version)
 
 os.makedirs(os.path.dirname(config_path), exist_ok=True)
 config = dict(
@@ -1156,6 +1177,9 @@ config = dict(
     generator = "rules_flutter",
     packages = packages,
 )
+if flutter_root:
+    config["flutterRoot"] = os.path.relpath(os.path.realpath(flutter_root), os.path.dirname(os.path.realpath(config_path))).replace(os.sep, "/")
+config["pubCache"] = os.path.relpath(os.path.realpath(cache_root), os.path.dirname(os.path.realpath(config_path))).replace(os.sep, "/")
 with open(config_path, "w", encoding="utf-8") as fh:
     json.dump(config, fh, indent=2)
     fh.write("\\n")
@@ -1173,7 +1197,15 @@ fi
 if [ -n "$PACKAGE_DIR" ]; then popd >/dev/null; fi
 popd >/dev/null
 
-CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics" "test")
+# Strip 'resolution: workspace' from the package pubspec.yaml so that
+# flutter test --no-pub treats the package as standalone and does not try
+# to validate dev_dependencies at the workspace level.  The package's own
+# dev_dependencies (including flutter_test) are still present.
+if [ -n "{package_dir}" ] && [ -f "$RUNTIME_WORKSPACE/{package_dir}/pubspec.yaml" ]; then
+    sed -i '/^resolution:[[:space:]]*/d' "$RUNTIME_WORKSPACE/{package_dir}/pubspec.yaml" 2>/dev/null || true
+fi
+
+CMD=("$FLUTTER_BIN_ABS" "--suppress-analytics" "test" "--no-pub")
 if [ "{coverage_flag}" = "true" ]; then
     CMD+=("--coverage")
 fi

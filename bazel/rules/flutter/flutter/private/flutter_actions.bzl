@@ -185,24 +185,31 @@ IS_PUB_PACKAGE="{is_pub_package}"
 ORIGINAL_PWD="$PWD"
 
 WORKSPACE_SRC_ABS="$ORIGINAL_PWD/$WORKSPACE_SRC"
-# The sandbox layout depends on whether we are in Workspace Mode
-WORKSPACE_DIR_ABS="$ORIGINAL_PWD/{working_dir_path}"
+# The sandbox layout depends on whether we are in Workspace Mode.
+# WORKSPACE_ROOT_ABS is always the prepared_workspace output root.
+# WORKSPACE_DIR_ABS is the package directory within the workspace (= root for non-workspace mode).
+WORKSPACE_ROOT_ABS="$ORIGINAL_PWD/{working_dir_path}"
 PACKAGE_DIR="{package_dir}"
-WORKSPACE_DIR_ABS="${{WORKSPACE_DIR_ABS:+$WORKSPACE_DIR_ABS/}}${{PACKAGE_DIR:+$PACKAGE_DIR}}"
+WORKSPACE_DIR_ABS="${{WORKSPACE_ROOT_ABS:+$WORKSPACE_ROOT_ABS/}}${{PACKAGE_DIR:+$PACKAGE_DIR}}"
 
 # Use the calculated WORKSPACE_DIR_ABS for everything else
 PUB_CACHE_DIR_ABS="$ORIGINAL_PWD/$PUB_CACHE_DIR"
 DART_TOOL_DIR_ABS="$ORIGINAL_PWD/$DART_TOOL_DIR"
 
-# Copy staged workspace into prepared output directory
-rm -rf "$WORKSPACE_DIR_ABS"
-mkdir -p "$WORKSPACE_DIR_ABS"
+# Copy staged workspace into the workspace ROOT (not the package subdirectory).
+# For workspace mode the workspace_seed already has paths relative to the workspace
+# root (e.g. pubspec.yaml at root, srcs/app/pubspec.yaml for the package), so we
+# must copy to WORKSPACE_ROOT_ABS to preserve those relative positions.
+rm -rf "$WORKSPACE_ROOT_ABS"
+mkdir -p "$WORKSPACE_ROOT_ABS"
 if command -v rsync >/dev/null 2>&1; then
-    rsync -aL "$WORKSPACE_SRC_ABS/" "$WORKSPACE_DIR_ABS/"
+    rsync -aL "$WORKSPACE_SRC_ABS/" "$WORKSPACE_ROOT_ABS/"
 else
-    cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_DIR_ABS/"
+    cp -RL "$WORKSPACE_SRC_ABS/." "$WORKSPACE_ROOT_ABS/"
 fi
-chmod -R u+rwX "$WORKSPACE_DIR_ABS"
+chmod -R u+rwX "$WORKSPACE_ROOT_ABS"
+# Ensure package dir exists (for workspace mode where it may not yet have been created)
+mkdir -p "$WORKSPACE_DIR_ABS"
 
 PYTHON_BIN="$(command -v python3 || command -v python || true)"
 if [ -z "$PYTHON_BIN" ]; then
