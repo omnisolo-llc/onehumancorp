@@ -1,0 +1,30 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "autodream",
+    srcs = [
+        "store.go",
+        "pg_store.go",
+        "sqlite_store.go",
+        "worker.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/autodream",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
+
+go_test(
+    name = "autodream_test",
+    srcs = [
+        "store_test.go",
+        "worker_test.go",
+        "e2e_test.go",
+    ],
+    embed = [":autodream"],
+    deps = [
+        "//srcs/server/db",
+        "@com_github_stretchr_testify//assert",
+    ],
+)
