@@ -120,3 +120,7 @@ func (p *McpSyncProxy) SyncPendingStates(ctx context.Context) error {
 
     return nil
 }
+
+func (p *McpSyncProxy) DBProvider() db.Provider { return p.dbProvider }
+func (p *McpSyncProxy) CloudEndpoint() string { return p.cloudEndpoint }
+func (p *McpSyncProxy) HTTPClient() *http.Client { return p.httpClient }

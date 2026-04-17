@@ -4,6 +4,7 @@ go_library(
     name = "mcp",
     srcs = [
         "proxy.go",
+        "schema_sync.go",
         "secrets.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/interop/mcp",
@@ -18,6 +19,7 @@ go_test(
     name = "mcp_test",
     srcs = [
         "proxy_test.go",
+        "schema_sync_test.go",
         "secrets_test.go",
     ],
     embed = [":mcp"],
