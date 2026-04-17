@@ -1,6 +1,7 @@
 packages:
   - "."
   - "srcs/proto"
+  - "srcs/web"
 pnpm:
   onlyBuiltDependencies:
     - google-protobuf

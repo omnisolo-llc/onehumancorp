@@ -1,4 +1,4 @@
-"""Build targets for the React web app (apps/web).
+"""Build targets for the React web app (srcs/web).
 
 Unit tests are run via Jest using the aspect_rules_js jest binary that is
 resolved from the pnpm workspace lock-file entry for this package.
@@ -7,7 +7,7 @@ E2E tests use Playwright and are gated by the "requires-network" tag so that
 Chromium is only downloaded when a network connection is available.
 """
 
-load("@npm//apps/web:jest/package_json.bzl", jest_bin = "bin")
+load("@npm//srcs/web:jest/package_json.bzl", jest_bin = "bin")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
