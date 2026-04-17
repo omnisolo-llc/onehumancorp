@@ -49,3 +49,7 @@ sequenceDiagram
 
     Agent->>Mesh: BroadcastIntent(Task X Completed)
 ```
+
+## Phase 4: Sub-Agent Orchestration Queue
+- **Architecture**: A distributed queue built on Redis and PostgreSQL to dispatch and monitor the lifecycle of transient sub-agents.
+- **Auto-Scaling**: Ensures agent pods scale dynamically based on pending queue depth to maintain latency SLAs.
