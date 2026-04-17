@@ -4,11 +4,13 @@ go_library(
     name = "api",
     srcs = [
         "sync_handler.go",
+        "invite_handler.go",
         "sync_escalation_handler.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/domain",
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
         "//srcs/server/orchestration/queue",
@@ -19,9 +21,10 @@ go_library(
 
 go_test(
     name = "api_test",
-    srcs = ["sync_escalation_handler_test.go"],
+    srcs = ["sync_escalation_handler_test.go", "invite_handler_test.go"],
     embed = [":api"],
     deps = [
+        "//srcs/server/domain",
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
     ],

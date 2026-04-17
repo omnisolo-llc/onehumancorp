@@ -18,6 +18,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
+	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -530,7 +531,16 @@ func run(now time.Time, listen listenFunc) error {
 	}()
 
 	slog.Info("serving API", "address", httpAddress)
-	return listen(httpAddress, handler)
+
+	inviteSvc := domain.NewInviteService()
+	inviteHndlr := api.NewInviteHandler(inviteSvc)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/invites", inviteHndlr.HandleInvites)
+	mux.HandleFunc("/api/invites/", inviteHndlr.HandleInviteAccept)
+	mux.Handle("/", handler)
+
+	return listen(httpAddress, mux)
 }
 
 // Entry point for the application.
