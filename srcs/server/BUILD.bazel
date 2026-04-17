@@ -38,3 +38,11 @@ genrule(
     cmd = "cp $< $@ && chmod 0755 $@",
     visibility = ["//visibility:public"],
 )
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+sh_test(
+    name = "standalone_ohc_test",
+    srcs = ["standalone_ohc_test.sh"],
+    data = ["standalone_ohc.sh"],
+)
