@@ -26,7 +26,7 @@ func (m mockSettingsStore) Save() error {
 }
 
 func (m mockSettingsStore) SetExtra(key, value string) error {
-    return nil
+	return nil
 }
 
 func TestHandleWizardConfigure(t *testing.T) {
@@ -168,6 +168,167 @@ func TestHandleWizardOnboardingVerify(t *testing.T) {
 		}
 		if resp["mode"] != "standalone" {
 			t.Errorf("Expected mode to be standalone, got %v", resp["mode"])
+		}
+	})
+}
+
+func TestHandleWizardStatus(t *testing.T) {
+	s := &Server{
+		settings: settings.AppSettings{
+			ListenAddr:    "127.0.0.1:8080",
+			DBPath:        "/tmp/db",
+			CentrifugeURL: "ws://localhost:8000",
+			AiProviders: []settings.AiProvider{
+				{Enabled: true, Name: "minimax"},
+			},
+		},
+		hub: orchestration.NewHub(),
+	}
+
+	// Test case 1: Method Not Allowed
+	t.Run("Method Not Allowed", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/status", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardStatus(rr, req)
+
+		if rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405, got %v", rr.Code)
+		}
+	})
+
+	// Test case 2: Valid status
+	t.Run("Valid Status", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/status", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardStatus(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %v", rr.Code)
+		}
+
+		var resp wizardStatusResponse
+		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
+
+		if !resp.Configured {
+			t.Errorf("Expected configured to be true, got %v", resp.Configured)
+		}
+		if !resp.Steps.Server {
+			t.Errorf("Expected server step to be true")
+		}
+		if !resp.Steps.AiProvider {
+			t.Errorf("Expected AiProvider step to be true")
+		}
+		if !resp.Steps.Centrifuge {
+			t.Errorf("Expected Centrifuge step to be true")
+		}
+	})
+}
+
+func TestHasEnabledProvider(t *testing.T) {
+	t.Run("No providers", func(t *testing.T) {
+		if hasEnabledProvider(nil) {
+			t.Error("Expected false for nil providers")
+		}
+		if hasEnabledProvider([]settings.AiProvider{}) {
+			t.Error("Expected false for empty providers")
+		}
+	})
+
+	t.Run("None enabled", func(t *testing.T) {
+		providers := []settings.AiProvider{
+			{Enabled: false, Name: "minimax"},
+			{Enabled: false, Name: "openai"},
+		}
+		if hasEnabledProvider(providers) {
+			t.Error("Expected false when all are disabled")
+		}
+	})
+
+	t.Run("One enabled", func(t *testing.T) {
+		providers := []settings.AiProvider{
+			{Enabled: false, Name: "minimax"},
+			{Enabled: true, Name: "openai"},
+		}
+		if !hasEnabledProvider(providers) {
+			t.Error("Expected true when one is enabled")
+		}
+	})
+}
+
+func TestHandleWizardConfigure_FullCoverage(t *testing.T) {
+	s := &Server{
+		settings: settings.AppSettings{},
+		hub:      orchestration.NewHub(),
+	}
+
+	t.Run("Method Not Allowed", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/api/wizard/configure", nil)
+		rr := httptest.NewRecorder()
+		s.handleWizardConfigure(rr, req)
+
+		if rr.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Expected status 405, got %v", rr.Code)
+		}
+	})
+
+	t.Run("Invalid JSON", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/configure", bytes.NewBuffer([]byte("{invalid json}")))
+		rr := httptest.NewRecorder()
+		s.handleWizardConfigure(rr, req)
+
+		if rr.Code != http.StatusBadRequest {
+			t.Errorf("Expected status 400, got %v", rr.Code)
+		}
+	})
+
+	t.Run("All Fields Configured", func(t *testing.T) {
+		reqBody := wizardConfigureRequest{
+			ListenAddr:    "127.0.0.1:9090",
+			DBPath:        "/new/db/path",
+			PostgresURL:   "postgres://user:pass@localhost:5432/db",
+			RedisURL:      "redis://localhost:6379/1",
+			CentrifugeURL: "ws://localhost:8000/connection",
+			MinimaxAPIKey: "test-minimax-key",
+			AiProviders: []settings.AiProvider{
+				{Enabled: true, Name: "openai"},
+			},
+		}
+		body, _ := json.Marshal(reqBody)
+
+		req, _ := http.NewRequest(http.MethodPost, "/api/wizard/configure", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+
+		s.handleWizardConfigure(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %v", rr.Code)
+		}
+
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+
+		if s.settings.ListenAddr != "127.0.0.1:9090" {
+			t.Errorf("Expected ListenAddr to be set")
+		}
+		if s.settings.DBPath != "/new/db/path" {
+			t.Errorf("Expected DBPath to be set")
+		}
+		if s.settings.PostgresURL != "postgres://user:pass@localhost:5432/db" {
+			t.Errorf("Expected PostgresURL to be set")
+		}
+		if s.settings.RedisURL != "redis://localhost:6379/1" {
+			t.Errorf("Expected RedisURL to be set")
+		}
+		if s.settings.CentrifugeURL != "ws://localhost:8000/connection" {
+			t.Errorf("Expected CentrifugeURL to be set")
+		}
+		if s.settings.MinimaxAPIKey != "test-minimax-key" {
+			t.Errorf("Expected MinimaxAPIKey to be set")
+		}
+		if len(s.settings.AiProviders) == 0 || s.settings.AiProviders[0].Name != "openai" {
+			t.Errorf("Expected AiProviders to be set")
 		}
 	})
 }
