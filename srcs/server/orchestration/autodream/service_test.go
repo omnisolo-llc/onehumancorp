@@ -57,7 +57,7 @@ func TestAutoDreamConsolidationPipeline(t *testing.T) {
 
 	repo := NewRepository(provider)
 	llm := &mockLLM{}
-	service := NewConsolidator(repo, llm, provider)
+	service := NewConsolidator(repo, llm, provider, nil)
 
 	err = service.ProcessCompletedTasks(ctx)
 	if err != nil {
