@@ -13,7 +13,11 @@ toc:
     path: /docs/features/index.md
   - title: Walkthroughs
     path: /docs/walkthroughs/index.md
+<<<<<<< HEAD
+  - title: OS-Level Sandbox Isolation Harness
+=======
   - title: Sandbox Isolation Harness Walkthrough
+>>>>>>> bca7df9d (✍️ Scribe: Implement documentation for OS-Level Sandbox Isolation Harness)
     path: /docs/walkthroughs/sandbox_isolation_harness.md
   - title: Hybrid MCP Telemetry Visual Guide
     path: /docs/walkthroughs/hybrid_mcp_telemetry_visual_guide.md
