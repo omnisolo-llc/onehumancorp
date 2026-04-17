@@ -1,3 +1,0 @@
-mission: 2026-04-16T13-26-47Z_kairos_shared_task_mesh.md
-status: BLOCKED
-blockers: Mission requires modifying SQL schemas and Go APIs outside of my exclusive domain (docs/, README.md, *.md).
