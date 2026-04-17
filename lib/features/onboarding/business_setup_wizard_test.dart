@@ -19,7 +19,8 @@ void main() {
     final continueButton = find.text('Continue').first;
     await tester.ensureVisible(continueButton);
     await tester.tap(continueButton, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     // Step 2 profile fields
     expect(find.text('Company name'), findsOneWidget);
@@ -27,7 +28,8 @@ void main() {
     // Step 2 -> Step 3
     await tester.ensureVisible(find.text('Continue').first);
     await tester.tap(find.text('Continue').first, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     // Step 3 goal fields
     expect(find.text('Automate customer support'), findsOneWidget);
@@ -35,7 +37,8 @@ void main() {
     // Step 3 -> Step 4
     await tester.ensureVisible(find.text('Continue').first);
     await tester.tap(find.text('Continue').first, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     // Step 4 deployment mode
     expect(find.text('Self-hosted Desktop'), findsWidgets);
@@ -43,7 +46,8 @@ void main() {
     // Step 4 -> Step 5
     await tester.ensureVisible(find.text('Continue').first);
     await tester.tap(find.text('Continue').first, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     // Step 5 admin
     expect(find.text('Email'), findsOneWidget);
@@ -52,7 +56,8 @@ void main() {
     // Step 5 -> Step 6
     await tester.ensureVisible(find.text('Continue').first);
     await tester.tap(find.text('Continue').first, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
     // Step 6 review
     expect(find.text('Launch My AI Team →'), findsOneWidget);
