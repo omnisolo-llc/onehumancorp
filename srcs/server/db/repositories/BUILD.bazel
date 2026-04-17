@@ -2,10 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "repositories",
-    srcs = [
-        "mesh_repo.go",
-        "tasks.go",
-    ],
+    srcs = ["tasks.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/db/repositories",
     visibility = ["//visibility:public"],
     deps = [
@@ -17,14 +14,12 @@ go_library(
 
 go_test(
     name = "repositories_test",
-    srcs = [
-        "mesh_repo_test.go",
-        "tasks_test.go",
-    ],
+    srcs = ["tasks_test.go"],
     embed = [":repositories"],
     deps = [
         "//srcs/server/db",
         "//srcs/server/db/models",
+        "@com_github_google_uuid//:uuid",
         "@org_modernc_sqlite//:sqlite",
     ],
 )
