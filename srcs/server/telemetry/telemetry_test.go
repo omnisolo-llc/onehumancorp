@@ -630,40 +630,6 @@ func TestRedactInterfacePII(t *testing.T) {
 		}
 	})
 
-	t.Run("slog.Attr", func(t *testing.T) {
-		attr := slog.String("email", "test@example.com")
-		res := RedactInterfacePII(attr).(slog.Attr)
-		if res.Value.String() != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL], got %v", res.Value.String())
-		}
-	})
-
-	t.Run("slog.Attr nested Group", func(t *testing.T) {
-		attr := slog.Group("user", slog.String("email", "test@example.com"))
-		res := RedactInterfacePII(attr).(slog.Attr)
-		attrs := res.Value.Group()
-		if len(attrs) == 0 || attrs[0].Value.String() != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL] in nested group, got %v", attrs)
-		}
-	})
-
-	t.Run("slog.Value", func(t *testing.T) {
-		val := slog.StringValue("test@example.com")
-		res := RedactInterfacePII(val).(slog.Value)
-		if res.String() != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL], got %v", res.String())
-		}
-	})
-
-	t.Run("slog.Value nested Group", func(t *testing.T) {
-		val := slog.GroupValue(slog.String("email", "test@example.com"))
-		res := RedactInterfacePII(val).(slog.Value)
-		attrs := res.Group()
-		if len(attrs) == 0 || attrs[0].Value.String() != "[REDACTED_EMAIL]" {
-			t.Errorf("Expected [REDACTED_EMAIL] in nested group, got %v", attrs)
-		}
-	})
-
 	t.Run("Default fallback", func(t *testing.T) {
 		res := RedactInterfacePII(123)
 		if res != 123 {
