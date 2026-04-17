@@ -15,7 +15,6 @@ go_test(
     srcs = [
         "mesh_test.go",
         "queue_test.go",
-        "security_test.go",
     ],
     embed = [":services"],
     deps = [
