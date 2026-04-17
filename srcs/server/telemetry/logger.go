@@ -52,23 +52,12 @@ func (h *PIIRedactingHandler) WithGroup(name string) slog.Handler {
 }
 
 func redactAttr(a slog.Attr) slog.Attr {
-	// Let slog.Attr handle empty attributes
-	if a.Equal(slog.Attr{}) {
-		return a
-	}
-
 	if a.Value.Kind() == slog.KindGroup {
-		// Handle empty groups
-		if len(a.Value.Group()) == 0 {
-			return a
-		}
-
 		attrs := a.Value.Group()
 		var redactedAttrs []any
 		for _, attr := range attrs {
 			redactedAttrs = append(redactedAttrs, redactAttr(attr))
 		}
-
 		return slog.Group(a.Key, redactedAttrs...)
 	}
 
