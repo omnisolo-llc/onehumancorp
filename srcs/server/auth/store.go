@@ -159,9 +159,6 @@ func newStore(repo UserRepository) *Store {
 	if secret := os.Getenv("JWT_SECRET"); secret != "" {
 		s.secret = []byte(secret)
 	} else {
-		if os.Getenv("OHC_MULTITENANT") == "true" {
-			panic("JWT_SECRET environment variable is mandatory in multi-tenant mode to ensure consistent token validation across swarm nodes")
-		}
 		slog.Warn("falling back to random JWT secret; this is only suitable for single-node or standalone deployments")
 		s.secret = randomBytes(32)
 	}
@@ -214,7 +211,7 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 
 	if s.repo != nil {
 		ctx := context.Background()
-		existing, err := s.repo.GetByUsername(ctx, "", adminUser)
+		existing, err := s.repo.GetByUsername(ctx, adminUser)
 		switch {
 		case err == nil && existing != nil:
 			return
@@ -309,7 +306,7 @@ func (s *Store) CreateUser(username, email, password string, roles []string) (*U
 // Has no side effects.
 func (s *Store) Authenticate(username, password string) (*User, error) {
 	if s.repo != nil {
-		u, err := s.repo.GetByUsername(context.Background(), "", username)
+		u, err := s.repo.GetByUsername(context.Background(), username)
 		if err != nil {
 			return nil, errors.New("invalid credentials")
 		}
@@ -342,9 +339,9 @@ func (s *Store) Authenticate(username, password string) (*User, error) {
 // Returns (*User, bool).
 // Produces no errors.
 // Has no side effects.
-func (s *Store) GetUser(orgID, id string) (*User, bool) {
+func (s *Store) GetUser(id string) (*User, bool) {
 	if s.repo != nil {
-		u, err := s.repo.GetByID(context.Background(), orgID, id)
+		u, err := s.repo.GetByID(context.Background(), id)
 		if err != nil {
 			return nil, false
 		}
@@ -354,9 +351,6 @@ func (s *Store) GetUser(orgID, id string) (*User, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	u, ok := s.users[id]
-	if ok && orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
-		return nil, false
-	}
 	return u, ok
 }
 
@@ -365,9 +359,9 @@ func (s *Store) GetUser(orgID, id string) (*User, bool) {
 // Returns []*User.
 // Produces no errors.
 // Has no side effects.
-func (s *Store) ListUsers(orgID string) []*User {
+func (s *Store) ListUsers() []*User {
 	if s.repo != nil {
-		users, err := s.repo.ListUsers(context.Background(), orgID)
+		users, err := s.repo.ListUsers(context.Background())
 		if err != nil {
 			slog.Error("failed to list users from repository", "error", err)
 			return nil
@@ -379,9 +373,6 @@ func (s *Store) ListUsers(orgID string) []*User {
 	defer s.mu.RUnlock()
 	out := make([]*User, 0, len(s.users))
 	for _, u := range s.users {
-		if orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
-			continue
-		}
 		out = append(out, u)
 	}
 	return out
@@ -392,10 +383,10 @@ func (s *Store) ListUsers(orgID string) []*User {
 // Returns (*User, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) UpdateUser(orgID, id string, emailPtr *string, roles []string, activePtr *bool) (*User, error) {
+func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePtr *bool) (*User, error) {
 	if s.repo != nil {
 		ctx := context.Background()
-		u, err := s.repo.GetByID(ctx, orgID, id)
+		u, err := s.repo.GetByID(ctx, id)
 		if err != nil {
 			if errors.Is(err, ErrUserNotFound) {
 				return nil, errors.New("user not found")
@@ -422,7 +413,7 @@ func (s *Store) UpdateUser(orgID, id string, emailPtr *string, roles []string, a
 	defer s.mu.Unlock()
 
 	u, ok := s.users[id]
-	if !ok || (orgID != "" && orgID != "sys" && u.OrganizationID != orgID) {
+	if !ok {
 		return nil, errors.New("user not found")
 	}
 	if emailPtr != nil && *emailPtr != u.Email {
@@ -448,10 +439,10 @@ func (s *Store) UpdateUser(orgID, id string, emailPtr *string, roles []string, a
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) DeleteUser(orgID, id string) error {
+func (s *Store) DeleteUser(id string) error {
 	if s.repo != nil {
 		ctx := context.Background()
-		if _, err := s.repo.GetByID(ctx, orgID, id); err != nil {
+		if _, err := s.repo.GetByID(ctx, id); err != nil {
 			if errors.Is(err, ErrUserNotFound) {
 				return errors.New("user not found")
 			}
@@ -463,7 +454,7 @@ func (s *Store) DeleteUser(orgID, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	u, ok := s.users[id]
-	if !ok || (orgID != "" && orgID != "sys" && u.OrganizationID != orgID) {
+	if !ok {
 		return errors.New("user not found")
 	}
 	delete(s.users, id)
@@ -579,9 +570,9 @@ func (s *Store) OIDCCfg() OIDCConfig { return s.oidcCfg }
 // Returns *User.
 // Produces no errors.
 // Has no side effects.
-func (s *Store) GetOrCreateOIDCUser(orgID, sub, email, preferredUsername string) *User {
+func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string) *User {
 	if s.repo != nil {
-		return s.getOrCreateOIDCUserInRepository(orgID, sub, email, preferredUsername)
+		return s.getOrCreateOIDCUserInRepository(sub, email, preferredUsername)
 	}
 
 	s.mu.Lock()
@@ -629,17 +620,17 @@ func (s *Store) GetOrCreateOIDCUser(orgID, sub, email, preferredUsername string)
 	return u
 }
 
-func (s *Store) getOrCreateOIDCUserInRepository(orgID, sub, email, preferredUsername string) *User {
+func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername string) *User {
 	ctx := context.Background()
 
-	if u, err := s.repo.GetByOIDCSubject(ctx, orgID, sub); err == nil {
+	if u, err := s.repo.GetByOIDCSubject(ctx, sub); err == nil {
 		return u
 	} else if !errors.Is(err, ErrUserNotFound) {
 		slog.Warn("failed to look up OIDC user by subject", "subject", sub, "error", err)
 	}
 
 	if email != "" {
-		if u, err := s.repo.GetByEmail(ctx, orgID, email); err == nil {
+		if u, err := s.repo.GetByEmail(ctx, email); err == nil {
 			u.OIDCSubject = sub
 			u.UpdatedAt = time.Now().UTC()
 			if err := s.repo.UpdateUser(ctx, u); err != nil {
@@ -670,7 +661,7 @@ func (s *Store) getOrCreateOIDCUserInRepository(orgID, sub, email, preferredUser
 
 	for attempts := 0; attempts < 2; attempts++ {
 		if u.Username != "" {
-			if existing, err := s.repo.GetByUsername(ctx, orgID, u.Username); err == nil && existing != nil {
+			if existing, err := s.repo.GetByUsername(ctx, u.Username); err == nil && existing != nil {
 				u.Username = u.Username + "_" + hex.EncodeToString(randomBytes(3))
 			} else if err != nil && !errors.Is(err, ErrUserNotFound) {
 				slog.Warn("failed to check OIDC username collision", "username", u.Username, "error", err)
