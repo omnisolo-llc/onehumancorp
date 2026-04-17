@@ -73,3 +73,18 @@ func TestCostAuditor(t *testing.T) {
 		t.Errorf("expected non-empty report")
 	}
 }
+
+func TestCostAuditor_Budget(t *testing.T) {
+	config := token_calculator.CostConfig{}
+	auditor := NewCostAuditor(config)
+	auditor.SetAgentBudget("agent-1", 10.0)
+
+	if !auditor.CheckAgentBudget("agent-1") {
+		t.Errorf("expected budget to be ok")
+	}
+
+	auditor.agentCosts["agent-1"] = 15.0
+	if auditor.CheckAgentBudget("agent-1") {
+		t.Errorf("expected budget to be exceeded")
+	}
+}

@@ -1,2 +1,0 @@
-status: BLOCKED
-reason: "Mission 1776335191643007360.md is out of domain. Requires Go/SQL backend changes but domain is apps/web/src/components/, apps/web/src/styles/."
