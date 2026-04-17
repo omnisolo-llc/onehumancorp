@@ -172,12 +172,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         ),
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+            constraints: const BoxConstraints(maxWidth: 600),
           child: GlassCard(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
-                mainAxisSize: MainAxisSize.max,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text('Business Setup', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                   const SizedBox(height: 16),
@@ -185,164 +185,126 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 16),
                   ],
-                  Expanded(
-                    child: Stepper(
-                      currentStep: state.step,
-                      type: StepperType.vertical,
-                      onStepContinue: () {
-                        if (state.step < 4) {
-                          notifier.nextStep();
-                        } else {
-                          notifier.launch(context, ref);
-                        }
-                      },
-                      onStepCancel: () {
-                        notifier.prevStep();
-                      },
-                      controlsBuilder: (BuildContext context, ControlsDetails details) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 16.0),
-                          child: Row(
-                            children: <Widget>[
-                              ElevatedButton(
-                                onPressed: state.isLoading ? null : details.onStepContinue,
-                                child: state.isLoading && state.step == 4
-                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                    : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
-                              ),
-                              if (state.step > 0) ...[
-                                const SizedBox(width: 12),
-                                TextButton(
-                                  onPressed: state.isLoading ? null : details.onStepCancel,
-                                  child: const Text('Back', style: TextStyle(fontFamily: 'Inter')),
-                                ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return FadeTransition(opacity: animation, child: child);
+                    },
+                    child: Container(
+                      key: ValueKey<int>(state.step),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (state.step == 0) ...[
+                            const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
+                          ] else if (state.step == 1) ...[
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Company Name', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateCompany,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Industry', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateIndustry,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<String>(
+                              value: state.size,
+                              decoration: const InputDecoration(labelText: 'Size', labelStyle: TextStyle(color: Colors.white70)),
+                              dropdownColor: const Color(0xFF1A1A33),
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                              items: const [
+                                DropdownMenuItem(value: 'S', child: Text('Small')),
+                                DropdownMenuItem(value: 'M', child: Text('Medium')),
+                                DropdownMenuItem(value: 'L', child: Text('Large')),
                               ],
-                            ],
-                          ),
-                        );
-                      },
-                      steps: [
-                        Step(
-                          title: const Text('Welcome', style: TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                          content: const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
-                          isActive: state.step >= 0,
-                          state: state.step > 0 ? StepState.complete : StepState.indexed,
-                        ),
-                        Step(
-                          title: const Text('Company Profile', style: TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                          content: Column(
-                            children: [
-                              TextField(
-                                decoration: const InputDecoration(labelText: 'Company Name', labelStyle: TextStyle(color: Colors.white70)),
-                                onChanged: notifier.updateCompany,
-                                style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-                              ),
-                              const SizedBox(height: 16),
-                              TextField(
-                                decoration: const InputDecoration(labelText: 'Industry', labelStyle: TextStyle(color: Colors.white70)),
-                                onChanged: notifier.updateIndustry,
-                                style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-                              ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<String>(
-                                value: state.size,
-                                decoration: const InputDecoration(labelText: 'Size', labelStyle: TextStyle(color: Colors.white70)),
-                                dropdownColor: const Color(0xFF1A1A33),
-                                style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-                                items: const [
-                                  DropdownMenuItem(value: 'S', child: Text('Small')),
-                                  DropdownMenuItem(value: 'M', child: Text('Medium')),
-                                  DropdownMenuItem(value: 'L', child: Text('Large')),
-                                ],
-                                onChanged: (val) {
-                                  if (val != null) notifier.updateSize(val);
-                                },
-                              ),
-                            ],
-                          ),
-                          isActive: state.step >= 1,
-                          state: state.step > 1 ? StepState.complete : StepState.indexed,
-                        ),
-                        Step(
-                          title: const Text('Goals', style: TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                          content: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                               const Text('Select Goals', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-                               ...['Support', 'Build software', 'Marketing', 'Data', 'Custom'].map((goal) => CheckboxListTile(
-                                title: Text(goal, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                                value: state.goals.contains(goal),
-                                checkColor: Colors.black,
-                                activeColor: Colors.white,
-                                onChanged: (bool? value) {
-                                  notifier.toggleGoal(goal);
-                                },
-                              )),
-                            ],
-                          ),
-                          isActive: state.step >= 2,
-                          state: state.step > 2 ? StepState.complete : StepState.indexed,
-                        ),
-                        Step(
-                          title: const Text('Deployment', style: TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                          content: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                               const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-                               ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
-                                title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                                value: dep,
-                                groupValue: state.deployment,
-                                activeColor: Colors.blueAccent,
-                                onChanged: (String? value) {
-                                  if (value != null) notifier.updateDeployment(value);
-                                },
-                              )),
-                            ],
-                          ),
-                          isActive: state.step >= 3,
-                          state: state.step > 3 ? StepState.complete : StepState.indexed,
-                        ),
-                        Step(
-                          title: const Text('Administrator', style: TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                          content: Column(
-                            children: [
-                              TextField(
-                                decoration: const InputDecoration(labelText: 'Admin Name', labelStyle: TextStyle(color: Colors.white70)),
-                                onChanged: notifier.updateAdminName,
-                                style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-                              ),
-                              const SizedBox(height: 16),
-                              TextField(
-                                decoration: const InputDecoration(labelText: 'Admin Email', labelStyle: TextStyle(color: Colors.white70)),
-                                onChanged: notifier.updateAdminEmail,
-                                style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-                              ),
-                              const SizedBox(height: 16),
-                              TextField(
-                                obscureText: _obscurePassword,
-                                onChanged: notifier.updateAdminPassword,
-                                style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-                                decoration: InputDecoration(
-                                  labelText: 'Admin Password',
-                                  labelStyle: const TextStyle(color: Colors.white70),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
-                                    onPressed: () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
-                                    },
-                                  ),
+                              onChanged: (val) {
+                                if (val != null) notifier.updateSize(val);
+                              },
+                            ),
+                          ] else if (state.step == 2) ...[
+                             const Text('Select Goals', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                             ...['Support', 'Build software', 'Marketing', 'Data', 'Custom'].map((goal) => CheckboxListTile(
+                              title: Text(goal, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
+                              value: state.goals.contains(goal),
+                              checkColor: Colors.black,
+                              activeColor: Colors.white,
+                              onChanged: (bool? value) {
+                                notifier.toggleGoal(goal);
+                              },
+                            )),
+                          ] else if (state.step == 3) ...[
+                             const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                             ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
+                              title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
+                              value: dep,
+                              groupValue: state.deployment,
+                              activeColor: Colors.blueAccent,
+                              onChanged: (String? value) {
+                                if (value != null) notifier.updateDeployment(value);
+                              },
+                            )),
+                          ] else if (state.step == 4) ...[
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Admin Name', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateAdminName,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Admin Email', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateAdminEmail,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              obscureText: _obscurePassword,
+                              onChanged: notifier.updateAdminPassword,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'Admin Password',
+                                labelStyle: const TextStyle(color: Colors.white70),
+                                suffixIcon: IconButton(
+                                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+                                  onPressed: () {
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
+                                  },
                                 ),
                               ),
-                            ],
-                          ),
-                          isActive: state.step >= 4,
-                          state: StepState.indexed,
-                        ),
-                      ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      if (state.step > 0)
+                        TextButton(
+                          onPressed: state.isLoading ? null : notifier.prevStep,
+                          child: const Text('Back', style: TextStyle(fontFamily: 'Inter')),
+                        )
+                      else
+                        const SizedBox(),
+                      ElevatedButton(
+                        onPressed: state.isLoading ? null : () {
+                          if (state.step < 4) {
+                            notifier.nextStep();
+                          } else {
+                            notifier.launch(context, ref);
+                          }
+                        },
+                        child: state.isLoading
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                      ),
+                    ],
                   ),
                 ],
               ),
