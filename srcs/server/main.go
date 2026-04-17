@@ -16,7 +16,6 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
@@ -455,14 +454,6 @@ func run(now time.Time, listen listenFunc) error {
 		slog.Info("using single-tenant dashboard server", "headless", headless)
 	}
 
-	// Integrate InviteService to main handler
-	inviteSvc := domain.NewInviteService(pool)
-	inviteHandler := api.NewInviteHandler(inviteSvc)
-	mux := http.NewServeMux()
-	mux.Handle("/", handler) // wrap the existing dashboard server
-	mux.HandleFunc("/api/invites", inviteHandler.HandleCreateInvite)
-	mux.HandleFunc("/api/invites/", inviteHandler.HandleAcceptInvite) // handles /api/invites/{id}/accept
-
 	// 4. Start Scheduler Background Task
 	go hub.Scheduler().StartBackgroundTask(ctx, func(task scheduler.Task) {
 		slog.Info("executing scheduled task", "task_id", task.ID, "name", task.Name)
@@ -539,7 +530,7 @@ func run(now time.Time, listen listenFunc) error {
 	}()
 
 	slog.Info("serving API", "address", httpAddress)
-	return listen(httpAddress, mux)
+	return listen(httpAddress, handler)
 }
 
 // Entry point for the application.
