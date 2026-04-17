@@ -35,9 +35,6 @@ is_complete_web_bundle() {
 }
 
 # ── Locate web build artifacts ─────────────────────────────────────────────
-# Depending on rule naming, Bazel may emit either:
-#   srcs/app/app.web_build_artifacts/
-#   srcs/app/app_web_build_artifacts/
 WEB_ARTIFACTS=""
 WORKSPACE_WEB_BUNDLE="${WORKSPACE_ROOT}/srcs/app/build/web"
 if is_complete_web_bundle "${WORKSPACE_WEB_BUNDLE}"; then
@@ -85,9 +82,6 @@ export PLAYWRIGHT_BASE_URL="http://localhost:${PORT}"
 echo "HTTP server on port ${PORT} (${PLAYWRIGHT_BASE_URL})"
 
 # ── Start the Go backend serving the Flutter app ───────────────────────────
-# We run the real backend API so the Flutter app can communicate with it
-# and we use an ephemeral SQLite DB to ensure deterministic seeded state.
-
 BACKEND_BIN=""
 for candidate in \
     "${RUNFILES}/${WORKSPACE}/srcs/server/ohc_/ohc" \
@@ -104,7 +98,6 @@ done
 
 if [ -z "$BACKEND_BIN" ]; then
   echo "ERROR: Go backend binary not found. Ensure //srcs/server:ohc is included in data." >&2
-  # Fallback to Python server if we can't find the backend binary (e.g. during local dev)
   python3 -m http.server "${PORT}" --directory "${WEB_ARTIFACTS}" &
   SERVER_PID=$!
 else
@@ -115,7 +108,6 @@ else
   export ADMIN_USERNAME="admin"
   export ADMIN_PASSWORD="adminpass123"
 
-  # Seed the backend
   "${BACKEND_BIN}" &
   SERVER_PID=$!
   export API_BASE_URL="http://localhost:${PORT}"
@@ -221,8 +213,7 @@ if [ -z "$NODE_MODULES_DIR" ]; then
   exit 1
 fi
 
-# Run tests from temporary real files to avoid symlink path resolution pulling
-# in a different @playwright/test instance from the host workspace.
+# Run tests from temporary real files to avoid symlink path resolution issues.
 E2E_TMP_DIR="${TMPDIR}/e2e"
 mkdir -p "${E2E_TMP_DIR}"
 cp "${CONFIG}" "${E2E_TMP_DIR}/playwright.config.ts"
@@ -234,9 +225,7 @@ export NODE_PATH="${NODE_MODULES_DIR}${NODE_PATH:+:${NODE_PATH}}"
 export PLAYWRIGHT_BROWSERS_PATH="${TMPDIR}/pw_browsers"
 mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}"
 
-# In sandboxed environments, --with-deps may fail due lack of root privileges.
 if ! "${PLAYWRIGHT_CMD[@]}" install chromium 2>/dev/null; then
-  # Fall back – if install still fails, try with any preinstalled browser.
   echo "WARNING: Could not install browser; trying with system browser..." >&2
 fi
 
