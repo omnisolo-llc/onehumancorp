@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	"github.com/onehumancorp/mono/srcs/server/integrations/mcp_inference_router"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -547,6 +548,11 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mcp/tools", server.handleMCPTools)
 	mux.HandleFunc("/api/mcp/tools/register", server.handleMCPRegister)
 	mux.HandleFunc("/api/mcp/tools/invoke", server.handleMCPInvoke)
+
+	inferenceRouter := mcp_inference_router.NewInferenceRouter("http://localhost:8080", "https://api.cloud.onehumancorp.com")
+	inferenceHandler := api.NewInferenceHandler(inferenceRouter)
+	mux.Handle("/api/v1/inference/route", inferenceHandler)
+
 	mux.HandleFunc("/api/dev/seed", auth.RequireRole("admin", server.handleDevSeed))
 	mux.HandleFunc("/api/settings", server.handleSettings)
 	mux.HandleFunc("/api/scheduler", server.handleSchedulerTasks)

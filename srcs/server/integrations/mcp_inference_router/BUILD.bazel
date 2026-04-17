@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcp_inference_router",
+    srcs = ["router.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/mcp_inference_router",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "mcp_inference_router_test",
+    srcs = ["router_test.go"],
+    embed = [":mcp_inference_router"],
+)

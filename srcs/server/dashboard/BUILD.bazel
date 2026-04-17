@@ -26,6 +26,7 @@ go_library(
         "//srcs/server/api",
         "@com_github_redis_rueidis//:rueidis",
         "//srcs/server/api/mesh",
+        "//srcs/server/integrations/mcp_inference_router",
         "//srcs/server/orchestration/mesh",
         "//srcs/server/services/growth",
         "//srcs/server/agents",
