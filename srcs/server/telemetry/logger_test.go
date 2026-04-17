@@ -70,3 +70,36 @@ func TestPIIRedactingHandler_WithGroup(t *testing.T) {
 		t.Errorf("Expected [REDACTED_PHONE] in output, got: %s", output)
 	}
 }
+
+func TestPIIRedactingHandler_WithEmptyGroup(t *testing.T) {
+	var buf bytes.Buffer
+	baseHandler := slog.NewJSONHandler(&buf, nil)
+	handler := NewPIIRedactingHandler(baseHandler)
+	logger := slog.New(handler)
+
+	// slog ignores empty groups in output, so we shouldn't fail
+	logger.Info("User info", slog.Group("empty_group"))
+
+	output := buf.String()
+	// slog removes empty groups entirely
+	if strings.Contains(output, "empty_group") {
+		t.Errorf("Expected no empty group in output, got: %s", output)
+	}
+}
+
+func TestPIIRedactingHandler_WithEmptyKey(t *testing.T) {
+	var buf bytes.Buffer
+	baseHandler := slog.NewJSONHandler(&buf, nil)
+	handler := NewPIIRedactingHandler(baseHandler)
+	logger := slog.New(handler)
+
+	logger.Info("User info", slog.Group("", slog.String("email", "test@example.com")))
+
+	output := buf.String()
+	if strings.Contains(output, "test@example.com") {
+		t.Errorf("Expected email to be redacted inside empty key group, got: %s", output)
+	}
+	if !strings.Contains(output, "[REDACTED_EMAIL]") {
+		t.Errorf("Expected [REDACTED_EMAIL] in output, got: %s", output)
+	}
+}
