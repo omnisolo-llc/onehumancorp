@@ -70,6 +70,98 @@ func (p *AutoDreamPipeline) Stop() {
 func (p *AutoDreamPipeline) process(ctx context.Context) {
 	slog.Info("AutoDreamPipeline: starting memory consolidation sweep")
 
+	// 1. Extraction: Poll recent agent_session_data
+	threshold := time.Now().Add(-1 * time.Hour).UTC()
+	var query string
+	if p.db.IsSQLite() {
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? LIMIT 50"
+	} else {
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := p.db.Query(ctx, query, threshold)
+	if err != nil {
+		slog.Error("AutoDreamPipeline: failed to fetch stale sessions", "error", err)
+		return
+	}
+
+	type Session struct {
+		ID          string
+		AgentID     string
+		ContextData string
+	}
+
+	var sessions []Session
+	for rows.Next() {
+		var s Session
+		if err := rows.Scan(&s.ID, &s.AgentID, &s.ContextData); err == nil {
+			sessions = append(sessions, s)
+		}
+	}
+	rows.Close()
+
+	if len(sessions) > 0 {
+		for _, s := range sessions {
+			summary := s.ContextData
+			var embeddingStr string
+			if p.client != nil {
+				ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+				embedding, embedErr := p.client.GenerateEmbedding(ctxTimeout, summary)
+				cancel()
+				if embedErr == nil && len(embedding) > 0 {
+					if bytes, err := json.Marshal(embedding); err == nil {
+						embeddingStr = string(bytes)
+					}
+				}
+			}
+
+			if embeddingStr == "" {
+				var vec []string
+				for i := 0; i < 1536; i++ {
+					vec = append(vec, "0.0")
+				}
+				embeddingStr = "[" + strings.Join(vec, ",") + "]"
+			}
+
+			err = func() error {
+				tx, err := p.db.Begin(ctx)
+				if err != nil {
+					return err
+				}
+				defer tx.Rollback(ctx)
+
+				var insertQuery string
+				if p.db.IsSQLite() {
+					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, ?, 'session_compression')"
+					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
+				} else {
+					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, 'system', $2, $3, $4::vector, 'session_compression')"
+					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
+				}
+
+				if err != nil {
+					return err
+				}
+
+				var delQuery string
+				if p.db.IsSQLite() {
+					delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+				} else {
+					delQuery = "DELETE FROM agent_session_data WHERE session_id = $1"
+				}
+				_, err = tx.Exec(ctx, delQuery, s.ID)
+				if err != nil {
+					return err
+				}
+
+				return tx.Commit(ctx)
+			}()
+			if err != nil {
+				slog.Error("AutoDreamPipeline: failed to consolidate DB memory", "error", err)
+			}
+		}
+	}
+
 	memoryDir := os.Getenv("OHC_MEMORY_DIR")
 	if memoryDir == "" {
 		return // DB-backed memory only; no file processing
