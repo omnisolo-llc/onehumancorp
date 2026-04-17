@@ -27,7 +27,6 @@ var (
 	OmniContextBytesRouted           metric.Int64Counter
 	RagEscalationCount               metric.Int64Counter
 
-	SandboxViolationTotal      metric.Int64Counter
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
 	meter                      metric.Meter
@@ -257,12 +256,6 @@ func InitWithMeter(m mockableMeter) error {
 	}
 	var err error
 	var errs []error
-
-	err = initSandboxViolationMetrics(m)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
@@ -1678,15 +1671,4 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("mode", mode),
 	))
-}
-
-// RecordSandboxViolation increments the sandbox violation counter.
-func RecordSandboxViolation(ctx context.Context, violationType, agentID, path string) {
-	if SandboxViolationTotal != nil {
-		SandboxViolationTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("type", violationType),
-			attribute.String("agent_id", agentID),
-			attribute.String("path", path),
-		))
-	}
 }
