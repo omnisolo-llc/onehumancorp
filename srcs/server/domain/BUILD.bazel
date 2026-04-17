@@ -7,18 +7,12 @@ go_library(
         "blueprint.go",
         "compute.go",
         "federation.go",
-        "invite.go",
         "organization.go",
         "sre.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/domain",
     visibility = ["//visibility:public"],
-    deps = [
-        "@io_opentelemetry_go_otel//:otel",
-        "@io_opentelemetry_go_otel//attribute",
-        "@in_gopkg_yaml_v3//:yaml_v3",
-        "//srcs/server/db",
-    ],
+    deps = ["@in_gopkg_yaml_v3//:yaml_v3"],
 )
 
 go_test(
@@ -28,7 +22,6 @@ go_test(
         "blueprint_test.go",
         "compute_test.go",
         "federation_test.go",
-        "invite_test.go",
         "organization_test.go",
         "sre_test.go",
     ],
