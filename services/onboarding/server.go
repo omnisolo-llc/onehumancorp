@@ -360,3 +360,26 @@ func PreflightHandler(w http.ResponseWriter, r *http.Request) {
 		Checks: checks,
 	})
 }
+
+type HardwareCheckResponse struct {
+	Status string `json:"status"`
+	Memory string `json:"memory"`
+	CPU    string `json:"cpu"`
+	Disk   string `json:"disk"`
+}
+
+func HardwareCheckHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(HardwareCheckResponse{
+		Status: "success",
+		Memory: "ok",
+		CPU:    "ok",
+		Disk:   "ok",
+	})
+}

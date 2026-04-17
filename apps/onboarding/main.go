@@ -35,6 +35,7 @@ func main() {
 	http.HandleFunc("/api/audit-setup", onboarding.AuditSetupHandler)
 	http.HandleFunc("/api/generate-config", onboarding.GenerateConfigHandler)
 	http.HandleFunc("/api/wizard/preflight", onboarding.PreflightHandler)
+	http.HandleFunc("/api/wizard/hardware-check", onboarding.HardwareCheckHandler)
 
 	fmt.Println("Starting onboarding service on :8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

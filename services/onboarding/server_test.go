@@ -68,6 +68,30 @@ func TestGenerateConfigHandler(t *testing.T) {
 	}
 }
 
+func TestHardwareCheckHandler(t *testing.T) {
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/wizard/hardware-check", nil)
+	rrGet := httptest.NewRecorder()
+	HardwareCheckHandler(rrGet, reqGet)
+
+	if status := rrGet.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res HardwareCheckResponse
+	json.NewDecoder(rrGet.Body).Decode(&res)
+	if res.Status != "success" {
+		t.Errorf("handler returned unexpected status: got %v", res.Status)
+	}
+
+	reqPost := httptest.NewRequest(http.MethodPost, "/api/wizard/hardware-check", nil)
+	rrPost := httptest.NewRecorder()
+	HardwareCheckHandler(rrPost, reqPost)
+
+	if status := rrPost.Code; status != http.StatusMethodNotAllowed {
+		t.Errorf("handler returned wrong status code for POST: got %v want %v", status, http.StatusMethodNotAllowed)
+	}
+}
+
 func TestVerifyEnvironmentHandler(t *testing.T) {
 	tests := []struct {
 		name       string
