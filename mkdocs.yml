@@ -40,6 +40,7 @@ nav:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - Sandbox Isolation Harness Walkthrough: walkthroughs/sandbox_isolation_harness.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
+      - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
       - walkthroughs/index.md
   - Operations:
       - operations/index.md
