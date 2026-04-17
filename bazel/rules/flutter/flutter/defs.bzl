@@ -230,6 +230,7 @@ def _flutter_library_impl(ctx):
         pubspec_file,
         transitive_pub_caches,
         ctx.attr.codegen,
+        is_pub_package = ctx.attr.pub_package,
         workspace_pubspec = ctx.file.workspace_pubspec,
     )
 
@@ -291,6 +292,10 @@ _flutter_library_rule = rule(
         "codegen": attr.string_list(
             doc = "List of code generation commands to run via `dart run` (e.g., ['intl_utils:generate'])",
             default = [],
+        ),
+        "pub_package": attr.bool(
+            doc = "True if this target represents a hosted pub.dev package (enables cache publishing).",
+            default = False,
         ),
         "workspace_pubspec": attr.label(
             allow_single_file = True,

@@ -350,7 +350,6 @@ echo "=== Generating pub_deps.json from available packages ==="
 "$PYTHON_BIN" <<'PY'
 import json
 import os
-import re
 
 pub_cache = os.environ.get("PUB_CACHE") or ""
 pubspec_path = os.environ.get("PUBSPEC_PATH") or ""
@@ -371,32 +370,30 @@ if os.path.exists(pubspec_path):
                 root_version = stripped.split(":", 1)[1].strip().strip('"').strip("'")
 
 if root_name:
-    packages.append({
-        "name": root_name,
-        "source": "root",
-        "version": root_version or "0.0.0",
-        "kind": "root",
-    })
+    entry = dict()
+    entry["name"] = root_name
+    entry["source"] = "root"
+    entry["version"] = root_version or "0.0.0"
+    entry["kind"] = "root"
+    packages.append(entry)
 
 # 2. Hosted packages already present in pub_cache (from dep_caches + own IS_PUB_PACKAGE copy)
-seen_hosted = {}
+# Parse "pkgname-version" by splitting on the last hyphen before a digit.
+seen_hosted = dict()
 hosted_dir = os.path.join(pub_cache, "hosted", "pub.dev")
 if os.path.isdir(hosted_dir):
     for pkg_dir in sorted(os.listdir(hosted_dir)):
-        m = re.match(r'^(.+?)-(\d+\.\d+.*)$', pkg_dir)
-        if m:
-            pkg_name = m.group(1)
-            pkg_version = m.group(2)
-            # For duplicate versions keep the last one in sorted order (highest)
-            seen_hosted[pkg_name] = pkg_version
+        parts = pkg_dir.rsplit("-", 1)
+        if len(parts) == 2 and parts[1] and parts[1][0].isdigit():
+            seen_hosted[parts[0]] = parts[1]
 
-for pkg_name, pkg_version in sorted(seen_hosted.items()):
-    packages.append({
-        "name": pkg_name,
-        "source": "hosted",
-        "version": pkg_version,
-        "kind": "transitive",
-    })
+for pkg_name in sorted(seen_hosted.keys()):
+    entry = dict()
+    entry["name"] = pkg_name
+    entry["source"] = "hosted"
+    entry["version"] = seen_hosted[pkg_name]
+    entry["kind"] = "transitive"
+    packages.append(entry)
 
 # 3. SDK packages from the Flutter SDK
 if flutter_root:
@@ -407,17 +404,19 @@ if flutter_root:
         for pkg_name in sorted(os.listdir(sdk_dir)):
             pkg_path = os.path.join(sdk_dir, pkg_name)
             if os.path.isdir(pkg_path) and os.path.exists(os.path.join(pkg_path, "pubspec.yaml")):
-                packages.append({
-                    "name": pkg_name,
-                    "source": "sdk",
-                    "version": "0.0.0",
-                    "kind": "transitive",
-                })
+                entry = dict()
+                entry["name"] = pkg_name
+                entry["source"] = "sdk"
+                entry["version"] = "0.0.0"
+                entry["kind"] = "transitive"
+                packages.append(entry)
 
+result = dict()
+result["packages"] = packages
 with open("pub_deps.json", "w", encoding="utf-8") as f:
-    json.dump({"packages": packages}, f, indent=2)
+    json.dump(result, f, indent=2)
 
-print("Generated synthetic pub_deps.json with {} packages".format(len(packages)))
+print("Generated synthetic pub_deps.json with " + str(len(packages)) + " packages")
 PY
 
 if [ ! -s pub_deps.json ]; then

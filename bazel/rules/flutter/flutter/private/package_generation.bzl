@@ -221,7 +221,7 @@ def generate_package_build(repository_ctx, package_name, package_dir = ".", sdk_
             lines.append('        "{}",'.format(dep))
         lines.append("    ],")
 
-    if rule_kind == "dart_library":
+    if rule_kind in ("dart_library", "flutter_library"):
         lines.append("    pub_package = True,")
 
     lines.append(_DEF_VISIBILITY)
