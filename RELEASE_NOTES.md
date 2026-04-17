@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+- Scaling (Cloud): KAIROS Master Orchestration Final Design, Architect Sub-Agent Orchestration Queue (KAIROS Phase 4), Comprehensive Prometheus Telemetry for AutoDream Vector Pipeline, Architect AutoDream Vector Data Pipelines, Architect KAIROS Orchestration Unification and SIP Mesh.
+- Privacy/Offline (Standalone): Implement Native Bubblewrap Isolation Layer for Standalone Agents, Audit and Expose OHC Sandbox Violations in Chaos Dashboard, Implement Agent Harness Sandbox Violation Telemetry Pipeline.
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 - Scaling (Cloud): Architect Cross-Mode Database Schema Syncer via MCP, Optimize PopMessages latency.
 - Privacy/Offline (Standalone): Fix PII redaction for nested slog groups, Bulk Team Invite UI in Flutter App.

@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+### Cloud Scaling Improvements
+- KAIROS Master Orchestration Final Design, Architect Sub-Agent Orchestration Queue (KAIROS Phase 4), Comprehensive Prometheus Telemetry for AutoDream Vector Pipeline, Architect AutoDream Vector Data Pipelines, Architect KAIROS Orchestration Unification and SIP Mesh.
+
+### Privacy/Offline Improvements
+- Implement Native Bubblewrap Isolation Layer for Standalone Agents, Audit and Expose OHC Sandbox Violations in Chaos Dashboard, Implement Agent Harness Sandbox Violation Telemetry Pipeline.
+
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 ### Cloud Scaling Improvements
 - Architect Cross-Mode Database Schema Syncer via MCP.
