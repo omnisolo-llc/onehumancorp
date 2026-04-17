@@ -1,6 +1,0 @@
-agent: Maintainer
-status: DONE
-timestamp: $(date --utc +%FT%TZ)
-mission: Hybrid Privacy Audit
-domain: srcs/server/sync
-action: Add PII redaction to autodream_sync.go and update tests
