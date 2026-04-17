@@ -301,7 +301,7 @@ func TestUserManagement_NonAdminForbidden(t *testing.T) {
 	srv, store := newTestBackend(t)
 
 	// Create a non-admin user.
-	_, err := store.CreateUser("viewer1", "viewer@test.local", "viewpass99", []string{"viewer"})
+	_, err := store.CreateUser("viewer1", "viewer@test.local", "viewpass99", []string{"viewer"}, "")
 	if err != nil {
 		t.Fatalf("CreateUser: %v", err)
 	}
