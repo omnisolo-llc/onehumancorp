@@ -1,4 +1,4 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
 
 # User Guide: OHC Flutter App
 
@@ -8,7 +8,18 @@ This guide covers the Bazel-native Flutter app workflow in `srcs/app`.
 The app's screenshots are generated from the Bazel-built Flutter web bundle by
 running Playwright with platform-specific viewport and device profiles.
 
-## 2. Regenerate Screenshots
+## 2. Visual Rendering (Cloud vs Standalone)
+
+The OHC Agentic OS maintains a strict **Visual Excellence Mandate** across both Cloud-native and Standalone Desktop environments. Whether operating via the high-scale PostgreSQL/Redis backend or the offline SQLite engine, all user interfaces share a single, unified visual representation.
+
+To guarantee user delight, both modes implement identical Glassmorphism design tokens:
+- **Backdrop Filter**: `blur(20px) saturate(200%)`
+- **Background**: `rgba(255, 255, 255, 0.03)`
+- **Typography**: `Outfit`, `Inter`, sans-serif
+
+This ensures the Premium Feel is consistent, regardless of the underlying hybrid architecture.
+
+## 3. Regenerate Screenshots
 
 Run either of the following from the repository root:
 
@@ -22,7 +33,7 @@ Generated images are written to:
 
 - `docs/public/assets/screenshots/app/landing-page/`
 
-## 3. Screenshot Gallery
+## 4. Screenshot Gallery
 
 ### Web
 
@@ -55,9 +66,9 @@ Generated images are written to:
 ![OHC Flutter app login with Linux profile](./app/linux/login.png)
 
 </div>
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
 
-## 4. Documentation
+## 5. Documentation
 
 Please refer to the detailed architecture documents in the `docs/` folder:
 - [KAIROS Orchestration Design Phase 4](./kairos_orchestration_phase4.md)
