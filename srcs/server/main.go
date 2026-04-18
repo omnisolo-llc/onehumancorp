@@ -357,11 +357,6 @@ func run(now time.Time, listen listenFunc) error {
 			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
 			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
 			if contextEndpoint != "" {
-
-				// Background sync for internal sync daemon for Standalone Mode RAG records
-				ragSyncDaemon := orchestration.NewRagSyncDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
-				ragSyncDaemon.Start(ctx)
-
 				go func() {
 					ticker := time.NewTicker(5 * time.Second)
 					defer ticker.Stop()

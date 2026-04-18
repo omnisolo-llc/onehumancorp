@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "sync_handler.go",
         "sync_escalation_handler.go",
-        "growth_handler.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
     visibility = ["//visibility:public"],
@@ -14,24 +13,16 @@ go_library(
         "//srcs/server/orchestration/hybrid_sync",
         "//srcs/server/orchestration/queue",
         "//srcs/server/telemetry",
-        "//srcs/server/services/growth",
         "@io_opentelemetry_go_otel//:otel",
     ],
 )
 
 go_test(
     name = "api_test",
-    srcs = [
-        "sync_escalation_handler_test.go",
-        "growth_handler_test.go",
-        "growth_e2e_test.go",
-    ],
+    srcs = ["sync_escalation_handler_test.go"],
     embed = [":api"],
     deps = [
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
-        "//srcs/server/services/growth",
-        "//srcs/server/db",
-        "//lib/analytics",
     ],
 )

@@ -30,7 +30,7 @@ test('renders welcome screen and navigates through wizard', async () => {
   expect(screen.getByText('Review & Launch')).toBeInTheDocument();
 
   global.alert = jest.fn();
-  const launchButton = screen.getByRole('button', { name: /Launch/i });
+  const launchButton = screen.getByRole('button', { name: /Launch My AI Team/i });
   fireEvent.click(launchButton);
 
   await waitFor(() => {

@@ -108,8 +108,6 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 		var client orchestration.MinimaxClient
 		if s.hub != nil && s.hub.SIPDB() != nil {
 			client = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), s.hub.SIPDB().Provider(), nil)
-		} else if s.dbProvider != nil {
-			client = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), s.dbProvider, nil)
 		} else {
 			client = orchestration.NewMinimaxClient(minimaxKey)
 		}

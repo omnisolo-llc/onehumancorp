@@ -3,7 +3,7 @@ import { theme } from '../../styles/theme';
 
 const BusinessSetupWizard = () => {
   const [step, setStep] = useState(1);
-  const [expertMode, setExpertMode] = useState(false);
+      const [expertMode, setExpertMode] = useState(false);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -26,7 +26,6 @@ const BusinessSetupWizard = () => {
   const [deployment, setDeployment] = useState('cloud');
   const [admin, setAdmin] = useState({ name: '', email: '', password: '' });
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // Visibility toggle state
 
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
@@ -63,7 +62,7 @@ const BusinessSetupWizard = () => {
       {step === 1 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
           <h1 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Your AI team, ready in minutes</h1>
-          <button aria-label="Next Step" title="Proceed to Business Profile" onClick={nextStep}>Next</button>
+          <button onClick={nextStep}>Next</button>
         </div>
       )}
       {step === 2 && (
@@ -83,8 +82,8 @@ const BusinessSetupWizard = () => {
             <option value="Enterprise">Enterprise</option>
           </select>
           <input placeholder="Language" value={profile.language} onChange={e => setProfile({...profile, language: e.target.value})} />
-          <button aria-label="Previous Step" title="Go back to Welcome" onClick={prevStep}>Back</button>
-          <button aria-label="Next Step" title="Proceed to Goal Selection" onClick={nextStep}>Next</button>
+          <button onClick={prevStep}>Back</button>
+          <button onClick={nextStep}>Next</button>
         </div>
       )}
       {step === 3 && (
@@ -95,8 +94,8 @@ const BusinessSetupWizard = () => {
           <label><input type="checkbox" checked={goals.includes('marketing')} onChange={() => toggleGoal('marketing')} /> Generate marketing content</label><br />
           <label><input type="checkbox" checked={goals.includes('data')} onChange={() => toggleGoal('data')} /> Analyze data</label><br />
           <label><input type="checkbox" checked={goals.includes('custom')} onChange={() => toggleGoal('custom')} /> Custom</label><br />
-          <button aria-label="Previous Step" title="Go back to Business Profile" onClick={prevStep}>Back</button>
-          <button aria-label="Next Step" title="Proceed to Deployment Preference" onClick={nextStep}>Next</button>
+          <button onClick={prevStep}>Back</button>
+          <button onClick={nextStep}>Next</button>
         </div>
       )}
       {step === 4 && (
@@ -107,8 +106,8 @@ const BusinessSetupWizard = () => {
             <option value="desktop">Self-hosted Desktop</option>
             <option value="mobile">Mobile-only</option>
           </select>
-          <button aria-label="Previous Step" title="Go back to Goal Selection" onClick={prevStep}>Back</button>
-          <button aria-label="Next Step" title="Proceed to Administrator Account" onClick={nextStep}>Next</button>
+          <button onClick={prevStep}>Back</button>
+          <button onClick={nextStep}>Next</button>
         </div>
       )}
       {step === 5 && (
@@ -116,21 +115,16 @@ const BusinessSetupWizard = () => {
           <h2 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Administrator Account</h2>
           <input placeholder="Name" value={admin.name} onChange={e => setAdmin({...admin, name: e.target.value})} />
           <input type="email" placeholder="Email" value={admin.email} onChange={e => setAdmin({...admin, email: e.target.value})} />
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <input type={showPassword ? "text" : "password"} placeholder="Password" value={admin.password} onChange={e => setAdmin({...admin, password: e.target.value})} />
-            <button aria-label="Toggle Password Visibility" title="Toggle password visibility" onClick={() => setShowPassword(!showPassword)} style={{ marginLeft: '8px' }}>
-              {showPassword ? "Hide" : "Show"}
-            </button>
-          </div>
-          <button aria-label="Previous Step" title="Go back to Deployment Preference" onClick={prevStep}>Back</button>
-          <button aria-label="Next Step" title="Proceed to Review & Launch" onClick={nextStep}>Next</button>
+          <input type="password" placeholder="Password" value={admin.password} onChange={e => setAdmin({...admin, password: e.target.value})} />
+          <button onClick={prevStep}>Back</button>
+          <button onClick={nextStep}>Next</button>
         </div>
       )}
       {step === 6 && (
         <div style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
           <h2 style={{ ...theme.typography, margin: '0 0 16px 0' }}>Review & Launch</h2>
-          <button aria-label="Previous Step" title="Go back to Administrator Account" onClick={prevStep}>Back</button>
-          <button aria-label="Launch" title="Launch your AI team" onClick={launch} disabled={isLoading}>{isLoading ? 'Launching...' : 'Launch My AI Team >'}</button>
+          <button onClick={prevStep}>Back</button>
+          <button onClick={launch} disabled={isLoading}>{isLoading ? 'Launching...' : 'Launch My AI Team &gt;'}</button>
         </div>
       )}
 
@@ -140,7 +134,7 @@ const BusinessSetupWizard = () => {
           Expert Mode
         </label>
         {expertMode && (
-          <div style={{ ...theme.glassmorphism, padding: '10px', marginTop: '10px', fontFamily: 'monospace', borderRadius: '8px' }}>
+          <div style={{ background: '#222', padding: '10px', marginTop: '10px', fontFamily: 'monospace' }}>
             <p>Raw Config Fields Revealed</p>
             <pre>{JSON.stringify({ profile, goals, deployment, admin }, null, 2)}</pre>
           </div>
