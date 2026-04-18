@@ -1507,7 +1507,12 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		payloadMap := map[string]interface{}{
+			"delta": delta,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", string(payloadBytes))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
