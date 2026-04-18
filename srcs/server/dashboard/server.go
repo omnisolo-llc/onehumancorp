@@ -27,8 +27,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
@@ -388,6 +388,9 @@ var defaultMcpTools = []MCPTool{
 	{ID: "github-actions-mcp", Name: "GitHub Actions", Description: "CI/CD pipelines: trigger workflow runs, inspect job logs, and manage deployment environments.", Category: "cicd", Status: "available"},
 	{ID: "notion-mcp", Name: "Notion", Description: "Knowledge base: read and write pages, manage databases, and retrieve structured documentation.", Category: "knowledge", Status: "available"},
 	{ID: "spire-mcp", Name: "SPIFFE/SPIRE", Description: "Identity management: issue and rotate SVID certificates for agent workloads.", Category: "identity", Status: "available"},
+	{ID: "company-architect-mcp", Name: "Company Architect", Description: "Plan the company structure, operating model, and agent workforce for a natural-language business request.", Category: "business_ops", Status: "available"},
+	{ID: "workforce-hiring-mcp", Name: "Workforce Hiring", Description: "Create the initial internal AI workforce inside the platform from a generated company plan.", Category: "hr", Status: "available"},
+	{ID: "formation-docs-mcp", Name: "Formation Docs", Description: "Draft the business formation packet and filing checklist needed to register the company with the state.", Category: "legal", Status: "available"},
 }
 
 var statusOrder = []orchestration.Status{
@@ -551,6 +554,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Agent provider management
 	mux.HandleFunc("/api/agents/providers", server.handleAgentProviders)
 	mux.HandleFunc("/api/agents/providers/auth", server.handleAgentProviderAuth)
+	mux.HandleFunc("/api/ai/providers", server.handleAIProviders)
+	mux.HandleFunc("/api/ai/providers/", server.handleAIProviderByID)
 	mux.HandleFunc("/api/domains", server.handleDomains)
 	mux.HandleFunc("/api/mcp/tools", server.handleMCPTools)
 	mux.HandleFunc("/api/mcp/tools/register", server.handleMCPRegister)
@@ -694,7 +699,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Config wizard API endpoints.
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
+	mux.HandleFunc("/api/wizard/bootstrap_business", server.handleWizardBootstrapBusiness)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
+	mux.HandleFunc("/api/wizard/nl_chat", server.handleWizardNlChat)
+	mux.HandleFunc("/api/wizard/model_provider", server.handleWizardModelProvider)
 
 	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
 }
