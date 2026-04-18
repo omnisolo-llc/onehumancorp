@@ -22,6 +22,95 @@ var (
 	migrationsFS embed.FS
 )
 
+func splitSQLStatements(sqlText string) []string {
+	var (
+		statements      []string
+		current         strings.Builder
+		inSingleQuote   bool
+		inDoubleQuote   bool
+		inLineComment   bool
+		inBlockComment  bool
+	)
+
+	for i := 0; i < len(sqlText); i++ {
+		ch := sqlText[i]
+		next := byte(0)
+		if i+1 < len(sqlText) {
+			next = sqlText[i+1]
+		}
+
+		if inLineComment {
+			current.WriteByte(ch)
+			if ch == '\n' {
+				inLineComment = false
+			}
+			continue
+		}
+
+		if inBlockComment {
+			current.WriteByte(ch)
+			if ch == '*' && next == '/' {
+				current.WriteByte(next)
+				i++
+				inBlockComment = false
+			}
+			continue
+		}
+
+		if !inSingleQuote && !inDoubleQuote {
+			if ch == '-' && next == '-' {
+				current.WriteByte(ch)
+				current.WriteByte(next)
+				i++
+				inLineComment = true
+				continue
+			}
+			if ch == '/' && next == '*' {
+				current.WriteByte(ch)
+				current.WriteByte(next)
+				i++
+				inBlockComment = true
+				continue
+			}
+		}
+
+		if ch == '\'' && !inDoubleQuote {
+			current.WriteByte(ch)
+			if inSingleQuote && next == '\'' {
+				current.WriteByte(next)
+				i++
+				continue
+			}
+			inSingleQuote = !inSingleQuote
+			continue
+		}
+
+		if ch == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+			current.WriteByte(ch)
+			continue
+		}
+
+		if ch == ';' && !inSingleQuote && !inDoubleQuote {
+			stmt := strings.TrimSpace(current.String())
+			if stmt != "" {
+				statements = append(statements, stmt)
+			}
+			current.Reset()
+			continue
+		}
+
+		current.WriteByte(ch)
+	}
+
+	stmt := strings.TrimSpace(current.String())
+	if stmt != "" {
+		statements = append(statements, stmt)
+	}
+
+	return statements
+}
+
 // DB wraps a Provider with migration support.
 type DB struct {
 	Provider

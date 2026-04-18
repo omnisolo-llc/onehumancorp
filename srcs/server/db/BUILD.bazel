@@ -92,6 +92,7 @@ go_library(
 go_test(
     name = "db_test",
     srcs = [
+        "database_test.go",
         "provider_test.go",
     ],
     embed = [":db"],
