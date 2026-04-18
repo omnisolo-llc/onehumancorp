@@ -12,6 +12,7 @@ type EnvConfig struct {
 	Headless         bool
 	TelemetryEnabled bool
 	ApiEndpoint      string
+	DatabaseURL      string
 }
 
 // VerifyEnvironment checks the provided environment variables for Day One setup validity.
@@ -31,13 +32,29 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 	if hl, ok := envVars["OHC_HEADLESS"]; ok && strings.ToLower(hl) == "true" {
 		config.Headless = true
 	}
-
 	if config.Mode == "cloud" && !config.MultiTenant {
 		return nil, errors.New("cloud mode requires OHC_MULTITENANT to be true")
 	}
 
+	if config.Mode == "cloud" {
+		dbUrl, ok := envVars["DATABASE_URL"]
+		if !ok || dbUrl == "" {
+			return nil, errors.New("cloud mode requires DATABASE_URL")
+		}
+		config.DatabaseURL = dbUrl
+	}
+
 	if config.Mode == "standalone" && config.MultiTenant {
 		return nil, errors.New("standalone mode cannot be multitenant")
+	}
+
+	if config.Mode == "standalone" {
+		dbUrl, ok := envVars["DATABASE_URL"]
+		if !ok || dbUrl == "" {
+			config.DatabaseURL = "sqlite://local.db"
+		} else {
+			config.DatabaseURL = dbUrl
+		}
 	}
 
 	if config.Mode == "thin_client" {
