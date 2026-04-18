@@ -1,11 +1,17 @@
-1. **Fix Overflow Error in AgentHireWizardScreen:**
-   - Investigate the overflow error in the `Stepper` component in `AgentHireWizardScreen`.
-   - Wrap the `Stepper` inside an `Expanded` widget, which needs a parent `Column` or similar, or just remove horizontal stepper overflow by using an `Expanded` in the `Row` where the `Stepper` controls might be overflowing, or switch `StepperType.horizontal` to `StepperType.vertical` if horizontal is too wide for some screens, though horizontal is required maybe? Let's check `Stepper` controls. The overflow is reported in `Stepper`, maybe horizontal type on a small screen? "A RenderFlex overflowed by 358 pixels on the right. The overflowing RenderFlex has an orientation of Axis.horizontal. The specific RenderFlex in question is: RenderFlex#d34e7 relayoutBoundary=up6 OVERFLOWING: creator: Row <- SizedBox <- Padding <- DefaultTextStyle <- AnimatedDefaultTextStyle <- ... <- Column <- Stepper"
-   - Actually, a `Stepper` of type `horizontal` with 7 steps will definitely overflow on most screens since it creates a `Row` with all 7 step titles. Flutter's `Stepper` is not scrollable horizontally for its headers. A common fix is to either use `StepperType.vertical` or wrap it, or just use a custom stepper. Since the prompt does not strictly require horizontal Stepper for Agent Hire, changing it to `StepperType.vertical` is the most reliable fix for overflow. Wait, checking `business_setup_wizard_screen.dart`, what does it use?
-2. **Add Controllers to TextField in AgentHireWizardScreen:**
-   - In `srcs/app/lib/screens/agent_hire_wizard_screen.dart`, add `controller: _endpointUrlController` to the Custom Endpoint URL `TextField` and `controller: _tokenLimitController` to the Token Limit `TextField` under Advanced Configuration (in Step 6 — Resource Limits).
-   - Update `dispose` method to dispose of `_endpointUrlController` and `_tokenLimitController`.
-3. **Add AgentHireWizardScreen E2E Test:**
-   - Create `srcs/app/test/screens/agent_hire_wizard_screen_test.dart` to test the wizard steps and that all state changes correctly (similar to E2E test requirement).
-4. **Run pre-commit instructions:**
-   - Ensure proper testing, verification, review, and reflection are done.
+1. **Analyze telemetry compliance requirements**:
+   - Instruction: "In telemetry or logging code, always apply `RedactInterfacePII` (or an equivalent redaction function) to payload maps before calling `json.Marshal` to prevent PII leakage in multi-tenant environments."
+   - Issue 1: In `srcs/server/telemetry/telemetry.go`, `RecordQueueLength` directly constructs a payload map using `fmt.Sprintf` and doesn't apply `RedactInterfacePII`. Wait, currently it uses `fmt.Sprintf` instead of a JSON payload! However, to be consistent with all other `BufferMetricFunc` calls, and to comply with the PII redaction rule for payload maps before calling `json.Marshal`, I need to rewrite `RecordQueueLength` to use a map, redact it, and marshal it.
+   - Issue 2: In `srcs/server/orchestration/event_log.go`, `sanitizeHubEvent` takes a `raw` object, calls `json.Marshal(raw)`, and THEN tries to unmarshal, redact, and re-marshal. If unmarshal fails, the unredacted payload is saved! The rule dictates redacting the object BEFORE the first `json.Marshal`. I will update `sanitizeHubEvent` to redact `raw` immediately using `telemetry.RedactInterfacePII(raw)`.
+
+2. **Execute changes**:
+   - `srcs/server/telemetry/telemetry.go`: Refactor `RecordQueueLength`.
+   - `srcs/server/orchestration/event_log.go`: Refactor `sanitizeHubEvent`.
+
+3. **Verify changes**:
+   - Run `bazelisk test //srcs/server/telemetry/...` and `bazelisk test //srcs/server/orchestration/...` to ensure all tests pass.
+
+4. **Complete pre-commit steps**:
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+5. **Submit the PR**:
+   - Issue ID will be included.
