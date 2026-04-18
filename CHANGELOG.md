@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Universal Mesh Bridge backend service and frontend integration.
+
+### Privacy/Offline Improvements
+- Added premium UI formatting for Universal Mesh Bridge frontend integration.
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 ### Cloud Scaling Improvements
 - Architect Cross-Mode Database Schema Syncer via MCP.

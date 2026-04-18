@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+- Scaling (Cloud): Implement Universal Mesh Bridge backend service and frontend integration.
+- Privacy/Offline (Standalone): Added premium UI formatting for Universal Mesh Bridge frontend integration.
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 - Scaling (Cloud): Architect Cross-Mode Database Schema Syncer via MCP, Optimize PopMessages latency.
 - Privacy/Offline (Standalone): Fix PII redaction for nested slog groups, Bulk Team Invite UI in Flutter App.
