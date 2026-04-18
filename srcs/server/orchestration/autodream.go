@@ -13,6 +13,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	autodream_metrics "github.com/onehumancorp/mono/srcs/server/orchestration/autodream"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -73,6 +75,10 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		slog.Error("AutoDream: failed to begin tx for completed tasks", "error", err)
 		return
 	}
+	mode := kairos.GetMode()
+	start := time.Now()
+	_ = mode
+	_ = start
 	defer tx.Rollback(ctx)
 
 	var query string
@@ -184,6 +190,10 @@ func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 		slog.Error("AutoDream: failed to begin transaction for compression", "error", err)
 		return
 	}
+	mode := kairos.GetMode()
+	start := time.Now()
+	_ = mode
+	_ = start
 	defer tx.Rollback(ctx)
 
 	var query string
@@ -287,6 +297,12 @@ func (w *AutoDreamWorker) runMemoryIngestionPipeline(ctx context.Context) {
 
 // compressSessionContexts periodically compresses context from agent_session_data into autodream_memories.
 func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
+	mode := kairos.GetMode()
+	start := time.Now()
+	_ = mode
+	_ = start
+	_ = mode
+	_ = start
 	// Only process sessions older than 5 minutes to avoid compressing active sessions
 	threshold := time.Now().Add(-5 * time.Minute).UTC()
 	var rows db.Rows
@@ -377,6 +393,8 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		}
 		if err != nil {
 			slog.Error("AutoDream: failed to insert compressed memory", "session", s.ID, "error", err)
+			autodream_metrics.ConsolidationErrorsTotal.WithLabelValues(mode, "compress_session_contexts", "db_insert_error").Inc()
+			autodream_metrics.MemoriesProcessedTotal.WithLabelValues(mode, "session_context", "failure").Inc()
 			continue
 		}
 
@@ -908,6 +926,12 @@ func (w *AutoDreamWorker) runMissionIngestionPipeline(ctx context.Context) {
 // by OHC_MISSIONS_DIR. GitHub issues are the canonical task tracker, so file
 // ingestion is disabled unless the env var is explicitly configured.
 func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
+	mode := kairos.GetMode()
+	start := time.Now()
+	_ = mode
+	_ = start
+	_ = mode
+	_ = start
 	missionDir := os.Getenv("OHC_MISSIONS_DIR")
 	if missionDir == "" {
 		return
