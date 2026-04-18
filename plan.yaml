@@ -1,0 +1,5 @@
+issue_title: "[observability] Add Mode-Specific Metrics for Token Burn Rate Forecasting"
+issue_priority: "P1"
+issue_category: "[observability]"
+issue_description: "A detailed description of the task, including research findings and implementation requirements."
+issue_label: ["research", "high-impact"]
