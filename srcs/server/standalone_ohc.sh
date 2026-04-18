@@ -5,6 +5,9 @@ cleanup_tmp_files() {
   if [[ "${OHC_STANDALONE:-true}" == "true" ]]; then
     # Mode-aware cleanup for standalone
     if [ -d "${STATE_DIR}" ]; then
+      # Prune identified files in Linear (internal orchestrator state is private) to align them with the Hybrid architecture.
+      find "${STATE_DIR}" -name "*Linear*.tmp" -type f -delete 2>/dev/null || true
+      find "${STATE_DIR}" -name "*linear*.tmp" -type f -delete 2>/dev/null || true
       # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
       find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
     fi
