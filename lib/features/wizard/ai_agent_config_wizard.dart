@@ -118,7 +118,7 @@ class _AiAgentConfigWizardState extends ConsumerState<AiAgentConfigWizard> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 1,
-                childAspectRatio: 2.5,
+                childAspectRatio: 1.5,
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
                 children: (cat['roles'] as List).map<Widget>((role) {
@@ -154,7 +154,9 @@ class _AiAgentConfigWizardState extends ConsumerState<AiAgentConfigWizard> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(role['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
-                                Text(role['desc'], style: const TextStyle(fontSize: 12, fontFamily: 'Inter'), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                Expanded(
+                                  child: Text(role['desc'], style: const TextStyle(fontSize: 12, fontFamily: 'Inter'), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
