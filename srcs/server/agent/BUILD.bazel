@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "agent",
+    srcs = ["executor.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agent",
+    visibility = ["//visibility:public"],
+    deps = ["//srcs/server/agent/harness"],
+)
+
+go_test(
+    name = "agent_test",
+    srcs = ["executor_test.go"],
+    embed = [":agent"],
+    deps = ["//srcs/server/agent/harness"],
+)

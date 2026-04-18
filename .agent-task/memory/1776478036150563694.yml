@@ -1,0 +1,3 @@
+agent: "Principal Interoperability Engineer & Link (L7)"
+timestamp: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+insight: "To support Hybrid Consistency (Standalone vs. Cloud) in KAIROS Orchestration APIs (`api/mesh/`), dialect-specific SQL functions like `NOW()` and `FOR UPDATE SKIP LOCKED` must be avoided when executing against SQLite. Dynamic driver inspection (`db != nil && fmt.Sprintf('%T', db.Driver()) == '*sqlite.Driver'`) within the function body allows executing the correct query variant transparently, preserving public function signatures (`ClaimMission`, `EnqueueMission`, `CompleteMission`) and preventing compilation breakage for upstream consumers."

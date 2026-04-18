@@ -257,21 +257,52 @@ class _ChannelList extends StatelessWidget {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: channels.length,
-      itemBuilder: (_, i) => _ChannelCard(channel: channels[i]),
+      itemBuilder: (_, i) => _ChannelCard(channel: channels[i], index: i),
     );
   }
 }
 
 class _ChannelCard extends StatefulWidget {
   final ChatChannel channel;
-  const _ChannelCard({required this.channel});
+  final int index;
+  const _ChannelCard({required this.channel, required this.index});
 
   @override
   State<_ChannelCard> createState() => _ChannelCardState();
 }
 
-class _ChannelCardState extends State<_ChannelCard> {
+class _ChannelCardState extends State<_ChannelCard> with SingleTickerProviderStateMixin {
   bool _isHovered = false;
+  late AnimationController _controller;
+  late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+
+    Future.delayed(Duration(milliseconds: 100 * widget.index), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   String _icon() {
     for (final def in _channelDefs) {
@@ -284,9 +315,13 @@ class _ChannelCardState extends State<_ChannelCard> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GlassCard(
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: GlassCard(
           padding: const EdgeInsets.all(16),
           child: ListTile(
                   leading: Text(_icon(), style: const TextStyle(fontSize: 28)),
@@ -308,6 +343,8 @@ class _ChannelCardState extends State<_ChannelCard> {
                     ],
                   ),
                 ),
+          ),
+        ),
       ),
     );
   }

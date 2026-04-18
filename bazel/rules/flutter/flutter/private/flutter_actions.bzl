@@ -108,6 +108,7 @@ done < "$MANIFEST_FILE"
         inputs = input_files,
         outputs = [working_dir],
         executable = setup_script,
+        execution_requirements = {"no-cache": "1"},
         arguments = [working_dir.path, manifest.path],
         mnemonic = "SetupFlutterWorkspace",
         progress_message = "Setting up Flutter workspace for %s" % ctx.label.name,
@@ -174,6 +175,14 @@ def flutter_pub_get_action(
 
     script_content = """#!/bin/bash
 set -euo pipefail
+
+cleanup_temp_dirs() {{
+    echo "Cleaning up temporary directories..."
+    [ -n "${{FLUTTER_WRITABLE:-}}" ] && rm -rf "$FLUTTER_WRITABLE" || true
+    [ -n "${{RUNTIME_WORKSPACE:-}}" ] && rm -rf "$RUNTIME_WORKSPACE" || true
+    [ -n "${{PACKAGE_CONFIG_OUT:-}}" ] && rm -f "$PACKAGE_CONFIG_OUT" || true
+}}
+trap cleanup_temp_dirs EXIT
 
 WORKSPACE_SRC="{workspace_src}"
 WORKSPACE_DIR="{workspace_dir}"
@@ -509,6 +518,7 @@ echo "=== Dependency preparation complete ==="
     ctx.actions.run_shell(
         inputs = [working_dir, pubspec_file] + dep_pub_cache_files + ([workspace_pubspec] if workspace_pubspec else []) + flutter_toolchain.flutterinfo.tool_files + flutter_toolchain.flutterinfo.sdk_files,
         outputs = [pub_get_output, pub_deps, pub_cache_dir, dart_tool_dir, prepared_workspace],
+        execution_requirements = {"no-cache": "1"},
         command = script_content + """
 
 cd "$ORIGINAL_PWD"
@@ -626,6 +636,14 @@ def flutter_build_action(
 
     script_content = """#!/bin/bash
 set -euo pipefail
+
+cleanup_temp_dirs() {{
+    echo "Cleaning up temporary directories..."
+    [ -n "${{FLUTTER_WRITABLE:-}}" ] && rm -rf "$FLUTTER_WRITABLE" || true
+    [ -n "${{RUNTIME_WORKSPACE:-}}" ] && rm -rf "$RUNTIME_WORKSPACE" || true
+    [ -n "${{PACKAGE_CONFIG_OUT:-}}" ] && rm -f "$PACKAGE_CONFIG_OUT" || true
+}}
+trap cleanup_temp_dirs EXIT
 
 WORKSPACE_DIR="{workspace_dir}"
 PUB_CACHE_DIR="{pub_cache_dir}"
@@ -976,7 +994,6 @@ if "$FLUTTER_BIN_ABS" --suppress-analytics {build_command}; then
         echo "This indicates a serious issue with Flutter build execution"
         exit 1
     fi
-    
     echo "✓ Flutter build completed successfully"
 else
     echo "✗ FATAL ERROR: flutter {build_command} failed"
@@ -1001,6 +1018,7 @@ fi
     ctx.actions.run_shell(
         inputs = [working_dir, pub_cache_dir, dart_tool_dir] + flutter_toolchain.flutterinfo.tool_files + flutter_toolchain.flutterinfo.sdk_files,
         outputs = [build_artifacts],
+        execution_requirements = {"no-cache": "1"},
         command = script_content,
         mnemonic = "FlutterBuild",
         progress_message = "Running flutter build %s for %s" % (target, ctx.label.name),
