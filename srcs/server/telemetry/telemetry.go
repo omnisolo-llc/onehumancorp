@@ -1603,6 +1603,7 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 	))
 }
 
+// RecordQueueLength correctly applies PII redaction before JSON marshaling.
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
