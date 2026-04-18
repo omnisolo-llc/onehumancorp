@@ -8,10 +8,10 @@ backend:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 2
-    maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 85
+    minReplicas: 3
+    maxReplicas: 30
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "250m"
@@ -50,10 +50,10 @@ ohcCore:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 2
-    maxReplicas: 20
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 85
+    minReplicas: 3
+    maxReplicas: 30
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "50m"
@@ -92,10 +92,10 @@ chatwoot:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 1
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 85
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "250m"
@@ -133,10 +133,10 @@ powersync:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 1
-    maxReplicas: 5
-    targetCPUUtilizationPercentage: 70
-    targetMemoryUtilizationPercentage: 85
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
+    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "50m"
