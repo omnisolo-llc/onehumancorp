@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
+### Cloud Scaling Improvements
+- Optimise Orchestration & Observability.
+
+### Privacy/Offline Improvements
+- Add AutoDream Sync Walkthrough.
+
+
 ## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Local Embedding Caching for Cost Optimization.
