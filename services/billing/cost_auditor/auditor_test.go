@@ -73,3 +73,29 @@ func TestCostAuditor(t *testing.T) {
 		t.Errorf("expected non-empty report")
 	}
 }
+
+func TestBudget(t *testing.T) {
+	config := token_calculator.CostConfig{
+		CostPerInputToken: 0.00001,
+		CostPerOutputToken: 0.00003,
+	}
+	auditor := NewCostAuditor(config)
+	ctx := context.Background()
+
+	auditor.SetAgentBudget("miser-2", 0.01)
+
+	auditor.RecordEvent(ctx, AuditEvent{
+		AgentID: "miser-2",
+		InputTokens: 1000,
+		OutputTokens: 500,
+	})
+
+	if !auditor.IsAgentOverBudget("miser-2") {
+		t.Errorf("expected miser-2 to be over budget")
+	}
+
+	report := auditor.GenerateReport()
+	if report == "" {
+		t.Errorf("expected non-empty report")
+	}
+}
