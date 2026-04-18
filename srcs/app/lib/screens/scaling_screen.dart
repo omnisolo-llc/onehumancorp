@@ -23,6 +23,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
     'DESIGNER',
     'SECURITY_ENGINEER',
     'PRODUCT_MANAGER',
+    'AI_NEWS_COLLECTOR',
   ];
 
   Future<void> _handleScale() async {
