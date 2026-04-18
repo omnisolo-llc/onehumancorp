@@ -1124,7 +1124,14 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 			telemetry.RecordSwarmTaskCompleted(ctx, missionID)
 		default:
 			if telemetry.BufferMetricFunc != nil {
-				_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
+				var data interface{}
+				if err := json.Unmarshal([]byte(p.Payload), &data); err == nil {
+					redactedMap := telemetry.RedactInterfacePII(data)
+					payloadBytes, _ := json.Marshal(redactedMap)
+					_ = telemetry.BufferMetricFunc(ctx, p.MetricType, string(payloadBytes))
+				} else {
+					_ = telemetry.BufferMetricFunc(ctx, p.MetricType, telemetry.RedactPII(p.Payload))
+				}
 			}
 		}
 	}

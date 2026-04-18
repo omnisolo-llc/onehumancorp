@@ -38,7 +38,8 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "capabilities")
 	} else {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "capabilities"})
+		redactedMap := telemetry.RedactInterfacePII(map[string]interface{}{"mode": "capabilities"})
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = telemetry.BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
 	}
 
@@ -130,7 +131,8 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 			if telemetry.BufferMetricFunc == nil {
 				telemetry.RecordMeshBroadcast(ctx, "events")
 			} else {
-				payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+				redactedMap := telemetry.RedactInterfacePII(map[string]interface{}{"mode": "events"})
+				payloadBytes, _ := json.Marshal(redactedMap)
 				_ = telemetry.BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
 			}
 		}
