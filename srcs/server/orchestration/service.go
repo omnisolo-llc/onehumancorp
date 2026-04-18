@@ -1773,7 +1773,7 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	defer bufferPool.Put(buf)
 
 	escapedText, _ := json.Marshal(text)
-	buf.WriteString(`{"model":"embo-01","texts":[`)
+	buf.WriteString(`{"model":"embo-01","type":"db","texts":[`)
 	buf.Write(escapedText)
 	buf.WriteString(`]}`)
 
