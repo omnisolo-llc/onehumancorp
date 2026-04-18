@@ -26,26 +26,6 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
     'AI_NEWS_COLLECTOR',
   ];
 
-
-  String _formatRole(String role) {
-    if (role.isEmpty) return role;
-    return role
-        .replaceAll('_', ' ')
-        .toLowerCase()
-        .split(' ')
-        .map((word) {
-          if (word == 'ai') return 'AI';
-          if (word == 'ceo') return 'CEO';
-          if (word == 'qa') return 'QA';
-          if (word == 'cfo') return 'CFO';
-          if (word == 'seo') return 'SEO';
-          if (word == 'llm') return 'LLM';
-          if (word.isEmpty) return word;
-          return word[0].toUpperCase() + word.substring(1);
-        })
-        .join(' ');
-  }
-
   Future<void> _handleScale() async {
     setState(() {
       _isProvisioning = true;
@@ -126,7 +106,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                         _roles.map((role) {
                           final isSelected = _selectedRole == role;
                           return ChoiceChip(
-                            label: Text(_formatRole(role)),
+                            label: Text(role.replaceAll('_', ' ')),
                             selected: isSelected,
                             onSelected:
                                 _isProvisioning

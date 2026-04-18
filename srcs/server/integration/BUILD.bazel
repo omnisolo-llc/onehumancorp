@@ -21,9 +21,6 @@ go_test(
         "frontend_backend_test.go",
         "minimax_e2e_test.go",
     ],
-    env = {
-        "MINIMAX_API_KEY": "",
-    },
     deps = [
         "//srcs/server/auth",
         "//srcs/server/billing",

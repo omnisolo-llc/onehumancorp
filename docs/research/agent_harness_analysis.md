@@ -1,62 +1,30 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+<div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-# [backend] Agent Harness Isolation Architecture
+# OHC Agent Harness vs Claude-Class Infrastructure Analysis
 
-## Problem Statement
-OHC currently lacks a robust, standardized isolation harness for agents to safely execute code, test commands, and manipulate the environment. Currently, basic sandboxing mechanisms rely on simplistic regex checks (e.g., in `bash_sandbox/sandbox.go`), which is not a secure or scalable security boundary. A failure in environment isolation could allow an agent to manipulate files outside of its workspace or modify the core system, compromising user data or application stability.
+## 1. Architectural Findings
+Our deep dive into the Claude Code implementation reveals a highly robust sub-process handling architecture (The Agent Harness). Its key features include:
+- **Teammate Mesh / Forking:** Capable of spawning isolated subprocess agents with explicit inheritance of conversation context or fresh context via `subagent_type`.
+- **Git Worktree Isolation:** Safe experimental changes utilizing temporary git worktrees (`isolation: "worktree"`).
+- **Background Orchestration:** Support for `run_in_background`, enabling asynchronous subagent orchestration independent of the main UI thread.
+- **Robust Tool Access Control:** Detailed prompt instructions validating command safety, read-only permissions, and destructive command warnings via specific TS abstractions (e.g., `bashPermissions.ts`, `commandSemantics.ts`).
 
-## Research Report
-An analysis of leading agent architectures, including the leaked Claude Code project (`CC-Source/src/tools/BashTool`), reveals a mature approach to agent sandboxing.
-Key findings from analyzing Claude Code's agent harness:
-1. **Dynamic Sandboxing**: It uses a layered configuration to allow/deny filesystem reads and writes (`SandboxManager`).
-2. **Execution Telemetry**: It captures and propagates violations directly via stderr (`<sandbox_violations>`) so the LLM is contextually aware of the sandbox constraints.
-3. **Pervasive Security Enforcement**: Access boundaries aren't just limited to regex; they enforce deep process-level constraints and dynamic path resolution to intercept unauthorized accesses (`resolvePathPatternForSandbox`).
-4. **Git Worktree Isolation:** Safe experimental changes utilizing temporary git worktrees (`isolation: "worktree"`).
+## 2. Comparative Matrix
 
-Currently, OHC's `bash_sandbox.go` only does rudimentary regex matching for things like `rm -rf /` and `sudo`. For macOS specifically, OHC has a start on process isolation via the `sandbox-exec` utility (`sandbox_darwin.go`), but the system lacks cross-platform worktree isolation and true dynamic path restriction per execution context.
-
-### Comparative Matrix
-
-| Feature | OHC Current State (`srcs/server/bash_sandbox/sandbox.go`) | Claude-Class State | Gap |
+| Feature | OHC Current State (`srcs/server/agents/provider.go`) | Claude-Class State | Gap |
 |---------|------------------------------------------------------|-------------------|-----|
-| Sandboxing | Simple Regex Checks | Dynamic Sandboxing, OS-level hooks | Critical |
+| Sandboxing | In-memory Provider abstractions | Isolated Subprocesses, Remote CCR | Critical |
 | Branch Safety | Manual Git execution | `isolation: "worktree"` automated | High |
-| Execution Telemetry | Basic execution counters | Rich context-aware violation propagation (`<sandbox_violations>`) | Medium |
+| Execution Telemetry | Standard HTTP metrics | Rich command semantics & path validation | Medium |
 
-## Design Doc
-To elevate OHC's agent isolation to "Premium" Claude-level capability, we must implement a **Unified Agent Worktree Harness (UAWH)**.
-
-### Architecture Changes
-1. **Worktree Abstraction**: Agents must operate in isolated directories (Git worktrees or ephemeral mounts), tracking modifications securely without colliding with other agents.
-2. **Process Sandboxing**:
-   - Expand OS-level sandboxing. For macOS, stabilize `sandbox-exec` configurations. For Linux, implement `bwrap` (Bubblewrap) or `nsjail`.
-3. **Execution Telemetry**: Enhance `telemetry/telemetry.go` and `orchestration/harness.go` to capture detailed metrics (time taken, sandbox violations, peak memory usage).
-4. **Contextual Sandbox Failure Propagation**: Any violations must be intercepted and formatted identically to the `<sandbox_violations>` output convention, ensuring the agent model accurately interprets restriction boundaries.
-
-### Architecture Diagram
-
+## 3. Recommended Upgrades for OHC
 ```mermaid
 graph TD
-    A[Agent Planner] --> B[Unified Agent Worktree Harness]
+    A[KAIROS Hub] --> B[SubAgent Allocator]
     B --> C[Worktree Provisioner]
     B --> D[Permissions Gateway]
-    C --> E[Agent Runtime / Execution]
+    C --> E[Agent Runtime]
     D --> E
-    E --> F[Telemetry & Context Propagation]
-    F --> A
+    E --> F[Telemetry & Observability]
 ```
-
-## Implementation Prompt
-Implement the Unified Agent Worktree Harness (UAWH) for the OHC platform.
-1. Create a new `worktree_sandbox.go` inside `srcs/server/agent/harness/` that securely mounts temporary directories for agent execution context.
-2. Enhance `srcs/server/bash_sandbox/sandbox.go` to integrate with the OS-level isolation harnesses in `srcs/server/agent/harness/`, replacing simple regex checks with strict OS-level filesystem constraints where possible.
-3. Update `srcs/server/telemetry/telemetry.go` to explicitly log `SandboxWorktreeMountFailed`, `SandboxViolationDetected`, and execution timing metrics.
-4. Add comprehensive unit tests and E2E coverage for the sandbox logic in `srcs/server/bash_sandbox/sandbox_test.go` and `srcs/server/agent/harness/sandbox_test.go` to hit 100% test coverage.
-
-## Estimated Scope
-Large
-
-## Priority
-P0
-
 </div>

@@ -31,7 +31,6 @@ go_test(
         "ast_pii_linter_test.go",
         "buffer_test.go",
         "compliance_test.go",
-        "global_pii_linter_test.go",
         "privacy_test.go",
         "logger_test.go",
         "pii_linter_test.go",

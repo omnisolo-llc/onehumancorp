@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // LandingPageExperiment defines a growth experiment for the OHC platform.

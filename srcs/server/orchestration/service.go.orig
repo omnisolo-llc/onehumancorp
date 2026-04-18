@@ -1,8 +1,14 @@
 package orchestration
 
+
 import (
 	"google.golang.org/protobuf/proto"
 
+
+
+
+	"strings"
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -15,40 +21,24 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strings"
 	"sync"
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
-	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
-	"github.com/onehumancorp/mono/srcs/server/storage"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"github.com/redis/rueidis"
+	"github.com/onehumancorp/mono/srcs/server/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
 )
-
-var telemetryJobChan = make(chan func(), 10000)
-var telemetryOnce sync.Once
-
-func initTelemetryWorkers() {
-	telemetryOnce.Do(func() {
-		for i := 0; i < 16; i++ {
-			go func() {
-				for job := range telemetryJobChan {
-					job()
-				}
-			}()
-		}
-	})
-}
 
 var (
 	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
 )
+
 
 // Status indicates the current operational phase of an AI agent within the workforce.
 // Accepts no parameters.
@@ -188,7 +178,6 @@ type Agent struct {
 	// the platform's own lightweight agent is used.
 	ProviderType string `json:"providerType,omitempty"`
 	Region       string `json:"region,omitempty"`
-	IsDefault    bool   `json:"isDefault,omitempty"`
 }
 
 // Message represents a discrete packet of communication between agents within a meeting room, containing the content and sender identity.
@@ -280,7 +269,6 @@ type Hub struct {
 	GetTokenUsage  func(ctx context.Context) map[string]int64
 	autoCorTrack   map[string]struct{}
 	eventLogChan   chan interface{}
-	recentEvents   []HubEvent
 	repo           HubRepository
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
@@ -342,17 +330,16 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		cancel:        cancel,
 	}
 
-	// Use S3/Minio for blob storage.  The bucket name is read from the
-	// OHC_S3_BUCKET_BLOBS env var (default: "ohc-blobs").
-	bucketName := os.Getenv("OHC_S3_BUCKET_BLOBS")
-	if bucketName == "" {
-		bucketName = "ohc-blobs"
+
+	// Default to a stub S3 provider if we can't initialize a local one
+	h.storage = storage.NewS3Provider("ohc-blobs")
+	if local, err := storage.NewLocalProvider(".agent-task/blobs"); err == nil {
+		h.storage = local
 	}
-	h.storage = storage.NewS3Provider(bucketName)
 
 	// Create a dummy/empty taskManager. Real deployment will set a DB provider.
 	// TaskManager doesn't export a default without a DB, but we can set one when needed.
-	go h.eventLogWorker(h.ctx)
+	go h.eventLogWorker(h.ctx, "events.jsonl")
 	go h.tokenBurnRateWorker(h.ctx)
 	return h
 }
@@ -375,6 +362,8 @@ func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
 		}
 	}
 }
+
+
 
 func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]int64) {
 	if h.GetTokenUsage == nil {
@@ -411,6 +400,59 @@ func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]i
 	for orgID := range history {
 		if !activeOrgs[orgID] {
 			delete(history, orgID)
+		}
+	}
+}
+
+// eventLogWorker processes event logs and writes them sequentially to the specified file.
+func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		slog.Error("failed to open event log file", "filename", filename, "error", err)
+		return
+	}
+	defer f.Close()
+
+	// ⚡ BOLT: [Unbuffered synchronous disk writes to the events.jsonl sidecar logs] - Randomized Selection from Top 5
+	bw := bufio.NewWriter(f)
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			bw.Flush()
+			return
+		case logEntry, ok := <-h.eventLogChan:
+			if !ok {
+				bw.Flush()
+				return
+			}
+			b, err := json.Marshal(logEntry)
+			if err != nil {
+				slog.Error("failed to marshal event log", "error", err)
+				continue
+			}
+
+			var m map[string]interface{}
+			if err := json.Unmarshal(b, &m); err == nil {
+				telemetry.RedactInterfacePII(m)
+				b, _ = json.Marshal(m)
+			}
+
+			if _, err := bw.Write(append(b, '\n')); err != nil {
+				slog.Error("failed to write to event log file", "filename", filename, "error", err)
+			}
+
+			// If we've drained the channel, flush immediately to avoid latency
+			if len(h.eventLogChan) == 0 {
+				bw.Flush()
+			}
+
+		case <-ticker.C:
+			if err := bw.Flush(); err != nil {
+				slog.Error("failed to flush event log buffer", "error", err)
+			}
 		}
 	}
 }
@@ -468,13 +510,7 @@ func (h *Hub) TokenEfficientContextSummarization(eventID, agentID string, payloa
 		return fmt.Errorf("invalid payload: %w", err)
 	}
 
-	var dbProvider db.Provider
-	var redisClient rueidis.Client
-	if h.SIPDB() != nil {
-		dbProvider = h.SIPDB().Provider()
-		redisClient = h.SIPDB().RedisClient()
-	}
-	client := NewCachedMinimaxClient(NewMinimaxClient(h.MinimaxAPIKey()), dbProvider, redisClient)
+	client := NewMinimaxClient(h.MinimaxAPIKey())
 
 	// Safely encode the untrusted payload as JSON to prevent prompt injection.
 	contextPayload, _ := json.Marshal(map[string]string{
@@ -937,13 +973,7 @@ func (h *Hub) Publish(message Message) error {
 			go func(mID string, tLines []transcriptLine) {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				var dbProvider db.Provider
-				var redisClient rueidis.Client
-				if h.SIPDB() != nil {
-					dbProvider = h.SIPDB().Provider()
-					redisClient = h.SIPDB().RedisClient()
-				}
-				client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), dbProvider, redisClient)
+				client := NewMinimaxClient(minimaxKey)
 
 				// Redact PII in the goroutine to save main thread CPU
 				for i, line := range tLines {
@@ -1006,18 +1036,12 @@ func (h *Hub) Publish(message Message) error {
 
 	// ⚡ BOLT: [Parallel Execution] Async worker for telemetry, PII redaction and logging
 	// Move heavy regex processing (redactPII) to a background goroutine to free up the Publisher thread
-	initTelemetryWorkers()
-	sID, sRole, mType, mContent := sender.ID, sender.Role, message.Type, message.Content
-	select {
-	case telemetryJobChan <- func() {
+	go func(sID, sRole, mType, mContent string) {
 		telemetry.RecordAgentApiCall(context.Background(), sID, sRole, "publish")
 		if mType != EventStatus {
 			telemetry.LogAgentExecution(context.Background(), sID, sRole, "publish", mType, telemetry.RedactPII(mContent))
 		}
-	}:
-	default:
-		// Drop telemetry if channel is full to prevent blocking
-	}
+	}(sender.ID, sender.Role, message.Type, message.Content)
 
 	if centrifugeNode != nil {
 		go func(m Message, cn *CentrifugeNode) {
@@ -1513,13 +1537,7 @@ func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream 
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*pb.ReasonResponse, error) {
-	var dbProvider db.Provider
-	var redisClient rueidis.Client
-	if s.hub.SIPDB() != nil {
-		dbProvider = s.hub.SIPDB().Provider()
-		redisClient = s.hub.SIPDB().RedisClient()
-	}
-	client := NewCachedMinimaxClient(NewMinimaxClient(s.hub.MinimaxAPIKey()), dbProvider, redisClient)
+	client := NewMinimaxClient(s.hub.MinimaxAPIKey())
 	content, err := client.Reason(ctx, req.GetPrompt())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "minimax reasoning failed: %v", err)
@@ -1659,7 +1677,7 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 
 	// Retry loop to handle transient empty responses from Minimax.
 	var lastErr error
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 3; i++ {
 		// Need a new request for each retry because the body buffer is consumed.
 		// Re-create the request using the same buffer bytes.
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
@@ -1681,10 +1699,10 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			if resp.StatusCode >= 500 {
+			if resp.StatusCode == 529 {
 				// Retry on high load without recording circuit breaker failure immediately
 				resp.Body.Close()
-				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
+				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
 				time.Sleep(2 * time.Second) // Longer backoff for overloaded
 				continue
 			}
@@ -1780,7 +1798,7 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	payloadBytes := buf.Bytes()
 	var lastErr error
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 3; i++ {
 		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
 		if err != nil {
 			return nil, err
@@ -1798,9 +1816,9 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			if resp.StatusCode >= 500 {
+			if resp.StatusCode == 529 {
 				resp.Body.Close()
-				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
+				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
 				time.Sleep(2 * time.Second)
 				continue
 			}
@@ -1900,10 +1918,10 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 
 		// KAIROS Orchestration broadcasts task updates
 		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action":   "sync",
-			"status":   payload.Status,
+			"action": "sync",
+			"status": payload.Status,
 			"agent_id": "system", // Or something appropriate
-			"payload":  payload.Payload,
+			"payload": payload.Payload,
 		})
 	}
 
@@ -1967,7 +1985,6 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	var req struct {
 		Status  string `json:"status"`
 		AgentID string `json:"agent_id"`
-		Result  string `json:"result"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
@@ -1979,7 +1996,7 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 	case "REVIEW":
 		err = tm.ReviewTask(r.Context(), taskID, req.AgentID)
 	case "COMPLETED":
-		err = tm.CompleteTaskWithResult(r.Context(), taskID, req.AgentID, req.Result)
+		err = tm.CompleteTask(r.Context(), taskID, req.AgentID)
 	default:
 		http.Error(w, "invalid status transition", http.StatusBadRequest)
 		return
@@ -1992,6 +2009,9 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 
 	w.WriteHeader(http.StatusOK)
 }
+
+
+
 
 func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 	var req struct {
@@ -2012,19 +2032,81 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 
 	var createdTasks []*SharedTask
 	for _, st := range req.SubTasks {
-		var filteredDeps []string
-		for _, dep := range st.Dependencies {
-			if dep != req.TaskID {
-				filteredDeps = append(filteredDeps, dep)
-			}
-		}
-		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, req.TaskID, filteredDeps, st.Title, st.Description, st.Priority)
+		// Sub-tasks do not depend on the parent task. The parent task should ideally depend on them, but
+		// for now we just create the sub-tasks with their own explicitly provided dependencies.
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, st.Dependencies, st.Title, st.Description, st.Priority)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
 			return
 		}
+		// Set parent_plan_id and inherit parent's depth + 1
+		if tx, err := tm.db.Begin(r.Context()); err == nil {
+			_, _ = tx.Exec(r.Context(), `
+				UPDATE shared_tasks
+				SET parent_plan_id = $1,
+				    depth = (SELECT depth FROM shared_tasks WHERE id = $1) + 1
+				WHERE id = $2
+			`, req.TaskID, t.ID)
+			_ = tx.Commit(r.Context())
+		}
 		createdTasks = append(createdTasks, t)
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(createdTasks)
+}
+
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if s.mesh == nil {
+		return nil, status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	if err := s.mesh.AdvertiseCapabilities(ctx, *req); err != nil {
+		return nil, err
+	}
+	if meshMsgThroughput != nil {
+		meshMsgThroughput.Add(ctx, 1)
+	}
+	return &pb.PublishMessageResponse{Success: true}, nil
+}
+
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	if s.mesh == nil {
+		return status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	ch, err := s.mesh.SubscribeCapabilities(stream.Context())
+	if err != nil {
+		return err
+	}
+	for cap := range ch {
+		if err := stream.Send(&cap); err != nil {
+			return err
+		}
+		if meshMsgThroughput != nil {
+			meshMsgThroughput.Add(stream.Context(), 1)
+		}
+	}
+	return nil
+}
+
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	if s.mesh == nil {
+		return status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	ch, err := s.mesh.SubscribeMeshEvents(stream.Context(), req.GetTopic())
+	if err != nil {
+		return err
+	}
+	for payload := range ch {
+		event := &pb.MeshEvent{
+			Topic:   req.GetTopic(),
+			Payload: payload,
+		}
+		if err := stream.Send(event); err != nil {
+			return err
+		}
+		if meshMsgThroughput != nil {
+			meshMsgThroughput.Add(stream.Context(), 1)
+		}
+	}
+	return nil
 }

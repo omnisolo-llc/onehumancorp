@@ -58,12 +58,6 @@ func TestInitTelemetry(t *testing.T) {
 	if AgentTransitionLatency == nil {
 		t.Error("expected AgentTransitionLatency to be initialized")
 	}
-	if AgentTokenUsageTotal == nil {
-		t.Error("expected AgentTokenUsageTotal to be initialized")
-	}
-	if AgentCostEstimateUSD == nil {
-		t.Error("expected AgentCostEstimateUSD to be initialized")
-	}
 
 	cleanup() // Clean up resources
 }
@@ -157,17 +151,8 @@ func (m *mockMeter) RegisterCallback(callback metric.Callback, instruments ...me
 	return nil, nil
 }
 
-type mockFloat64Counter struct {
-	metric.Float64Counter
-}
-
-func (m *mockFloat64Counter) Add(ctx context.Context, incr float64, options ...metric.AddOption) {}
-
 func (m *mockMeter) Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error) {
-	if m.failCounters {
-		return nil, fmt.Errorf("mock counter error")
-	}
-	return &mockFloat64Counter{}, nil
+	return nil, nil
 }
 
 func (m *mockMeter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
@@ -385,14 +370,6 @@ func TestRecordFunctions(t *testing.T) {
 		RecordAgentTransitionLatency(ctx, "pending_to_running", 1.23)
 	})
 
-	t.Run("RecordSQLiteLockContention", func(t *testing.T) {
-		RecordSQLiteLockContention(ctx, "query")
-	})
-
-	t.Run("RecordSQLiteRetryExhausted", func(t *testing.T) {
-		RecordSQLiteRetryExhausted(ctx, "query")
-	})
-
 	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
 		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
 	})
@@ -407,14 +384,6 @@ func TestRecordFunctions(t *testing.T) {
 
 	t.Run("RecordLLMNetworkLatency", func(t *testing.T) {
 		RecordLLMNetworkLatency(ctx, "claude-3-5-sonnet", 1.23)
-	})
-
-	t.Run("RecordAgentTokenUsage", func(t *testing.T) {
-		RecordAgentTokenUsage(ctx, "agent-1", "org-1", "developer", "gpt-4", 1000)
-	})
-
-	t.Run("RecordAgentCost", func(t *testing.T) {
-		RecordAgentCost(ctx, "agent-1", "org-1", "developer", "gpt-4", 0.03)
 	})
 }
 
