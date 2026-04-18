@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -239,6 +241,13 @@ func NewRedisMeshTransport(redisURL string) (*RedisMeshTransport, error) {
 }
 
 func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastTask", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "tasks")
+	}
+
 	if err := interop.ValidateSPIFFEID(task.AgentID); err != nil && task.AgentID != "system" {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
@@ -253,6 +262,9 @@ func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) erro
 }
 
 func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeTasks", time.Since(start)) }()
+
 	ch := make(chan Task, 100)
 
 	go func() {
@@ -275,6 +287,13 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 }
 
 func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "coordination")
+	}
+
 	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
@@ -289,6 +308,9 @@ func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg Mes
 }
 
 func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeCoordination", time.Since(start)) }()
+
 	ch := make(chan MeshMessage, 100)
 
 	go func() {
@@ -311,6 +333,13 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 }
 
 func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "capabilities")
+	}
+
 	if err := interop.ValidateSPIFFEID(caps.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
@@ -325,6 +354,9 @@ func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb
 }
 
 func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeCapabilities", time.Since(start)) }()
+
 	ch := make(chan pb.AgentCapabilities, 100)
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:capabilities").Build(), func(msg rueidis.PubSubMessage) {
@@ -346,6 +378,13 @@ func (rm *RedisMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan
 }
 
 func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastMeshEvent", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "events")
+	}
+
 	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(payload)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
@@ -353,6 +392,9 @@ func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic stri
 }
 
 func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEvents", time.Since(start)) }()
+
 	ch := make(chan []byte, 100)
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:events:"+topic).Build(), func(msg rueidis.PubSubMessage) {
@@ -474,17 +516,19 @@ type MeshTransport interface {
 const numShards = 16
 
 type MemoryMeshTransport struct {
-	db              db.Provider
-	broadcast       []chan Task
-	persist         []chan Task
-	mu              []sync.RWMutex
-	subs            []map[chan Task]struct{}
-	coordBroadcast  []chan MeshMessage
-	coordSubs       []map[chan MeshMessage]struct{}
-	coordMu         []sync.RWMutex
-	capsBroadcast   []chan pb.AgentCapabilities
-	capsSubs        []map[chan pb.AgentCapabilities]struct{}
-	capsMu          []sync.RWMutex
+	db             db.Provider
+	broadcast      []chan Task
+	persist        []chan Task
+	mu             []sync.RWMutex
+	subs           []map[chan Task]struct{}
+	coordBroadcast []chan MeshMessage
+	coordSubs      []map[chan MeshMessage]struct{}
+	coordMu        []sync.RWMutex
+
+	capsBroadcast []chan pb.AgentCapabilities
+	capsSubs      []map[chan pb.AgentCapabilities]struct{}
+	capsMu        []sync.RWMutex
+
 	eventsBroadcast map[string][]chan []byte
 	eventsSubs      map[string][]map[chan []byte]struct{}
 	eventsMu        map[string][]sync.RWMutex
@@ -509,6 +553,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		eventsMu:        make(map[string][]sync.RWMutex),
 	}
 
+	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
+	// We use sharding by taskID/agentID to reduce lock contention and maximize parallel throughput.
 	for i := 0; i < numShards; i++ {
 		lm.broadcast[i] = make(chan Task, 10000)
 		lm.persist[i] = make(chan Task, 10000)
@@ -518,6 +564,7 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
 		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
+		// Spawn multiple worker threads per shard
 		for j := 0; j < 16; j++ {
 			go lm.run(i)
 			go lm.persistWorker(i)
@@ -554,11 +601,20 @@ func (lm *MemoryMeshTransport) persistWorker(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastTask(ctx context.Context, task Task) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastTask", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "tasks")
+	}
+
 	if err := interop.ValidateSPIFFEID(task.AgentID); err != nil && task.AgentID != "system" {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
 	shardIdx := lm.getShard(task.TaskID)
 
+	// Offload persistence to worker threads within the specific shard
+	// Use backoff retry for persistence channel
 	err := meshWithRetry(ctx, 3, func() error {
 		select {
 		case lm.persist[shardIdx] <- task:
@@ -571,6 +627,8 @@ func (lm *MemoryMeshTransport) BroadcastTask(ctx context.Context, task Task) err
 		slog.Warn("MemoryMeshTransport persist channel full, dropping persistence for task after retries", "taskID", task.TaskID)
 	}
 
+	// Broadcast locally to the specific shard
+	// Use backoff retry for broadcast channel
 	_ = meshWithRetry(ctx, 3, func() error {
 		select {
 		case lm.broadcast[shardIdx] <- task:
@@ -584,6 +642,11 @@ func (lm *MemoryMeshTransport) BroadcastTask(ctx context.Context, task Task) err
 }
 
 func (lm *MemoryMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeTasks", time.Since(start)) }()
+
+	// A subscriber needs to receive tasks from all shards.
+	// To keep it simple but performant, we add the subscriber to all shards.
 	ch := make(chan Task, 100)
 
 	for i := 0; i < numShards; i++ {
@@ -592,6 +655,7 @@ func (lm *MemoryMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task,
 		lm.mu[i].Unlock()
 	}
 
+	// Handle context cancellation
 	go func() {
 		<-ctx.Done()
 		for i := 0; i < numShards; i++ {
@@ -619,11 +683,19 @@ func (lm *MemoryMeshTransport) run(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "coordination")
+	}
+
 	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
 	shardIdx := lm.getShard(msg.AgentID)
 
+	// Use backoff retry for coord broadcast channel
 	err := meshWithRetry(ctx, 3, func() error {
 		select {
 		case lm.coordBroadcast[shardIdx] <- msg:
@@ -640,6 +712,9 @@ func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg Me
 }
 
 func (lm *MemoryMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeCoordination", time.Since(start)) }()
+
 	ch := make(chan MeshMessage, 100)
 
 	for i := 0; i < numShards; i++ {
@@ -675,6 +750,13 @@ func (lm *MemoryMeshTransport) runCoord(shardIdx int) {
 }
 
 func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "capabilities")
+	}
+
 	if err := interop.ValidateSPIFFEID(caps.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
@@ -696,6 +778,9 @@ func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps p
 }
 
 func (lm *MemoryMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeCapabilities", time.Since(start)) }()
+
 	ch := make(chan pb.AgentCapabilities, 100)
 
 	for i := 0; i < numShards; i++ {
@@ -746,8 +831,15 @@ func (lm *MemoryMeshTransport) initTopic(topic string) {
 }
 
 func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastMeshEvent", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "events")
+	}
+
 	lm.initTopic(topic)
-	shardIdx := lm.getShard(string(payload)) // hash payload for random shard since event ID isn't directly available
+	shardIdx := lm.getShard(string(payload))
 
 	lm.eventsGlobalMu.RLock()
 	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
@@ -769,6 +861,9 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 }
 
 func (lm *MemoryMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEvents", time.Since(start)) }()
+
 	lm.initTopic(topic)
 	ch := make(chan []byte, 100)
 
@@ -822,375 +917,12 @@ func (lm *MemoryMeshTransport) runEvents(topic string, shardIdx int) {
 	}
 }
 
-type LocalTeammateMesh struct {
-	db             db.Provider
-	broadcast      []chan Task
-	persist        []chan Task
-	mu             []sync.RWMutex
-	subs           []map[chan Task]struct{}
-	coordBroadcast []chan MeshMessage
-	coordSubs      []map[chan MeshMessage]struct{}
-	coordMu        []sync.RWMutex
-
-	capsBroadcast []chan pb.AgentCapabilities
-	capsSubs      []map[chan pb.AgentCapabilities]struct{}
-	capsMu        []sync.RWMutex
-
-	eventsBroadcast map[string][]chan []byte
-	eventsSubs      map[string][]map[chan []byte]struct{}
-	eventsMu        map[string][]sync.RWMutex
-	eventsGlobalMu  sync.RWMutex
-}
-
-func NewLocalTeammateMesh(provider db.Provider) *LocalTeammateMesh {
-	lm := &LocalTeammateMesh{
-		db:              provider,
-		broadcast:       make([]chan Task, numShards),
-		persist:         make([]chan Task, numShards),
-		mu:              make([]sync.RWMutex, numShards),
-		subs:            make([]map[chan Task]struct{}, numShards),
-		coordBroadcast:  make([]chan MeshMessage, numShards),
-		coordSubs:       make([]map[chan MeshMessage]struct{}, numShards),
-		coordMu:         make([]sync.RWMutex, numShards),
-		capsBroadcast:   make([]chan pb.AgentCapabilities, numShards),
-		capsSubs:        make([]map[chan pb.AgentCapabilities]struct{}, numShards),
-		capsMu:          make([]sync.RWMutex, numShards),
-		eventsBroadcast: make(map[string][]chan []byte),
-		eventsSubs:      make(map[string][]map[chan []byte]struct{}),
-		eventsMu:        make(map[string][]sync.RWMutex),
-	}
-
-	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
-	// We use sharding by taskID/agentID to reduce lock contention and maximize parallel throughput.
-	for i := 0; i < numShards; i++ {
-		lm.broadcast[i] = make(chan Task, 10000)
-		lm.persist[i] = make(chan Task, 10000)
-		lm.subs[i] = make(map[chan Task]struct{})
-		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
-		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
-		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
-		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
-
-		// Spawn multiple worker threads per shard
-		for j := 0; j < 16; j++ {
-			go lm.run(i)
-			go lm.persistWorker(i)
-		}
-		go lm.runCoord(i)
-		go lm.runCaps(i)
-	}
-	return lm
-}
-
-func (lm *LocalTeammateMesh) getShard(key string) int {
-	var hash uint32
-	for i := 0; i < len(key); i++ {
-		hash = hash*31 + uint32(key[i])
-	}
-	return int(hash % numShards)
-}
-
-func (lm *LocalTeammateMesh) persistWorker(shardIdx int) {
-	query := `
-		INSERT INTO shared_tasks (id, title, status, agent_id, organization_id)
-		VALUES ($1, $2, $3, $4, 'system')
-		ON CONFLICT(id) DO UPDATE SET
-			status = excluded.status,
-			agent_id = excluded.agent_id,
-			updated_at = CURRENT_TIMESTAMP
-	`
-	for task := range lm.persist[shardIdx] {
-		_, err := lm.db.Exec(context.Background(), query, task.TaskID, task.Action, task.Status, task.AgentID)
-		if err != nil {
-			slog.Error("LocalTeammateMesh persist error", "err", err, "taskID", task.TaskID)
-		}
-	}
-}
-
-func (lm *LocalTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
-	if err := interop.ValidateSPIFFEID(task.AgentID); err != nil && task.AgentID != "system" {
-		return fmt.Errorf("invalid SPIFFE ID: %w", err)
-	}
-	shardIdx := lm.getShard(task.TaskID)
-
-	// Offload persistence to worker threads within the specific shard
-	// Use backoff retry for persistence channel
-	err := meshWithRetry(ctx, 3, func() error {
-		select {
-		case lm.persist[shardIdx] <- task:
-			return nil
-		default:
-			return fmt.Errorf("LocalTeammateMesh persist channel full")
-		}
-	})
-	if err != nil {
-		slog.Warn("LocalTeammateMesh persist channel full, dropping persistence for task after retries", "taskID", task.TaskID)
-	}
-
-	// Broadcast locally to the specific shard
-	// Use backoff retry for broadcast channel
-	_ = meshWithRetry(ctx, 3, func() error {
-		select {
-		case lm.broadcast[shardIdx] <- task:
-			return nil
-		default:
-			return fmt.Errorf("LocalTeammateMesh broadcast channel full")
-		}
-	})
-
-	return nil
-}
-
-func (lm *LocalTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
-	// A subscriber needs to receive tasks from all shards.
-	// To keep it simple but performant, we add the subscriber to all shards.
-	ch := make(chan Task, 100)
-
-	for i := 0; i < numShards; i++ {
-		lm.mu[i].Lock()
-		lm.subs[i][ch] = struct{}{}
-		lm.mu[i].Unlock()
-	}
-
-	// Handle context cancellation
-	go func() {
-		<-ctx.Done()
-		for i := 0; i < numShards; i++ {
-			lm.mu[i].Lock()
-			delete(lm.subs[i], ch)
-			lm.mu[i].Unlock()
-		}
-		close(ch)
-	}()
-
-	return ch, nil
-}
-
-func (lm *LocalTeammateMesh) run(shardIdx int) {
-	for msg := range lm.broadcast[shardIdx] {
-		lm.mu[shardIdx].RLock()
-		for ch := range lm.subs[shardIdx] {
-			select {
-			case ch <- msg:
-			default:
-			}
-		}
-		lm.mu[shardIdx].RUnlock()
-	}
-}
-
-func (lm *LocalTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
-	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
-		return fmt.Errorf("invalid SPIFFE ID: %w", err)
-	}
-	shardIdx := lm.getShard(msg.AgentID)
-
-	// Use backoff retry for coord broadcast channel
-	err := meshWithRetry(ctx, 3, func() error {
-		select {
-		case lm.coordBroadcast[shardIdx] <- msg:
-			return nil
-		default:
-			return fmt.Errorf("LocalTeammateMesh coord broadcast channel full")
-		}
-	})
-
-	if err != nil {
-		slog.Warn("LocalTeammateMesh coord broadcast channel full, dropping message after retries")
-	}
-	return nil
-}
-
-func (lm *LocalTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
-	ch := make(chan MeshMessage, 100)
-
-	for i := 0; i < numShards; i++ {
-		lm.coordMu[i].Lock()
-		lm.coordSubs[i][ch] = struct{}{}
-		lm.coordMu[i].Unlock()
-	}
-
-	go func() {
-		<-ctx.Done()
-		for i := 0; i < numShards; i++ {
-			lm.coordMu[i].Lock()
-			delete(lm.coordSubs[i], ch)
-			lm.coordMu[i].Unlock()
-		}
-		close(ch)
-	}()
-
-	return ch, nil
-}
-
-func (lm *LocalTeammateMesh) runCoord(shardIdx int) {
-	for msg := range lm.coordBroadcast[shardIdx] {
-		lm.coordMu[shardIdx].RLock()
-		for ch := range lm.coordSubs[shardIdx] {
-			select {
-			case ch <- msg:
-			default:
-			}
-		}
-		lm.coordMu[shardIdx].RUnlock()
-	}
-}
-
-func (lm *LocalTeammateMesh) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
-	if err := interop.ValidateSPIFFEID(caps.GetAgentId()); err != nil {
-		return fmt.Errorf("invalid SPIFFE ID: %w", err)
-	}
-	shardIdx := lm.getShard(caps.GetAgentId())
-
-	err := meshWithRetry(ctx, 3, func() error {
-		select {
-		case lm.capsBroadcast[shardIdx] <- caps:
-			return nil
-		default:
-			return fmt.Errorf("LocalTeammateMesh caps broadcast channel full")
-		}
-	})
-
-	if err != nil {
-		slog.Warn("LocalTeammateMesh caps broadcast channel full, dropping message after retries")
-	}
-	return nil
-}
-
-func (lm *LocalTeammateMesh) SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error) {
-	ch := make(chan pb.AgentCapabilities, 100)
-
-	for i := 0; i < numShards; i++ {
-		lm.capsMu[i].Lock()
-		lm.capsSubs[i][ch] = struct{}{}
-		lm.capsMu[i].Unlock()
-	}
-
-	go func() {
-		<-ctx.Done()
-		for i := 0; i < numShards; i++ {
-			lm.capsMu[i].Lock()
-			delete(lm.capsSubs[i], ch)
-			lm.capsMu[i].Unlock()
-		}
-		close(ch)
-	}()
-
-	return ch, nil
-}
-
-func (lm *LocalTeammateMesh) runCaps(shardIdx int) {
-	for msg := range lm.capsBroadcast[shardIdx] {
-		lm.capsMu[shardIdx].RLock()
-		for ch := range lm.capsSubs[shardIdx] {
-			select {
-			case ch <- msg:
-			default:
-			}
-		}
-		lm.capsMu[shardIdx].RUnlock()
-	}
-}
-
-func (lm *LocalTeammateMesh) initTopic(topic string) {
-	lm.eventsGlobalMu.Lock()
-	defer lm.eventsGlobalMu.Unlock()
-	if _, ok := lm.eventsBroadcast[topic]; !ok {
-		lm.eventsBroadcast[topic] = make([]chan []byte, numShards)
-		lm.eventsSubs[topic] = make([]map[chan []byte]struct{}, numShards)
-		lm.eventsMu[topic] = make([]sync.RWMutex, numShards)
-		for i := 0; i < numShards; i++ {
-			lm.eventsBroadcast[topic][i] = make(chan []byte, 10000)
-			lm.eventsSubs[topic][i] = make(map[chan []byte]struct{})
-			go lm.runEvents(topic, i)
-		}
-	}
-}
-
-func (lm *LocalTeammateMesh) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
-	lm.initTopic(topic)
-	shardIdx := lm.getShard(string(payload))
-
-	lm.eventsGlobalMu.RLock()
-	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
-	lm.eventsGlobalMu.RUnlock()
-
-	err := meshWithRetry(ctx, 3, func() error {
-		select {
-		case broadcastChan <- payload:
-			return nil
-		default:
-			return fmt.Errorf("LocalTeammateMesh events broadcast channel full")
-		}
-	})
-
-	if err != nil {
-		slog.Warn("LocalTeammateMesh events broadcast channel full, dropping message after retries")
-	}
-	return nil
-}
-
-func (lm *LocalTeammateMesh) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
-	lm.initTopic(topic)
-	ch := make(chan []byte, 100)
-
-	lm.eventsGlobalMu.RLock()
-	muArray := lm.eventsMu[topic]
-	subsArray := lm.eventsSubs[topic]
-	for i := 0; i < numShards; i++ {
-		muArray[i].Lock()
-		subsArray[i][ch] = struct{}{}
-		muArray[i].Unlock()
-	}
-	lm.eventsGlobalMu.RUnlock()
-
-	go func() {
-		<-ctx.Done()
-		lm.eventsGlobalMu.RLock()
-		if muArray, ok := lm.eventsMu[topic]; ok {
-			subsArray := lm.eventsSubs[topic]
-			for i := 0; i < numShards; i++ {
-				muArray[i].Lock()
-				delete(subsArray[i], ch)
-				muArray[i].Unlock()
-			}
-		}
-		lm.eventsGlobalMu.RUnlock()
-		close(ch)
-	}()
-
-	return ch, nil
-}
-
-func (lm *LocalTeammateMesh) runEvents(topic string, shardIdx int) {
-	lm.eventsGlobalMu.RLock()
-	broadcastChan := lm.eventsBroadcast[topic][shardIdx]
-	lm.eventsGlobalMu.RUnlock()
-
-	for msg := range broadcastChan {
-		lm.eventsGlobalMu.RLock()
-		if muArray, ok := lm.eventsMu[topic]; ok {
-			subsArray := lm.eventsSubs[topic]
-			muArray[shardIdx].RLock()
-			for ch := range subsArray[shardIdx] {
-				select {
-				case ch <- msg:
-				default:
-				}
-			}
-			muArray[shardIdx].RUnlock()
-		}
-		lm.eventsGlobalMu.RUnlock()
-	}
-}
-
 // TeammateMeshEvent is the payload structure for Teammate Mesh coordination
 type TeammateMeshEvent struct {
 	AgentID string `json:"agent_id"`
 	Action  string `json:"action"`
 	Status  string `json:"status"`
 }
-
 
 func (rm *RedisMeshTransport) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
 	data, err := json.Marshal(payload)
@@ -1202,7 +934,6 @@ func (rm *RedisMeshTransport) BroadcastEvent(ctx context.Context, channel string
 		return rm.client.Do(ctx, cmd).Error()
 	})
 }
-
 
 func (rm *RedisMeshTransport) SubscribeChannel(ctx context.Context, channel string) (<-chan map[string]interface{}, error) {
 	ch := make(chan map[string]interface{}, 100)
@@ -1225,35 +956,33 @@ func (rm *RedisMeshTransport) SubscribeChannel(ctx context.Context, channel stri
 	return ch, nil
 }
 
-
-func (lm *LocalTeammateMesh) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
-    data, err := json.Marshal(payload)
-    if err != nil {
-        return err
-    }
-    return lm.BroadcastMeshEvent(ctx, channel, data)
+func (lm *MemoryMeshTransport) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return lm.BroadcastMeshEvent(ctx, channel, data)
 }
 
+func (lm *MemoryMeshTransport) SubscribeChannel(ctx context.Context, channel string) (<-chan map[string]interface{}, error) {
+	bytesCh, err := lm.SubscribeMeshEvents(ctx, channel)
+	if err != nil {
+		return nil, err
+	}
 
-func (lm *LocalTeammateMesh) SubscribeChannel(ctx context.Context, channel string) (<-chan map[string]interface{}, error) {
-    bytesCh, err := lm.SubscribeMeshEvents(ctx, channel)
-    if err != nil {
-        return nil, err
-    }
+	ch := make(chan map[string]interface{}, 100)
+	go func() {
+		for data := range bytesCh {
+			var payload map[string]interface{}
+			if err := json.Unmarshal(data, &payload); err == nil {
+				select {
+				case ch <- payload:
+				default:
+				}
+			}
+		}
+		close(ch)
+	}()
 
-    ch := make(chan map[string]interface{}, 100)
-    go func() {
-        for data := range bytesCh {
-            var payload map[string]interface{}
-            if err := json.Unmarshal(data, &payload); err == nil {
-                select {
-                case ch <- payload:
-                default:
-                }
-            }
-        }
-        close(ch)
-    }()
-
-    return ch, nil
+	return ch, nil
 }

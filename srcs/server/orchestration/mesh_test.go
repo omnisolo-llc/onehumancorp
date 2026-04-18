@@ -116,7 +116,7 @@ func TestTeammateMesh_MultiTenantIsolation(t *testing.T) {
 	mesh.mu.Unlock()
 }
 
-func TestLocalTeammateMesh(t *testing.T) {
+func TestMemoryMeshTransport(t *testing.T) {
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
 	// Use NewTestProvider or db.New to init db
 	ctx := context.Background()
@@ -143,7 +143,7 @@ func TestLocalTeammateMesh(t *testing.T) {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	mesh := NewLocalTeammateMesh(provider)
+	mesh := NewMemoryMeshTransport(provider)
 
 	sub, err := mesh.SubscribeTasks(ctx)
 	if err != nil {
