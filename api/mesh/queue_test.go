@@ -18,8 +18,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 	}
 
 	_, err = conn.Exec(`
-		ATTACH DATABASE ':memory:' AS ohc_tasks;
-		CREATE TABLE ohc_tasks.mission_queue (
+		CREATE TABLE mission_queue (
 			mission_id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'QUEUED',
@@ -29,7 +28,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
-		CREATE TABLE ohc_tasks.sub_agent_queue (
+		CREATE TABLE sub_agent_queue (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			parent_task_id TEXT NOT NULL,
 			payload TEXT,
@@ -106,7 +105,7 @@ func TestQueueOrchestrator_Flow(t *testing.T) {
 
 	// 5. Verify completed
 	var status string
-	err = conn.QueryRow("SELECT status FROM ohc_tasks.sub_agent_queue WHERE id = $1", taskID).Scan(&status)
+	err = conn.QueryRow("SELECT status FROM sub_agent_queue WHERE id = $1", taskID).Scan(&status)
 	assert.NoError(t, err)
 	assert.Equal(t, "COMPLETED", status)
 }

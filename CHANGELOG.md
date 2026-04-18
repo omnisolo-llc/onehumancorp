@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Local Embedding Caching for Cost Optimization.
+
+### Privacy/Offline Improvements
+- Enhance standalone performance via Local Embedding Caching.
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 ### Cloud Scaling Improvements
 - Architect Cross-Mode Database Schema Syncer via MCP.
