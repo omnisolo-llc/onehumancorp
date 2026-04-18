@@ -1,11 +1,16 @@
-1. **Fix Overflow Error in AgentHireWizardScreen:**
-   - Investigate the overflow error in the `Stepper` component in `AgentHireWizardScreen`.
-   - Wrap the `Stepper` inside an `Expanded` widget, which needs a parent `Column` or similar, or just remove horizontal stepper overflow by using an `Expanded` in the `Row` where the `Stepper` controls might be overflowing, or switch `StepperType.horizontal` to `StepperType.vertical` if horizontal is too wide for some screens, though horizontal is required maybe? Let's check `Stepper` controls. The overflow is reported in `Stepper`, maybe horizontal type on a small screen? "A RenderFlex overflowed by 358 pixels on the right. The overflowing RenderFlex has an orientation of Axis.horizontal. The specific RenderFlex in question is: RenderFlex#d34e7 relayoutBoundary=up6 OVERFLOWING: creator: Row <- SizedBox <- Padding <- DefaultTextStyle <- AnimatedDefaultTextStyle <- ... <- Column <- Stepper"
-   - Actually, a `Stepper` of type `horizontal` with 7 steps will definitely overflow on most screens since it creates a `Row` with all 7 step titles. Flutter's `Stepper` is not scrollable horizontally for its headers. A common fix is to either use `StepperType.vertical` or wrap it, or just use a custom stepper. Since the prompt does not strictly require horizontal Stepper for Agent Hire, changing it to `StepperType.vertical` is the most reliable fix for overflow. Wait, checking `business_setup_wizard_screen.dart`, what does it use?
-2. **Add Controllers to TextField in AgentHireWizardScreen:**
-   - In `srcs/app/lib/screens/agent_hire_wizard_screen.dart`, add `controller: _endpointUrlController` to the Custom Endpoint URL `TextField` and `controller: _tokenLimitController` to the Token Limit `TextField` under Advanced Configuration (in Step 6 — Resource Limits).
-   - Update `dispose` method to dispose of `_endpointUrlController` and `_tokenLimitController`.
-3. **Add AgentHireWizardScreen E2E Test:**
-   - Create `srcs/app/test/screens/agent_hire_wizard_screen_test.dart` to test the wizard steps and that all state changes correctly (similar to E2E test requirement).
-4. **Run pre-commit instructions:**
-   - Ensure proper testing, verification, review, and reflection are done.
+1.  **Extract the Target Tarball**:
+    - Ensure `claude-code.tgz` is extracted to `/tmp/claude-code`.
+2.  **Locate the Agent Harness**:
+    - The target repository implements its Harness in the `SandboxManager` wrapper which configures Bubblewrap (`bwrap`) on Linux, applying seccomp filters and network/filesystem namespaces.
+3.  **Analyze the Code**:
+    - Search specifically in `/tmp/claude-code/CC-Source/node_modules/@anthropic-ai/sandbox-runtime/dist/sandbox/linux-sandbox-utils.js` for the `wrapCommandWithSandboxLinux` function. This reveals how Bubblewrap (`bwrap`) is configured using `--unshare-net`, `--seccomp`, `--ro-bind`, and `--unshare-pid`.
+    - Search for UI/Integration points like `shouldUseSandbox` and `BashTool` wrappers that conditionally apply this harness.
+4.  **Synthesize Findings into a Markdown Research Report**:
+    - Compile a Markdown Research Report to `docs/research/[security]_agent_harness_audit.md`.
+    - The report should be formatted exactly with "Premium" styling (glassmorphism tokens `backdrop-filter: blur(20px)`, `background: rgba(255, 255, 255, 0.03)`, `font-family: 'Outfit', 'Inter'`) inside a `<div markdown="1" style="...">` tag.
+    - Include Mermaid charts to depict the architecture gap (e.g., standard Node.js vs. Bwrap isolated harness).
+    - It must include the following sections exactly: `Title`, `Problem Statement`, `Research Report`, `Design Doc`, `Implementation Prompt`, `Priority` (P1), and `Estimated Scope` (Large).
+5.  **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done**:
+    - Run the pre-commit script to verify our changes.
+6.  **Create a PR and Submit**:
+    - Trigger task completion with a YAML block in the final message to create the `issue`.
