@@ -1,4 +1,0 @@
-timestamp: "2026-04-18T02:28:44Z"
-type: "research_finding"
-domain: "integrations"
-finding: "Identified a gap in the hybrid architecture for an out-of-the-box MCP tool that securely syncs state between the local SQLite footprint and the remote Postgres footprint."
