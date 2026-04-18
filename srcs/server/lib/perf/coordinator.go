@@ -34,6 +34,7 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 	var wg sync.WaitGroup
 	var idx atomic.Int64
 	var firstErr atomic.Value
+	firstErr.Store((*error)(nil))
 
 	// Dynamically calculate batch size to ensure all workers get tasks
 	batchSize := int64(len(tasks) / (workerCount * 4))
@@ -51,7 +52,7 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 			defer wg.Done()
 			for {
 				if err := ctx.Err(); err != nil {
-					firstErr.CompareAndSwap(nil, err)
+					firstErr.CompareAndSwap((*error)(nil), &err)
 					return
 				}
 
@@ -68,7 +69,7 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 
 				for curr := startIdx; curr < endIdx; curr++ {
 					if err := tasks[curr](); err != nil {
-						firstErr.CompareAndSwap(nil, err)
+					firstErr.CompareAndSwap((*error)(nil), &err)
 					}
 				}
 			}
@@ -77,8 +78,8 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 
 	wg.Wait()
 
-	if err := firstErr.Load(); err != nil {
-		return err.(error)
+	if errPtr := firstErr.Load().(*error); errPtr != nil && *errPtr != nil {
+		return *errPtr
 	}
 	return nil
 }
