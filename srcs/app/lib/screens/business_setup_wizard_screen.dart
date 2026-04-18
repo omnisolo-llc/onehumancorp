@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui';
-import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
@@ -102,12 +101,11 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
-    final user = ref.read(authStateProvider).valueOrNull;
     final api = ref.read(apiServiceProvider);
 
     state = state.copyWith(isLoading: true, errorMessage: null);
 
-    if (user != null && api != null) {
+    if (api != null) {
       try {
         await api.bootstrapBusiness(
           prompt: state.aiPrompt,

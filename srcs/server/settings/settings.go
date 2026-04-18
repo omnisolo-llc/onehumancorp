@@ -3,20 +3,20 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"github.com/onehumancorp/mono/srcs/server/utils"
+	"os"
 	"path/filepath"
 	"sync"
 )
 
 // AiProvider represents an AI service configuration.
 type AiProvider struct {
-	Name    string `json:"name"`
-	APIKey  string `json:"api_key,omitempty"`
-	BaseURL string `json:"base_url,omitempty"`
-	Model   string `json:"model"`
+	Name    string   `json:"name"`
+	APIKey  string   `json:"api_key,omitempty"`
+	BaseURL string   `json:"base_url,omitempty"`
+	Model   string   `json:"model"`
 	Models  []string `json:"models,omitempty"`
-	Enabled bool   `json:"enabled"`
+	Enabled bool     `json:"enabled"`
 }
 
 // AppSettings represents the global configuration for the OHC platform.

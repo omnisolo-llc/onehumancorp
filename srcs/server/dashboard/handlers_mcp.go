@@ -434,8 +434,8 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}
 		plan := s.planBusinessArchitecture(p)
 		return map[string]any{
-			"architecture":      plan,
-			"HybridEscalation":  true,
+			"architecture":     plan,
+			"HybridEscalation": true,
 		}, nil
 	case "workforce-hiring-mcp":
 		var p wizardBootstrapBusinessRequest
@@ -445,9 +445,9 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		plan := s.planBusinessArchitecture(p)
 		hiredAgents := s.bootstrapBusinessAgents(plan, p)
 		return map[string]any{
-			"hired_agents":      hiredAgents,
-			"architecture":      plan,
-			"HybridEscalation":  true,
+			"hired_agents":     hiredAgents,
+			"architecture":     plan,
+			"HybridEscalation": true,
 		}, nil
 	case "formation-docs-mcp":
 		var p wizardBootstrapBusinessRequest
@@ -839,10 +839,10 @@ func (s *Server) handleMcpRagSync(w http.ResponseWriter, r *http.Request) {
 			redactedContext := telemetry.RedactPII(rec.Context)
 
 			memory := orchestration.EpisodicMemory{
-				MemoryID:        rec.ID,
-				Context:         redactedContext,
-				SourcePlugin:    "hybrid-sync",
-				CreatedAt:       time.Now().UTC(),
+				MemoryID:     rec.ID,
+				Context:      redactedContext,
+				SourcePlugin: "hybrid-sync",
+				CreatedAt:    time.Now().UTC(),
 			}
 			if err := s.hub.SIPDB().StoreEpisodicMemory(ctx, memory); err == nil {
 				syncedCount++

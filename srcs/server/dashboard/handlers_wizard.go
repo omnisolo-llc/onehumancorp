@@ -37,19 +37,19 @@ type wizardConfigureRequest struct {
 	RedisURL      string                `json:"redis_url,omitempty"`
 	CentrifugeURL string                `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string                `json:"minimax_api_key,omitempty"`
-	Extras        map[string]string `json:"extras,omitempty"`
+	Extras        map[string]string     `json:"extras,omitempty"`
 	AiProviders   []settings.AiProvider `json:"ai_providers,omitempty"`
 }
 
 type wizardBootstrapBusinessRequest struct {
-	Prompt     string   `json:"prompt,omitempty"`
+	Prompt      string   `json:"prompt,omitempty"`
 	CompanyName string   `json:"company_name,omitempty"`
-	Industry   string   `json:"industry,omitempty"`
+	Industry    string   `json:"industry,omitempty"`
 	CompanySize string   `json:"company_size,omitempty"`
-	Goals      []string `json:"goals,omitempty"`
-	Deployment string   `json:"deployment_preference,omitempty"`
-	AdminName  string   `json:"admin_name,omitempty"`
-	AdminEmail string   `json:"admin_email,omitempty"`
+	Goals       []string `json:"goals,omitempty"`
+	Deployment  string   `json:"deployment_preference,omitempty"`
+	AdminName   string   `json:"admin_name,omitempty"`
+	AdminEmail  string   `json:"admin_email,omitempty"`
 }
 
 type businessArchitecturePlan struct {
@@ -79,12 +79,12 @@ type formationDocument struct {
 }
 
 type wizardBootstrapBusinessResponse struct {
-	Status             string                `json:"status"`
-	Summary            string                `json:"summary"`
-	MCPServers         []string              `json:"mcp_servers"`
+	Status             string                   `json:"status"`
+	Summary            string                   `json:"summary"`
+	MCPServers         []string                 `json:"mcp_servers"`
 	Architecture       businessArchitecturePlan `json:"architecture"`
-	HiredAgents        []orchestration.Agent `json:"hired_agents"`
-	FormationDocuments []formationDocument   `json:"formation_documents"`
+	HiredAgents        []orchestration.Agent    `json:"hired_agents"`
+	FormationDocuments []formationDocument      `json:"formation_documents"`
 }
 
 var businessAutomationMCPServers = []string{

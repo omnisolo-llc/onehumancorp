@@ -45,6 +45,8 @@ import 'package:ohc_app/models/settings.dart';
 
 class MockHttpClient extends Mock implements http.Client {}
 
+class MockApiService extends Mock implements ApiService {}
+
 class FakeUri extends Fake implements Uri {}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
@@ -136,6 +138,7 @@ class _FakeLocalManagerService extends LocalManagerService {
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeUri());
+    registerFallbackValue(<String>[]);
   });
 
   // ── LoginScreen ──────────────────────────────────────────────────────────
@@ -946,24 +949,20 @@ void main() {
 
   group('BusinessSetupWizardScreen – AI bootstrap flow', () {
     testWidgets('launches backend business bootstrap request', (tester) async {
-      final mockClient = MockHttpClient();
+      final mockApiService = MockApiService();
       when(
-        () => mockClient.post(
-          any(),
-          headers: any(named: 'headers'),
-          body: any(named: 'body'),
+        () => mockApiService.bootstrapBusiness(
+          prompt: any(named: 'prompt'),
+          companyName: any(named: 'companyName'),
+          industry: any(named: 'industry'),
+          companySize: any(named: 'companySize'),
+          goals: any(named: 'goals'),
+          deploymentPreference: any(named: 'deploymentPreference'),
+          adminName: any(named: 'adminName'),
+          adminEmail: any(named: 'adminEmail'),
         ),
       ).thenAnswer(
-        (_) async => http.Response(
-          jsonEncode({'status': 'created', 'summary': 'Created business'}),
-          200,
-        ),
-      );
-
-      final api = ApiService(
-        baseUrl: 'http://localhost',
-        token: 'tok-test',
-        client: mockClient,
+        (_) async => {'status': 'created', 'summary': 'Created business'},
       );
       final router = GoRouter(
         routes: [
@@ -982,7 +981,7 @@ void main() {
         ProviderScope(
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
-            apiServiceProvider.overrideWithValue(api),
+            apiServiceProvider.overrideWithValue(mockApiService),
           ],
           child: MaterialApp.router(routerConfig: router),
         ),
@@ -1008,16 +1007,18 @@ void main() {
       await tester.tap(find.text('Launch My AI Team →'));
       await tester.pumpAndSettle();
 
-      final captured = verify(
-        () => mockClient.post(
-          any(),
-          headers: any(named: 'headers'),
-          body: captureAny(named: 'body'),
+      verify(
+        () => mockApiService.bootstrapBusiness(
+          prompt: 'Help me create a real estate staging company',
+          companyName: 'Luxe Stage',
+          industry: 'Real Estate',
+          companySize: 'S',
+          goals: ['Support'],
+          deploymentPreference: 'Cloud',
+          adminName: 'Alex Founder',
+          adminEmail: 'alex@example.com',
         ),
-      ).captured.last as String;
-      expect(captured, contains('"prompt":"Help me create a real estate staging company"'));
-      expect(captured, contains('"company_name":"Luxe Stage"'));
-      expect(captured, contains('"industry":"Real Estate"'));
+      ).called(1);
       expect(find.text('Dashboard'), findsOneWidget);
     });
   });

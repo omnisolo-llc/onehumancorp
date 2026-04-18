@@ -27,8 +27,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
