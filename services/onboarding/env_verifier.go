@@ -12,7 +12,6 @@ type EnvConfig struct {
 	Headless         bool
 	TelemetryEnabled bool
 	ApiEndpoint      string
-	DatabaseURL      string
 }
 
 // VerifyEnvironment checks the provided environment variables for Day One setup validity.
@@ -21,14 +20,7 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 
 	mode, ok := envVars["OHC_SOURCE_MODE"]
 	if !ok || mode == "" {
-		if _, isK8s := envVars["KUBERNETES_SERVICE_HOST"]; isK8s {
-			mode = "cloud"
-			envVars["OHC_MULTITENANT"] = "true"
-		} else if endpoint, hasEndpoint := envVars["OHC_API_ENDPOINT"]; hasEndpoint && endpoint != "" {
-			mode = "thin_client"
-		} else {
-			mode = "standalone"
-		}
+		return nil, errors.New("OHC_SOURCE_MODE is required (e.g. standalone, cloud, headless, thin_client)")
 	}
 	config.Mode = strings.ToLower(mode)
 
@@ -39,29 +31,13 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 	if hl, ok := envVars["OHC_HEADLESS"]; ok && strings.ToLower(hl) == "true" {
 		config.Headless = true
 	}
+
 	if config.Mode == "cloud" && !config.MultiTenant {
 		return nil, errors.New("cloud mode requires OHC_MULTITENANT to be true")
 	}
 
-	if config.Mode == "cloud" {
-		dbUrl, ok := envVars["DATABASE_URL"]
-		if !ok || dbUrl == "" {
-			return nil, errors.New("cloud mode requires DATABASE_URL")
-		}
-		config.DatabaseURL = dbUrl
-	}
-
 	if config.Mode == "standalone" && config.MultiTenant {
 		return nil, errors.New("standalone mode cannot be multitenant")
-	}
-
-	if config.Mode == "standalone" {
-		dbUrl, ok := envVars["DATABASE_URL"]
-		if !ok || dbUrl == "" {
-			config.DatabaseURL = "sqlite://local.db"
-		} else {
-			config.DatabaseURL = dbUrl
-		}
 	}
 
 	if config.Mode == "thin_client" {
