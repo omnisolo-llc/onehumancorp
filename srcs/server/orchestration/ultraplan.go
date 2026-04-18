@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/google/uuid"
 	"errors"
 	"fmt"
 	"io"
@@ -127,7 +128,7 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 	var plan UltraPlan
 	var query string
 	if m.db.IsSQLite() {
-		plan.ID = generateID()
+		plan.ID = uuid.New().String()
 		query = `
 			INSERT INTO swarm_ultra_plans (id, mission_id, state_machine, status, created_at, updated_at)
 			VALUES ($1, $2, $3, 'DELIBERATING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -160,7 +161,7 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 		// Use Publish function instead of the hallucinated PublishTaskBroadcast
 		go func() {
 			msg := Message{
-				ID:        generateID(),
+				ID:        uuid.New().String(),
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "ULTRAPLAN_CREATE",
@@ -330,7 +331,7 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 	if m.hub != nil {
 		go func() {
 			msg := Message{
-				ID:        generateID(),
+				ID:        uuid.New().String(),
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      eventType,
@@ -441,7 +442,7 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 		// Use Publish function or custom logic instead of the hallucinated PublishTaskBroadcast
 		go func() {
 			msg := Message{
-				ID:        generateID(),
+				ID:        uuid.New().String(),
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "ULTRAPLAN_UPDATE",
