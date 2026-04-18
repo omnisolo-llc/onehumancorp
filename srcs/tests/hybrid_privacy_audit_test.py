@@ -14,7 +14,7 @@ class TestHybridPrivacyAudit(unittest.TestCase):
         env['OHC_TELEMETRY_ENABLED'] = 'false'
 
         # Test telemetry module init with these settings
-        bazelisk = shutil.which('bazelisk') or (os.path.abspath('./bazelisk') if os.path.exists('./bazelisk') else 'bazel')
+        bazelisk = shutil.which('bazelisk') or 'bazel'
         result = subprocess.run([bazelisk, 'test', '//srcs/server/telemetry:telemetry_test', '--test_env=OHC_MULTITENANT=false', '--test_env=OHC_TELEMETRY_ENABLED=false'], env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, f"Standalone telemetry opt-out test failed:\n{result.stdout}\n{result.stderr}")
 
