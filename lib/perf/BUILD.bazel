@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "perf",
+    srcs = [
+        "coordinator.go",
+        "hybrid_tune.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/lib/perf",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/orchestration",
+    ],
+)
+
+go_test(
+    name = "perf_test",
+    srcs = ["coordinator_test.go"],
+    embed = [":perf"],
+    deps = [
+        "//srcs/server/orchestration",
+    ],
+)

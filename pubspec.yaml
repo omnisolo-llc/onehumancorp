@@ -7,3 +7,6 @@ environment:
 
 workspace:
   - srcs/app
+
+flutter:
+  uses-material-design: true

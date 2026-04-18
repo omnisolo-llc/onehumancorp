@@ -208,3 +208,31 @@ func (r *ReferralRepository) GetAllReferrals(ctx context.Context) ([]*GrowthRefe
 	}
 	return results, nil
 }
+
+
+func (r *ReferralRepository) GetViralCoefficient(ctx context.Context) (float64, error) {
+	referrals, err := r.GetAllReferrals(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(referrals) == 0 {
+		return 0, nil
+	}
+
+	uniqueInviters := make(map[string]bool)
+	signedUpCount := 0
+
+	for _, ref := range referrals {
+		uniqueInviters[ref.InviterID] = true
+		if ref.Status == "SIGNED_UP" {
+			signedUpCount++
+		}
+	}
+
+	if len(uniqueInviters) == 0 {
+		return 0, nil
+	}
+
+	return float64(signedUpCount) / float64(len(uniqueInviters)), nil
+}
