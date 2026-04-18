@@ -35,6 +35,12 @@ const (
 	ResourceExhaustion
 	// CorruptAgentLock corrupts the .agent-lock/ file.
 	CorruptAgentLock
+	// SQLSyncLag injects delays simulating SQL synchronization lag.
+	SQLSyncLag
+	// NetworkPartition simulates network partitions.
+	NetworkPartition
+	// CorruptMailbox corrupts the .agent-task/mailbox/ directory.
+	CorruptMailbox
 )
 
 // String returns the string representation of ChaosMode.
@@ -50,6 +56,12 @@ func (c ChaosMode) String() string {
 		return "resource_exhaustion"
 	case CorruptAgentLock:
 		return "corrupt_agent_lock"
+	case SQLSyncLag:
+		return "sql_sync_lag"
+	case NetworkPartition:
+		return "network_partition"
+	case CorruptMailbox:
+		return "corrupt_mailbox"
 	default:
 		return "unknown"
 	}
@@ -114,6 +126,29 @@ func (i *Injector) Inject(ctx context.Context) error {
 			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
 		}
 		return &ChaosError{Message: "chaos: simulated agent lock corruption"}
+	case SQLSyncLag:
+		i.mu.Lock()
+		delay := time.Duration(i.rand.Intn(400)+100) * time.Millisecond
+		i.mu.Unlock()
+		select {
+		case <-time.After(delay):
+			return &ChaosError{Message: "chaos: simulated sql sync lag"}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	case NetworkPartition:
+		i.mu.Lock()
+		partition := i.rand.Float32() < 0.2
+		i.mu.Unlock()
+		if partition {
+			return &ChaosError{Message: "chaos: simulated network partition"}
+		}
+	case CorruptMailbox:
+		mailboxPath := ".agent-task/mailbox/"
+		if _, err := os.Stat(mailboxPath); !os.IsNotExist(err) {
+			_ = os.WriteFile(mailboxPath+"corrupted.msg", []byte("chaos corrupted this mailbox"), 0644)
+		}
+		return &ChaosError{Message: "chaos: simulated mailbox corruption"}
 	}
 	return nil
 }

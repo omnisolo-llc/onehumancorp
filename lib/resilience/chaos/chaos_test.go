@@ -119,11 +119,68 @@ func TestAllModeStrings(t *testing.T) {
 		ConnectionDrop:     "connection_drop",
 		ResourceExhaustion: "resource_exhaustion",
 		CorruptAgentLock:   "corrupt_agent_lock",
+		SQLSyncLag:         "sql_sync_lag",
+		NetworkPartition:   "network_partition",
+		CorruptMailbox:     "corrupt_mailbox",
 	}
 
 	for mode, expected := range modes {
 		if mode.String() != expected {
 			t.Errorf("expected %s, got %s", expected, mode.String())
 		}
+	}
+}
+
+func TestSQLSyncLag(t *testing.T) {
+	inj := NewInjector(SQLSyncLag, 1)
+	start := time.Now()
+	err := inj.Inject(context.Background())
+	duration := time.Since(start)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated sql sync lag" {
+		t.Fatalf("expected sql sync lag error, got %v", err)
+	}
+	if duration < 100*time.Millisecond {
+		t.Fatalf("expected delay > 100ms, got %v", duration)
+	}
+}
+
+func TestNetworkPartition(t *testing.T) {
+	inj := NewInjector(NetworkPartition, 1)
+	partitioned := false
+	for i := 0; i < 100; i++ {
+		err := inj.Inject(context.Background())
+		if err != nil {
+			if e, ok := err.(*ChaosError); ok && e.Message == "chaos: simulated network partition" {
+				partitioned = true
+				break
+			}
+		}
+	}
+	if !partitioned {
+		t.Fatal("expected a network partition error to occur within 100 attempts")
+	}
+}
+
+func TestCorruptMailbox(t *testing.T) {
+	err := os.MkdirAll(".agent-task/mailbox/", 0755)
+	if err != nil {
+		t.Fatalf("failed to create directory: %v", err)
+	}
+	defer os.RemoveAll(".agent-task/")
+
+	inj := NewInjector(CorruptMailbox, 3)
+	err = inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated mailbox corruption" {
+		t.Fatalf("expected simulated mailbox corruption error, got %v", err)
+	}
+
+	if _, err := os.Stat(".agent-task/mailbox/corrupted.msg"); os.IsNotExist(err) {
+		t.Fatalf("expected corrupted.msg file to be created, but it was not")
 	}
 }
