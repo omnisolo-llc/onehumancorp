@@ -22,6 +22,7 @@ while true; do
     echo -e "  3) Run Diagnostics"
     echo -e "  4) Launch Quick Start (Standalone)"
     echo -e "  5) Provision AI Agent"
+    echo -e "  6) Standalone DB Health Check"
     echo -e "  0) Exit"
     read -p "Choice: " choice
 
@@ -31,6 +32,13 @@ while true; do
         3) bash "$SCRIPT_DIR/ohc-diagnostics.sh" || echo -e "${PURPLE}Diagnostics returned non-zero exit status.${RESET}" ;;
         4) bash "$SCRIPT_DIR/ohc-quick-start.sh" || echo -e "${PURPLE}Quick Start returned non-zero exit status.${RESET}" ;;
         5) bash "$SCRIPT_DIR/ohc-agent-wizard.sh" || echo -e "${PURPLE}Agent Provisioning returned non-zero exit status.${RESET}" ;;
+        6)
+            if [ -f "$HOME/.ohc-local-data/standalone.db" ]; then
+                echo -e "${GREEN}Standalone DB found at $HOME/.ohc-local-data/standalone.db${RESET}"
+            else
+                echo -e "${PURPLE}Standalone DB NOT found at $HOME/.ohc-local-data/standalone.db${RESET}"
+            fi
+            ;;
         0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
