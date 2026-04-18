@@ -10,6 +10,10 @@ import (
 var (
 	ragRecordsSyncedTotal metric.Int64Counter
 	ragSyncErrorsTotal    metric.Int64Counter
+
+	// VectorsSyncedCount is an exported counter for vectors synced during hybrid RAG sync.
+	// It is nil until telemetry is initialised; callers must guard with a nil-check.
+	VectorsSyncedCount metric.Int64Counter
 )
 
 func initRAGSyncMetrics(m mockableMeter) error {

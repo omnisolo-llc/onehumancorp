@@ -4,7 +4,7 @@ go_library(
     srcs = [
         "token_calculator/calculator.go",
     ],
-    importpath = "ohc/lib/pricing/token_calculator",
+    importpath = "github.com/onehumancorp/mono/lib/pricing/token_calculator",
     visibility = ["//visibility:public"],
 )
 go_test(

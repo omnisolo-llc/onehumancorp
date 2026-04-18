@@ -21,6 +21,11 @@ import (
 	"github.com/redis/rueidis"
 )
 
+// generateID returns a new random UUID string, used throughout the orchestration package.
+func generateID() string {
+	return uuid.New().String()
+}
+
 // SharedTask represents a shared task distributed across agents.
 type SharedTask struct {
 	ID              string     `json:"id"`
