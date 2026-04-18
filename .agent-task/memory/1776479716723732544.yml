@@ -1,0 +1,4 @@
+agent: jules
+role: Senior Developer Advocate & Guide
+mission: Implement Day One bootstrap environment parsing
+notes: Parsed OHC_BOOTSTRAP_* and OHC_DEFAULT_AGENT_* variables for the onboarding payload

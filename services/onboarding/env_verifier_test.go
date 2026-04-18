@@ -93,3 +93,38 @@ func TestVerifyEnvironment_ThinClientMissingEndpoint(t *testing.T) {
 		t.Fatalf("expected error for thin_client mode without endpoint")
 	}
 }
+
+func TestVerifyEnvironment_BootstrapConfig(t *testing.T) {
+	env := map[string]string{
+		"OHC_SOURCE_MODE": "standalone",
+		"OHC_BOOTSTRAP_ORG_ID": "org-123",
+		"OHC_BOOTSTRAP_ORG_NAME": "Acme",
+		"OHC_BOOTSTRAP_CEO_NAME": "Alice",
+		"OHC_DEFAULT_AGENT_NAME": "Bob",
+		"OHC_DEFAULT_AGENT_ROLE": "Guide",
+	}
+
+	config, err := VerifyEnvironment(env)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if config.BootstrapOrgID != "org-123" {
+		t.Errorf("expected BootstrapOrgID org-123, got %s", config.BootstrapOrgID)
+	}
+	if config.BootstrapOrgName != "Acme" {
+		t.Errorf("expected BootstrapOrgName Acme, got %s", config.BootstrapOrgName)
+	}
+	if config.BootstrapCEOName != "Alice" {
+		t.Errorf("expected BootstrapCEOName Alice, got %s", config.BootstrapCEOName)
+	}
+	if config.DefaultAgentName != "Bob" {
+		t.Errorf("expected DefaultAgentName Bob, got %s", config.DefaultAgentName)
+	}
+	if config.DefaultAgentRole != "Guide" {
+		t.Errorf("expected DefaultAgentRole Guide, got %s", config.DefaultAgentRole)
+	}
+	if config.DefaultAgentRegion != "docker" {
+		t.Errorf("expected DefaultAgentRegion docker, got %s", config.DefaultAgentRegion)
+	}
+}

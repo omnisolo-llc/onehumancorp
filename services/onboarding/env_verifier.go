@@ -12,6 +12,12 @@ type EnvConfig struct {
 	Headless         bool
 	TelemetryEnabled bool
 	ApiEndpoint      string
+	BootstrapOrgID     string
+	BootstrapOrgName   string
+	BootstrapCEOName   string
+	DefaultAgentName   string
+	DefaultAgentRole   string
+	DefaultAgentRegion string
 }
 
 // VerifyEnvironment checks the provided environment variables for Day One setup validity.
@@ -68,6 +74,27 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 		if tel, ok := envVars["OHC_TELEMETRY_ENABLED"]; ok && strings.ToLower(tel) == "false" {
 			config.TelemetryEnabled = false
 		}
+	}
+
+	if val, ok := envVars["OHC_BOOTSTRAP_ORG_ID"]; ok {
+		config.BootstrapOrgID = val
+	}
+	if val, ok := envVars["OHC_BOOTSTRAP_ORG_NAME"]; ok {
+		config.BootstrapOrgName = val
+	}
+	if val, ok := envVars["OHC_BOOTSTRAP_CEO_NAME"]; ok {
+		config.BootstrapCEOName = val
+	}
+	if val, ok := envVars["OHC_DEFAULT_AGENT_NAME"]; ok {
+		config.DefaultAgentName = val
+	}
+	if val, ok := envVars["OHC_DEFAULT_AGENT_ROLE"]; ok {
+		config.DefaultAgentRole = val
+	}
+	if val, ok := envVars["OHC_DEFAULT_AGENT_REGION"]; ok {
+		config.DefaultAgentRegion = val
+	} else {
+		config.DefaultAgentRegion = "docker"
 	}
 
 	return config, nil
