@@ -2,8 +2,10 @@ package db
 
 import (
 	"context"
+	"strings"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -29,6 +31,10 @@ func trackQuery(ctx context.Context, operation string, err error, duration time.
 	if err != nil {
 		attrs = append(attrs, attribute.Bool("error", true))
 		queryErrors.Add(ctx, 1, metric.WithAttributes(attrs...))
+
+		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
+			telemetry.RecordSQLiteLockContention(ctx, operation)
+		}
 	}
 	queryDuration.Record(ctx, duration.Seconds(), metric.WithAttributes(attrs...))
 }
