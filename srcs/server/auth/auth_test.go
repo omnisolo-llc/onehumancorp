@@ -248,6 +248,39 @@ func TestMiddleware_MissingToken(t *testing.T) {
 	}
 }
 
+func TestHandleLogin_TenantIsolation(t *testing.T) {
+	s := auth.NewStore()
+	h := auth.NewHandlers(s)
+
+	// Create a user in tenant "org1"
+	_, err := s.CreateUser("tenantuser", "user@org1.com", "password123", []string{auth.RoleViewer}, "org1")
+	if err != nil {
+		t.Fatalf("failed to create user: %v", err)
+	}
+
+	// Try logging in as "tenantuser" but claiming to be in "org2"
+	body := `{"username":"tenantuser","password":"password123","organizationId":"org2"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.HandleLogin(rec, req)
+
+	// Should fail because user is not in org2
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401 Unauthorized for cross-tenant login, got %d", rec.Code)
+	}
+
+	// Try logging in as "tenantuser" and claiming to be in "org1"
+	bodyValid := `{"username":"tenantuser","password":"password123","organizationId":"org1"}`
+	reqValid := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(bodyValid))
+	recValid := httptest.NewRecorder()
+	h.HandleLogin(recValid, reqValid)
+
+	// Should succeed because user is in org1
+	if recValid.Code != http.StatusOK {
+		t.Errorf("expected 200 OK for valid tenant login, got %d", recValid.Code)
+	}
+}
+
 func TestMiddleware_ValidBearerToken(t *testing.T) {
 	s := auth.NewStore()
 	u, _ := s.CreateUser("mwuser", "mw@test.com", "mwpass12", []string{auth.RoleViewer}, "")
