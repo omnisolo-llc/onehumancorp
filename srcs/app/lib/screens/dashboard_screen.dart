@@ -62,6 +62,11 @@ class _DashboardContent extends StatelessWidget {
   Widget build(BuildContext context) {
     // Collect all unique roles
     final Set<String> allRoles = {};
+    for (final profile in data.organization.roleProfiles) {
+      if (profile.role.isNotEmpty && profile.role != 'CEO') {
+        allRoles.add(profile.role);
+      }
+    }
     for (final member in data.organization.members) {
       if (member.role.isNotEmpty && !member.isHuman) {
         allRoles.add(member.role);
