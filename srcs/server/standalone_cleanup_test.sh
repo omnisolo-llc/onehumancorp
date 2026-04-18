@@ -43,13 +43,13 @@ if [[ -f "${STATE_DIR}/normal.tmp" ]]; then
   exit 1
 fi
 
-if [[ ! -f "${STATE_DIR}/Linear-state.tmp" ]]; then
-  echo "Error: Linear-state.tmp was deleted"
+if [[ -f "${STATE_DIR}/Linear-state.tmp" ]]; then
+  echo "Error: Linear-state.tmp was not deleted"
   exit 1
 fi
 
-if [[ ! -f "${STATE_DIR}/linear_task.tmp" ]]; then
-  echo "Error: linear_task.tmp was deleted"
+if [[ -f "${STATE_DIR}/linear_task.tmp" ]]; then
+  echo "Error: linear_task.tmp was not deleted"
   exit 1
 fi
 

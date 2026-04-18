@@ -35,6 +35,8 @@ const (
 	ResourceExhaustion
 	// CorruptAgentLock corrupts the .agent-lock/ file.
 	CorruptAgentLock
+	// CorruptMailbox corrupts the .agent-task/mailbox/ directory.
+	CorruptMailbox
 )
 
 // String returns the string representation of ChaosMode.
@@ -50,6 +52,8 @@ func (c ChaosMode) String() string {
 		return "resource_exhaustion"
 	case CorruptAgentLock:
 		return "corrupt_agent_lock"
+	case CorruptMailbox:
+		return "corrupt_mailbox"
 	default:
 		return "unknown"
 	}
@@ -60,6 +64,7 @@ type Injector struct {
 	mode ChaosMode
 	mu   sync.Mutex
 	rand *rand.Rand
+	basePath string
 }
 
 // NewInjector creates a new Chaos Injector.
@@ -67,6 +72,7 @@ func NewInjector(mode ChaosMode, seed int64) *Injector {
 	return &Injector{
 		mode: mode,
 		rand: rand.New(rand.NewSource(seed)),
+		basePath: ".",
 	}
 }
 
@@ -109,11 +115,17 @@ func (i *Injector) Inject(ctx context.Context) error {
 			return &ChaosError{Message: "chaos: simulated resource exhaustion"}
 		}
 	case CorruptAgentLock:
-		lockPath := ".agent-lock/"
+		lockPath := i.basePath + "/.agent-lock/"
 		if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
 			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
 		}
 		return &ChaosError{Message: "chaos: simulated agent lock corruption"}
+	case CorruptMailbox:
+		mailboxPath := i.basePath + "/.agent-task/mailbox/"
+		if _, err := os.Stat(mailboxPath); !os.IsNotExist(err) {
+			_ = os.WriteFile(mailboxPath+"corrupt.msg", []byte("chaos corrupted this mailbox"), 0644)
+		}
+		return &ChaosError{Message: "chaos: simulated mailbox corruption"}
 	}
 	return nil
 }

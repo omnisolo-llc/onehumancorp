@@ -256,3 +256,57 @@ func TestResetWizardStateHandler(t *testing.T) {
 		t.Errorf("expected empty state, got %v", res)
 	}
 }
+
+func TestGetWizardProfileHandler_Cloud(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/wizard/profile?mode=cloud", nil)
+	w := httptest.NewRecorder()
+
+	GetWizardProfileHandler(w, req)
+
+	res := w.Result()
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", res.StatusCode)
+	}
+
+	var profile EnvConfig
+	if err := json.NewDecoder(res.Body).Decode(&profile); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if profile.Mode != "cloud" || !profile.MultiTenant || profile.DatabaseURL == "" {
+		t.Errorf("unexpected cloud profile: %+v", profile)
+	}
+}
+
+func TestGetWizardProfileHandler_Standalone(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/wizard/profile?mode=standalone", nil)
+	w := httptest.NewRecorder()
+
+	GetWizardProfileHandler(w, req)
+
+	res := w.Result()
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", res.StatusCode)
+	}
+
+	var profile EnvConfig
+	if err := json.NewDecoder(res.Body).Decode(&profile); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if profile.Mode != "standalone" || profile.MultiTenant || profile.DatabaseURL != "sqlite://local.db" {
+		t.Errorf("unexpected standalone profile: %+v", profile)
+	}
+}
+
+func TestGetWizardProfileHandler_InvalidMode(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/wizard/profile?mode=unknown", nil)
+	w := httptest.NewRecorder()
+
+	GetWizardProfileHandler(w, req)
+
+	res := w.Result()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status BadRequest, got %v", res.StatusCode)
+	}
+}

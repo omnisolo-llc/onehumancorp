@@ -23,6 +23,7 @@ go_library(
         "sip.go",
         "sqlite_hub.go",
         "sync_daemon.go",
+        "rag_sync_daemon.go",
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh_api.go",

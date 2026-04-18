@@ -613,6 +613,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 						return // Enforce fail-closed if there's a read error
 					}
 					combinedGrounding.WriteString("\n" + string(content) + "\n")
+					break
 				} else if !os.IsNotExist(statErr) {
 					s.cachedGroundErr = statErr
 					return
@@ -982,29 +983,50 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	// Prepare payload for batch sync
 	var idsToDelete []string
 	processedPayloads := make([]string, len(records))
-	tasks := make([]func() error, len(records))
 
-	for i, rec := range records {
-		idsToDelete = append(idsToDelete, fmt.Sprintf("%d", rec.id))
-		i, rec := i, rec // capture loop variables
-		tasks[i] = func() error {
-			var obj map[string]interface{}
-			if err := json.Unmarshal([]byte(rec.payload), &obj); err == nil {
-				obj["metric_type"] = rec.metricType
-				sanitizedObj := SanitizePayloadMap(obj)
-				b, _ := json.Marshal(sanitizedObj)
-				processedPayloads[i] = string(b)
-			} else {
-				sanitizedStr, _ := SanitizePayload(rec.payload)
-				processedPayloads[i] = sanitizedStr
+	// Determine optimal worker count
+	workerCount := 4
+	if len(records) > 0 {
+		coordinator := perf.NewCoordinatorMode(workerCount)
+		tasks := make([]func() error, workerCount)
+
+		// Partition the records processing to avoid the overhead of spawning a closure per record
+		batchSize := (len(records) + workerCount - 1) / workerCount
+
+		for w := 0; w < workerCount; w++ {
+			w := w
+			tasks[w] = func() error {
+				start := w * batchSize
+				end := start + batchSize
+				if end > len(records) {
+					end = len(records)
+				}
+
+				for i := start; i < end; i++ {
+					rec := records[i]
+					var obj map[string]interface{}
+					if err := json.Unmarshal([]byte(rec.payload), &obj); err == nil {
+						obj["metric_type"] = rec.metricType
+						sanitizedObj := SanitizePayloadMap(obj)
+						b, _ := json.Marshal(sanitizedObj)
+						processedPayloads[i] = string(b)
+					} else {
+						sanitizedStr, _ := SanitizePayload(rec.payload)
+						processedPayloads[i] = sanitizedStr
+					}
+				}
+				return nil
 			}
-			return nil
 		}
-	}
 
-	coordinator := perf.NewCoordinatorMode(4)
-	if err := coordinator.ExecuteParallel(ctx, tasks); err != nil {
-		return 0, fmt.Errorf("parallel processing failed: %w", err)
+		if err := coordinator.ExecuteParallel(ctx, tasks); err != nil {
+			return 0, fmt.Errorf("parallel processing failed: %w", err)
+		}
+
+		// Fill idsToDelete sequentially to preserve order if necessary
+		for _, rec := range records {
+			idsToDelete = append(idsToDelete, fmt.Sprintf("%d", rec.id))
+		}
 	}
 
 	var payloadBuilder strings.Builder
