@@ -6,7 +6,8 @@ cleanup_tmp_files() {
     # Mode-aware cleanup for standalone
     if [ -d "${STATE_DIR}" ]; then
       # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
-      find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
+      # Mode-aware: preserve Linear orchestrator state files
+      find "${STATE_DIR}" -name "*.tmp" ! -iname "*linear*" -type f -mmin +60 -delete 2>/dev/null || true
     fi
   fi
 }
@@ -166,8 +167,8 @@ start_daemon() {
     HOME="${HOME}" \
     PORT="${port}" \
     GRPC_PORT="${GRPC_PORT:-0}" \
-    GOMEMLIMIT="${GOMEMLIMIT:-64MiB}" \
-    GOGC="${GOGC:-20}" \
+    GOMEMLIMIT="${GOMEMLIMIT:-1024MiB}" \
+    GOGC="${GOGC:-100}" \
     OHC_STANDALONE="true" \
     nohup "${SERVER_BIN}" >"${LOG_FILE}" 2>&1 &
   local pid=$!

@@ -6,28 +6,33 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ClientSettings {
   final String backendUrl;
   final bool standaloneMode;
+  final bool expertMode;
 
   const ClientSettings({
     required this.backendUrl,
     required this.standaloneMode,
+    this.expertMode = false,
   });
 
-  ClientSettings copyWith({String? backendUrl, bool? standaloneMode}) {
+  ClientSettings copyWith({String? backendUrl, bool? standaloneMode, bool? expertMode}) {
     return ClientSettings(
       backendUrl: backendUrl ?? this.backendUrl,
       standaloneMode: standaloneMode ?? this.standaloneMode,
+      expertMode: expertMode ?? this.expertMode,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'backendUrl': backendUrl,
     'standaloneMode': standaloneMode,
+    'expertMode': expertMode,
   };
 
   factory ClientSettings.fromJson(Map<String, dynamic> json) {
     return ClientSettings(
       backendUrl: json['backendUrl'] as String? ?? 'http://localhost:18789',
       standaloneMode: json['standaloneMode'] as bool? ?? false,
+      expertMode: json['expertMode'] as bool? ?? false,
     );
   }
 }
@@ -69,6 +74,7 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
         return ClientSettings(
           backendUrl: envUrl,
           standaloneMode: envStandalone,
+          expertMode: false,
         );
       }
       return ClientSettings.fromJson(jsonDecode(json) as Map<String, dynamic>);
@@ -86,6 +92,14 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
     final current = state.valueOrNull;
     if (current == null) return;
     state = AsyncData(current.copyWith(standaloneMode: enabled));
+    await _save();
+  }
+
+
+  Future<void> updateExpertMode(bool enabled) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(expertMode: enabled));
     await _save();
   }
 

@@ -20,11 +20,11 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	authStore := auth.NewStore()
 
-	_, err := authStore.CreateUser("adminuser", "admin@test.com", "adminpass123", []string{"admin"})
+	_, err := authStore.CreateUser("adminuser", "admin@test.com", "adminpass123", []string{"admin"}, "")
 	if err != nil {
 		t.Fatal("create user failed", err)
 	}
-	user, err := authStore.Authenticate("adminuser", "adminpass123")
+	user, err := authStore.Authenticate("adminuser", "adminpass123", "")
 	if err != nil {
 		t.Fatal("auth failed", err)
 	}
