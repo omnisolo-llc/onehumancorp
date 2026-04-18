@@ -1,22 +1,15 @@
-1. **Explore the requested issue.**
-   - Review the requirements for the "Premium Research Doc" to be submitted via PR.
-   - Review the requirements for the YAML block needed at the end of the final message.
-
-2. **Generate the Premium Research Doc.**
-   - Combine the findings from the `docs/research/agent_harness_audit.md`, `docs/research/agent_harness_network_proxy_audit.md`, `docs/research/claude_code_harness_audit.md`, `docs/architecture/claude_code_harness_research.md`, and `docs/research/agent-harness-analysis.md` into a single, cohesive, premium-styled markdown file (with the `backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;` styling, as per OHC Visual Excellence Mandate).
-   - Let's call this new doc `docs/research/AGENT_HARNESS_REPORT.md`.
-
-3. **Generate the Mission File.**
-   - The mission requires creating a mission file in `.agent-task/missions/{timestamp}.md` that includes Title, Problem Statement, Research Report, Design Doc, Implementation Prompt, Priority, and Estimated Scope. I've already done this step!
-
-4. **Add and commit files.**
-   - Add `docs/research/AGENT_HARNESS_REPORT.md` and `.agent-task/missions/*.md` using `git add -f`.
-
-5. **Complete pre-commit steps.**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-6. **Submit PR.**
-   - Use `submit` with the correct branch format `Oracle: [Architecture] description`.
-
-7. **Output the YAML block.**
-   - In the final message, output the required YAML block to trigger the automator.
+1. **Fix `ProcessMemories` memory directory default:**
+   - I will use `run_in_bash_session` to apply a sed replacement in `srcs/server/orchestration/autodream_worker.go` to default `memoryDir` to `.agent-task/memory` if `OHC_MEMORY_DIR` is empty. The problem statement explicitly requires data from `.agent-task/memory/` to be processed.
+   - Command:
+     ```bash
+     sed -i 's/if memoryDir == "" {/if memoryDir == "" {\n\t\tmemoryDir = ".agent-task\/memory"\n\t}\n\tif memoryDir == "" {/' srcs/server/orchestration/autodream_worker.go
+     ```
+   - Actually, I will just use `replace_with_git_merge_diff` for precision.
+2. **Verify modifications:**
+   - I will use `run_in_bash_session` to `cat srcs/server/orchestration/autodream_worker.go` and verify the exact changes were applied.
+3. **Check Code Coverage:**
+   - I will run `bazelisk coverage //srcs/server/orchestration:orchestration_test --test_filter="TestAutoDreamWorker"` and then `cat bazel-out/_coverage/_coverage_report.dat | grep autodream_worker.go` to ensure >90% coverage.
+4. **Complete pre-commit steps:**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done. I will use `pre_commit_instructions` tool to execute all necessary checks.
+5. **Submit:**
+   - Run `submit` with the branch name and a descriptive commit message. I will include the text `issue_id: 4339` in the commit body and my final message.

@@ -41,7 +41,7 @@ type MemoryFile struct {
 func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	memoryDir := os.Getenv("OHC_MEMORY_DIR")
 	if memoryDir == "" {
-		return nil // file-based ingestion disabled; agents write to DB directly
+		memoryDir = ".agent-task/memory"
 	}
 	matches, err := filepath.Glob(filepath.Join(memoryDir, "*.yml"))
 	if err != nil {
