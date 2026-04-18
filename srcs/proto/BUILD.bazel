@@ -42,10 +42,3 @@ proto_go_grpc_library(
     importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/model",
     visibility = ["//visibility:public"],
 )
-
-proto_library(
-    name = "wizard_proto",
-    srcs = ["wizard.proto"],
-    deps = [":model_proto"],
-    visibility = ["//visibility:public"],
-)

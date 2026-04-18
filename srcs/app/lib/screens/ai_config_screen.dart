@@ -267,11 +267,6 @@ const _presetProviders = [
     'models': ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5'],
   },
   {
-    'name': 'MiniMax',
-    'base_url': 'https://api.minimax.io/v1',
-    'models': ['MiniMax-Text-01', 'abab6.5s-chat'],
-  },
-  {
     'name': 'Ollama (local)',
     'base_url': 'http://localhost:11434/v1',
     'models': ['llama3', 'mistral', 'phi3'],

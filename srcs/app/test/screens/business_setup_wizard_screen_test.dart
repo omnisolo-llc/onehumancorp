@@ -3,35 +3,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
-import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
-import 'package:mocktail/mocktail.dart';
-
-class MockApiService extends Mock implements ApiService {}
-
-class _FakeAuthNotifier extends AuthNotifier {
-  final AuthUser? _user;
-  _FakeAuthNotifier(this._user);
-
-  @override
-  Future<AuthUser?> build() async => _user;
-}
-
-const _fakeUser = AuthUser(
-  id: 'u1',
-  email: 'dev@example.com',
-  name: 'Dev',
-  role: 'admin',
-  organizationId: 'org-1',
-  token: 'tok-test',
-);
 
 void main() {
-  setUpAll(() {
-    registerFallbackValue(<String>[]);
-  });
-
   testWidgets('BusinessSetupWizardScreen renders and navigates steps in Cloud Mode', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -123,9 +97,6 @@ void main() {
     notifier.updateCompany('NewCo');
     expect(container.read(businessSetupProvider).companyName, 'NewCo');
 
-    notifier.updatePrompt('Help me create a real estate staging company');
-    expect(container.read(businessSetupProvider).aiPrompt, 'Help me create a real estate staging company');
-
     notifier.updateIndustry('Tech');
     expect(container.read(businessSetupProvider).industry, 'Tech');
 
@@ -214,78 +185,5 @@ void main() {
     expect(find.text('Deployment Preference'), findsOneWidget);
     expect(find.byType(RadioListTile<String>), findsNothing); // Should be hidden
     expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsOneWidget); // Bypass message
-  });
-
-  testWidgets('BusinessSetupWizardScreen launches backend business bootstrap flow when authenticated', (WidgetTester tester) async {
-    final mockApiService = MockApiService();
-    when(
-      () => mockApiService.bootstrapBusiness(
-        prompt: any(named: 'prompt'),
-        companyName: any(named: 'companyName'),
-        industry: any(named: 'industry'),
-        companySize: any(named: 'companySize'),
-        goals: any(named: 'goals'),
-        deploymentPreference: any(named: 'deploymentPreference'),
-        adminName: any(named: 'adminName'),
-        adminEmail: any(named: 'adminEmail'),
-      ),
-    ).thenAnswer((_) async => {'status': 'created'});
-
-    final router = GoRouter(
-      routes: [
-        GoRoute(
-          path: '/',
-          builder: (context, state) => const BusinessSetupWizardScreen(),
-        ),
-        GoRoute(
-          path: '/dashboard',
-          builder: (context, state) => const Scaffold(body: Text('Dashboard')),
-        ),
-      ],
-    );
-
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
-          apiServiceProvider.overrideWithValue(mockApiService),
-        ],
-        child: MaterialApp.router(routerConfig: router),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.enterText(find.byType(TextField).first, 'Help me create a real estate staging company');
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).first, 'Luxe Stage');
-    await tester.enterText(find.byType(TextField).at(1), 'Real Estate');
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Support'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(0), 'Alex Founder');
-    await tester.enterText(find.byType(TextField).at(1), 'alex@example.com');
-    await tester.enterText(find.byType(TextField).at(2), 'password');
-    await tester.tap(find.text('Launch My AI Team →'));
-    await tester.pumpAndSettle();
-
-    verify(
-      () => mockApiService.bootstrapBusiness(
-        prompt: 'Help me create a real estate staging company',
-        companyName: 'Luxe Stage',
-        industry: 'Real Estate',
-        companySize: 'S',
-        goals: ['Support'],
-        deploymentPreference: 'Cloud',
-        adminName: 'Alex Founder',
-        adminEmail: 'alex@example.com',
-      ),
-    ).called(1);
-    expect(find.text('Dashboard'), findsOneWidget);
   });
 }
