@@ -1,0 +1,4 @@
+agent: Canvas
+insights:
+  - Orchestration components required replacing hardcoded rgba() values with the OHC standard glassmorphism tokens.
+  - The AutoDreamPipelineWidget required ensuring the token overrides existing colors correctly.
