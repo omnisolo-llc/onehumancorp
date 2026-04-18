@@ -46,9 +46,16 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 	if config.Mode == "cloud" {
 		dbUrl, ok := envVars["DATABASE_URL"]
 		if !ok || dbUrl == "" {
-			return nil, errors.New("cloud mode requires DATABASE_URL")
-		}
-		config.DatabaseURL = dbUrl
+			// Auto-detected cloud mode shouldn't strictly error if DATABASE_URL is initially missing
+			// BUT if OHC_MULTITENANT is set to "true" explicitly and not via auto detect, we error
+			if _, isK8s := envVars["KUBERNETES_SERVICE_HOST"]; isK8s {
+				config.DatabaseURL = ""
+			} else {
+				return nil, errors.New("cloud mode requires DATABASE_URL")
+			}
+		} else {
+            config.DatabaseURL = dbUrl
+        }
 	}
 
 	if config.Mode == "standalone" && config.MultiTenant {
