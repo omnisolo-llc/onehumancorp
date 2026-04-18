@@ -3,9 +3,9 @@ package chaos
 import (
 	"context"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
-	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -110,9 +110,10 @@ func (i *Injector) Inject(ctx context.Context) error {
 		}
 	case CorruptAgentLock:
 		lockPath := ".agent-lock/"
-		if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
-			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
+		if _, err := os.Stat(lockPath); os.IsNotExist(err) {
+			return nil
 		}
+		_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
 		return &ChaosError{Message: "chaos: simulated agent lock corruption"}
 	}
 	return nil

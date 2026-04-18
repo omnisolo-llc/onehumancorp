@@ -2,6 +2,7 @@ package chaos_test
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -65,6 +66,9 @@ func TestChaosSystem_ResourceExhaustion(t *testing.T) {
 }
 
 func TestChaosSystem_CorruptAgentLock(t *testing.T) {
+	os.MkdirAll(".agent-lock/", 0755)
+	defer os.RemoveAll(".agent-lock/")
+
 	injector := chaos.NewInjector(chaos.CorruptAgentLock, 123)
 
 	err := injector.Inject(context.Background())
