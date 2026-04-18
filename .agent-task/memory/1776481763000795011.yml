@@ -1,0 +1,1 @@
+context: "Fixed Expert Mode Persistence with proper SharedPreferences syncing and proper syntax placement. Also Implemented Missing Logic for UpgradeWizard and BillingWizard with progress steps, rollbacks, cost estimations, and switch plan buttons."

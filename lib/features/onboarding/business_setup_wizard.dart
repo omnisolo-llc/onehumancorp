@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class BusinessSetupWizard extends ConsumerStatefulWidget {
   const BusinessSetupWizard({super.key});
@@ -13,8 +14,30 @@ class BusinessSetupWizard extends ConsumerStatefulWidget {
 class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
   int _step = 0;
   bool _isLoading = false;
+  bool _expertMode = false;
 
   final _companyNameCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadExpertMode();
+  }
+
+  Future<void> _loadExpertMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _expertMode = prefs.getBool('expertMode') ?? false;
+    });
+  }
+
+  Future<void> _toggleExpertMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('expertMode', value);
+    setState(() {
+      _expertMode = value;
+    });
+  }
   String _selectedIndustry = 'Tech';
   String _selectedSize = 'M';
   String _selectedLanguage = 'English';
@@ -60,7 +83,7 @@ class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+        filter: ImageFilter.compose(outer: ColorFilter.matrix([2.0, 0, 0, 0, 0, 0, 2.0, 0, 0, 0, 0, 0, 2.0, 0, 0, 0, 0, 0, 1, 0]), inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0)),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -165,10 +188,29 @@ class _BusinessSetupWizardState extends ConsumerState<BusinessSetupWizard> {
     return _buildGlassmorphism(
       child: Column(
         children: [
-          const Text('Review & Launch', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Review & Launch', style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold)),
+              Row(
+                children: [
+                  const Text('Expert Mode', style: TextStyle(fontFamily: 'Inter', fontSize: 12)),
+                  Switch(value: _expertMode, onChanged: _toggleExpertMode),
+                ],
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
           ListTile(title: const Text('Company'), subtitle: Text(_companyNameCtrl.text)),
           ListTile(title: const Text('Deployment'), subtitle: Text(_deploymentMode)),
+          if (_expertMode) ...[
+             const SizedBox(height: 16),
+             Container(
+               color: Colors.black12,
+               padding: const EdgeInsets.all(8),
+               child: Text('Raw Config Fields: \ncompanyName: ${_companyNameCtrl.text}\nindustry: $_selectedIndustry\nsize: $_selectedSize\nlanguage: $_selectedLanguage\ngoals: ${_goals.entries.where((e) => e.value).map((e) => e.key).toList()}\ndeploymentMode: $_deploymentMode', style: const TextStyle(fontFamily: 'monospace')),
+             )
+          ],
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {},
