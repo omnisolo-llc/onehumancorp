@@ -30,10 +30,9 @@ const TeammateMeshConsole = () => {
         style={{
           height: '250px',
           overflowY: 'auto',
-          background: 'rgba(0,0,0,0.3)',
+          ...theme.glassmorphism,
           padding: '16px',
           borderRadius: '12px',
-          border: '1px solid rgba(255,255,255,0.05)',
           display: 'flex',
           flexDirection: 'column',
           gap: '8px'

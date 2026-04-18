@@ -118,7 +118,7 @@ class _AiAgentConfigWizardState extends ConsumerState<AiAgentConfigWizard> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 1,
-                childAspectRatio: 2.5,
+                childAspectRatio: 1.5,
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
                 children: (cat['roles'] as List).map<Widget>((role) {
@@ -154,7 +154,9 @@ class _AiAgentConfigWizardState extends ConsumerState<AiAgentConfigWizard> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(role['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
-                                Text(role['desc'], style: const TextStyle(fontSize: 12, fontFamily: 'Inter'), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                Expanded(
+                                  child: Text(role['desc'], style: const TextStyle(fontSize: 12, fontFamily: 'Inter'), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
@@ -303,7 +305,15 @@ class _AiAgentConfigWizardState extends ConsumerState<AiAgentConfigWizard> {
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            filter: ImageFilter.compose(
+                outer: const ColorFilter.matrix(<double>[
+                  1.168, -0.153, -0.015, 0, 0,
+                  -0.046, 1.061, -0.015, 0, 0,
+                  -0.046, -0.152, 1.198, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
             child: Container(
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface.withOpacity(0.1),

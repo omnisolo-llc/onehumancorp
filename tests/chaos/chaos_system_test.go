@@ -76,3 +76,16 @@ func TestChaosSystem_CorruptAgentLock(t *testing.T) {
 		t.Fatalf("expected ChaosError, got %T", err)
 	}
 }
+
+func TestChaosSystem_CorruptMailbox(t *testing.T) {
+	injector := chaos.NewInjector(chaos.CorruptMailbox, 123)
+
+	err := injector.Inject(context.Background())
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if _, ok := err.(*chaos.ChaosError); !ok {
+		t.Fatalf("expected ChaosError, got %T", err)
+	}
+}

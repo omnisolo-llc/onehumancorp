@@ -5,7 +5,7 @@ import (
 	"log/slog"
 )
 
-// PIIRedactingHandler wraps an slog.Handler to redact PII from messages and attributes.
+// PIIRedactingHandler wraps an slog.Handler to redact PII from messages and attributes in multi-tenant environments.
 type PIIRedactingHandler struct {
 	handler slog.Handler
 }
