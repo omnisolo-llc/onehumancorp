@@ -1,10 +1,11 @@
-1. **Cloud HPA/VPA Optimization**:
-   - Improve `deploy/helm/ohc/values.yaml` scaling values for `backend`, `ohcCore`, `powersync`, and `chatwoot` to be more reactive (CPU/Mem targets updated).
-2. **Standalone Desktop wrapper Optimization**:
-   - Improve `srcs/server/standalone_ohc.sh` local process footprint by adjusting `GOGC` and constraining `GOMAXPROCS`.
-3. **Multi-tenant PII guardrails initialization**:
-   - Fix the PII redacting logger in `srcs/server/main.go` so it properly wraps the global handler within the `init()` function instead of overwriting `slog.SetDefault` in `main()`, ensuring early initialization compatibility.
-4. **Pre-commit Checks**:
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-5. **Submit**:
-   - Submit the PR with the title 🧹 Maintainer: [Infra] Optimise Orchestration & Observability.
+1. **Fix Overflow Error in AgentHireWizardScreen:**
+   - Investigate the overflow error in the `Stepper` component in `AgentHireWizardScreen`.
+   - Wrap the `Stepper` inside an `Expanded` widget, which needs a parent `Column` or similar, or just remove horizontal stepper overflow by using an `Expanded` in the `Row` where the `Stepper` controls might be overflowing, or switch `StepperType.horizontal` to `StepperType.vertical` if horizontal is too wide for some screens, though horizontal is required maybe? Let's check `Stepper` controls. The overflow is reported in `Stepper`, maybe horizontal type on a small screen? "A RenderFlex overflowed by 358 pixels on the right. The overflowing RenderFlex has an orientation of Axis.horizontal. The specific RenderFlex in question is: RenderFlex#d34e7 relayoutBoundary=up6 OVERFLOWING: creator: Row <- SizedBox <- Padding <- DefaultTextStyle <- AnimatedDefaultTextStyle <- ... <- Column <- Stepper"
+   - Actually, a `Stepper` of type `horizontal` with 7 steps will definitely overflow on most screens since it creates a `Row` with all 7 step titles. Flutter's `Stepper` is not scrollable horizontally for its headers. A common fix is to either use `StepperType.vertical` or wrap it, or just use a custom stepper. Since the prompt does not strictly require horizontal Stepper for Agent Hire, changing it to `StepperType.vertical` is the most reliable fix for overflow. Wait, checking `business_setup_wizard_screen.dart`, what does it use?
+2. **Add Controllers to TextField in AgentHireWizardScreen:**
+   - In `srcs/app/lib/screens/agent_hire_wizard_screen.dart`, add `controller: _endpointUrlController` to the Custom Endpoint URL `TextField` and `controller: _tokenLimitController` to the Token Limit `TextField` under Advanced Configuration (in Step 6 — Resource Limits).
+   - Update `dispose` method to dispose of `_endpointUrlController` and `_tokenLimitController`.
+3. **Add AgentHireWizardScreen E2E Test:**
+   - Create `srcs/app/test/screens/agent_hire_wizard_screen_test.dart` to test the wizard steps and that all state changes correctly (similar to E2E test requirement).
+4. **Run pre-commit instructions:**
+   - Ensure proper testing, verification, review, and reflection are done.
