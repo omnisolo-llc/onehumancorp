@@ -57,6 +57,7 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
+	AutoDreamConsolidationTotal        metric.Int64Counter
 	AutoDreamIngestionErrorCounter metric.Int64Counter
 	AutoDreamCompressionErrorCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
@@ -301,6 +302,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AutoDreamConsolidationTotal, err = m.Int64Counter(
+		"ohc_autodream_consolidation_total",
+		metric.WithDescription("Total number of AutoDream consolidation cycles"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1279,6 +1288,24 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 		return
 	}
 	AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+	))
+}
+
+// RecordAutoDreamConsolidation increments the counter when an AutoDream consolidation cycle completes.
+func RecordAutoDreamConsolidation(ctx context.Context, agentID string) {
+	if AutoDreamConsolidationTotal == nil {
+		if BufferMetricFunc != nil {
+			payloadMap := map[string]interface{}{
+				"agent_id": agentID,
+			}
+			redactedMap := RedactInterfacePII(payloadMap)
+			payloadBytes, _ := json.Marshal(redactedMap)
+			_ = BufferMetricFunc(ctx, "autodream_consolidation_total", string(payloadBytes))
+		}
+		return
+	}
+	AutoDreamConsolidationTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("agent_id", agentID),
 	))
 }

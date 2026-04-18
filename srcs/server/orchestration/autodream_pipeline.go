@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"fmt"
 	"encoding/json"
 	"log/slog"
 	"os"
@@ -206,50 +207,83 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 			continue
 		}
 
+		chunks := chunkText(contentToEmbed, 8000)
 		missionID := strings.TrimSuffix(filepath.Base(file), ".yml")
 
-		embeddingStr := "[0.0, 0.0, 0.0]"
-		if p.client != nil {
-			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			resp, err := p.client.GenerateEmbedding(ctxTimeout, contentToEmbed)
-			cancel()
-			if err == nil && len(resp) > 0 {
-				if bytes, err := json.Marshal(resp); err == nil {
-					embeddingStr = string(bytes)
+		success := true
+		for i, chunk := range chunks {
+			memID := missionID
+			if len(chunks) > 1 {
+				memID = fmt.Sprintf("%s-chunk%d", missionID, i)
+			}
+
+			var vec []string
+			for i := 0; i < 1536; i++ {
+				vec = append(vec, "0.0")
+			}
+			embeddingStr := "[" + strings.Join(vec, ",") + "]"
+
+			if p.client != nil {
+				ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+				resp, err := p.client.GenerateEmbedding(ctxTimeout, chunk)
+				cancel()
+				if err == nil && len(resp) > 0 {
+					if bytes, err := json.Marshal(resp); err == nil {
+						embeddingStr = string(bytes)
+					}
+				} else if err != nil {
+					slog.Warn("AutoDreamPipeline: failed to generate embedding", "error", err)
 				}
-			} else if err != nil {
-				slog.Warn("AutoDreamPipeline: failed to generate embedding", "error", err)
+			}
+
+			var insertQuery string
+			var insertArgs []interface{}
+
+			if p.db.IsSQLite() {
+				insertQuery = `
+					INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
+					VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
+					ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+				`
+				insertArgs = []interface{}{memID, chunk, embeddingStr}
+			} else {
+				insertQuery = `
+					INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
+					VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
+					ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+				`
+				insertArgs = []interface{}{memID, chunk, embeddingStr}
+			}
+
+			if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
+				slog.Warn("AutoDreamPipeline: failed to insert memory chunk", "id", memID, "error", err)
+				success = false
+			} else {
+				slog.Debug("AutoDreamPipeline: consolidated memory chunk", "id", memID)
 			}
 		}
-
-		var insertQuery string
-		var insertArgs []interface{}
-
-		memID := missionID
-
-		if p.db.IsSQLite() {
-			insertQuery = `
-				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
-				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
-			`
-			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
-		} else {
-			insertQuery = `
-				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-				VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
-				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
-			`
-			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
-		}
-
-		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
-			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", memID, "error", err)
-		} else {
-			slog.Debug("AutoDreamPipeline: consolidated memory", "id", memID)
+		if success {
 			os.Remove(file)
 		}
 	}
 
 	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(matches))
+}
+
+// chunkText splits a string into chunks of a given maximum size (in runes).
+func chunkText(text string, chunkSize int) []string {
+	if chunkSize <= 0 {
+		return []string{text}
+	}
+	runes := []rune(text)
+	var chunks []string
+	for len(runes) > 0 {
+		if len(runes) < chunkSize {
+			chunks = append(chunks, string(runes))
+			break
+		}
+		chunks = append(chunks, string(runes[:chunkSize]))
+		runes = runes[chunkSize:]
+	}
+	return chunks
 }
