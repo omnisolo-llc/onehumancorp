@@ -8,7 +8,7 @@ import (
 
 func TestMesh_MailboxCorruption(t *testing.T) {
 	tmpDir := t.TempDir()
-	mailboxDir := filepath.Join(tmpDir, ".agent-task", "mailbox")
+	mailboxDir := filepath.Join(tmpDir, ".ohc", "runtime", "mailbox")
 	err := os.MkdirAll(mailboxDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create mailbox dir: %v", err)
