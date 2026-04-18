@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
+### Cloud Scaling Improvements
+- Optimise HPA/VPA scaling targets for multi-tenant K8s workloads and fix early logger initialization.
+
+### Privacy/Offline Improvements
+- Optimise desktop wrapper footprint by tweaking GC and core limits.
+
+
 ## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Local Embedding Caching for Cost Optimization.

@@ -138,9 +138,7 @@ func init() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
-	redactingHandler := telemetry.NewPIIRedactingHandler(handler)
-	logger := slog.New(redactingHandler)
-	slog.SetDefault(logger)
+	slog.SetDefault(slog.New(telemetry.NewPIIRedactingHandler(handler)))
 }
 
 // Creates a new demo system.

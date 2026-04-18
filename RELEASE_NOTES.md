@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
+- Scaling (Cloud): Optimise HPA/VPA scaling targets for multi-tenant K8s workloads and fix early logger initialization.
+- Privacy/Offline (Standalone): Optimise desktop wrapper footprint by tweaking GC and core limits.
+
 ## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
 - Scaling (Cloud): Implement Local Embedding Caching for Cost Optimization.
 - Privacy/Offline (Standalone): Enhance standalone performance via Local Embedding Caching.
