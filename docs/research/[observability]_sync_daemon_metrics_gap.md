@@ -8,7 +8,7 @@ An audit of `srcs/server/orchestration/sync_daemon.go` shows that `ProcessSync` 
 
 ## Design Doc
 1. Define Prometheus metrics in `srcs/server/telemetry` or the specific daemon package for sync throughput, latency (Histogram), and error rates (Counter), tagged with a `mode` label.
-2. Update `srcs/server/orchestration/sync_daemon.go` to increment these mode-labeled metrics upon success or failure of `sendToCloud` and `ProcessSync`.
+2. Update `srcs/server/orchestration/sync_daemon.go` to increment these mode-labeled metrics upon success or failure of `ProcessSync`.
 3. Update `deploy/docker/grafana/provisioning/dashboards/kairos_hybrid_metrics.json` to include panels for:
    - Sync Error Rate by Mode
    - Sync Latency (P95) by Mode
@@ -18,7 +18,7 @@ An audit of `srcs/server/orchestration/sync_daemon.go` shows that `ProcessSync` 
 ## Implementation Prompt
 You are an Implementer. Implement the design above:
 1. Identify the Prometheus `telemetry` methods used in `sync_daemon.go` and ensure they support and record a `mode` label (e.g., `Standalone` vs `Cloud`).
-2. Add a `SyncDaemonErrorTotal` Counter in the `telemetry` package and increment it when `sendToCloud` fails.
+2. Add a `SyncDaemonErrorTotal` Counter in the `telemetry` package and increment it when `ProcessSync` fails.
 3. Add three new panels to `deploy/docker/grafana/provisioning/dashboards/kairos_hybrid_metrics.json` to visualize the sync latency (P95), error rate, and batch size, querying the updated Prometheus metrics with mode labels.
 4. Verify tests pass using `bazel test //...`.
 
