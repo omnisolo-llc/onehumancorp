@@ -3,6 +3,7 @@ package chaos
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -92,13 +93,16 @@ func TestErrorString(t *testing.T) {
 }
 
 func TestCorruptAgentLock(t *testing.T) {
-	err := os.MkdirAll(".agent-lock/", 0755)
+	tmpDir := t.TempDir()
+	lockPath := filepath.Join(tmpDir, ".agent-lock")
+	err := os.MkdirAll(lockPath, 0755)
 	if err != nil {
 		t.Fatalf("failed to create directory: %v", err)
 	}
-	defer os.RemoveAll(".agent-lock/")
 
 	inj := NewInjector(CorruptAgentLock, 3)
+	inj.basePath = tmpDir
+
 	err = inj.Inject(context.Background())
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -107,8 +111,70 @@ func TestCorruptAgentLock(t *testing.T) {
 		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
 	}
 
-	if _, err := os.Stat(".agent-lock/corrupt.lock"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(lockPath, "corrupt.lock")); os.IsNotExist(err) {
 		t.Fatalf("expected corrupt.lock file to be created, but it was not")
+	}
+}
+
+func TestCorruptAgentLockPathDoesNotExist(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	inj := NewInjector(CorruptAgentLock, 4)
+	inj.basePath = tmpDir
+
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated agent lock corruption" {
+		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(tmpDir, ".agent-lock", "corrupt.lock")); !os.IsNotExist(err) {
+		t.Fatalf("expected corrupt.lock file to not be created, but it was")
+	}
+}
+
+func TestCorruptMailbox(t *testing.T) {
+	tmpDir := t.TempDir()
+	mailboxPath := filepath.Join(tmpDir, ".agent-task", "mailbox")
+	err := os.MkdirAll(mailboxPath, 0755)
+	if err != nil {
+		t.Fatalf("failed to create directory: %v", err)
+	}
+
+	inj := NewInjector(CorruptMailbox, 3)
+	inj.basePath = tmpDir
+
+	err = inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated mailbox corruption" {
+		t.Fatalf("expected simulated mailbox corruption error, got %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(mailboxPath, "corrupt.msg")); os.IsNotExist(err) {
+		t.Fatalf("expected corrupt.msg file to be created, but it was not")
+	}
+}
+
+func TestCorruptMailboxPathDoesNotExist(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	inj := NewInjector(CorruptMailbox, 4)
+	inj.basePath = tmpDir
+
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated mailbox corruption" {
+		t.Fatalf("expected simulated mailbox corruption error, got %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(tmpDir, ".agent-task", "mailbox", "corrupt.msg")); !os.IsNotExist(err) {
+		t.Fatalf("expected corrupt.msg file to not be created, but it was")
 	}
 }
 
@@ -119,6 +185,7 @@ func TestAllModeStrings(t *testing.T) {
 		ConnectionDrop:     "connection_drop",
 		ResourceExhaustion: "resource_exhaustion",
 		CorruptAgentLock:   "corrupt_agent_lock",
+		CorruptMailbox:     "corrupt_mailbox",
 	}
 
 	for mode, expected := range modes {
