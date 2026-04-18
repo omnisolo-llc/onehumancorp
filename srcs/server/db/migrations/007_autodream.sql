@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS agent_session_data (
     last_accessed TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_agent_session_accessed ON agent_session_data(last_accessed);
+CREATE INDEX idx_agent_session_accessed ON agent_session_data(last_accessed);
 
 -- Extend swarm_memory_embeddings if necessary or manage migrations safely
 -- but as instructed we will use vector logic.

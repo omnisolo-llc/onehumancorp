@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
+CREATE INDEX idx_shared_tasks_status ON shared_tasks(status);
 
 -- The pgvector extension logic must degrade cleanly in SQLite
 

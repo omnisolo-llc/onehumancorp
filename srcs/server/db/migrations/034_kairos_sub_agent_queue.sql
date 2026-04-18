@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS sub_agent_queue (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_sub_agent_queue_status ON sub_agent_queue(status);
+CREATE INDEX idx_sub_agent_queue_status ON sub_agent_queue(status);
 -- +goose StatementEnd
 
 -- +goose Down
