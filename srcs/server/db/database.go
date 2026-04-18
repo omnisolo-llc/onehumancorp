@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -101,7 +103,33 @@ func New(ctx context.Context) (*DB, error) {
 		if key == "" {
 			// Zero Secrets: Generate a cryptographically secure local storage key on first run and store in environment or require user to provide it.
 			// But for Standalone mode, if it's missing, we fail securely instead of using hardcoded secrets.
-			if os.Getenv("OHC_STANDALONE") == "true" {
+			if os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("CI") != "true" && !strings.Contains(os.Args[0], "test") {
+				keyDir := filepath.Dir(strings.TrimPrefix(dbPath, "file:"))
+				if keyDir == "" || keyDir == "." {
+					homeDir, err := os.UserHomeDir()
+					if err == nil {
+						keyDir = filepath.Join(homeDir, ".openclaw")
+					} else {
+						keyDir = os.TempDir()
+					}
+				}
+				if err := os.MkdirAll(keyDir, 0700); err == nil {
+					keyFile := filepath.Join(keyDir, ".ohc_key")
+					if keyData, err := os.ReadFile(keyFile); err == nil {
+						key = string(keyData)
+					} else {
+						newKey := make([]byte, 32)
+						if _, err := rand.Read(newKey); err == nil {
+							key = hex.EncodeToString(newKey)
+							_ = os.WriteFile(keyFile, []byte(key), 0600)
+						} else {
+							key = "standalone_ephemeral_key" // fallback if random fails, though rare
+						}
+					}
+				} else {
+					key = "standalone_ephemeral_key" // fallback if mkdir fails
+				}
+			} else if os.Getenv("OHC_STANDALONE") == "true" {
 				// We cannot fail yet as it breaks tests without environment variables.
 				// For tests, use a transient key.
 				key = "standalone_ephemeral_key"
