@@ -370,6 +370,14 @@ func TestRecordFunctions(t *testing.T) {
 		RecordAgentTransitionLatency(ctx, "pending_to_running", 1.23)
 	})
 
+	t.Run("RecordSQLiteLockContention", func(t *testing.T) {
+		RecordSQLiteLockContention(ctx, "query")
+	})
+
+	t.Run("RecordSQLiteRetryExhausted", func(t *testing.T) {
+		RecordSQLiteRetryExhausted(ctx, "query")
+	})
+
 	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
 		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
 	})
