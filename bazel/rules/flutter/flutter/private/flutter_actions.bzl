@@ -176,6 +176,14 @@ def flutter_pub_get_action(
     script_content = """#!/bin/bash
 set -euo pipefail
 
+cleanup_temp_dirs() {{
+    echo "Cleaning up temporary directories..."
+    [ -n "${{FLUTTER_WRITABLE:-}}" ] && rm -rf "$FLUTTER_WRITABLE" || true
+    [ -n "${{RUNTIME_WORKSPACE:-}}" ] && rm -rf "$RUNTIME_WORKSPACE" || true
+    [ -n "${{PACKAGE_CONFIG_OUT:-}}" ] && rm -f "$PACKAGE_CONFIG_OUT" || true
+}}
+trap cleanup_temp_dirs EXIT
+
 WORKSPACE_SRC="{workspace_src}"
 WORKSPACE_DIR="{workspace_dir}"
 PUB_CACHE_DIR="{pub_cache_dir}"
@@ -629,6 +637,14 @@ def flutter_build_action(
     script_content = """#!/bin/bash
 set -euo pipefail
 
+cleanup_temp_dirs() {{
+    echo "Cleaning up temporary directories..."
+    [ -n "${{FLUTTER_WRITABLE:-}}" ] && rm -rf "$FLUTTER_WRITABLE" || true
+    [ -n "${{RUNTIME_WORKSPACE:-}}" ] && rm -rf "$RUNTIME_WORKSPACE" || true
+    [ -n "${{PACKAGE_CONFIG_OUT:-}}" ] && rm -f "$PACKAGE_CONFIG_OUT" || true
+}}
+trap cleanup_temp_dirs EXIT
+
 WORKSPACE_DIR="{workspace_dir}"
 PUB_CACHE_DIR="{pub_cache_dir}"
 DART_TOOL_DIR="{dart_tool_dir}"
@@ -978,7 +994,6 @@ if "$FLUTTER_BIN_ABS" --suppress-analytics {build_command}; then
         echo "This indicates a serious issue with Flutter build execution"
         exit 1
     fi
-    
     echo "✓ Flutter build completed successfully"
 else
     echo "✗ FATAL ERROR: flutter {build_command} failed"
