@@ -63,6 +63,8 @@ var (
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
 	subAgentQueueLengthGauge           metric.Int64UpDownCounter
+	AutoDreamRecordsSyncedTotal metric.Int64Counter
+	AutoDreamSyncErrorsTotal    metric.Int64Counter
 	SubAgentQueueDelayHistogram        metric.Float64Histogram
 	TaskClaimContentionTotal           metric.Int64Counter
 	SandboxViolationsTotal             metric.Int64Counter
@@ -280,7 +282,20 @@ func InitWithMeter(m mockableMeter) error {
 	if m == nil {
 		return fmt.Errorf("meter is nil")
 	}
+
 	var err error
+	AutoDreamRecordsSyncedTotal, err = m.Int64Counter("autodream_records_synced_total",
+		metric.WithDescription("Total number of autodream records successfully synced"),
+	)
+	if err != nil {
+		return err
+	}
+	AutoDreamSyncErrorsTotal, err = m.Int64Counter("autodream_sync_errors_total",
+		metric.WithDescription("Total number of autodream sync errors"),
+	)
+	if err != nil {
+		return err
+	}
 	var errs []error
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
@@ -1758,4 +1773,41 @@ func RecordSandboxViolation(ctx context.Context, violationType, agentID, path st
 		attribute.String("agent_id", agentID),
 		attribute.String("path", path),
 	))
+}
+
+
+// RecordAutoDreamSyncSuccess increments the successful sync counter.
+func RecordAutoDreamSyncSuccess(ctx context.Context, agentID string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id": agentID,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_records_synced_total", string(payloadBytes))
+	}
+	if AutoDreamRecordsSyncedTotal != nil {
+		AutoDreamRecordsSyncedTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+		))
+	}
+}
+
+// RecordAutoDreamSyncError increments the sync error counter.
+func RecordAutoDreamSyncError(ctx context.Context, agentID, errorType string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id": agentID,
+			"error_type": errorType,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "autodream_sync_errors_total", string(payloadBytes))
+	}
+	if AutoDreamSyncErrorsTotal != nil {
+		AutoDreamSyncErrorsTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
