@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybrid_rag",
+    srcs = ["delegator.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/hybrid_rag",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "hybrid_rag_test",
+    srcs = [
+        "delegator_test.go",
+        "e2e_test.go",
+    ],
+    embed = [":hybrid_rag"],
+    deps = [
+        "//srcs/server/api",
+        "//srcs/server/orchestration",
+    ],
+)

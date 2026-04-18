@@ -602,6 +602,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
 	mux.HandleFunc("/api/sync/escalation", auth.RequireRole("system", api.HandleSyncEscalation(server.hub)))
+	mux.HandleFunc("/api/hybrid/delegate", auth.RequireRole("system", api.HandleHybridDelegation(server.hub)))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
 	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleSyncRAG))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
