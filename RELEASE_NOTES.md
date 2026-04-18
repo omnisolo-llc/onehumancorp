@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
+- Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.
+- Privacy/Offline (Standalone): Enhance AutoDream Vector Data Pipelines for standalone privacy.
+
 ## v0.4.4 (Cloud) / v0.4.4+1 (Standalone)
 - Scaling (Cloud): Parallel execution for SyncMissions and SyncContextSync, Optimize OHC-SIP synchronization latency.
 - Privacy/Offline (Standalone): Add Agent Harness architecture research report, Add Telemetry for SQLite lock contention.
