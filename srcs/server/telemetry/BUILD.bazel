@@ -33,6 +33,7 @@ go_test(
         "compliance_test.go",
         "privacy_test.go",
         "logger_test.go",
+        "pii_linter_test.go",
         "sync_worker_test.go",
         "telemetry_extra_test.go",
         "telemetry_test.go",
