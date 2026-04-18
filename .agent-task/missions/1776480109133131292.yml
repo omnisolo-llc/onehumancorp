@@ -1,0 +1,16 @@
+schema_version: 1.0
+timestamp: "2024-05-24T10:00:00Z"
+title: "Fix Circular Dependency String Matching Test Plan"
+status: "pending"
+priority: "high"
+assignee: "implementer_core_orchestration"
+description: >
+  The `CheckCircularDependency` function in `srcs/server/orchestration/tasks.go` currently returns `fmt.Errorf("circular dependency detected for task %s", taskID)`.
+  According to `docs/features/core-orchestration/test-plan.md`, the orchestrator engine's DAG evaluator is expected to detect the cycle and raise a `DependencyCycleError`.
+  We need to update the error message to prepend `DependencyCycleError: ` so that it satisfies the test plan expectations.
+
+  ```go
+  // srcs/server/orchestration/tasks.go:935
+  - return fmt.Errorf("circular dependency detected for task %s", taskID)
+  + return fmt.Errorf("DependencyCycleError: circular dependency detected for task %s", taskID)
+  ```
