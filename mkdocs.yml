@@ -38,6 +38,7 @@ nav:
       - api/index.md
   - Features:
       - features/index.md
+      - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
   - Walkthroughs:
       - Agent Harness Visual Walkthrough: walkthroughs/agent_harness_walkthrough.md
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
