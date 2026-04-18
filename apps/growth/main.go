@@ -46,7 +46,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 	referralsRepo := growth.NewReferralRepository(rdb)
 	quotaService := growth.NewQuotaService(tracker, rdb, referralsRepo, 100)
 	referralService := growth.NewReferralService(tracker)
-	teamService := growth.NewTeamService(tracker, referralsRepo)
 
 	abTestService := growth.NewABTestService(tracker)
 
@@ -396,115 +395,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Usage incremented successfully\n")
 	}))
-
-	mux.HandleFunc("/api/v1/growth/teams/invite", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		spiffeID := r.Header.Get("X-Spiffe-Id")
-		if spiffeID == "" {
-			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
-			return
-		}
-
-		var req struct {
-			TeamID       string `json:"team_id"`
-			InviteeEmail string `json:"invitee_email"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		if req.TeamID == "" || req.InviteeEmail == "" {
-			http.Error(w, "missing team_id or invitee_email", http.StatusBadRequest)
-			return
-		}
-
-		ref, err := teamService.SendTeamInvite(r.Context(), req.TeamID, spiffeID, req.InviteeEmail)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message":   "Team invite sent successfully",
-			"invite_id": ref.ID,
-		})
-	}))
-
-	mux.HandleFunc("/api/v1/growth/teams/accept", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		var req struct {
-			InviteID string `json:"invite_id"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
-
-		if req.InviteID == "" {
-			http.Error(w, "missing invite_id", http.StatusBadRequest)
-			return
-		}
-
-		spiffeID := r.Header.Get("X-Spiffe-Id")
-		if spiffeID == "" {
-			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
-			return
-		}
-
-		err := teamService.AcceptTeamInvite(r.Context(), req.InviteID, spiffeID)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]string{
-			"message": "Team invite accepted successfully",
-		})
-	}))
-
-	mux.HandleFunc("/api/v1/growth/analytics/viral_coefficient", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		spiffeID := r.Header.Get("X-Spiffe-Id")
-		if spiffeID == "" {
-			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
-			return
-		}
-
-		if spiffeID != "admin" && spiffeID != "dashboard-service" {
-			http.Error(w, "Unauthorized: missing admin privileges", http.StatusForbidden)
-			return
-		}
-
-		coef, err := referralsRepo.GetViralCoefficient(r.Context())
-		if err != nil {
-			http.Error(w, "Failed to get viral coefficient", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(map[string]float64{
-			"viral_coefficient": coef,
-		})
-	}))
-
 	return mux
 }
 
