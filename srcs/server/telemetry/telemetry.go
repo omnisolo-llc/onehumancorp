@@ -78,6 +78,7 @@ var (
 	SyncPayloadSize        metric.Int64Histogram
 	RateLimitExceededCount metric.Int64Counter
 	syncDaemonBatchSize    metric.Int64Histogram
+	SyncDaemonErrorTotal metric.Int64Counter
 
 	sqliteLockContentionCounter   metric.Int64Counter
 	sqliteRetryExhaustedCounter   metric.Int64Counter
@@ -392,6 +393,14 @@ func InitWithMeter(m mockableMeter) error {
 	syncDaemonBatchSize, err = m.Int64Histogram(
 		"ohc_sync_daemon_batch_size",
 		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncDaemonErrorTotal, err = m.Int64Counter(
+		"sync_daemon_error_total",
+		metric.WithDescription("Total number of sync daemon errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1304,35 +1313,35 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
-func RecordSyncEscalation(ctx context.Context, count int64) {
+func RecordSyncEscalation(ctx context.Context, count int64, mode string) {
 	if SyncEscalationsCount == nil {
 		return
 	}
-	SyncEscalationsCount.Add(ctx, count)
+	SyncEscalationsCount.Add(ctx, count, metric.WithAttributes(attribute.String("mode", mode)))
 }
 
 // RecordSyncLatency records the latency of the sync process.
-func RecordSyncLatency(ctx context.Context, latency float64) {
+func RecordSyncLatency(ctx context.Context, latency float64, mode string) {
 	if SyncLatency == nil {
 		return
 	}
-	SyncLatency.Record(ctx, latency)
+	SyncLatency.Record(ctx, latency, metric.WithAttributes(attribute.String("mode", mode)))
 }
 
 // RecordSyncPayloadSize records the size of the sync payload.
-func RecordSyncPayloadSize(ctx context.Context, size int64) {
+func RecordSyncPayloadSize(ctx context.Context, size int64, mode string) {
 	if SyncPayloadSize == nil {
 		return
 	}
-	SyncPayloadSize.Record(ctx, size)
+	SyncPayloadSize.Record(ctx, size, metric.WithAttributes(attribute.String("mode", mode)))
 }
 
 // RecordSyncDaemonBatchSize records the batch size processed by SyncDaemon.
-func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
+func RecordSyncDaemonBatchSize(ctx context.Context, size int64, mode string) {
 	if syncDaemonBatchSize == nil {
 		return
 	}
-	syncDaemonBatchSize.Record(ctx, size)
+	syncDaemonBatchSize.Record(ctx, size, metric.WithAttributes(attribute.String("mode", mode)))
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
@@ -1726,4 +1735,13 @@ func RecordSandboxViolation(ctx context.Context, violationType, agentID, path st
 		attribute.String("agent_id", agentID),
 		attribute.String("path", path),
 	))
+}
+
+
+// RecordSyncDaemonError increments the global counter for sync daemon errors.
+func RecordSyncDaemonError(ctx context.Context, mode string) {
+	if SyncDaemonErrorTotal == nil {
+		return
+	}
+	SyncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode)))
 }
