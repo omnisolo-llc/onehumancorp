@@ -138,9 +138,10 @@ func init() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
+
+	// Wrap the global handler to ensure PII redaction without completely overwriting existing formats
 	redactingHandler := telemetry.NewPIIRedactingHandler(handler)
-	logger := slog.New(redactingHandler)
-	slog.SetDefault(logger)
+	slog.SetDefault(slog.New(redactingHandler))
 }
 
 // Creates a new demo system.
