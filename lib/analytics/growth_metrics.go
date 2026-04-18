@@ -9,6 +9,7 @@ import (
 var (
 	inviteSentCounter     metric.Int64Counter
 	inviteAcceptedCounter metric.Int64Counter
+	teamInviteSentCounter metric.Int64Counter
 	abTestImpressionCounter metric.Int64Counter
 	abTestConversionCounter metric.Int64Counter
 	quotaExceededCounter    metric.Int64Counter
@@ -19,6 +20,10 @@ func init() {
 	meter := otel.Meter("github.com/onehumancorp/mono/ohc")
 	var err error
 	inviteSentCounter, err = meter.Int64Counter("growth_viral_invite_sent_total")
+	if err != nil {
+		panic(err)
+	}
+	teamInviteSentCounter, err = meter.Int64Counter("growth_viral_team_invite_sent_total")
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +57,9 @@ func NewTracker() *Tracker {
 }
 
 func (t *Tracker) TrackEvent(ctx context.Context, name string, props map[string]interface{}) {
-	if name == "invite_sent" && inviteSentCounter != nil {
+	if name == "team_invite_sent" && teamInviteSentCounter != nil {
+		teamInviteSentCounter.Add(ctx, 1)
+	} else if name == "invite_sent" && inviteSentCounter != nil {
 		inviteSentCounter.Add(ctx, 1)
 	} else if name == "invite_accepted" && inviteAcceptedCounter != nil {
 		inviteAcceptedCounter.Add(ctx, 1)

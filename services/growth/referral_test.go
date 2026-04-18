@@ -50,3 +50,18 @@ func TestProcessBulkInvites(t *testing.T) {
 		t.Errorf("Expected error for empty parameters")
 	}
 }
+
+func TestProcessTeamInvite(t *testing.T) {
+	tracker := analytics.NewTracker()
+	service := NewReferralService(tracker)
+
+	err := service.ProcessTeamInvite(context.Background(), "team-a", "user-123", []string{"test1@example.com", "test2@example.com"})
+	if err != nil {
+		t.Errorf("ProcessTeamInvite failed: %v", err)
+	}
+
+	err = service.ProcessTeamInvite(context.Background(), "", "", []string{})
+	if err == nil {
+		t.Errorf("Expected error for empty parameters")
+	}
+}

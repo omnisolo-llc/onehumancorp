@@ -224,6 +224,58 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		})
 	}))
 
+
+	mux.HandleFunc("/api/v1/growth/referrals/team_invite", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		spiffeID := r.Header.Get("X-Spiffe-Id")
+		if spiffeID == "" {
+			http.Error(w, "missing SPIFFE identity", http.StatusUnauthorized)
+			return
+		}
+
+		var req growth.TeamInviteRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
+
+		if len(req.ReceiverEmails) == 0 || req.TeamID == "" {
+			http.Error(w, "missing receiver_emails or team_id", http.StatusBadRequest)
+			return
+		}
+
+		var links []string
+		for _, email := range req.ReceiverEmails {
+			referral := &growth.GrowthReferral{
+				InviterID:    spiffeID,
+				InviteeEmail: email,
+				Status:       "PENDING",
+				CreatedAt:    time.Now(),
+			}
+			referral.ID = fmt.Sprintf("ref-team-%s-%d", req.TeamID, time.Now().UnixNano())
+
+			err := referralsRepo.SaveReferral(r.Context(), referral)
+			if err != nil {
+				http.Error(w, "Failed to save referral", http.StatusInternalServerError)
+				return
+			}
+			links = append(links, fmt.Sprintf("ohc://join?ref=%s", referral.ID))
+		}
+
+		_ = referralService.ProcessTeamInvite(r.Context(), req.TeamID, spiffeID, req.ReceiverEmails)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"message": "Team invites sent successfully",
+			"links":   links,
+		})
+	}))
+
 	mux.HandleFunc("/api/v1/growth/referrals/accept", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)

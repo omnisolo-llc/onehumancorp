@@ -47,3 +47,21 @@ func (s *ReferralService) ProcessBulkInvites(ctx context.Context, senderID strin
 	})
 	return nil
 }
+
+type TeamInviteRequest struct {
+	TeamID         string   `json:"team_id"`
+	SenderID       string   `json:"sender_id"`
+	ReceiverEmails []string `json:"receiver_emails"`
+}
+
+func (s *ReferralService) ProcessTeamInvite(ctx context.Context, teamID string, senderID string, receiverEmails []string) error {
+	if teamID == "" || senderID == "" || len(receiverEmails) == 0 {
+		return fmt.Errorf("invalid team invite parameters")
+	}
+	s.tracker.TrackEvent(ctx, "team_invite_sent", map[string]interface{}{
+		"team_id":         teamID,
+		"sender_id":       senderID,
+		"receiver_emails": receiverEmails,
+	})
+	return nil
+}

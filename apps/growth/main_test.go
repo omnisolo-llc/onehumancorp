@@ -275,3 +275,21 @@ func TestExportEndpoint(t *testing.T) {
 		t.Errorf("expected 1 signup, got %v", resp["total_signups"])
 	}
 }
+
+func TestGrowthReferralsTeamInviteAPI(t *testing.T) {
+	tracker := analytics.NewTracker()
+	mux := NewGrowthMux(tracker, nil)
+
+	reqTeamInvite, err := http.NewRequest("POST", "/api/v1/growth/referrals/team_invite", bytes.NewBuffer([]byte(`{"team_id":"team-test", "receiver_emails":["t1@example.com"]}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqTeamInvite.Header.Set("X-Spiffe-Id", "spiffe://example.org/myservice")
+
+	rrTeamInvite := httptest.NewRecorder()
+	mux.ServeHTTP(rrTeamInvite, reqTeamInvite)
+
+	if status := rrTeamInvite.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+}
