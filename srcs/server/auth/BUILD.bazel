@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "auth",
     srcs = [
+        "crypto.go",
         "handlers.go",
         "jwt.go",
         "middleware.go",
@@ -25,6 +26,7 @@ go_test(
     srcs = [
         "auth_extra_test.go",
         "auth_test.go",
+        "crypto_test.go",
         "jwt_extra_test.go",
         "oidc_test.go",
         "powersync_test.go",
