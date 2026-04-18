@@ -42,3 +42,25 @@ func CalculateNetworkCost(bytes int64, config CostConfig) float64 {
 	cost := gb * config.CostPerNetworkGB
 	return math.Round(cost*10000) / 10000
 }
+
+type ModelPricing struct {
+	Name string
+	CostPerInputToken float64
+	CostPerOutputToken float64
+}
+
+func RouteToCheapestModel(inputTokens, expectedOutputTokens int, models []ModelPricing) string {
+	if len(models) == 0 {
+		return ""
+	}
+	cheapestModel := models[0].Name
+	minCost := float64(inputTokens)*models[0].CostPerInputToken + float64(expectedOutputTokens)*models[0].CostPerOutputToken
+	for _, model := range models[1:] {
+		cost := float64(inputTokens)*model.CostPerInputToken + float64(expectedOutputTokens)*model.CostPerOutputToken
+		if cost < minCost {
+			minCost = cost
+			cheapestModel = model.Name
+		}
+	}
+	return cheapestModel
+}
