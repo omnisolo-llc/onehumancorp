@@ -23,6 +23,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
     'DESIGNER',
     'SECURITY_ENGINEER',
     'PRODUCT_MANAGER',
+    'AI_NEWS_COLLECTOR',
   ];
 
   Future<void> _handleScale() async {
@@ -154,7 +155,8 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                                         setState(() => _targetCount = val),
                           ),
                           const Divider(height: 32),
-                          Row(
+                          Wrap(
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Icon(
                                 Icons.info_outline,
@@ -166,7 +168,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                                 'Estimated Cost Impact:',
                                 style: TextStyle(fontSize: 12),
                               ),
-                              const Spacer(),
+                              const SizedBox(width: 8),
                               Text(
                                 '\$${(_targetCount * 0.45).toStringAsFixed(2)} / hr',
                                 style: const TextStyle(
@@ -227,11 +229,11 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                       children: [
                         const Icon(Icons.terminal, size: 18),
                         const SizedBox(width: 8),
-                        const Text(
+                        const Expanded(child: Text(
                           'Provisioning Logs',
                           style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const Spacer(),
+                          overflow: TextOverflow.ellipsis,
+                        )),
                         if (_isProvisioning)
                           const SizedBox(
                             width: 12,
