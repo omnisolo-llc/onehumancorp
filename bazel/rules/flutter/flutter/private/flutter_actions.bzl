@@ -108,7 +108,6 @@ done < "$MANIFEST_FILE"
         inputs = input_files,
         outputs = [working_dir],
         executable = setup_script,
-        execution_requirements = {"no-cache": "1"},
         arguments = [working_dir.path, manifest.path],
         mnemonic = "SetupFlutterWorkspace",
         progress_message = "Setting up Flutter workspace for %s" % ctx.label.name,
@@ -510,7 +509,6 @@ echo "=== Dependency preparation complete ==="
     ctx.actions.run_shell(
         inputs = [working_dir, pubspec_file] + dep_pub_cache_files + ([workspace_pubspec] if workspace_pubspec else []) + flutter_toolchain.flutterinfo.tool_files + flutter_toolchain.flutterinfo.sdk_files,
         outputs = [pub_get_output, pub_deps, pub_cache_dir, dart_tool_dir, prepared_workspace],
-        execution_requirements = {"no-cache": "1"},
         command = script_content + """
 
 cd "$ORIGINAL_PWD"
@@ -978,7 +976,7 @@ if "$FLUTTER_BIN_ABS" --suppress-analytics {build_command}; then
         echo "This indicates a serious issue with Flutter build execution"
         exit 1
     fi
-    
+
     echo "✓ Flutter build completed successfully"
 else
     echo "✗ FATAL ERROR: flutter {build_command} failed"
@@ -1003,7 +1001,6 @@ fi
     ctx.actions.run_shell(
         inputs = [working_dir, pub_cache_dir, dart_tool_dir] + flutter_toolchain.flutterinfo.tool_files + flutter_toolchain.flutterinfo.sdk_files,
         outputs = [build_artifacts],
-        execution_requirements = {"no-cache": "1"},
         command = script_content,
         mnemonic = "FlutterBuild",
         progress_message = "Running flutter build %s for %s" % (target, ctx.label.name),
