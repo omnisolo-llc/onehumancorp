@@ -30,12 +30,15 @@ type CostAuditor struct {
 	storageSavings   float64
 	totalComputeCost float64
 	totalNetworkCost float64
+	contextCompressionSavings float64
+	agentBudgets map[string]float64
 }
 
 func NewCostAuditor(config token_calculator.CostConfig) *CostAuditor {
 	return &CostAuditor{
 		config:     config,
 		agentCosts: make(map[string]float64),
+		agentBudgets: make(map[string]float64),
 	}
 }
 func (a *CostAuditor) RecordEvent(ctx context.Context, event AuditEvent) float64 {
@@ -93,17 +96,54 @@ func (a *CostAuditor) RecordComputeEvent(ctx context.Context, event ComputeEvent
 	a.totalNetworkCost += networkCost
 	return totalCost
 }
+
+func (a *CostAuditor) RecordContextCompression(ctx context.Context, originalTokens, compressedTokens int) float64 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	savings := token_calculator.CalculateContextCompressionSavings(originalTokens, compressedTokens, a.config)
+	a.contextCompressionSavings += savings
+	return savings
+}
+
+func (a *CostAuditor) GetTotalContextCompressionSavings() float64 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.contextCompressionSavings
+}
+
+func (a *CostAuditor) SetAgentBudget(agentID string, budget float64) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.agentBudgets[agentID] = budget
+}
+
+func (a *CostAuditor) CheckAgentBudget(agentID string) (float64, float64, bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	cost := a.agentCosts[agentID]
+	budget, hasBudget := a.agentBudgets[agentID]
+	if !hasBudget {
+		return cost, 0, true
+	}
+	return cost, budget, cost <= budget
+}
+
 func (a *CostAuditor) GenerateReport() string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	report := fmt.Sprintf("Total Cost: $%.4f\n", a.totalCost)
 	report += fmt.Sprintf("Total Savings via Caching: $%.4f\n", a.cachingSavings)
 	report += fmt.Sprintf("Total Savings via Storage Compression: $%.4f\n", a.storageSavings)
+	report += fmt.Sprintf("Total Savings via Context Compression: $%.4f\n", a.contextCompressionSavings)
 	report += fmt.Sprintf("Total Compute Cost: $%.4f\n", a.totalComputeCost)
 	report += fmt.Sprintf("Total Network Cost: $%.4f\n", a.totalNetworkCost)
 	report += "Agent Costs:\n"
 	for agentID, cost := range a.agentCosts {
-		report += fmt.Sprintf("- %s: $%.4f\n", agentID, cost)
+		if budget, ok := a.agentBudgets[agentID]; ok {
+			report += fmt.Sprintf("- %s: $%.4f / $%.4f\n", agentID, cost, budget)
+		} else {
+			report += fmt.Sprintf("- %s: $%.4f\n", agentID, cost)
+		}
 	}
 	return report
 }

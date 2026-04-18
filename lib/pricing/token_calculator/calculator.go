@@ -42,3 +42,12 @@ func CalculateNetworkCost(bytes int64, config CostConfig) float64 {
 	cost := gb * config.CostPerNetworkGB
 	return math.Round(cost*10000) / 10000
 }
+
+func CalculateContextCompressionSavings(originalTokens, compressedTokens int, config CostConfig) float64 {
+	savedTokens := float64(originalTokens - compressedTokens)
+	if savedTokens < 0 {
+		savedTokens = 0
+	}
+	savings := savedTokens * config.CostPerInputToken
+	return math.Round(savings*10000) / 10000
+}

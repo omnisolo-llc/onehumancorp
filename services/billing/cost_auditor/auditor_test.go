@@ -68,6 +68,41 @@ func TestCostAuditor(t *testing.T) {
 		t.Errorf("expected new agent cost %f, got %f", expectedNewAgentCost, newAgentCost)
 	}
 
+
+	savingsContext := auditor.RecordContextCompression(ctx, 10000, 2000)
+	if savingsContext != 0.08 {
+		t.Errorf("expected context savings 0.08, got %f", savingsContext)
+	}
+	totalContextSavings := auditor.GetTotalContextCompressionSavings()
+	if totalContextSavings != 0.08 {
+		t.Errorf("expected total context savings 0.08, got %f", totalContextSavings)
+	}
+
+	auditor.SetAgentBudget("miser-1", 1.0)
+	costCurrent, budget, underBudget := auditor.CheckAgentBudget("miser-1")
+	if !underBudget {
+		t.Errorf("expected to be under budget")
+	}
+	if budget != 1.0 {
+		t.Errorf("expected budget 1.0, got %f", budget)
+	}
+	if costCurrent != auditor.GetAgentCost("miser-1") {
+		t.Errorf("cost mismatch")
+	}
+
+	auditor.SetAgentBudget("miser-over", 0.01)
+	auditor.RecordEvent(ctx, AuditEvent{
+		AgentID:              "miser-over",
+		InputTokens:          100000,
+		OutputTokens:         100000,
+		CachedInputTokens:    0,
+		LocalEmbeddingTokens: 0,
+	})
+	_, _, underBudgetOver := auditor.CheckAgentBudget("miser-over")
+	if underBudgetOver {
+		t.Errorf("expected to be over budget")
+	}
+
 	report := auditor.GenerateReport()
 	if report == "" {
 		t.Errorf("expected non-empty report")
