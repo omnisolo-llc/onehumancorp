@@ -1,20 +1,25 @@
-1. **Apply `perf.CoordinatorMode` in `SyncContextSync`**:
-   - In `srcs/server/orchestration/sip.go`, find `SyncContextSync`.
-   - After fetching the `records` from `swarm_memory_embeddings`, iterate and transform the payloads. Currently, this iteration is done sequentially: `for _, rec := range records { ... }`.
-   - Update it to use `perf.CoordinatorMode(4)` for parallel payload sanitization and HTTP requests to `remoteEndpoint`.
-   - To make it thread-safe, collect the `idsToDelete` via a mutex or by sending results back to a channel. Note: Since `ExecuteParallel` blocks until all finish, we can process items and aggregate safe state. Wait, HTTP requests inside `ExecuteParallel` might be concurrent and need separate `http.Client`s or reuse the same thread-safe `http.Client`.
-   - Alternatively, batch the records to construct an array of processed payloads, similar to `SyncBufferedMetrics` if it does one large POST. Wait, the existing code in `SyncContextSync` does a POST *per record*: `req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))`.
-   - If it does a POST per record, `ExecuteParallel` will parallelize both sanitization and network requests!
-   - Use `perf.NewCoordinatorMode(4)` to parallelize it. Use a mutex for `idsToDelete` and `syncedCount`.
+1. **Analyze Code**: The performance issue in `SyncContextSync` and `SyncMissions` inside `srcs/server/orchestration/sip.go` seems to originate from limiting parallelism by manually chunking the tasks inside `CoordinatorMode` and looping sequentially inside each chunk. By changing the approach to create an individual task function for each record, we allow `CoordinatorMode` to parallelize execution efficiently up to its concurrency limit.
 
-2. **Apply `perf.CoordinatorMode` in `SyncMissions`**:
-   - In `srcs/server/orchestration/sip.go`, find `SyncMissions`.
-   - Similar to above, it processes `missions` in a loop and sends a POST *per mission*.
-   - Update it to use `perf.CoordinatorMode(4)`. Use a `sync.Mutex` for tracking successful synchronizations (updating `agent_missions` status in the DB transaction might not be safe, wait! The SQLite/PG transaction `tx` is not thread-safe. Wait, `tx.Exec` might not be safe to call concurrently from multiple goroutines on the same transaction).
-   - In `SyncMissions`, `tx.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)` is done per mission. We can collect successfully synced mission IDs in a thread-safe way, and do a single batch update or individual updates *after* `ExecuteParallel` completes.
-   - Wait, `SyncContextSync` collects `idsToDelete` and does a batch delete: `tx.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))`. So `SyncMissions` should collect `idsToUpdate` and do a batch update: `tx.Exec(ctx, fmt.Sprintf("UPDATE agent_missions SET status = 'SYNCED' WHERE id IN (%s)", idList))` after `ExecuteParallel`.
+2. **Refactor `SyncContextSync`**:
+    - Update `SyncContextSync` in `srcs/server/orchestration/sip.go`.
+    - Change the `tasks` array creation to make a `func() error` for *each* record instead of looping inside `workerCount` tasks.
+    - Let `workerCount = 64` (or minimum of `len(records)` and `64`).
+    - Remove the inner loop, directly performing the sanitization and network call for that single record. This allows `ExecuteParallel` to correctly batch and parallelize.
 
-3. **Verify functionality**:
-   - Run `bazelisk test //...` to ensure no tests are broken by these changes.
+3. **Refactor `SyncMissions`**:
+    - Update `SyncMissions` in `srcs/server/orchestration/sip.go` exactly like `SyncContextSync`.
+    - Change the `tasks` array creation to make a `func() error` for *each* mission instead of grouping them and looping inside the worker task.
+    - Set `workerCount = 64` (or min of `len(missions)` and `64`).
+    - Remove the inner loop inside the task func.
 
-4. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
+4. **Run Benchmarks**:
+    - Use `run_in_bash_session` to execute the benchmarks in `srcs/benchmarks/sip_sync_bench_test.go` to verify the 10x performance improvement.
+
+5. **Run Tests**:
+    - Execute `./bazelisk test //...` to make sure nothing is broken.
+
+6. **Complete pre commit steps**:
+    - Complete pre commit steps to ensure proper testing, verification, review, and reflection are done.
+
+7. **Submit**:
+    - Commit and submit the code using `submit` tool with title "⚡ Bolt: [performance improvement]".
