@@ -24,6 +24,7 @@ import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/ai_config_screen.dart';
+import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/screens/channels_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/login_screen.dart';
@@ -940,6 +941,84 @@ void main() {
         await tester.pumpAndSettle();
       }
       expect(find.byType(Scaffold), findsOneWidget);
+    });
+  });
+
+  group('BusinessSetupWizardScreen – AI bootstrap flow', () {
+    testWidgets('launches backend business bootstrap request', (tester) async {
+      final mockClient = MockHttpClient();
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode({'status': 'created', 'summary': 'Created business'}),
+          200,
+        ),
+      );
+
+      final api = ApiService(
+        baseUrl: 'http://localhost',
+        token: 'tok-test',
+        client: mockClient,
+      );
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const BusinessSetupWizardScreen(),
+          ),
+          GoRoute(
+            path: '/dashboard',
+            builder: (context, state) => const Scaffold(body: Text('Dashboard')),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
+            apiServiceProvider.overrideWithValue(api),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'Help me create a real estate staging company');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Luxe Stage');
+      await tester.enterText(find.byType(TextField).at(1), 'Real Estate');
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Support'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).at(0), 'Alex Founder');
+      await tester.enterText(find.byType(TextField).at(1), 'alex@example.com');
+      await tester.enterText(find.byType(TextField).at(2), 'password');
+      await tester.tap(find.text('Launch My AI Team →'));
+      await tester.pumpAndSettle();
+
+      final captured = verify(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: captureAny(named: 'body'),
+        ),
+      ).captured.last as String;
+      expect(captured, contains('"prompt":"Help me create a real estate staging company"'));
+      expect(captured, contains('"company_name":"Luxe Stage"'));
+      expect(captured, contains('"industry":"Real Estate"'));
+      expect(find.text('Dashboard'), findsOneWidget);
     });
   });
 

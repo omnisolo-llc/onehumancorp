@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'dart:ui';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
   final int step;
+  final String aiPrompt;
   final String companyName;
   final String industry;
   final String size;
@@ -23,6 +23,7 @@ class BusinessSetupState {
 
   const BusinessSetupState({
     this.step = 0,
+    this.aiPrompt = '',
     this.companyName = '',
     this.industry = '',
     this.size = 'S',
@@ -37,6 +38,7 @@ class BusinessSetupState {
 
   BusinessSetupState copyWith({
     int? step,
+    String? aiPrompt,
     String? companyName,
     String? industry,
     String? size,
@@ -48,8 +50,9 @@ class BusinessSetupState {
     bool? isLoading,
     String? errorMessage,
   }) {
-    return BusinessSetupState(
+      return BusinessSetupState(
       step: step ?? this.step,
+      aiPrompt: aiPrompt ?? this.aiPrompt,
       companyName: companyName ?? this.companyName,
       industry: industry ?? this.industry,
       size: size ?? this.size,
@@ -81,6 +84,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   }
 
   void updateCompany(String name) => state = state.copyWith(companyName: name);
+  void updatePrompt(String prompt) => state = state.copyWith(aiPrompt: prompt);
   void updateIndustry(String val) => state = state.copyWith(industry: val);
   void updateSize(String val) => state = state.copyWith(size: val);
   void toggleGoal(String goal) {
@@ -99,37 +103,22 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authStateProvider).valueOrNull;
-    final baseUrl = ref.read(backendUrlProvider);
+    final api = ref.read(apiServiceProvider);
 
     state = state.copyWith(isLoading: true, errorMessage: null);
 
-    if (user != null && baseUrl.isNotEmpty) {
-      final body = {
-        'extras': {
-          'company_name': state.companyName,
-          'industry': state.industry,
-          'company_size': state.size,
-          'goals': state.goals.join(','),
-          'deployment_preference': state.deployment,
-          'admin_name': state.adminName,
-          'admin_email': state.adminEmail,
-        }
-      };
-
+    if (user != null && api != null) {
       try {
-        final res = await http.post(
-          Uri.parse('$baseUrl/api/wizard/configure'),
-          headers: {
-            'Authorization': 'Bearer ${user.token}',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(body),
+        await api.bootstrapBusiness(
+          prompt: state.aiPrompt,
+          companyName: state.companyName,
+          industry: state.industry,
+          companySize: state.size,
+          goals: state.goals,
+          deploymentPreference: state.deployment,
+          adminName: state.adminName,
+          adminEmail: state.adminEmail,
         );
-
-        if (res.statusCode != 200) {
-          state = state.copyWith(isLoading: false, errorMessage: 'Configuration failed: ${res.statusCode}');
-          return;
-        }
       } catch (e) {
         state = state.copyWith(isLoading: false, errorMessage: 'Network error: $e');
         return;
@@ -201,6 +190,18 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                         children: [
                           if (state.step == 0) ...[
                             const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
+                            const SizedBox(height: 16),
+                            TextField(
+                              minLines: 3,
+                              maxLines: 5,
+                              decoration: const InputDecoration(
+                                labelText: 'Describe the business you want AI to create',
+                                hintText: 'Help me create a real estate staging company that serves luxury listings.',
+                                labelStyle: TextStyle(color: Colors.white70),
+                              ),
+                              onChanged: notifier.updatePrompt,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
                           ] else if (state.step == 1) ...[
                             TextField(
                               decoration: const InputDecoration(labelText: 'Company Name', labelStyle: TextStyle(color: Colors.white70)),

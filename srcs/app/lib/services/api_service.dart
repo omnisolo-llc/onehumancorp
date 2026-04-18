@@ -365,6 +365,34 @@ class ApiService {
     return AiProvider.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
+  Future<Map<String, dynamic>> bootstrapBusiness({
+    required String prompt,
+    required String companyName,
+    required String industry,
+    required String companySize,
+    required List<String> goals,
+    required String deploymentPreference,
+    required String adminName,
+    required String adminEmail,
+  }) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/wizard/bootstrap_business'),
+      headers: _headers,
+      body: jsonEncode({
+        'prompt': prompt,
+        'company_name': companyName,
+        'industry': industry,
+        'company_size': companySize,
+        'goals': goals,
+        'deployment_preference': deploymentPreference,
+        'admin_name': adminName,
+        'admin_email': adminEmail,
+      }),
+    ).timeout(_timeout);
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   // ── Skills ────────────────────────────────────────────────────────────────
 
   Future<List<Skill>> listSkills() async {

@@ -15,6 +15,7 @@ type AiProvider struct {
 	APIKey  string `json:"api_key,omitempty"`
 	BaseURL string `json:"base_url,omitempty"`
 	Model   string `json:"model"`
+	Models  []string `json:"models,omitempty"`
 	Enabled bool   `json:"enabled"`
 }
 
