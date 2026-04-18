@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // BridgeEnvelope is used to prevent infinite broadcast loops across swarms.

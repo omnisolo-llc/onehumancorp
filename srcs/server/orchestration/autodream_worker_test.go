@@ -114,12 +114,10 @@ func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 	}
 }
 
-
 func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 	provider := setupTestDB(t)
 	worker := NewAutoDreamWorker(provider)
 	ctx := context.Background()
-
 
 	// Clean up table for isolated test
 	provider.Exec(ctx, "DELETE FROM autodream_memories")

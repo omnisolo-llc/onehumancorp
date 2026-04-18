@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"gopkg.in/yaml.v3"
 )
 
 func formatFloat32SliceForVector(embedding []float32) string {
@@ -153,12 +153,10 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	return nil
 }
 
-
-
 // AutoDreamWorkerDaemon runs ProcessMemories periodically.
 type AutoDreamWorkerDaemon struct {
-	worker *AutoDreamWorker
-	done   chan struct{}
+	worker   *AutoDreamWorker
+	done     chan struct{}
 	stopOnce sync.Once
 }
 
@@ -168,7 +166,6 @@ func NewAutoDreamWorkerDaemon(worker *AutoDreamWorker) *AutoDreamWorkerDaemon {
 		done:   make(chan struct{}),
 	}
 }
-
 
 // ConsolidateMemories processes the backlog of episodic memories into embeddings.
 // It fetches up to 100 rows where processed_at IS NULL.

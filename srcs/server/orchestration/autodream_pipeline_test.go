@@ -64,9 +64,6 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-
-
-
 	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'))")
 	require.NoError(t, err)
 

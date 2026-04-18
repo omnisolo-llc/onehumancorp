@@ -2,27 +2,27 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
+	"encoding/json"
+	_ "modernc.org/sqlite"
+	"strings"
 	"testing"
-    "encoding/json"
-    "database/sql"
-    "strings"
-    _ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
 func setupTestDBSharedTasks(t *testing.T) db.Provider {
-    conn, err := sql.Open("sqlite", ":memory:")
-    if err != nil {
-        t.Fatalf("failed to open sqlite: %v", err)
-    }
+	conn, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite: %v", err)
+	}
 
-    p := db.NewSqliteProvider(conn)
+	p := db.NewSqliteProvider(conn)
 
-    ctx := context.Background()
+	ctx := context.Background()
 
-    // Create the required table
-    _, err = p.Exec(ctx, `
+	// Create the required table
+	_, err = p.Exec(ctx, `
 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     id VARCHAR PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
@@ -38,68 +38,68 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );`)
-    if err != nil {
-        t.Fatalf("failed to create table: %v", err)
-    }
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
 
-    return p
+	return p
 }
 
 func TestClaimTask(t *testing.T) {
 	provider := setupTestDBSharedTasks(t)
-    defer provider.Close()
+	defer provider.Close()
 
 	ctx := context.Background()
 
-    task := &SharedTaskDecomposition{
-        OrganizationID: "org-1",
-        Title: "Test Task",
-        Status: "PENDING",
-        Priority: "P2",
-        Payload: json.RawMessage("{}"),
-        Dependencies: json.RawMessage("[]"),
-    }
+	task := &SharedTaskDecomposition{
+		OrganizationID: "org-1",
+		Title:          "Test Task",
+		Status:         "PENDING",
+		Priority:       "P2",
+		Payload:        json.RawMessage("{}"),
+		Dependencies:   json.RawMessage("[]"),
+	}
 
-    err := CreateTask(ctx, provider, task)
-    if err != nil {
-        t.Fatalf("failed to create task: %v", err)
-    }
+	err := CreateTask(ctx, provider, task)
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
 
-    claimedTask, err := ClaimTask(ctx, provider, "agent-1")
-    if err != nil {
-        t.Fatalf("failed to claim task: %v", err)
-    }
+	claimedTask, err := ClaimTask(ctx, provider, "agent-1")
+	if err != nil {
+		t.Fatalf("failed to claim task: %v", err)
+	}
 
-    if *claimedTask.AssignedAgentID != "agent-1" {
-        t.Errorf("expected agent-1, got %v", *claimedTask.AssignedAgentID)
-    }
+	if *claimedTask.AssignedAgentID != "agent-1" {
+		t.Errorf("expected agent-1, got %v", *claimedTask.AssignedAgentID)
+	}
 
-    if claimedTask.Status != "ASSIGNED" {
-        t.Errorf("expected status ASSIGNED, got %v", claimedTask.Status)
-    }
+	if claimedTask.Status != "ASSIGNED" {
+		t.Errorf("expected status ASSIGNED, got %v", claimedTask.Status)
+	}
 
-    err = TransitionTask(ctx, provider, claimedTask.ID, "DONE")
-    if err != nil {
-        t.Fatalf("failed to transition task: %v", err)
-    }
+	err = TransitionTask(ctx, provider, claimedTask.ID, "DONE")
+	if err != nil {
+		t.Fatalf("failed to transition task: %v", err)
+	}
 
-    var status string
-    err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks_decomposition WHERE id = $1", claimedTask.ID).Scan(&status)
-    if err != nil {
-        t.Fatalf("failed to query status: %v", err)
-    }
-    if status != "DONE" {
-        t.Errorf("expected status DONE, got %v", status)
-    }
+	var status string
+	err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks_decomposition WHERE id = $1", claimedTask.ID).Scan(&status)
+	if err != nil {
+		t.Fatalf("failed to query status: %v", err)
+	}
+	if status != "DONE" {
+		t.Errorf("expected status DONE, got %v", status)
+	}
 
-    // Test claiming when no tasks are available
-    noTask, err := ClaimTask(ctx, provider, "agent-1")
-    if err != nil {
-        t.Fatalf("expected nil error when no tasks are available, got %v", err)
-    }
-    if noTask != nil {
-        t.Errorf("expected nil task when no tasks are available, got %v", noTask)
-    }
+	// Test claiming when no tasks are available
+	noTask, err := ClaimTask(ctx, provider, "agent-1")
+	if err != nil {
+		t.Fatalf("expected nil error when no tasks are available, got %v", err)
+	}
+	if noTask != nil {
+		t.Errorf("expected nil task when no tasks are available, got %v", noTask)
+	}
 }
 
 type mockPGProvider struct {
@@ -114,6 +114,7 @@ func (m *mockPGProvider) QueryRow(ctx context.Context, query string, args ...int
 }
 
 type mockPGRow struct{}
+
 func (m *mockPGRow) Scan(dest ...interface{}) error { return sql.ErrNoRows }
 
 func TestClaimTask_PostgresLocking(t *testing.T) {

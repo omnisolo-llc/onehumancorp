@@ -8,9 +8,9 @@ import (
 
 // HybridHealthProbe details the system health across standalone and cloud modes.
 type HybridHealthProbe struct {
-	Mode        string        `json:"mode"`
-	Status      string        `json:"status"`
-	DBPing      time.Duration `json:"db_ping"`
+	Mode          string        `json:"mode"`
+	Status        string        `json:"status"`
+	DBPing        time.Duration `json:"db_ping"`
 	SyncBacklog   int           `json:"sync_backlog"`
 	StuckMissions int           `json:"stuck_missions"`
 	LastSyncTime  time.Time     `json:"last_sync_time"`

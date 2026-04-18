@@ -1,8 +1,8 @@
 package orchestration
 
 import (
-	"testing"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"testing"
 )
 
 func TestTaskStoreInterface(t *testing.T) {

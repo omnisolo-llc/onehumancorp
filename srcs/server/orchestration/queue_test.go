@@ -99,7 +99,6 @@ func TestSQLiteTaskQueue_Delayed(t *testing.T) {
 	}
 }
 
-
 func TestJobQueue_MapHighLevelTask(t *testing.T) {
 	t.Setenv("OHC_MULTITENANT", "false")
 	provider, cleanup := db.SetupTestDB(t)
@@ -109,7 +108,7 @@ func TestJobQueue_MapHighLevelTask(t *testing.T) {
 	ctx := context.Background()
 	task := &QueuedTask{
 		Payload: map[string]interface{}{
-			"title": "test task",
+			"title":           "test task",
 			"organization_id": "test-org",
 		},
 	}

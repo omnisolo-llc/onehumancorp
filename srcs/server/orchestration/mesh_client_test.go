@@ -2,11 +2,11 @@ package orchestration
 
 import (
 	"context"
-	"testing"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"testing"
 )
 
-type MockMeshClient struct {}
+type MockMeshClient struct{}
 
 func (m *MockMeshClient) Publish(ctx context.Context, topic string, payload []byte) error {
 	return nil

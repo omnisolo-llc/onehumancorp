@@ -1,9 +1,9 @@
 package orchestration
 
 import (
-	pb "github.com/onehumancorp/mono/srcs/proto"
-	"errors"
 	"context"
+	"errors"
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +14,6 @@ import (
 )
 
 func TestBridgeManager(t *testing.T) {
-
 
 	// Mock server representing remote swarm
 	remoteReceived := make(chan []byte, 1)
@@ -104,7 +103,7 @@ func TestBridgeManager(t *testing.T) {
 	case msg := <-remoteReceived:
 		t.Fatalf("Expected message to be dropped, but received it %s", string(msg))
 	case <-time.After(1 * time.Second):
-}
+	}
 }
 func TestBridgeManager_Errors(t *testing.T) {
 
@@ -129,7 +128,6 @@ func TestBridgeManager_Errors(t *testing.T) {
 }
 
 func TestBridgeManager_Unmarshaling(t *testing.T) {
-
 
 	dbProvider := db.NewTestProvider(t)
 	mt := NewMemoryMeshTransport(dbProvider)
@@ -163,7 +161,6 @@ func TestBridgeManager_Unmarshaling(t *testing.T) {
 }
 
 func TestBridgeManager_CancelContext(t *testing.T) {
-
 
 	dbProvider := db.NewTestProvider(t)
 	mt := NewMemoryMeshTransport(dbProvider)
@@ -202,7 +199,6 @@ func TestBridgeManager_CancelContext(t *testing.T) {
 
 func TestBridgeManager_NoNodeForwardLoop(t *testing.T) {
 
-
 	bm := NewBridgeManager(nil, "mesh:tasks:shared", "local-org-1")
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -211,7 +207,6 @@ func TestBridgeManager_NoNodeForwardLoop(t *testing.T) {
 }
 
 func TestBridgeManager_NodeNoMeshTransportForwardLoop(t *testing.T) {
-
 
 	node := &CentrifugeNode{meshTransport: nil}
 	bm := NewBridgeManager(node, "mesh:tasks:shared", "local-org-1")
@@ -222,7 +217,6 @@ func TestBridgeManager_NodeNoMeshTransportForwardLoop(t *testing.T) {
 }
 
 func TestBridgeManager_SubscribeErr(t *testing.T) {
-
 
 	mt := &mockMeshTransport{
 		errSubscribe: errors.New("mock subscribe error"),
@@ -237,7 +231,7 @@ func TestBridgeManager_SubscribeErr(t *testing.T) {
 
 type mockMeshTransport struct {
 	errSubscribe error
-	ch chan []byte
+	ch           chan []byte
 }
 
 func (m *mockMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
@@ -266,7 +260,6 @@ func (m *mockMeshTransport) SubscribeCapabilities(ctx context.Context) (<-chan p
 	return nil, nil
 }
 func TestBridgeManager_ForwardEnvelopedLocal(t *testing.T) {
-
 
 	upgrader := websocket.Upgrader{}
 	remoteReceived := make(chan []byte, 1)
@@ -314,7 +307,6 @@ func TestBridgeManager_ForwardEnvelopedLocal(t *testing.T) {
 }
 
 func TestBridgeManager_ClosedEventChan(t *testing.T) {
-
 
 	mt := &mockMeshTransport{
 		ch: make(chan []byte),

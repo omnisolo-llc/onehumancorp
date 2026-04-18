@@ -478,5 +478,4 @@ func (m *UltraPlanManager) GetUltraPlan(ctx context.Context, planID string) (*Ul
 	return &plan, nil
 }
 
-
 // HandleCreateUltraPlan HTTP handler for creating a proposal.

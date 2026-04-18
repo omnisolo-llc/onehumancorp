@@ -52,8 +52,6 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 			return
 		}
 
-
-
 		go func(job *queue.Job) {
 			startTime := time.Now()
 
@@ -69,7 +67,6 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 				_ = w.taskQueue.Complete(ctx, job.ID)
 			}
 		}(job)
-
 
 	}
 }

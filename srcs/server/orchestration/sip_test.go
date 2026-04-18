@@ -1,15 +1,15 @@
 package orchestration
 
 import (
+	"context"
 	"database/sql"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"sync"
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 )
@@ -320,7 +320,6 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 		t.Fatalf("Expected remaining mission to be '1', got '%s'", id)
 	}
 }
-
 
 func TestSIPDB_PruneTelemetryBuffer(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")

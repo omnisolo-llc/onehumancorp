@@ -26,7 +26,7 @@ const (
 )
 
 type TaskStateMachine struct {
-	dbProvider db.Provider
+	dbProvider    db.Provider
 	mutexProvider MutexProvider
 }
 
@@ -143,7 +143,6 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 
 	return tx.Commit(ctx)
 }
-
 
 // TransitionState changes the state of a task and checks dependencies.
 func (sm *TaskStateMachine) TransitionState(ctx context.Context, taskID string, newState string) error {

@@ -133,7 +133,7 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		if w.pool.IsSQLite() {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			memID := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr)
+			_, err = tx.Exec(ctx, insertQuery, memID, content, []byte(*embeddingStr))
 		} else {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
 			_, err = tx.Exec(ctx, insertQuery, content, embeddingStr)
@@ -467,7 +467,7 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		if w.pool.IsSQLite() {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr)
+			_, err = w.pool.Exec(ctx, insertQuery, id, content, []byte(*embeddingStr))
 		} else {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
 			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr)
@@ -719,7 +719,12 @@ func (w *AutoDreamWorker) InjectTruth(ctx context.Context, memoryID, contextStr 
 		query = "INSERT INTO swarm_truth_embeddings (memory_id, context, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding"
 	}
 
-	_, err := w.pool.Exec(ctx, query, memoryID, contextStr, embedding)
+	var err error
+	if w.pool.IsSQLite() {
+		_, err = w.pool.Exec(ctx, query, memoryID, contextStr, []byte(embedding))
+	} else {
+		_, err = w.pool.Exec(ctx, query, memoryID, contextStr, embedding)
+	}
 	return err
 }
 
@@ -764,7 +769,13 @@ func (w *AutoDreamWorker) SearchTruth(ctx context.Context, embedding string, lim
 		ORDER BY distance ASC
 		LIMIT $2
 	`
-	rows, err := w.pool.Query(ctx, query, embedding, limit)
+	var err error
+	var rows db.Rows
+	if w.pool.IsSQLite() {
+		rows, err = w.pool.Query(ctx, query, []byte(embedding), limit)
+	} else {
+		rows, err = w.pool.Query(ctx, query, embedding, limit)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to search truth with pgvector: %w", err)
 	}
@@ -861,7 +872,11 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 
 				// Also write to agent_memories for the AutoDream pipeline requirements
 				if !w.pool.IsSQLite() {
-					_, _ = w.pool.Exec(ctx, "INSERT INTO agent_memories (organization_id, content, embedding) VALUES ($1, $2, $3::vector)", "system", response, "[0.0, 0.0, 0.0]")
+					if w.pool.IsSQLite() {
+						_, _ = w.pool.Exec(ctx, "INSERT INTO agent_memories (organization_id, content, embedding) VALUES ($1, $2, $3)", "system", response, []byte("[0.0, 0.0, 0.0]"))
+					} else {
+						_, _ = w.pool.Exec(ctx, "INSERT INTO agent_memories (organization_id, content, embedding) VALUES ($1, $2, $3::vector)", "system", response, "[0.0, 0.0, 0.0]")
+					}
 				}
 			} else {
 				clusterData["error"] = err.Error()

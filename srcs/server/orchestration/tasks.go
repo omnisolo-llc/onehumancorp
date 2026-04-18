@@ -279,7 +279,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
 				telemetry.RecordTaskClaimContention(ctx, "redis")
-					return nil, nil // Lock could not be acquired (task is locked)
+				return nil, nil // Lock could not be acquired (task is locked)
 			}
 			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
 		}

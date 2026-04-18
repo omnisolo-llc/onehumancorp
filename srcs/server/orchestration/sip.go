@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/lib/perf"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -43,14 +43,14 @@ var (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db              db.Provider
-	orgID           string
-	ContextRoot     string
-	cachedGrounding string
-	groundingOnce   *sync.Once
-	cachedGroundErr error
-	redisClient     rueidis.Client
-	localCache      sync.Map
+	db               db.Provider
+	orgID            string
+	ContextRoot      string
+	cachedGrounding  string
+	groundingOnce    *sync.Once
+	cachedGroundErr  error
+	redisClient      rueidis.Client
+	localCache       sync.Map
 	cacheExpirations sync.Map
 }
 

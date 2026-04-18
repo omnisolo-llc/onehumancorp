@@ -119,7 +119,6 @@ type SQLiteMutex struct {
 	ownerID  string
 }
 
-
 func (m *SQLiteMutex) Lock(ctx context.Context, ttl time.Duration) error {
 	tx, err := m.provider.db.Begin(ctx)
 	if err != nil {

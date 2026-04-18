@@ -9,8 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"math/rand"
 	"log/slog"
+	"math/rand"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"

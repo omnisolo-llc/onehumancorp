@@ -1191,7 +1191,6 @@ type TeammateMeshEvent struct {
 	Status  string `json:"status"`
 }
 
-
 func (rm *RedisMeshTransport) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -1202,7 +1201,6 @@ func (rm *RedisMeshTransport) BroadcastEvent(ctx context.Context, channel string
 		return rm.client.Do(ctx, cmd).Error()
 	})
 }
-
 
 func (rm *RedisMeshTransport) SubscribeChannel(ctx context.Context, channel string) (<-chan map[string]interface{}, error) {
 	ch := make(chan map[string]interface{}, 100)
@@ -1225,35 +1223,33 @@ func (rm *RedisMeshTransport) SubscribeChannel(ctx context.Context, channel stri
 	return ch, nil
 }
 
-
 func (lm *LocalTeammateMesh) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
-    data, err := json.Marshal(payload)
-    if err != nil {
-        return err
-    }
-    return lm.BroadcastMeshEvent(ctx, channel, data)
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	return lm.BroadcastMeshEvent(ctx, channel, data)
 }
 
-
 func (lm *LocalTeammateMesh) SubscribeChannel(ctx context.Context, channel string) (<-chan map[string]interface{}, error) {
-    bytesCh, err := lm.SubscribeMeshEvents(ctx, channel)
-    if err != nil {
-        return nil, err
-    }
+	bytesCh, err := lm.SubscribeMeshEvents(ctx, channel)
+	if err != nil {
+		return nil, err
+	}
 
-    ch := make(chan map[string]interface{}, 100)
-    go func() {
-        for data := range bytesCh {
-            var payload map[string]interface{}
-            if err := json.Unmarshal(data, &payload); err == nil {
-                select {
-                case ch <- payload:
-                default:
-                }
-            }
-        }
-        close(ch)
-    }()
+	ch := make(chan map[string]interface{}, 100)
+	go func() {
+		for data := range bytesCh {
+			var payload map[string]interface{}
+			if err := json.Unmarshal(data, &payload); err == nil {
+				select {
+				case ch <- payload:
+				default:
+				}
+			}
+		}
+		close(ch)
+	}()
 
-    return ch, nil
+	return ch, nil
 }

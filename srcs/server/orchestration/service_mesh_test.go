@@ -12,10 +12,10 @@ import (
 
 // MockStream for DiscoverAgents
 type mockDiscoverAgentsStream struct {
-	ctx      context.Context
-	sent     []*pb.AgentCapabilities
-	sendErr  error
-	recvErr  error
+	ctx     context.Context
+	sent    []*pb.AgentCapabilities
+	sendErr error
+	recvErr error
 }
 
 func (m *mockDiscoverAgentsStream) Send(caps *pb.AgentCapabilities) error {
@@ -35,10 +35,10 @@ func (m *mockDiscoverAgentsStream) RecvMsg(m_ interface{}) error { return nil }
 
 // MockStream for StreamMeshEvents
 type mockStreamMeshEventsStream struct {
-	ctx      context.Context
-	sent     []*pb.MeshEvent
-	sendErr  error
-	recvErr  error
+	ctx     context.Context
+	sent    []*pb.MeshEvent
+	sendErr error
+	recvErr error
 }
 
 func (m *mockStreamMeshEventsStream) Send(event *pb.MeshEvent) error {
@@ -55,7 +55,6 @@ func (m *mockStreamMeshEventsStream) SetTrailer(metadata.MD)       {}
 func (m *mockStreamMeshEventsStream) Context() context.Context     { return m.ctx }
 func (m *mockStreamMeshEventsStream) SendMsg(m_ interface{}) error { return nil }
 func (m *mockStreamMeshEventsStream) RecvMsg(m_ interface{}) error { return nil }
-
 
 func TestHubServiceServer_AdvertiseCapabilities(t *testing.T) {
 	hub := NewHub()

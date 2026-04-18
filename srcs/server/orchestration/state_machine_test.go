@@ -3,11 +3,11 @@ package orchestration
 import (
 	"context"
 	"database/sql"
-	"sync"
-	"testing"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/stretchr/testify/assert"
 	_ "modernc.org/sqlite"
+	"sync"
+	"testing"
 )
 
 func TestStateMachine_Concurrent(t *testing.T) {

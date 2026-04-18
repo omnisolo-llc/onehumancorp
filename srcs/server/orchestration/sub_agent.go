@@ -39,13 +39,13 @@ type SubAgentSpawner interface {
 
 // DefaultSubAgentSpawner implements SubAgentSpawner.
 type DefaultSubAgentSpawner struct {
-	db       db.Provider
-	tm       *TaskManager
-	hub      *CentrifugeNode // For teammate mesh broadcasts
-	sem      chan struct{} // For concurrency limits in standalone mode
-	wg       sync.WaitGroup
-	ctx      context.Context
-	cancel   context.CancelFunc
+	db     db.Provider
+	tm     *TaskManager
+	hub    *CentrifugeNode // For teammate mesh broadcasts
+	sem    chan struct{}   // For concurrency limits in standalone mode
+	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewDefaultSubAgentSpawner creates a new DefaultSubAgentSpawner.
@@ -114,9 +114,9 @@ func (s *DefaultSubAgentSpawner) executeWithRetry(task *SharedTask) {
 	if err == nil {
 		_ = s.completeTask(task)
 	} else if s.ctx.Err() != nil {
-        // Do not fail the task if the error is due to a context cancellation (graceful shutdown)
-        return
-    } else {
+		// Do not fail the task if the error is due to a context cancellation (graceful shutdown)
+		return
+	} else {
 		_ = s.failTask(task)
 	}
 }
