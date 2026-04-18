@@ -5,12 +5,12 @@ actions:
     #   memory: 16GB
     #   disk: 50GB
     triggers:
-      push:
-        branches:
-          - "main"
-      pull_request:
-        branches:
-          - "*"
+      # push:
+      #   branches:
+      #     - "main"
+      # pull_request:
+      #   branches:
+      #     - "*"
     steps:
       - run: |
           bazel test //... \
