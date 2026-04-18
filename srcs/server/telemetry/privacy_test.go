@@ -1,11 +1,15 @@
 package telemetry_test
 
 import (
+	"bytes"
+	"log/slog"
+	"strings"
 	"testing"
+
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
-func TestRedactPII(t *testing.T) {
+func TestMultiTenantLoggingPIIRedaction(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -75,9 +79,21 @@ func TestRedactPII(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := telemetry.RedactPII(tt.input)
-			if got != tt.expected {
-				t.Errorf("RedactPII(%q) = %q, want %q", tt.input, got, tt.expected)
+			var buf bytes.Buffer
+			baseHandler := slog.NewJSONHandler(&buf, nil)
+			handler := telemetry.NewPIIRedactingHandler(baseHandler)
+			logger := slog.New(handler)
+
+			logger.Info(tt.input)
+			output := buf.String()
+
+			if !strings.Contains(output, tt.expected) {
+				t.Errorf("Expected output to contain %q, got %q", tt.expected, output)
+			}
+
+			// Optional: verify that the unredacted input is NOT in the output if it's supposed to be redacted
+			if tt.input != tt.expected && strings.Contains(output, tt.input) {
+				t.Errorf("Expected output to NOT contain unredacted input %q, got %q", tt.input, output)
 			}
 		})
 	}
