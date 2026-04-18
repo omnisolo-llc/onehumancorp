@@ -39,6 +39,7 @@ nav:
       - developer/index.md
   - API:
       - api/index.md
+      - "Interactive Api Playbook": api/api_playbook.md
   - Features:
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
       - features/index.md
