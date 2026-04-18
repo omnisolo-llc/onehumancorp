@@ -452,10 +452,12 @@ language_spec = os.environ.get("ROOT_LANGUAGE_SPEC") or ""
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace(">=", "").replace("<", "").split()
-    if spec:
-        return spec[0].split("+")[0]
-    return "3.0"
+    spec = spec.replace("^", "").replace(">=", "").replace("<=", "").replace(">", "").replace("<", "").replace("~", "").strip().split()
+    ver = spec[0].split("+")[0] if spec else ""
+    parts = ver.split(".")
+    if len(parts) >= 2:
+        return parts[0] + "." + parts[1]
+    return parts[0] if parts and parts[0] else "3.0"
 
 language_version = _parse_language(language_spec)
 
@@ -916,10 +918,12 @@ package_name, package_language_spec = read_pubspec_meta(package_pubspec_path)
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace(">=", "").replace("<", "").split()
-    if spec:
-        return spec[0].split("+")[0]
-    return "3.0"
+    spec = spec.replace("^", "").replace(">=", "").replace("<=", "").replace(">", "").replace("<", "").replace("~", "").strip().split()
+    ver = spec[0].split("+")[0] if spec else ""
+    parts = ver.split(".")
+    if len(parts) >= 2:
+        return parts[0] + "." + parts[1]
+    return parts[0] if parts and parts[0] else "3.0"
 
 def _as_uri(path):
     return Path(path).resolve().as_uri()

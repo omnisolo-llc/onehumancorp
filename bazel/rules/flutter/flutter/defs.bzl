@@ -1117,10 +1117,12 @@ for i, line in enumerate(lines):
 def _parse_language(spec):
     if not spec:
         return "3.0"
-    spec = spec.replace(">=", "").replace("<", "").split()
-    if spec:
-        return spec[0].split("+")[0]
-    return "3.0"
+    spec = spec.replace("^", "").replace(">=", "").replace("<=", "").replace(">", "").replace("<", "").replace("~", "").strip().split()
+    ver = spec[0].split("+")[0] if spec else ""
+    parts = ver.split(".")
+    if len(parts) >= 2:
+        return parts[0] + "." + parts[1]
+    return parts[0] if parts and parts[0] else "3.0"
 
 language_version = _parse_language(language_spec)
 
