@@ -1,5 +1,0 @@
-status: "Success"
-domain_objectives:
-  - "Removed insecure Fast-and-Loose code in tenant registry to prevent random tenant fallback."
-  - "Fixed standalone wrapper cleanup to prune runaway linear tasks tmp files."
-tests: "100% Green"

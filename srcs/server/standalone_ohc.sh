@@ -7,6 +7,9 @@ cleanup_tmp_files() {
     if [ -d "${STATE_DIR}" ]; then
       # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
       find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
+      # Prune internal orchestrator state files
+      find "${STATE_DIR}" -name "Linear-state.tmp" -type f -delete 2>/dev/null || true
+      find "${STATE_DIR}" -name "linear_task.tmp" -type f -delete 2>/dev/null || true
     fi
   fi
 }
@@ -206,11 +209,9 @@ stop_daemon() {
     sleep 0.25
   done
 
-  pkill -9 -P "${pid}" 2>/dev/null || true
-  kill -9 "${pid}" 2>/dev/null || true
-  rm -f "${PID_FILE}" "${LOG_FILE}"
-  cleanup_tmp_files
-  echo "ohc stopped"
+  echo "warning: ohc did not stop gracefully"
+  # We do NOT remove the PID file if the process did not stop, preventing it from being orphaned and becoming a runaway.
+  return 1
 }
 
 SCRIPT_DIR="$(resolve_script_dir)"
