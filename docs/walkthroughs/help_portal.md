@@ -141,6 +141,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Edge LLM Offloading Protocol API](../api/edge_llm_offloading_api.md)**: Interactive playbook for offloading LLM inference to the cloud.
 - **[Edge LLM Handoff Visual Walkthrough](edge_llm_handoff_walkthrough.md)**: Visual diagram illustrating the context transfer flow.
 - **[Hybrid Environment Setup Walkthrough](hybrid_environment_setup_walkthrough.md)**: Visual guide to Cloud vs Standalone environment initialization.
+- **[Agent Harness OS-Level Sandboxing and MCP Integration](agent_harness_os_level_sandboxing_mcp_integration.md)**: Visual guide to the OS-Level execution wrapper and MCP integrations.
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
 </div>
