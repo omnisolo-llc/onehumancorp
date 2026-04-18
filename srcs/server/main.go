@@ -135,6 +135,10 @@ func init() {
 		Level: slog.LevelInfo,
 	}
 	var handler slog.Handler = slog.NewJSONHandler(os.Stdout, opts)
+	// Provide unified logging across Cloud and Local standalone modes
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		handler = slog.NewTextHandler(os.Stdout, opts)
+	}
 	redactingHandler := telemetry.NewPIIRedactingHandler(handler)
 	logger := slog.New(redactingHandler)
 	slog.SetDefault(logger)

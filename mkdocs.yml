@@ -37,7 +37,6 @@ nav:
   - Developer:
       - developer/index.md
   - API:
-      - Interactive API Playbook: kairos/interactive_api_playbook.md
       - api/index.md
   - Features:
       - features/index.md
@@ -48,9 +47,6 @@ nav:
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
       - Teammate Mesh Walkthrough: walkthroughs/teammate_mesh_walkthrough.md
-      - Help Portal: walkthroughs/help_portal.md
-      - Interactive API Docs: walkthroughs/interactive_api_docs.md
-      - KAIROS Interactive API Playbook: walkthroughs/kairos_interactive_api_playbook.md
       - walkthroughs/index.md
   - Operations:
       - operations/index.md
