@@ -2,9 +2,7 @@ package orchestration
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -172,13 +171,14 @@ func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, title, de
 
 // CreateTaskWithPlan creates a new pending task with plan association.
 func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
-	// When creating a new task, we don't have its ID yet to check for a cycle
-	// The real risk of circular dependencies is when updating dependencies.
-	// But we can verify that the new task doesn't add a dependency on itself, which is trivially true here.
+	id := uuid.New().String()
+
+	// Verify dependencies don't form a cycle.
+	if err := tm.CheckCircularDependency(ctx, id, dependencies); err != nil {
+		return nil, err
+	}
 
 	var task SharedTask
-
-	id := generateID()
 
 	payloadMap := map[string]interface{}{
 		"description": description,
@@ -888,7 +888,7 @@ func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentR
 		return err
 	}
 	job := &queue.Job{
-		ID:           generateID(),
+		ID:           uuid.New().String(),
 		ParentTaskID: parentTaskID,
 		AgentRole:    agentRole,
 		Payload:      string(payloadBytes),
@@ -897,11 +897,204 @@ func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentR
 	return tm.taskQueue.Enqueue(ctx, job)
 }
 
-// generateID generates a pseudo-uuid for SQLite compatibility.
-func generateID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b[0:4]) + "-" + hex.EncodeToString(b[4:6]) + "-" + hex.EncodeToString(b[6:8]) + "-" + hex.EncodeToString(b[8:10]) + "-" + hex.EncodeToString(b[10:])
+// GetTask retrieves a task and its dependencies.
+func (tm *TaskManager) GetTask(ctx context.Context, taskID string) (*SharedTask, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized: missing claims")
+	}
+
+	query := `
+		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, agent_id, locked_until, created_at, updated_at
+		FROM shared_tasks
+		WHERE id = $1 AND organization_id = $2
+	`
+	task := &SharedTask{}
+	err := tm.db.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
+		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.AssignedAgentID, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get task: %w", err)
+	}
+
+	// Fetch dependencies
+	depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+	rows, err := tm.db.Query(ctx, depQuery, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dependencies: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var depID string
+		if err := rows.Scan(&depID); err == nil {
+			task.Dependencies = append(task.Dependencies, depID)
+		}
+	}
+
+	// Reconstruct Description from JSON payload
+	var payloadMap map[string]interface{}
+	if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
+		if desc, ok := payloadMap["description"].(string); ok {
+			task.Description = desc
+		}
+	}
+
+	return task, nil
+}
+
+// UpdateTask updates an existing task.
+func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return errors.New("unauthorized: missing claims")
+	}
+
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
+	}
+
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Verify existence and ownership
+	var existingOrgID string
+	err = tx.QueryRow(ctx, "SELECT organization_id FROM shared_tasks WHERE id = $1", task.ID).Scan(&existingOrgID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("task not found")
+		}
+		return fmt.Errorf("failed to verify task: %w", err)
+	}
+
+	if existingOrgID != claims.OrganizationID {
+		return errors.New("unauthorized: task does not belong to your organization")
+	}
+
+	// Check circular dependency if dependencies changed
+	if err := tm.CheckCircularDependency(ctx, task.ID, task.Dependencies); err != nil {
+		return err
+	}
+
+	// Update payload with new description
+	payloadMap := map[string]interface{}{}
+	if task.Payload != "" {
+		_ = json.Unmarshal([]byte(task.Payload), &payloadMap)
+	}
+	payloadMap["description"] = task.Description
+	payloadBytes, _ := json.Marshal(payloadMap)
+	task.Payload = string(payloadBytes)
+
+	query := `
+		UPDATE shared_tasks
+		SET title = $1, status = $2, priority = $3, agent_id = $4, payload = $5, locked_until = $6, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $7
+	`
+	_, err = tx.Exec(ctx, query, task.Title, task.Status, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update task: %w", err)
+	}
+
+	// Update dependencies
+	_, err = tx.Exec(ctx, "DELETE FROM task_dependencies WHERE task_id = $1", task.ID)
+	if err != nil {
+		return fmt.Errorf("failed to clear dependencies: %w", err)
+	}
+
+	for _, dep := range task.Dependencies {
+		_, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, dep)
+		if err != nil {
+			return fmt.Errorf("failed to update dependency: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Broadcast update
+	if tm.hub != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":  task.ID,
+				"action":   "UPDATE",
+				"agent_id": task.AssignedAgentID,
+				"status":   task.Status,
+			}
+			tm.hub.PublishTaskBroadcast(task.ID, payload)
+		}()
+	}
+
+	return nil
+}
+
+// DeleteTask removes a task and its dependencies.
+func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return errors.New("unauthorized: missing claims")
+	}
+
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
+	}
+
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Verify existence and ownership
+	var existingOrgID string
+	err = tx.QueryRow(ctx, "SELECT organization_id FROM shared_tasks WHERE id = $1", taskID).Scan(&existingOrgID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil // Already deleted or doesn't exist
+		}
+		return fmt.Errorf("failed to verify task: %w", err)
+	}
+
+	if existingOrgID != claims.OrganizationID {
+		return errors.New("unauthorized: task does not belong to your organization")
+	}
+
+	// Cascading delete is handled by database if foreign keys are configured,
+	// but let's be explicit for compatibility.
+	_, err = tx.Exec(ctx, "DELETE FROM task_dependencies WHERE task_id = $1 OR depends_on_task_id = $1", taskID)
+	if err != nil {
+		return fmt.Errorf("failed to delete task dependencies: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, "DELETE FROM shared_tasks WHERE id = $1", taskID)
+	if err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Broadcast deletion
+	if tm.hub != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id": taskID,
+				"action":  "DELETE",
+			}
+			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+
+	return nil
 }
 
 // CheckCircularDependency ensures that the dependencies do not create a cycle.
