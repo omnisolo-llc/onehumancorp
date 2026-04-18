@@ -235,6 +235,13 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 
 		sqlStr := string(sqlBytes)
 
+		// Strip the goose Down section – this runner only applies UP migrations.
+		// Some migration files use goose-style markers; executing the Down section
+		// would undo the migration immediately after applying it.
+		if idx := regexp.MustCompile(`(?im)^--\s*\+goose\s+Down`).FindStringIndex(sqlStr); idx != nil {
+			sqlStr = sqlStr[:idx[0]]
+		}
+
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		if p.Provider.IsSQLite() {
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.
@@ -277,6 +284,11 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// Remove constraint drops for SQLite since it's unsupported
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+\w+;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ADD\s+CONSTRAINT\s+\w+\s+CHECK\s*\([^;]+;`).ReplaceAllString(sqlStr, "")
+
+			// SQLite does not support ADD COLUMN IF NOT EXISTS – strip the IF NOT EXISTS qualifier.
+			sqlStr = regexp.MustCompile(`(?i)\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b`).ReplaceAllString(sqlStr, "ADD COLUMN")
+			// SQLite does not support DROP COLUMN IF EXISTS – strip the IF EXISTS qualifier.
+			sqlStr = regexp.MustCompile(`(?i)\bDROP\s+COLUMN\s+IF\s+EXISTS\b`).ReplaceAllString(sqlStr, "DROP COLUMN")
 		}
 
 		tx, err := p.Begin(ctx)
@@ -284,9 +296,33 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			return fmt.Errorf("db: begin tx for %s: %w", f, err)
 		}
 
-		if _, err := tx.Exec(ctx, sqlStr); err != nil {
-			_ = tx.Rollback(ctx)
-			return fmt.Errorf("db: exec migration %s: %w", f, err)
+		if p.Provider.IsSQLite() {
+			// Execute statements individually for SQLite so that idempotent
+			// patterns (e.g. ADD COLUMN where the column already exists) can be
+			// silently skipped rather than aborting the whole migration.
+			stmts := splitSQLStatements(sqlStr)
+			for _, stmt := range stmts {
+				stmt = strings.TrimSpace(stmt)
+				if stmt == "" {
+					continue
+				}
+				if _, stmtErr := tx.Exec(ctx, stmt); stmtErr != nil {
+					errMsg := stmtErr.Error()
+					// Tolerate "duplicate column name" so that ADD COLUMN
+					// statements in later migrations don't fail when the column
+					// was already added by an earlier migration.
+					if strings.Contains(errMsg, "duplicate column name") {
+						continue
+					}
+					_ = tx.Rollback(ctx)
+					return fmt.Errorf("db: exec migration %s: %w", f, stmtErr)
+				}
+			}
+		} else {
+			if _, err := tx.Exec(ctx, sqlStr); err != nil {
+				_ = tx.Rollback(ctx)
+				return fmt.Errorf("db: exec migration %s: %w", f, err)
+			}
 		}
 
 		_, err = tx.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES ($1)", f)
