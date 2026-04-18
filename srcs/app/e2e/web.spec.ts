@@ -339,3 +339,51 @@ test.describe('Flutter Web App – E2E', () => {
     expect(resJson.status).toBe('success');
   });
 });
+
+test.describe('AutoDream Sync Walkthrough E2E', () => {
+  test('navigates through the AutoDream Sync walkthrough interactive guide', async ({ page }) => {
+    // 1. Visit App and Login
+    await page.goto('/');
+
+    // Login
+    await page.fill('input[type="email"]', 'ceo@onehumancorp.com');
+    await page.fill('input[type="password"]', 'admin');
+    await page.click('text=Login');
+
+    // Wait for Dashboard
+    await page.waitForSelector('text=System Overview');
+
+    // 2. Navigate to AutoDream Sync Walkthrough via sidebar
+    await page.click('text=AutoDream Sync');
+
+    // Wait for the new screen to load
+    await page.waitForSelector('text=AutoDream Sync Daemon Walkthrough');
+    await page.waitForSelector('text=Interactive Guide: Sync Lifecycle');
+
+    // 3. Step 1
+    await page.waitForSelector('text=1. Generate & Insert Vector');
+    await page.waitForSelector('text=Step 1 of 7');
+
+    // 4. Click Next Step
+    await page.click('text=Next Step');
+
+    // 5. Step 2
+    await page.waitForSelector('text=2. Query Pending Vectors');
+    await page.waitForSelector('text=Step 2 of 7');
+
+    // 6. Click Previous Step
+    await page.click('text=Previous Step');
+
+    // 7. Step 1 again
+    await page.waitForSelector('text=1. Generate & Insert Vector');
+
+    // 8. Progress to the end
+    for (let i = 0; i < 6; i++) {
+      await page.click('text=Next Step');
+    }
+
+    // 9. Verify Step 7
+    await page.waitForSelector('text=7. Update sync_status');
+    await page.waitForSelector('text=Step 7 of 7');
+  });
+});
