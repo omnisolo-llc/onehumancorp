@@ -12,8 +12,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "github.com/onehumancorp/mono/srcs/server/orchestration/autodream"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"gopkg.in/yaml.v3"
 )
 
 func formatFloat32SliceForVector(embedding []float32) string {
@@ -50,6 +53,10 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	if len(matches) == 0 {
 		return nil // No files to process
 	}
+	mode := kairos.GetMode()
+	start := time.Now()
+	_ = mode
+	_ = start
 
 	// Apply batch limit of 500 as requested
 	if len(matches) > 500 {
@@ -153,12 +160,10 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	return nil
 }
 
-
-
 // AutoDreamWorkerDaemon runs ProcessMemories periodically.
 type AutoDreamWorkerDaemon struct {
-	worker *AutoDreamWorker
-	done   chan struct{}
+	worker   *AutoDreamWorker
+	done     chan struct{}
 	stopOnce sync.Once
 }
 
@@ -168,7 +173,6 @@ func NewAutoDreamWorkerDaemon(worker *AutoDreamWorker) *AutoDreamWorkerDaemon {
 		done:   make(chan struct{}),
 	}
 }
-
 
 // ConsolidateMemories processes the backlog of episodic memories into embeddings.
 // It fetches up to 100 rows where processed_at IS NULL.
@@ -185,6 +189,10 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to fetch unprocessed memories: %w", err)
 	}
+	mode := kairos.GetMode()
+	start := time.Now()
+	_ = mode
+	_ = start
 
 	type memEntry struct {
 		id      string
@@ -237,6 +245,7 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 			slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
 		} else {
 			slog.Debug("AutoDream: consolidated memory", "id", e.id)
+			telemetry.RecordAutoDreamConsolidation(ctx, "autodream_worker")
 		}
 	}
 

@@ -35,7 +35,7 @@ const (
 	ResourceExhaustion
 	// CorruptAgentLock corrupts the .agent-lock/ file.
 	CorruptAgentLock
-	// CorruptMailbox corrupts the .agent-task/mailbox/ directory.
+	// CorruptMailbox corrupts the .ohc/runtime/mailbox/ directory.
 	CorruptMailbox
 )
 
@@ -121,7 +121,7 @@ func (i *Injector) Inject(ctx context.Context) error {
 		}
 		return &ChaosError{Message: "chaos: simulated agent lock corruption"}
 	case CorruptMailbox:
-		mailboxPath := i.basePath + "/.agent-task/mailbox/"
+		mailboxPath := i.basePath + "/.ohc/runtime/mailbox/"
 		if _, err := os.Stat(mailboxPath); !os.IsNotExist(err) {
 			_ = os.WriteFile(mailboxPath+"corrupt.msg", []byte("chaos corrupted this mailbox"), 0644)
 		}

@@ -114,6 +114,94 @@ func TestNewServerBootstrapsInternalDefaultAgentWhenHubEmpty(t *testing.T) {
 	}
 }
 
+func TestBusinessBootstrapE2E(t *testing.T) {
+	_, server, token := newTestServer(t)
+	client := authedClient(token)
+
+	providerBody := bytes.NewBufferString(`{"name":"OpenAI","base_url":"https://api.openai.com/v1","api_key":"sk-test","models":["gpt-4o-mini"]}`)
+	providerReq, _ := http.NewRequest(http.MethodPost, server.URL+"/api/ai/providers", providerBody)
+	providerReq.Header.Set("Content-Type", "application/json")
+	providerResp, err := client.Do(providerReq)
+	if err != nil {
+		t.Fatalf("POST /api/ai/providers returned error: %v", err)
+	}
+	defer providerResp.Body.Close()
+	if providerResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(providerResp.Body)
+		t.Fatalf("POST /api/ai/providers: want 200, got %d (body=%s)", providerResp.StatusCode, string(body))
+	}
+
+	bootstrapBody := bytes.NewBufferString(`{
+		"prompt":"Help me create a real estate staging company",
+		"company_name":"Luxe Stage",
+		"industry":"Real Estate",
+		"company_size":"S",
+		"goals":["Support","Marketing"],
+		"deployment_preference":"Cloud",
+		"admin_name":"Alex Founder",
+		"admin_email":"alex@example.com"
+	}`)
+	bootstrapReq, _ := http.NewRequest(http.MethodPost, server.URL+"/api/wizard/bootstrap_business", bootstrapBody)
+	bootstrapReq.Header.Set("Content-Type", "application/json")
+	bootstrapResp, err := client.Do(bootstrapReq)
+	if err != nil {
+		t.Fatalf("POST /api/wizard/bootstrap_business returned error: %v", err)
+	}
+	defer bootstrapResp.Body.Close()
+	if bootstrapResp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(bootstrapResp.Body)
+		t.Fatalf("POST /api/wizard/bootstrap_business: want 200, got %d (body=%s)", bootstrapResp.StatusCode, string(body))
+	}
+
+	var bootstrapResult struct {
+		Architecture struct {
+			TemplateDomain string `json:"template_domain"`
+		} `json:"architecture"`
+		HiredAgents        []map[string]any `json:"hired_agents"`
+		FormationDocuments []map[string]any `json:"formation_documents"`
+		MCPServers         []string         `json:"mcp_servers"`
+	}
+	if err := json.NewDecoder(bootstrapResp.Body).Decode(&bootstrapResult); err != nil {
+		t.Fatalf("decode bootstrap response: %v", err)
+	}
+	if bootstrapResult.Architecture.TemplateDomain != "digital_marketing_agency" {
+		t.Fatalf("expected digital_marketing_agency template, got %q", bootstrapResult.Architecture.TemplateDomain)
+	}
+	if len(bootstrapResult.HiredAgents) < 4 {
+		t.Fatalf("expected at least 4 hired agents, got %d", len(bootstrapResult.HiredAgents))
+	}
+	if len(bootstrapResult.FormationDocuments) != 3 {
+		t.Fatalf("expected 3 formation documents, got %d", len(bootstrapResult.FormationDocuments))
+	}
+	if len(bootstrapResult.MCPServers) != 3 {
+		t.Fatalf("expected 3 backend MCP servers, got %d", len(bootstrapResult.MCPServers))
+	}
+
+	dashboardResp, err := client.Get(server.URL + "/api/dashboard")
+	if err != nil {
+		t.Fatalf("GET /api/dashboard returned error: %v", err)
+	}
+	defer dashboardResp.Body.Close()
+	var snapshot struct {
+		Agents []struct {
+			Role string `json:"role"`
+		} `json:"agents"`
+	}
+	if err := json.NewDecoder(dashboardResp.Body).Decode(&snapshot); err != nil {
+		t.Fatalf("decode dashboard response: %v", err)
+	}
+	foundGrowth := false
+	for _, agent := range snapshot.Agents {
+		if agent.Role == "GROWTH_AGENT" {
+			foundGrowth = true
+			break
+		}
+	}
+	if !foundGrowth {
+		t.Fatalf("expected hired dashboard workforce to include GROWTH_AGENT")
+	}
+}
+
 func TestNewServerBootstrapsInternalDefaultAgentFromEnv(t *testing.T) {
 	t.Setenv("OHC_DEFAULT_AGENT_NAME", "Claude-Class Internal Agent")
 	t.Setenv("OHC_DEFAULT_AGENT_ROLE", "SOFTWARE_ENGINEER")

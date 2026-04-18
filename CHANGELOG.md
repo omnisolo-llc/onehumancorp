@@ -1,5 +1,14 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.4 (Cloud) / v0.4.4+1 (Standalone)
+### Cloud Scaling Improvements
+- Parallel execution for SyncMissions and SyncContextSync.
+- Optimize OHC-SIP synchronization latency.
+
+### Privacy/Offline Improvements
+- Add Agent Harness architecture research report.
+- Add Telemetry for SQLite lock contention.
+
 ## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
 ### Cloud Scaling Improvements
 - Optimise Orchestration & Observability.

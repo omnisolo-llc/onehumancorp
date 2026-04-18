@@ -10,7 +10,7 @@ import (
 )
 
 func setupMockMissions(t *testing.T, count int) string {
-	dir, err := os.MkdirTemp("", "agent-task-missions-test")
+	dir, err := os.MkdirTemp("", "ohc-missions-test")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -206,11 +206,9 @@ stop_daemon() {
     sleep 0.25
   done
 
-  pkill -9 -P "${pid}" 2>/dev/null || true
-  kill -9 "${pid}" 2>/dev/null || true
-  rm -f "${PID_FILE}" "${LOG_FILE}"
-  cleanup_tmp_files
-  echo "ohc stopped"
+  echo "warning: ohc did not stop gracefully"
+  # We do NOT remove the PID file if the process did not stop, preventing it from being orphaned and becoming a runaway.
+  return 1
 }
 
 SCRIPT_DIR="$(resolve_script_dir)"

@@ -32,12 +32,14 @@ nav:
       - architecture/index.md
       - Chaos Engineering: architecture/chaos_engineering.md
       - KAIROS Features Design: architecture/kairos_hybrid_os_architecture.md
+      - Hybrid PubSub MCP: research/[integrations]_hybrid_pubsub_mcp.md
   - Developer:
       - developer/index.md
   - API:
       - api/index.md
   - Features:
       - features/index.md
+      - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
   - Walkthroughs:
       - Agent Harness Visual Walkthrough: walkthroughs/agent_harness_walkthrough.md
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
