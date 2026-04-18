@@ -302,6 +302,36 @@ void main() {
         ),
       ).called(1);
     });
+
+    test('bootstrapBusiness posts business automation request', () async {
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response('{"status":"created"}', 200));
+
+      final result = await api.bootstrapBusiness(
+        prompt: 'Help me create a real estate staging company',
+        companyName: 'Luxe Stage',
+        industry: 'Real Estate',
+        companySize: 'S',
+        goals: ['Support'],
+        deploymentPreference: 'Cloud',
+        adminName: 'Alex Founder',
+        adminEmail: 'alex@example.com',
+      );
+
+      expect(result['status'], 'created');
+      verify(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).called(1);
+    });
   });
 
   // ── Skills ────────────────────────────────────────────────────────────────
