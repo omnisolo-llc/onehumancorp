@@ -12,6 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 )
 
 // BridgeEnvelope is used to prevent infinite broadcast loops across swarms.
@@ -118,7 +119,7 @@ func (bm *BridgeManager) readLoop(ctx context.Context, remoteOrgID string, conn 
 			if bm.node != nil && bm.node.meshTransport != nil {
 				// We re-broadcast the raw enveloped message. The forwardLoop will see it,
 				// check the OriginOrgID, and realize it's not local, thus skipping forwarding it back.
-				_ = bm.node.meshTransport.BroadcastMeshEvent(ctx, bm.topic, message)
+				bm.node.meshTransport.BroadcastMeshEvent(ctx, bm.topic, message)
 			}
 		} else {
 			// It's a raw message that didn't have an envelope.
@@ -129,7 +130,7 @@ func (bm *BridgeManager) readLoop(ctx context.Context, remoteOrgID string, conn 
 			}
 			envBytes, _ := json.Marshal(env)
 			if bm.node != nil && bm.node.meshTransport != nil {
-				_ = bm.node.meshTransport.BroadcastMeshEvent(ctx, bm.topic, envBytes)
+				bm.node.meshTransport.BroadcastMeshEvent(ctx, bm.topic, envBytes)
 			}
 		}
 	}
