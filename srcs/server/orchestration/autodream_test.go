@@ -258,3 +258,71 @@ func TestAutoDreamWorker_PipelinesCoverage(t *testing.T) {
 		t.Errorf("expected compressSessionContexts to process and delete session, got %d", count)
 	}
 }
+
+func TestAutoDreamWorker_CompletedTasksIngestion(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	ctx := context.Background()
+
+	// Ensure required tables exist
+	_, err = pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks_master (
+			id VARCHAR PRIMARY KEY,
+			organization_id VARCHAR NOT NULL,
+			title VARCHAR NOT NULL,
+			description TEXT,
+			payload TEXT,
+			status VARCHAR NOT NULL DEFAULT 'PENDING'
+		);
+		CREATE TABLE IF NOT EXISTS autodream_memories (
+			id TEXT PRIMARY KEY,
+			content TEXT NOT NULL,
+			embedding TEXT,
+			source_mission_id TEXT,
+			organization_id TEXT,
+			agent_id TEXT,
+			source_type TEXT,
+			processed_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create tables: %v", err)
+	}
+
+	// Insert completed task
+	_, err = pool.Exec(ctx, "INSERT INTO shared_tasks_master (id, organization_id, title, description, status) VALUES ('task-comp-1', 'org-1', 'Test Mission', 'This is a test description', 'COMPLETED')")
+	if err != nil {
+		t.Fatalf("failed to insert completed task: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool)
+
+	// Run ingestion pipeline logic once
+	worker.ingestCompletedTasks(ctx)
+
+	// Verify task was archived
+	var status string
+	err = pool.QueryRow(ctx, "SELECT status FROM shared_tasks_master WHERE id = 'task-comp-1'").Scan(&status)
+	if err != nil {
+		t.Fatalf("failed to check task status: %v", err)
+	}
+	if status != "ARCHIVED" {
+		t.Errorf("expected task status to be ARCHIVED, got %s", status)
+	}
+
+	// Verify memory was inserted
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id = 'task-comp-1'").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to query autodream_memories: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 memory inserted, got %d", count)
+	}
+}

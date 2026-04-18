@@ -15,6 +15,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	_ "github.com/onehumancorp/mono/srcs/server/orchestration/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"gopkg.in/yaml.v3"
 )
 
@@ -244,6 +245,7 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 			slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
 		} else {
 			slog.Debug("AutoDream: consolidated memory", "id", e.id)
+			telemetry.RecordAutoDreamConsolidation(ctx, "autodream_worker")
 		}
 	}
 
