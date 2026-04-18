@@ -28,6 +28,7 @@ go_library(
 go_test(
     name = "telemetry_test",
     srcs = [
+        "ast_pii_linter_test.go",
         "buffer_test.go",
         "compliance_test.go",
         "privacy_test.go",
@@ -38,6 +39,7 @@ go_test(
         "token_forecast_worker_test.go",
     ],
     embed = [":telemetry"],
+    data = ["telemetry.go"],
     deps = [
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_golang//prometheus/push",
