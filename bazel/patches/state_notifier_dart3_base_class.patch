@@ -1,0 +1,11 @@
+--- a/lib/state_notifier.dart
++++ b/lib/state_notifier.dart
+@@ -327,7 +327,7 @@
+   }
+ }
+ 
+-class _ListenerEntry<T> extends LinkedListEntry<_ListenerEntry<T>> {
++base class _ListenerEntry<T> extends LinkedListEntry<_ListenerEntry<T>> {
+   _ListenerEntry(this.listener);
+ 
+   final Listener<T> listener;

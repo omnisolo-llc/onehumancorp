@@ -25,6 +25,13 @@ _ATTRS = {
     "sdk_repo": attr.string(
         doc = "Repository label providing Flutter SDK packages (e.g. @flutter_sdk)",
     ),
+    "patches": attr.label_list(
+        doc = "List of patch files to apply after extracting the package archive.",
+    ),
+    "patch_args": attr.string_list(
+        default = ["-p1"],
+        doc = "Arguments to pass to the patch tool.",
+    ),
 }
 
 def _pub_dev_repository_impl(repository_ctx):
@@ -76,6 +83,10 @@ def _pub_dev_repository_impl(repository_ctx):
         url = archive_url,
         stripPrefix = "",  # pub.dev packages typically have no prefix
     )
+
+    # Apply any patches (e.g. for Dart SDK compatibility fixes)
+    for patch in repository_ctx.attr.patches:
+        repository_ctx.patch(patch, repository_ctx.attr.patch_args)
 
     generate_package_build(
         repository_ctx,

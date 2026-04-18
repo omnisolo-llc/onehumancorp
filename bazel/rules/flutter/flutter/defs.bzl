@@ -1137,8 +1137,8 @@ def add_package(pkg_name, root_path, lang_ver):
         return
     entry = dict()
     entry["name"] = pkg_name
-    rel = os.path.relpath(os.path.realpath(root_path), os.path.dirname(os.path.realpath(config_path)))
-    entry["rootUri"] = rel.replace(os.sep, "/")
+    real = os.path.realpath(root_path)
+    entry["rootUri"] = "file://" + real.replace(os.sep, "/")
     entry["packageUri"] = "lib/"
     entry["languageVersion"] = lang_ver
     packages.append(entry)
@@ -1180,8 +1180,8 @@ config = dict(
     packages = packages,
 )
 if flutter_root:
-    config["flutterRoot"] = os.path.relpath(os.path.realpath(flutter_root), os.path.dirname(os.path.realpath(config_path))).replace(os.sep, "/")
-config["pubCache"] = os.path.relpath(os.path.realpath(cache_root), os.path.dirname(os.path.realpath(config_path))).replace(os.sep, "/")
+    config["flutterRoot"] = "file://" + os.path.realpath(flutter_root).replace(os.sep, "/")
+config["pubCache"] = "file://" + os.path.realpath(cache_root).replace(os.sep, "/")
 with open(config_path, "w", encoding="utf-8") as fh:
     json.dump(config, fh, indent=2)
     fh.write("\\n")
@@ -1198,6 +1198,15 @@ fi
 
 if [ -n "$PACKAGE_DIR" ]; then popd >/dev/null; fi
 popd >/dev/null
+
+# Also propagate the regenerated package_config.json to the workspace root
+# .dart_tool/ so that Dart workspace mode (pubspec.yaml with 'workspace:' key)
+# uses the same file:// URIs instead of the stale build-time relative paths.
+if [ -n "{package_dir}" ] && [ -f "$PACKAGE_CONFIG_PATH" ]; then
+    mkdir -p "$RUNTIME_WORKSPACE/.dart_tool"
+    cp "$PACKAGE_CONFIG_PATH" "$RUNTIME_WORKSPACE/.dart_tool/package_config.json"
+    chmod u+w "$RUNTIME_WORKSPACE/.dart_tool/package_config.json" 2>/dev/null || true
+fi
 
 # Strip 'resolution: workspace' from the package pubspec.yaml so that
 # flutter test --no-pub treats the package as standalone and does not try

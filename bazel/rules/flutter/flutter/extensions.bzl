@@ -63,6 +63,8 @@ pub_package = tag_class(attrs = {
     "name": attr.string(doc = "Repository name for the package", mandatory = True),
     "package": attr.string(doc = "Package name on pub.dev", mandatory = True),
     "version": attr.string(doc = "Package version (optional, defaults to latest)"),
+    "patches": attr.label_list(doc = "Patch files to apply after downloading the package"),
+    "patch_args": attr.string_list(doc = "Arguments to pass to the patch tool (default: -p1)"),
 })
 
 _DEPS_DISCOVERY_SCRIPT = """
@@ -175,7 +177,7 @@ def _extract_description_url(description):
         )
     return None
 
-def _register_repo(repo_map, repo_name, package, version, origin):
+def _register_repo(repo_map, repo_name, package, version, origin, patches = None, patch_args = None):
     """Merge repository metadata ensuring consistency across lockfiles/tags."""
     existing = repo_map.get(repo_name)
     if existing:
@@ -201,12 +203,18 @@ def _register_repo(repo_map, repo_name, package, version, origin):
             )
         if version and not existing["version"]:
             existing["version"] = version
+        if patches:
+            existing["patches"] = patches
+        if patch_args:
+            existing["patch_args"] = patch_args
         existing["origins"].append(origin)
         return
 
     repo_map[repo_name] = {
         "package": package,
         "version": version,
+        "patches": patches or [],
+        "patch_args": patch_args or [],
         "origins": [origin],
     }
 

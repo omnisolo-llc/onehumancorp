@@ -1,10 +1,23 @@
 def compute_relative_to_package(ctx, file):
     """Compute the path of a file relative to the package directory."""
     pkg_path = ctx.label.package
+    path = file.short_path
+
+    # External repository files have short_path starting with "../<repo>/<rest>".
+    # For pub packages (typically root-level targets in external repos), we want
+    # to preserve the path relative to the external repo root so that `lib/`
+    # subdirectories and `src/` subdirectories are retained in the pub_cache.
+    # This allows Dart to correctly resolve both package URIs (via packageUri
+    # "lib/") and relative imports within the package files (e.g. src/client.dart).
+    if path.startswith("../"):
+        parts = path.split("/", 2)
+        if len(parts) >= 3:
+            return parts[2]
+        return file.basename
+
     if not pkg_path:
         return file.basename
 
-    path = file.short_path
     if path.startswith(pkg_path + "/"):
         return path[len(pkg_path) + 1:]
 
