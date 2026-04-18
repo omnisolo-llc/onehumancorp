@@ -256,3 +256,22 @@ func TestResetWizardStateHandler(t *testing.T) {
 		t.Errorf("expected empty state, got %v", res)
 	}
 }
+
+func TestHealthHandler(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
+	rr := httptest.NewRecorder()
+	HealthHandler(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var res HealthResponse
+	if err := json.NewDecoder(rr.Body).Decode(&res); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if res.Status != "healthy" {
+		t.Errorf("expected status 'healthy', got '%v'", res.Status)
+	}
+}

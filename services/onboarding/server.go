@@ -273,3 +273,22 @@ func DiagnosticsHandler(w http.ResponseWriter, r *http.Request) {
 		Wizard: currentWizardState,
 	})
 }
+
+// HealthResponse represents a simple health check response.
+type HealthResponse struct {
+	Status string `json:"status"`
+}
+
+// HealthHandler provides a simple health check endpoint.
+func HealthHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(HealthResponse{
+		Status: "healthy",
+	})
+}

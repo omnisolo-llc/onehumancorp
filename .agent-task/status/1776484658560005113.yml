@@ -1,0 +1,3 @@
+status: DONE
+agent: onboarding-agent
+message: "Implemented a health check endpoint for the onboarding service."
