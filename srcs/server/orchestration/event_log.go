@@ -13,31 +13,27 @@ import (
 const maxInMemoryHubEvents = 200
 
 func sanitizeHubEvent(raw interface{}) (HubEvent, error) {
-	payload, err := json.Marshal(raw)
+	redactedRaw := telemetry.RedactInterfacePII(raw)
+	payload, err := json.Marshal(redactedRaw)
 	if err != nil {
 		return HubEvent{}, fmt.Errorf("marshal hub event: %w", err)
 	}
 
+	// Fallback to detectHubEventType with the redacted object
 	var decoded interface{}
+	// Since redactedRaw is already redacted, we just parse it back if we need the map for type detection.
+	// But actually, we can just detect the type on the redacted raw directly if it's already a map!
 	if err := json.Unmarshal(payload, &decoded); err == nil {
-		decoded = telemetry.RedactInterfacePII(decoded)
-		payload, err = json.Marshal(decoded)
-		if err != nil {
-			return HubEvent{}, fmt.Errorf("marshal redacted hub event: %w", err)
-		}
 		return HubEvent{
-			Type:       detectHubEventType(decoded, raw),
+			Type:       detectHubEventType(decoded, redactedRaw),
 			Payload:    payload,
 			OccurredAt: time.Now().UTC(),
 		}, nil
 	}
 
-	// Fallback to string-based redaction if unmarshaling fails to prevent PII leakage
-	redactedPayloadStr := telemetry.RedactPII(string(payload))
-
 	return HubEvent{
-		Type:       detectHubEventType(nil, raw),
-		Payload:    []byte(redactedPayloadStr),
+		Type:       detectHubEventType(nil, redactedRaw),
+		Payload:    payload,
 		OccurredAt: time.Now().UTC(),
 	}, nil
 }
