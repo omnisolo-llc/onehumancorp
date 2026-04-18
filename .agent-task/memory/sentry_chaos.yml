@@ -1,4 +1,0 @@
-chaos_modes_to_add:
-  - SqlSyncLag
-  - CorruptMailbox
-  - AgentLockDrop
