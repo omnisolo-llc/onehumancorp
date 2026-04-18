@@ -15,7 +15,7 @@ void main() {
       ),
     );
 
-    // AI_NEWS_COLLECTOR should be displayed as "AI NEWS COLLECTOR" due to replaceAll('_', ' ')
-    expect(find.text('AI NEWS COLLECTOR'), findsOneWidget);
+    // AI_NEWS_COLLECTOR should be displayed properly formatted as "AI News Collector"
+    expect(find.text('AI News Collector'), findsOneWidget);
   });
 }
