@@ -32,9 +32,12 @@ func sanitizeHubEvent(raw interface{}) (HubEvent, error) {
 		}, nil
 	}
 
+	// Fallback to string-based redaction if unmarshaling fails to prevent PII leakage
+	redactedPayloadStr := telemetry.RedactPII(string(payload))
+
 	return HubEvent{
 		Type:       detectHubEventType(nil, raw),
-		Payload:    payload,
+		Payload:    []byte(redactedPayloadStr),
 		OccurredAt: time.Now().UTC(),
 	}, nil
 }
