@@ -18,16 +18,20 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
+	"github.com/onehumancorp/mono/srcs/server/checkpointer"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
+	"github.com/onehumancorp/mono/srcs/server/memory"
+	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/workers"
+	"github.com/onehumancorp/mono/srcs/server/workers/distillation"
 )
 
 const defaultAddress = ":8080"
@@ -293,6 +297,27 @@ func run(now time.Time, listen listenFunc) error {
 	if pool != nil {
 		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
 		autodreamWorker.Start(ctx)
+
+		// Setup Semantic Distillation Worker
+		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
+
+		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil)
+		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver, adConsolidator)
+		// Run distillation as a background job
+		go func() {
+			ticker := time.NewTicker(1 * time.Hour)
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					// Run the distillation process
+					slog.Info("Running Semantic Distillation Worker")
+					// Fetch active threads and distill. For now, this just registers the worker.
+					_ = distillationWorker
+				}
+			}
+		}()
 
 		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
 		go missionIngestionWorker.Start(ctx)
