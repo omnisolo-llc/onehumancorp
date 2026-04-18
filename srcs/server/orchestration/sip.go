@@ -1149,6 +1149,9 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 						payloadData = spm
 					}
 
+					// Redact rag_context for force-local conflict resolution strategy
+					delete(payloadData, "rag_context")
+
 					// ensure memory_id is set
 					payloadData["memory_id"] = rec.id
 
