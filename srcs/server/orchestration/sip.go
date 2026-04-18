@@ -613,6 +613,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 						return // Enforce fail-closed if there's a read error
 					}
 					combinedGrounding.WriteString("\n" + string(content) + "\n")
+					break
 				} else if !os.IsNotExist(statErr) {
 					s.cachedGroundErr = statErr
 					return
