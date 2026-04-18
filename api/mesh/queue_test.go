@@ -18,9 +18,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 	}
 
 	_, err = conn.Exec(`
-		ATTACH DATABASE ':memory:' AS ohc_tasks;
-		CREATE TABLE ohc_tasks.mission_queue (
-			mission_id TEXT PRIMARY KEY,
+		CREATE TABLE mission_queue (
+			mission_id INTEGER PRIMARY KEY AUTOINCREMENT,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'QUEUED',
 			assigned_agent TEXT,
@@ -29,7 +28,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
-		CREATE TABLE ohc_tasks.sub_agent_queue (
+		CREATE TABLE sub_agent_queue (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			parent_task_id TEXT NOT NULL,
 			payload TEXT,
@@ -49,13 +48,13 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 func TestEnqueueMission_NilDB(t *testing.T) {
 	ctx := context.Background()
-	_, err := EnqueueMission(ctx, nil, "test", "P0", []byte("{}"))
+	_, err := EnqueueMission(ctx, nil, false, "test", "P0", []byte("{}"))
 	assert.Error(t, err)
 }
 
 func TestCompleteMission_NilDB(t *testing.T) {
 	ctx := context.Background()
-	err := CompleteMission(ctx, nil, "uuid", "agent")
+	err := CompleteMission(ctx, nil, false, "uuid", "agent")
 	assert.Error(t, err)
 }
 
@@ -106,7 +105,29 @@ func TestQueueOrchestrator_Flow(t *testing.T) {
 
 	// 5. Verify completed
 	var status string
-	err = conn.QueryRow("SELECT status FROM ohc_tasks.sub_agent_queue WHERE id = $1", taskID).Scan(&status)
+	err = conn.QueryRow("SELECT status FROM sub_agent_queue WHERE id = $1", taskID).Scan(&status)
 	assert.NoError(t, err)
 	assert.Equal(t, "COMPLETED", status)
+}
+
+func TestMission_Flow(t *testing.T) {
+	conn := setupTestDB(t)
+	defer conn.Close()
+	ctx := context.Background()
+	missionID, err := EnqueueMission(ctx, conn, true, "test-mission", "P0", []byte(`{"do":"work"}`))
+	assert.NoError(t, err)
+	assert.NotEmpty(t, missionID)
+	mission, err := ClaimMission(ctx, conn, true, "agent-1")
+	assert.NoError(t, err)
+	assert.NotNil(t, mission)
+	assert.Equal(t, "test-mission", mission.Title)
+	mission2, err := ClaimMission(ctx, conn, true, "agent-2")
+	assert.NoError(t, err)
+	assert.Nil(t, mission2)
+	err = CompleteMission(ctx, conn, true, missionID, "agent-1")
+	assert.NoError(t, err)
+	var status string
+	err = conn.QueryRow("SELECT status FROM mission_queue WHERE mission_id = $1", missionID).Scan(&status)
+	assert.NoError(t, err)
+	assert.Equal(t, "DONE", status)
 }
