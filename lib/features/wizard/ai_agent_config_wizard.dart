@@ -118,7 +118,7 @@ class _AiAgentConfigWizardState extends ConsumerState<AiAgentConfigWizard> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 1,
-                childAspectRatio: 2.5,
+                childAspectRatio: 1.5,
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
                 children: (cat['roles'] as List).map<Widget>((role) {
