@@ -28,3 +28,17 @@ proto_dart_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+proto_library(
+    name = "model_proto",
+    srcs = ["model.proto"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+proto_go_grpc_library(
+    name = "model_go_proto",
+    protos = ":model_proto",
+    importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/model",
+    visibility = ["//visibility:public"],
+)
