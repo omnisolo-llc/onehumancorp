@@ -456,3 +456,95 @@ func TestTaskManager_PollTasks_TeammateMesh(t *testing.T) {
 		t.Fatalf("expected 1 task, got %d", len(tasks))
 	}
 }
+
+func TestTaskManager_GetTask(t *testing.T) {
+	t.Setenv("OHC_MULTITENANT", "false")
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := taskClaimsContext()
+	task, _ := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
+
+	retrieved, err := tm.GetTask(ctx, task.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if retrieved == nil {
+		t.Fatalf("expected task, got nil")
+	}
+	if retrieved.ID != task.ID {
+		t.Errorf("expected ID %s, got %s", task.ID, retrieved.ID)
+	}
+}
+
+func TestTaskManager_UpdateTask(t *testing.T) {
+	t.Setenv("OHC_MULTITENANT", "false")
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := taskClaimsContext()
+	task, _ := tm.CreateTask(ctx, "org-1", "Original Title", "Original Desc", "P2")
+
+	task.Title = "Updated Title"
+	task.Description = "Updated Desc"
+	task.Priority = "P1"
+
+	err := tm.UpdateTask(ctx, task)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	updated, _ := tm.GetTask(ctx, task.ID)
+	if updated.Title != "Updated Title" {
+		t.Errorf("expected Title 'Updated Title', got %s", updated.Title)
+	}
+	if updated.Description != "Updated Desc" {
+		t.Errorf("expected Description 'Updated Desc', got %s", updated.Description)
+	}
+	if updated.Priority != "P1" {
+		t.Errorf("expected Priority 'P1', got %s", updated.Priority)
+	}
+}
+
+func TestTaskManager_DeleteTask(t *testing.T) {
+	t.Setenv("OHC_MULTITENANT", "false")
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := taskClaimsContext()
+	task, _ := tm.CreateTask(ctx, "org-1", "To Delete", "Desc", "P1")
+
+	err := tm.DeleteTask(ctx, task.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	deleted, _ := tm.GetTask(ctx, task.ID)
+	if deleted != nil {
+		t.Fatalf("expected nil for deleted task, got %v", deleted)
+	}
+}
+
+func TestTaskManager_CircularDependencyDetection(t *testing.T) {
+	t.Setenv("OHC_MULTITENANT", "false")
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := taskClaimsContext()
+	task1, _ := tm.CreateTask(ctx, "org-1", "Task 1", "Desc", "P1")
+	task2, _ := tm.CreateTask(ctx, "org-1", "Task 2", "Desc", "P1")
+
+	// Create a dependency task2 depends on task1
+	task2.Dependencies = []string{task1.ID}
+	_ = tm.UpdateTask(ctx, task2)
+
+	// Attempt to make task1 depend on task2 (circular)
+	_, err := tm.CreateTaskWithPlan(ctx, "org-1", "", []string{task2.ID}, "Task 3", "Desc", "P1")
+	// If task3 depends on task2, and task2 depends on task1, it's NOT a cycle for task3.
+	// But let's try to update task1 to depend on task2.
+	task1.Dependencies = []string{task2.ID}
+	err = tm.UpdateTask(ctx, task1)
+	if err == nil {
+		t.Fatalf("expected error for circular dependency, got nil")
+	}
+}
