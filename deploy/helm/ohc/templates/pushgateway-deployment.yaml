@@ -18,9 +18,6 @@ spec:
       - name: pushgateway
         image: prom/pushgateway:latest
         ports:
-        env:
-        - name: LOG_LEVEL
-          value: "info"
         - containerPort: 9091
         resources:
           {{- toYaml .Values.pushgateway.resources | nindent 12 }}

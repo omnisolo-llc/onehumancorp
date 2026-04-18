@@ -1,7 +1,0 @@
-type: status
-metadata:
-  role: Maintainer
-  timestamp: 1776477741
-health: ok
-observations:
-  - Deployed missing Grafana dashboards to Helm charts.

@@ -33,5 +33,3 @@ toc:
     path: /docs/api/edge_llm_offloading_api.md
   - title: Edge LLM Handoff Visual Walkthrough
     path: /docs/walkthroughs/edge_llm_handoff_walkthrough.md
-  - title: Hybrid Environment Setup Walkthrough
-    path: /docs/walkthroughs/hybrid_environment_setup_walkthrough.md

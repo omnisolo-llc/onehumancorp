@@ -35,8 +35,6 @@ spec:
           resources:
             {{- toYaml .Values.chatwoot.resources | nindent 12 }}
           env:
-            - name: LOG_LEVEL
-              value: "info"
             - name: SECRET_KEY_BASE
               valueFrom:
                 secretKeyRef:
@@ -105,8 +103,6 @@ spec:
           ports:
             - containerPort: {{ .Values.chatwoot.service.port }}
           env:
-            - name: LOG_LEVEL
-              value: "info"
             - name: SECRET_KEY_BASE
               valueFrom:
                 secretKeyRef:
@@ -189,8 +185,6 @@ spec:
           resources:
             {{- toYaml .Values.chatwoot.resources | nindent 12 }}
           env:
-            - name: LOG_LEVEL
-              value: "info"
             - name: SECRET_KEY_BASE
               valueFrom:
                 secretKeyRef:

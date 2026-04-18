@@ -8,7 +8,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/lib/perf"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
@@ -58,22 +57,6 @@ func BenchmarkHybridSIPDB(b *testing.B) {
 		}
 	})
 
-	b.Run("SQLite_ParallelUpdateMemory", func(b *testing.B) {
-		coord := perf.NewCoordinator(sqliteDB)
-		ctx := context.Background()
-		updates := make(map[string]string)
-		for i := 0; i < 100; i++ {
-			updates[fmt.Sprintf("key-%d", i)] = fmt.Sprintf("val-%d", i)
-		}
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			err := coord.ParallelUpdateMemory(ctx, updates)
-			if err != nil {
-				b.Fatalf("ParallelUpdateMemory failed: %v", err)
-			}
-		}
-	})
-
 	if pgDB != nil {
 		b.Run("Postgres_UpdateMemory", func(b *testing.B) {
 			ctx := context.Background()
@@ -93,22 +76,6 @@ func BenchmarkHybridSIPDB(b *testing.B) {
 				_, err := pgDB.SyncMissions(ctx, "remote")
 				if err != nil {
 					b.Fatalf("SyncMissions failed: %v", err)
-				}
-			}
-		})
-
-		b.Run("Postgres_ParallelUpdateMemory", func(b *testing.B) {
-			coord := perf.NewCoordinator(pgDB)
-			ctx := context.Background()
-			updates := make(map[string]string)
-			for i := 0; i < 100; i++ {
-				updates[fmt.Sprintf("key-%d", i)] = fmt.Sprintf("val-%d", i)
-			}
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				err := coord.ParallelUpdateMemory(ctx, updates)
-				if err != nil {
-					b.Fatalf("ParallelUpdateMemory failed: %v", err)
 				}
 			}
 		})

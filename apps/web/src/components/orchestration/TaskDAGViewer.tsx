@@ -31,17 +31,17 @@ const TaskDAGViewer = () => {
       <h2 style={{ marginBottom: '8px', fontWeight: 600 }}>Task DAG Viewer</h2>
       <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '20px', fontSize: '14px' }}>Visual representation of parent-child dependencies and task statuses.</p>
       {loading ? (
-        <div style={{ ...theme.glassmorphism, padding: '20px', textAlign: 'center', borderRadius: '12px' }}>Loading tasks...</div>
+        <div style={{ padding: '20px', textAlign: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>Loading tasks...</div>
       ) : (
         <ul data-testid="task-list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {tasks.length === 0 ? <li style={{ ...theme.glassmorphism, padding: '20px', textAlign: 'center', borderRadius: '12px', color: 'rgba(255,255,255,0.5)' }}>No tasks in DAG.</li> : tasks.map((task, idx) => (
+          {tasks.length === 0 ? <li style={{ padding: '20px', textAlign: 'center', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', color: 'rgba(255,255,255,0.5)' }}>No tasks in DAG.</li> : tasks.map((task, idx) => (
             <li key={idx} style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              ...theme.glassmorphism,
               padding: '12px 16px',
               marginBottom: '10px',
+              background: 'rgba(0,0,0,0.2)',
               borderRadius: '8px',
               borderLeft: `4px solid ${task.status === 'PENDING' ? theme.colors.pending : task.status === 'COMPLETED' ? theme.colors.completed : task.status === 'EXECUTING' ? theme.colors.executing : theme.colors.text}`
             }}>
