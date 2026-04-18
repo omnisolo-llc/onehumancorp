@@ -154,7 +154,9 @@ class _AiAgentConfigWizardState extends ConsumerState<AiAgentConfigWizard> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(role['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
-                                Text(role['desc'], style: const TextStyle(fontSize: 12, fontFamily: 'Inter'), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                Expanded(
+                                  child: Text(role['desc'], style: const TextStyle(fontSize: 12, fontFamily: 'Inter'), maxLines: 2, overflow: TextOverflow.ellipsis),
+                                ),
                               ],
                             ),
                           ),
