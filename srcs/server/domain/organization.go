@@ -120,6 +120,13 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	RolePayrollManager Role = "PAYROLL_MANAGER"
+	// RoleAINewsCollector defines the standard operational responsibilities and system access boundaries for the AINewsCollector persona.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	RoleAINewsCollector Role = "AI_NEWS_COLLECTOR"
+
 )
 
 // Member represents a distinct individual (human or AI agent) assigned to a specific role within the organizational hierarchy.
@@ -367,6 +374,20 @@ func defaultSoftwareCompanyRoleProfiles() []RoleProfile {
 				"code diffs",
 				"dependency inventory",
 				"deployment risk",
+			},
+		},
+		{
+			Role:       RoleAINewsCollector,
+			BasePrompt: "Continuously scan the internet for AI-related news, summarize key findings, and present actionable insights.",
+			Capabilities: []string{
+				"Scrape news sources",
+				"Summarize articles",
+				"Identify AI trends",
+			},
+			ContextInputs: []string{
+				"RSS feeds",
+				"news APIs",
+				"social media trends",
 			},
 		},
 	}
