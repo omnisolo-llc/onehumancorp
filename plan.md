@@ -1,17 +1,20 @@
-1. **Analyze telemetry compliance requirements**:
-   - Instruction: "In telemetry or logging code, always apply `RedactInterfacePII` (or an equivalent redaction function) to payload maps before calling `json.Marshal` to prevent PII leakage in multi-tenant environments."
-   - Issue 1: In `srcs/server/telemetry/telemetry.go`, `RecordQueueLength` directly constructs a payload map using `fmt.Sprintf` and doesn't apply `RedactInterfacePII`. Wait, currently it uses `fmt.Sprintf` instead of a JSON payload! However, to be consistent with all other `BufferMetricFunc` calls, and to comply with the PII redaction rule for payload maps before calling `json.Marshal`, I need to rewrite `RecordQueueLength` to use a map, redact it, and marshal it.
-   - Issue 2: In `srcs/server/orchestration/event_log.go`, `sanitizeHubEvent` takes a `raw` object, calls `json.Marshal(raw)`, and THEN tries to unmarshal, redact, and re-marshal. If unmarshal fails, the unredacted payload is saved! The rule dictates redacting the object BEFORE the first `json.Marshal`. I will update `sanitizeHubEvent` to redact `raw` immediately using `telemetry.RedactInterfacePII(raw)`.
+1. **Apply `perf.CoordinatorMode` in `SyncContextSync`**:
+   - In `srcs/server/orchestration/sip.go`, find `SyncContextSync`.
+   - After fetching the `records` from `swarm_memory_embeddings`, iterate and transform the payloads. Currently, this iteration is done sequentially: `for _, rec := range records { ... }`.
+   - Update it to use `perf.CoordinatorMode(4)` for parallel payload sanitization and HTTP requests to `remoteEndpoint`.
+   - To make it thread-safe, collect the `idsToDelete` via a mutex or by sending results back to a channel. Note: Since `ExecuteParallel` blocks until all finish, we can process items and aggregate safe state. Wait, HTTP requests inside `ExecuteParallel` might be concurrent and need separate `http.Client`s or reuse the same thread-safe `http.Client`.
+   - Alternatively, batch the records to construct an array of processed payloads, similar to `SyncBufferedMetrics` if it does one large POST. Wait, the existing code in `SyncContextSync` does a POST *per record*: `req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))`.
+   - If it does a POST per record, `ExecuteParallel` will parallelize both sanitization and network requests!
+   - Use `perf.NewCoordinatorMode(4)` to parallelize it. Use a mutex for `idsToDelete` and `syncedCount`.
 
-2. **Execute changes**:
-   - `srcs/server/telemetry/telemetry.go`: Refactor `RecordQueueLength`.
-   - `srcs/server/orchestration/event_log.go`: Refactor `sanitizeHubEvent`.
+2. **Apply `perf.CoordinatorMode` in `SyncMissions`**:
+   - In `srcs/server/orchestration/sip.go`, find `SyncMissions`.
+   - Similar to above, it processes `missions` in a loop and sends a POST *per mission*.
+   - Update it to use `perf.CoordinatorMode(4)`. Use a `sync.Mutex` for tracking successful synchronizations (updating `agent_missions` status in the DB transaction might not be safe, wait! The SQLite/PG transaction `tx` is not thread-safe. Wait, `tx.Exec` might not be safe to call concurrently from multiple goroutines on the same transaction).
+   - In `SyncMissions`, `tx.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)` is done per mission. We can collect successfully synced mission IDs in a thread-safe way, and do a single batch update or individual updates *after* `ExecuteParallel` completes.
+   - Wait, `SyncContextSync` collects `idsToDelete` and does a batch delete: `tx.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))`. So `SyncMissions` should collect `idsToUpdate` and do a batch update: `tx.Exec(ctx, fmt.Sprintf("UPDATE agent_missions SET status = 'SYNCED' WHERE id IN (%s)", idList))` after `ExecuteParallel`.
 
-3. **Verify changes**:
-   - Run `bazelisk test //srcs/server/telemetry/...` and `bazelisk test //srcs/server/orchestration/...` to ensure all tests pass.
+3. **Verify functionality**:
+   - Run `bazelisk test //...` to ensure no tests are broken by these changes.
 
-4. **Complete pre-commit steps**:
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-5. **Submit the PR**:
-   - Issue ID will be included.
+4. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
