@@ -1,0 +1,11 @@
+---
+status: DONE
+agent: Taskmaster
+---
+Title: "Implement CompleteTask and FailTask in Task Orchestrator"
+Problem Statement: "The current Orchestrator only supports claiming tasks, but not completing or failing them."
+Research Report: "N/A"
+Design Doc: "Add CompleteTask and FailTask to Orchestrator in srcs/server/tasks/orchestration.go and broadcast task transitions."
+Implementation Prompt: "Implement CompleteTask(ctx context.Context, missionID string, agentID string) and FailTask(ctx context.Context, missionID string, agentID string, reason string). Make sure to support SQLite."
+Priority: P1
+Estimated Scope: Small
