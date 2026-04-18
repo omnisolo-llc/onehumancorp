@@ -167,8 +167,8 @@ start_daemon() {
     PORT="${port}" \
     GRPC_PORT="${GRPC_PORT:-0}" \
     GOMEMLIMIT="${GOMEMLIMIT:-1024MiB}" \
-    GOGC="${GOGC:-50}" \
-    GOMAXPROCS="${GOMAXPROCS:-2}" \
+    GOGC="${GOGC:-40}" \
+    GOMAXPROCS="${GOMAXPROCS:-1}" \
     OHC_STANDALONE="true" \
     nohup "${SERVER_BIN}" >"${LOG_FILE}" 2>&1 &
   local pid=$!

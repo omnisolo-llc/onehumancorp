@@ -138,8 +138,7 @@ func init() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
-	redactingHandler := telemetry.NewPIIRedactingHandler(handler)
-	logger := slog.New(redactingHandler)
+	logger := slog.New(telemetry.NewPIIRedactingHandler(handler))
 	slog.SetDefault(logger)
 }
 
