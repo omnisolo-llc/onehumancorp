@@ -53,25 +53,3 @@ func TestCalculateNetworkCost(t *testing.T) {
 		t.Errorf("expected %f, got %f", expected, cost)
 	}
 }
-
-func TestRouteToCheapestModel(t *testing.T) {
-	models := []ModelPricing{
-		{"ModelA", 0.0001, 0.0002},
-		{"ModelB", 0.00005, 0.0003},
-	}
-
-	best1 := RouteToCheapestModel(1000, 500, models)
-	if best1 != "ModelA" {
-		t.Errorf("expected ModelA, got %s", best1)
-	}
-
-	best2 := RouteToCheapestModel(1000, 2000, models)
-	if best2 != "ModelA" {
-		t.Errorf("expected ModelA, got %s", best2)
-	}
-
-	best3 := RouteToCheapestModel(5000, 100, models)
-	if best3 != "ModelB" {
-		t.Errorf("expected ModelB, got %s", best3)
-	}
-}

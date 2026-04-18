@@ -239,7 +239,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Image.asset(
-                            package: 'ohc_app',
                           'assets/logo.png',
                           height: 80,
                           fit: BoxFit.contain,

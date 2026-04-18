@@ -12,6 +12,7 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -122,6 +123,21 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		if h == nil {
 			h = r.Provision(defaultTenantOrganization(claims.OrganizationID))
 		}
+		h.ServeHTTP(w, req)
+		return
+	}
+
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		r.mu.RLock()
+		for _, h := range r.tenants {
+			r.mu.RUnlock()
+			h.ServeHTTP(w, req)
+			return
+		}
+		r.mu.RUnlock()
+
+		// If no tenant is provisioned yet in standalone mode, lazily provision the default single-tenant
+		h := r.Provision(defaultTenantOrganization("standalone-single-user"))
 		h.ServeHTTP(w, req)
 		return
 	}

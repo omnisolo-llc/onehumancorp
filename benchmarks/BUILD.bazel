@@ -6,7 +6,6 @@ go_test(
     deps = [
         "//srcs/server/db",
         "//srcs/server/orchestration",
-        "//lib/perf",
         "@com_github_jackc_pgx_v5//pgxpool",
     ],
 )
