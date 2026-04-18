@@ -134,7 +134,7 @@ func (p *AutoDreamPipeline) resolveConflicts(ctx context.Context) {
 		cancel()
 
 		resolvedContext := "Consolidated memory: " + c.Content1 + " & " + c.Content2
-		if llmErr == nil && resp.Message.Content != "" && resp.Message.Content != "" {
+		if llmErr == nil && resp.Message.Content != "" {
 			resolvedContext = resp.Message.Content
 		}
 
@@ -262,7 +262,7 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 		cancel()
 
 		summary := "Summarized context from session " + s.ID
-		if err == nil && resp.Message.Content != "" && resp.Message.Content != "" {
+		if err == nil && resp.Message.Content != "" {
 			summary = resp.Message.Content
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
@@ -389,7 +389,7 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 		cancel()
 
 		summary := "Summarized context from file " + file.Name()
-		if err == nil && resp.Message.Content != "" && resp.Message.Content != "" {
+		if err == nil && resp.Message.Content != "" {
 			summary = resp.Message.Content
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)

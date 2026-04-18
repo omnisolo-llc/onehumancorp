@@ -37,6 +37,44 @@ async function waitForFlutter(page: Page, timeoutMs = 30_000): Promise<void> {
   );
 }
 
+async function loginWithSeededAdmin(page: Page): Promise<void> {
+  await page.goto('/login');
+  await waitForFlutter(page);
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('flutter-first-frame'));
+  });
+
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('admin@test.local');
+  await page.keyboard.press('Tab');
+  await page.keyboard.type('adminpass123');
+  await page.keyboard.press('Enter');
+
+  await page.waitForTimeout(1_500);
+  await expect(page).not.toHaveURL(/\/login/);
+}
+
+async function mockWizardAiResponse(page: Page): Promise<void> {
+  await page.route('**/api/wizard/nl_chat', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        reply:
+          'Great choice — I queued an action plan for your jewelry business and filled the setup details for you.',
+        field_updates: {
+          company_name: 'Luna Jewelry Co',
+          industry: 'Retail',
+          admin_email: 'owner@luna.test',
+          admin_name: 'Avery Founder',
+        },
+      }),
+    });
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -114,6 +152,41 @@ test.describe('Flutter Web App – E2E', () => {
     // expect(bodyHtml).toContain('Company Structure');
     // expect(bodyHtml).toContain('Scale Software Engineer role');
     // expect(bodyHtml).toContain('Increase Software Engineer count');
+  });
+
+  test('business setup natural-language chat uses a mocked AI reply and unlocks launch state', async ({
+    page,
+  }) => {
+    await mockWizardAiResponse(page);
+    await loginWithSeededAdmin(page);
+
+    await page.goto('/business_setup');
+    await waitForFlutter(page);
+
+    const nlModeToggle = page
+      .locator('[role="switch"], input[type="checkbox"]')
+      .first();
+    if (await nlModeToggle.isVisible({ timeout: 10_000 })) {
+      await nlModeToggle.click();
+    }
+
+    const nlPrompt = page.locator(
+      'textarea, input[placeholder*="real estate" i], input[placeholder*="e.g." i]',
+    ).first();
+    await expect(nlPrompt).toBeVisible({ timeout: 10_000 });
+    await nlPrompt.fill(
+      'I want to launch a handmade jewelry brand with AI support for customer service and operations.',
+    );
+    await nlPrompt.press('Enter');
+
+    await expect(
+      page.getByText(
+        /queued an action plan for your jewelry business/i,
+      ),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole('button', { name: /launch my ai team/i }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test('Flutter root element is mounted', async ({ page }) => {
