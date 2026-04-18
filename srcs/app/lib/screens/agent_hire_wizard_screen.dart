@@ -85,6 +85,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _endpointUrlController.dispose();
+    _tokenLimitController.dispose();
     super.dispose();
   }
 
@@ -141,7 +143,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ),
       ),
       body: Stepper(
-        type: StepperType.horizontal,
+        type: StepperType.vertical,
         currentStep: _step,
         onStepContinue: () {
           if (_step < 6) {
@@ -532,15 +534,17 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  const TextField(
-                    decoration: InputDecoration(
+                  TextField(
+                    controller: _endpointUrlController,
+                    decoration: const InputDecoration(
                       labelText: 'Custom Endpoint URL (Optional)',
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const TextField(
-                    decoration: InputDecoration(
+                  TextField(
+                    controller: _tokenLimitController,
+                    decoration: const InputDecoration(
                       labelText: 'Token Limit (Optional)',
                       border: OutlineInputBorder(),
                     ),
