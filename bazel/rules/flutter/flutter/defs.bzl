@@ -244,7 +244,7 @@ def _flutter_library_impl(ctx):
     return [
         DefaultInfo(
             files = depset(output_files + [pubspec_file]),
-            runfiles = ctx.runfiles(files = output_files + [pubspec_file]),
+            runfiles = ctx.runfiles(files = [pub_get_output, pub_deps, pubspec_file]),
         ),
         FlutterLibraryInfo(
             workspace = prepared_workspace,
@@ -515,6 +515,7 @@ fi
             manifest,
         ] + ctx.files.srcs,
         outputs = [prepared_workspace],
+        execution_requirements = {"no-cache": "1"},
         arguments = [
             prepared_workspace.path,
             library_info.workspace.path,
@@ -554,9 +555,6 @@ fi
                     runner,
                     build_output,
                     build_artifacts,
-                    library_info.pub_deps,
-                    library_info.pub_cache,
-                    library_info.dart_tool,
                 ],
             ),
         ),
@@ -776,6 +774,7 @@ done
     ctx.actions.run_shell(
         inputs = [library_info.workspace] + ctx.files.srcs,
         outputs = [prepared_workspace],
+        execution_requirements = {"no-cache": "1"},
         arguments = [
             prepared_workspace.path,
             library_info.workspace.path,
