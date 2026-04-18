@@ -1529,10 +1529,10 @@ func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*
 
 // MinimaxAPIURL is the endpoint for Minimax reasoning.
 // ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
-var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
+var MinimaxAPIURL = "https://api.minimax.chat/v1/chat/completions"
 
 // MinimaxEmbeddingAPIURL is the endpoint for Minimax embeddings.
-var MinimaxEmbeddingAPIURL = "https://api.minimax.io/v1/embeddings"
+var MinimaxEmbeddingAPIURL = "https://api.minimax.chat/v1/embeddings"
 
 // CircuitBreaker state
 type CircuitBreaker struct {
@@ -1773,7 +1773,7 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	defer bufferPool.Put(buf)
 
 	escapedText, _ := json.Marshal(text)
-	buf.WriteString(`{"model":"embo-01","texts":[`)
+	buf.WriteString(`{"model":"embo-01","type":"db","texts":[`)
 	buf.Write(escapedText)
 	buf.WriteString(`]}`)
 
