@@ -20,7 +20,14 @@ func VerifyEnvironment(envVars map[string]string) (*EnvConfig, error) {
 
 	mode, ok := envVars["OHC_SOURCE_MODE"]
 	if !ok || mode == "" {
-		return nil, errors.New("OHC_SOURCE_MODE is required (e.g. standalone, cloud, headless, thin_client)")
+		if _, isK8s := envVars["KUBERNETES_SERVICE_HOST"]; isK8s {
+			mode = "cloud"
+			envVars["OHC_MULTITENANT"] = "true"
+		} else if endpoint, hasEndpoint := envVars["OHC_API_ENDPOINT"]; hasEndpoint && endpoint != "" {
+			mode = "thin_client"
+		} else {
+			mode = "standalone"
+		}
 	}
 	config.Mode = strings.ToLower(mode)
 

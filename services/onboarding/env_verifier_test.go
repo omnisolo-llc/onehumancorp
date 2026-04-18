@@ -35,14 +35,48 @@ func TestVerifyEnvironment_CloudInvalid(t *testing.T) {
 	}
 }
 
-func TestVerifyEnvironment_MissingMode(t *testing.T) {
+func TestVerifyEnvironment_AutoDetectStandalone(t *testing.T) {
 	env := map[string]string{
 		"OHC_MULTITENANT": "false",
 	}
 
-	_, err := VerifyEnvironment(env)
-	if err == nil {
-		t.Fatalf("expected error for missing mode")
+	config, err := VerifyEnvironment(env)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if config.Mode != "standalone" {
+		t.Errorf("expected mode standalone, got %s", config.Mode)
+	}
+}
+
+func TestVerifyEnvironment_AutoDetectCloud(t *testing.T) {
+	env := map[string]string{
+		"KUBERNETES_SERVICE_HOST": "10.0.0.1",
+	}
+
+	config, err := VerifyEnvironment(env)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if config.Mode != "cloud" {
+		t.Errorf("expected mode cloud, got %s", config.Mode)
+	}
+	if !config.MultiTenant {
+		t.Errorf("expected multitenant true")
+	}
+}
+
+func TestVerifyEnvironment_AutoDetectThinClient(t *testing.T) {
+	env := map[string]string{
+		"OHC_API_ENDPOINT": "https://api.ohc.io",
+	}
+
+	config, err := VerifyEnvironment(env)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if config.Mode != "thin_client" {
+		t.Errorf("expected mode thin_client, got %s", config.Mode)
 	}
 }
 
