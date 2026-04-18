@@ -234,7 +234,10 @@ func initializeTables(provider db.Provider) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system',
-			synced_to_cloud BOOLEAN DEFAULT FALSE
+			synced_to_cloud BOOLEAN DEFAULT FALSE,
+			cloud_mission_id TEXT,
+			sync_error TEXT,
+			last_synced_at TIMESTAMP
 		);`,
 		`CREATE TABLE IF NOT EXISTS agent_status (
 			agent_id TEXT PRIMARY KEY,

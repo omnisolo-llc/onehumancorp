@@ -27,7 +27,11 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 			id TEXT PRIMARY KEY,
 			status TEXT,
 			payload TEXT,
-			synced_to_cloud BOOLEAN DEFAULT false
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			synced_to_cloud BOOLEAN DEFAULT false,
+            cloud_mission_id TEXT,
+            sync_error TEXT,
+            last_synced_at TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -35,11 +39,11 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	}
 
 	_, err = sqlDB.Exec(`
-		INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
+		INSERT INTO agent_missions (id, status, payload, synced_to_cloud, cloud_mission_id, sync_error, last_synced_at)
 		VALUES
-			('m1', 'PENDING', '{"task":"test-mission", "details":"[PRIVATE:secret] email is a@b.com"}', false),
-			('m2', 'COMPLETED', '{"task":"synced-mission"}', true),
-			('m3', 'IGNORED', '{"task":"ignored"}', false)
+			('m1', 'PENDING', '{"task":"test-mission", "details":"[PRIVATE:secret] email is a@b.com"}', false, NULL, NULL, NULL),
+			('m2', 'COMPLETED', '{"task":"synced-mission"}', true, NULL, NULL, NULL),
+			('m3', 'IGNORED', '{"task":"ignored"}', false, NULL, NULL, NULL)
 	`)
 	if err != nil {
 		t.Fatalf("failed to insert test data: %v", err)
@@ -49,14 +53,18 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	dbWrapper := &db.DB{Provider: sqliteProv}
 
 	// Mock cloud API
-	var receivedPayloads []SyncDaemonPayload
+	var receivedPayload struct {
+		LocalID string `json:"local_id"`
+		Payload map[string]interface{} `json:"payload"`
+	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/sync/missions" && r.Method == http.MethodPost {
-			if err := json.NewDecoder(r.Body).Decode(&receivedPayloads); err != nil {
+		if r.URL.Path == "/api/v1/missions/escalate" && r.Method == http.MethodPost {
+			if err := json.NewDecoder(r.Body).Decode(&receivedPayload); err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
 			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(CloudSyncResponse{Status: "ACCEPTED", CloudID: "cloud-m1"})
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -69,20 +77,20 @@ func TestHybridMCPRAGDaemon_ProcessSync(t *testing.T) {
 	daemon.ProcessSync(context.Background())
 
 	// Validate received payload
-	if len(receivedPayloads) != 1 {
-		t.Fatalf("expected 1 mission to be synced, got %d", len(receivedPayloads))
+	if receivedPayload.LocalID == "" {
+		t.Fatalf("expected 1 mission to be synced, got %d", 1)
 	}
-	if receivedPayloads[0].ID != "m1" {
-		t.Errorf("expected payload ID m1, got %s", receivedPayloads[0].ID)
+	if receivedPayload.LocalID != "m1" {
+		t.Errorf("expected payload ID m1, got %s", receivedPayload.LocalID)
 	}
-	if receivedPayloads[0].Status != "PENDING" {
-		t.Errorf("expected status PENDING, got %s", receivedPayloads[0].Status)
+	if receivedPayload.Payload["task"] != "test-mission" {
+		t.Errorf("expected test-mission, got %v", receivedPayload.Payload["task"])
 	}
 
 	// Verify sanitization
-	expectedPayload := `{"details":" email is [REDACTED_EMAIL]","task":"test-mission"}`
-	if receivedPayloads[0].Payload != expectedPayload {
-		t.Errorf("expected sanitized payload %q, got %q", expectedPayload, receivedPayloads[0].Payload)
+	expectedPayload := `{"details":" email is [REDACTED_EMAIL]"}`
+	if receivedPayload.Payload["details"] != " email is [REDACTED_EMAIL]" {
+		t.Errorf("expected sanitized payload %q, got %q", expectedPayload, receivedPayload.Payload["details"])
 	}
 
 	// Validate db status updated
@@ -110,7 +118,11 @@ func TestHybridMCPRAGDaemon_StartStop(t *testing.T) {
 			id TEXT PRIMARY KEY,
 			status TEXT,
 			payload TEXT,
-			synced_to_cloud BOOLEAN DEFAULT false
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			synced_to_cloud BOOLEAN DEFAULT false,
+            cloud_mission_id TEXT,
+            sync_error TEXT,
+            last_synced_at TIMESTAMP
 		)
 	`)
 	if err != nil {

@@ -23,6 +23,7 @@ go_library(
         "sip.go",
         "sqlite_hub.go",
         "sync_daemon.go",
+        "sync_daemon_adapter.go",
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh_api.go",
@@ -65,6 +66,7 @@ go_library(
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
             "//srcs/server/lib/resilience",
+        "//srcs/server/orchestration/sync",
 ],
 )
 

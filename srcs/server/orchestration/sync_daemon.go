@@ -80,95 +80,17 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	}
 	start := time.Now()
 
-	tx, err := d.dbWrapper.Begin(ctx)
+	err := d.PushPendingMissions(ctx)
 	if err != nil {
-		slog.Error("sync_daemon: failed to begin transaction", "error", err)
-		return false
+		slog.Error("sync_daemon: PushPendingMissions failed", "error", err)
 	}
-	defer tx.Rollback(ctx)
 
-		query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND (status = 'PENDING' OR status = 'BURSTING') LIMIT 500"
-	if d.dbWrapper.IsSQLite() {
-		query = "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND (status = 'PENDING' OR status = 'BURSTING') LIMIT 500"
-	}
-	rows, err := tx.Query(ctx, query)
+	err = d.PullMissionUpdates(ctx)
 	if err != nil {
-		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
-		return false
+		slog.Error("sync_daemon: PullMissionUpdates failed", "error", err)
 	}
-	defer rows.Close()
-
-	var payloads []SyncDaemonPayload
-	var ids []string
-
-	for rows.Next() {
-		var id, status, payloadData string
-		if err := rows.Scan(&id, &status, &payloadData); err != nil {
-			slog.Error("sync_daemon: failed to scan agent_missions", "error", err)
-			continue
-		}
-
-		// Sanitize payload data for PI and private markers
-		var parsedPayload map[string]interface{}
-		if err := json.Unmarshal([]byte(payloadData), &parsedPayload); err == nil {
-			parsedIface := SanitizePayloadMap(parsedPayload)
-			if redactedBytes, err := json.Marshal(parsedIface); err == nil {
-				payloadData = string(redactedBytes)
-			}
-		} else {
-			sanitizedStr, _ := SanitizePayload(payloadData)
-			payloadData = sanitizedStr
-		}
-
-		payloads = append(payloads, SyncDaemonPayload{
-			ID:      id,
-			Status:  status,
-			Payload: payloadData,
-		})
-		ids = append(ids, id)
-	}
-
-	if len(payloads) == 0 {
-		return false
-	}
-
-	if err := d.sendToCloud(ctx, payloads); err != nil {
-		slog.Error("sync_daemon: failed to send agent_missions to cloud", "error", err)
-		return false
-	}
-
-	// Mark as synced
-	if len(ids) > 0 {
-		idList := ""
-		for i, id := range ids {
-			if i > 0 {
-				idList += ","
-			}
-			idList += fmt.Sprintf("'%s'", id)
-		}
-		updateQuery := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
-		if d.dbWrapper.IsSQLite() {
-			updateQuery = fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id IN (%s)", idList)
-		}
-		_, err := tx.Exec(ctx, updateQuery)
-		if err != nil {
-			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
-			return false
-		} else {
-			telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		slog.Error("sync_daemon: failed to commit transaction", "error", err)
-		return false
-	}
-
-	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
 
 	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
-
-	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
 	return true
 }
 
