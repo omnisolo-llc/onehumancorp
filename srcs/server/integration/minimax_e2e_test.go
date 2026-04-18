@@ -40,6 +40,8 @@ func minimaxAPIKey() string {
 //     the round-trip from task dispatch → Minimax reasoning → acknowledgment
 //     works end-to-end.
 func TestMinimaxAgentTaskE2E(t *testing.T) {
+	orchestration.ResetGlobalCircuitBreakerForTest()
+	t.Setenv("MINIMAX_API_KEY", "")
 	key := minimaxAPIKey()
 	if key == "" || len(key) < 20 {
 		// Mock the API for CI testing
@@ -155,6 +157,8 @@ func TestMinimaxAgentTaskE2E(t *testing.T) {
 // After the three-turn exchange the test asserts that the meeting transcript
 // contains exactly three messages in the correct order.
 func TestMinimaxAgentMeetingRoomE2E(t *testing.T) {
+	orchestration.ResetGlobalCircuitBreakerForTest()
+	t.Setenv("MINIMAX_API_KEY", "")
 	key := minimaxAPIKey()
 	if key == "" || len(key) < 20 {
 		// Mock the API for CI testing
