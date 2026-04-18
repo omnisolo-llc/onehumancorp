@@ -2,11 +2,13 @@ package autodream
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/lib/pricing"
 )
 
 type LLMClient interface {
@@ -18,13 +20,15 @@ type Consolidator struct {
 	vectorRepo *Repository
 	llm        LLMClient
 	db         db.Provider
+	cache      *pricing.LocalEmbeddingCache
 }
 
-func NewConsolidator(vectorRepo *Repository, llm LLMClient, dbProvider db.Provider) *Consolidator {
+func NewConsolidator(vectorRepo *Repository, llm LLMClient, dbProvider db.Provider, cache *pricing.LocalEmbeddingCache) *Consolidator {
 	return &Consolidator{
 		vectorRepo: vectorRepo,
 		llm:        llm,
 		db:         dbProvider,
+		cache:      cache,
 	}
 }
 
@@ -88,9 +92,23 @@ func (s *Consolidator) Consolidate(ctx context.Context, taskID, orgID string, lo
 		return fmt.Errorf("failed to synthesize memory: %w", err)
 	}
 
-	embedding, err := s.llm.GenerateEmbedding(ctx, summary)
-	if err != nil {
-		return fmt.Errorf("failed to generate embedding: %w", err)
+	var embedding []float32
+	if s.cache != nil {
+		if cached, ok := s.cache.Get(summary); ok {
+			_ = json.Unmarshal([]byte(cached), &embedding)
+		}
+	}
+
+	if len(embedding) == 0 {
+		embedding, err = s.llm.GenerateEmbedding(ctx, summary)
+		if err != nil {
+			return fmt.Errorf("failed to generate embedding: %w", err)
+		}
+		if s.cache != nil {
+			if bytes, err := json.Marshal(embedding); err == nil {
+				s.cache.Set(summary, string(bytes))
+			}
+		}
 	}
 
 	memID := taskID + "-summary"
