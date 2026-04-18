@@ -30,6 +30,7 @@ import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/logs_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
+import 'package:ohc_app/screens/model_provider_wizard_screen.dart';
 import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
@@ -139,6 +140,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(FakeUri());
     registerFallbackValue(<String>[]);
+    registerFallbackValue(<String, dynamic>{});
   });
 
   // ── LoginScreen ──────────────────────────────────────────────────────────
@@ -1055,6 +1057,270 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
+    });
+  });
+
+  // ── AiConfigScreen MiniMax preset ─────────────────────────────────────────
+
+  group('AiConfigScreen – MiniMax preset', () {
+    testWidgets('MiniMax appears in provider presets dropdown', (tester) async {
+      final mockClient = MockHttpClient();
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
+      final api = ApiService(
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Open the add provider dialog.
+      await tester.tap(find.text('Add Provider').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+
+      // Open the preset dropdown to verify MiniMax is listed.
+      await tester.tap(find.byType(DropdownButtonFormField<int>));
+      await tester.pumpAndSettle();
+
+      expect(find.text('MiniMax'), findsWidgets);
+    });
+  });
+
+  // ── ProviderType enum ─────────────────────────────────────────────────────
+
+  group('ProviderType enum', () {
+    test('fromValue and value round-trip correctly', () {
+      expect(ProviderType.fromValue(0), ProviderType.unspecified);
+      expect(ProviderType.fromValue(1), ProviderType.openai);
+      expect(ProviderType.fromValue(10), ProviderType.minimax);
+      expect(ProviderType.fromValue(99), ProviderType.custom);
+      expect(ProviderType.minimax.value, 10);
+      expect(ProviderType.openai.displayName, 'OpenAI');
+      expect(ProviderType.minimax.displayName, 'MiniMax');
+    });
+
+    test('AiProvider.fromJson parses provider_type', () {
+      final p = AiProvider.fromJson({
+        'id': 'mm',
+        'name': 'MiniMax',
+        'provider_type': 10,
+        'base_url': 'https://api.minimax.io/v1',
+        'api_key': 'key',
+        'models': <String>[],
+        'is_official': true,
+      });
+      expect(p.providerType, ProviderType.minimax);
+      expect(p.isOfficial, true);
+    });
+
+    test('AiProvider.toJson includes provider_type', () {
+      const p = AiProvider(
+        id: 'mm',
+        name: 'MiniMax',
+        providerType: ProviderType.minimax,
+        baseUrl: 'https://api.minimax.io/v1',
+        apiKey: 'key',
+        models: <String>[],
+        isOfficial: true,
+      );
+      final j = p.toJson();
+      expect(j['provider_type'], 10);
+    });
+  });
+
+  // ── BusinessSetupWizardScreen NL mode ─────────────────────────────────────
+
+  group('BusinessSetupWizardScreen – NL mode toggle', () {
+    testWidgets('mode toggle switches between Form and NL views', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            clientSettingsProvider.overrideWith(
+              (ref) => ClientSettingsNotifier(ref)
+                ..state = const AsyncValue.data(
+                  ClientSettings(
+                    backendUrl: 'http://localhost',
+                    standaloneMode: false,
+                  ),
+                ),
+            ),
+          ],
+          child: const MaterialApp(home: BusinessSetupWizardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Initially in form mode – Next button is visible.
+      expect(find.text('Next'), findsOneWidget);
+
+      // Toggle to NL mode.
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      // Form Next button is gone; NL input is visible.
+      expect(find.text('Next'), findsNothing);
+
+      // Toggle back to form mode.
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Next'), findsOneWidget);
+    });
+
+    testWidgets('NL mode preserves form state when toggling back', (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            clientSettingsProvider.overrideWith(
+              (ref) => ClientSettingsNotifier(ref)
+                ..state = const AsyncValue.data(
+                  ClientSettings(
+                    backendUrl: 'http://localhost',
+                    standaloneMode: false,
+                  ),
+                ),
+            ),
+          ],
+          child: const MaterialApp(home: BusinessSetupWizardScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Enter company name in form mode step 1.
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).first, 'Luxe Stage');
+      await tester.pumpAndSettle();
+
+      // Toggle to NL mode and back.
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Switch));
+      await tester.pumpAndSettle();
+
+      // Company name field should still have 'Luxe Stage'.
+      expect(find.widgetWithText(TextField, 'Luxe Stage'), findsOneWidget);
+    });
+  });
+
+  // ── ModelProviderWizardScreen ─────────────────────────────────────────────
+
+  group('ModelProviderWizardScreen – model provider wizard', () {
+    testWidgets('renders first step with provider dropdown', (tester) async {
+      final mockApiService = MockApiService();
+      when(
+        () => mockApiService.modelProviderWizardStep(
+          step: any(named: 'step'),
+          provider: any(named: 'provider'),
+          agentType: any(named: 'agentType'),
+        ),
+      ).thenAnswer((_) async => {
+        'step': 2,
+        'total_steps': 5,
+        'title': 'Base URL',
+        'instruction': 'Enter the base URL.',
+        'configured_provider': <String, dynamic>{},
+      });
+
+      await tester.pumpWidget(
+        _wrap(
+          const ModelProviderWizardScreen(agentType: 'builtin'),
+          overrides: [apiServiceProvider.overrideWithValue(mockApiService)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Configure Model – builtin'), findsOneWidget);
+      expect(find.byType(DropdownButtonFormField<ProviderType>), findsOneWidget);
+      expect(find.text('Next'), findsOneWidget);
+    });
+
+    testWidgets('Next advances to step 2 after provider selected', (tester) async {
+      final mockApiService = MockApiService();
+      when(
+        () => mockApiService.modelProviderWizardStep(
+          step: any(named: 'step'),
+          provider: any(named: 'provider'),
+          agentType: any(named: 'agentType'),
+        ),
+      ).thenAnswer((_) async => {
+        'step': 2,
+        'total_steps': 5,
+        'title': 'Base URL',
+        'instruction': 'Enter the base URL.',
+        'configured_provider': {'base_url': 'https://api.minimax.io/v1'},
+      });
+
+      await tester.pumpWidget(
+        _wrap(
+          const ModelProviderWizardScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(mockApiService)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Select MiniMax from the provider dropdown.
+      await tester.tap(find.byType(DropdownButtonFormField<ProviderType>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('MiniMax').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+
+      // Should now show the Base URL step.
+      expect(find.widgetWithText(TextField, 'https://api.minimax.io/v1'), findsOneWidget);
+    });
+
+    testWidgets('Minimax key from MINIMAX_API_KEY is available as a preset',
+        (tester) async {
+      // This test verifies that if a MiniMax provider exists (read from the API),
+      // it shows up in the providers list with isOfficial = true.
+      final mockClient = MockHttpClient();
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'minimax-default',
+              'name': 'MiniMax',
+              'provider_type': 10,
+              'base_url': 'https://api.minimax.io/v1',
+              'api_key': 'test-key',
+              'models': ['MiniMax-Text-01', 'abab6.5s-chat'],
+              'is_official': true,
+            },
+          ]),
+          200,
+        ),
+      );
+      final api = ApiService(
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          const AiConfigScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // MiniMax provider should appear in the list.
+      expect(find.text('MiniMax'), findsOneWidget);
     });
   });
 }

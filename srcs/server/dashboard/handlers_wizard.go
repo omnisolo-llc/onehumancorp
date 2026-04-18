@@ -50,6 +50,8 @@ type wizardBootstrapBusinessRequest struct {
 	Deployment  string   `json:"deployment_preference,omitempty"`
 	AdminName   string   `json:"admin_name,omitempty"`
 	AdminEmail  string   `json:"admin_email,omitempty"`
+	// Mode mirrors WizardMode from wizard.proto (0=unspecified, 1=form, 2=natural_language).
+	Mode int32 `json:"mode,omitempty"`
 }
 
 type businessArchitecturePlan struct {

@@ -79,13 +79,14 @@ func (s *Server) handleMarketplace(w http.ResponseWriter, _ *http.Request) {
 }
 
 type aiProviderPayload struct {
-	ID         string   `json:"id,omitempty"`
-	Name       string   `json:"name"`
-	BaseURL    string   `json:"base_url,omitempty"`
-	APIKey     string   `json:"api_key,omitempty"`
-	Model      string   `json:"model,omitempty"`
-	Models     []string `json:"models,omitempty"`
-	IsOfficial bool     `json:"is_official,omitempty"`
+	ID           string   `json:"id,omitempty"`
+	Name         string   `json:"name"`
+	ProviderType int32    `json:"provider_type,omitempty"`
+	BaseURL      string   `json:"base_url,omitempty"`
+	APIKey       string   `json:"api_key,omitempty"`
+	Model        string   `json:"model,omitempty"`
+	Models       []string `json:"models,omitempty"`
+	IsOfficial   bool     `json:"is_official,omitempty"`
 }
 
 func (s *Server) handleAIProviders(w http.ResponseWriter, r *http.Request) {
@@ -110,12 +111,15 @@ func (s *Server) handleAIProviders(w http.ResponseWriter, r *http.Request) {
 		}
 
 		provider := settings.AiProvider{
-			Name:    req.Name,
-			APIKey:  strings.TrimSpace(req.APIKey),
-			BaseURL: strings.TrimSpace(req.BaseURL),
-			Model:   strings.TrimSpace(req.Model),
-			Models:  normalizeProviderModels(req.Models, req.Model),
-			Enabled: true,
+			ID:           aiProviderID(req.Name),
+			Name:         req.Name,
+			ProviderType: req.ProviderType,
+			APIKey:       strings.TrimSpace(req.APIKey),
+			BaseURL:      strings.TrimSpace(req.BaseURL),
+			Model:        strings.TrimSpace(req.Model),
+			Models:       normalizeProviderModels(req.Models, req.Model),
+			Enabled:      true,
+			IsOfficial:   req.IsOfficial,
 		}
 		if provider.Model == "" && len(provider.Models) > 0 {
 			provider.Model = provider.Models[0]
@@ -168,7 +172,11 @@ func (s *Server) handleAIProviderByID(w http.ResponseWriter, r *http.Request) {
 	cfg := s.settings
 	updated := false
 	for i, provider := range cfg.AiProviders {
-		if aiProviderID(provider.Name) == providerID {
+		storedID := provider.ID
+		if storedID == "" {
+			storedID = aiProviderID(provider.Name)
+		}
+		if storedID == providerID || aiProviderID(provider.Name) == providerID {
 			cfg.AiProviders[i].APIKey = strings.TrimSpace(req.APIKey)
 			cfg.AiProviders[i].Enabled = strings.TrimSpace(req.APIKey) != ""
 			if len(cfg.AiProviders[i].Models) == 0 && cfg.AiProviders[i].Model != "" {
@@ -228,14 +236,23 @@ func toAIProviderPayload(provider settings.AiProvider) aiProviderPayload {
 		models = []string{provider.Model}
 	}
 	name := strings.TrimSpace(provider.Name)
+	id := provider.ID
+	if id == "" {
+		id = aiProviderID(name)
+	}
+	isOfficial := provider.IsOfficial
+	if !isOfficial {
+		isOfficial = strings.EqualFold(name, "openai") || strings.EqualFold(name, "anthropic") || strings.EqualFold(name, "gemini") || strings.EqualFold(name, "minimax")
+	}
 	return aiProviderPayload{
-		ID:         aiProviderID(name),
-		Name:       name,
-		BaseURL:    provider.BaseURL,
-		APIKey:     provider.APIKey,
-		Model:      provider.Model,
-		Models:     models,
-		IsOfficial: strings.EqualFold(name, "openai") || strings.EqualFold(name, "anthropic") || strings.EqualFold(name, "gemini"),
+		ID:           id,
+		Name:         name,
+		ProviderType: provider.ProviderType,
+		BaseURL:      provider.BaseURL,
+		APIKey:       provider.APIKey,
+		Model:        provider.Model,
+		Models:       models,
+		IsOfficial:   isOfficial,
 	}
 }
 

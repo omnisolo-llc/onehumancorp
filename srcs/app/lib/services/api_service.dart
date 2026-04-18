@@ -393,6 +393,50 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  // ── Wizard NL Chat ────────────────────────────────────────────────────────
+
+  /// Sends a natural-language message to the wizard and returns a reply plus
+  /// any extracted field updates.  Matches the NlChat RPC in wizard.proto.
+  Future<Map<String, dynamic>> nlChatWizard({
+    required String message,
+    String sessionId = '',
+    Map<String, dynamic>? partialState,
+  }) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/wizard/nl_chat'),
+      headers: _headers,
+      body: jsonEncode({
+        'session_id': sessionId,
+        'message': message,
+        if (partialState != null) 'partial_state': partialState,
+      }),
+    ).timeout(_timeout);
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  // ── Model Provider Wizard ─────────────────────────────────────────────────
+
+  /// Advances one step of the model provider configuration wizard.
+  /// Matches the ModelProviderWizard RPC in wizard.proto.
+  Future<Map<String, dynamic>> modelProviderWizardStep({
+    required int step,
+    required Map<String, dynamic> provider,
+    String agentType = '',
+  }) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/wizard/model_provider'),
+      headers: _headers,
+      body: jsonEncode({
+        'step': step,
+        'provider': provider,
+        'agent_type': agentType,
+      }),
+    ).timeout(_timeout);
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   // ── Skills ────────────────────────────────────────────────────────────────
 
   Future<List<Skill>> listSkills() async {
