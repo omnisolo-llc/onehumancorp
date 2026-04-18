@@ -28,6 +28,7 @@ import (
 	"github.com/redis/rueidis"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
@@ -60,6 +61,7 @@ type Server struct {
 	pipelines             []Pipeline
 	authStore             *auth.Store
 	authHandlers          *auth.Handlers
+	dbProvider            db.Provider
 	settings              settings.AppSettings
 	agentProviderRegistry *agents.Registry
 	dynamicMCPTools       []MCPTool
@@ -469,6 +471,12 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		teamInvites:           []TeamInvite{},
 		waitlist:              []WaitlistEntry{},
 		onboardingFunnels:     []OnboardingFunnel{},
+	}
+
+	if (hub == nil || hub.SIPDB() == nil) && os.Getenv("OHC_STANDALONE") == "true" {
+		if provider, err := db.New(context.Background()); err == nil {
+			server.dbProvider = provider
+		}
 	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
