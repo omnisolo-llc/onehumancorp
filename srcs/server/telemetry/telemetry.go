@@ -37,6 +37,8 @@ var (
 	SIPSyncPayloadSizeRecorder metric.Int64Histogram
 
 	tokenUsageCounter                  metric.Int64Counter
+	AgentTokenUsageTotal               metric.Int64Counter
+	AgentCostEstimateUSD               metric.Float64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -266,6 +268,7 @@ func InitTelemetry() (func(), error) {
 type mockableMeter interface {
 	Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error)
 	Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error)
+	Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error)
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
@@ -423,6 +426,22 @@ func InitWithMeter(m mockableMeter) error {
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
 		metric.WithDescription("Total tokens used by agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AgentTokenUsageTotal, err = m.Int64Counter(
+		"ohc_agent_token_usage_total",
+		metric.WithDescription("Total tokens consumed by agents across all models"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AgentCostEstimateUSD, err = m.Float64Counter(
+		"ohc_agent_cost_estimate_usd",
+		metric.WithDescription("Cumulative estimated USD cost of agent LLM operations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -846,6 +865,58 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		redactedMap := RedactInterfacePII(payloadMap)
 		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
+	}
+}
+
+// RecordAgentTokenUsage increments the centralized agent token counter.
+func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, model string, count int64) {
+	if AgentTokenUsageTotal == nil {
+		return
+	}
+	AgentTokenUsageTotal.Add(ctx, count, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("organization_id", organizationID),
+		attribute.String("role", role),
+		attribute.String("model", model),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":        agentID,
+			"organization_id": organizationID,
+			"role":            role,
+			"model":           model,
+			"count":           count,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "agent_token_usage", string(payloadBytes))
+	}
+}
+
+// RecordAgentCost records the estimated USD cost of an agent operation.
+func RecordAgentCost(ctx context.Context, agentID, organizationID, role, model string, cost float64) {
+	if AgentCostEstimateUSD == nil {
+		return
+	}
+	AgentCostEstimateUSD.Add(ctx, cost, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("organization_id", organizationID),
+		attribute.String("role", role),
+		attribute.String("model", model),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":        agentID,
+			"organization_id": organizationID,
+			"role":            role,
+			"model":           model,
+			"cost":            cost,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "agent_cost", string(payloadBytes))
 	}
 }
 
@@ -1507,7 +1578,12 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		payloadMap := map[string]interface{}{
+			"delta": delta,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", string(payloadBytes))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
