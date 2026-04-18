@@ -10,3 +10,4 @@ Use this section for guided narratives such as setup verification, orchestration
 - [Day One Onboarding Walkthrough](./day_one_onboarding.md)
 - [Hybrid MCP RAG Dynamic Escalation Walkthrough](./hybrid_mcp_rag_escalation.md)
 - [OS-Level Sandbox Isolation Harness](./sandbox_isolation_harness.md)
+- [Hybrid Environment Setup Walkthrough](./hybrid_environment_setup_walkthrough.md)
