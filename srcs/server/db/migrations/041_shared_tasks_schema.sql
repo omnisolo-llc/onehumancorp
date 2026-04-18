@@ -18,5 +18,5 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS shared_tasks;
+-- DROP TABLE IF EXISTS shared_tasks;
 -- +goose StatementEnd

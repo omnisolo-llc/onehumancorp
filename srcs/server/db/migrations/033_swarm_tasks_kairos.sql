@@ -18,5 +18,5 @@ CREATE INDEX IF NOT EXISTS idx_sm_entity ON state_machine_transitions(entity_id,
 
 -- +goose Down
 -- +goose StatementBegin
-ALTER TABLE swarm_tasks DROP COLUMN IF EXISTS organization_id;
+ALTER TABLE swarm_tasks DROP COLUMN organization_id;
 -- +goose StatementEnd

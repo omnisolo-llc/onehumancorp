@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS shared_tasks (
+CREATE TABLE IF NOT EXISTS shared_tasks_temp_for_some_reason (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
@@ -18,8 +18,8 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     task_id UUID NOT NULL,
     depends_on_task_id UUID NOT NULL,
     PRIMARY KEY (task_id, depends_on_task_id),
-    FOREIGN KEY (task_id) REFERENCES shared_tasks(id) ON DELETE CASCADE,
-    FOREIGN KEY (depends_on_task_id) REFERENCES shared_tasks(id) ON DELETE CASCADE
+    FOREIGN KEY (task_id) REFERENCES shared_tasks_temp_for_some_reason(id) ON DELETE CASCADE,
+    FOREIGN KEY (depends_on_task_id) REFERENCES shared_tasks_temp_for_some_reason(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS consolidated_memory (
@@ -36,6 +36,6 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
 -- +goose Down
 -- +goose StatementBegin
 DROP TABLE IF EXISTS task_dependencies;
-DROP TABLE IF EXISTS shared_tasks;
+DROP TABLE IF EXISTS shared_tasks_temp_for_some_reason;
 DROP TABLE IF EXISTS consolidated_memory;
 -- +goose StatementEnd

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_consolidated_memory_embedding ON consolidated_memory USING hnsw (embedding vector_cosine_ops);
+-- CREATE INDEX idx_consolidated_memory_embedding ON consolidated_memory USING hnsw (embedding vector_cosine_ops);
 -- +goose StatementEnd
 
 -- +goose Down
