@@ -76,6 +76,7 @@ func TestRecordOtherMetricsUninitialized(t *testing.T) {
 	origTaskEnq := taskEnqueuedCounter
 	origTaskFail := taskFailedCounter
 	origCacheMiss := cacheMissesCounter
+	origHarnessExecutionDuration := HarnessExecutionDuration
 
 	// Nullify all
 	agentApiErrorsCounter = nil
@@ -97,6 +98,7 @@ func TestRecordOtherMetricsUninitialized(t *testing.T) {
 	taskEnqueuedCounter = nil
 	taskFailedCounter = nil
 	cacheMissesCounter = nil
+	HarnessExecutionDuration = nil
 
 	defer func() {
 		agentApiErrorsCounter = origAgentApiErrors
@@ -118,6 +120,7 @@ func TestRecordOtherMetricsUninitialized(t *testing.T) {
 		taskEnqueuedCounter = origTaskEnq
 		taskFailedCounter = origTaskFail
 		cacheMissesCounter = origCacheMiss
+		HarnessExecutionDuration = origHarnessExecutionDuration
 	}()
 
 	RecordAgentApiError(ctx, "agent-1", "dev", "api-1")
@@ -139,6 +142,7 @@ func TestRecordOtherMetricsUninitialized(t *testing.T) {
 	RecordTaskEnqueued(ctx, "task1")
 	RecordTaskFailed(ctx, "task1", "err1")
 	RecordCacheMiss(ctx, "op1", "type1")
+	RecordHarnessExecutionDuration(ctx, 1.5, "cloud", "bwrap")
 }
 
 func TestLogAgentExecutionFallback(t *testing.T) {

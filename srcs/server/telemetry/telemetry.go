@@ -83,9 +83,10 @@ var (
 	sqliteRetryExhaustedCounter   metric.Int64Counter
 	postgresRetryExhaustedCounter metric.Int64Counter
 
-	autoDreamSyncDuration  metric.Float64Histogram
-	autoDreamQueryDuration metric.Float64Histogram
-	meshBroadcastTotal     metric.Int64Counter
+	autoDreamSyncDuration    metric.Float64Histogram
+	autoDreamQueryDuration   metric.Float64Histogram
+	HarnessExecutionDuration metric.Float64Histogram
+	meshBroadcastTotal       metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`(?:\+\d{1,3}[- ]?)?\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -699,6 +700,15 @@ func InitWithMeter(m mockableMeter) error {
 	autoDreamQueryDuration, err = m.Float64Histogram(
 		"ohc_autodream_query_duration_seconds",
 		metric.WithDescription("Latency of AutoDream query operations in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	HarnessExecutionDuration, err = m.Float64Histogram(
+		"ohc_harness_execution_duration_seconds",
+		metric.WithDescription("Latency of Harness execution in seconds"),
 		metric.WithUnit("s"),
 	)
 	if err != nil {
@@ -1451,6 +1461,16 @@ func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode stri
 	if autoDreamQueryDuration != nil {
 		autoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+// RecordHarnessExecutionDuration records the duration of harness execution.
+func RecordHarnessExecutionDuration(ctx context.Context, duration float64, mode string, harnessType string) {
+	if HarnessExecutionDuration != nil {
+		HarnessExecutionDuration.Record(ctx, duration, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+			attribute.String("harness_type", harnessType),
 		))
 	}
 }

@@ -4,7 +4,11 @@ package harness
 
 import (
 	"context"
+	"os"
 	"os/exec"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type BwrapHarness struct{}
@@ -14,6 +18,15 @@ func NewIsolationHarness() IsolationHarness {
 }
 
 func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {
+	start := time.Now()
+	defer func() {
+		mode := "standalone"
+		if os.Getenv("OHC_MULTITENANT") == "true" {
+			mode = "cloud"
+		}
+		telemetry.RecordHarnessExecutionDuration(ctx, time.Since(start).Seconds(), mode, "bwrap")
+	}()
+
 	args := []string{
 		"--unshare-net",
 		"--unshare-pid",
