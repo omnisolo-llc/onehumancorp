@@ -67,6 +67,7 @@ flutter_library(
     name = "router_lib",
     srcs = ["lib/router.dart"],
     pubspec = "pubspec.yaml",
+    data = [":app_assets"],
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         "//srcs/app/lib/models:models_lib",
@@ -80,6 +81,7 @@ flutter_library(
     name = "main_lib",
     srcs = ["lib/main.dart"],
     pubspec = "pubspec.yaml",
+    data = [":app_assets"],
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         ":router_lib",
@@ -95,6 +97,7 @@ flutter_library(
     name = "app_lib",
     srcs = ["lib/main.dart"],
     pubspec = "pubspec.yaml",
+    data = [":app_assets"],
     visibility = ["//srcs/app:__subpackages__"],
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
@@ -129,6 +132,7 @@ flutter_library(
     name = "app_for_tests",
     srcs = [],
     pubspec = "pubspec.yaml",
+    data = [":app_assets"],
     visibility = ["//srcs/app:__subpackages__"],
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
