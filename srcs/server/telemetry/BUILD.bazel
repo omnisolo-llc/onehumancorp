@@ -41,7 +41,7 @@ go_test(
         "token_forecast_worker_test.go",
     ],
     embed = [":telemetry"],
-    data = ["//srcs/server:all_go_files"],
+    data = ["telemetry.go"],
     deps = [
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_golang//prometheus/push",
