@@ -2,8 +2,10 @@ package statesyncmcp
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
@@ -165,4 +167,251 @@ func (m *mockEmptySQLiteProvider) IsSQLite() bool {
 
 func (m *mockEmptySQLiteProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
 	return &mockRows{count: 0}, nil
+}
+
+type mockErrorSQLiteProvider struct {
+	db.Provider
+}
+
+func (m *mockErrorSQLiteProvider) IsSQLite() bool {
+	return true
+}
+
+func (m *mockErrorSQLiteProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
+	return &mockErrorRow{}
+}
+
+func (m *mockErrorSQLiteProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
+	return nil, errors.New("query error")
+}
+
+func (m *mockErrorSQLiteProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
+	return 0, errors.New("exec error")
+}
+
+type mockErrorRow struct{}
+
+func (r *mockErrorRow) Scan(dest ...any) error {
+	return errors.New("scan error")
+}
+
+func TestDBStateSyncProvider_SendToCloud_EmptyURL(t *testing.T) {
+	provider := NewDBStateSyncProvider(&db.DB{}, "")
+	// Use an empty test to export the method via testing package trick or just invoke
+	_, err := provider.sendToCloud(context.Background(), "/api", http.MethodGet, nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SendToCloud_MarshalError(t *testing.T) {
+	provider := NewDBStateSyncProvider(&db.DB{}, "http://localhost")
+	_, err := provider.sendToCloud(context.Background(), "/api", http.MethodPost, make(chan int), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SendToCloud_InvalidMethod(t *testing.T) {
+	provider := NewDBStateSyncProvider(&db.DB{}, "http://localhost")
+	_, err := provider.sendToCloud(context.Background(), "/api", "INV@LID", nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SendToCloud_Spiffe(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer test-token" {
+			t.Errorf("expected spiffe token")
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	os.Setenv("SPIFFE_IDENTITY_TOKEN", "test-token")
+	defer os.Unsetenv("SPIFFE_IDENTITY_TOKEN")
+
+	provider := NewDBStateSyncProvider(&db.DB{}, server.URL)
+	_, err := provider.sendToCloud(context.Background(), "/api", http.MethodGet, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDBStateSyncProvider_SendToCloud_ErrorStatus(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	provider := NewDBStateSyncProvider(&db.DB{}, server.URL)
+	_, err := provider.sendToCloud(context.Background(), "/api", http.MethodGet, nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SendToCloud_DoError(t *testing.T) {
+	provider := NewDBStateSyncProvider(&db.DB{}, "http://invalid-url-that-does-not-exist.local")
+	_, err := provider.sendToCloud(context.Background(), "/api", http.MethodGet, nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SyncUp_QueryError(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockErrorSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost")
+	_, err := provider.SyncUp(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SyncUp_SendError(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://invalid-url-that-does-not-exist.local")
+	_, err := provider.SyncUp(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SyncDown_NotSQLite(t *testing.T) {
+	type mockNonSQLiteProvider struct {
+		db.Provider
+	}
+	// Need to implement IsSQLite() to return false to prevent nil pointer dereference
+	// because IsSQLite is part of the db.Provider interface which we are embedding implicitly
+	// but it defaults to nil interface and triggers a crash.
+}
+
+type concreteMockNonSQLiteProvider struct{
+	db.Provider
+}
+func (c *concreteMockNonSQLiteProvider) IsSQLite() bool { return false }
+func (c *concreteMockNonSQLiteProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row { return nil }
+func (c *concreteMockNonSQLiteProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) { return nil, nil }
+func (c *concreteMockNonSQLiteProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) { return 0, nil }
+
+func TestDBStateSyncProvider_SyncDown_NotSQLiteFixed(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &concreteMockNonSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost")
+	_, err := provider.SyncDown(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SyncDown_SendError(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://invalid-url-that-does-not-exist.local")
+	_, err := provider.SyncDown(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SyncDown_JSONError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`invalid-json`))
+	}))
+	defer server.Close()
+
+	dbWrapper := &db.DB{Provider: &mockSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, server.URL)
+	_, err := provider.SyncDown(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_SyncDown_Missions(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"missions": [{"id": "test1", "status": "done"}]}`))
+	}))
+	defer server.Close()
+
+	dbWrapper := &db.DB{Provider: &mockSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, server.URL)
+	_, err := provider.SyncDown(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDBStateSyncProvider_GetStatus_NotSQLite(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &concreteMockNonSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost")
+	_, err := provider.GetStatus(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestDBStateSyncProvider_GetStatus_Error(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockErrorSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost")
+	_, err := provider.GetStatus(context.Background(), nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+type mockScanErrorSQLiteProvider struct {
+	db.Provider
+}
+
+func (m *mockScanErrorSQLiteProvider) IsSQLite() bool { return true }
+func (m *mockScanErrorSQLiteProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
+	return &mockScanErrorRows{count: 1}, nil
+}
+
+type mockScanErrorRows struct {
+	count int
+	idx   int
+}
+func (r *mockScanErrorRows) Next() bool {
+	if r.idx < r.count {
+		r.idx++
+		return true
+	}
+	return false
+}
+func (r *mockScanErrorRows) Scan(dest ...any) error { return errors.New("scan error") }
+func (r *mockScanErrorRows) Close() {}
+func (r *mockScanErrorRows) Columns() ([]string, error) { return nil, nil }
+func (r *mockScanErrorRows) Err() error { return nil }
+
+func TestDBStateSyncProvider_SyncUp_ScanError(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockScanErrorSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost")
+	res, err := provider.SyncUp(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res["synced_count"] != 0 {
+		t.Fatalf("expected 0, got %v", res["synced_count"])
+	}
+}
+
+func TestDBStateSyncProvider_SendToCloud_ReadError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Length", "10") // claim it's 10 bytes long
+		w.WriteHeader(http.StatusOK)
+		// close immediately without writing body
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+	}))
+	defer server.Close()
+
+	provider := NewDBStateSyncProvider(&db.DB{}, server.URL)
+	_, err := provider.sendToCloud(context.Background(), "/api", http.MethodGet, nil, nil)
+	if err == nil {
+		t.Fatal("expected error")
+	}
 }
