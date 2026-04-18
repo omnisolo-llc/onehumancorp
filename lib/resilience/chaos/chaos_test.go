@@ -119,11 +119,63 @@ func TestAllModeStrings(t *testing.T) {
 		ConnectionDrop:     "connection_drop",
 		ResourceExhaustion: "resource_exhaustion",
 		CorruptAgentLock:   "corrupt_agent_lock",
+		SQLSyncLag:         "sql_sync_lag",
+		CorruptMailbox:     "corrupt_mailbox",
 	}
 
 	for mode, expected := range modes {
 		if mode.String() != expected {
 			t.Errorf("expected %s, got %s", expected, mode.String())
 		}
+	}
+}
+
+func TestSQLSyncLag(t *testing.T) {
+	inj := NewInjector(SQLSyncLag, 1)
+
+	start := time.Now()
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated SQL sync lag" {
+		t.Fatalf("expected simulated SQL sync lag error, got %v", err)
+	}
+
+	duration := time.Since(start)
+	if duration < 100*time.Millisecond {
+		t.Fatalf("expected delay > 100ms, got %v", duration)
+	}
+}
+
+func TestSQLSyncLagContextCancellation(t *testing.T) {
+	inj := NewInjector(SQLSyncLag, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	err := inj.Inject(ctx)
+	if err == nil {
+		t.Fatal("expected context error, got nil")
+	}
+	if err != context.Canceled {
+		t.Fatalf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestCorruptMailbox(t *testing.T) {
+	defer os.RemoveAll("mailbox/")
+
+	inj := NewInjector(CorruptMailbox, 4)
+	err := inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated mailbox corruption" {
+		t.Fatalf("expected simulated mailbox corruption error, got %v", err)
+	}
+
+	if _, err := os.Stat("mailbox/corrupt.msg"); os.IsNotExist(err) {
+		t.Fatalf("expected corrupt.msg file to be created, but it was not")
 	}
 }

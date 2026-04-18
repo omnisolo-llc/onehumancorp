@@ -76,3 +76,36 @@ func TestChaosSystem_CorruptAgentLock(t *testing.T) {
 		t.Fatalf("expected ChaosError, got %T", err)
 	}
 }
+
+func TestChaosSystem_SQLSyncLag(t *testing.T) {
+	injector := chaos.NewInjector(chaos.SQLSyncLag, 123)
+
+	start := time.Now()
+	err := injector.Inject(context.Background())
+	duration := time.Since(start)
+
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if _, ok := err.(*chaos.ChaosError); !ok {
+		t.Fatalf("expected ChaosError, got %T", err)
+	}
+
+	if duration < 100*time.Millisecond || duration > 600*time.Millisecond {
+		t.Fatalf("expected duration between 100ms and 600ms, got %v", duration)
+	}
+}
+
+func TestChaosSystem_CorruptMailbox(t *testing.T) {
+	injector := chaos.NewInjector(chaos.CorruptMailbox, 123)
+
+	err := injector.Inject(context.Background())
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if _, ok := err.(*chaos.ChaosError); !ok {
+		t.Fatalf("expected ChaosError, got %T", err)
+	}
+}
