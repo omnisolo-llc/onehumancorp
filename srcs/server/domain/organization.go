@@ -58,6 +58,12 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	RoleMarketingManager Role = "MARKETING_MANAGER"
+	// RoleAINewsCollector defines the standard operational responsibilities and system access boundaries for the AINewsCollector persona.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	RoleAINewsCollector Role = "AI_NEWS_COLLECTOR"
 
 	// RoleGrowthAgent Digital Marketing Agency roles.
 	// Accepts no parameters.
@@ -367,6 +373,20 @@ func defaultSoftwareCompanyRoleProfiles() []RoleProfile {
 				"code diffs",
 				"dependency inventory",
 				"deployment risk",
+			},
+		},
+		{
+			Role:       RoleAINewsCollector,
+			BasePrompt: "Scour the web for the latest AI news and summarize key trends.",
+			Capabilities: []string{
+				"Crawl news sources",
+				"Summarize articles",
+				"Identify trends",
+			},
+			ContextInputs: []string{
+				"RSS feeds",
+				"tech blogs",
+				"social media",
 			},
 		},
 	}

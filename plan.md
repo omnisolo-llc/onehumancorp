@@ -1,22 +1,9 @@
-1. **Explore the requested issue.**
-   - Review the requirements for the "Premium Research Doc" to be submitted via PR.
-   - Review the requirements for the YAML block needed at the end of the final message.
-
-2. **Generate the Premium Research Doc.**
-   - Combine the findings from the `docs/research/agent_harness_audit.md`, `docs/research/agent_harness_network_proxy_audit.md`, `docs/research/claude_code_harness_audit.md`, `docs/architecture/claude_code_harness_research.md`, and `docs/research/agent-harness-analysis.md` into a single, cohesive, premium-styled markdown file (with the `backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;` styling, as per OHC Visual Excellence Mandate).
-   - Let's call this new doc `docs/research/AGENT_HARNESS_REPORT.md`.
-
-3. **Generate the Mission File.**
-   - The mission requires creating a mission file in `.agent-task/missions/{timestamp}.md` that includes Title, Problem Statement, Research Report, Design Doc, Implementation Prompt, Priority, and Estimated Scope. I've already done this step!
-
-4. **Add and commit files.**
-   - Add `docs/research/AGENT_HARNESS_REPORT.md` and `.agent-task/missions/*.md` using `git add -f`.
-
-5. **Complete pre-commit steps.**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-6. **Submit PR.**
-   - Use `submit` with the correct branch format `Oracle: [Architecture] description`.
-
-7. **Output the YAML block.**
-   - In the final message, output the required YAML block to trigger the automator.
+1. **Define `RoleAINewsCollector`**: Edit `srcs/server/domain/organization.go` to add `RoleAINewsCollector Role = "AI_NEWS_COLLECTOR"` in the `const` block for roles, probably near `RoleSoftwareEngineer` or marketing roles.
+2. **Add to default role profiles**: Edit `srcs/server/domain/organization.go` in `defaultSoftwareCompanyRoleProfiles` to include the `RoleProfile` for `RoleAINewsCollector`.
+   - `Role: RoleAINewsCollector`
+   - `BasePrompt: "Scrape and summarize the latest AI industry news and trends."` (or similar)
+   - `Capabilities: []string{"Scrape web sources", "Summarize articles", "Identify trends"}`
+   - `ContextInputs: []string{"news feeds", "industry blogs", "social media"}`
+   (Also check if `AI_NEWS_COLLECTOR` should be added to `NewSoftwareCompany`'s default `members` slice)
+3. **Verify `srcs/server/dashboard/seeder.go` and `srcs/server/main.go`**: Make sure the seeders align with the role definition (which they seem to do, using string literal "AI_NEWS_COLLECTOR").
+4. **Testing, verification, review, and reflection**: Run `bazelisk test //...` and `flutter test` in `srcs/app/` to ensure everything is working correctly.
