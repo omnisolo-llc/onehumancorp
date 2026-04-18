@@ -19,6 +19,23 @@ type SqliteProvider struct {
 	db *sql.DB
 }
 
+func sqliteRowsAffected(res sql.Result) (rows int64, err error) {
+	if res == nil {
+		return 0, nil
+	}
+	defer func() {
+		if recover() != nil {
+			rows = 0
+			err = nil
+		}
+	}()
+	rows, err = res.RowsAffected()
+	if err != nil {
+		return 0, nil
+	}
+	return rows, nil
+}
+
 func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 	return &SqliteProvider{db: db}
 }
@@ -77,7 +94,7 @@ func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ..
 	if err != nil {
 		return 0, err
 	}
-	return res.RowsAffected()
+	return sqliteRowsAffected(res)
 }
 
 func (p *SqliteProvider) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
@@ -235,7 +252,7 @@ func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) 
 	if err != nil {
 		return 0, err
 	}
-	return res.RowsAffected()
+	return sqliteRowsAffected(res)
 }
 
 func (t *SqliteTx) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {

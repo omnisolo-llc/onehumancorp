@@ -61,6 +61,9 @@ services:
       OHC_HEADLESS: ${OHC_HEADLESS:-false}
       # Rust core sidecar address.
       OHC_CORE_URL: http://ohc-core:18789
+      # Initial admin credentials read by the one-time bootstrap script.
+      SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:-admin}
+      SETUP_ADMIN_INIT_PASSWORD: ${SETUP_ADMIN_INIT_PASSWORD:-admin}
     depends_on:
       ohc-core:
         condition: service_started
@@ -72,6 +75,31 @@ services:
         condition: service_started
     ports:
       - "8080:8080"
+
+  # ─── One-time admin bootstrap ─────────────────────────────────────────────
+  # Runs once at install time: waits for `server` to be healthy, then creates
+  # the initial admin account from SETUP_ADMIN_INIT_USERNAME / _PASSWORD.
+  # A marker file written to the `server-init-data` volume prevents it from
+  # repeating even if the container is restarted.
+  server-init:
+    image: alpine:3.19
+    command: sh /scripts/bootstrap-admin.sh
+    volumes:
+      - ./docker/server-init/bootstrap-admin.sh:/scripts/bootstrap-admin.sh:ro
+      - server-init-data:/data
+    environment:
+      SERVER_URL: http://server:8080
+      SETUP_ADMIN_INIT_USERNAME: ${SETUP_ADMIN_INIT_USERNAME:-admin}
+      SETUP_ADMIN_INIT_PASSWORD: ${SETUP_ADMIN_INIT_PASSWORD:-admin}
+    depends_on:
+      server:
+        condition: service_started
+    restart: on-failure
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 32M
 
   redis:
     image: redis:7-alpine
@@ -209,8 +237,8 @@ services:
       - "3000:3000"
     environment:
       LOG_LEVEL: "info"
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
     depends_on:
@@ -248,3 +276,7 @@ services:
         limits:
           cpus: "0.2"
           memory: 64M
+
+volumes:
+  # Persists the bootstrap marker so the admin-init script runs only once.
+  server-init-data:
