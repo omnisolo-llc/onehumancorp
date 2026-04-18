@@ -1571,7 +1571,8 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 			"agent_id":   agentID,
 			"trace_type": traceType,
 		}
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "agent_execution_traces_total", string(payloadBytes))
 	}
 }
