@@ -47,11 +47,12 @@ class _GlassCardState extends State<GlassCard> {
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
                 padding: widget.padding ?? const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: widget.color ?? const Color.fromRGBO(255, 255, 255, 0.03),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  color: widget.color ?? Color.fromRGBO(255, 255, 255, _isHovered ? 0.08 : 0.03),
+                  border: Border.all(color: Colors.white.withValues(alpha: _isHovered ? 0.2 : 0.1)),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: widget.child,
