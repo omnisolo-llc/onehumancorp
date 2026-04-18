@@ -316,7 +316,6 @@ func (r *ModelRegistry) ResolveModel(ctx context.Context, orgID, agentID, modelI
 	defer r.mu.RUnlock()
 
 	var model *domain.ModelInstance
-	var err error
 
 	if modelInstanceID != "" {
 		m, ok := r.orgModels(orgID)[modelInstanceID]

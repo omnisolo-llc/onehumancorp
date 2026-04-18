@@ -2,7 +2,6 @@ package orchestration
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
