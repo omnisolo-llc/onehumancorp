@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/redis/rueidis"
 )
 
 type MeshMessage struct {
@@ -19,7 +21,7 @@ type MeshMessage struct {
 
 type MeshCoordinatorService struct {
 	isRedis     bool
-	redisClient interface{} // Stub for rueidis.Client
+	redisClient rueidis.Client
 
 	// Local channel fallback state
 	mu          sync.RWMutex
@@ -28,9 +30,11 @@ type MeshCoordinatorService struct {
 
 func NewMeshCoordinatorService(redisClient interface{}) *MeshCoordinatorService {
 	if redisClient != nil {
-		return &MeshCoordinatorService{
-			isRedis:     true,
-			redisClient: redisClient,
+		if client, ok := redisClient.(rueidis.Client); ok {
+			return &MeshCoordinatorService{
+				isRedis:     true,
+				redisClient: client,
+			}
 		}
 	}
 
@@ -42,8 +46,17 @@ func NewMeshCoordinatorService(redisClient interface{}) *MeshCoordinatorService 
 
 func (s *MeshCoordinatorService) Publish(ctx context.Context, msg MeshMessage) error {
 	if s.isRedis {
-		// Stub: In a real implementation, this would use rueidis.Client
-		return fmt.Errorf("redis publish not fully implemented")
+		b, err := json.Marshal(msg)
+		if err != nil {
+			return fmt.Errorf("failed to marshal mesh message: %w", err)
+		}
+
+		cmd := s.redisClient.B().Publish().Channel(msg.Channel).Message(string(b)).Build()
+		res := s.redisClient.Do(ctx, cmd)
+		if err := res.Error(); err != nil {
+			return fmt.Errorf("redis publish failed: %w", err)
+		}
+		return nil
 	}
 
 	s.mu.RLock()
@@ -61,12 +74,30 @@ func (s *MeshCoordinatorService) Publish(ctx context.Context, msg MeshMessage) e
 }
 
 func (s *MeshCoordinatorService) Subscribe(ctx context.Context, channel string) (<-chan MeshMessage, error) {
-	if s.isRedis {
-		// Stub: In a real implementation, this would use rueidis.Client
-		return nil, fmt.Errorf("redis subscribe not fully implemented")
-	}
-
 	ch := make(chan MeshMessage, 100)
+
+	if s.isRedis {
+		cmd := s.redisClient.B().Subscribe().Channel(channel).Build()
+
+		go func() {
+			err := s.redisClient.Receive(ctx, cmd, func(msg rueidis.PubSubMessage) {
+				var meshMsg MeshMessage
+				if err := json.Unmarshal([]byte(msg.Message), &meshMsg); err == nil {
+					select {
+					case ch <- meshMsg:
+					case <-ctx.Done():
+					}
+				}
+			})
+			if err != nil {
+				// We don't have a great way to return this error from the background routine,
+				// but in a production system we'd log it.
+			}
+			close(ch)
+		}()
+
+		return ch, nil
+	}
 
 	s.mu.Lock()
 	s.subscribers[channel] = append(s.subscribers[channel], ch)

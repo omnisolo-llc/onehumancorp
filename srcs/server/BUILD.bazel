@@ -1,4 +1,5 @@
 load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 go_library(
     name = "server_lib",
@@ -37,4 +38,10 @@ genrule(
     outs = ["standalone_ohc_exec"],
     cmd = "cp $< $@ && chmod 0755 $@",
     visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "standalone_cleanup_test",
+    srcs = ["standalone_cleanup_test.sh"],
+    data = ["standalone_ohc.sh"],
 )

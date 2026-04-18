@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:ui';
 import '../services/auth_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
@@ -160,6 +162,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
   Widget build(BuildContext context) {
     final state = ref.watch(businessSetupProvider);
     final notifier = ref.read(businessSetupProvider.notifier);
+    final clientSettings = ref.watch(clientSettingsProvider).valueOrNull;
+    final isStandalone = clientSettings?.standaloneMode ?? false;
 
     return Scaffold(
       body: Container(
@@ -237,15 +241,37 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                             )),
                           ] else if (state.step == 3) ...[
                              const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-                             ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
-                              title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                              value: dep,
-                              groupValue: state.deployment,
-                              activeColor: Colors.blueAccent,
-                              onChanged: (String? value) {
-                                if (value != null) notifier.updateDeployment(value);
-                              },
-                            )),
+                             if (isStandalone)
+                               Padding(
+                                 padding: const EdgeInsets.only(top: 16.0),
+                                 child: ClipRRect(
+                                   borderRadius: BorderRadius.circular(12),
+                                   child: BackdropFilter(
+                                     filter: ImageFilter.compose(outer: const ColorFilter.matrix(<double>[1.168, -0.153, -0.015, 0, 0, -0.046, 1.061, -0.015, 0, 0, -0.046, -0.152, 1.198, 0, 0, 0, 0, 0, 1, 0]), inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0)),
+                                     child: Container(
+                                       padding: const EdgeInsets.all(16),
+                                       decoration: BoxDecoration(
+                                         color: Colors.white.withOpacity(0.05),
+                                         border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                       ),
+                                       child: const Text(
+                                         'Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.',
+                                         style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontSize: 16),
+                                       ),
+                                     ),
+                                   ),
+                                 ),
+                               )
+                             else
+                               ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
+                                title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
+                                value: dep,
+                                groupValue: state.deployment,
+                                activeColor: Colors.blueAccent,
+                                onChanged: (String? value) {
+                                  if (value != null) notifier.updateDeployment(value);
+                                },
+                              )),
                           ] else if (state.step == 4) ...[
                             TextField(
                               decoration: const InputDecoration(labelText: 'Admin Name', labelStyle: TextStyle(color: Colors.white70)),
