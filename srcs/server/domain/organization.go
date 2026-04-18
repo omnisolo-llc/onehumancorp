@@ -46,6 +46,12 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	RoleSecurityEngineer Role = "SECURITY_ENGINEER"
+	// RoleAINewsCollector defines the standard operational responsibilities and system access boundaries for the AINewsCollector persona.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	RoleAINewsCollector Role = "AI_NEWS_COLLECTOR"
 	// RoleDesigner defines the standard operational responsibilities and system access boundaries for the Designer persona.
 	// Accepts no parameters.
 	// Returns nothing.
@@ -187,6 +193,7 @@ func NewSoftwareCompany(id, name, ceoName string, now time.Time) Organization {
 		{ID: id + "-swe-2", Name: "Software Engineer 2", Role: RoleSoftwareEngineer, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-qa-1", Name: "QA Tester", Role: RoleQATester, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-security-1", Name: "Security Engineer", Role: RoleSecurityEngineer, ManagerID: directorID, IsHuman: false},
+		{ID: id + "-news-1", Name: "AI News Collector", Role: RoleAINewsCollector, ManagerID: ceoID, IsHuman: false},
 	}
 
 	return Organization{
@@ -367,6 +374,20 @@ func defaultSoftwareCompanyRoleProfiles() []RoleProfile {
 				"code diffs",
 				"dependency inventory",
 				"deployment risk",
+			},
+		},
+		{
+			Role:       RoleAINewsCollector,
+			BasePrompt: "Scour the web for the latest AI news and trends.",
+			Capabilities: []string{
+				"Search for news",
+				"Summarize articles",
+				"Draft newsletters",
+			},
+			ContextInputs: []string{
+				"RSS feeds",
+				"Twitter timelines",
+				"Hacker News",
 			},
 		},
 	}
