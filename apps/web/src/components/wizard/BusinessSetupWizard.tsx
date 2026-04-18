@@ -140,7 +140,7 @@ const BusinessSetupWizard = () => {
           Expert Mode
         </label>
         {expertMode && (
-          <div style={{ background: '#222', padding: '10px', marginTop: '10px', fontFamily: 'monospace' }}>
+          <div style={{ ...theme.glassmorphism, padding: '10px', marginTop: '10px', fontFamily: 'monospace', borderRadius: '8px' }}>
             <p>Raw Config Fields Revealed</p>
             <pre>{JSON.stringify({ profile, goals, deployment, admin }, null, 2)}</pre>
           </div>
