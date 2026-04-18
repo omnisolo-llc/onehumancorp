@@ -25,7 +25,6 @@ type CostAuditor struct {
 	mu               sync.Mutex
 	config           token_calculator.CostConfig
 	agentCosts       map[string]float64
-	agentBudgets     map[string]float64
 	totalCost        float64
 	cachingSavings   float64
 	storageSavings   float64
@@ -37,7 +36,6 @@ func NewCostAuditor(config token_calculator.CostConfig) *CostAuditor {
 	return &CostAuditor{
 		config:     config,
 		agentCosts: make(map[string]float64),
-		agentBudgets: make(map[string]float64),
 	}
 }
 func (a *CostAuditor) RecordEvent(ctx context.Context, event AuditEvent) float64 {
@@ -105,29 +103,7 @@ func (a *CostAuditor) GenerateReport() string {
 	report += fmt.Sprintf("Total Network Cost: $%.4f\n", a.totalNetworkCost)
 	report += "Agent Costs:\n"
 	for agentID, cost := range a.agentCosts {
-		budget, hasBudget := a.agentBudgets[agentID]
-		if hasBudget && cost > budget {
-			report += fmt.Sprintf("- %s: $%.4f (OVER BUDGET)\n", agentID, cost)
-		} else {
-			report += fmt.Sprintf("- %s: $%.4f\n", agentID, cost)
-		}
+		report += fmt.Sprintf("- %s: $%.4f\n", agentID, cost)
 	}
 	return report
-}
-
-func (a *CostAuditor) SetAgentBudget(agentID string, budget float64) {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	a.agentBudgets[agentID] = budget
-}
-
-func (a *CostAuditor) IsAgentOverBudget(agentID string) bool {
-	a.mu.Lock()
-	defer a.mu.Unlock()
-	cost := a.agentCosts[agentID]
-	budget, exists := a.agentBudgets[agentID]
-	if !exists {
-		return false
-	}
-	return cost > budget
 }

@@ -28,7 +28,6 @@ import (
 	"github.com/redis/rueidis"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
-	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
@@ -61,7 +60,6 @@ type Server struct {
 	pipelines             []Pipeline
 	authStore             *auth.Store
 	authHandlers          *auth.Handlers
-	dbProvider            db.Provider
 	settings              settings.AppSettings
 	agentProviderRegistry *agents.Registry
 	dynamicMCPTools       []MCPTool
@@ -472,12 +470,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		waitlist:              []WaitlistEntry{},
 		onboardingFunnels:     []OnboardingFunnel{},
 	}
-
-	if (hub == nil || hub.SIPDB() == nil) && os.Getenv("OHC_STANDALONE") == "true" {
-		if provider, err := db.New(context.Background()); err == nil {
-			server.dbProvider = provider
-		}
-	}
 	if server.staticDir == "" {
 		server.staticDir = "srcs/app/build/web"
 	}
@@ -612,7 +604,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/sync/escalation", auth.RequireRole("system", api.HandleSyncEscalation(server.hub)))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
 	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleSyncRAG))
-	mux.HandleFunc("/api/mcp/rag/sync", auth.RequireRole("system", server.handleMcpRagSync))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
 	mux.HandleFunc("/api/clusters/", server.handleClusterStatus)

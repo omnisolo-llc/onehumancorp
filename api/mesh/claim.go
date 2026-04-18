@@ -22,8 +22,6 @@ type Mission struct {
 
 // ClaimMission attempts to claim a queued mission for the given agent using FOR UPDATE SKIP LOCKED.
 func ClaimMission(ctx context.Context, db *sql.DB, agentID string) (*Mission, error) {
-	isSQLite := db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"
-
 	if db == nil {
 		return nil, fmt.Errorf("db connection is nil")
 	}
@@ -34,37 +32,20 @@ func ClaimMission(ctx context.Context, db *sql.DB, agentID string) (*Mission, er
 	}
 	defer tx.Rollback()
 
-	var query string
-	if isSQLite {
-		query = `
-			UPDATE mission_queue
-			SET status = 'IN_PROGRESS',
-			    assigned_agent = $1,
-			    updated_at = CURRENT_TIMESTAMP
-			WHERE mission_id = (
-			    SELECT mission_id
-			    FROM mission_queue
-			    WHERE status = 'QUEUED'
-			    LIMIT 1
-			)
-			RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at
-		`
-	} else {
-		query = `
-			UPDATE ohc_tasks.mission_queue
-			SET status = 'IN_PROGRESS',
-			    assigned_agent = $1,
-			    updated_at = NOW()
-			WHERE mission_id = (
-			    SELECT mission_id
-			    FROM ohc_tasks.mission_queue
-			    WHERE status = 'QUEUED'
-			    FOR UPDATE SKIP LOCKED
-			    LIMIT 1
-			)
-			RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at
-		`
-	}
+	query := `
+		UPDATE ohc_tasks.mission_queue
+		SET status = 'IN_PROGRESS',
+		    assigned_agent = $1,
+		    updated_at = NOW()
+		WHERE mission_id = (
+		    SELECT mission_id
+		    FROM ohc_tasks.mission_queue
+		    WHERE status = 'QUEUED'
+		    FOR UPDATE SKIP LOCKED
+		    LIMIT 1
+		)
+		RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at
+	`
 
 	row := tx.QueryRowContext(ctx, query, agentID)
 

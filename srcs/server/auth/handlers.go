@@ -28,9 +28,8 @@ func NewHandlers(store *Store) *Handlers {
 // ── auth endpoints ────────────────────────────────────────────────────────────
 
 type loginRequest struct {
-	Username       string `json:"username"`
-	Password       string `json:"password"`
-	OrganizationID string `json:"organizationId,omitempty"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type loginResponse struct {
@@ -62,7 +61,7 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.store.Authenticate(req.Username, req.Password, req.OrganizationID)
+	user, err := h.store.Authenticate(req.Username, req.Password, "")
 	if err != nil {
 		jsonError(w, "invalid credentials", http.StatusUnauthorized)
 		return

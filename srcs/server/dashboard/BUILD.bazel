@@ -21,7 +21,6 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/dashboard",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/db",
         "//api/mesh",
         "@com_github_redis_go_redis_v9//:go-redis",
         "//srcs/server/api",
