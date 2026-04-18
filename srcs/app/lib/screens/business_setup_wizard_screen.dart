@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'dart:ui';
-import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
   final int step;
+  final String aiPrompt;
   final String companyName;
   final String industry;
   final String size;
@@ -20,9 +19,12 @@ class BusinessSetupState {
   final String adminPassword;
   final bool isLoading;
   final String? errorMessage;
+  final bool useNlMode;
+  final List<Map<String, String>> nlMessages;
 
   const BusinessSetupState({
     this.step = 0,
+    this.aiPrompt = '',
     this.companyName = '',
     this.industry = '',
     this.size = 'S',
@@ -33,10 +35,13 @@ class BusinessSetupState {
     this.adminPassword = '',
     this.isLoading = false,
     this.errorMessage,
+    this.useNlMode = false,
+    this.nlMessages = const [],
   });
 
   BusinessSetupState copyWith({
     int? step,
+    String? aiPrompt,
     String? companyName,
     String? industry,
     String? size,
@@ -47,9 +52,12 @@ class BusinessSetupState {
     String? adminPassword,
     bool? isLoading,
     String? errorMessage,
+    bool? useNlMode,
+    List<Map<String, String>>? nlMessages,
   }) {
-    return BusinessSetupState(
+      return BusinessSetupState(
       step: step ?? this.step,
+      aiPrompt: aiPrompt ?? this.aiPrompt,
       companyName: companyName ?? this.companyName,
       industry: industry ?? this.industry,
       size: size ?? this.size,
@@ -60,6 +68,8 @@ class BusinessSetupState {
       adminPassword: adminPassword ?? this.adminPassword,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
+      useNlMode: useNlMode ?? this.useNlMode,
+      nlMessages: nlMessages ?? this.nlMessages,
     );
   }
 }
@@ -81,6 +91,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   }
 
   void updateCompany(String name) => state = state.copyWith(companyName: name);
+  void updatePrompt(String prompt) => state = state.copyWith(aiPrompt: prompt);
   void updateIndustry(String val) => state = state.copyWith(industry: val);
   void updateSize(String val) => state = state.copyWith(size: val);
   void toggleGoal(String goal) {
@@ -97,39 +108,47 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
 
+  void toggleNlMode() => state = state.copyWith(useNlMode: !state.useNlMode);
+
+  void addNlMessage(String role, String text) {
+    final msgs = List<Map<String, String>>.from(state.nlMessages)
+      ..add({'role': role, 'text': text});
+    state = state.copyWith(nlMessages: msgs);
+  }
+
+  void applyNlFieldUpdates(Map<String, String> updates) {
+    var s = state;
+    if (updates.containsKey('company_name')) s = s.copyWith(companyName: updates['company_name']);
+    if (updates.containsKey('industry')) s = s.copyWith(industry: updates['industry']);
+    if (updates.containsKey('size')) s = s.copyWith(size: updates['size']);
+    if (updates.containsKey('admin_name')) s = s.copyWith(adminName: updates['admin_name']);
+    if (updates.containsKey('admin_email')) s = s.copyWith(adminEmail: updates['admin_email']);
+    if (updates.containsKey('goals')) {
+      final goals = List<String>.from(s.goals);
+      final goal = updates['goals']!;
+      if (!goals.contains(goal)) goals.add(goal);
+      s = s.copyWith(goals: goals);
+    }
+    state = s;
+  }
+
   Future<void> launch(BuildContext context, WidgetRef ref) async {
-    final user = ref.read(authStateProvider).valueOrNull;
-    final baseUrl = ref.read(backendUrlProvider);
+    final api = ref.read(apiServiceProvider);
 
     state = state.copyWith(isLoading: true, errorMessage: null);
 
-    if (user != null && baseUrl.isNotEmpty) {
-      final body = {
-        'extras': {
-          'company_name': state.companyName,
-          'industry': state.industry,
-          'company_size': state.size,
-          'goals': state.goals.join(','),
-          'deployment_preference': state.deployment,
-          'admin_name': state.adminName,
-          'admin_email': state.adminEmail,
-        }
-      };
-
+    if (api != null) {
       try {
-        final res = await http.post(
-          Uri.parse('$baseUrl/api/wizard/configure'),
-          headers: {
-            'Authorization': 'Bearer ${user.token}',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(body),
+        await api.bootstrapBusiness(
+          prompt: state.aiPrompt,
+          companyName: state.companyName,
+          industry: state.industry,
+          companySize: state.size,
+          goals: state.goals,
+          deploymentPreference: state.deployment,
+          adminName: state.adminName,
+          adminEmail: state.adminEmail,
         );
-
-        if (res.statusCode != 200) {
-          state = state.copyWith(isLoading: false, errorMessage: 'Configuration failed: ${res.statusCode}');
-          return;
-        }
       } catch (e) {
         state = state.copyWith(isLoading: false, errorMessage: 'Network error: $e');
         return;
@@ -157,6 +176,48 @@ class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
 
 class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
   bool _obscurePassword = true;
+  final _nlMessageCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _nlMessageCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendNlMessage() async {
+    final msg = _nlMessageCtrl.text.trim();
+    if (msg.isEmpty) return;
+    final notifier = ref.read(businessSetupProvider.notifier);
+    notifier.addNlMessage('user', msg);
+    _nlMessageCtrl.clear();
+
+    final api = ref.read(apiServiceProvider);
+    if (api == null) {
+      notifier.addNlMessage('assistant', 'No API connection available.');
+      return;
+    }
+    try {
+      final state = ref.read(businessSetupProvider);
+      final result = await api.nlChatWizard(
+        message: msg,
+        partialState: {
+          'company_name': state.companyName,
+          'industry': state.industry,
+          'admin_email': state.adminEmail,
+          'admin_name': state.adminName,
+        },
+      );
+      if (result['reply'] != null) {
+        notifier.addNlMessage('assistant', result['reply'] as String);
+      }
+      final updates = result['field_updates'] as Map<String, dynamic>?;
+      if (updates != null) {
+        notifier.applyNlFieldUpdates(updates.map((k, v) => MapEntry(k, v.toString())));
+      }
+    } catch (e) {
+      notifier.addNlMessage('assistant', 'Error: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -184,11 +245,37 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text('Business Setup', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
+                  // Mode toggle: Form ↔ Natural Language
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Form', style: TextStyle(fontFamily: 'Inter', color: Colors.white70, fontSize: 13)),
+                      const SizedBox(width: 8),
+                      Switch(
+                        value: state.useNlMode,
+                        onChanged: (_) => notifier.toggleNlMode(),
+                        activeColor: Colors.blueAccent,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text('Natural Language', style: TextStyle(fontFamily: 'Inter', color: Colors.white70, fontSize: 13)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
                   if (state.errorMessage != null) ...[
                     Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 16),
                   ],
+                  if (state.useNlMode)
+                    _NlChatView(
+                      messages: state.nlMessages,
+                      controller: _nlMessageCtrl,
+                      onSend: _sendNlMessage,
+                      isLoading: state.isLoading,
+                      readyToSubmit: state.companyName.isNotEmpty && state.adminEmail.isNotEmpty,
+                      onSubmit: () => notifier.launch(context, ref),
+                    )
+                  else ...[
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     transitionBuilder: (Widget child, Animation<double> animation) {
@@ -201,6 +288,18 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                         children: [
                           if (state.step == 0) ...[
                             const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
+                            const SizedBox(height: 16),
+                            TextField(
+                              minLines: 3,
+                              maxLines: 5,
+                              decoration: const InputDecoration(
+                                labelText: 'Describe the business you want AI to create',
+                                hintText: 'Help me create a real estate staging company that serves luxury listings.',
+                                labelStyle: TextStyle(color: Colors.white70),
+                              ),
+                              onChanged: notifier.updatePrompt,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
                           ] else if (state.step == 1) ...[
                             TextField(
                               decoration: const InputDecoration(labelText: 'Company Name', labelStyle: TextStyle(color: Colors.white70)),
@@ -307,6 +406,8 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       ),
                     ),
                   ),
+                  // Navigation buttons shown only in form mode.
+                  if (!state.useNlMode) ...[
                   const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -332,13 +433,112 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       ),
                     ],
                   ),
-                ],
-              ),
+                  ], // end form mode navigation
+                ], // end else (form mode) block
+              ],
             ),
+          ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Natural-language chat view ────────────────────────────────────────────────
+
+class _NlChatView extends StatelessWidget {
+  final List<Map<String, String>> messages;
+  final TextEditingController controller;
+  final VoidCallback onSend;
+  final bool isLoading;
+  final bool readyToSubmit;
+  final VoidCallback onSubmit;
+
+  const _NlChatView({
+    required this.messages,
+    required this.controller,
+    required this.onSend,
+    required this.isLoading,
+    required this.readyToSubmit,
+    required this.onSubmit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 260),
+          child: messages.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text(
+                    'Describe your business in natural language and I\'ll fill in the form for you.',
+                    style: TextStyle(fontFamily: 'Inter', color: Colors.white70, fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: messages.length,
+                  itemBuilder: (_, i) {
+                    final msg = messages[i];
+                    final isUser = msg['role'] == 'user';
+                    return Align(
+                      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isUser
+                              ? Colors.blueAccent.withOpacity(0.3)
+                              : Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          msg['text'] ?? '',
+                          style: const TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 13),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: controller,
+                style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                decoration: const InputDecoration(
+                  hintText: 'e.g. I want to start a real estate staging company...',
+                  hintStyle: TextStyle(color: Colors.white38),
+                  border: OutlineInputBorder(),
+                ),
+                onSubmitted: (_) => onSend(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.send, color: Colors.blueAccent),
+              onPressed: isLoading ? null : onSend,
+            ),
+          ],
+        ),
+        if (readyToSubmit) ...[
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: isLoading ? null : onSubmit,
+            child: isLoading
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Text('Launch My AI Team →', style: TextStyle(fontFamily: 'Inter')),
+          ),
+        ],
+      ],
     );
   }
 }

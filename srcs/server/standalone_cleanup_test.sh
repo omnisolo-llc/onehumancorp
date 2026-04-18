@@ -28,14 +28,21 @@ export STATE_DIR="$TEST_DIR"
 export OHC_STANDALONE="true"
 
 touch "${STATE_DIR}/normal.tmp"
+touch "${STATE_DIR}/some_linear_file.tmp"
 
 # Artificial backdate to simulate old files using touch -t
 touch -t 200001010000 "${STATE_DIR}/normal.tmp"
+touch -t 200001010000 "${STATE_DIR}/some_linear_file.tmp"
 
 cleanup_tmp_files
 
 if [[ -f "${STATE_DIR}/normal.tmp" ]]; then
   echo "Error: normal.tmp was not deleted"
+  exit 1
+fi
+
+if [[ -f "${STATE_DIR}/some_linear_file.tmp" ]]; then
+  echo "Error: some_linear_file.tmp was not deleted"
   exit 1
 fi
 
