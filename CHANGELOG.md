@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.4 (Cloud) / v0.4.4+1 (Standalone)
+### Cloud Scaling Improvements
+- Cleanup obsolete Linear orchestrator state in standalone wrapper.
+
+### Privacy/Offline Improvements
+- Harden the standalone environment by preserving correct orchestration files.
+
+
 ## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
 ### Cloud Scaling Improvements
 - Optimise Orchestration & Observability.

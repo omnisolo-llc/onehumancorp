@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.4.4 (Cloud) / v0.4.4+1 (Standalone)
+- Scaling (Cloud): Cleanup obsolete Linear orchestrator state in standalone wrapper.
+- Privacy/Offline (Standalone): Harden the standalone environment by preserving correct orchestration files.
+
+
 
 ## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
 - Scaling (Cloud): Optimise Orchestration & Observability.
