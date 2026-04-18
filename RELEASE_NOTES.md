@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
+- Scaling (Cloud): Optimise Orchestration & Observability.
+- Privacy/Offline (Standalone): Add AutoDream Sync Walkthrough.
+
 ## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
 - Scaling (Cloud): Implement Local Embedding Caching for Cost Optimization.
 - Privacy/Offline (Standalone): Enhance standalone performance via Local Embedding Caching.
