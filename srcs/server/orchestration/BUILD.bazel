@@ -52,6 +52,8 @@ go_library(
         "//srcs/server/orchestration/statemachine",
         "//srcs/server/orchestration/queue",
         "//srcs/server/memory/autodream",
+        "//srcs/server/orchestration/autodream",
+        "//srcs/server/orchestration/kairos",
         "@com_github_centrifugal_centrifuge//:centrifuge",
         "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel//:otel",
