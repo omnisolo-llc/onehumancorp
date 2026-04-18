@@ -105,7 +105,6 @@ class _HeaderSection extends StatelessWidget {
     return Column(
       children: [
         Image.asset(
-          package: 'ohc_app',
           'assets/logo.png',
           height: 80,
           errorBuilder: (context, error, stackTrace) {
