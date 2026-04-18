@@ -1,11 +1,14 @@
 package auth
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"os"
 )
 
@@ -16,7 +19,24 @@ func getCryptoKey() []byte {
 	}
 	if key == "" {
 		if os.Getenv("OHC_STANDALONE") == "true" {
-			key = "standalone_ephemeral_key"
+			keyPath := os.Getenv("OHC_SQLITE_KEY_FILE")
+			if keyPath == "" {
+				keyPath = ".ohc_sqlite_key"
+			}
+			b, err := os.ReadFile(keyPath)
+			if err != nil {
+				newKey := make([]byte, 32)
+				if _, err := rand.Read(newKey); err == nil {
+					key = hex.EncodeToString(newKey)
+					if err := os.WriteFile(keyPath, []byte(key), 0600); err != nil {
+						panic("failed to securely persist sqlite key: " + err.Error())
+					}
+				} else {
+					key = "fallback_memory_key"
+				}
+			} else {
+				key = string(bytes.TrimSpace(b))
+			}
 		} else {
 			key = "transient_memory_key"
 		}
