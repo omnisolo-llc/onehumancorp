@@ -2,7 +2,7 @@ package cost_auditor
 
 import (
 	"context"
-	"ohc/lib/pricing/token_calculator"
+	"github.com/onehumancorp/mono/lib/pricing/token_calculator"
 	"testing"
 )
 
