@@ -37,6 +37,7 @@ nav:
       - developer/index.md
   - API:
       - api/index.md
+      - "Interactive Api Playbook": api/api_playbook.md
   - Features:
       - features/index.md
   - Walkthroughs:
