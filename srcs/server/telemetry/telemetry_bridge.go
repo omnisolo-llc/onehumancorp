@@ -20,7 +20,7 @@ var (
 func initBridgeMetrics() {
 	var err error
 	if meter == nil {
-		return // telemetry not fully initialized, wait for InitTelemetry
+		return // telemetry not fully initialized, wait for InitTelemetry // telemetry not fully initialized, wait for InitTelemetry
 	}
 
 	bridgeMessagesSentTotal, err = meter.Int64Counter(

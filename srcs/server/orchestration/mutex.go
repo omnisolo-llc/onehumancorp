@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/rueidis"
 )
@@ -59,7 +60,7 @@ func (p *RedisMutexProvider) NewMutex(key string) Mutex {
 	return &RedisMutex{
 		client:  p.client,
 		key:     fmt.Sprintf("ohc:lock:%s", key),
-		ownerID: generateID(),
+		ownerID: uuid.New().String(),
 	}
 }
 
@@ -109,7 +110,7 @@ func (p *SQLiteMutexProvider) NewMutex(key string) Mutex {
 	return &SQLiteMutex{
 		provider: p,
 		key:      key,
-		ownerID:  generateID(),
+		ownerID:  uuid.New().String(),
 	}
 }
 

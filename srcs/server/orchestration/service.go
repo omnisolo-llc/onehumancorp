@@ -1899,12 +1899,14 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 		}
 
 		// KAIROS Orchestration broadcasts task updates
-		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action":   "sync",
-			"status":   payload.Status,
-			"agent_id": "system", // Or something appropriate
-			"payload":  payload.Payload,
-		})
+		if tm.hub != nil {
+			tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
+				"action":   "sync",
+				"status":   payload.Status,
+				"agent_id": "system", // Or something appropriate
+				"payload":  payload.Payload,
+			})
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
