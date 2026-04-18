@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS sub_agent_queue (
     completed_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS idx_sub_agent_queue_status_scheduled ON sub_agent_queue(status, scheduled_at);
+CREATE INDEX idx_sub_agent_queue_status_scheduled ON sub_agent_queue(status, scheduled_at);

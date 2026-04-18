@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS sub_agent_jobs (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_jobs_runnable ON sub_agent_jobs (status, run_after) WHERE status = 'QUEUED';
+CREATE INDEX idx_jobs_runnable ON sub_agent_jobs (status, run_after) WHERE status = 'QUEUED';
