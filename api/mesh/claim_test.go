@@ -2,14 +2,15 @@ package mesh
 
 import (
 	"context"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 // We define a dummy driver test since FOR UPDATE SKIP LOCKED is Postgres specific.
 func TestClaimMission_NilDB(t *testing.T) {
 	ctx := context.Background()
-	_, err := ClaimMission(ctx, nil, "test-agent")
+	q := NewQueueOrchestrator(nil, nil, false)
+	_, err := q.ClaimMission(ctx, "test-agent")
 	assert.Error(t, err)
 }
 

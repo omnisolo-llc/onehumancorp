@@ -23,7 +23,7 @@ func TestDistributedLock(t *testing.T) {
 	// Acquire lock
 	err := lock.Acquire(ctx, 1*time.Second)
 	if err != nil {
-	    t.Fatalf("Failed to acquire lock: %v", err)
+		t.Fatalf("Failed to acquire lock: %v", err)
 	}
 
 	// Attempt to acquire again (should block, so we use a timeout context)
@@ -31,18 +31,18 @@ func TestDistributedLock(t *testing.T) {
 	defer cancelTimeout()
 	err = lock.Acquire(ctxTimeout, 1*time.Second)
 	if err != context.DeadlineExceeded {
-	    t.Fatalf("Expected DeadlineExceeded, got: %v", err)
+		t.Fatalf("Expected DeadlineExceeded, got: %v", err)
 	}
 
 	// Release lock
 	err = lock.Release(ctx)
 	if err != nil {
-	    t.Fatalf("Failed to release lock: %v", err)
+		t.Fatalf("Failed to release lock: %v", err)
 	}
 
 	// Acquire again
 	err = lock.Acquire(ctx, 1*time.Second)
 	if err != nil {
-	    t.Fatalf("Failed to acquire lock after release: %v", err)
+		t.Fatalf("Failed to acquire lock after release: %v", err)
 	}
 }

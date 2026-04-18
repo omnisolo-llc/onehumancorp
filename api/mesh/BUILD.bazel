@@ -2,7 +2,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mesh",
-    srcs = ["mesh.go", "lock.go", "claim.go", "queue.go"],
+    srcs = ["mesh.go", "lock.go", "queue.go"],
     importpath = "github.com/onehumancorp/mono/api/mesh",
     visibility = ["//visibility:public"],
     deps = [

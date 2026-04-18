@@ -49,13 +49,15 @@ func setupTestDB(t *testing.T) *sql.DB {
 
 func TestEnqueueMission_NilDB(t *testing.T) {
 	ctx := context.Background()
-	_, err := EnqueueMission(ctx, nil, "test", "P0", []byte("{}"))
+	q := NewQueueOrchestrator(nil, nil, false)
+	_, err := q.EnqueueMission(ctx, "test", "P0", []byte("{}"))
 	assert.Error(t, err)
 }
 
 func TestCompleteMission_NilDB(t *testing.T) {
 	ctx := context.Background()
-	err := CompleteMission(ctx, nil, "uuid", "agent")
+	q := NewQueueOrchestrator(nil, nil, false)
+	err := q.CompleteMission(ctx, "uuid", "agent")
 	assert.Error(t, err)
 }
 
