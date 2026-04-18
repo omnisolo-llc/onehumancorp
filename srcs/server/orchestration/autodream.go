@@ -136,19 +136,21 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		}
 
 		var insertQuery string
+		memID := uuid.New().String()
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
-			memID := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr)
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES (?, ?, ?, ?, 'system', 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
+			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
 		} else {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
-			_, err = tx.Exec(ctx, insertQuery, content, embeddingStr)
+			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, 'system', 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
+			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
 		}
 
 		if err != nil {
 			slog.Error("AutoDream: failed to insert completed task memory", "error", err)
 			continue
 		}
+
+		telemetry.RecordAutoDreamConsolidation(ctx, "autodream_worker")
 
 		// Update task to ARCHIVED to avoid re-processing
 		updateQuery := "UPDATE shared_tasks_master SET status = 'ARCHIVED' WHERE id = $1"
