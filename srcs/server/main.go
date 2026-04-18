@@ -138,7 +138,9 @@ func init() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
-	logger := slog.New(handler)
+	// Wrap handler with PIIRedactingHandler to enforce multi-tenant compliance guardrails globally.
+	redactingHandler := telemetry.NewPIIRedactingHandler(handler)
+	logger := slog.New(redactingHandler)
 	slog.SetDefault(logger)
 }
 
@@ -544,10 +546,6 @@ func run(now time.Time, listen listenFunc) error {
 // Produces no errors.
 // Has no side effects.
 func main() {
-	// Set up global PII-redacting logger
-	baseHandler := slog.NewJSONHandler(os.Stdout, nil)
-	redactingHandler := telemetry.NewPIIRedactingHandler(baseHandler)
-	slog.SetDefault(slog.New(redactingHandler))
 
 	shutdown, err := initTelemetry()
 	if err != nil {
