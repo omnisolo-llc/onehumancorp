@@ -3,22 +3,29 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "services",
     srcs = [
+        "lock.go",
         "mesh.go",
         "queue.go",
     ],
     importpath = "github.com/onehumancorp/mono/apps/api/services",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_redis_rueidis//:rueidis",
+    ],
 )
 
 go_test(
     name = "services_test",
     srcs = [
+        "lock_test.go",
         "mesh_test.go",
+
         "queue_test.go",
     ],
     embed = [":services"],
     deps = [
         "//apps/api/db",
         "@org_modernc_sqlite//:sqlite",
+
     ],
 )

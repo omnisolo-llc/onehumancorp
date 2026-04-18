@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/redis/rueidis"
 )
 
 type MeshMessage struct {
@@ -19,14 +21,14 @@ type MeshMessage struct {
 
 type MeshCoordinatorService struct {
 	isRedis     bool
-	redisClient interface{} // Stub for rueidis.Client
+	redisClient rueidis.Client
 
 	// Local channel fallback state
 	mu          sync.RWMutex
 	subscribers map[string][]chan MeshMessage
 }
 
-func NewMeshCoordinatorService(redisClient interface{}) *MeshCoordinatorService {
+func NewMeshCoordinatorService(redisClient rueidis.Client) *MeshCoordinatorService {
 	if redisClient != nil {
 		return &MeshCoordinatorService{
 			isRedis:     true,
@@ -42,8 +44,12 @@ func NewMeshCoordinatorService(redisClient interface{}) *MeshCoordinatorService 
 
 func (s *MeshCoordinatorService) Publish(ctx context.Context, msg MeshMessage) error {
 	if s.isRedis {
-		// Stub: In a real implementation, this would use rueidis.Client
-		return fmt.Errorf("redis publish not fully implemented")
+		b, err := json.Marshal(msg)
+		if err != nil {
+			return fmt.Errorf("failed to marshal mesh message: %w", err)
+		}
+		cmd := s.redisClient.B().Publish().Channel(msg.Channel).Message(string(b)).Build()
+		return s.redisClient.Do(ctx, cmd).Error()
 	}
 
 	s.mu.RLock()
@@ -62,8 +68,20 @@ func (s *MeshCoordinatorService) Publish(ctx context.Context, msg MeshMessage) e
 
 func (s *MeshCoordinatorService) Subscribe(ctx context.Context, channel string) (<-chan MeshMessage, error) {
 	if s.isRedis {
-		// Stub: In a real implementation, this would use rueidis.Client
-		return nil, fmt.Errorf("redis subscribe not fully implemented")
+		ch := make(chan MeshMessage, 100)
+
+		go func() {
+			err := s.redisClient.Receive(ctx, s.redisClient.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
+				var m MeshMessage
+				if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
+					ch <- m
+				}
+			})
+			if err != nil {
+				close(ch)
+			}
+		}()
+		return ch, nil
 	}
 
 	ch := make(chan MeshMessage, 100)
