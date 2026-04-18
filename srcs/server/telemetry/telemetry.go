@@ -26,6 +26,8 @@ var (
 	SyncConflictsResolvedTotal       metric.Int64Counter
 	OmniContextBytesRouted           metric.Int64Counter
 	RagEscalationCount               metric.Int64Counter
+	GrowthOutputSharedTotal          metric.Int64Counter
+	GrowthSharedOutputViewsTotal     metric.Int64Counter
 
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
@@ -283,6 +285,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	GrowthOutputSharedTotal, err = m.Int64Counter(
+		"ohc_growth_output_shares_total",
+		metric.WithDescription("Total number of agentic outputs shared via viral loop"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	GrowthSharedOutputViewsTotal, err = m.Int64Counter(
+		"ohc_growth_shared_views_total",
+		metric.WithDescription("Total number of times shared agentic outputs were viewed by unauthenticated users"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1631,6 +1649,20 @@ func RecordOmniContextBytes(ctx context.Context, bytes int64) {
 func RecordRagEscalation(ctx context.Context) {
 	if RagEscalationCount != nil {
 		RagEscalationCount.Add(ctx, 1)
+	}
+}
+
+// RecordOutputShared increments the output shared growth counter.
+func RecordOutputShared(ctx context.Context, taskId string) {
+	if GrowthOutputSharedTotal != nil {
+		GrowthOutputSharedTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("task_id", taskId)))
+	}
+}
+
+// RecordSharedOutputView increments the shared output view growth counter.
+func RecordSharedOutputView(ctx context.Context, token string) {
+	if GrowthSharedOutputViewsTotal != nil {
+		GrowthSharedOutputViewsTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("token", token)))
 	}
 }
 

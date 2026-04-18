@@ -506,6 +506,83 @@ type QuotaMetrics struct {
 	Max  int `json:"max"`
 }
 
+// SharedOutput represents an agentic output shared via a viral loop.
+type SharedOutput struct {
+	ID        string    `json:"id"`
+	Token     string    `json:"token"`
+	TaskID    string    `json:"taskId"`
+	Content   string    `json:"content"`
+	Author    string    `json:"author"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type shareOutputRequest struct {
+	TaskID  string `json:"taskId"`
+	Content string `json:"content"`
+	Author  string `json:"author"`
+}
+
+func (s *Server) handleShareOutput(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req shareOutputRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	if req.TaskID == "" || req.Content == "" {
+		http.Error(w, "taskId and content are required", http.StatusBadRequest)
+		return
+	}
+
+	token := growth.GenerateToken() // I'll need to add this helper or use a local one
+	output := SharedOutput{
+		ID:        "shared-" + time.Now().UTC().Format("20060102150405"),
+		Token:     token,
+		TaskID:    req.TaskID,
+		Content:   req.Content,
+		Author:    req.Author,
+		CreatedAt: time.Now().UTC(),
+	}
+
+	s.mu.Lock()
+	s.sharedOutputs = append(s.sharedOutputs, output)
+	s.mu.Unlock()
+
+	telemetry.RecordOutputShared(r.Context(), req.TaskID)
+	writeJSON(w, output)
+}
+
+func (s *Server) handleGetSharedOutput(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "token is required", http.StatusNotFound)
+		return
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for _, out := range s.sharedOutputs {
+		if out.Token == token {
+			telemetry.RecordSharedOutputView(r.Context(), token)
+			writeJSON(w, out)
+			return
+		}
+	}
+
+	http.Error(w, "shared output not found", http.StatusNotFound)
+}
+
 func (s *Server) handleQuota(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

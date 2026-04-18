@@ -74,6 +74,7 @@ type Server struct {
 	teamInvites           []TeamInvite
 	onboardingFunnels     []OnboardingFunnel
 	waitlist              []WaitlistEntry
+	sharedOutputs         []SharedOutput
 }
 
 // RateLimitState functionality.
@@ -471,6 +472,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		teamInvites:           []TeamInvite{},
 		waitlist:              []WaitlistEntry{},
 		onboardingFunnels:     []OnboardingFunnel{},
+		sharedOutputs:         []SharedOutput{},
 	}
 
 	if (hub == nil || hub.SIPDB() == nil) && os.Getenv("OHC_STANDALONE") == "true" {
@@ -636,6 +638,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/viral-coefficient-metrics", server.handleViralCoefficientMetrics)
 	mux.HandleFunc("/api/growth/quota", server.handleQuota)
 	mux.HandleFunc("/api/growth/onboarding-metrics", server.handleOnboardingMetrics)
+	mux.HandleFunc("/api/growth/share", server.handleShareOutput)
+	mux.HandleFunc("/api/growth/shared", server.handleGetSharedOutput)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)

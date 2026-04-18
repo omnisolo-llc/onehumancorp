@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:ohc_app/models/shared_task.dart';
@@ -80,6 +81,13 @@ class _TaskGlassCard extends StatelessWidget {
               style: const TextStyle(fontFamily: 'Inter', color: Colors.white54, fontSize: 12),
             ),
           ],
+          if (task.status.toUpperCase() == 'COMPLETED') ...[
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _ShareOutputButton(task: task),
+            ),
+          ],
         ],
       ),
     );
@@ -157,6 +165,50 @@ class _AnimatedTaskGlassCardState extends State<_AnimatedTaskGlassCard> with Sin
       child: FadeTransition(
         opacity: _fadeAnimation,
         child: _TaskGlassCard(task: widget.task),
+      ),
+    );
+  }
+}
+
+class _ShareOutputButton extends ConsumerWidget {
+  final SharedTask task;
+  const _ShareOutputButton({required this.task});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return TextButton.icon(
+      onPressed: () async {
+        try {
+          final result = await ref.read(apiServiceProvider)!.shareOutput(
+                taskId: task.id,
+                content: "Autonomous intelligence results for task: ${task.title}. Verified by KAIROS.",
+                author: task.agentId ?? 'OpenClaw Agent',
+              );
+          final token = result['token'];
+          final inviteLink = 'https://cloud.ohc.io/shared/$token';
+          await Clipboard.setData(ClipboardData(text: inviteLink));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Cloud-Bridge link copied: $inviteLink'),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+              ),
+            );
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error sharing: \$e'), backgroundColor: Colors.redAccent),
+            );
+          }
+        }
+      },
+      icon: const Icon(Icons.share, size: 18),
+      label: const Text('Share Result', style: TextStyle(fontFamily: 'Outfit')),
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.blueAccent,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
     );
   }

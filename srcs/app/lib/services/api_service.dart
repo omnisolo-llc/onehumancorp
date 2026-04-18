@@ -221,6 +221,33 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
+  Future<Map<String, dynamic>> shareOutput({
+    required String taskId,
+    required String content,
+    required String author,
+  }) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/growth/share'),
+      headers: _headers,
+      body: jsonEncode({
+        'taskId': taskId,
+        'content': content,
+        'author': author,
+      }),
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getSharedOutput(String token) async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/growth/shared?token=$token'),
+      // No auth header needed for public shared output
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
   Future<dynamic> invokeMCPTool(
     String toolId,
     String action,

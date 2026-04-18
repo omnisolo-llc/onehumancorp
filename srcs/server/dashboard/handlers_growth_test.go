@@ -522,3 +522,49 @@ func TestHandleQuota(t *testing.T) {
 		t.Errorf("expected 10/200, got %d/%d", metrics.Used, metrics.Max)
 	}
 }
+
+func TestHandleShareOutput(t *testing.T) {
+	s := &Server{}
+
+	payload := `{"taskId": "task-123", "content": "Test intelligence", "author": "Agent Nova"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/growth/share", bytes.NewBufferString(payload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	s.handleShareOutput(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", w.Code)
+	}
+
+	var created SharedOutput
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if created.TaskID != "task-123" {
+		t.Errorf("expected taskId 'task-123', got '%s'", created.TaskID)
+	}
+	if created.Token == "" {
+		t.Error("expected non-empty token")
+	}
+
+	// Test GET
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/growth/shared?token="+created.Token, nil)
+	wGet := httptest.NewRecorder()
+
+	s.handleGetSharedOutput(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", wGet.Code)
+	}
+
+	var retrieved SharedOutput
+	if err := json.NewDecoder(wGet.Body).Decode(&retrieved); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+
+	if retrieved.ID != created.ID {
+		t.Errorf("expected ID %s, got %s", created.ID, retrieved.ID)
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 // GenerateReferralLink creates a deep link for sharing the standalone desktop mode.
@@ -54,4 +55,13 @@ func ReferralHandler(w http.ResponseWriter, r *http.Request) {
 	resp := ReferralResponse{Link: link}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+// GenerateToken generates a random token for sharing.
+func GenerateToken() string {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return hex.EncodeToString([]byte(fmt.Sprintf("%d", time.Now().UnixNano())))
+	}
+	return hex.EncodeToString(bytes)
 }
