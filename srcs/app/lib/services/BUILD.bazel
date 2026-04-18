@@ -39,6 +39,8 @@ flutter_library(
         "@pub_http//:http",
         "@pub_path//:path",
         "@pub_shared_preferences//:shared_preferences",
+        "//srcs/app/stubs/powersync:powersync",
+        "//srcs/app/stubs/path_provider:path_provider",
     ],
 )
 

@@ -1,0 +1,9 @@
+load("@rules_flutter//flutter:defs.bzl", "dart_library")
+
+dart_library(
+    name = "powersync",
+    srcs = ["lib/powersync.dart"],
+    pubspec = "pubspec.yaml",
+    pub_package = True,
+    visibility = ["//visibility:public"],
+)

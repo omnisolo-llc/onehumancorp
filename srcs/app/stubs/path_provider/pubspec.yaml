@@ -1,0 +1,11 @@
+name: path_provider
+description: Stub for path_provider package used in Bazel builds
+version: 2.1.5
+publish_to: none
+
+environment:
+  sdk: "^3.7.2"
+
+dependencies:
+  flutter:
+    sdk: flutter

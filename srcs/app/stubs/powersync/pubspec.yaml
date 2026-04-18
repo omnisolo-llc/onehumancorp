@@ -1,0 +1,11 @@
+name: powersync
+description: Stub for PowerSync package used in Bazel builds
+version: 1.9.3
+publish_to: none
+
+environment:
+  sdk: "^3.7.2"
+
+dependencies:
+  flutter:
+    sdk: flutter

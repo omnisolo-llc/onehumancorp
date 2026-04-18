@@ -1064,6 +1064,15 @@ if [ -d "$FLUTTER_ROOT/packages" ]; then
     done
 fi
 
+# Apply in-place compatibility patches to packages in RUNTIME_PUB_CACHE that
+# are incompatible with the bundled Dart SDK version.
+# state_notifier-1.0.0: _ListenerEntry must be 'base class' for Dart >= 3.7
+# because dart:collection LinkedListEntry became 'abstract base mixin class'.
+_SN_FILE="$RUNTIME_PUB_CACHE/hosted/pub.dev/state_notifier-1.0.0/lib/state_notifier.dart"
+if [ -f "$_SN_FILE" ]; then
+    sed -i 's/^class _ListenerEntry<T> extends LinkedListEntry/base class _ListenerEntry<T> extends LinkedListEntry/' "$_SN_FILE" 2>/dev/null || true
+fi
+
 # Regenerate package_config.json with correct paths to RUNTIME_PUB_CACHE
 # directly from Bazel-generated pub_deps.json so tests stay hermetic and do not
 # require a runtime `flutter pub get`.
