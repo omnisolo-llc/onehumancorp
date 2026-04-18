@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"github.com/onehumancorp/mono/srcs/server/lib/perf"
 	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -980,36 +979,26 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	}
 
 	// Prepare payload for batch sync
-	var idsToDelete []string
-	processedPayloads := make([]string, len(records))
-	tasks := make([]func() error, len(records))
-
-	for i, rec := range records {
-		idsToDelete = append(idsToDelete, fmt.Sprintf("%d", rec.id))
-		i, rec := i, rec // capture loop variables
-		tasks[i] = func() error {
-			var obj map[string]interface{}
-			if err := json.Unmarshal([]byte(rec.payload), &obj); err == nil {
-				obj["metric_type"] = rec.metricType
-				sanitizedObj := SanitizePayloadMap(obj)
-				b, _ := json.Marshal(sanitizedObj)
-				processedPayloads[i] = string(b)
-			} else {
-				sanitizedStr, _ := SanitizePayload(rec.payload)
-				processedPayloads[i] = sanitizedStr
-			}
-			return nil
-		}
-	}
-
-	coordinator := perf.NewCoordinatorMode(4)
-	if err := coordinator.ExecuteParallel(ctx, tasks); err != nil {
-		return 0, fmt.Errorf("parallel processing failed: %w", err)
-	}
-
 	var payloadBuilder strings.Builder
 	payloadBuilder.WriteString("[")
-	payloadBuilder.WriteString(strings.Join(processedPayloads, ","))
+	var idsToDelete []string
+	for i, rec := range records {
+		if i > 0 {
+			payloadBuilder.WriteString(",")
+		}
+		// Inject metric_type into payload
+		var obj map[string]interface{}
+		if err := json.Unmarshal([]byte(rec.payload), &obj); err == nil {
+			obj["metric_type"] = rec.metricType
+			sanitizedObj := SanitizePayloadMap(obj)
+			b, _ := json.Marshal(sanitizedObj)
+			payloadBuilder.Write(b)
+		} else {
+			sanitizedStr, _ := SanitizePayload(rec.payload)
+			payloadBuilder.WriteString(sanitizedStr)
+		}
+		idsToDelete = append(idsToDelete, fmt.Sprintf("%d", rec.id))
+	}
 	payloadBuilder.WriteString("]")
 
 	payloadStr := payloadBuilder.String()

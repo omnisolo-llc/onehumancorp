@@ -58,7 +58,7 @@ func TestAutoDreamPipeline_RunConsolidationCycle(t *testing.T) {
 
 	repo := &mockVectorRepo{}
 	llm := &mockLLM{}
-	pipeline := NewAutoDreamPipeline(repo, llm, provider, nil)
+	pipeline := NewAutoDreamPipeline(repo, llm, provider)
 
 	err = pipeline.RunConsolidationCycle(ctx)
 	if err != nil {

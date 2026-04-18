@@ -2,20 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
-import 'package:ohc_app/services/settings_service.dart';
+import 'package:ohc_app/widgets/glass_card.dart';
 
 void main() {
-  testWidgets('BusinessSetupWizardScreen renders and navigates steps in Cloud Mode', (WidgetTester tester) async {
+  testWidgets('BusinessSetupWizardScreen renders and navigates steps', (WidgetTester tester) async {
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          clientSettingsProvider.overrideWith(
-            (ref) => ClientSettingsNotifier(ref)..state = const AsyncValue.data(
-              ClientSettings(backendUrl: 'http://localhost', standaloneMode: false),
-            ),
-          ),
-        ],
-        child: const MaterialApp(
+      const ProviderScope(
+        child: MaterialApp(
           home: BusinessSetupWizardScreen(),
         ),
       ),
@@ -49,10 +42,9 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 3: Deployment Preference (Cloud Mode)
+    // Step 3: Deployment Preference
     expect(find.text('Deployment Preference'), findsOneWidget);
     expect(find.byType(RadioListTile<String>), findsNWidgets(3));
-    expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsNothing);
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
@@ -66,35 +58,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Launch My AI Team →'), findsOneWidget);
-  });
-
-  testWidgets('BusinessSetupWizardScreen renders and navigates steps in Standalone Mode', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          clientSettingsProvider.overrideWith(
-            (ref) => ClientSettingsNotifier(ref)..state = const AsyncValue.data(
-              ClientSettings(backendUrl: 'http://localhost', standaloneMode: true),
-            ),
-          ),
-        ],
-        child: const MaterialApp(
-          home: BusinessSetupWizardScreen(),
-        ),
-      ),
-    );
-
-    // Navigate to Step 3
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Step 3: Deployment Preference (Standalone Mode)
-    expect(find.text('Deployment Preference'), findsOneWidget);
-    expect(find.byType(RadioListTile<String>), findsNothing); // Should be hidden
-    expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsOneWidget); // Bypass message
   });
 }

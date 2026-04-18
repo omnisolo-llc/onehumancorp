@@ -2,7 +2,6 @@ package autodream
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -10,7 +9,6 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/lib/pricing"
 )
 
 type VectorRepository interface {
@@ -21,15 +19,13 @@ type AutoDreamPipeline struct {
 	vectorRepo VectorRepository
 	llm        LLMClient
 	db         db.Provider
-	cache      *pricing.LocalEmbeddingCache
 }
 
-func NewAutoDreamPipeline(vectorRepo VectorRepository, llm LLMClient, dbProvider db.Provider, cache *pricing.LocalEmbeddingCache) *AutoDreamPipeline {
+func NewAutoDreamPipeline(vectorRepo VectorRepository, llm LLMClient, dbProvider db.Provider) *AutoDreamPipeline {
 	return &AutoDreamPipeline{
 		vectorRepo: vectorRepo,
 		llm:        llm,
 		db:         dbProvider,
-		cache:      cache,
 	}
 }
 
@@ -128,23 +124,9 @@ func (p *AutoDreamPipeline) compressAndStore(ctx context.Context, content string
 		return fmt.Errorf("llm reason error: %w", err)
 	}
 
-	var embedding []float32
-	if p.cache != nil {
-		if cached, ok := p.cache.Get(summary); ok {
-			_ = json.Unmarshal([]byte(cached), &embedding)
-		}
-	}
-
-	if len(embedding) == 0 {
-		embedding, err = p.llm.GenerateEmbedding(ctx, summary)
-		if err != nil {
-			return fmt.Errorf("llm embedding error: %w", err)
-		}
-		if p.cache != nil {
-			if bytes, err := json.Marshal(embedding); err == nil {
-				p.cache.Set(summary, string(bytes))
-			}
-		}
+	embedding, err := p.llm.GenerateEmbedding(ctx, summary)
+	if err != nil {
+		return fmt.Errorf("llm embedding error: %w", err)
 	}
 
 	memID := fmt.Sprintf("mem-%d", time.Now().UnixNano())

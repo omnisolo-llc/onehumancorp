@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../services/settings_service.dart';
 
-class SetupUI extends ConsumerWidget {
+class SetupUI extends StatelessWidget {
   const SetupUI({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final clientSettings = ref.watch(clientSettingsProvider).valueOrNull;
-    final isStandalone = clientSettings?.standaloneMode ?? false;
-
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
@@ -31,17 +26,10 @@ class SetupUI extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 20),
-          if (isStandalone) ...[
-            _buildChecklistItem('1. Initialize Local SQLite', true),
-            _buildChecklistItem('2. Bypassed Redis & Postgres', true),
-            _buildChecklistItem('3. Hire Initial Agent', false),
-            _buildChecklistItem('4. Launch Standalone Mode', false),
-          ] else ...[
-            _buildChecklistItem('1. Setup PostgreSQL', true),
-            _buildChecklistItem('2. Configure Redis', true),
-            _buildChecklistItem('3. Hire Initial Agent', false),
-            _buildChecklistItem('4. Launch Standalone Mode', false),
-          ],
+          _buildChecklistItem('1. Setup PostgreSQL', true),
+          _buildChecklistItem('2. Configure Redis', true),
+          _buildChecklistItem('3. Hire Initial Agent', false),
+          _buildChecklistItem('4. Launch Standalone Mode', false),
         ],
       ),
     );

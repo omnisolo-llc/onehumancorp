@@ -116,19 +116,6 @@ class SettingsScreen extends ConsumerWidget {
                 ],
 
                 const Divider(),
-                SwitchListTile(
-                  secondary: const Icon(Icons.psychology),
-                  title: const Text('Expert Mode'),
-                  subtitle: const Text(
-                    'Reveals raw config fields, JSON editors, CLI commands, and API endpoint URLs.',
-                  ),
-                  value: settings.expertMode,
-                  onChanged:
-                      (value) => ref
-                          .read(clientSettingsProvider.notifier)
-                          .updateExpertMode(value),
-                ),
-                const Divider(),
                 const _SectionHeader(title: 'Account'),
                 ListTile(
                   leading: const Icon(Icons.business),
