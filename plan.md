@@ -1,20 +1,20 @@
-1. **Remove `.agent-task` directory**:
-   - The `.agent-task/` directory is abolished according to `AGENTS.md` and the instructions. Remove the `.agent-task/` directory from the root.
-   - Using `run_in_bash_session` to `rm -rf .agent-task`.
+1. **Apply `perf.CoordinatorMode` in `SyncContextSync`**:
+   - In `srcs/server/orchestration/sip.go`, find `SyncContextSync`.
+   - After fetching the `records` from `swarm_memory_embeddings`, iterate and transform the payloads. Currently, this iteration is done sequentially: `for _, rec := range records { ... }`.
+   - Update it to use `perf.CoordinatorMode(4)` for parallel payload sanitization and HTTP requests to `remoteEndpoint`.
+   - To make it thread-safe, collect the `idsToDelete` via a mutex or by sending results back to a channel. Note: Since `ExecuteParallel` blocks until all finish, we can process items and aggregate safe state. Wait, HTTP requests inside `ExecuteParallel` might be concurrent and need separate `http.Client`s or reuse the same thread-safe `http.Client`.
+   - Alternatively, batch the records to construct an array of processed payloads, similar to `SyncBufferedMetrics` if it does one large POST. Wait, the existing code in `SyncContextSync` does a POST *per record*: `req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))`.
+   - If it does a POST per record, `ExecuteParallel` will parallelize both sanitization and network requests!
+   - Use `perf.NewCoordinatorMode(4)` to parallelize it. Use a mutex for `idsToDelete` and `syncedCount`.
 
-2. **Clean up `Linear` references**:
-   - In `srcs/server/standalone_cleanup_test.sh`, the test explicitly creates and asserts the deletion of `Linear-state.tmp` and `linear_task.tmp` files. I will use a Python script via `run_in_bash_session` to remove these lines from the test since they are obsolete and leak internal logic to the wrapper test.
+2. **Apply `perf.CoordinatorMode` in `SyncMissions`**:
+   - In `srcs/server/orchestration/sip.go`, find `SyncMissions`.
+   - Similar to above, it processes `missions` in a loop and sends a POST *per mission*.
+   - Update it to use `perf.CoordinatorMode(4)`. Use a `sync.Mutex` for tracking successful synchronizations (updating `agent_missions` status in the DB transaction might not be safe, wait! The SQLite/PG transaction `tx` is not thread-safe. Wait, `tx.Exec` might not be safe to call concurrently from multiple goroutines on the same transaction).
+   - In `SyncMissions`, `tx.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)` is done per mission. We can collect successfully synced mission IDs in a thread-safe way, and do a single batch update or individual updates *after* `ExecuteParallel` completes.
+   - Wait, `SyncContextSync` collects `idsToDelete` and does a batch delete: `tx.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))`. So `SyncMissions` should collect `idsToUpdate` and do a batch update: `tx.Exec(ctx, fmt.Sprintf("UPDATE agent_missions SET status = 'SYNCED' WHERE id IN (%s)", idList))` after `ExecuteParallel`.
 
-3. **Cleanup `standalone_ohc.sh`**:
-   - Audit `srcs/server/standalone_ohc.sh` to remove insecure "Fast-and-Loose" logic. The script uses `pkill -9 -P` and `kill -9` inside `stop_daemon()`. A graceful shutdown should simply kill the process and wait, not use SIGKILL. I will update `stop_daemon` to avoid `kill -9` to ensure multi-tenant and local state safety.
-   - I will use a Python script via `run_in_bash_session` to modify `srcs/server/standalone_ohc.sh` to remove the `kill -9` statements and instead let it gracefully exit or log a timeout.
+3. **Verify functionality**:
+   - Run `bazelisk test //...` to ensure no tests are broken by these changes.
 
-4. **Verify Tests**:
-   - Run `bazelisk test //srcs/server/...` to ensure all tests pass.
-   - Run `bazelisk test //srcs/tests/...` to ensure Python checks pass.
-
-5. **Complete pre-commit steps**:
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-6. **Submit PR**:
-   - Create a PR using the persona's standard `"🧹 Maintainer: [Hybrid Hygiene] Audit and prune standalone wrapper & obsolete state tracking"`.
+4. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
