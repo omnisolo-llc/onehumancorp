@@ -137,7 +137,7 @@ func TestCorruptAgentLockPathDoesNotExist(t *testing.T) {
 
 func TestCorruptMailbox(t *testing.T) {
 	tmpDir := t.TempDir()
-	mailboxPath := filepath.Join(tmpDir, ".agent-task", "mailbox")
+	mailboxPath := filepath.Join(tmpDir, ".ohc", "runtime", "mailbox")
 	err := os.MkdirAll(mailboxPath, 0755)
 	if err != nil {
 		t.Fatalf("failed to create directory: %v", err)
@@ -173,7 +173,7 @@ func TestCorruptMailboxPathDoesNotExist(t *testing.T) {
 		t.Fatalf("expected simulated mailbox corruption error, got %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(tmpDir, ".agent-task", "mailbox", "corrupt.msg")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(tmpDir, ".ohc", "runtime", "mailbox", "corrupt.msg")); !os.IsNotExist(err) {
 		t.Fatalf("expected corrupt.msg file to not be created, but it was")
 	}
 }
