@@ -32,47 +32,31 @@ func (c *CoordinatorMode) ExecuteParallel(ctx context.Context, tasks []func() er
 	}
 
 	var wg sync.WaitGroup
-	var idx atomic.Int64
 	var firstErr atomic.Value
 
-	// Dynamically calculate batch size to ensure all workers get tasks
-	batchSize := int64(len(tasks) / (workerCount * 4))
-	if batchSize < 1 {
-		batchSize = 1
-	}
-	// Cap maximum batch size to prevent starvation on very large queues
-	if batchSize > 64 {
-		batchSize = 64
-	}
+	batchSize := (len(tasks) + workerCount - 1) / workerCount
 
 	for i := 0; i < workerCount; i++ {
 		wg.Add(1)
-		go func() {
+		startIdx := i * batchSize
+		endIdx := startIdx + batchSize
+		if endIdx > len(tasks) {
+			endIdx = len(tasks)
+		}
+
+		go func(start, end int) {
 			defer wg.Done()
-			for {
+			for curr := start; curr < end; curr++ {
 				if err := ctx.Err(); err != nil {
 					firstErr.CompareAndSwap(nil, err)
 					return
 				}
 
-				endIdx := idx.Add(batchSize)
-				startIdx := endIdx - batchSize
-
-				if startIdx >= int64(len(tasks)) {
-					return
-				}
-
-				if endIdx > int64(len(tasks)) {
-					endIdx = int64(len(tasks))
-				}
-
-				for curr := startIdx; curr < endIdx; curr++ {
-					if err := tasks[curr](); err != nil {
-						firstErr.CompareAndSwap(nil, err)
-					}
+				if err := tasks[curr](); err != nil {
+					firstErr.CompareAndSwap(nil, err)
 				}
 			}
-		}()
+		}(startIdx, endIdx)
 	}
 
 	wg.Wait()
