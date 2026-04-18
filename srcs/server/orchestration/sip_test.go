@@ -933,7 +933,7 @@ func TestSIPDB_DelegateMission_WithContextRoot(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions4))
 	}
 
-	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent4
+	expectedContent4 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent4 + "\n\n" + claudeMdContent4
 	if missions4[0].Content != expectedContent4 {
 		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
 	}
@@ -1015,7 +1015,7 @@ func TestSIPDB_DelegateMission_MissingFiles(t *testing.T) {
 		t.Fatalf("expected 1 mission, got %d", len(missions4))
 	}
 
-	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent
+	expectedContent3 := "Fourth instruction\n\n[SYSTEM GROUNDING]\n" + agentsMdContent + "\n\n" + claudeMdContent
 	if missions4[0].Content != expectedContent3 {
 		t.Fatalf("expected injected instruction, got %q", missions4[0].Content)
 	}

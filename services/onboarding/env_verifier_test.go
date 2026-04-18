@@ -52,6 +52,7 @@ func TestVerifyEnvironment_AutoDetectStandalone(t *testing.T) {
 func TestVerifyEnvironment_AutoDetectCloud(t *testing.T) {
 	env := map[string]string{
 		"KUBERNETES_SERVICE_HOST": "10.0.0.1",
+		"DATABASE_URL": "postgres://user:pass@localhost/db",
 	}
 
 	config, err := VerifyEnvironment(env)
