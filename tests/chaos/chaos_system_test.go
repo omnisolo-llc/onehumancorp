@@ -76,3 +76,25 @@ func TestChaosSystem_CorruptAgentLock(t *testing.T) {
 		t.Fatalf("expected ChaosError, got %T", err)
 	}
 }
+
+func TestChaosSystem_DropMeshSync(t *testing.T) {
+	injector := chaos.NewInjector(chaos.DropMeshSync, 123)
+	err := injector.Inject(context.Background())
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if e, ok := err.(*chaos.ChaosError); !ok || e.Message != "chaos: simulated mesh sync drop" {
+		t.Fatalf("expected ChaosError 'chaos: simulated mesh sync drop', got %v", err)
+	}
+}
+
+func TestChaosSystem_SimulatedSandboxViolation(t *testing.T) {
+	injector := chaos.NewInjector(chaos.SimulatedSandboxViolation, 123)
+	err := injector.Inject(context.Background())
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+	if e, ok := err.(*chaos.ChaosError); !ok || e.Message != "chaos: simulated sandbox violation" {
+		t.Fatalf("expected ChaosError 'chaos: simulated sandbox violation', got %v", err)
+	}
+}

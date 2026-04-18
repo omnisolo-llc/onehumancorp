@@ -114,11 +114,13 @@ func TestCorruptAgentLock(t *testing.T) {
 
 func TestAllModeStrings(t *testing.T) {
 	modes := map[ChaosMode]string{
-		NoChaos:            "no_chaos",
-		LatencySpike:       "latency_spike",
-		ConnectionDrop:     "connection_drop",
-		ResourceExhaustion: "resource_exhaustion",
-		CorruptAgentLock:   "corrupt_agent_lock",
+		NoChaos:                   "no_chaos",
+		LatencySpike:              "latency_spike",
+		ConnectionDrop:            "connection_drop",
+		ResourceExhaustion:        "resource_exhaustion",
+		CorruptAgentLock:          "corrupt_agent_lock",
+		DropMeshSync:              "drop_mesh_sync",
+		SimulatedSandboxViolation: "simulated_sandbox_violation",
 	}
 
 	for mode, expected := range modes {

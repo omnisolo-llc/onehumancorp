@@ -20,6 +20,15 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+      "id": 999,
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; color: #fff;\"><h1>OHC Chaos Resilience</h1><p>Visualizing proactive failure injection metrics.</p></div>"
+      }
+    },
+    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -75,7 +84,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "id": 2,
       "options": {

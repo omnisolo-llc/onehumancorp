@@ -2,8 +2,12 @@ load("@rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "chaos_system_test",
-    srcs = ["chaos_system_test.go"],
+    srcs = [
+        "chaos_system_test.go",
+        "chaos_cuj_e2e_test.go",
+    ],
     deps = [
         "//lib/resilience/chaos",
+        "//srcs/server/orchestration",
     ],
 )

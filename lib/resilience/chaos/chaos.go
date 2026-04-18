@@ -35,6 +35,10 @@ const (
 	ResourceExhaustion
 	// CorruptAgentLock corrupts the .agent-lock/ file.
 	CorruptAgentLock
+	// DropMeshSync simulates dropping the standalone sync connection.
+	DropMeshSync
+	// SimulatedSandboxViolation triggers a synthetic validation failure.
+	SimulatedSandboxViolation
 )
 
 // String returns the string representation of ChaosMode.
@@ -50,6 +54,10 @@ func (c ChaosMode) String() string {
 		return "resource_exhaustion"
 	case CorruptAgentLock:
 		return "corrupt_agent_lock"
+	case DropMeshSync:
+		return "drop_mesh_sync"
+	case SimulatedSandboxViolation:
+		return "simulated_sandbox_violation"
 	default:
 		return "unknown"
 	}
@@ -114,6 +122,10 @@ func (i *Injector) Inject(ctx context.Context) error {
 			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
 		}
 		return &ChaosError{Message: "chaos: simulated agent lock corruption"}
+	case DropMeshSync:
+		return &ChaosError{Message: "chaos: simulated mesh sync drop"}
+	case SimulatedSandboxViolation:
+		return &ChaosError{Message: "chaos: simulated sandbox violation"}
 	}
 	return nil
 }
