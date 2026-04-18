@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/services/settings_service.dart';
 
@@ -66,6 +67,94 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Launch My AI Team →'), findsOneWidget);
+  });
+
+  test('BusinessSetupNotifier covers all state mutations', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    final notifier = container.read(businessSetupProvider.notifier);
+
+    expect(container.read(businessSetupProvider).step, 0);
+
+    notifier.nextStep();
+    expect(container.read(businessSetupProvider).step, 1);
+
+    notifier.prevStep();
+    expect(container.read(businessSetupProvider).step, 0);
+
+    notifier.prevStep();
+    expect(container.read(businessSetupProvider).step, 0);
+
+    notifier.nextStep();
+    notifier.nextStep();
+    notifier.nextStep();
+    notifier.nextStep();
+
+    notifier.nextStep();
+    expect(container.read(businessSetupProvider).step, 4);
+
+    notifier.updateCompany('NewCo');
+    expect(container.read(businessSetupProvider).companyName, 'NewCo');
+
+    notifier.updateIndustry('Tech');
+    expect(container.read(businessSetupProvider).industry, 'Tech');
+
+    notifier.updateSize('L');
+    expect(container.read(businessSetupProvider).size, 'L');
+
+    notifier.toggleGoal('Support');
+    expect(container.read(businessSetupProvider).goals.contains('Support'), true);
+
+    notifier.toggleGoal('Support');
+    expect(container.read(businessSetupProvider).goals.contains('Support'), false);
+
+    notifier.updateDeployment('Desktop');
+    expect(container.read(businessSetupProvider).deployment, 'Desktop');
+
+    notifier.updateAdminName('Admin');
+    expect(container.read(businessSetupProvider).adminName, 'Admin');
+
+    notifier.updateAdminEmail('admin@example.com');
+    expect(container.read(businessSetupProvider).adminEmail, 'admin@example.com');
+
+    notifier.updateAdminPassword('secr3t');
+    expect(container.read(businessSetupProvider).adminPassword, 'secr3t');
+  });
+
+  testWidgets('BusinessSetupWizardScreen launch bypasses API and routes to dashboard if no user is set', (WidgetTester tester) async {
+    // We add a minimal go_router configuration so that GoRouter.of(context) does not throw.
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const BusinessSetupWizardScreen(),
+        ),
+        GoRoute(
+          path: '/dashboard',
+          builder: (context, state) => const Scaffold(body: Text('Dashboard')),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp.router(
+          routerConfig: router,
+        ),
+      ),
+    );
+
+    for(int i = 0; i < 4; i++) {
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+    }
+
+    await tester.tap(find.text('Launch My AI Team →'));
+    await tester.pumpAndSettle();
+
+    // As auth is null, the API is bypassed and we should navigate to /dashboard
+    expect(find.text('Dashboard'), findsOneWidget);
   });
 
   testWidgets('BusinessSetupWizardScreen renders and navigates steps in Standalone Mode', (WidgetTester tester) async {
