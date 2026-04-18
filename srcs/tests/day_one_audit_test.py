@@ -8,7 +8,7 @@ class TestDayOneSetup(unittest.TestCase):
         env = os.environ.copy()
         env['OHC_SOURCE_MODE'] = 'standalone'
         env['OHC_MULTITENANT'] = 'false'
-        bazelisk = shutil.which('bazelisk') or (os.path.abspath('./bazelisk') if os.path.exists('./bazelisk') else 'bazel')
+        bazelisk = shutil.which('bazelisk') or 'bazel'
         result = subprocess.run([bazelisk, 'test', '//srcs/server/api/...', '--test_output=errors'], env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, f"Standalone tests failed:\n{result.stdout}\n{result.stderr}")
 
@@ -16,7 +16,7 @@ class TestDayOneSetup(unittest.TestCase):
         env = os.environ.copy()
         env['OHC_SOURCE_MODE'] = 'cloud'
         env['OHC_MULTITENANT'] = 'true'
-        bazelisk = shutil.which('bazelisk') or (os.path.abspath('./bazelisk') if os.path.exists('./bazelisk') else 'bazel')
+        bazelisk = shutil.which('bazelisk') or 'bazel'
         result = subprocess.run([bazelisk, 'test', '//srcs/server/api/...', '--test_output=errors'], env=env, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, f"Cloud tests failed:\n{result.stdout}\n{result.stderr}")
 
