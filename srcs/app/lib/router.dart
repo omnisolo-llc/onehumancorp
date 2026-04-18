@@ -28,6 +28,7 @@ import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
+import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
@@ -167,6 +168,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SwarmMemoryScreen(),
           ),
           GoRoute(
+            path: '/autodream-sync',
+            builder: (context, state) => const AutoDreamSyncWalkthroughScreen(),
+          ),
+          GoRoute(
             path: '/growth-experiments',
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
@@ -213,6 +218,7 @@ class _Sidebar extends StatelessWidget {
           path: '/orchestration/tasks',
         ),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
+        _NavItem(icon: Icons.sync, label: 'AutoDream Sync', path: '/autodream-sync'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
         _NavItem(
