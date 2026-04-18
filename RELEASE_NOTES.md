@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.4 (Cloud) / v0.4.4+1 (Standalone)
+- Scaling (Cloud): Parallel execution for SyncMissions and SyncContextSync, Optimize OHC-SIP synchronization latency.
+- Privacy/Offline (Standalone): Add Agent Harness architecture research report, Add Telemetry for SQLite lock contention.
+
 ## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
 - Scaling (Cloud): Optimise Orchestration & Observability.
 - Privacy/Offline (Standalone): Add AutoDream Sync Walkthrough.
