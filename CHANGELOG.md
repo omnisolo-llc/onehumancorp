@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.5.0 (Cloud) / v0.5.0+1 (Standalone)
+### Cloud Scaling Improvements
+- General scaling improvements for Cloud server pods.
+
+### Privacy/Offline Improvements
+- Enhanced privacy and offline capabilities for Standalone desktop binaries.
+
+
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 ### Cloud Scaling Improvements
 - Architect Cross-Mode Database Schema Syncer via MCP.
