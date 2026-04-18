@@ -11,4 +11,4 @@ CREATE TABLE IF NOT EXISTS swarm_checkpoints (
     PRIMARY KEY (thread_id, checkpoint_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_checkpoints_thread_parent ON swarm_checkpoints (thread_id, parent_id);
+CREATE INDEX idx_checkpoints_thread_parent ON swarm_checkpoints (thread_id, parent_id);

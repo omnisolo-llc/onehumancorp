@@ -9,5 +9,5 @@ ALTER TABLE swarm_memory_embeddings ADD COLUMN organization_id TEXT DEFAULT 'sys
 ALTER TABLE telemetry_buffer ADD COLUMN organization_id TEXT DEFAULT 'system';
 
 -- Add composite indices for performance and uniqueness where necessary
-CREATE INDEX IF NOT EXISTS idx_agent_missions_org_status ON agent_missions(organization_id, status);
-CREATE INDEX IF NOT EXISTS idx_agent_status_org ON agent_status(organization_id);
+CREATE INDEX idx_agent_missions_org_status ON agent_missions(organization_id, status);
+CREATE INDEX idx_agent_status_org ON agent_status(organization_id);

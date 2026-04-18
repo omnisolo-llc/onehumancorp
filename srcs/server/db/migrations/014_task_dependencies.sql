@@ -6,5 +6,5 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
     FOREIGN KEY (depends_on_task_id) REFERENCES shared_tasks(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_task_deps_task ON task_dependencies(task_id);
-CREATE INDEX IF NOT EXISTS idx_task_deps_depends ON task_dependencies(depends_on_task_id);
+CREATE INDEX idx_task_deps_task ON task_dependencies(task_id);
+CREATE INDEX idx_task_deps_depends ON task_dependencies(depends_on_task_id);
