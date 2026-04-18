@@ -275,3 +275,89 @@ func TestExportEndpoint(t *testing.T) {
 		t.Errorf("expected 1 signup, got %v", resp["total_signups"])
 	}
 }
+
+
+func TestTeamEndpoints(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mr.Close()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	tracker := analytics.NewTracker()
+	mux := NewGrowthMux(tracker, rdb)
+
+	// Test Send Invite
+	reqSend, err := http.NewRequest("POST", "/api/v1/growth/teams/invite", bytes.NewBuffer([]byte(`{"team_id":"team-1","invitee_email":"test@example.com"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqSend.Header.Set("X-Spiffe-Id", "spiffe://example.org/inviter")
+
+	rrSend := httptest.NewRecorder()
+	mux.ServeHTTP(rrSend, reqSend)
+
+	if status := rrSend.Code; status != http.StatusOK {
+		t.Fatalf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var respSend map[string]string
+	json.Unmarshal(rrSend.Body.Bytes(), &respSend)
+	inviteID := respSend["invite_id"]
+	if inviteID == "" {
+		t.Fatalf("Expected invite_id in response")
+	}
+
+	// Test Accept Invite
+	reqAccept, err := http.NewRequest("POST", "/api/v1/growth/teams/accept", bytes.NewBuffer([]byte(`{"invite_id":"` + inviteID + `"}`)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reqAccept.Header.Set("X-Spiffe-Id", "spiffe://example.org/invitee")
+
+	rrAccept := httptest.NewRecorder()
+	mux.ServeHTTP(rrAccept, reqAccept)
+
+	if status := rrAccept.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code for accept: got %v want %v", status, http.StatusOK)
+	}
+}
+
+func TestViralCoefficientEndpoint(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mr.Close()
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	tracker := analytics.NewTracker()
+	mux := NewGrowthMux(tracker, rdb)
+
+	req, err := http.NewRequest("GET", "/api/v1/growth/analytics/viral_coefficient", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Spiffe-Id", "admin")
+
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	var resp map[string]float64
+	json.Unmarshal(rr.Body.Bytes(), &resp)
+
+	if _, ok := resp["viral_coefficient"]; !ok {
+		t.Errorf("expected viral_coefficient in response, got %v", resp)
+	}
+}

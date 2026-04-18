@@ -14,8 +14,8 @@ const AutoDreamPipelineWidget = () => {
   const renderNode = (label: string, icon: string, color: string) => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{
+        ...theme.glassmorphism,
         width: '48px', height: '48px', borderRadius: '50%',
-        backgroundColor: 'rgba(255,255,255,0.05)',
         border: `2px solid ${color}`,
         display: 'flex', justifyContent: 'center', alignItems: 'center',
         boxShadow: `0 0 10px ${color}`
