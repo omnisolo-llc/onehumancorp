@@ -4,7 +4,7 @@ package ohc.wizard;
 
 option go_package = "github.com/onehumancorp/mono/srcs/proto/wizardpb;wizardpb";
 
-import "model.proto";
+import "srcs/proto/model.proto";
 
 // WizardMode describes whether the user is in form mode or natural-language mode.
 enum WizardMode {
