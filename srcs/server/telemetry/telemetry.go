@@ -63,6 +63,7 @@ var (
 	subAgentQueueLengthGauge           metric.Int64UpDownCounter
 	SubAgentQueueDelayHistogram        metric.Float64Histogram
 	TaskClaimContentionTotal           metric.Int64Counter
+	SandboxViolationsTotal             metric.Int64Counter
 	postgresLockContentionCounter      metric.Int64Counter
 	llmNetworkLatencyHistogram         metric.Float64Histogram
 	ToolAutoCorrectionTotal            metric.Int64Counter
@@ -87,7 +88,7 @@ var (
 	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
-	phoneRegex = regexp.MustCompile(`\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
+	phoneRegex = regexp.MustCompile(`(?:\+\d{1,3}[- ]?)?\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
 
 	// Credit cards usually have dashes or spaces, or at least shouldn't be confused with timestamps (13 digits).
@@ -559,6 +560,14 @@ func InitWithMeter(m mockableMeter) error {
 	TaskClaimContentionTotal, err = m.Int64Counter(
 		"ohc_task_claim_contention_total",
 		metric.WithDescription("Number of failed task claim attempts or retries due to lock contention"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SandboxViolationsTotal, err = m.Int64Counter(
+		"telemetry_sandbox_violation_total",
+		metric.WithDescription("Total number of sandbox violations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1693,5 +1702,27 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 	}
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("mode", mode),
+	))
+}
+
+// RecordSandboxViolation increments the sandbox violation counter.
+func RecordSandboxViolation(ctx context.Context, violationType, agentID, path string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"type":     violationType,
+			"agent_id": agentID,
+			"path":     path,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sandbox_violation_total", string(payloadBytes))
+	}
+	if SandboxViolationsTotal == nil {
+		return
+	}
+	SandboxViolationsTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("type", violationType),
+		attribute.String("agent_id", agentID),
+		attribute.String("path", path),
 	))
 }
