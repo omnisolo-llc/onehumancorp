@@ -100,12 +100,30 @@
       ],
       "title": "Chaos Injections Rate",
       "type": "timeseries"
+    },
+    {
+      "type": "text",
+      "title": "OHC Visual Excellence",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 99,
+      "options": {
+        "mode": "html",
+        "content": "<style>.panel-content { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; }</style><div class='panel-content'><h1>Chaos Engineering Metrics</h1><p>Active monitoring for ML-Resilience and Hybrid Mode Parity.</p></div>"
+      }
     }
   ],
   "refresh": "5s",
   "schemaVersion": 30,
   "style": "dark",
-  "tags": ["chaos", "resilience"],
+  "tags": [
+    "chaos",
+    "resilience"
+  ],
   "templating": {
     "list": []
   },

@@ -2,6 +2,8 @@ package chaos_test
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -65,7 +67,8 @@ func TestChaosSystem_ResourceExhaustion(t *testing.T) {
 }
 
 func TestChaosSystem_CorruptAgentLock(t *testing.T) {
-	injector := chaos.NewInjector(chaos.CorruptAgentLock, 123)
+	tmpDir := t.TempDir()
+	injector := chaos.NewInjectorWithBasePath(chaos.CorruptAgentLock, 123, tmpDir)
 
 	err := injector.Inject(context.Background())
 	if err == nil {
@@ -74,5 +77,59 @@ func TestChaosSystem_CorruptAgentLock(t *testing.T) {
 
 	if _, ok := err.(*chaos.ChaosError); !ok {
 		t.Fatalf("expected ChaosError, got %T", err)
+	}
+}
+
+func TestChaosSystem_SQLSyncLag(t *testing.T) {
+	injector := chaos.NewInjector(chaos.SQLSyncLag, 123)
+
+	start := time.Now()
+	err := injector.Inject(context.Background())
+	duration := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if duration < 50*time.Millisecond {
+		t.Fatalf("expected duration > 50ms, got %v", duration)
+	}
+}
+
+func TestChaosSystem_NetworkPartition(t *testing.T) {
+	injector := chaos.NewInjector(chaos.NetworkPartition, 123)
+
+	foundDrop := false
+	for i := 0; i < 100; i++ {
+		err := injector.Inject(context.Background())
+		if err != nil {
+			if _, ok := err.(*chaos.ChaosError); !ok {
+				t.Fatalf("expected ChaosError, got %T", err)
+			}
+			foundDrop = true
+			break
+		}
+	}
+
+	if !foundDrop {
+		t.Fatalf("expected network partition drop to occur within 100 iterations")
+	}
+}
+
+func TestChaosSystem_CorruptMailbox(t *testing.T) {
+	tmpDir := t.TempDir()
+	injector := chaos.NewInjectorWithBasePath(chaos.CorruptMailbox, 123, tmpDir)
+
+	err := injector.Inject(context.Background())
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+
+	if _, ok := err.(*chaos.ChaosError); !ok {
+		t.Fatalf("expected ChaosError, got %T", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(tmpDir, ".agent-task", "mailbox", "corrupt.msg")); os.IsNotExist(err) {
+		t.Fatalf("expected corrupt.msg file to be created, but it was not")
 	}
 }

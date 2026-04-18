@@ -3,6 +3,7 @@ package chaos
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -92,13 +93,14 @@ func TestErrorString(t *testing.T) {
 }
 
 func TestCorruptAgentLock(t *testing.T) {
-	err := os.MkdirAll(".agent-lock/", 0755)
+	tmpDir := t.TempDir()
+	lockDir := filepath.Join(tmpDir, ".agent-lock")
+	err := os.MkdirAll(lockDir, 0755)
 	if err != nil {
 		t.Fatalf("failed to create directory: %v", err)
 	}
-	defer os.RemoveAll(".agent-lock/")
 
-	inj := NewInjector(CorruptAgentLock, 3)
+	inj := NewInjectorWithBasePath(CorruptAgentLock, 3, tmpDir)
 	err = inj.Inject(context.Background())
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -107,10 +109,65 @@ func TestCorruptAgentLock(t *testing.T) {
 		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
 	}
 
-	if _, err := os.Stat(".agent-lock/corrupt.lock"); os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(lockDir, "corrupt.lock")); os.IsNotExist(err) {
 		t.Fatalf("expected corrupt.lock file to be created, but it was not")
 	}
 }
+
+func TestSQLSyncLag(t *testing.T) {
+	inj := NewInjector(SQLSyncLag, 1)
+
+	start := time.Now()
+	err := inj.Inject(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	duration := time.Since(start)
+	if duration < 50*time.Millisecond {
+		t.Fatalf("expected delay > 50ms, got %v", duration)
+	}
+}
+
+func TestNetworkPartition(t *testing.T) {
+	inj := NewInjector(NetworkPartition, 1)
+	dropped := false
+	for i := 0; i < 100; i++ {
+		err := inj.Inject(context.Background())
+		if err != nil {
+			if e, ok := err.(*ChaosError); ok && e.Message == "chaos: simulated network partition" {
+				dropped = true
+				break
+			}
+		}
+	}
+	if !dropped {
+		t.Fatal("expected a network partition error to occur within 100 attempts")
+	}
+}
+
+func TestCorruptMailbox(t *testing.T) {
+	tmpDir := t.TempDir()
+	mailboxDir := filepath.Join(tmpDir, ".agent-task/mailbox")
+	err := os.MkdirAll(mailboxDir, 0755)
+	if err != nil {
+		t.Fatalf("failed to create directory: %v", err)
+	}
+
+	inj := NewInjectorWithBasePath(CorruptMailbox, 4, tmpDir)
+	err = inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if e, ok := err.(*ChaosError); !ok || e.Message != "chaos: simulated mailbox corruption" {
+		t.Fatalf("expected simulated mailbox corruption error, got %v", err)
+	}
+
+	if _, err := os.Stat(filepath.Join(mailboxDir, "corrupt.msg")); os.IsNotExist(err) {
+		t.Fatalf("expected corrupt.msg file to be created, but it was not")
+	}
+}
+
 
 func TestAllModeStrings(t *testing.T) {
 	modes := map[ChaosMode]string{
@@ -119,6 +176,9 @@ func TestAllModeStrings(t *testing.T) {
 		ConnectionDrop:     "connection_drop",
 		ResourceExhaustion: "resource_exhaustion",
 		CorruptAgentLock:   "corrupt_agent_lock",
+		SQLSyncLag:         "sql_sync_lag",
+		NetworkPartition:   "network_partition",
+		CorruptMailbox:     "corrupt_mailbox",
 	}
 
 	for mode, expected := range modes {
