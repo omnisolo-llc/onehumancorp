@@ -3,19 +3,24 @@ package settings
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"github.com/onehumancorp/mono/srcs/server/utils"
+	"os"
 	"path/filepath"
 	"sync"
 )
 
 // AiProvider represents an AI service configuration.
+// ProviderType matches the ohc.model.ProviderType proto enum values.
 type AiProvider struct {
-	Name    string `json:"name"`
-	APIKey  string `json:"api_key,omitempty"`
-	BaseURL string `json:"base_url,omitempty"`
-	Model   string `json:"model"`
-	Enabled bool   `json:"enabled"`
+	ID           string   `json:"id,omitempty"`
+	Name         string   `json:"name"`
+	ProviderType int32    `json:"provider_type,omitempty"`
+	APIKey       string   `json:"api_key,omitempty"`
+	BaseURL      string   `json:"base_url,omitempty"`
+	Model        string   `json:"model"`
+	Models       []string `json:"models,omitempty"`
+	Enabled      bool     `json:"enabled"`
+	IsOfficial   bool     `json:"is_official,omitempty"`
 }
 
 // AppSettings represents the global configuration for the OHC platform.
@@ -31,12 +36,27 @@ type AppSettings struct {
 }
 
 // DefaultSettings returns the default configuration.
+// If MINIMAX_API_KEY is set, a MiniMax provider is pre-configured.
 func DefaultSettings() AppSettings {
+	providers := []AiProvider{}
+	if key := os.Getenv("MINIMAX_API_KEY"); key != "" {
+		providers = append(providers, AiProvider{
+			ID:           "minimax-default",
+			Name:         "MiniMax",
+			ProviderType: 10, // PROVIDER_TYPE_MINIMAX from model.proto
+			APIKey:       key,
+			BaseURL:      "https://api.minimax.io/v1",
+			Model:        "MiniMax-Text-01",
+			Models:       []string{"MiniMax-Text-01", "abab6.5s-chat"},
+			Enabled:      true,
+			IsOfficial:   true,
+		})
+	}
 	return AppSettings{
 		ListenAddr:    "0.0.0.0:18789",
 		DBPath:        "ohc.db",
 		CentrifugeURL: "ws://localhost:8000/connection/websocket",
-		AiProviders:   []AiProvider{},
+		AiProviders:   providers,
 		Extras:        make(map[string]string),
 	}
 }
