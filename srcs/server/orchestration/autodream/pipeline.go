@@ -87,7 +87,7 @@ func (p *AutoDreamPipeline) extractFromDB(ctx context.Context) ([]string, error)
 func (p *AutoDreamPipeline) extractFromFS() ([]string, error) {
 	memoryDir := os.Getenv("OHC_MEMORY_DIR")
 	if memoryDir == "" {
-		memoryDir = ".agent-task/memory"
+		memoryDir = ".ohc/runtime/memory"
 	}
 
 	// Read workspace root properly to find the dir
