@@ -71,6 +71,16 @@ func TestRedactPII(t *testing.T) {
 			input:    "Key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKE+.",
 			expected: "Key: [REDACTED_AWS_SECRET_KEY].",
 		},
+		{
+			name:     "Leakage Audit Guardrail 1",
+			input:    "multi-tenant user data with PII like john.doe@acme.com in logs",
+			expected: "multi-tenant user data with PII like [REDACTED_EMAIL] in logs",
+		},
+		{
+			name:     "Leakage Audit Guardrail 2",
+			input:    "Cloud DB query leaked phone number +1-800-555-0199",
+			expected: "Cloud DB query leaked phone number [REDACTED_PHONE]",
+		},
 	}
 
 	for _, tt := range tests {
