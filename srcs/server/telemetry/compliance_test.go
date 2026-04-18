@@ -105,4 +105,35 @@ func TestBufferMetricFuncRedactsPII(t *testing.T) {
 	if !strings.Contains(errorVal, "[REDACTED_SSN]") {
 		t.Errorf("Expected redacted SSN in payload: %s", errorVal)
 	}
+
+	// Test RecordAgentExecutionTrace
+	capturedPayload = ""
+	agentID := "agent-456 test@example.com"
+	traceType := "deliberation 123-45-6789"
+	telemetry.RecordAgentExecutionTrace(ctx, agentID, traceType)
+
+	if capturedPayload == "" {
+		t.Fatalf("BufferMetricFunc was not called for RecordAgentExecutionTrace")
+	}
+
+	err = json.Unmarshal([]byte(capturedPayload), &payloadMap)
+	if err != nil {
+		t.Fatalf("Failed to unmarshal payload: %v", err)
+	}
+
+	agentIDVal, ok := payloadMap["agent_id"].(string)
+	if !ok {
+		t.Fatalf("agent_id is missing or not a string")
+	}
+	if !strings.Contains(agentIDVal, "[REDACTED_EMAIL]") {
+		t.Errorf("Expected redacted email in payload: %s", agentIDVal)
+	}
+
+	traceTypeVal, ok := payloadMap["trace_type"].(string)
+	if !ok {
+		t.Fatalf("trace_type is missing or not a string")
+	}
+	if !strings.Contains(traceTypeVal, "[REDACTED_SSN]") {
+		t.Errorf("Expected redacted SSN in payload: %s", traceTypeVal)
+	}
 }
