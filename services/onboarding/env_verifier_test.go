@@ -93,3 +93,62 @@ func TestVerifyEnvironment_ThinClientMissingEndpoint(t *testing.T) {
 		t.Fatalf("expected error for thin_client mode without endpoint")
 	}
 }
+
+func TestVerifyEnvironment_CloudDatabaseURLRequired(t *testing.T) {
+	env := map[string]string{
+		"OHC_SOURCE_MODE": "cloud",
+		"OHC_MULTITENANT": "true",
+	}
+
+	_, err := VerifyEnvironment(env)
+	if err == nil {
+		t.Fatalf("expected error for cloud mode without DATABASE_URL")
+	}
+}
+
+func TestVerifyEnvironment_CloudDatabaseURLSuccess(t *testing.T) {
+	env := map[string]string{
+		"OHC_SOURCE_MODE": "cloud",
+		"OHC_MULTITENANT": "true",
+		"DATABASE_URL": "postgresql://user:pass@localhost/db",
+	}
+
+	config, err := VerifyEnvironment(env)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if config.DatabaseURL != "postgresql://user:pass@localhost/db" {
+		t.Errorf("expected db url postgresql://user:pass@localhost/db, got %s", config.DatabaseURL)
+	}
+}
+
+func TestVerifyEnvironment_StandaloneDatabaseURLFallback(t *testing.T) {
+	env := map[string]string{
+		"OHC_SOURCE_MODE": "standalone",
+		"OHC_MULTITENANT": "false",
+	}
+
+	config, err := VerifyEnvironment(env)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if config.DatabaseURL != "sqlite://local.db" {
+		t.Errorf("expected fallback db url sqlite://local.db, got %s", config.DatabaseURL)
+	}
+}
+
+func TestVerifyEnvironment_StandaloneDatabaseURLExplicit(t *testing.T) {
+	env := map[string]string{
+		"OHC_SOURCE_MODE": "standalone",
+		"OHC_MULTITENANT": "false",
+		"DATABASE_URL": "sqlite://custom.db",
+	}
+
+	config, err := VerifyEnvironment(env)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if config.DatabaseURL != "sqlite://custom.db" {
+		t.Errorf("expected explicit db url sqlite://custom.db, got %s", config.DatabaseURL)
+	}
+}
