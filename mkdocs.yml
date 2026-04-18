@@ -41,6 +41,8 @@ nav:
       - features/index.md
       - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
   - Walkthroughs:
+      - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
+      - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
       - Agent Harness Visual Walkthrough: walkthroughs/agent_harness_walkthrough.md
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
