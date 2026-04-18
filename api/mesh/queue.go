@@ -43,11 +43,20 @@ func (q *QueueOrchestrator) EnqueueSubTask(ctx context.Context, parentTaskID str
 		return "", fmt.Errorf("db connection is nil")
 	}
 
-	query := `
+	var query string
+	if q.isSQLite {
+		query = `
+		INSERT INTO sub_agent_queue (parent_task_id, payload, status)
+		VALUES ($1, $2, 'QUEUED')
+		RETURNING id
+	`
+	} else {
+		query = `
 		INSERT INTO ohc_tasks.sub_agent_queue (parent_task_id, payload, status)
 		VALUES ($1, $2, 'QUEUED')
 		RETURNING id
 	`
+	}
 	var taskID string
 	err := q.db.QueryRowContext(ctx, query, parentTaskID, payload).Scan(&taskID)
 	if err != nil {
@@ -75,10 +84,10 @@ func (q *QueueOrchestrator) ClaimSubTask(ctx context.Context, workerID string) (
 	var query string
 	if q.isSQLite {
 		query = `
-			UPDATE ohc_tasks.sub_agent_queue
+			UPDATE sub_agent_queue
 			SET status = 'IN_PROGRESS', worker_id = $1, updated_at = CURRENT_TIMESTAMP
 			WHERE id = (
-				SELECT id FROM ohc_tasks.sub_agent_queue WHERE status = 'QUEUED' LIMIT 1
+				SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' LIMIT 1
 			)
 			RETURNING id, parent_task_id, payload, status, worker_id, created_at, updated_at
 		`
@@ -121,11 +130,20 @@ func (q *QueueOrchestrator) CompleteSubTask(ctx context.Context, taskID, workerI
 		return fmt.Errorf("db connection is nil")
 	}
 
-	query := `
+	var query string
+	if q.isSQLite {
+		query = `
+		UPDATE sub_agent_queue
+		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND worker_id = $2 AND status = 'IN_PROGRESS'
+	`
+	} else {
+		query = `
 		UPDATE ohc_tasks.sub_agent_queue
 		SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP
 		WHERE id = $1 AND worker_id = $2 AND status = 'IN_PROGRESS'
 	`
+	}
 	res, err := q.db.ExecContext(ctx, query, taskID, workerID)
 	if err != nil {
 		return fmt.Errorf("failed to complete sub-task: %w", err)
@@ -148,11 +166,21 @@ func EnqueueMission(ctx context.Context, db *sql.DB, title, priority string, pay
 		return "", fmt.Errorf("db connection is nil")
 	}
 
-	query := `
+	isSQLite := db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"
+	var query string
+	if isSQLite {
+		query = `
+		INSERT INTO mission_queue (title, priority, payload)
+		VALUES ($1, $2, $3)
+		RETURNING mission_id
+	`
+	} else {
+		query = `
 		INSERT INTO ohc_tasks.mission_queue (title, priority, payload)
 		VALUES ($1, $2, $3)
 		RETURNING mission_id
 	`
+	}
 	var missionID string
 	err := db.QueryRowContext(ctx, query, title, priority, payload).Scan(&missionID)
 	if err != nil {
@@ -168,12 +196,23 @@ func CompleteMission(ctx context.Context, db *sql.DB, missionID, agentID string)
 		return fmt.Errorf("db connection is nil")
 	}
 
-	query := `
+	isSQLite := db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"
+	var query string
+	if isSQLite {
+		query = `
+		UPDATE mission_queue
+		SET status = 'DONE',
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS'
+	`
+	} else {
+		query = `
 		UPDATE ohc_tasks.mission_queue
 		SET status = 'DONE',
 		    updated_at = NOW()
 		WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS'
 	`
+	}
 	res, err := db.ExecContext(ctx, query, missionID, agentID)
 	if err != nil {
 		return fmt.Errorf("failed to complete mission: %w", err)

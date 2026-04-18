@@ -32,7 +32,24 @@ func ClaimMission(ctx context.Context, db *sql.DB, agentID string) (*Mission, er
 	}
 	defer tx.Rollback()
 
-	query := `
+	isSQLite := db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"
+	var query string
+	if isSQLite {
+		query = `
+		UPDATE mission_queue
+		SET status = 'IN_PROGRESS',
+		    assigned_agent = $1,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE mission_id = (
+		    SELECT mission_id
+		    FROM mission_queue
+		    WHERE status = 'QUEUED'
+		    LIMIT 1
+		)
+		RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at
+	`
+	} else {
+		query = `
 		UPDATE ohc_tasks.mission_queue
 		SET status = 'IN_PROGRESS',
 		    assigned_agent = $1,
@@ -46,6 +63,7 @@ func ClaimMission(ctx context.Context, db *sql.DB, agentID string) (*Mission, er
 		)
 		RETURNING mission_id, title, status, assigned_agent, priority, payload, created_at, updated_at
 	`
+	}
 
 	row := tx.QueryRowContext(ctx, query, agentID)
 
