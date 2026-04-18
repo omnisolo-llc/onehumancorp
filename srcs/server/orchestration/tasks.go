@@ -905,7 +905,7 @@ func (tm *TaskManager) GetTask(ctx context.Context, taskID string) (*SharedTask,
 	}
 
 	query := `
-		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, agent_id, locked_until, created_at, updated_at
+		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at
 		FROM shared_tasks
 		WHERE id = $1 AND organization_id = $2
 	`
