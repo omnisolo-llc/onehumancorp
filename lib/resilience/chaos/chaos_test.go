@@ -194,3 +194,33 @@ func TestAllModeStrings(t *testing.T) {
 		}
 	}
 }
+
+func TestNoChaosString(t *testing.T) {
+	if NoChaos.String() != "no_chaos" {
+		t.Errorf("Expected no_chaos")
+	}
+}
+
+func TestContextCancellation_NoChaos(t *testing.T) {
+	inj := NewInjector(NoChaos, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	err := inj.Inject(ctx)
+	if err != nil {
+		t.Fatalf("expected nil, got %v", err)
+	}
+}
+
+func TestContextCancellation_LatencySpike(t *testing.T) {
+	inj := NewInjector(LatencySpike, 1)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	err := inj.Inject(ctx)
+	if err == nil {
+		t.Fatal("expected context error, got nil")
+	}
+}
