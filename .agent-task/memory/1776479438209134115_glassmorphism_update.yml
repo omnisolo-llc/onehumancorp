@@ -1,7 +1,0 @@
-title: "Glassmorphism Application"
-details: |
-  Applied OHC standard glassmorphism tokens to nested UI elements in Next.js web application.
-  Components modified:
-  - BusinessSetupWizard (expertMode div)
-  - TeammateMeshConsole (scrollable log container)
-  Ensured theme object was correctly spread to replace hardcoded #222 and rgba() flat color backgrounds.
