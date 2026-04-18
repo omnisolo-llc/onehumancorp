@@ -227,8 +227,8 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 	}
 
 	s.users[admin.ID] = admin
-	s.byName[adminUser] = admin
-	s.byEmail[adminEmail] = admin
+	s.byName[orgKey("sys", adminUser)] = admin
+	s.byEmail[orgKey("sys", adminEmail)] = admin
 }
 
 // CreateUser creates a new user with the given credentials and roles.
@@ -252,15 +252,15 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 
 		now := time.Now().UTC()
 		u := &User{
-			ID:           generateID(),
-			Username:     username,
-			Email:        email,
-			PasswordHash: string(hash),
-			Roles:        append([]string(nil), roles...),
-			Active:       true,
+			ID:             generateID(),
+			Username:       username,
+			Email:          email,
+			PasswordHash:   string(hash),
+			Roles:          append([]string(nil), roles...),
+			Active:         true,
 			OrganizationID: orgID,
-			CreatedAt:    now,
-			UpdatedAt:    now,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		}
 		if err := s.repo.CreateUser(context.Background(), u); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
@@ -271,10 +271,10 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.byName[username]; exists {
+	if _, exists := s.byName[orgKey(orgID, username)]; exists {
 		return nil, errors.New("username already taken")
 	}
-	if _, exists := s.byEmail[email]; exists {
+	if _, exists := s.byEmail[orgKey(orgID, email)]; exists {
 		return nil, errors.New("email already registered")
 	}
 
@@ -285,19 +285,19 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:           generateID(),
-		Username:     username,
-		Email:        email,
-		PasswordHash: string(hash),
-		Roles:        append([]string(nil), roles...),
-		Active:       true,
+		ID:             generateID(),
+		Username:       username,
+		Email:          email,
+		PasswordHash:   string(hash),
+		Roles:          append([]string(nil), roles...),
+		Active:         true,
 		OrganizationID: orgID,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	s.users[u.ID] = u
-	s.byName[username] = u
-	s.byEmail[email] = u
+	s.byName[orgKey(orgID, username)] = u
+	s.byEmail[orgKey(orgID, email)] = u
 	return u, nil
 }
 
@@ -322,7 +322,7 @@ func (s *Store) Authenticate(username, password string, orgID string) (*User, er
 	}
 
 	s.mu.RLock()
-	u, ok := s.byName[username]
+	u, ok := s.byName[orgKey(orgID, username)]
 	if ok && orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
 		ok = false
 	}
@@ -427,12 +427,12 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 		return nil, errors.New("user not found")
 	}
 	if emailPtr != nil && *emailPtr != u.Email {
-		if _, exists := s.byEmail[*emailPtr]; exists {
+		if _, exists := s.byEmail[orgKey(u.OrganizationID, *emailPtr)]; exists {
 			return nil, errors.New("email already registered")
 		}
-		delete(s.byEmail, u.Email)
+		delete(s.byEmail, orgKey(u.OrganizationID, u.Email))
 		u.Email = *emailPtr
-		s.byEmail[u.Email] = u
+		s.byEmail[orgKey(u.OrganizationID, u.Email)] = u
 	}
 	if roles != nil {
 		u.Roles = append([]string(nil), roles...)
@@ -468,10 +468,10 @@ func (s *Store) DeleteUser(id string, orgID string) error {
 		return errors.New("user not found")
 	}
 	delete(s.users, id)
-	delete(s.byName, u.Username)
-	delete(s.byEmail, u.Email)
+	delete(s.byName, orgKey(u.OrganizationID, u.Username))
+	delete(s.byEmail, orgKey(u.OrganizationID, u.Email))
 	if u.OIDCSubject != "" {
-		delete(s.byOIDC, u.OIDCSubject)
+		delete(s.byOIDC, orgKey(u.OrganizationID, u.OIDCSubject))
 	}
 	return nil
 }
@@ -588,13 +588,13 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if u, ok := s.byOIDC[sub]; ok {
+	if u, ok := s.byOIDC[orgKey(orgID, sub)]; ok {
 		return u
 	}
 	if email != "" {
-		if u, ok := s.byEmail[email]; ok {
+		if u, ok := s.byEmail[orgKey(orgID, email)]; ok {
 			u.OIDCSubject = sub
-			s.byOIDC[sub] = u
+			s.byOIDC[orgKey(orgID, sub)] = u
 			return u
 		}
 	}
@@ -604,30 +604,30 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 		uname = email
 	}
 	// de-duplicate username
-	if _, taken := s.byName[uname]; taken {
+	if _, taken := s.byName[orgKey(orgID, uname)]; taken {
 		uname = uname + "_" + hex.EncodeToString(randomBytes(3))
 	}
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:          generateID(),
-		Username:    uname,
-		Email:       email,
-		Roles:       []string{RoleViewer},
-		Active:      true,
+		ID:             generateID(),
+		Username:       uname,
+		Email:          email,
+		Roles:          []string{RoleViewer},
+		Active:         true,
 		OrganizationID: orgID,
-		OIDCSubject: sub,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		OIDCSubject:    sub,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	s.users[u.ID] = u
 	if uname != "" {
-		s.byName[uname] = u
+		s.byName[orgKey(orgID, uname)] = u
 	}
 	if email != "" {
-		s.byEmail[email] = u
+		s.byEmail[orgKey(orgID, email)] = u
 	}
-	s.byOIDC[sub] = u
+	s.byOIDC[orgKey(orgID, sub)] = u
 	return u
 }
 
@@ -660,15 +660,15 @@ func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername st
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:          generateID(),
-		Username:    uname,
-		Email:       email,
-		Roles:       []string{RoleViewer},
-		Active:      true,
+		ID:             generateID(),
+		Username:       uname,
+		Email:          email,
+		Roles:          []string{RoleViewer},
+		Active:         true,
 		OrganizationID: orgID,
-		OIDCSubject: sub,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		OIDCSubject:    sub,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 
 	for attempts := 0; attempts < 2; attempts++ {
@@ -711,6 +711,13 @@ func normalizeRepositoryWriteError(err error) error {
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
+
+func orgKey(orgID, key string) string {
+	if orgID == "" || orgID == "sys" {
+		return "sys:" + key
+	}
+	return orgID + ":" + key
+}
 
 func generateID() string {
 	return hex.EncodeToString(randomBytes(8))
