@@ -86,4 +86,35 @@ func TestTaskQueueService(t *testing.T) {
 			t.Errorf("expected COMPLETED, got %s", status)
 		}
 	})
+
+	t.Run("ClaimTask_PostgresError", func(t *testing.T) {
+		svcPg := NewTaskQueueService(conn, false)
+		// This will trigger a syntax error because SQLite doesn't support FOR UPDATE SKIP LOCKED
+		_, err := svcPg.ClaimTask("agent-1")
+		if err == nil {
+			t.Fatal("expected error for unsupported postgres query in sqlite")
+		}
+	})
+
+	t.Run("ClaimTask_NoPending", func(t *testing.T) {
+		task, err := svc.ClaimTask("agent-1")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if task != nil {
+			t.Fatal("expected no task")
+		}
+	})
+
+	t.Run("CompleteTask_Error", func(t *testing.T) {
+		// Just to cover error paths we would need to mock or close the DB,
+		// but maybe we can just cover CompleteTask normally.
+		// Actually, CompleteTask is fully covered already (except the return error line if it fails, which is 1 line).
+		// Let's close connection to force error
+		conn.Close()
+		err := svc.CompleteTask("task-1")
+		if err == nil {
+			t.Fatal("expected error for closed connection")
+		}
+	})
 }

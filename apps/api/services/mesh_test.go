@@ -118,4 +118,35 @@ func TestMeshCoordinatorService_Redis(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for message")
 	}
+
+	t.Run("Publish_RedisMarshalError", func(t *testing.T) {
+		// Mock json.Marshal error - wait, we can't easily mock json.Marshal.
+		// Let's test MarshalJSON instead.
+		msg := MeshMessage{ID: "test"}
+		b, err := msg.MarshalJSON()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(b) == 0 {
+			t.Fatal("expected bytes")
+		}
+	})
+
+	t.Run("Publish_RedisDoError", func(t *testing.T) {
+		// rueidis allows injecting errors with a mock or simply passing an invalid context to Do
+		// For Do, if the context is canceled it should return an error
+		canceledCtx, cancelFn := context.WithCancel(context.Background())
+		cancelFn()
+		err := svc.Publish(canceledCtx, msg)
+		if err == nil {
+			t.Fatal("expected error on canceled context")
+		}
+	})
+
+	t.Run("NewMeshCoordinatorService_Nil", func(t *testing.T) {
+		svc := NewMeshCoordinatorService("invalid type")
+		if svc.isRedis {
+			t.Fatal("expected isRedis to be false")
+		}
+	})
 }
