@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"time"
-
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type MeshAPI struct {
@@ -26,9 +23,6 @@ func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleBroadcast", time.Since(start)) }()
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -51,21 +45,11 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if telemetry.BufferMetricFunc == nil {
-		telemetry.RecordMeshBroadcast(r.Context(), "tasks")
-	} else {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "tasks"})
-		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
-	}
-
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"success"}`))
 }
 
 func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleStream", time.Since(start)) }()
-
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -100,12 +84,6 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 			w.Write(msg)
 			w.Write([]byte("\n\n"))
 			flusher.Flush()
-			if telemetry.BufferMetricFunc == nil {
-				telemetry.RecordMeshBroadcast(r.Context(), "events")
-			} else {
-				payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
-				_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
-			}
 		case <-r.Context().Done():
 			// Explicitly return on context cancellation just in case.
 			return
@@ -114,9 +92,6 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandlePublish", time.Since(start)) }()
-
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -139,20 +114,11 @@ func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if telemetry.BufferMetricFunc == nil {
-		telemetry.RecordMeshBroadcast(r.Context(), "events")
-	} else {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
-		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
-	}
-
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"success"}`))
 }
 
 func (api *MeshAPI) HandleConnect(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleConnect", time.Since(start)) }()
 	api.HandleStream(w, r)
 }
 
