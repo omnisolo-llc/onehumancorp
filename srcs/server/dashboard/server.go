@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	meshapi "github.com/onehumancorp/mono/api/mesh"
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -27,8 +27,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 

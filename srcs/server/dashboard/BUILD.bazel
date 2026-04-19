@@ -22,7 +22,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "//api/mesh",
+        "//srcs/server/api/mesh_legacy:mesh",
         "@com_github_redis_go_redis_v9//:go-redis",
         "//srcs/server/api",
         "@com_github_redis_rueidis//:rueidis",
