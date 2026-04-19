@@ -15,6 +15,7 @@ require (
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/redis/rueidis v1.0.68
 	github.com/slack-go/slack v0.22.0
+	github.com/smacker/go-tree-sitter v0.0.0-20240827094217-dd81d9e9be82
 	github.com/spf13/afero v1.14.0
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.11.1
