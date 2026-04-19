@@ -837,3 +837,12 @@ func TestRecordBubblewrapMetrics(t *testing.T) {
 	RecordBubblewrapExecutionLatency(ctx, 1.23)
 	RecordBubblewrapViolation(ctx)
 }
+
+func TestRecordSandboxViolation(t *testing.T) {
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+	InitTelemetry()
+
+	ctx := context.Background()
+	// Should not panic
+	RecordSandboxViolation(ctx, "fs_read", "agent-123", "/etc/passwd")
+}

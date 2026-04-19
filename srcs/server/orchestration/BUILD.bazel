@@ -15,6 +15,7 @@ go_library(
         "delegation.go",
         "event_log.go",
         "events.go",
+        "harness.go",
         "health.go",
         "hub.go",
         "postgres_hub.go",
@@ -90,6 +91,7 @@ go_test(
         "eventlog_test.go",
         "hub_test.go",
         "health_test.go",
+        "harness_test.go",
         "minimax_client_test.go",
         "service_extra_test.go",
         "service_grpc_test.go",
@@ -111,6 +113,7 @@ go_test(
     ],
     embed = [":orchestration"],
     deps = [
+        "@com_github_prometheus_client_golang//prometheus",
         "//srcs/server/auth",
         "//srcs/server/checkpointer",
         "//srcs/server/utils",
