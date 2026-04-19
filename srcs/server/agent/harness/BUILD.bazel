@@ -10,6 +10,9 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agent/harness",
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/telemetry",
+    ],
 )
 
 go_test(

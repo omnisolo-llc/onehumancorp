@@ -5,6 +5,10 @@ package harness
 import (
 	"context"
 	"os/exec"
+	"strings"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type BwrapHarness struct{}
@@ -14,6 +18,9 @@ func NewIsolationHarness() IsolationHarness {
 }
 
 func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {
+	telemetry.RecordBubblewrapSpawn(ctx)
+	start := time.Now()
+
 	args := []string{
 		"--unshare-net",
 		"--unshare-pid",
@@ -34,5 +41,26 @@ func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([
 	args = append(args, execCtx.Command...)
 
 	cmd := exec.CommandContext(ctx, "bwrap", args...)
-	return cmd.CombinedOutput()
+	out, err := cmd.CombinedOutput()
+
+	duration := time.Since(start).Seconds()
+	telemetry.RecordBubblewrapExecutionLatency(ctx, duration)
+
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			// Common violation codes: 126 (command invoked cannot execute)
+			// Or check the output for "Permission denied"
+			if exitErr.ExitCode() != 0 && (strings.Contains(string(out), "Permission denied") || exitErr.ExitCode() == 126) {
+				telemetry.RecordBubblewrapViolation(ctx)
+			}
+		} else {
+			// if it's not an ExitError, it might be a failure to start bwrap at all.
+			// Let's also check if it contains Permission denied just in case.
+			if strings.Contains(err.Error(), "permission denied") {
+				telemetry.RecordBubblewrapViolation(ctx)
+			}
+		}
+	}
+
+	return out, err
 }
