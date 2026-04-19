@@ -10,7 +10,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
-// SwarmSynchronizer synchronizes local RAG state to the cloud.
+// SwarmSynchronizer synchronizes local RAG embeddings to the cloud.
 type SwarmSynchronizer struct {
 	dbProvider  db.Provider
 	cloudClient CloudClient
