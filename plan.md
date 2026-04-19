@@ -1,7 +1,18 @@
-1. Add `Task` and `TaskDependency` models: Provide the explicit string contents and the exact python script commands to append `Task` and `TaskDependency` structs into `srcs/server/orchestration/models.go` as described. Verify the added contents with `cat`.
-2. Create Database Migrations: Create a SQL migration script `srcs/server/db/migrations/060_shared_task_list.sql` using a heredoc block for PostgreSQL and SQLite to create `shared_task_list_tasks` and `shared_task_list_dependencies` tables. Verify with `cat`.
-3. Implement Repository Layer: Create `srcs/server/orchestration/shared_task_list_repo.go` with functions to `CreateTask`, `UpdateTaskStatus`, and `GetNextAvailableTask` handling SQLite and Postgres specific logic. The string contents are injected with a bash heredoc and then verified with `cat`.
-4. Write Unit Tests: Write a test file `srcs/server/orchestration/shared_task_list_repo_test.go` checking all functions utilizing the DB provider. Update `srcs/server/orchestration/BUILD.bazel` to include both the new `shared_task_list_repo.go` and `shared_task_list_repo_test.go` and verify the file was updated via `cat`. Run `bazelisk test //srcs/server/orchestration/...` to verify test passes locally.
-5. Repository Tests: Run `bazelisk build //...` and `bazelisk test //...` to ensure all rules are unbroken.
-6. Pre-commit Checks: Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-7. Submit PR: Submit the PR and include `issue_id: 5841`.
+1. **Update `sync_daemon.go`**:
+   - In `ProcessSync`, update the SQL queries to target missions where `status = 'CLOUD_ESCALATION'` instead of `PENDING` or `BURSTING`.
+     - Update PostgreSQL query: `SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 500`
+     - Update SQLite query: `SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND status = 'CLOUD_ESCALATION' LIMIT 500`
+
+2. **Update `sync_daemon_test.go`**:
+   - Create or update the `ClearSemaphore()` cleanup function for `sync_daemon_test.go`. Ensure it exists in a `_test.go` file (e.g., `sync_daemon_test.go` or `agent_context_test.go`).
+   - Modify the mock test data to insert missions with `status = 'CLOUD_ESCALATION'` instead of `PENDING`.
+   - Modify the assertions to check for `CLOUD_ESCALATION` status instead of `PENDING`.
+
+3. **Verify tests and Build**:
+   - Run `bazelisk test //...` to ensure all tests pass.
+
+4. **Complete pre-commit steps**:
+   - Ensure proper testing, verification, review, and reflection are done by calling `pre_commit_instructions`.
+
+5. **Submit the PR**:
+   - Submit the PR with standard conventions. Format the title as `🧹 Maintainer: [Hybrid Security Fix] Implement Hybrid MCP RAG Protocol Daemon`. Ensure description contains 💡 What, 🎯 Why, 📊 Impact, and 🔬 Measurement. Include `issue_id: 4038` in the final message.
