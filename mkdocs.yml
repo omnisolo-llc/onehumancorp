@@ -37,6 +37,8 @@ nav:
       - Hybrid PubSub MCP: research/[integrations]_hybrid_pubsub_mcp.md
   - Developer:
       - developer/index.md
+  - UI:
+      - Day One Onboarding: ui/guide_proactive_onboarding.md
   - API:
       - api/index.md
       - "Interactive Api Playbook": api/api_playbook.md
