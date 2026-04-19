@@ -513,6 +513,11 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 	var prevTime time.Time
 	var oldStatus string
 
+	// Telemetry extraction
+	if ac, ok := GetAgentContext(ctx); ok {
+		slog.InfoContext(ctx, "UpsertMission with context", "agent_id", ac.AgentID, "mission_id", missionID)
+	}
+
 	err := withSipRetry(ctx, func() error {
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
@@ -589,6 +594,14 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	// Context extraction
+	if ac, ok := GetAgentContext(ctx); ok {
+		if task.Metadata == nil {
+			task.Metadata = make(map[string]string)
+		}
+		task.Metadata["agent_id"] = ac.AgentID
+		task.Metadata["parent_session_id"] = ac.ParentSessionID
+	}
 	if err := acquireThrottle(ctx); err != nil {
 		return err
 	}
