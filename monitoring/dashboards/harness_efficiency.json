@@ -1,0 +1,25 @@
+{
+  "title": "Harness Efficiency Dashboard",
+  "panels": [
+    {
+      "title": "Harness Initialization Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(harness_init_latency_bucket[5m])) by (le, deployment_mode))",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    },
+    {
+      "title": "Harness Database I/O Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(harness_db_io_latency_bucket[5m])) by (le, deployment_mode))",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    }
+  ]
+}
