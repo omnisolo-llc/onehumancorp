@@ -90,3 +90,10 @@ func (a *Agent) BaseSystemPrompt() string {
 	}
 	return prompt
 }
+
+// Transport defines the universal interface for agent communication.
+type Transport interface {
+	Send(channel string, msg *Message) error
+	Receive(channel string) (<-chan *Message, error)
+	Close() error
+}

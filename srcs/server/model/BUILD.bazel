@@ -1,0 +1,16 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "model",
+    srcs = [
+        "predefined.go",
+        "store.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/model",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/billing",
+        "//srcs/server/domain",
+        "@com_github_google_uuid//:uuid",
+    ],
+)

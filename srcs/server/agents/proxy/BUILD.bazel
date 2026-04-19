@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "proxy",
     srcs = ["capture.go"],
-    importpath = "onehumancorp/mono/srcs/server/agents/proxy",
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/proxy",
     visibility = ["//visibility:public"],
     deps = [
         "@io_opentelemetry_go_otel//:otel",

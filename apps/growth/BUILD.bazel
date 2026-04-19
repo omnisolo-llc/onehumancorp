@@ -24,6 +24,7 @@ go_test(
     embed = [":growth_lib"],
     deps = [
         "//lib/analytics",
+        "//services/growth",
         "@com_github_alicebob_miniredis_v2//:miniredis",
         "@com_github_redis_go_redis_v9//:go-redis",
     ],

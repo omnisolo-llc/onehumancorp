@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_test")
 
 go_test(
     name = "benchmarks_test",
-    srcs = ["hybrid_bench_test.go", "sip_sync_bench_test.go"],
+    srcs = [
+        "hybrid_bench_test.go",
+        "sip_sync_bench_test.go",
+    ],
     deps = [
         "//srcs/server/lib/perf",
         "//srcs/server/orchestration",
