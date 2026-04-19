@@ -1177,3 +1177,4 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 
 	return nil
 }
+// added for Sub-Agent Orchestration Queue
