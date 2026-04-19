@@ -1163,6 +1163,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 					}
 
 					// Redact rag_context for force-local conflict resolution strategy
+					// added for issue 4331: complete stripping of rag_context
 					delete(payloadData, "rag_context")
 
 					// ensure memory_id is set
