@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 	"time"
-	"os"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -176,8 +175,8 @@ func TestMinimaxMetricsUninitialized(t *testing.T) {
 
 func TestRecordAgentExecutionTrace(t *testing.T) {
 	// Enable metrics for this test
-	os.Setenv("OHC_TELEMETRY_ENABLED", "true")
-	defer os.Unsetenv("OHC_TELEMETRY_ENABLED")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
+
 
 	InitWithMeter(meter)
 

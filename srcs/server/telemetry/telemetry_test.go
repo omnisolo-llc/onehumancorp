@@ -1,3 +1,4 @@
+// Enforce standalone privacy telemetry rules
 package telemetry
 
 import (
@@ -48,6 +49,15 @@ func TestInitTelemetry(t *testing.T) {
 	}
 	if swarmTasksCompletedCounter == nil {
 		t.Error("expected swarmTasksCompletedCounter to be initialized")
+	}
+	if BubblewrapSpawnTotal == nil {
+		t.Error("expected BubblewrapSpawnTotal to be initialized")
+	}
+	if BubblewrapExecutionLatency == nil {
+		t.Error("expected BubblewrapExecutionLatency to be initialized")
+	}
+	if BubblewrapViolationTotal == nil {
+		t.Error("expected BubblewrapViolationTotal to be initialized")
 	}
 	if SIPSyncLatencyRecorder == nil {
 		t.Error("expected SIPSyncLatencyRecorder to be initialized")
@@ -815,4 +825,15 @@ func TestInitTelemetry_StandaloneOptIn_EnvVar(t *testing.T) {
 		t.Fatal("expected cleanup function, got nil")
 	}
 	cleanup()
+}
+
+
+func TestRecordBubblewrapMetrics(t *testing.T) {
+	// Initialize a dummy context
+	ctx := context.Background()
+
+	// Should not panic even if metrics are nil
+	RecordBubblewrapSpawn(ctx)
+	RecordBubblewrapExecutionLatency(ctx, 1.23)
+	RecordBubblewrapViolation(ctx)
 }

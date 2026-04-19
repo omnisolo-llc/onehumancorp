@@ -29,6 +29,9 @@ var (
 
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
+	BubblewrapSpawnTotal       metric.Int64Counter
+	BubblewrapExecutionLatency metric.Float64Histogram
+	BubblewrapViolationTotal   metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
 	latencyHistogram           metric.Float64Histogram
@@ -770,6 +773,31 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_sub_agent_execution_duration_seconds",
 		metric.WithDescription("Duration of sub-agent execution in seconds"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapSpawnTotal, err = m.Int64Counter(
+		"ohc_bubblewrap_spawn_total",
+		metric.WithDescription("Total number of Bubblewrap spawns"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapExecutionLatency, err = m.Float64Histogram(
+		"ohc_bubblewrap_execution_latency_seconds",
+		metric.WithDescription("Latency of Bubblewrap execution in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BubblewrapViolationTotal, err = m.Int64Counter(
+		"ohc_bubblewrap_violation_total",
+		metric.WithDescription("Total number of Bubblewrap sandbox policy violations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1881,5 +1909,35 @@ func RecordAutoDreamSyncError(ctx context.Context, agentID, errorType string) {
 			attribute.String("agent_id", agentID),
 			attribute.String("error_type", errorType),
 		))
+	}
+}
+
+
+// RecordBubblewrapSpawn increments the counter for Bubblewrap sandbox spawns.
+func RecordBubblewrapSpawn(ctx context.Context) {
+	if BubblewrapSpawnTotal != nil {
+		BubblewrapSpawnTotal.Add(ctx, 1)
+	}
+}
+
+// RecordBubblewrapExecutionLatency records the latency of a Bubblewrap execution.
+func RecordBubblewrapExecutionLatency(ctx context.Context, duration float64) {
+	if BubblewrapExecutionLatency != nil {
+		BubblewrapExecutionLatency.Record(ctx, duration)
+	}
+}
+
+// RecordBubblewrapViolation increments the counter for Bubblewrap sandbox policy violations.
+func RecordBubblewrapViolation(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"type": "bubblewrap_violation",
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "bubblewrap_violation_total", string(payloadBytes))
+	}
+	if BubblewrapViolationTotal != nil {
+		BubblewrapViolationTotal.Add(ctx, 1)
 	}
 }
