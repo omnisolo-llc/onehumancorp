@@ -128,7 +128,7 @@ func (s *DefaultSubAgentSpawner) failTask(task *SharedTask) error {
 		return fmt.Errorf("failed to fail sub-agent task: %w", err)
 	}
 
-	// Update TaskStateMachine
+	// Update StateMachine
 	if s.tm != nil && s.tm.stateMachine != nil {
 		_ = s.tm.stateMachine.Transition(context.Background(), task.ID, "SHARED_TASK", statemachine.StateFailed, "sub-agent", EventSubTaskFailed)
 	}
@@ -192,7 +192,7 @@ func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
 		return fmt.Errorf("failed to complete sub-agent task: %w", err)
 	}
 
-	// Update TaskStateMachine
+	// Update StateMachine
 	if s.tm != nil && s.tm.stateMachine != nil {
 		_ = s.tm.stateMachine.Transition(context.Background(), task.ID, "SHARED_TASK", statemachine.StateCompleted, "sub-agent", EventSubTaskCompleted)
 	}

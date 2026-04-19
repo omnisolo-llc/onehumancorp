@@ -16,12 +16,15 @@ import (
 
 type SharedTaskDB struct {
     ID              string
-    ParentPlanID    *string
     OrganizationID  string
     Title           string
     Description     *string
     Status          string
-    AgentID *string
+    AgentID         *string
+    Priority        string
+    Payload         *string
+    ParentPlanID    *string
+    Dependencies    *string
     CreatedAt       string
     UpdatedAt       string
 }
@@ -216,11 +219,11 @@ func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, 
 }
 
 func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-    if !to.mu.TryLock() && to.dbProvider.IsSQLite() {
-        telemetry.RecordPostgresLockContention(ctx, "claim_task_v4")
-        to.mu.Lock()
-    }
     if to.dbProvider.IsSQLite() {
+        if !to.mu.TryLock() {
+            telemetry.RecordPostgresLockContention(ctx, "claim_task_v4")
+            to.mu.Lock()
+        }
         defer to.mu.Unlock()
     }
 
@@ -231,16 +234,28 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
     defer tx.Rollback(ctx)
 
     query := `
-        SELECT id FROM shared_tasks_v4
-        WHERE status = 'PENDING' AND organization_id = $1
+        SELECT id FROM shared_tasks_v4 t
+        WHERE t.status = 'PENDING' AND t.organization_id = $1
+        AND NOT EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements_text(t.dependencies::jsonb) d
+            JOIN shared_tasks_v4 dep ON dep.id = d
+            WHERE dep.status != 'COMPLETED'
+        )
         LIMIT 1
         FOR UPDATE SKIP LOCKED
     `
 
     if to.dbProvider.IsSQLite() {
         query = `
-            SELECT id FROM shared_tasks_v4
-            WHERE status = 'PENDING' AND organization_id = $1
+            SELECT id FROM shared_tasks_v4 t
+            WHERE t.status = 'PENDING' AND t.organization_id = $1
+            AND NOT EXISTS (
+                SELECT 1
+                FROM json_each(t.dependencies) d
+                JOIN shared_tasks_v4 dep ON dep.id = d.value
+                WHERE dep.status != 'COMPLETED'
+            )
             LIMIT 1
         `
     }
@@ -248,10 +263,13 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
     var id string
     err = tx.QueryRow(ctx, query, orgID).Scan(&id)
     if err != nil {
+        if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+            return nil, nil
+        }
         return nil, err
     }
 
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS' WHERE id = $1", id)
+    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, id)
     if err != nil {
         return nil, err
     }
@@ -261,4 +279,59 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
     }
 
     return &SharedTaskDB{ID: id, Status: "IN_PROGRESS"}, nil
+}
+
+func (to *SharedTaskOrchestrator) CreateTaskV4(ctx context.Context, task *SharedTaskDB) error {
+    if task.ID == "" {
+        task.ID = uuid.New().String()
+    }
+
+    tx, err := to.dbProvider.Begin(ctx)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback(ctx)
+
+    depsStr := "[]"
+    if task.Dependencies != nil && *task.Dependencies != "" {
+        depsStr = *task.Dependencies
+    }
+
+    query := `
+        INSERT INTO shared_tasks_v4 (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `
+
+    var priority string
+    if task.Priority != "" {
+        priority = task.Priority
+    } else {
+        priority = "P2"
+    }
+
+    var status string
+    if task.Status != "" {
+        status = task.Status
+    } else {
+        status = "PENDING"
+    }
+
+    _, err = tx.Exec(ctx, query,
+        task.ID,
+        task.OrganizationID,
+        task.Title,
+        task.Description,
+        status,
+        task.AgentID,
+        priority,
+        task.Payload,
+        task.ParentPlanID,
+        depsStr,
+    )
+
+    if err != nil {
+        return err
+    }
+
+    return tx.Commit(ctx)
 }
