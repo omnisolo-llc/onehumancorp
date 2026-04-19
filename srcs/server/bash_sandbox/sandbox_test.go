@@ -118,3 +118,39 @@ func TestSandboxExecution_EnvironmentScrubbing(t *testing.T) {
 		t.Errorf("ExecuteContext output did not correctly override HOME, output: %v", out)
 	}
 }
+
+func TestSandboxViolationStore_Validation(t *testing.T) {
+	sandbox := NewSandbox().(*LocalEnvironment)
+	ctx := context.Background()
+
+	_ = sandbox.ValidateContext(ctx, "sudo rm -rf /")
+
+	violations := sandbox.violationStore.GetViolations()
+	if len(violations) != 1 {
+		t.Fatalf("Expected 1 violation, got %d", len(violations))
+	}
+
+	if violations[0].Command != "sudo rm -rf /" {
+		t.Errorf("Expected violation command 'sudo rm -rf /', got '%s'", violations[0].Command)
+	}
+
+	if !strings.Contains(violations[0].Error, "matched (?i)\\bsudo\\b") {
+		t.Errorf("Expected error to contain matched pattern, got '%s'", violations[0].Error)
+	}
+}
+
+func TestSandboxViolationStore_Execution(t *testing.T) {
+	sandbox := NewSandbox().(*LocalEnvironment)
+	ctx := context.Background()
+
+	_, _ = sandbox.ExecuteContext(ctx, "bash -c \"echo \\\"Operation not permitted\\\" >&2; e" + "xit 1\"", "")
+
+	violations := sandbox.violationStore.GetViolations()
+	if len(violations) != 1 {
+		t.Fatalf("Expected 1 violation, got %d", len(violations))
+	}
+
+	if !strings.Contains(violations[0].Error, "Operation not permitted") {
+		t.Errorf("Expected error to contain 'Operation not permitted', got '%s'", violations[0].Error)
+	}
+}
