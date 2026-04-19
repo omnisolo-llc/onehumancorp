@@ -333,3 +333,26 @@ func (cn *CentrifugeNode) MeshHealthCheck(ctx context.Context) error {
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
 }
+
+func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, action, status string, payload map[string]interface{}) {
+    msg := map[string]interface{}{
+        "agent_id": agentID,
+        "action":   action,
+        "status":   status,
+        "payload":  payload,
+    }
+
+    data, err := json.Marshal(msg)
+    if err != nil {
+        slog.Error("[centrifuge] marshal teammate mesh event", "error", err)
+        return
+    }
+
+    // Also dispatch to internal transport fallback memory if active
+    if cn.meshTransport != nil {
+        _ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "teammate_mesh", data)
+    }
+
+    // Publish to the Centrifuge redis pubsub backend
+    _, _ = cn.node.Publish("orchestration.tasks", data)
+}
