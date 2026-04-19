@@ -1,17 +1,31 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# OHC API Playbook
+# OHC Interactive API Playbook
 
-**Version:** 1.0.0
-**Target Audience:** Orchestration Engineers & Human CEOs
+**Version:** 1.1.0
+**Target Audience:** Orchestration Engineers, Internal Integrators & Human CEOs
 
 ## 1. Introduction
-The One Human Corp (OHC) API Playbook provides an interactive reference for the core components of the Hybrid Agentic OS, specifically focusing on the newly added KAIROS Orchestration layers.
+The One Human Corp (OHC) API Playbook provides an interactive reference for the core components of the Hybrid Agentic OS. It outlines key REST endpoints, integration strategies, and the Hybrid API architecture.
 
-## 2. KAIROS Sub-Agent Queue API
+## 2. Authentication & AuthZ
+
+The system enforces a **Zero Secrets** policy, relying entirely on SPIFFE/SPIRE for identity and authentication across all deployments.
+
+For local development and testing, an ephemeral token can be used.
+
+**Headers:**
+```http
+Authorization: Bearer <SPIFFE_TOKEN>
+X-OHC-Dev-Token: <OHC_DEV_TOKEN>  # (Optional, local development only)
+```
+
+## 3. Core Endpoints
+
+### 3.1 KAIROS Sub-Agent Queue Orchestration
 
 **Endpoint:** `POST /api/queue/subagent`
-Enqueues a sub-agent task into the highly available distributed queue (backed by Rueidis ZSETs in Cloud-Native mode or application-level mutexed SQLite in Standalone mode).
+Enqueues a sub-agent task into the distributed queue.
 
 **Payload:**
 ```json
@@ -32,27 +46,10 @@ Enqueues a sub-agent task into the highly available distributed queue (backed by
 }
 ```
 
-### Sub-Agent Queue Orchestration Flow
-```mermaid
-sequenceDiagram
-    participant API as OHC API
-    participant DB as State Machine (PG/SQLite)
-    participant Queue as Sub-Agent Queue
-    participant Worker as Sub-Agent
-
-    API->>Queue: POST /api/queue/subagent
-    Queue->>DB: Record Task (PENDING)
-    Worker->>Queue: Poll/Subscribe
-    Worker->>DB: FOR UPDATE SKIP LOCKED
-    DB-->>Worker: Lock Acquired (EXECUTING)
-    Worker->>API: Complete Task
-    API->>DB: Update State (COMPLETED)
-```
-
-## 3. Teammate Mesh v2 (Centrifuge)
+### 3.2 Teammate Mesh v2 (Centrifuge)
 
 **Endpoint:** `POST /api/mesh/v2/broadcast`
-Broadcasts a validated state machine event over the structured Centrifuge channels, replacing legacy WebSockets for robust sub-agent coordination.
+Broadcasts a validated state machine event over structured Centrifuge channels.
 
 **Payload:**
 ```json
@@ -66,5 +63,47 @@ Broadcasts a validated state machine event over the structured Centrifuge channe
   }
 }
 ```
+
+### 3.3 Agents List
+
+**Endpoint:** `GET /api/agents`
+Returns a list of all configured agents within the OHC swarm.
+
+## 4. Standalone vs. Cloud Routing
+
+The OHC API routes dynamically based on the active OHC Hybrid Architecture mode.
+
+### Cloud-Native Mode
+- Queue requests are routed to Rueidis ZSETs backed by K8s pods.
+- Sub-agent coordination uses Redis Pub/Sub channels.
+
+### Standalone Desktop Mode
+- Queue requests fall back to an application-level mutexed SQLite instance.
+- Sub-agent coordination happens in-memory via direct event passing (graceful degradation).
+
+### Thin Client Mode
+- UI forwards all API requests securely to configured cloud API endpoints via OAuth.
+
+## 5. Code Snippets & Testing Instructions
+
+**Testing with cURL (Local Development):**
+```bash
+# Get list of agents
+curl -X GET "http://localhost:8080/api/agents" \
+  -H "X-OHC-Dev-Token: <your_dev_token>"
+
+# Broadcast an event
+curl -X POST "http://localhost:8080/api/mesh/v2/broadcast" \
+  -H "Content-Type: application/json" \
+  -H "X-OHC-Dev-Token: <your_dev_token>" \
+  -d '{
+    "channel": "mesh:test",
+    "event_type": "PING",
+    "data": {}
+  }'
+```
+
+**Interactive Swagger Docs:**
+For real-time testing, navigate to `/api/docs` in your local setup, which exposes the Swagger/OpenAPI portal and integrates with WebSockets.
 
 </div>
