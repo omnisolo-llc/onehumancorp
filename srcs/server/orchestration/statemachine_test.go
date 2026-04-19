@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"sync"
+	"fmt"
 	"testing"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +27,7 @@ func TestStateMachine_Concurrent(t *testing.T) {
 	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub3', 'org1', 'title1', 'parent', 'EXECUTING')`)
 	tx.Commit(ctx)
 
-	sm := NewTaskStateMachine(provider, nil)
+	sm := NewStateMachine(provider, nil)
 
 	var wg sync.WaitGroup
 	subtasks := []string{"sub1", "sub2", "sub3"}
@@ -68,7 +69,7 @@ func TestStateMachine_TransitionAndDependencies(t *testing.T) {
 	tx.Exec(ctx, `INSERT INTO swarm_task_dependencies (task_id, depends_on_task_id) VALUES ('taskB', 'taskA')`)
 	tx.Commit(ctx)
 
-	sm := NewTaskStateMachine(provider, nil)
+	sm := NewStateMachine(provider, nil)
 
 	// Check dependencies for taskB
 	ready, err := sm.CheckDependencies(ctx, "taskB")
@@ -97,4 +98,53 @@ func TestStateMachine_TransitionAndDependencies(t *testing.T) {
 	tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'taskB'").Scan(&taskBStatus)
 	assert.Equal(t, TaskStateReady, taskBStatus)
 	tx.Rollback(ctx)
+}
+
+func TestStateMachine_ConcurrentTransitionToInProgress(t *testing.T) {
+	conn, err := sql.Open("sqlite", ":memory:")
+	assert.NoError(t, err)
+	defer conn.Close()
+
+	provider := db.NewSqliteProvider(conn)
+	ctx := context.Background()
+
+	tx, _ := provider.Begin(ctx)
+	tx.Exec(ctx, `CREATE TABLE distributed_locks (lock_key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at DATETIME NOT NULL)`)
+	tx.Exec(ctx, `CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, status TEXT, agent_id TEXT, updated_at TIMESTAMP)`)
+	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('taskC', 'org1', 'Task C', 'READY')`)
+	tx.Commit(ctx)
+
+	sm := NewStateMachine(provider, nil)
+
+	var wg sync.WaitGroup
+	workers := 10
+	successCount := 0
+	var mu sync.Mutex
+
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(agentID string) {
+			defer wg.Done()
+			err := sm.TransitionToInProgress(ctx, "taskC", agentID)
+			if err == nil {
+				mu.Lock()
+				successCount++
+				mu.Unlock()
+			}
+		}(fmt.Sprintf("agent-%d", i))
+	}
+
+	wg.Wait()
+
+	// Only one transition should succeed due to locking and state validation
+	assert.Equal(t, 1, successCount)
+
+	tx, _ = provider.Begin(ctx)
+	var status string
+	var assignedAgent string
+	tx.QueryRow(ctx, "SELECT status, agent_id FROM shared_tasks WHERE id = 'taskC'").Scan(&status, &assignedAgent)
+	tx.Rollback(ctx)
+
+	assert.Equal(t, "EXECUTING", status)
+	assert.NotEmpty(t, assignedAgent)
 }
