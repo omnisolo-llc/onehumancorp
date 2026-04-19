@@ -2233,5 +2233,6 @@
   "title": "OHC Hybrid Telemetry Review",
   "uid": "d9abce3d-fc01-4475-8eb6-074eb6df4d10",
   "version": 1,
-  "weekStart": ""
+  "weekStart": "",
+  "description": "Updated by maintainer for observability of hybrid task queues and sqlite contention."
 }
