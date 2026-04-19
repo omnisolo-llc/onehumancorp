@@ -422,12 +422,25 @@ async function main() {
   // 5. Install browsers if absent.
   ensureBrowsers(PW_CLI);
 
-  // 6. Run ALL specs discovered by playwright.config.ts.
+  // 6. Run specs: OHC_E2E_SPEC_FILES can be a comma-separated list of spec
+  //    file names (relative to E2E_DIR) to run only a subset of the suite.
+  //    When absent, all *.spec.ts files discovered by playwright.config.ts
+  //    are executed.
   const config = resolve(E2E_DIR, 'playwright.config.ts');
-  console.log('[e2e] Launching Playwright test suite …');
+  const specFilesEnv = process.env.OHC_E2E_SPEC_FILES;
+  const specArgs = specFilesEnv
+    ? specFilesEnv.split(',').map(f => f.trim()).filter(Boolean)
+    : [];
+
+  console.log(
+    specArgs.length > 0
+      ? `[e2e] Launching Playwright with specs: ${specArgs.join(', ')}`
+      : '[e2e] Launching Playwright test suite (all specs) …',
+  );
+
   const r = spawnSync(
     process.execPath,
-    [PW_CLI, 'test', '--config', config],
+    [PW_CLI, 'test', '--config', config, ...specArgs],
     {
       stdio: 'inherit',
       cwd: E2E_DIR,
