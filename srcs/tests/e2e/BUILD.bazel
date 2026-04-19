@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 load("@rules_go//go:def.bzl", "go_test")
-load(":playwright_tests.bzl", "define_playwright_tests")
 
 go_test(
     name = "e2e_test",
@@ -21,17 +20,3 @@ go_test(
         "requires-network",
     ],
 )
-
-# Filegroup that exposes all TypeScript e2e sources to Playwright js_test targets.
-filegroup(
-    name = "srcs",
-    srcs = glob([
-        "*.ts",
-        "*.mjs",
-        "*.json",
-    ]),
-    visibility = ["//visibility:public"],
-)
-
-# Define per-category Playwright js_test targets and the combined test_suite.
-define_playwright_tests()
