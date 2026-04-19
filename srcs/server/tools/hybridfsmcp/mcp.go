@@ -313,7 +313,7 @@ func (w *RealS3ClientWrapper) ListObjects(ctx context.Context, bucketName string
 
 // NewProviderFactory returns a FileSystemProvider based on environment configuration.
 func NewProviderFactory(baseDir string) (FileSystemProvider, error) {
-	if envBoolDefault("OHC_MULTITENANT", false) {
+	if envBoolDefault("OHC_MULTITENANT", false) && !envBoolDefault("OHC_STANDALONE", false) {
 		endpoint := os.Getenv("S3_ENDPOINT")
 		accessKey := os.Getenv("S3_ACCESS_KEY")
 		secretKey := os.Getenv("S3_SECRET_KEY")
