@@ -186,3 +186,42 @@ func TestClaimTask_Postgres(t *testing.T) {
         t.Errorf("expected status 'IN_PROGRESS', got '%s'", task.Status)
     }
 }
+
+func TestClaimTaskV4LockingPg(t *testing.T) {
+    telemetry.InitTelemetry()
+    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    if err != nil {
+        t.Fatalf("failed to create sqlite provider: %v", err)
+    }
+
+    ctx := context.Background()
+
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            dependencies TEXT NOT NULL DEFAULT '[]'
+        )
+    `)
+    if err != nil {
+        t.Fatalf("failed to create shared_tasks_v4: %v", err)
+    }
+
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-lock-1', 'org-1', 'Test Lock 1', 'PENDING', '[]')")
+    if err != nil {
+        t.Fatalf("failed to insert: %v", err)
+    }
+
+    to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
+
+    // Test that the method successfully claims a task using the sqlite fallback logic
+    task, err := to.ClaimTaskV4(ctx, "org-1", "agent-pg")
+    if err != nil {
+        t.Fatalf("ClaimTaskV4 should not have failed: %v", err)
+    }
+    if task == nil || task.ID != "task-lock-1" {
+        t.Fatalf("Expected to claim task-lock-1")
+    }
+}
