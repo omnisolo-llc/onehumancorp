@@ -33,7 +33,7 @@ func TestPIIRedactionLinter(t *testing.T) {
 			line := scanner.Text()
 
 			// We are looking for lines that marshal a payload for telemetry buffering.
-			if strings.Contains(line, "json.Marshal(") && !strings.Contains(line, "json.Marshal(redactedMap)") && !strings.Contains(line, "json.Marshal(RedactInterfacePII(") && !strings.Contains(line, "json.Marshal(RedactPII(") {
+			if strings.Contains(line, "json.Marshal(") && !strings.Contains(line, "json.Marshal(redactedMap)") && !strings.Contains(line, "json.Marshal(redactedPayloads)") && !strings.Contains(line, "json.Marshal(RedactInterfacePII(") && !strings.Contains(line, "json.Marshal(RedactPII(") {
 				// Allow lists
 				if strings.Contains(line, "if redactedBytes, err := json.Marshal(redacted); err == nil {") {
 					continue

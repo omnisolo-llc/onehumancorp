@@ -5,8 +5,6 @@
 
 PRAGMA foreign_keys=off;
 
-BEGIN TRANSACTION;
-
 CREATE TABLE IF NOT EXISTS agent_missions_new (
     id         TEXT PRIMARY KEY,
     status     TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'BURSTING')),
@@ -15,20 +13,16 @@ CREATE TABLE IF NOT EXISTS agent_missions_new (
 );
 
 INSERT INTO agent_missions_new (id, status, payload, created_at)
-SELECT id, status, payload, created_at FROM agent_missions;
+SELECT id, CASE WHEN status NOT IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'BURSTING') THEN 'PENDING' ELSE status END, payload, created_at FROM agent_missions;
 
 DROP TABLE agent_missions;
 ALTER TABLE agent_missions_new RENAME TO agent_missions;
 CREATE INDEX idx_missions_status ON agent_missions (status);
 
-COMMIT;
-
 PRAGMA foreign_keys=on;
 
 -- +goose Down
 PRAGMA foreign_keys=off;
-
-BEGIN TRANSACTION;
 
 CREATE TABLE IF NOT EXISTS agent_missions_old (
     id         TEXT PRIMARY KEY,
@@ -45,7 +39,5 @@ SELECT id, status, payload, created_at FROM agent_missions;
 DROP TABLE agent_missions;
 ALTER TABLE agent_missions_old RENAME TO agent_missions;
 CREATE INDEX idx_missions_status ON agent_missions (status);
-
-COMMIT;
 
 PRAGMA foreign_keys=on;

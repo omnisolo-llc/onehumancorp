@@ -70,7 +70,8 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 		return nil
 	}
 
-	body, err := json.Marshal(payloads)
+	redactedPayloads := RedactInterfacePII(payloads)
+	body, err := json.Marshal(redactedPayloads)
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
@@ -106,8 +107,8 @@ func InitStandaloneBuffer(db *sql.DB) {
 	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
 		var data map[string]interface{}
 		if err := json.Unmarshal([]byte(payload), &data); err == nil {
-			redactedData := RedactInterfacePII(data)
-			if redactedBytes, err := json.Marshal(redactedData); err == nil {
+			redactedMap := RedactInterfacePII(data)
+			if redactedBytes, err := json.Marshal(redactedMap); err == nil {
 				payload = string(redactedBytes)
 			}
 		}
