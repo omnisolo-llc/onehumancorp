@@ -26,8 +26,7 @@ func (m *MockWorkerLLMClient) GenerateEmbedding(ctx context.Context, text string
 }
 
 func TestAutoDreamWorker(t *testing.T) {
-	provider, cleanup := db.NewTestProvider()
-	defer cleanup()
+	provider := db.NewTestProvider(t)
 	ctx := context.Background()
 
 	// Create tables
