@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/google/uuid"
 )
 
@@ -18,9 +19,11 @@ type McpSyncProxy struct {
 	dbProvider   db.Provider
 	cloudGateway string
 	httpClient   *http.Client
+	mode         string
 }
 
 func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string) *McpSyncProxy {
+	start := time.Now()
 	// For SPIFFE mTLS we would typically use a SPIFFE workload API client to get the tls.Config.
 	// We configure a basic TLS client here as placeholder/simulation of mTLS if not fully fleshed out.
 	tr := &http.Transport{
@@ -28,11 +31,21 @@ func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string) *McpSyncProxy 
 			// In production, configure mTLS certificates
 		},
 	}
-	return &McpSyncProxy{
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+
+	proxy := &McpSyncProxy{
 		dbProvider:   dbProvider,
 		cloudGateway: cloudGateway,
 		httpClient:   &http.Client{Timeout: 10 * time.Second, Transport: tr},
+		mode:         mode,
 	}
+
+	telemetry.RecordHarnessInitLatency(context.Background(), float64(time.Since(start).Milliseconds()), mode)
+
+	return proxy
 }
 
 // Buffer buffers a tool execution request into the local SQLite database.
@@ -49,9 +62,12 @@ func (p *McpSyncProxy) Buffer(ctx context.Context, toolName string, arguments ma
 		return "", fmt.Errorf("failed to marshal arguments: %w", err)
 	}
 
+	start := time.Now()
 	_, err = p.dbProvider.Exec(ctx,
 		"INSERT INTO hybrid_mcp_sync_queue (id, tool_name, arguments, status, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)",
 		id, toolName, string(argsBytes), "PENDING")
+
+	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
 	if err != nil {
 		return "", fmt.Errorf("failed to buffer to db: %w", err)
 	}
@@ -61,7 +77,10 @@ func (p *McpSyncProxy) Buffer(ctx context.Context, toolName string, arguments ma
 
 // Sync periodically syncs buffered tool executions to the cloud gateway.
 func (p *McpSyncProxy) Sync(ctx context.Context) (int, error) {
+	start := time.Now()
 	rows, err := p.dbProvider.Query(ctx, "SELECT id, tool_name, arguments FROM hybrid_mcp_sync_queue WHERE status = 'PENDING' LIMIT 50")
+
+	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query queue: %w", err)
 	}

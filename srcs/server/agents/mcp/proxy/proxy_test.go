@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type mockRows struct {
@@ -68,6 +69,7 @@ func (m *mockDBProvider) Query(ctx context.Context, sql string, optionsAndArgs .
 }
 
 func TestMcpSyncProxy_Buffer(t *testing.T) {
+	telemetry.InitTelemetry()
 	mockDB := &mockDBProvider{}
 	proxy := NewMcpSyncProxy(mockDB, "http://dummy")
 
@@ -84,6 +86,7 @@ func TestMcpSyncProxy_Buffer(t *testing.T) {
 }
 
 func TestMcpSyncProxy_Sync(t *testing.T) {
+	telemetry.InitTelemetry()
 	os.Setenv("SPIFFE_IDENTITY_TOKEN", "fake-token")
 	defer os.Unsetenv("SPIFFE_IDENTITY_TOKEN")
 
@@ -115,5 +118,18 @@ func TestMcpSyncProxy_Sync(t *testing.T) {
 
 	if receivedToken != "Bearer fake-token" {
 		t.Errorf("Expected SPIFFE token to be sent, got %s", receivedToken)
+	}
+}
+
+func TestMcpSyncProxy_Init(t *testing.T) {
+	telemetry.InitTelemetry()
+	mockDB := &mockDBProvider{}
+
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+	proxy := NewMcpSyncProxy(mockDB, "http://dummy")
+
+	if proxy.mode != "standalone" {
+		t.Errorf("Expected standalone mode, got %s", proxy.mode)
 	}
 }
