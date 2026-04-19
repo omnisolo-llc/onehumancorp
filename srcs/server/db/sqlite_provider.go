@@ -202,6 +202,23 @@ func (p *SqliteProvider) IsSQLite() bool {
 	return true
 }
 
+func (p *SqliteProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) {
+	query := `SELECT content FROM autodream_memories WHERE organization_id = $1 AND content LIKE $2 LIMIT $3`
+	rows, err := p.Query(ctx, query, organizationID, "%"+queryText+"%", limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var results []string
+	for rows.Next() {
+		var content string
+		if err := rows.Scan(&content); err == nil {
+			results = append(results, content)
+		}
+	}
+	return results, nil
+}
+
 func (p *SqliteProvider) Ping(ctx context.Context) error {
 	return p.db.PingContext(ctx)
 }

@@ -49,6 +49,8 @@ type mockDBProvider struct {
 	execErr   error
 }
 
+func (m *mockDBProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) { return nil, nil }
+
 func (m *mockDBProvider) IsSQLite() bool {
 	return true
 }
