@@ -160,14 +160,26 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 		return fmt.Errorf("email already registered")
 	}
 
-	_, err := r.pool.Exec(ctx, `
-		UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-		organization_id=$7, oidc_subject=$8, updated_at=$9
-		WHERE id=$1`,
-		user.ID, user.Username, email, user.PasswordHash,
-		rolesArg, user.Active, user.OrganizationID,
-		nilIfEmpty(oidcSubject), user.UpdatedAt,
-	)
+	var err error
+	if user.OrganizationID == "" || user.OrganizationID == "sys" {
+		_, err = r.pool.Exec(ctx, `
+			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+			organization_id=$7, oidc_subject=$8, updated_at=$9
+			WHERE id=$1`,
+			user.ID, user.Username, email, user.PasswordHash,
+			rolesArg, user.Active, user.OrganizationID,
+			nilIfEmpty(oidcSubject), user.UpdatedAt,
+		)
+	} else {
+		_, err = r.pool.Exec(ctx, `
+			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+			organization_id=$7, oidc_subject=$8, updated_at=$9
+			WHERE id=$1 AND organization_id=$7`,
+			user.ID, user.Username, email, user.PasswordHash,
+			rolesArg, user.Active, user.OrganizationID,
+			nilIfEmpty(oidcSubject), user.UpdatedAt,
+		)
+	}
 	if err != nil {
 		return fmt.Errorf("pg: update user: %w", err)
 	}
