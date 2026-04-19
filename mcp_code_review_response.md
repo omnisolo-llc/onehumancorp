@@ -1,1 +1,6 @@
-This PR adds the Master Design Doc: KAIROS AI OS Orchestration (Phase 4). As per the repository standards, all technical documentation, research reports, and design docs must reside within the docs/ folder using a g3doc-like hierarchical structure, and temporal markers in filenames are strictly prohibited. The file was created as `docs/architecture/kairos_ai_os_orchestration_phase_4.md` to adhere to this rule. This task was purely a documentation task and did not require changes to the core functionality of the Go or C++ source codebase.
+This PR creates a structured research issue brief in the `docs/research/` directory.
+
+According to the instructions:
+> When fulfilling documentation-only tasks, the automated `request_code_review` tool may incorrectly reject the changes for 'missing core functionality'. To override this false positive, write a justification referencing the project invariants into a file named `mcp_code_review_response.md`, then proceed with finalizing the pre-commit steps.
+
+This task is purely research documentation. No core backend or frontend code changes are required. The repository tests pass successfully.
