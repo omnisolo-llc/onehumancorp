@@ -50,7 +50,7 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 		return fmt.Errorf("failed to parse command")
 	}
 
-	if err := v.walkAndValidate(tree.RootNode()); err != nil {
+	if err := v.walkAndValidate(tree.RootNode(), command); err != nil {
 		violationCount.Add(ctx, 1)
 		return err
 	}
@@ -58,7 +58,7 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 	return nil
 }
 
-func (v *ASTValidator) walkAndValidate(node *sitter.Node) error {
+func (v *ASTValidator) walkAndValidate(node *sitter.Node, command string) error {
 	nodeType := node.Type()
 
 	if nodeType == "command_substitution" || nodeType == "process_substitution" || nodeType == "subshell" {
@@ -69,9 +69,26 @@ func (v *ASTValidator) walkAndValidate(node *sitter.Node) error {
 		return fmt.Errorf("redirections are not allowed")
 	}
 
+	if nodeType == "variable_name" {
+		varName := command[node.StartByte():node.EndByte()]
+		if varName == "IFS" {
+			return fmt.Errorf("IFS injection is not allowed")
+		}
+	}
+
+	if nodeType == "command_name" || nodeType == "command" {
+		cmdName := command[node.StartByte():node.EndByte()]
+		if cmdName == "zmodload" {
+			return fmt.Errorf("zsh dangerous command zmodload is blocked")
+		}
+		if cmdName == "sudo" {
+			return fmt.Errorf("sudo is not allowed")
+		}
+	}
+
 	for i := 0; i < int(node.ChildCount()); i++ {
 		child := node.Child(i)
-		if err := v.walkAndValidate(child); err != nil {
+		if err := v.walkAndValidate(child, command); err != nil {
 			return err
 		}
 	}

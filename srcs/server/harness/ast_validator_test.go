@@ -43,6 +43,21 @@ func TestASTValidator(t *testing.T) {
             command: "( rm -rf / )",
             wantErr: true,
         },
+		{
+			name:    "IFS injection",
+			command: "IFS=:; ls",
+			wantErr: true,
+		},
+		{
+			name:    "zmodload",
+			command: "zmodload zsh/net/tcp",
+			wantErr: true,
+		},
+		{
+			name:    "sudo",
+			command: "sudo apt-get install",
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {

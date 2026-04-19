@@ -24,31 +24,57 @@ func NewBwrapRunner(validator *ASTValidator) *BwrapRunner {
 
 // GetBwrapArgs generates the bwrap arguments for a given command.
 // We extract this to make it testable.
-func (r *BwrapRunner) GetBwrapArgs(command string) []string {
-	return []string{
-		"--unshare-net",
+func (r *BwrapRunner) GetBwrapArgs(command string, policy *Policy) []string {
+	args := []string{
 		"--unshare-pid",
 		"--unshare-uts",
 		"--unshare-ipc",
 		"--unshare-cgroup",
-		"--ro-bind", "/", "/",
 		"--proc", "/proc",
 		"--dev", "/dev",
 		"--tmpfs", "/tmp",
-        // Using socat Unix Socket proxy to strictly control network egress
-        "--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock",
-		"--",
-		"bash", "-c", command,
 	}
+
+	if policy == nil || !policy.AllowNetwork {
+		args = append(args, "--unshare-net")
+	}
+
+	// Default read-only bind of root, but specific policies can override this.
+	// In a real implementation we would be more restrictive.
+	args = append(args, "--ro-bind", "/", "/")
+
+	if policy != nil {
+		for _, path := range policy.AllowedPaths {
+			args = append(args, "--bind", path, path)
+		}
+		for _, path := range policy.ReadOnlyPaths {
+			args = append(args, "--ro-bind", path, path)
+		}
+		// BlockedPaths are implemented by mounting an empty tmpfs over them
+		for _, path := range policy.BlockedPaths {
+			args = append(args, "--tmpfs", path)
+		}
+	}
+
+	// Using socat Unix Socket proxy to strictly control network egress
+	args = append(args, "--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock")
+	args = append(args, "--", "bash", "-c", command)
+
+	return args
 }
 
 // Execute runs the command in a bwrap sandbox after AST validation.
 func (r *BwrapRunner) Execute(ctx context.Context, command string) (Result, error) {
+	return r.ExecuteWithPolicy(ctx, command, nil)
+}
+
+// ExecuteWithPolicy runs the command with a specific policy.
+func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, policy *Policy) (Result, error) {
 	if err := r.validator.Validate(ctx, command); err != nil {
 		return Result{}, fmt.Errorf("command validation failed: %w", err)
 	}
 
-	bwrapArgs := r.GetBwrapArgs(command)
+	bwrapArgs := r.GetBwrapArgs(command, policy)
 	cmd := exec.CommandContext(ctx, "bwrap", bwrapArgs...)
 
 	var stdout, stderr bytes.Buffer
