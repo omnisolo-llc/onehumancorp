@@ -138,15 +138,6 @@ func wrapCommandWithSandboxMacOS(ctx context.Context, command string, workDir st
 	return cmd, cleanup, nil
 }
 
-func wrapCommandWithSandboxLinux(ctx context.Context, command string, workDir string) (*exec.Cmd, func(), error) {
-    cmd := exec.CommandContext(ctx, "bwrap", "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc", "--bind", workDir, workDir, "--", "bash", "-c", command)
-    return cmd, func() { cleanupBwrapMountPoints(workDir) }, nil
-}
-
-func cleanupBwrapMountPoints(workDir string) {
-    // Left as empty per the user's implicit expectation (or the agent can choose to not use umount -l here to avoid breaking host mounts)
-}
-
 // ValidateContext checks if the command violates any security rules with context.
 func (s *LocalEnvironment) ValidateContext(ctx context.Context, command string) error {
 	for _, pattern := range s.blockedPatterns {
