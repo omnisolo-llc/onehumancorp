@@ -197,9 +197,9 @@ func (w *AutoDreamWorker) ingestTasksFromTable(ctx context.Context, tableName st
 
 	var query string
 	if w.pool.IsSQLite() {
-		query = fmt.Sprintf("SELECT id, title, COALESCE(payload, '{}') FROM %s WHERE status = 'COMPLETED' LIMIT 100", tableName)
+		query = fmt.Sprintf("SELECT id, title, COALESCE(payload, '{}') FROM %s WHERE status = 'COMPLETED' LIMIT 500", tableName)
 	} else {
-		query = fmt.Sprintf("SELECT id, title, COALESCE(payload, '{}') FROM %s WHERE status = 'COMPLETED' LIMIT 100 FOR UPDATE SKIP LOCKED", tableName)
+		query = fmt.Sprintf("SELECT id, title, COALESCE(payload, '{}') FROM %s WHERE status = 'COMPLETED' LIMIT 500 FOR UPDATE SKIP LOCKED", tableName)
 	}
 
 	rows, err := tx.Query(ctx, query)
@@ -350,10 +350,10 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 	var rows db.Rows
 
 	if w.pool.IsSQLite() {
-		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100")
+		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 500")
 	} else {
 		// Postgres lock row for update so no other worker picks it up
-		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100 FOR UPDATE SKIP LOCKED")
+		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 500 FOR UPDATE SKIP LOCKED")
 	}
 	if err != nil {
 		return fmt.Errorf("failed to fetch unprocessed memories: %w", err)
