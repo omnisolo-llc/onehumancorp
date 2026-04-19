@@ -418,7 +418,7 @@ func InitWithMeter(m mockableMeter) error {
 
 	syncDaemonBatchSize, err = m.Int64Histogram(
 		"ohc_sync_daemon_batch_size",
-		metric.WithDescription("Batch size of records synchronized by SyncDaemon"),
+		metric.WithDescription("Batch size of records synchronized by SyncDaemon (local daemon syncing)"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -482,7 +482,7 @@ func InitWithMeter(m mockableMeter) error {
 
 	agentExecutionTracesTotal, err = m.Int64Counter(
 		"ohc_agent_execution_traces_total",
-		metric.WithDescription("Total number of agent execution traces"),
+		metric.WithDescription("Total number of agent execution traces (Standalone Agent Tracing)"),
 	)
 	if err != nil {
 		errs = append(errs, err)
