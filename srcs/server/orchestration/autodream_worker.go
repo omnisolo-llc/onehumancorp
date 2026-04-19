@@ -261,9 +261,10 @@ func (w *AutoDreamWorker) ingestTasksFromTable(ctx context.Context, tableName st
 			continue
 		}
 
-		updateQuery := fmt.Sprintf("UPDATE %s SET status = 'ARCHIVED' WHERE id = $1", tableName)
-		_, err = tx.Exec(ctx, updateQuery, e.id)
-		if err != nil {
+		updateQuery := fmt.Sprintf("UPDATE %s SET status = 'ARCHIVED' WHERE id = $1 RETURNING id", tableName)
+		var retId string
+		err = tx.QueryRow(ctx, updateQuery, e.id).Scan(&retId)
+		if err != nil && err.Error() != "sql: no rows in result set" && err.Error() != "no rows in result set" {
 			slog.Error("AutoDream: failed to update task status to ARCHIVED", "error", err)
 		}
 	}
@@ -340,14 +341,19 @@ func NewAutoDreamWorkerDaemon(worker *AutoDreamWorker) *AutoDreamWorkerDaemon {
 // ConsolidateMemories processes the backlog of episodic memories into embeddings.
 // It fetches up to 100 rows where processed_at IS NULL.
 func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var rows db.Rows
-	var err error
 
 	if w.pool.IsSQLite() {
-		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100")
+		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100")
 	} else {
 		// Postgres lock row for update so no other worker picks it up
-		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100 FOR UPDATE SKIP LOCKED")
+		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100 FOR UPDATE SKIP LOCKED")
 	}
 	if err != nil {
 		return fmt.Errorf("failed to fetch unprocessed memories: %w", err)
@@ -404,13 +410,14 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 
 		var query string
 		if w.pool.IsSQLite() {
-			query = "UPDATE autodream_memories SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
+			query = "UPDATE autodream_memories SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id"
 		} else {
-			query = "UPDATE autodream_memories SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
+			query = "UPDATE autodream_memories SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id"
 		}
 
-		_, updateErr := w.pool.Exec(ctx, query, embStr, e.id)
-		if updateErr != nil {
+		var retId string
+		updateErr := tx.QueryRow(ctx, query, embStr, e.id).Scan(&retId)
+		if updateErr != nil && updateErr.Error() != "sql: no rows in result set" && updateErr.Error() != "no rows in result set" {
 			slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
 		} else {
 			slog.Debug("AutoDream: consolidated memory", "id", e.id)
@@ -432,6 +439,9 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 		}
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
+	}
 	return nil
 }
 
