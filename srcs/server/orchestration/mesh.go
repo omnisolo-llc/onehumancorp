@@ -224,7 +224,7 @@ type RedisTeammateMesh struct {
 	client rueidis.Client
 }
 
-type RedisMeshTransport struct {
+type RedisMeshTransport struct { // Implement Redis mesh transport
 	client rueidis.Client
 }
 
