@@ -1087,8 +1087,8 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
 	}
 
-	telemetry.RecordSIPSyncLatency(ctx, time.Since(start))
-	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)
+	telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
+	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize) // added for issue 4365
 
 	// Delete successfully synced records
 	err = withSipRetry(ctx, func() error {
@@ -1208,8 +1208,8 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 							idsToDelete = append(idsToDelete, rec.id)
 							syncedCount++
 							mu.Unlock()
-							telemetry.RecordSIPSyncLatency(ctx, time.Since(start))
-							telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)
+							telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
+							telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize) // added for issue 4365
 						}
 						resp.Body.Close()
 					}
