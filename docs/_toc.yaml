@@ -1,39 +1,41 @@
 toc:
-  - title: Home
-    path: /docs/index.md
+  - title: Documentation
+    section: true
+  - title: Technical Documentation
+    path: /docs/technical/index.md
   - title: Architecture
-    path: /docs/architecture/index.md
-  - title: Universal Transport Bridge
-    path: /docs/architecture/universal_transport_bridge.md
-  - title: Developer
-    path: /docs/developer/index.md
-  - title: API
-    path: /docs/api/index.md
-  - title: Hybrid MCP API Playbook
-    path: /docs/api/hybrid_mcp_api.md
-  - title: Features
-    path: /docs/features/index.md
-  - title: Walkthroughs
-    path: /docs/walkthroughs/index.md
-  - title: OS-Level Sandbox Isolation Harness
-    path: /docs/walkthroughs/sandbox_isolation_harness.md
-  - title: Hybrid MCP Telemetry Visual Guide
-    path: /docs/walkthroughs/hybrid_mcp_telemetry_visual_guide.md
+    path: /docs/technical/architecture/index.md
+  - title: System Design
+    path: /docs/technical/architecture/system-design.md
+  - title: Developer Guide
+    path: /docs/technical/developer/index.md
+  - title: API Reference
+    path: /docs/technical/api/index.md
+  - title: Features & CUJs
+    path: /docs/technical/features/index.md
   - title: Operations
-    path: /docs/operations/index.md
-  - title: Releases
-    path: /docs/public/index.md
-  - title: Archive
-    path: /docs/archive/index.md
-  - title: Hybrid MCP RAG Escalation Walkthrough
-    path: /docs/walkthroughs/hybrid_mcp_rag_escalation.md
-  - title: Harness Git Protection Report
-    path: /docs/reports/RESEARCH_REPORT_HARNESS_GIT_PROTECTION.md
-  - title: Edge LLM Offloading Protocol API
-    path: /docs/api/edge_llm_offloading_api.md
-  - title: Edge LLM Handoff Visual Walkthrough
-    path: /docs/walkthroughs/edge_llm_handoff_walkthrough.md
-  - title: Hybrid Environment Setup Walkthrough
-    path: /docs/walkthroughs/hybrid_environment_setup_walkthrough.md
-  - title: Virtual Meeting Room Walkthrough
-    path: /docs/walkthroughs/virtual_meeting_room.md
+    path: /docs/technical/operations/index.md
+  - title: Research
+    path: /docs/technical/research/index.md
+  - title: Reports
+    path: /docs/technical/reports/index.md
+  - title: Walkthroughs
+    path: /docs/technical/walkthroughs/index.md
+  - title: Templates
+    path: /docs/technical/templates/index.md
+  - title: MCP Protocol
+    path: /docs/technical/mcp/hybrid-mcp-playbook.md
+  - title: Business Documentation
+    path: /docs/business/index.md
+  - title: Product Overview
+    path: /docs/business/public/index.md
+  - title: User Guide
+    path: /docs/business/user_guide.md
+  - title: Roadmap
+    path: /docs/business/roadmap.md
+  - title: Vision
+    path: /docs/business/vision/index.md
+  - title: Cost Blueprint
+    path: /docs/business/cost-blueprint.md
+  - title: Growth Strategy
+    path: /docs/business/growth_strategy_audit.md
