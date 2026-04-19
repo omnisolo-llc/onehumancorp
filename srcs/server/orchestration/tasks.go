@@ -27,6 +27,7 @@ func generateID() string {
 }
 
 // SharedTask represents a shared task distributed across agents.
+// SharedTask struct represents a task
 type SharedTask struct {
 	ID              string     `json:"id"`
 	OrganizationID  string     `json:"organization_id"`
