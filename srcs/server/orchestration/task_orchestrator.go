@@ -479,7 +479,6 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 
 	// Update status to COMPLETED
 	var returnedID string
-	// RETURNING id used instead of RowsAffected for SQLite/Postgres compatibility
 	err = tx.QueryRow(ctx, "UPDATE swarm_tasks SET status = 'COMPLETED', payload = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND assigned_agent_id = $2 AND status = 'IN_PROGRESS' RETURNING id", taskID, agentID, string(updatedPayload)).Scan(&returnedID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" {
@@ -653,7 +652,7 @@ func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, 
 
 	tx.Commit(ctx)
 
-	sm := NewStateMachine(to.db, to.redisClient)
+	sm := NewTaskStateMachine(to.db, to.redisClient)
 	err = sm.ProcessEvent(ctx, taskID, EventDecompositionComplete)
 	if err != nil {
 		return "", err

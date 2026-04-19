@@ -5,9 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
-	"time"
-	"strings"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // BwrapRunner executes commands inside a bubblewrap sandbox.
@@ -84,19 +81,7 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	startTime := time.Now()
-
-	// Extract base tool name to avoid high cardinality metrics
-	toolName := "unknown"
-	parts := strings.Fields(command)
-	if len(parts) > 0 {
-		toolName = parts[0]
-	}
-	telemetry.RecordHarnessToolInvocation(ctx, toolName, "bwrap-runner")
-
 	err := cmd.Run()
-	duration := time.Since(startTime).Seconds()
-	telemetry.RecordHarnessExecutionDuration(ctx, duration, "bwrap-runner")
 	exitCode := 0
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
@@ -108,7 +93,6 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
             // unless we parse stderr.
             if exitCode == 1 && bytes.Contains(stderr.Bytes(), []byte("bwrap:")) {
                 violationCount.Add(ctx, 1)
-                telemetry.RecordHarnessViolation(ctx, "bwrap-runner")
             }
 		} else {
             // Infrastructure error launching bwrap process
