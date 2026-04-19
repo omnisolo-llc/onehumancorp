@@ -816,3 +816,11 @@ func TestInitTelemetry_StandaloneOptIn_EnvVar(t *testing.T) {
 	}
 	cleanup()
 }
+
+func TestRecordHarnessCommandDuration(t *testing.T) {
+	RecordHarnessCommandDuration(context.Background(), "test-tenant", "ls", "0", 1.5)
+}
+
+func TestRecordHarnessIOBytes(t *testing.T) {
+	RecordHarnessIOBytes(context.Background(), "test-tenant", "stdout", 1024)
+}

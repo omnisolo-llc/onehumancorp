@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"fmt"
+
 	"context"
 	"strings"
 	"testing"
@@ -45,5 +47,56 @@ func TestExecutor_Success(t *testing.T) {
 
 	if err == nil && !strings.Contains(string(out), "test") {
 		t.Fatalf("expected output to contain 'test', got: %s", string(out))
+	}
+}
+
+// A mock harness for testing telemetry and tracing context propagation
+type mockHarnessWithTrace struct {
+	lastSpanCtx context.Context
+}
+
+func (m *mockHarnessWithTrace) Execute(ctx context.Context, execCtx harness.ExecutionContext) ([]byte, error) {
+	m.lastSpanCtx = ctx
+	return []byte("mock output"), nil
+}
+
+func TestExecutor_TracingAndTelemetry(t *testing.T) {
+	mockH := &mockHarnessWithTrace{}
+	exec := NewExecutor(mockH)
+
+	ctx := context.WithValue(context.Background(), "tenantID", "test-tenant-123")
+
+	out, err := exec.ExecuteCommand(ctx, "echo test")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if string(out) != "mock output" {
+		t.Fatalf("unexpected output: %s", string(out))
+	}
+
+	if mockH.lastSpanCtx == nil {
+		t.Fatal("expected span context to be passed to harness")
+	}
+}
+
+type errorMockHarness struct{}
+
+func (m *errorMockHarness) Execute(ctx context.Context, execCtx harness.ExecutionContext) ([]byte, error) {
+	return []byte("error output"), fmt.Errorf("mock error")
+}
+
+func TestExecutor_ErrorTracingAndTelemetry(t *testing.T) {
+	mockH := &errorMockHarness{}
+	exec := NewExecutor(mockH)
+
+	out, err := exec.ExecuteCommand(context.Background(), "false")
+
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+
+	if string(out) != "error output" {
+		t.Fatalf("unexpected output: %s", string(out))
 	}
 }

@@ -5,7 +5,13 @@ go_library(
     srcs = ["executor.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/agent",
     visibility = ["//visibility:public"],
-    deps = ["//srcs/server/agent/harness"],
+    deps = [
+        "//srcs/server/agent/harness",
+        "//srcs/server/telemetry",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_trace//:trace",
+    ],
 )
 
 go_test(

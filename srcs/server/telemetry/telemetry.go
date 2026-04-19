@@ -21,6 +21,8 @@ import (
 )
 
 var (
+	HarnessCommandDuration     metric.Float64Histogram
+	HarnessIOBytesTotal        metric.Int64Counter
 	IdentityVerificationSuccessTotal metric.Int64Counter
 	IdentityVerificationFailureTotal metric.Int64Counter
 	SyncConflictsResolvedTotal       metric.Int64Counter
@@ -286,6 +288,20 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	var err error
+	HarnessCommandDuration, err = m.Float64Histogram("ohc_harness_command_duration_seconds",
+		metric.WithDescription("Duration of agent harness shell command executions"),
+	)
+	if err != nil {
+		return err
+	}
+
+	HarnessIOBytesTotal, err = m.Int64Counter("ohc_harness_io_bytes_total",
+		metric.WithDescription("Total I/O bytes from harness commands"),
+	)
+	if err != nil {
+		return err
+	}
+
 	AutoDreamRecordsSyncedTotal, err = m.Int64Counter("autodream_records_synced_total",
 		metric.WithDescription("Total number of autodream records successfully synced"),
 	)
@@ -1882,4 +1898,27 @@ func RecordAutoDreamSyncError(ctx context.Context, agentID, errorType string) {
 			attribute.String("error_type", errorType),
 		))
 	}
+}
+
+// RecordHarnessCommandDuration records the duration of a harness command.
+func RecordHarnessCommandDuration(ctx context.Context, tenantID, commandPrefix string, exitCode string, durationSeconds float64) {
+	if HarnessCommandDuration == nil {
+		return
+	}
+	HarnessCommandDuration.Record(ctx, durationSeconds, metric.WithAttributes(
+		attribute.String("tenant_id", tenantID),
+		attribute.String("command_prefix", commandPrefix),
+		attribute.String("exit_code", exitCode),
+	))
+}
+
+// RecordHarnessIOBytes increments the I/O bytes counter for a harness command.
+func RecordHarnessIOBytes(ctx context.Context, tenantID, streamType string, bytes int64) {
+	if HarnessIOBytesTotal == nil {
+		return
+	}
+	HarnessIOBytesTotal.Add(ctx, bytes, metric.WithAttributes(
+		attribute.String("tenant_id", tenantID),
+		attribute.String("stream_type", streamType),
+	))
 }
