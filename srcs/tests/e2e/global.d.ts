@@ -23,9 +23,12 @@ declare module '@playwright/test' {
     waitForSelector(selector: string, options?: { timeout?: number }): Promise<unknown>;
     waitForTimeout(ms: number): Promise<void>;
     waitForRequest(urlOrPredicate: string | ((req: Request) => boolean), options?: { timeout?: number }): Promise<Request>;
+    waitForURL(urlOrPredicate: string | RegExp | ((url: URL) => boolean), options?: { timeout?: number }): Promise<void>;
     locator(selector: string): Locator;
     getByText(text: string | RegExp): Locator;
     on(event: string, handler: (arg: unknown) => void): void;
+    evaluate<T>(fn: () => T): Promise<T>;
+    url(): string;
     keyboard: { press(key: string): Promise<void> };
   }
 
@@ -59,20 +62,22 @@ declare module '@playwright/test' {
   // expect — returns a chainable assertion object.
   export function expect(value: unknown): {
     toBeVisible(options?: { timeout?: number }): Promise<void>;
+    toBeEmpty(): Promise<void>;
     not: {
       toBeVisible(options?: { timeout?: number }): Promise<void>;
-      toContainText(text: string | RegExp): Promise<void>;
+      toContainText(text: string | RegExp, options?: { timeout?: number }): Promise<void>;
+      toBeVisible(options?: { timeout?: number }): Promise<void>;
+      toBeEmpty(): Promise<void>;
     };
     toHaveValue(value: string): Promise<void>;
     toHaveAttribute(name: string, value: string): Promise<void>;
     toBeEnabled(): Promise<void>;
     toBeChecked(): Promise<void>;
-    toContainText(text: string | RegExp): Promise<void>;
+    toContainText(text: string | RegExp, options?: { timeout?: number }): Promise<void>;
     toBe(expected: unknown): void;
     toBeGreaterThanOrEqual(n: number): void;
     toBeGreaterThan(n: number): void;
     toMatch(pattern: RegExp): void;
-    not: unknown;
   };
 
   // test — the Playwright test function.
