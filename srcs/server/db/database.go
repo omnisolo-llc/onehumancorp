@@ -406,6 +406,14 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = regexp.MustCompile(`(?i)\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b`).ReplaceAllString(sqlStr, "ADD COLUMN")
 			// SQLite does not support DROP COLUMN IF EXISTS – strip the IF EXISTS qualifier.
 			sqlStr = regexp.MustCompile(`(?i)\bDROP\s+COLUMN\s+IF\s+EXISTS\b`).ReplaceAllString(sqlStr, "DROP COLUMN")
+		} else {
+			// Postgres mode: normalise any SQLite-specific types that leaked into
+			// migration files so that migrations are portable in both directions.
+			sqlStr = strings.ReplaceAll(sqlStr, "INTEGER PRIMARY KEY AUTOINCREMENT", "BIGSERIAL PRIMARY KEY")
+			// DATETIME is a SQLite type; Postgres uses TIMESTAMP.
+			sqlStr = regexp.MustCompile(`(?i)\bDATETIME\b`).ReplaceAllString(sqlStr, "TIMESTAMP")
+			// BLOB is a SQLite type; Postgres uses BYTEA.
+			sqlStr = regexp.MustCompile(`(?i)\bBLOB\b`).ReplaceAllString(sqlStr, "BYTEA")
 		}
 
 		tx, err := p.Begin(ctx)
