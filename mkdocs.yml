@@ -44,6 +44,7 @@ nav:
       - api/index.md
       - "Interactive Api Playbook": api/api_playbook.md
   - Features:
+      - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
       - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md
       - features/index.md
