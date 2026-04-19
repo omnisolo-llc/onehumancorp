@@ -1,10 +1,12 @@
-package perf
+package benchmarks
 
 import (
 	"context"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/lib/perf"
 )
 
 // BenchmarkCoordinatorMode compares parallel vs sequential execution
@@ -30,7 +32,7 @@ func BenchmarkCoordinatorMode(b *testing.B) {
 
 	for _, concurrency := range []int{2, 4, 8, 16} {
 		b.Run(fmt.Sprintf("Parallel-%d", concurrency), func(b *testing.B) {
-			coord := NewCoordinatorMode(concurrency)
+			coord := perf.NewCoordinatorMode(concurrency)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				_ = coord.ExecuteParallel(ctx, tasks)
@@ -42,16 +44,16 @@ func BenchmarkCoordinatorMode(b *testing.B) {
 // BenchmarkShardedMailbox compares sharded vs unsharded mailbox
 func BenchmarkShardedMailbox(b *testing.B) {
 	// Create unsharded (single shard) mailbox for baseline
-	unsharded := NewShardedMailbox(1)
+	unsharded := perf.NewShardedMailbox(1)
 
 	// Create highly sharded mailbox
-	sharded := NewShardedMailbox(64)
+	sharded := perf.NewShardedMailbox(64)
 
 	b.Run("Unsharded-Write", func(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			i := 0
 			for pb.Next() {
-				msg := Message{
+				msg := perf.Message{
 					ID:        "msg-1",
 					Sender:    "agent-1",
 					Recipient: fmt.Sprintf("agent-%d", i%100),
@@ -67,7 +69,7 @@ func BenchmarkShardedMailbox(b *testing.B) {
 		b.RunParallel(func(pb *testing.PB) {
 			i := 0
 			for pb.Next() {
-				msg := Message{
+				msg := perf.Message{
 					ID:        "msg-1",
 					Sender:    "agent-1",
 					Recipient: fmt.Sprintf("agent-%d", i%100),
@@ -82,10 +84,10 @@ func BenchmarkShardedMailbox(b *testing.B) {
 
 // BenchmarkShardedMailboxRead benchmarks the read performance
 func BenchmarkShardedMailboxRead(b *testing.B) {
-	mailbox := NewShardedMailbox(64)
+	mailbox := perf.NewShardedMailbox(64)
 	// prefill
 	for i := 0; i < 10000; i++ {
-		msg := Message{
+		msg := perf.Message{
 			ID:        "msg-1",
 			Sender:    "agent-1",
 			Recipient: fmt.Sprintf("agent-%d", i%1000),
@@ -100,7 +102,7 @@ func BenchmarkShardedMailboxRead(b *testing.B) {
 		for pb.Next() {
 			_ = mailbox.Read(fmt.Sprintf("agent-%d", i%1000))
 			// re-insert to keep mailbox populated
-			msg := Message{
+			msg := perf.Message{
 				ID:        "msg-1",
 				Sender:    "agent-1",
 				Recipient: fmt.Sprintf("agent-%d", i%1000),

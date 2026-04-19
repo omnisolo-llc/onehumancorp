@@ -11,7 +11,6 @@ go_library(
         "mcp_metrics.go",
         "telemetry_bridge.go",
         "token_forecast_worker.go",
-        "mcp_sync_worker.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",
     visibility = ["//visibility:public"],
@@ -25,7 +24,6 @@ go_library(
         "@io_opentelemetry_go_otel_exporters_prometheus//:prometheus",
         "@io_opentelemetry_go_otel_metric//:metric",
         "@io_opentelemetry_go_otel_sdk_metric//:metric",
-
     ],
 )
 
@@ -43,7 +41,6 @@ go_test(
         "telemetry_extra_test.go",
         "telemetry_test.go",
         "token_forecast_worker_test.go",
-        "mcp_sync_worker_test.go",
     ],
     embed = [":telemetry"],
     data = ["telemetry.go"],
@@ -52,8 +49,5 @@ go_test(
         "@com_github_prometheus_client_golang//prometheus/push",
         "@io_opentelemetry_go_otel_metric//:metric",
         "@io_opentelemetry_go_otel_metric//noop",
-
-        "@com_github_google_uuid//:uuid",
-        "@org_modernc_sqlite//:sqlite",
     ],
 )

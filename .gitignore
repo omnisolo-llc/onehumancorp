@@ -16,8 +16,6 @@
 /*.txt
 /*.sh
 /bazelisk
-/CLAUDE_OHC.md
-/test-results
 
 # Test binary, built with `go test -c`
 *.test

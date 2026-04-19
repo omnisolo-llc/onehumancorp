@@ -100,13 +100,6 @@ build:local --remote_cache=
 build:local --remote_executor=
 build:local --spawn_strategy=sandboxed,local
 
-# ── Local test: run tests locally and load .env ───────────────────────────────
-# For local development/testing: loads .env and runs tests without remote execution.
-# Usage: bazel test --config=local //path/to:target
-# Or use the wrapper: ./scripts/bazel-test-local.sh //path/to:target
-test:local --config=local
-test:local --test_output=streamed
-
 # ── Platform configs ───────────────────────────────────────────────────────────
 build:linux --platforms=@platforms//os:linux
 build:android --platforms=@platforms//os:android
