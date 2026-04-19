@@ -549,3 +549,4 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 		t.Fatalf("expected error for circular dependency, got nil")
 	}
 }
+// added for Sub-Agent Orchestration Queue
