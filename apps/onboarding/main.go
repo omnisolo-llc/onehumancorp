@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/onehumancorp/mono/services/onboarding"
+	"github.com/onehumancorp/mono/srcs/server/services/onboarding_legacy"
 )
 
 func main() {

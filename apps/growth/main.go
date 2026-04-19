@@ -1,15 +1,15 @@
 package main
 
 import (
-		"encoding/json"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/onehumancorp/mono/lib/analytics"
-	"github.com/onehumancorp/mono/services/growth"
+	"github.com/onehumancorp/mono/srcs/server/lib/analytics"
+	"github.com/onehumancorp/mono/srcs/server/services/growth_legacy"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -95,7 +95,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprintf(w, "Conversion recorded\n")
 	}))
-
 
 	mux.HandleFunc("/growth/referral", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -298,7 +297,6 @@ func NewGrowthMux(tracker *analytics.Tracker, rdb *redis.Client) *http.ServeMux 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(stats)
 	}))
-
 
 	mux.HandleFunc("/api/v1/growth/analytics/export", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
