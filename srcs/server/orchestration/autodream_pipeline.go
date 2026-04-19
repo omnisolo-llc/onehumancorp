@@ -268,6 +268,95 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 	}
 
 	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(matches))
+
+	// 2. Scan COMPLETED tasks in shared_tasks_master
+	p.processCompletedTasks(ctx)
+}
+
+func (p *AutoDreamPipeline) processCompletedTasks(ctx context.Context) {
+	slog.Info("AutoDreamPipeline: starting completed tasks consolidation sweep")
+
+	var query string
+	if p.db.IsSQLite() {
+		query = "SELECT id, agent_id, payload, title FROM shared_tasks_v2 WHERE status = 'COMPLETED' AND id NOT IN (SELECT id FROM autodream_memories) LIMIT 50"
+	} else {
+		query = "SELECT id, agent_id, payload, title FROM shared_tasks_v2 WHERE status = 'COMPLETED' AND id NOT IN (SELECT id FROM autodream_memories) LIMIT 50 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := p.db.Query(ctx, query)
+	if err != nil {
+		slog.Error("AutoDreamPipeline: failed to fetch completed tasks", "error", err)
+		return
+	}
+
+	type Task struct {
+		ID      string
+		AgentID string
+		Payload string
+		Title   string
+	}
+
+	var tasks []Task
+	for rows.Next() {
+		var t Task
+		var agentID *string
+		if err := rows.Scan(&t.ID, &agentID, &t.Payload, &t.Title); err == nil {
+			if agentID != nil {
+				t.AgentID = *agentID
+			}
+			tasks = append(tasks, t)
+		}
+	}
+	rows.Close()
+
+	for _, t := range tasks {
+		summary := fmt.Sprintf("Task '%s' payload: %s", t.Title, t.Payload)
+		var embeddingStr string
+		if p.client != nil {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+			embedding, embedErr := p.client.GenerateEmbedding(ctxTimeout, summary)
+			cancel()
+			if embedErr == nil && len(embedding) > 0 {
+				if bytes, err := json.Marshal(embedding); err == nil {
+					embeddingStr = string(bytes)
+				}
+			}
+		}
+
+		if embeddingStr == "" {
+			var vec []string
+			for i := 0; i < 1536; i++ {
+				vec = append(vec, "0.0")
+			}
+			embeddingStr = "[" + strings.Join(vec, ",") + "]"
+		}
+
+		err = func() error {
+			tx, err := p.db.Begin(ctx)
+			if err != nil {
+				return err
+			}
+			defer tx.Rollback(ctx)
+
+			var insertQuery string
+			if p.db.IsSQLite() {
+				insertQuery = "INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, ?, 'task_completion')"
+				_, err = tx.Exec(ctx, insertQuery, t.ID, t.AgentID, summary, embeddingStr)
+			} else {
+				insertQuery = "INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, 'system', $2, $3, $4::vector, 'task_completion')"
+				_, err = tx.Exec(ctx, insertQuery, t.ID, t.AgentID, summary, embeddingStr)
+			}
+
+			if err != nil {
+				return err
+			}
+
+			return tx.Commit(ctx)
+		}()
+		if err != nil {
+			slog.Error("AutoDreamPipeline: failed to consolidate completed task memory", "error", err)
+		}
+	}
 }
 
 // chunkText splits a string into chunks of a given maximum size (in runes).

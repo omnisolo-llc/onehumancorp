@@ -208,3 +208,24 @@ func TestHubServiceServer_Errors(t *testing.T) {
 		t.Errorf("expected error for missing MeshTransport")
 	}
 }
+// A quick mock implementation for mesh test
+func TestServiceMeshBroadcastAndStream_Coverage(t *testing.T) {
+    s := &HubServiceServer{
+        hub: &CentrifugeHub{},
+    }
+
+    ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+    defer cancel()
+
+    req1 := &pb.MeshEvent{Topic: "tasks", Payload: []byte("test")}
+    _, err1 := s.BroadcastMeshEvent(ctx, req1)
+    if err1 == nil {
+        t.Errorf("Expected error due to nil CentrifugeNode, got nil")
+    }
+
+    req2 := &pb.EventStreamRequest{Topic: "tasks"}
+    err2 := s.StreamTasks(req2, nil) // Stream is nil for testing failure path
+    if err2 == nil || err2.Error() != "CentrifugeNode is nil" {
+         t.Errorf("Expected 'CentrifugeNode is nil' error, got: %v", err2)
+    }
+}

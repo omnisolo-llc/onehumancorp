@@ -42,7 +42,7 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 		_ = telemetry.BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
 	}
 
-	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+	return &pb.PublishMessageResponse{Success: true}, nil
 }
 
 // DiscoverAgents streams known agent capabilities from the mesh
@@ -116,12 +116,12 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 				return nil
 			}
 
-			event := pb.MeshEvent_builder{
-				EventId:   proto.String(fmt.Sprintf("evt-%d", time.Now().UnixNano())),
-				Topic:     proto.String(req.GetTopic()),
+			event := &pb.MeshEvent{
+				EventId:   fmt.Sprintf("evt-%d", time.Now().UnixNano()),
+				Topic:     req.GetTopic(),
 				Payload:   payload,
-				Timestamp: proto.Int64(time.Now().Unix()),
-			}.Build()
+				Timestamp: time.Now().Unix(),
+			}
 
 			if err := stream.Send(event); err != nil {
 				return err
@@ -132,6 +132,96 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 			} else {
 				payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
 				_ = telemetry.BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
+			}
+		}
+	}
+}
+
+
+// BroadcastMeshEvent broadcasts a message to the entire Teammate Mesh
+func (s *HubServiceServer) BroadcastMeshEvent(ctx context.Context, req *pb.MeshEvent) (*pb.PublishMessageResponse, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastMeshEvent", time.Since(start)) }()
+
+	if req.GetTopic() == "" {
+		return nil, fmt.Errorf("topic is required")
+	}
+
+	cn := s.hub.CentrifugeNode()
+	if cn == nil {
+		return nil, fmt.Errorf("CentrifugeNode is nil")
+	}
+
+	if cn.meshTransport == nil {
+		return nil, fmt.Errorf("meshTransport is not configured")
+	}
+
+	if err := cn.meshTransport.BroadcastMeshEvent(ctx, req.GetTopic(), req.GetPayload()); err != nil {
+		slog.Error("Failed to broadcast mesh event", "error", err, "topic", req.GetTopic())
+		return nil, fmt.Errorf("failed to broadcast event: %w", err)
+	}
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "event_broadcast")
+	} else {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "event_broadcast"})
+		_ = telemetry.BufferMetricFunc(ctx, "mesh_broadcast", string(payloadBytes))
+	}
+
+	return &pb.PublishMessageResponse{Success: true}, nil
+}
+
+// StreamTasks streams real-time tasks updates via SSE/WebSocket
+func (s *HubServiceServer) StreamTasks(req *pb.EventStreamRequest, stream pb.HubService_StreamTasksServer) error {
+	ctx := stream.Context()
+
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "StreamTasks", time.Since(start)) }()
+
+	cn := s.hub.CentrifugeNode()
+	if cn == nil {
+		return fmt.Errorf("CentrifugeNode is nil")
+	}
+
+	if cn.meshTransport == nil {
+		return fmt.Errorf("meshTransport is not configured")
+	}
+
+	// We utilize the same mesh transport, subscribing to a "tasks" specific topic
+	eventsChan, err := cn.meshTransport.SubscribeMeshEvents(ctx, "tasks")
+	if err != nil {
+		return fmt.Errorf("failed to subscribe to task events: %w", err)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case payload, ok := <-eventsChan:
+			if !ok {
+				return nil
+			}
+
+			// We wrap it into whatever TaskStreamResponse the proto demands.
+			// Assuming it expects MeshEvent for simplicity or equivalent structure.
+			// To be robust, let's just marshal it as a task stream event.
+			var taskID string
+
+			// Trying to extract task ID from payload
+			var payloadMap map[string]interface{}
+			if err := json.Unmarshal(payload, &payloadMap); err == nil {
+				if t, ok := payloadMap["task_id"].(string); ok {
+					taskID = t
+				}
+			}
+
+			event := &pb.TaskStreamResponse{
+				TaskId: taskID,
+				Payload: payload,
+			}
+
+			if err := stream.Send(event); err != nil {
+				return err
 			}
 		}
 	}

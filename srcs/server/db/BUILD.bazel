@@ -77,6 +77,8 @@ go_library(
         "migrations/20260418000000_autodream_pgvector_memories_sqlite.sql",
         "migrations/20260419010000_autodream_consolidated_memory.sql",
         "migrations/20260419010000_autodream_consolidated_memory_sqlite.sql",
+        "migrations/059_autodream_memories_final.sql",
+        "migrations/059_autodream_memories_final_sqlite.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],

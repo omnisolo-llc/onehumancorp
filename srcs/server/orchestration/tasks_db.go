@@ -257,18 +257,42 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 
 
 func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, error) {
+    if to.dbProvider.IsSQLite() {
+        to.mu.Lock()
+        defer to.mu.Unlock()
+    }
+
     tx, err := to.dbProvider.Begin(ctx)
     if err != nil {
         return nil, fmt.Errorf("failed to begin transaction: %w", err)
     }
     defer tx.Rollback(ctx)
 
-    query := `
-        SELECT id FROM shared_tasks_v2
-        WHERE status = 'PENDING'
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-    `
+    var query string
+    if to.dbProvider.IsSQLite() {
+        query = `
+            SELECT id FROM shared_tasks_v2
+            WHERE status = 'PENDING'
+            AND NOT EXISTS (
+                SELECT 1 FROM json_each(dependencies) AS dep
+                JOIN shared_tasks_v2 d ON d.id = dep.value
+                WHERE d.status != 'COMPLETED'
+            )
+            LIMIT 1
+        `
+    } else {
+        query = `
+            SELECT id FROM shared_tasks_v2
+            WHERE status = 'PENDING'
+            AND NOT EXISTS (
+                SELECT 1 FROM jsonb_array_elements_text(dependencies) AS dep
+                JOIN shared_tasks_v2 d ON d.id = dep
+                WHERE d.status != 'COMPLETED'
+            )
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+        `
+    }
     var id string
     err = tx.QueryRow(ctx, query).Scan(&id)
     if err != nil {
