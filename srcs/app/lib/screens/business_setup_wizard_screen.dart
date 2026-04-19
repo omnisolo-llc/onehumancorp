@@ -241,6 +241,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                             )),
                           ] else if (state.step == 3) ...[
                              const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                             // added for platform-specific setup resilience audits in Standalone Desktop Mode
                              if (isStandalone)
                                Padding(
                                  padding: const EdgeInsets.only(top: 16.0),

@@ -35,6 +35,7 @@ import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/skills_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';
+import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
@@ -1059,5 +1060,68 @@ void main() {
         body: any(named: 'body', that: contains('Linux')),
       )).called(1);
     });
+
+  testWidgets('E2E: BusinessSetupWizardScreen flow in Standalone Mode bypasses cloud steps', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          clientSettingsProvider.overrideWith(
+            (ref) => ClientSettingsNotifier(ref)..state = const AsyncValue.data(
+              ClientSettings(backendUrl: 'http://localhost', standaloneMode: true),
+            ),
+          ),
+
+        ],
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => const BusinessSetupWizardScreen(),
+              ),
+              GoRoute(
+                path: '/dashboard',
+                builder: (context, state) => const Scaffold(body: Text('Dashboard E2E Reached')),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.text('Business Setup'), findsOneWidget);
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).first, 'E2E Company');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Support'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Deployment Preference'), findsOneWidget);
+    expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsOneWidget);
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'E2E Admin');
+    await tester.enterText(find.byType(TextField).at(1), 'admin@e2e.com');
+    await tester.enterText(find.byType(TextField).at(2), 'password');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Launch My AI Team →'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Dashboard E2E Reached'), findsOneWidget);
+  });
   });
 }

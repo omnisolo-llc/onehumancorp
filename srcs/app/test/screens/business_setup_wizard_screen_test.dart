@@ -157,6 +157,7 @@ void main() {
     expect(find.text('Dashboard'), findsOneWidget);
   });
 
+  // added for platform-specific setup resilience audits test
   testWidgets('BusinessSetupWizardScreen renders and navigates steps in Standalone Mode', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
