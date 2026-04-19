@@ -91,3 +91,12 @@ Chart.lock
 /target/
 /.agent-task
 site/
+
+# Android/Flutter local properties (auto-generated, machine-specific)
+/srcs/app/android/local.properties
+/srcs/app/android/.gradle/
+/srcs/app/ios/Flutter/Flutter.podspec
+/srcs/app/ios/Flutter/Generated.xcconfig
+/srcs/app/macos/Flutter/Flutter.podspec
+/srcs/app/macos/Flutter/GeneratedPluginRegistrant.swift
+/srcs/app/**/ephemeral/
