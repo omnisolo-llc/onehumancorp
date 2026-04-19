@@ -22,6 +22,15 @@ var (
 	subscribeCount, _ = meter.Int64Counter("mesh.subscribe.count")
 )
 
+
+type MeshEvent struct {
+	AgentID string `json:"agent_id"`
+	Channel string `json:"channel"`
+	Action  string `json:"action"`
+	Status  string `json:"status"`
+	Payload map[string]interface{} `json:"payload"`
+}
+
 type TeammateMeshService interface {
 	BroadcastIntent(ctx context.Context, intent string) error
 	Subscribe(ctx context.Context) (<-chan string, error)
