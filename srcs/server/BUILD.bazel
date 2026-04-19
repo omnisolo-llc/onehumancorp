@@ -14,6 +14,7 @@ go_library(
         "//srcs/server/domain",
         "//srcs/server/integrations/chatwoot",
         "//srcs/server/orchestration",
+        "//srcs/server/orchestration/hybrid_sync",
         "//srcs/server/pipeline",
         "//srcs/server/scheduler",
         "//srcs/server/settings",
