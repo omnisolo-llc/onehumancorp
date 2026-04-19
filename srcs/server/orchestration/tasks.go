@@ -532,6 +532,17 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				logLine = "Task " + taskID + " completed successfully."
 			}
 			logs := []string{logLine}
+
+			// Enqueue task for AutoDream consolidation
+			query := "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES ($1, $2, $3, $4, $5, 'task_completion')"
+			if tm.db.IsSQLite() {
+				query = "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, 'task_completion')"
+			}
+			_, err := tm.db.Exec(context.Background(), query, uuid.New().String(), logLine, taskID, claims.OrganizationID, agentID)
+			if err != nil {
+				// Ignore error for now to match background task semantics
+			}
+
 			_ = tm.autodream.Consolidate(context.Background(), taskID, logs)
 		}()
 	}
