@@ -127,3 +127,33 @@ func TestStateMachine_Transition(t *testing.T) {
 		t.Errorf("Expected no-op to succeed, got: %v", err)
 	}
 }
+
+func TestStateMachine_AllTransitions(t *testing.T) {
+	allStates := []string{
+		StatePending, StateAssigned, StateExecuting, StateWaitingDelegation,
+		StateReview, StateSuccess, StateTerminatedError,
+		StateInProgress, StateCompleted, StateFailed,
+	}
+
+	for _, from := range allStates {
+		for _, to := range allStates {
+			validNextStates, ok := ValidTransitions[from]
+
+			isValid := false
+			if from == to {
+				isValid = true
+			} else if ok {
+				for _, s := range validNextStates {
+					if s == to {
+						isValid = true
+						break
+					}
+				}
+			}
+
+			if got := IsValidTransition(from, to); got != isValid {
+				t.Errorf("IsValidTransition(%s, %s) = %v; expected %v", from, to, got, isValid)
+			}
+		}
+	}
+}
