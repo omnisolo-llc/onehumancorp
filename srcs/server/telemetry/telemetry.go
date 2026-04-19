@@ -722,8 +722,8 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	RateLimitExceededCount, err = m.Int64Counter(
-		"api_rate_limit_exceeded_count",
-		metric.WithDescription("Total number of API rate limit exceeded (HTTP 429) occurrences"),
+		"ohc_api_rate_limit_exceeded_total",
+		metric.WithDescription("Total number of API rate limit exceeded (HTTP 429) occurrences."),
 	)
 	if err != nil {
 		errs = append(errs, err)

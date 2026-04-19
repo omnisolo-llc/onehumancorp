@@ -1,18 +1,13 @@
-1. **Update `sync_daemon.go`**:
-   - In `ProcessSync`, update the SQL queries to target missions where `status = 'CLOUD_ESCALATION'` instead of `PENDING` or `BURSTING`.
-     - Update PostgreSQL query: `SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 500`
-     - Update SQLite query: `SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND status = 'CLOUD_ESCALATION' LIMIT 500`
+1. **Update `srcs/server/telemetry/telemetry.go`**:
+   - Change `api_rate_limit_exceeded_count` to `ohc_api_rate_limit_exceeded_total` in `InitTelemetry` / `InitWithMeter` initialization for `RateLimitExceededCount`. The suffix `_total` is standard for counters in Prometheus, and `ohc_` is the project prefix.
+   - Example line 725: Change `"api_rate_limit_exceeded_count"` to `"ohc_api_rate_limit_exceeded_total"`.
+   - Update the description to indicate it's the total.
 
-2. **Update `sync_daemon_test.go`**:
-   - Create or update the `ClearSemaphore()` cleanup function for `sync_daemon_test.go`. Ensure it exists in a `_test.go` file (e.g., `sync_daemon_test.go` or `agent_context_test.go`).
-   - Modify the mock test data to insert missions with `status = 'CLOUD_ESCALATION'` instead of `PENDING`.
-   - Modify the assertions to check for `CLOUD_ESCALATION` status instead of `PENDING`.
+2. **Verify tests and Build**:
+   - Run `bazelisk test //srcs/server/...` to ensure all tests pass.
 
-3. **Verify tests and Build**:
-   - Run `bazelisk test //...` to ensure all tests pass.
-
-4. **Complete pre-commit steps**:
+3. **Complete pre-commit steps**:
    - Ensure proper testing, verification, review, and reflection are done by calling `pre_commit_instructions`.
 
-5. **Submit the PR**:
-   - Submit the PR with standard conventions. Format the title as `🧹 Maintainer: [Hybrid Security Fix] Implement Hybrid MCP RAG Protocol Daemon`. Ensure description contains 💡 What, 🎯 Why, 📊 Impact, and 🔬 Measurement. Include `issue_id: 4038` in the final message.
+4. **Submit the PR**:
+   - Submit the PR with standard conventions. Format the title as `🧹 Maintainer: [Proactive Improvement] Implement API Rate Limit Prometheus Metrics`. Ensure description contains 💡 What, 🎯 Why, 📊 Impact, and 🔬 Measurement. Include `issue_id: 4018` in the final message.
