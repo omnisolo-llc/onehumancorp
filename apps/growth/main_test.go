@@ -1,16 +1,16 @@
 package main
 
 import (
-	"github.com/onehumancorp/mono/services/growth"
-	"encoding/json"
 	"bytes"
 	"context"
+	"encoding/json"
+	"github.com/onehumancorp/mono/srcs/server/services/growth_legacy"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/onehumancorp/mono/lib/analytics"
+	"github.com/onehumancorp/mono/srcs/server/lib/analytics"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -189,7 +189,6 @@ func TestQuotaIncrementEndpoint(t *testing.T) {
 	}
 }
 
-
 func TestABTestEndpoints(t *testing.T) {
 	tracker := analytics.NewTracker()
 	mux := NewGrowthMux(tracker, nil)
@@ -223,7 +222,6 @@ func TestABTestEndpoints(t *testing.T) {
 	}
 }
 
-
 func TestExportEndpoint(t *testing.T) {
 	s, err := miniredis.Run()
 	if err != nil {
@@ -240,16 +238,16 @@ func TestExportEndpoint(t *testing.T) {
 	// Add test data
 	repo := growth.NewReferralRepository(rdb)
 	repo.SaveReferral(context.Background(), &growth.GrowthReferral{
-		ID: "test-1",
-		InviterID: "user-1",
+		ID:           "test-1",
+		InviterID:    "user-1",
 		InviteeEmail: "test1@ex.com",
-		Status: "SIGNED_UP",
+		Status:       "SIGNED_UP",
 	})
 	repo.SaveReferral(context.Background(), &growth.GrowthReferral{
-		ID: "test-2",
-		InviterID: "user-2",
+		ID:           "test-2",
+		InviterID:    "user-2",
 		InviteeEmail: "test2@ex.com",
-		Status: "PENDING",
+		Status:       "PENDING",
 	})
 
 	req, err := http.NewRequest(http.MethodGet, "/api/v1/growth/analytics/export", nil)
@@ -275,7 +273,6 @@ func TestExportEndpoint(t *testing.T) {
 		t.Errorf("expected 1 signup, got %v", resp["total_signups"])
 	}
 }
-
 
 func TestTeamEndpoints(t *testing.T) {
 	mr, err := miniredis.Run()
@@ -313,7 +310,7 @@ func TestTeamEndpoints(t *testing.T) {
 	}
 
 	// Test Accept Invite
-	reqAccept, err := http.NewRequest("POST", "/api/v1/growth/teams/accept", bytes.NewBuffer([]byte(`{"invite_id":"` + inviteID + `"}`)))
+	reqAccept, err := http.NewRequest("POST", "/api/v1/growth/teams/accept", bytes.NewBuffer([]byte(`{"invite_id":"`+inviteID+`"}`)))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/onehumancorp/mono/lib/analytics"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/lib/analytics"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
 )
 
