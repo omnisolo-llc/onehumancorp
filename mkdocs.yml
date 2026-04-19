@@ -39,6 +39,7 @@ nav:
       - developer/index.md
   - UI:
       - Day One Onboarding: ui/guide_proactive_onboarding.md
+      - Hybrid Health Check: ui/guide_proactive_onboarding_health_check.md
   - API:
       - api/index.md
       - "Interactive Api Playbook": api/api_playbook.md
