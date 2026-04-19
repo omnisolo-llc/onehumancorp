@@ -24,9 +24,10 @@ cd "$e2e_dir"
 
 # Skip gracefully when the OHC server is not reachable.
 # This allows `bazel test //...` to pass on machines without a running stack.
+# Use a short timeout so CI doesn't stall when the server is absent.
 base_url="${OHC_E2E_BASE_URL:-http://localhost:8080}"
-if ! curl -sf --connect-timeout 3 --max-time 5 "${base_url}" &>/dev/null &&
-   ! curl -sf --connect-timeout 3 --max-time 5 "${base_url}/healthz" &>/dev/null; then
+if ! curl -sf --connect-timeout 2 --max-time 3 "${base_url}/healthz" &>/dev/null &&
+   ! curl -sf --connect-timeout 2 --max-time 3 "${base_url}" &>/dev/null; then
   echo "SKIP: OHC server is not reachable at ${base_url}."
   echo "To run E2E tests:"
   echo "  1. Start the OHC stack: cd deploy && docker compose up -d"
@@ -57,7 +58,11 @@ mkdir -p "$HOME"
 mkdir -p "$PLAYWRIGHT_BROWSERS_PATH"
 
 echo "Installing Playwright browsers if needed..."
-"$NODE_BIN" "$PLAYWRIGHT_BIN" install chromium --with-deps >/dev/null 2>&1 || true
+# playwright install is idempotent: it exits quickly when browsers already exist.
+# Use a glob to detect any versioned chromium-<rev> directory.
+if ! ls "${PLAYWRIGHT_BROWSERS_PATH}"/chromium-* &>/dev/null 2>&1; then
+  "$NODE_BIN" "$PLAYWRIGHT_BIN" install chromium --with-deps >/dev/null 2>&1 || true
+fi
 
 echo "Running Playwright test: $spec_path"
 "$NODE_BIN" "$PLAYWRIGHT_BIN" test --config playwright.config.ts "$spec_path"
