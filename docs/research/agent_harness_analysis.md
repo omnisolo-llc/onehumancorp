@@ -48,10 +48,10 @@ graph TD
 
 ## Implementation Prompt
 Implement the Unified Agent Worktree Harness (UAWH) for the OHC platform.
-1. Create a new `worktree_sandbox.go` inside `srcs/server/agent/harness/` that securely mounts temporary directories for agent execution context.
-2. Enhance `srcs/server/bash_sandbox/sandbox.go` to integrate with the OS-level isolation harnesses in `srcs/server/agent/harness/`, replacing simple regex checks with strict OS-level filesystem constraints where possible.
+1. Create a new `worktree_sandbox.go` inside `srcs/server/agents/harness/` that securely mounts temporary directories for agent execution context.
+2. Enhance `srcs/server/bash_sandbox/sandbox.go` to integrate with the OS-level isolation harnesses in `srcs/server/agents/harness/`, replacing simple regex checks with strict OS-level filesystem constraints where possible.
 3. Update `srcs/server/telemetry/telemetry.go` to explicitly log `SandboxWorktreeMountFailed`, `SandboxViolationDetected`, and execution timing metrics.
-4. Add comprehensive unit tests and E2E coverage for the sandbox logic in `srcs/server/bash_sandbox/sandbox_test.go` and `srcs/server/agent/harness/sandbox_test.go` to hit 100% test coverage.
+4. Add comprehensive unit tests and E2E coverage for the sandbox logic in `srcs/server/bash_sandbox/sandbox_test.go` and `srcs/server/agents/harness/sandbox_test.go` to hit 100% test coverage.
 
 ## Estimated Scope
 Large
