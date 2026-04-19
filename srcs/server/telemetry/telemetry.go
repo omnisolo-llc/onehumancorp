@@ -306,7 +306,6 @@ func InitWithMeter(m mockableMeter) error {
 		return err
 	}
 	var errs []error
-	errs = append(errs, initHarnessMetrics(m)...)
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),

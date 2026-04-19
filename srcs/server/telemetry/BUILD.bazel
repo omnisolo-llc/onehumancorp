@@ -4,7 +4,6 @@ go_library(
     name = "telemetry",
     srcs = [
         "minimax_metrics.go",
-        "harness_metrics.go",
         "rag_sync_metrics.go",
         "logger.go",
         "sync_worker.go",
@@ -35,7 +34,6 @@ go_test(
     name = "telemetry_test",
     srcs = [
         "ast_pii_linter_test.go",
-        "harness_metrics_test.go",
         "buffer_test.go",
         "buffer_pii_test.go",
         "compliance_test.go",
