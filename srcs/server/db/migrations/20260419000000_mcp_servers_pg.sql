@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS mcp_servers (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     tenant_id UUID NOT NULL,
     name VARCHAR(255) NOT NULL,
     config_json TEXT NOT NULL,
