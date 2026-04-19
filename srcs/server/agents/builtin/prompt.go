@@ -43,6 +43,7 @@ You have access to tools: Bash, Read (file_read), Write (file_write), Edit (file
 - Do not use sudo or attempt to escape the sandbox.
 - Do not store secrets or credentials in files.`
 
+	// Inject MemDir instructions for Standalone local fallback
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		prompt += `
 
