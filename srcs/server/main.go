@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync"
 	"github.com/redis/rueidis"
 
 	"google.golang.org/grpc"
@@ -383,6 +384,10 @@ func run(now time.Time, listen listenFunc) error {
 			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
 			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
 			if contextEndpoint != "" {
+
+				// Background sync for Hybrid MCP Sync via HybridSyncDaemon
+				hybridSyncDaemon := hybrid_sync.NewHybridSyncDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
+				hybridSyncDaemon.Start(ctx)
 
 				// Background sync for internal sync daemon for Standalone Mode RAG records
 				ragSyncDaemon := orchestration.NewRagSyncDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
