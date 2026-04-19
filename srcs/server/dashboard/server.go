@@ -923,7 +923,7 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
 }
 
-func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { // added for ohc_mesh_broadcast_total metric instrumentation
 	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		mode = "standalone"
@@ -1943,7 +1943,7 @@ type pipelinePromoteRequest struct {
 }
 
 // handleStream pushes real-time state changes via Server-Sent Events (SSE)
-func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) { // added for streaming real-time orchestration events
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)

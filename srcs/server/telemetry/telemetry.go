@@ -94,7 +94,7 @@ var (
 	sqliteRetryEventCounter       metric.Int64Counter
 
 	autoDreamSyncDuration  metric.Float64Histogram
-	autoDreamQueryDuration metric.Float64Histogram
+	autoDreamQueryDuration metric.Float64Histogram // added for ohc_autodream_query_duration_seconds
 	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
