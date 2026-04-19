@@ -24,3 +24,4 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 DROP TABLE IF EXISTS task_dependencies;
 DROP TABLE IF EXISTS shared_tasks;
 -- +goose StatementEnd
+-- Trivial change for automator
