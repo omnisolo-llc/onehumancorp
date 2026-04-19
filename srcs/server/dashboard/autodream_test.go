@@ -25,27 +25,27 @@ func TestHandleAutoDreamSync(t *testing.T) {
 		hub: hub,
 	}
 
-	// Setup initial table needed for ConsolidateEpoch
 	pool := s.hub.SIPDB().Provider()
 	_, err = pool.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS swarm_dream_epochs (
-			id VARCHAR(255) PRIMARY KEY,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			status VARCHAR(50),
-			cluster_results TEXT,
-			completed_at TIMESTAMP
-		);
+		CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT);
+		CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT);
 		CREATE TABLE IF NOT EXISTS autodream_memories (
-			id VARCHAR(255) PRIMARY KEY,
+			id TEXT PRIMARY KEY,
 			content TEXT,
 			embedding TEXT,
-			source_mission_id VARCHAR(255),
-			consolidated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			source_mission_id TEXT,
+			organization_id TEXT,
+			agent_id TEXT,
+			source_type TEXT,
+			processed_at TEXT,
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
 	if err != nil {
-		// pg specific ignore or handle
+		t.Fatalf("failed to setup schema: %v", err)
 	}
+
+	_, _ = pool.Exec(context.Background(), "INSERT INTO shared_tasks (id, title, payload, status) VALUES ('st1', 'T', '{}', 'COMPLETED')")
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/autodream/sync", s.handleAutoDreamSync)
@@ -89,11 +89,16 @@ func TestHandleAutoDreamQuery(t *testing.T) {
 	// Make sure table exists
 	pool := s.hub.SIPDB().Provider()
 	_, _ = pool.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
-			memory_id VARCHAR(255) PRIMARY KEY,
-			context TEXT,
+		CREATE TABLE IF NOT EXISTS autodream_memories (
+			id TEXT PRIMARY KEY,
+			content TEXT,
 			embedding TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			source_mission_id TEXT,
+			organization_id TEXT,
+			agent_id TEXT,
+			source_type TEXT,
+			processed_at TEXT,
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
 
