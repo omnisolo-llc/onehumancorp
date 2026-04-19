@@ -71,9 +71,9 @@ func (m *mockDBProvider) Query(ctx context.Context, sql string, optionsAndArgs .
 func TestMcpSyncProxy_Buffer(t *testing.T) {
 	telemetry.InitTelemetry()
 	mockDB := &mockDBProvider{}
-	proxy := NewMcpSyncProxy(mockDB, "http://dummy")
+	proxy := NewMcpSyncProxy(mockDB, "http://dummy", nil)
 
-	id, err := proxy.Buffer(context.Background(), "test-tool", map[string]interface{}{"key": "value"})
+	id, err := proxy.Buffer(context.Background(), "session-1", "test-capability", "test-tool", map[string]interface{}{"key": "value"})
 	if err != nil {
 		t.Fatalf("Buffer failed: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestMcpSyncProxy_Sync(t *testing.T) {
 	}
 	mockDB := &mockDBProvider{queryRows: mockRows}
 
-	proxy := NewMcpSyncProxy(mockDB, ts.URL)
+	proxy := NewMcpSyncProxy(mockDB, ts.URL, nil)
 	count, err := proxy.Sync(context.Background())
 	if err != nil {
 		t.Fatalf("Sync failed: %v", err)
@@ -127,7 +127,7 @@ func TestMcpSyncProxy_Init(t *testing.T) {
 
 	os.Setenv("OHC_STANDALONE", "true")
 	defer os.Unsetenv("OHC_STANDALONE")
-	proxy := NewMcpSyncProxy(mockDB, "http://dummy")
+	proxy := NewMcpSyncProxy(mockDB, "http://dummy", nil)
 
 	if proxy.mode != "standalone" {
 		t.Errorf("Expected standalone mode, got %s", proxy.mode)
