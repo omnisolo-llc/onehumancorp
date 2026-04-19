@@ -652,7 +652,7 @@ func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, 
 
 	tx.Commit(ctx)
 
-	sm := NewTaskStateMachine(to.db, to.redisClient)
+	sm := NewStateMachine(to.db, to.redisClient)
 	err = sm.ProcessEvent(ctx, taskID, EventDecompositionComplete)
 	if err != nil {
 		return "", err
