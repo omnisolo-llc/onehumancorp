@@ -17,7 +17,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/agents/builtin",
-        "//srcs/proto/agentservice",
         "@com_github_modelcontextprotocol_go_sdk//mcp",
         "@org_golang_google_adk//agent",
         "@org_golang_google_adk//agent/llmagent",
@@ -46,7 +45,6 @@ go_test(
     ],
     deps = [
         ":grpc",
-        "//srcs/proto/agentservice",
         "@org_golang_google_adk//model",
         "@org_golang_google_genai//:genai",
         "@org_golang_google_grpc//:grpc",

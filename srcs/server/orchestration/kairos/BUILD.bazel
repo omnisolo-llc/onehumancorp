@@ -3,8 +3,8 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "kairos",
     srcs = [
-        "metrics.go",
         "mesh.go",
+        "metrics.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/kairos",
     visibility = ["//visibility:public"],
@@ -16,7 +16,10 @@ go_library(
 
 go_test(
     name = "kairos_test",
-    srcs = ["mesh_test.go", "metrics_test.go"],
+    srcs = [
+        "mesh_test.go",
+        "metrics_test.go",
+    ],
     embed = [":kairos"],
     deps = [
         "@com_github_alicebob_miniredis_v2//:miniredis",

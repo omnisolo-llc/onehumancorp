@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "models",
     srcs = [
+        "model.go",
         "sync_log.go",
         "task.go",
     ],

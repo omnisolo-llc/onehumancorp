@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "vector",
+    srcs = [
+        "factory.go",
+        "handler.go",
+        "pgvector.go",
+        "provider.go",
+        "sqlite_vss.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/mcp/vector",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_modelcontextprotocol_go_sdk//mcp",
+    ],
+)
+
+go_test(
+    name = "vector_test",
+    srcs = [
+        "e2e_test.go",
+        "pgvector_test.go",
+        "provider_test.go",
+        "sqlite_vss_test.go",
+    ],
+    embed = [":vector"],
+)
