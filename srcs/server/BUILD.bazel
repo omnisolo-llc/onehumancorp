@@ -50,3 +50,5 @@ sh_test(
     srcs = ["standalone_cleanup_test.sh"],
     data = ["standalone_ohc.sh"],
 )
+
+# Added repository to deps if needed. It usually should be, let's keep it simple.
