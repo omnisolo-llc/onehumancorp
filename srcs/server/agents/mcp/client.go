@@ -1,6 +1,10 @@
 package mcp
 
 import (
+	"path/filepath"
+
+	"os"
+	"strings"
 	"context"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"encoding/json"
@@ -65,4 +69,54 @@ func (t *HybridContextTool) Execute(ctx context.Context, payload map[string]inte
 		_ = telemetry.BufferMetricFunc(ctx, "hybrid_ui_context", string(payloadBytes))
 	}
 	return FormatExecutionResult("hybrid_context", "success", payloadBytes, false), nil
+}
+
+
+type LocalFSSyncTool struct{}
+
+func (t *LocalFSSyncTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
+    action, _ := payload["Action"].(string)
+    path, _ := payload["Path"].(string)
+
+    cleanPath := filepath.Clean(path)
+    if !strings.HasPrefix(cleanPath, ".agent-task/") || strings.Contains(cleanPath, "..") {
+        return nil, errors.New("sandbox violation: path must start with .agent-task/")
+    }
+
+    payloadBytes, err := json.Marshal(payload)
+    if err != nil {
+        return nil, err
+    }
+
+    if telemetry.BufferMetricFunc != nil {
+        _ = telemetry.BufferMetricFunc(ctx, "local_fs_sync", string(payloadBytes))
+    }
+
+    var resultData []byte
+
+    switch action {
+    case "read":
+        data, err := os.ReadFile(cleanPath)
+        if err != nil {
+            return nil, err
+        }
+        resultData = data
+    case "write":
+        content, _ := payload["Content"].(string)
+        err := os.WriteFile(cleanPath, []byte(content), 0644)
+        if err != nil {
+            return nil, err
+        }
+        resultData = []byte(`{"status":"written"}`)
+    case "sync":
+        _, err := os.Stat(cleanPath)
+        if err != nil {
+            return nil, err
+        }
+        resultData = []byte(`{"status":"synced"}`)
+    default:
+        return nil, errors.New("invalid action")
+    }
+
+    return FormatExecutionResult("local_fs_sync", "success", resultData, false), nil
 }
