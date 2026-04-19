@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:ohc_app/models/shared_task.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/ui/shared_task_list.dart';
 
 final sharedTasksProvider = FutureProvider<List<SharedTask>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -24,14 +25,22 @@ class TaskListScreen extends ConsumerWidget {
         title: const Text('Shared Task List', style: TextStyle(fontFamily: 'Outfit')),
         backgroundColor: Colors.transparent,
       ),
-      body: tasksAsync.when(
-        data: (tasks) => ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: tasks.length,
-          itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
+      body: Column(
+        children: [
+          const Expanded(flex: 1, child: Padding(padding: EdgeInsets.all(16), child: SharedTaskList())),
+          Expanded(
+            flex: 2,
+            child: tasksAsync.when(
+              data: (tasks) => ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: tasks.length,
+                itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
+            ),
+          ),
+        ],
       ),
     );
   }

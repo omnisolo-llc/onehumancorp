@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS shared_tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id VARCHAR NOT NULL,
+    title VARCHAR NOT NULL,
+    description TEXT,
+    status VARCHAR NOT NULL DEFAULT 'PENDING',
+    assignee VARCHAR,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	"github.com/onehumancorp/mono/srcs/server/api/tasks"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -639,6 +640,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
+
+	taskRouter := tasks.NewRouter(tasks.NewQueue(server.dbProvider))
+	mux.HandleFunc("/api/tasks/claim", taskRouter.ClaimHandler)
+	mux.HandleFunc("/api/tasks/add", taskRouter.AddHandler)
 
 	// Standalone Cloud Sync Endpoints
 	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
