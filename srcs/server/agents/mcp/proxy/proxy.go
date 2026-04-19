@@ -20,9 +20,10 @@ type McpSyncProxy struct {
 	cloudGateway string
 	httpClient   *http.Client
 	mode         string
+	authorizer   *CapabilityAuthorizer
 }
 
-func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string) *McpSyncProxy {
+func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string, authorizer *CapabilityAuthorizer) *McpSyncProxy {
 	start := time.Now()
 	// For SPIFFE mTLS we would typically use a SPIFFE workload API client to get the tls.Config.
 	// We configure a basic TLS client here as placeholder/simulation of mTLS if not fully fleshed out.
@@ -36,11 +37,16 @@ func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string) *McpSyncProxy 
 		mode = "standalone"
 	}
 
+	if authorizer == nil {
+		authorizer = NewCapabilityAuthorizer(nil)
+	}
+
 	proxy := &McpSyncProxy{
 		dbProvider:   dbProvider,
 		cloudGateway: cloudGateway,
 		httpClient:   &http.Client{Timeout: 10 * time.Second, Transport: tr},
 		mode:         mode,
+		authorizer:   authorizer,
 	}
 
 	telemetry.RecordHarnessInitLatency(context.Background(), float64(time.Since(start).Milliseconds()), mode)
@@ -48,8 +54,12 @@ func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string) *McpSyncProxy 
 	return proxy
 }
 
+func (p *McpSyncProxy) GetAuthorizer() *CapabilityAuthorizer {
+	return p.authorizer
+}
+
 // Buffer buffers a tool execution request into the local SQLite database.
-func (p *McpSyncProxy) Buffer(ctx context.Context, toolName string, arguments map[string]interface{}) (string, error) {
+func (p *McpSyncProxy) Buffer(ctx context.Context, sessionID, capability, toolName string, arguments map[string]interface{}) (string, error) {
 	if !p.dbProvider.IsSQLite() {
 		// If we are in the cloud (Postgres), we might just directly push to the gateway or queue,
 		// but the prompt mentions "buffer integration metadata locally in SQLite during Standalone mode"
