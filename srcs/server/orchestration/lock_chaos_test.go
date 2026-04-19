@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestLock_ContentionResilience(t *testing.T) {
@@ -35,6 +36,34 @@ func TestLock_ContentionResilience(t *testing.T) {
 			t.Errorf("Expected 2 calls due to retry, got %d", calls)
 		}
 	})
+	t.Run("Retry with Telemetry", func(t *testing.T) {
+		called := 0
+		telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+			if metricType == "sqlite_retry_event" {
+				called++
+			}
+			return nil
+		}
+		defer func() { telemetry.BufferMetricFunc = nil }()
+
+		calls := 0
+		op := func() error {
+			calls++
+			if calls == 1 {
+				return fmt.Errorf("database is locked")
+			}
+			return nil
+		}
+
+		err := withSipRetry(context.Background(), op)
+		if err != nil {
+			t.Errorf("withSipRetry failed: %v", err)
+		}
+		if called != 1 {
+			t.Errorf("Expected 1 call to telemetry, got %d", called)
+		}
+	})
+
 
 	t.Run("Simulate .agent-lock File Contention", func(t *testing.T) {
 		lockFile := filepath.Join(lockDir, "mission_1.lock")
