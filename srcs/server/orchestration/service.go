@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
@@ -2029,4 +2030,56 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(createdTasks)
+}
+
+func (h *Hub) ForkAgent(ctx context.Context, parentID string, directive string) (string, error) {
+	parent, ok := h.Agent(parentID)
+	if !ok {
+		return "", fmt.Errorf("parent agent not found: %s", parentID)
+	}
+
+	childID := parentID + "-fork-" + uuid.New().String()
+	child := Agent{
+		ID:             childID,
+		Name:           parent.Name + " (Fork)",
+		Role:           parent.Role,
+		OrganizationID: parent.OrganizationID,
+		Status:         StatusIdle,
+		ProviderType:   parent.ProviderType,
+		Region:         parent.Region,
+		IsDefault:      false,
+	}
+	h.RegisterAgent(child)
+
+	var history []Message
+	if h.repo != nil {
+		history, _ = h.repo.PeekMessages(ctx, parentID)
+	} else {
+		h.mu.RLock()
+		inbox := h.inbox[parentID]
+		if len(inbox) > 0 {
+			history = make([]Message, len(inbox))
+			copy(history, inbox)
+		}
+		h.mu.RUnlock()
+	}
+
+	for _, msg := range history {
+		childMsg := msg
+		childMsg.ToAgent = childID
+		childMsg.ID = "msg-" + uuid.New().String()
+		h.Publish(childMsg)
+	}
+
+	directiveMsg := Message{
+		ID:         "msg-" + uuid.New().String(),
+		FromAgent:  "SYSTEM",
+		ToAgent:    childID,
+		Type:       "TaskAssignment",
+		Content:    fmt.Sprintf("<task-notification>\nDirective: %s\n</task-notification>", directive),
+		OccurredAt: time.Now().UTC(),
+	}
+	h.Publish(directiveMsg)
+
+	return childID, nil
 }
