@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
+	"github.com/onehumancorp/mono/srcs/server/harness/authz"
 )
 
 // Tool represents a Model Context Protocol tool spec.
@@ -36,14 +37,16 @@ func ConvertToMCPTool(t builtin.Tool) Tool {
 
 // ClientManager manages connections to MCP servers.
 type ClientManager struct {
-	mu      sync.Mutex
-	servers map[string]*MCPServer
+	mu          sync.Mutex
+	servers     map[string]*MCPServer
+	authorizer  *authz.CapabilityAuthorizer
 }
 
 // NewClientManager creates a new MCP client manager.
-func NewClientManager() *ClientManager {
+func NewClientManager(authorizer *authz.CapabilityAuthorizer) *ClientManager {
 	return &ClientManager{
-		servers: make(map[string]*MCPServer),
+		servers:    make(map[string]*MCPServer),
+		authorizer: authorizer,
 	}
 }
 
@@ -56,12 +59,22 @@ type MCPServer struct {
 }
 
 // ConnectStdio spawns an MCP server using stdio transport.
-func (cm *ClientManager) ConnectStdio(ctx context.Context, id string, config ServerConfig) error {
+func (cm *ClientManager) ConnectStdio(ctx context.Context, id string, config ServerConfig, sessionID string) error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
 	if _, exists := cm.servers[id]; exists {
 		return fmt.Errorf("server %s already connected", id)
+	}
+
+	if cm.authorizer != nil {
+		interceptor := authz.NewCapabilityInterceptor(cm.authorizer)
+		err := interceptor.Intercept(ctx, sessionID, "mcp_"+id, func() error {
+			return nil
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	cmd := exec.CommandContext(ctx, config.Command, config.Args...)

@@ -5,12 +5,18 @@ go_library(
     srcs = ["executor.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/agent",
     visibility = ["//visibility:public"],
-    deps = ["//srcs/server/agent/harness"],
+    deps = [
+        "//srcs/server/agent/harness",
+        "//srcs/server/harness/authz",
+    ],
 )
 
 go_test(
     name = "agent_test",
     srcs = ["executor_test.go"],
     embed = [":agent"],
-    deps = ["//srcs/server/agent/harness"],
+    deps = [
+        "//srcs/server/agent/harness",
+        "//srcs/server/harness/authz",
+    ],
 )

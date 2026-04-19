@@ -30,7 +30,7 @@ func TestConvertToMCPTool(t *testing.T) {
 }
 
 func TestClientManagerConnectStdio(t *testing.T) {
-	cm := NewClientManager()
+	cm := NewClientManager(nil)
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
@@ -39,7 +39,7 @@ func TestClientManagerConnectStdio(t *testing.T) {
 		Args:    []string{"hello"},
 	}
 
-	err := cm.ConnectStdio(ctx, "test_server", config)
+	err := cm.ConnectStdio(ctx, "test_server", config, "session1")
 	if err != nil {
 		t.Fatalf("Failed to connect stdio: %v", err)
 	}
