@@ -7,7 +7,7 @@ To begin your onboarding journey, we provide a **unified Master CLI** that handl
 From the root of the repository, you must explicitly run the onboarding CLI:
 
 ```bash
-./ohc_hybrid_cli.sh
+./deploy/scripts/ohc_hybrid_cli.sh
 ```
 
 **What this does:**
