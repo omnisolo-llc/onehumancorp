@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
+	"github.com/onehumancorp/mono/srcs/server/tools/edgeoffloadmcp"
 	"go.opentelemetry.io/otel"
 )
 
@@ -145,7 +146,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.RUnlock()
 
-	result, err := s.invokeMCPTool(req)
+	result, err := s.invokeMCPTool(r.Context(), req)
 
 	s.mu.Lock()
 	if err != nil {
@@ -236,7 +237,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, result)
 }
 
-func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
+func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[string]any, error) {
 	// Emit structured trace for MCP tool invocation
 	if telemetry.Verbosity >= 2 {
 		slog.Info("agent execution trace",
@@ -363,6 +364,32 @@ func (s *Server) invokeMCPTool(req mcpInvokeRequest) (map[string]any, error) {
 		}, nil
 
 	// ── Hybrid Blob Storage tool ──────────────────────────────────────────────
+	case "edge-offload-mcp":
+		edgeRouter := edgeoffloadmcp.NewRouter()
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, fmt.Errorf("invalid edge-offload-mcp parameters: %w", err)
+		}
+
+		// use passed ctx
+
+
+		method, _ := params["method"].(string)
+		if method == "tools/list" {
+			tools := edgeRouter.ListTools()
+			return map[string]interface{}{"tools": tools}, nil
+		} else if method == "tools/call" {
+			toolName, _ := params["name"].(string)
+			args, _ := params["arguments"].(map[string]interface{})
+			res, err := edgeRouter.CallTool(ctx, toolName, args)
+			if err != nil {
+				return nil, err
+			}
+			resBytes, _ := json.Marshal(res)
+			return map[string]interface{}{"content": []map[string]interface{}{{"type": "text", "text": string(resBytes)}}}, nil
+		}
+		return nil, fmt.Errorf("method not supported")
+
 	case "blob-mcp":
 		if s.hub.Storage() == nil {
 			return nil, errors.New("storage provider not configured")
