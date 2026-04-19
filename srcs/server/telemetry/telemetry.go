@@ -389,7 +389,7 @@ func InitWithMeter(m mockableMeter) error {
 
 	AutoDreamIngestionErrorCounter, err = m.Int64Counter(
 		"ohc_autodream_ingestion_error_total",
-		metric.WithDescription("Total number of ingestion errors"),
+		metric.WithDescription("Total number of AutoDream ingestion errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -397,7 +397,7 @@ func InitWithMeter(m mockableMeter) error {
 
 	AutoDreamCompressionErrorCounter, err = m.Int64Counter(
 		"ohc_autodream_compression_error_total",
-		metric.WithDescription("Total number of compression errors"),
+		metric.WithDescription("Total number of AutoDream compression errors"),
 	)
 	if err != nil {
 		errs = append(errs, err)
