@@ -24,7 +24,7 @@ type AutoDreamQueryResult struct {
 	Results []orchestration.TruthSearchResult `json:"results"`
 }
 
-func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) { // added for ohc_autodream_sync_duration_seconds metric instrumentation
 	start := time.Now()
 	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {

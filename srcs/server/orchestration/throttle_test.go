@@ -107,6 +107,8 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottleTelemetry(t *testing.T) {
 	startChan := make(chan struct{})
 
 	concurrency := 3
+	// Hold the lock to force contention
+	acquireThrottle(context.Background())
 	errChan := make(chan error, concurrency)
 
 	for i := 0; i < concurrency; i++ {
@@ -122,6 +124,9 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottleTelemetry(t *testing.T) {
 	}
 
 	close(startChan)
+	// Wait briefly to allow goroutines to hit the throttle and increment the counter
+	time.Sleep(50 * time.Millisecond)
+	releaseThrottle()
 	wg.Wait()
 	close(errChan)
 
