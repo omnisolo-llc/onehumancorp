@@ -56,7 +56,13 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 		go func(job *queue.Job) {
 			startTime := time.Now()
 
-			err := w.spawner.SpawnIsolated(ctx, job)
+			ac := &AgentContext{
+				AgentID:         job.ID,
+				AgentType:       job.AgentRole,
+				ParentSessionID: job.ParentTaskID,
+			}
+			agentCtx := WithAgentContext(ctx, ac)
+			err := w.spawner.SpawnIsolated(agentCtx, job)
 
 			duration := time.Since(startTime).Seconds()
 			telemetry.RecordSubAgentExecutionDuration(ctx, duration)
