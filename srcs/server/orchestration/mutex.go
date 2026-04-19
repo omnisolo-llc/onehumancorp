@@ -18,22 +18,22 @@ var (
 )
 
 // Mutex defines the interface for a distributed lock.
-type DistributedLock interface {
+type Mutex interface {
 	// Lock attempts to acquire the lock. It should return ErrLockAcquisitionFailed if it cannot be acquired.
 	Lock(ctx context.Context, ttl time.Duration) error
 	// Unlock releases the lock.
 	Unlock(ctx context.Context) error
 }
 
-// DistributedLockProvider creates mutexes for given keys.
-type DistributedLockProvider interface {
-	NewLock(key string) DistributedLock
+// MutexProvider creates mutexes for given keys.
+type MutexProvider interface {
+	NewMutex(key string) Mutex
 }
 
-// NewDistributedLockProvider creates the appropriate DistributedLockProvider based on the environment.
-func NewDistributedLockProvider(ctx context.Context, provider db.Provider, redisClient rueidis.Client) (DistributedLockProvider, error) {
+// NewMutexProvider creates the appropriate MutexProvider based on the environment.
+func NewMutexProvider(ctx context.Context, provider db.Provider, redisClient rueidis.Client) (MutexProvider, error) {
 	if redisClient != nil {
-		return &RedisDistributedLockProvider{client: redisClient}, nil
+		return &RedisMutexProvider{client: redisClient}, nil
 	}
 
 	// For SQLite/DB, ensure the table exists when the provider is created
@@ -48,29 +48,29 @@ func NewDistributedLockProvider(ctx context.Context, provider db.Provider, redis
 		return nil, fmt.Errorf("failed to initialize distributed_locks table: %w", err)
 	}
 
-	return &SQLiteDistributedLockProvider{db: provider}, nil
+	return &SQLiteMutexProvider{db: provider}, nil
 }
 
-// RedisDistributedLockProvider uses Redis for distributed locking.
-type RedisDistributedLockProvider struct {
+// RedisMutexProvider uses Redis for distributed locking.
+type RedisMutexProvider struct {
 	client rueidis.Client
 }
 
-func (p *RedisDistributedLockProvider) NewLock(key string) DistributedLock {
-	return &RedisDistributedLock{
+func (p *RedisMutexProvider) NewMutex(key string) Mutex {
+	return &RedisMutex{
 		client:  p.client,
 		key:     fmt.Sprintf("ohc:lock:%s", key),
 		ownerID: uuid.New().String(),
 	}
 }
 
-type RedisDistributedLock struct {
+type RedisMutex struct {
 	client  rueidis.Client
 	key     string
 	ownerID string
 }
 
-func (m *RedisDistributedLock) Lock(ctx context.Context, ttl time.Duration) error {
+func (m *RedisMutex) Lock(ctx context.Context, ttl time.Duration) error {
 	cmd := m.client.B().Set().Key(m.key).Value(m.ownerID).Nx().Px(ttl).Build()
 	err := m.client.Do(ctx, cmd).Error()
 	if err != nil {
@@ -82,7 +82,7 @@ func (m *RedisDistributedLock) Lock(ctx context.Context, ttl time.Duration) erro
 	return nil
 }
 
-func (m *RedisDistributedLock) Unlock(ctx context.Context) error {
+func (m *RedisMutex) Unlock(ctx context.Context) error {
 	script := `
 if redis.call("get", KEYS[1]) == ARGV[1] then
     return redis.call("del", KEYS[1])
@@ -101,27 +101,27 @@ end
 	return nil
 }
 
-// SQLiteDistributedLockProvider uses a database table for locking.
-type SQLiteDistributedLockProvider struct {
+// SQLiteMutexProvider uses a database table for locking.
+type SQLiteMutexProvider struct {
 	db db.Provider
 }
 
-func (p *SQLiteDistributedLockProvider) NewLock(key string) DistributedLock {
-	return &SQLiteDistributedLock{
+func (p *SQLiteMutexProvider) NewMutex(key string) Mutex {
+	return &SQLiteMutex{
 		provider: p,
 		key:      key,
 		ownerID:  uuid.New().String(),
 	}
 }
 
-type SQLiteDistributedLock struct {
-	provider *SQLiteDistributedLockProvider
+type SQLiteMutex struct {
+	provider *SQLiteMutexProvider
 	key      string
 	ownerID  string
 }
 
 
-func (m *SQLiteDistributedLock) Lock(ctx context.Context, ttl time.Duration) error {
+func (m *SQLiteMutex) Lock(ctx context.Context, ttl time.Duration) error {
 	tx, err := m.provider.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin tx: %w", err)
@@ -151,7 +151,7 @@ func (m *SQLiteDistributedLock) Lock(ctx context.Context, ttl time.Duration) err
 	}
 	return nil
 }
-func (m *SQLiteDistributedLock) Unlock(ctx context.Context) error {
+func (m *SQLiteMutex) Unlock(ctx context.Context) error {
 	query := `DELETE FROM distributed_locks WHERE lock_key = $1 AND owner_id = $2`
 	res, err := m.provider.db.Exec(ctx, query, m.key, m.ownerID)
 	if err != nil {

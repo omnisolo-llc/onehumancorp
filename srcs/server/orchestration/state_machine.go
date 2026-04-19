@@ -25,20 +25,20 @@ const (
 	EventDecompositionComplete = "DecompositionComplete"
 )
 
-type StateMachine struct {
+type TaskStateMachine struct {
 	dbProvider db.Provider
-	lockProvider DistributedLockProvider
+	mutexProvider MutexProvider
 }
 
-func NewStateMachine(provider db.Provider, redisClient rueidis.Client) *StateMachine {
+func NewTaskStateMachine(provider db.Provider, redisClient rueidis.Client) *TaskStateMachine {
 	ctx := context.Background()
-	mp, _ := NewDistributedLockProvider(ctx, provider, redisClient)
-	return &StateMachine{dbProvider: provider, lockProvider: mp}
+	mp, _ := NewMutexProvider(ctx, provider, redisClient)
+	return &TaskStateMachine{dbProvider: provider, mutexProvider: mp}
 }
 
-func (sm *StateMachine) ProcessEvent(ctx context.Context, taskID string, event string) error {
-	if sm.lockProvider != nil {
-		mx := sm.lockProvider.NewLock("sm:" + taskID)
+func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, event string) error {
+	if sm.mutexProvider != nil {
+		mx := sm.mutexProvider.NewMutex("sm:" + taskID)
 		if err := mx.Lock(ctx, 30*time.Second); err != nil {
 			return fmt.Errorf("failed to acquire state machine lock: %w", err)
 		}
@@ -146,9 +146,9 @@ func (sm *StateMachine) ProcessEvent(ctx context.Context, taskID string, event s
 
 
 // TransitionState changes the state of a task and checks dependencies.
-func (sm *StateMachine) TransitionState(ctx context.Context, taskID string, newState string) error {
-	if sm.lockProvider != nil {
-		mx := sm.lockProvider.NewLock("sm:" + taskID)
+func (sm *TaskStateMachine) TransitionState(ctx context.Context, taskID string, newState string) error {
+	if sm.mutexProvider != nil {
+		mx := sm.mutexProvider.NewMutex("sm:" + taskID)
 		if err := mx.Lock(ctx, 30*time.Second); err != nil {
 			return fmt.Errorf("failed to acquire state machine lock: %w", err)
 		}
@@ -169,9 +169,9 @@ func (sm *StateMachine) TransitionState(ctx context.Context, taskID string, newS
 }
 
 // CheckDependencies verifies if all prerequisites are met for a task.
-func (sm *StateMachine) CheckDependencies(ctx context.Context, taskID string) (bool, error) {
-	if sm.lockProvider != nil {
-		mx := sm.lockProvider.NewLock("sm:deps:" + taskID)
+func (sm *TaskStateMachine) CheckDependencies(ctx context.Context, taskID string) (bool, error) {
+	if sm.mutexProvider != nil {
+		mx := sm.mutexProvider.NewMutex("sm:deps:" + taskID)
 		if err := mx.Lock(ctx, 30*time.Second); err != nil {
 			return false, fmt.Errorf("failed to acquire state machine lock: %w", err)
 		}
@@ -196,80 +196,4 @@ func (sm *StateMachine) CheckDependencies(ctx context.Context, taskID string) (b
 	}
 
 	return incompleteCount == 0, nil
-}
-
-// TransitionToReady transitions the given task to READY state
-func (sm *StateMachine) TransitionToReady(ctx context.Context, taskID string) error {
-	if sm.lockProvider != nil {
-		mx := sm.lockProvider.NewLock("sm:" + taskID)
-		if err := mx.Lock(ctx, 30*time.Second); err != nil {
-			return fmt.Errorf("failed to acquire state machine lock: %w", err)
-		}
-		defer mx.Unlock(ctx)
-	}
-
-	tx, err := sm.dbProvider.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin tx: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	var currentState string
-	query := `SELECT status FROM shared_tasks WHERE id = $1`
-	if !sm.dbProvider.IsSQLite() {
-		query += ` FOR UPDATE`
-	}
-	err = tx.QueryRow(ctx, query, taskID).Scan(&currentState)
-	if err != nil {
-		return fmt.Errorf("failed to find task: %w", err)
-	}
-
-	if currentState != TaskStatePending && currentState != TaskStateBlocked {
-		return fmt.Errorf("invalid transition from %s to %s", currentState, TaskStateReady)
-	}
-
-	_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateReady, taskID)
-	if err != nil {
-		return fmt.Errorf("failed to update state: %w", err)
-	}
-
-	return tx.Commit(ctx)
-}
-
-// TransitionToInProgress transitions the given task to IN_PROGRESS state and assigns an agent
-func (sm *StateMachine) TransitionToInProgress(ctx context.Context, taskID string, agentID string) error {
-	if sm.lockProvider != nil {
-		mx := sm.lockProvider.NewLock("sm:" + taskID)
-		if err := mx.Lock(ctx, 30*time.Second); err != nil {
-			return fmt.Errorf("failed to acquire state machine lock: %w", err)
-		}
-		defer mx.Unlock(ctx)
-	}
-
-	tx, err := sm.dbProvider.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin tx: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	var currentState string
-	query := `SELECT status FROM shared_tasks WHERE id = $1`
-	if !sm.dbProvider.IsSQLite() {
-		query += ` FOR UPDATE`
-	}
-	err = tx.QueryRow(ctx, query, taskID).Scan(&currentState)
-	if err != nil {
-		return fmt.Errorf("failed to find task: %w", err)
-	}
-
-	if currentState != TaskStateReady {
-		return fmt.Errorf("invalid transition from %s to %s", currentState, TaskStateExecuting) // State is EXECUTING
-	}
-
-	_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`, TaskStateExecuting, agentID, taskID)
-	if err != nil {
-		return fmt.Errorf("failed to update state: %w", err)
-	}
-
-	return tx.Commit(ctx)
 }

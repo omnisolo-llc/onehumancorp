@@ -27,7 +27,7 @@ case $MODE in
     export OHC_STANDALONE=true
     export GOMEMLIMIT="256MiB"
     export GOGC=50
-    mkdir -p .ohc/memory/auto/ .ohc/memory/team/ # Ensures local memory directory fallback for standalone mode
+    mkdir -p .ohc/memory/auto/ .ohc/memory/team/
     export LOG_FORMAT="text"
     export LOG_LEVEL="info"
     if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
