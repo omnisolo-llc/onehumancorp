@@ -42,6 +42,9 @@ func getEnvOr(key, def string) string {
 
 func newPage(t *testing.T) playwright.Page {
 	t.Helper()
+	if bCtx == nil {
+		t.Skip("browser not available (browser launch failed in this environment)")
+	}
 	page, err := bCtx.NewPage()
 	if err != nil {
 		t.Fatalf("newPage: %v", err)
@@ -271,10 +274,10 @@ func mustStatusOK(t *testing.T, resp *http.Response, context string) {
 	}
 }
 
-// assertAPIHealthy verifies the server /health endpoint returns 200.
+// assertAPIHealthy verifies the server /healthz endpoint returns 200.
 func assertAPIHealthy(t *testing.T) {
 	t.Helper()
-	resp, err := http.Get(baseURL + "/health")
+	resp, err := http.Get(baseURL + "/healthz")
 	if err != nil {
 		t.Fatalf("health check request: %v", err)
 	}
