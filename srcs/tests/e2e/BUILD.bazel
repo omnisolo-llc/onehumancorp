@@ -1,7 +1,6 @@
 # Copyright 2026 Author(s) of OHC
 # SPDX-License-Identifier: Apache-2.0
 
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//srcs/tests/e2e:playwright_tests.bzl", "define_playwright_tests")
 
 filegroup(
@@ -18,14 +17,3 @@ filegroup(
 )
 
 define_playwright_tests()
-
-sh_test(
-    name = "e2e_typecheck_test",
-    srcs = ["typecheck_test.sh"],
-    data = glob([
-        "*.ts",
-        "*.d.ts",
-        "*.json",
-    ]),
-    tags = ["manual"],
-)

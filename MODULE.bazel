@@ -165,12 +165,18 @@ oci.pull(
     tag = "latest",
 )
 oci.pull(
+    name = "distroless_cc",
+    image = "gcr.io/distroless/cc",
+    platforms = ["linux/amd64"],
+    tag = "latest",
+)
+oci.pull(
     name = "nginx_alpine",
     image = "index.docker.io/library/nginx",
     platforms = ["linux/amd64"],
     tag = "alpine",
 )
-use_repo(oci, "distroless_static", "distroless_static_linux_amd64", "nginx_alpine", "nginx_alpine_linux_amd64")
+use_repo(oci, "distroless_static", "distroless_static_linux_amd64", "distroless_cc", "distroless_cc_linux_amd64", "nginx_alpine", "nginx_alpine_linux_amd64")
 
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
