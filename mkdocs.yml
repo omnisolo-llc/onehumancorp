@@ -48,6 +48,7 @@ nav:
       - features/index.md
       - Hybrid LLM Routing Gateway MCP: research/[integrations]_hybrid_llm_routing_gateway_mcp.md
       - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
+      - Hybrid Circuit Breaker MCP: research/[integrations]_hybrid_circuit_breaker_mcp.md
   - Walkthroughs:
       - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
       - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
