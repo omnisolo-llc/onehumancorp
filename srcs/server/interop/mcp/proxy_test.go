@@ -10,8 +10,18 @@ import (
     "github.com/onehumancorp/mono/srcs/server/db"
 )
 
-type mockRow struct {}
-func (m *mockRow) Scan(dest ...any) error { return nil }
+type mockRow struct { err error }
+func (m *mockRow) Scan(dest ...any) error {
+    if m.err != nil {
+        return m.err
+    }
+    if len(dest) > 0 {
+        if strPtr, ok := dest[0].(*string); ok {
+            *strPtr = `{"hash": "dummyhash", "config": {}}`
+        }
+    }
+    return nil
+}
 
 type mockRows struct {
     count int
@@ -45,6 +55,7 @@ func (m *mockRows) Columns() ([]string, error) { return nil, nil }
 type mockDBProvider struct {
     execCalls int
     queryCalls int
+    queryRowErr error
 }
 
 func (m *mockDBProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
@@ -55,7 +66,12 @@ func (m *mockDBProvider) Query(ctx context.Context, sql string, optionsAndArgs .
     m.queryCalls++
     return &mockRows{count: 1}, nil
 }
-func (m *mockDBProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row { return &mockRow{} }
+func (m *mockDBProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
+    if m.queryRowErr != nil {
+        return &mockRow{err: m.queryRowErr}
+    }
+    return &mockRow{}
+}
 func (m *mockDBProvider) Begin(ctx context.Context) (db.Tx, error) { return nil, nil }
 func (m *mockDBProvider) Close() {}
 func (m *mockDBProvider) Ping(ctx context.Context) error { return nil }
