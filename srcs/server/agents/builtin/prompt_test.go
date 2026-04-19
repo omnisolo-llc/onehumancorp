@@ -9,6 +9,7 @@ import (
 )
 
 func TestGetSystemPrompt_Standalone(t *testing.T) {
+	// Test ensures the standalone local memory dir fallback prompt is applied
 	// Backup and restore environment
 	orig := os.Getenv("OHC_STANDALONE")
 	defer os.Setenv("OHC_STANDALONE", orig)
