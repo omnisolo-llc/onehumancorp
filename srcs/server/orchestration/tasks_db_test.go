@@ -225,3 +225,47 @@ func TestClaimTaskV4LockingPg(t *testing.T) {
         t.Fatalf("Expected to claim task-lock-1")
     }
 }
+
+func TestClaimTaskDag(t *testing.T) {
+    telemetry.InitTelemetry()
+    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    if err != nil {
+        t.Fatalf("failed to create sqlite provider: %v", err)
+    }
+
+    ctx := context.Background()
+    claims := &auth.Claims{OrganizationID: "org-1"}
+    ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
+
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS shared_tasks (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            agent_id TEXT
+        )
+    `)
+    if err != nil { t.Fatalf("failed to create: %v", err) }
+
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS task_dependencies (
+            task_id TEXT NOT NULL,
+            depends_on_task_id TEXT NOT NULL
+        )
+    `)
+    if err != nil { t.Fatalf("failed to create: %v", err) }
+
+    dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test 1', 'COMPLETED')")
+    dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task-2', 'org-1', 'Test 2', 'PENDING')")
+    dbProvider.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task-2', 'task-1')")
+
+    to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
+    task, err := to.ClaimTask(ctxWithClaims, "agent-1")
+    if err != nil {
+        t.Fatalf("ClaimTask failed: %v", err)
+    }
+    if task == nil || task.TaskID != "task-2" {
+        t.Fatalf("expected to claim task-2")
+    }
+}
