@@ -4,6 +4,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS autodream_memories (
     id TEXT PRIMARY KEY,
+    topic TEXT NOT NULL DEFAULT 'unknown',
     task_id TEXT REFERENCES shared_tasks(id),
     content TEXT NOT NULL,
     embedding vector(1536),

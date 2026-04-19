@@ -2,6 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS autodream_memories (
     id TEXT PRIMARY KEY,
+    topic TEXT NOT NULL,
     organization_id VARCHAR NOT NULL,
     task_id TEXT REFERENCES shared_tasks_decomposition(id),
     content TEXT NOT NULL,

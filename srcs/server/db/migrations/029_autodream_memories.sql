@@ -10,6 +10,7 @@
 ALTER TABLE autodream_memories ADD COLUMN organization_id TEXT;
 ALTER TABLE autodream_memories ADD COLUMN agent_id TEXT;
 ALTER TABLE autodream_memories ADD COLUMN source_type TEXT;
+ALTER TABLE autodream_memories ADD COLUMN topic TEXT DEFAULT 'unknown';
 
 UPDATE autodream_memories SET organization_id = 'default' WHERE organization_id IS NULL;
 UPDATE autodream_memories SET source_type = 'unknown' WHERE source_type IS NULL;

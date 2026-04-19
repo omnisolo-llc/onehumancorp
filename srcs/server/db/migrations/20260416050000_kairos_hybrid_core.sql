@@ -20,6 +20,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS autodream_memories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    topic TEXT NOT NULL DEFAULT 'unknown',
     task_id UUID REFERENCES shared_tasks_decomposition(id),
     content TEXT NOT NULL,
     embedding vector(1536),

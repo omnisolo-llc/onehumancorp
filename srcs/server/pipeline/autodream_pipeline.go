@@ -300,15 +300,23 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 			defer tx.Rollback(ctx)
 
 			// 3. Loading: Upsert into consolidated_memory using pgvector
-			var insertQuery string
+			var insertQuery, insertAutoDream string
+			id := fmt.Sprintf("%d", time.Now().UnixNano())
+
 			if p.pool.IsSQLite() {
 				insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)"
-				id := fmt.Sprintf("%d", time.Now().UnixNano())
 				_, err = tx.Exec(ctx, insertQuery, id, "system", s.AgentID, summary, embeddingStr, "session_compression")
+				if err == nil {
+					insertAutoDream = "INSERT INTO autodream_memories (id, topic, content, embedding) VALUES (?, 'session_compression', ?, ?)"
+					_, err = tx.Exec(ctx, insertAutoDream, id, summary, embeddingStr)
+				}
 			} else {
 				insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)"
-				id := fmt.Sprintf("%d", time.Now().UnixNano())
 				_, err = tx.Exec(ctx, insertQuery, id, "system", s.AgentID, summary, embeddingStr, "session_compression")
+				if err == nil {
+					insertAutoDream = "INSERT INTO autodream_memories (topic, content, embedding) VALUES ('session_compression', $1, $2::vector)"
+					_, err = tx.Exec(ctx, insertAutoDream, summary, embeddingStr)
+				}
 			}
 
 			if err != nil {
@@ -419,15 +427,22 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 			embeddingStr = "[" + strings.Join(vec, ",") + "]"
 		}
 
-		var insertQuery string
+		var insertQuery, insertAutoDream string
+		id := fmt.Sprintf("%d", time.Now().UnixNano())
 		if p.pool.IsSQLite() {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)"
-			id := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = p.pool.Exec(ctx, insertQuery, id, "system", "system", summary, embeddingStr, "file_ingestion")
+			if err == nil {
+				insertAutoDream = "INSERT INTO autodream_memories (id, topic, content, embedding) VALUES (?, 'file_ingestion', ?, ?)"
+				_, err = p.pool.Exec(ctx, insertAutoDream, id, summary, embeddingStr)
+			}
 		} else {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)"
-			id := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = p.pool.Exec(ctx, insertQuery, id, "system", "system", summary, embeddingStr, "file_ingestion")
+			if err == nil {
+				insertAutoDream = "INSERT INTO autodream_memories (topic, content, embedding) VALUES ('file_ingestion', $1, $2::vector)"
+				_, err = p.pool.Exec(ctx, insertAutoDream, summary, embeddingStr)
+			}
 		}
 
 		if err != nil {

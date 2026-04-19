@@ -7,6 +7,7 @@
 CREATE TABLE IF NOT EXISTS autodream_memories_master (
     id VARCHAR PRIMARY KEY,
     tenant_id VARCHAR NOT NULL,
+    topic TEXT NOT NULL,
     memory_type TEXT NOT NULL,
     content TEXT NOT NULL,
     embedding BLOB,
