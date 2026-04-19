@@ -855,3 +855,25 @@ func TestRecordSandboxViolation(t *testing.T) {
 	// Should not panic
 	RecordSandboxViolation(ctx, "fs_read", "agent-123", "/etc/passwd")
 }
+
+func TestRecordHarnessInitLatency(t *testing.T) {
+	cleanup, _ := InitTelemetry()
+	defer cleanup()
+
+	// Wait for any background initialization.
+	time.Sleep(10 * time.Millisecond)
+
+	RecordHarnessInitLatency(context.Background(), 10.5, "cloud")
+	// If it doesn't panic, we consider it a success.
+	// Unfortunately, reading back values from otel metrics in tests requires an exporter setup.
+	// In this code base, we verify by ensuring no nil dereference happens.
+}
+
+func TestRecordHarnessDbIoLatency(t *testing.T) {
+	cleanup, _ := InitTelemetry()
+	defer cleanup()
+
+	time.Sleep(10 * time.Millisecond)
+
+	RecordHarnessDbIoLatency(context.Background(), 15.2, "standalone")
+}
