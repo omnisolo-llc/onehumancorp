@@ -78,8 +78,14 @@ func acquireThrottle(ctx context.Context) error {
 		select {
 		case standaloneThrottle <- struct{}{}:
 			return nil
-		case <-ctx.Done():
-			return ctx.Err()
+		default:
+			telemetry.RecordSQLiteThrottledRequest(ctx, "acquireThrottle")
+			select {
+			case standaloneThrottle <- struct{}{}:
+				return nil
+			case <-ctx.Done():
+				return ctx.Err()
+			}
 		}
 	}
 	return nil
@@ -97,6 +103,7 @@ func releaseThrottle() {
 // withSipRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withSipRetry(ctx context.Context, op func() error) error {
 	var err error
+	backoff := 10 * time.Millisecond
 	for i := 0; i < maxRetries; i++ {
 		err = op()
 		if err == nil {
@@ -112,6 +119,7 @@ func withSipRetry(ctx context.Context, op func() error) error {
 
 		if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
 			telemetry.RecordSQLiteLockContention(ctx, "exec/query")
+			telemetry.RecordSQLiteRetryEvent(ctx, "retry")
 		}
 
 		// Optimization: Avoid long exponential backoff retries when the DB connection is explicitly closed,
@@ -126,7 +134,18 @@ func withSipRetry(ctx context.Context, op func() error) error {
 		}
 
 		slog.Debug("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
-		time.Sleep(retryInterval * time.Duration(1<<i))
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(backoff):
+			// retry
+		}
+
+		backoff *= 2
+		if backoff > 100 * time.Millisecond {
+			backoff = 100 * time.Millisecond
+		}
 	}
 
 	if err != nil {

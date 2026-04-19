@@ -393,6 +393,15 @@ func TestRecordFunctions(t *testing.T) {
 		RecordSQLiteRetryExhausted(ctx, "query")
 	})
 
+	t.Run("RecordSQLiteThrottledRequest", func(t *testing.T) {
+		RecordSQLiteThrottledRequest(ctx, "query")
+	})
+
+	t.Run("RecordSQLiteRetryEvent", func(t *testing.T) {
+		RecordSQLiteRetryEvent(ctx, "query")
+	})
+
+
 	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
 		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
 	})

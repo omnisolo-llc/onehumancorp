@@ -87,6 +87,8 @@ var (
 	sqliteLockContentionCounter   metric.Int64Counter
 	sqliteRetryExhaustedCounter   metric.Int64Counter
 	postgresRetryExhaustedCounter metric.Int64Counter
+	sqliteThrottledRequestCounter metric.Int64Counter
+	sqliteRetryEventCounter       metric.Int64Counter
 
 	autoDreamSyncDuration  metric.Float64Histogram
 	autoDreamQueryDuration metric.Float64Histogram
@@ -302,6 +304,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	sqliteThrottledRequestCounter, err = m.Int64Counter(
+		"ohc_sqlite_throttled_request_total",
+		metric.WithDescription("Total times SQLite write operations were throttled by concurrency limiter."),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	sqliteRetryEventCounter, err = m.Int64Counter(
+		"ohc_sqlite_retry_event_total",
+		metric.WithDescription("Total times SQLite transactions were retried due to lock errors."),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1216,6 +1234,42 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 		return
 	}
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+// RecordSQLiteThrottledRequest increments the counter when a database request is throttled in Standalone mode.
+func RecordSQLiteThrottledRequest(ctx context.Context, operation string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sqlite_throttled_request", string(payloadBytes))
+	}
+	if sqliteThrottledRequestCounter == nil {
+		return
+	}
+	sqliteThrottledRequestCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("operation", operation),
+	))
+}
+
+// RecordSQLiteRetryEvent increments the counter when a database request executes a retry backoff.
+func RecordSQLiteRetryEvent(ctx context.Context, operation string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"operation": operation,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sqlite_retry_event", string(payloadBytes))
+	}
+	if sqliteRetryEventCounter == nil {
+		return
+	}
+	sqliteRetryEventCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
 	))
 }
