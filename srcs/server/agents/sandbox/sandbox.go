@@ -7,6 +7,7 @@ import (
 	"os/exec"
 )
 
+// added for issue 5417
 type SandboxManager struct {
 	SandboxDir string
 }
