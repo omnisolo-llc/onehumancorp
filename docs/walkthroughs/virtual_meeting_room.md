@@ -40,3 +40,4 @@ graph TD
 ```
 
 </div>
+<!-- Virtual Meeting Room Walkthrough added -->
