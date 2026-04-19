@@ -73,6 +73,8 @@ go_library(
         "migrations/20260416000000_shared_tasks_decomposition_sqlite.sql",
         "migrations/20260416020000_hybrid_mcp_sync_queue.sql",
         "migrations/058_autodream_sync.sql",
+        "migrations/20260421000000_swarm_tasks_and_state_machine_pg.sql",
+        "migrations/20260421000000_swarm_tasks_and_state_machine_sqlite.sql",
         "migrations/20260418000000_autodream_pgvector_memories_pg.sql",
         "migrations/20260418000000_autodream_pgvector_memories_sqlite.sql",
         "migrations/20260419010000_autodream_consolidated_memory.sql",
