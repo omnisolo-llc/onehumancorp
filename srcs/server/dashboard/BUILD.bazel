@@ -40,6 +40,7 @@ go_library(
         "//srcs/server/settings",
         "//srcs/server/telemetry",
         "//srcs/server/tools/blobinspector",
+        "//srcs/server/tools/edgeoffloadmcp",
         "//srcs/server/lib/integrations/hybridfsmcp",
         "@io_opentelemetry_go_otel//:otel",
         "//srcs/server/utils",
