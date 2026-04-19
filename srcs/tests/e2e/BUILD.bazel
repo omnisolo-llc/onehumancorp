@@ -1,19 +1,19 @@
 # Copyright 2026 Author(s) of OHC
 # SPDX-License-Identifier: Apache-2.0
 
-load("//srcs/tests/e2e:playwright_tests.bzl", "define_playwright_tests")
+load("@rules_go//go:def.bzl", "go_test")
 
-filegroup(
-    name = "srcs",
-    srcs = glob(
-        [
-            "*.ts",
-            "*.d.ts",
-            "*.json",
-        ],
-        exclude = ["*.spec.ts"],
-    ),
-    visibility = ["//visibility:public"],
+go_test(
+    name = "e2e_test",
+    srcs = glob(["*_test.go"]),
+    importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    deps = [
+        "@com_github_playwright_community_playwright_go//:playwright-go",
+    ],
+    size = "large",
+    timeout = "eternal",
+    tags = [
+        "local",
+        "requires-docker",
+    ],
 )
-
-define_playwright_tests()
