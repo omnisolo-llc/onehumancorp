@@ -112,6 +112,11 @@ type Role struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
+type tenantKey struct {
+	orgID string
+	key   string
+}
+
 // Store manages secure, thread-safe persistence for user accounts, credentials, and roles, using mutexes for concurrent access.
 // Accepts no parameters.
 // Returns nothing.
@@ -121,9 +126,9 @@ type Store struct {
 	mu      sync.RWMutex
 	users   map[string]*User
 	roles   map[string]*Role
-	byName  map[string]*User
-	byEmail map[string]*User
-	byOIDC  map[string]*User     // OIDC subject → User
+	byName  map[tenantKey]*User
+	byEmail map[tenantKey]*User
+	byOIDC  map[tenantKey]*User     // OIDC subject → User
 	revoked map[string]time.Time // JTI → expiry (for token revocation)
 	secret  []byte               // HS256 signing secret
 	repo    UserRepository
@@ -148,9 +153,9 @@ func newStore(repo UserRepository) *Store {
 	s := &Store{
 		users:   make(map[string]*User),
 		roles:   make(map[string]*Role),
-		byName:  make(map[string]*User),
-		byEmail: make(map[string]*User),
-		byOIDC:  make(map[string]*User),
+		byName:  make(map[tenantKey]*User),
+		byEmail: make(map[tenantKey]*User),
+		byOIDC:  make(map[tenantKey]*User),
 		revoked: make(map[string]time.Time),
 		repo:    repo,
 	}
@@ -227,8 +232,8 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 	}
 
 	s.users[admin.ID] = admin
-	s.byName[adminUser] = admin
-	s.byEmail[adminEmail] = admin
+	s.byName[tenantKey{"", adminUser}] = admin
+	s.byEmail[tenantKey{"", adminEmail}] = admin
 }
 
 // CreateUser creates a new user with the given credentials and roles.
@@ -271,10 +276,10 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.byName[username]; exists {
+	if _, exists := s.byName[tenantKey{orgID, username}]; exists {
 		return nil, errors.New("username already taken")
 	}
-	if _, exists := s.byEmail[email]; exists {
+	if _, exists := s.byEmail[tenantKey{orgID, email}]; exists {
 		return nil, errors.New("email already registered")
 	}
 
@@ -296,8 +301,8 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 		UpdatedAt:    now,
 	}
 	s.users[u.ID] = u
-	s.byName[username] = u
-	s.byEmail[email] = u
+	s.byName[tenantKey{orgID, username}] = u
+	s.byEmail[tenantKey{orgID, email}] = u
 	return u, nil
 }
 
@@ -322,7 +327,10 @@ func (s *Store) Authenticate(username, password string, orgID string) (*User, er
 	}
 
 	s.mu.RLock()
-	u, ok := s.byName[username]
+	u, ok := s.byName[tenantKey{orgID, username}]
+	if !ok && (orgID == "sys" || orgID == "") {
+		u, ok = s.byName[tenantKey{"", username}]
+	}
 	if ok && orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
 		ok = false
 	}
@@ -427,12 +435,12 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 		return nil, errors.New("user not found")
 	}
 	if emailPtr != nil && *emailPtr != u.Email {
-		if _, exists := s.byEmail[*emailPtr]; exists {
+		if _, exists := s.byEmail[tenantKey{u.OrganizationID, *emailPtr}]; exists {
 			return nil, errors.New("email already registered")
 		}
-		delete(s.byEmail, u.Email)
+		delete(s.byEmail, tenantKey{u.OrganizationID, u.Email})
 		u.Email = *emailPtr
-		s.byEmail[u.Email] = u
+		s.byEmail[tenantKey{u.OrganizationID, u.Email}] = u
 	}
 	if roles != nil {
 		u.Roles = append([]string(nil), roles...)
@@ -468,10 +476,10 @@ func (s *Store) DeleteUser(id string, orgID string) error {
 		return errors.New("user not found")
 	}
 	delete(s.users, id)
-	delete(s.byName, u.Username)
-	delete(s.byEmail, u.Email)
+	delete(s.byName, tenantKey{u.OrganizationID, u.Username})
+	delete(s.byEmail, tenantKey{u.OrganizationID, u.Email})
 	if u.OIDCSubject != "" {
-		delete(s.byOIDC, u.OIDCSubject)
+		delete(s.byOIDC, tenantKey{u.OrganizationID, u.OIDCSubject})
 	}
 	return nil
 }
@@ -588,13 +596,13 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if u, ok := s.byOIDC[sub]; ok {
+	if u, ok := s.byOIDC[tenantKey{orgID, sub}]; ok {
 		return u
 	}
 	if email != "" {
-		if u, ok := s.byEmail[email]; ok {
+		if u, ok := s.byEmail[tenantKey{orgID, email}]; ok {
 			u.OIDCSubject = sub
-			s.byOIDC[sub] = u
+			s.byOIDC[tenantKey{orgID, sub}] = u
 			return u
 		}
 	}
@@ -604,7 +612,7 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 		uname = email
 	}
 	// de-duplicate username
-	if _, taken := s.byName[uname]; taken {
+	if _, taken := s.byName[tenantKey{orgID, uname}]; taken {
 		uname = uname + "_" + hex.EncodeToString(randomBytes(3))
 	}
 
@@ -622,12 +630,12 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 	}
 	s.users[u.ID] = u
 	if uname != "" {
-		s.byName[uname] = u
+		s.byName[tenantKey{orgID, uname}] = u
 	}
 	if email != "" {
-		s.byEmail[email] = u
+		s.byEmail[tenantKey{orgID, email}] = u
 	}
-	s.byOIDC[sub] = u
+	s.byOIDC[tenantKey{orgID, sub}] = u
 	return u
 }
 

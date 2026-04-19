@@ -37,6 +37,17 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 		}
 	}
 
+	// We'll verify uniqueness at application level or let the new constraints handle it.
+	// But let's first check if there's a collision in the same org.
+	existing, _ := r.GetByUsername(ctx, user.Username, user.OrganizationID)
+	if existing != nil {
+		return fmt.Errorf("username already taken")
+	}
+	existingEmail, _ := r.GetByEmail(ctx, user.Email, user.OrganizationID)
+	if existingEmail != nil {
+		return fmt.Errorf("email already registered")
+	}
+
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
@@ -144,14 +155,31 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 		}
 	}
 
-	_, err := r.pool.Exec(ctx, `
-		UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-		organization_id=$7, oidc_subject=$8, updated_at=$9
-		WHERE id=$1`,
-		user.ID, user.Username, email, user.PasswordHash,
-		rolesArg, user.Active, user.OrganizationID,
-		nilIfEmpty(oidcSubject), user.UpdatedAt,
-	)
+	existingEmail, _ := r.GetByEmail(ctx, user.Email, user.OrganizationID)
+	if existingEmail != nil && existingEmail.ID != user.ID {
+		return fmt.Errorf("email already registered")
+	}
+
+	var err error
+	if user.OrganizationID == "" || user.OrganizationID == "sys" {
+		_, err = r.pool.Exec(ctx, `
+			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+			organization_id=$7, oidc_subject=$8, updated_at=$9
+			WHERE id=$1`,
+			user.ID, user.Username, email, user.PasswordHash,
+			rolesArg, user.Active, user.OrganizationID,
+			nilIfEmpty(oidcSubject), user.UpdatedAt,
+		)
+	} else {
+		_, err = r.pool.Exec(ctx, `
+			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+			organization_id=$7, oidc_subject=$8, updated_at=$9
+			WHERE id=$1 AND organization_id=$7`,
+			user.ID, user.Username, email, user.PasswordHash,
+			rolesArg, user.Active, user.OrganizationID,
+			nilIfEmpty(oidcSubject), user.UpdatedAt,
+		)
+	}
 	if err != nil {
 		return fmt.Errorf("pg: update user: %w", err)
 	}
