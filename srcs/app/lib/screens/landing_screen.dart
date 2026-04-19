@@ -250,7 +250,7 @@ class _GlassCard extends StatelessWidget {
   }
 }
 
-class _DownloadButton extends ConsumerWidget {
+class _DownloadButton extends ConsumerWidget { // Tracking intent metrics
   final String os;
   final IconData icon;
 
