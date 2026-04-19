@@ -13,6 +13,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type mockMeshTransport struct {
+	MeshTransport
+	BroadcastMeshEvents []struct {
+		Topic   string
+		Payload []byte
+	}
+}
+
+func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	m.BroadcastMeshEvents = append(m.BroadcastMeshEvents, struct {
+		Topic   string
+		Payload []byte
+	}{topic, payload})
+	return nil
+}
+
 func setupTestDB(t *testing.T) db.Provider {
 	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
@@ -114,12 +130,10 @@ func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 	}
 }
 
-
 func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 	provider := setupTestDB(t)
 	worker := NewAutoDreamWorker(provider)
 	ctx := context.Background()
-
 
 	// Clean up table for isolated test
 	provider.Exec(ctx, "DELETE FROM autodream_memories")
@@ -185,4 +199,37 @@ func TestAutoDreamWorkerDaemon_StartStop(t *testing.T) {
 	daemon.Stop()
 	daemon.Stop()
 	cancel() // to clean up contexts and verify ctx.Done doesn't panic
+}
+
+func TestAutoDreamWorker_ConsolidateMemories_MeshBroadcast(t *testing.T) {
+	provider := setupTestDB(t)
+	worker := NewAutoDreamWorker(provider)
+	ctx := context.Background()
+
+	mockMesh := &mockMeshTransport{}
+	worker.SetMeshTransport(mockMesh)
+
+	// Clean up table for isolated test
+	provider.Exec(ctx, "DELETE FROM autodream_memories")
+
+	// Insert one unprocessed memory
+	_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, ?)",
+		"mem-broadcast-1", "test content broadcast", "mission-broadcast", "org-1", "agent-1", "test")
+	if err != nil {
+		t.Fatalf("failed to insert mock memory: %v", err)
+	}
+
+	err = worker.ConsolidateMemories(ctx)
+	if err != nil {
+		t.Fatalf("ConsolidateMemories failed: %v", err)
+	}
+
+	if len(mockMesh.BroadcastMeshEvents) != 1 {
+		t.Errorf("Expected 1 mesh broadcast event, got %d", len(mockMesh.BroadcastMeshEvents))
+	} else {
+		event := mockMesh.BroadcastMeshEvents[0]
+		if event.Topic != "tasks" {
+			t.Errorf("Expected topic 'tasks', got %s", event.Topic)
+		}
+	}
 }
