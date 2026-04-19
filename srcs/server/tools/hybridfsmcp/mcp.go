@@ -3,7 +3,6 @@ package hybridfsmcp
 import (
 	"bytes"
 	"context"
-	"github.com/onehumancorp/mono/srcs/server/agents/mcp/proxy"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,18 +13,20 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+
+	"github.com/onehumancorp/mono/srcs/server/agents/mcp/proxy"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/utils"
 )
 
-// FileSystemProvider abstracts the file system operations.
+// FileSystemProvider defines the interface for file operations.
 type FileSystemProvider interface {
 	ReadFile(ctx context.Context, path string) ([]byte, error)
 	WriteFile(ctx context.Context, path string, data []byte) error
 	ListDir(ctx context.Context, path string) ([]string, error)
 }
 
-// LocalFSProvider implements FileSystemProvider for a bounded local directory.
+// LocalFSProvider implements FileSystemProvider for the local disk.
 type LocalFSProvider struct {
 	baseDir string
 }
@@ -241,18 +242,28 @@ func (m *HybridFSMCP) ListTools() []Tool {
 
 // CallTool executes a tool by name.
 func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments map[string]interface{}) (interface{}, error) {
+	sessionID := "system" // Defaults for testing if claims aren't available
+	if claims := auth.ClaimsFromContext(ctx); claims != nil && claims.SessionID != "" {
+		sessionID = claims.SessionID
+	}
+
 	switch toolName {
 	case "read_file":
 		path, ok := arguments["path"].(string)
 		if !ok {
 			return nil, errors.New("missing or invalid 'path' argument")
 		}
+		if m.proxy != nil {
+			if err := m.proxy.GetAuthorizer().Authorize(ctx, sessionID, "read", toolName); err != nil {
+				return nil, err
+			}
+		}
 		data, err := m.provider.ReadFile(ctx, path)
 		if err != nil {
 			return nil, err
 		}
 		if m.proxy != nil {
-			m.proxy.Buffer(ctx, toolName, arguments)
+			m.proxy.Buffer(ctx, sessionID, "read", toolName, arguments)
 		}
 		return map[string]interface{}{"content": string(data)}, nil
 	case "write_file":
@@ -264,12 +275,17 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 		if !ok {
 			return nil, errors.New("missing or invalid 'content' argument")
 		}
+		if m.proxy != nil {
+			if err := m.proxy.GetAuthorizer().Authorize(ctx, sessionID, "write", toolName); err != nil {
+				return nil, err
+			}
+		}
 		err := m.provider.WriteFile(ctx, path, []byte(content))
 		if err != nil {
 			return nil, err
 		}
 		if m.proxy != nil {
-			m.proxy.Buffer(ctx, toolName, arguments)
+			m.proxy.Buffer(ctx, sessionID, "write", toolName, arguments)
 		}
 		return map[string]interface{}{"status": "success"}, nil
 	case "list_directory":
@@ -277,12 +293,17 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 		if !ok {
 			return nil, errors.New("missing or invalid 'path' argument")
 		}
+		if m.proxy != nil {
+			if err := m.proxy.GetAuthorizer().Authorize(ctx, sessionID, "read", toolName); err != nil {
+				return nil, err
+			}
+		}
 		entries, err := m.provider.ListDir(ctx, path)
 		if err != nil {
 			return nil, err
 		}
 		if m.proxy != nil {
-			m.proxy.Buffer(ctx, toolName, arguments)
+			m.proxy.Buffer(ctx, sessionID, "read", toolName, arguments)
 		}
 		return map[string]interface{}{"entries": entries}, nil
 	default:
