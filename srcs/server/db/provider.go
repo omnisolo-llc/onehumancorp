@@ -51,6 +51,7 @@ type Provider interface {
 	Ping(ctx context.Context) error
 	IsSQLite() bool
 	AcquireTask(ctx context.Context, organizationID, agentID string) (*TaskRecord, error)
+	SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error)
 }
 
 // TaskRecord represents a task fetched from the queue.
