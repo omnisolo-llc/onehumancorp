@@ -611,6 +611,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
 	mux.HandleFunc("/api/sync/escalation", auth.RequireRole("system", api.HandleSyncEscalation(server.hub)))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
+	// added for issue 4331: sync rag endpoint with system role
 	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleSyncRAG))
 	mux.HandleFunc("/api/mcp/rag/sync", auth.RequireRole("system", server.handleMcpRagSync))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
