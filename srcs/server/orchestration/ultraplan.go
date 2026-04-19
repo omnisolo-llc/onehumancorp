@@ -21,6 +21,7 @@ import (
 )
 
 // compressUltraPlanData compresses the given byte slice using gzip and encodes it to base64 string.
+// added for issue 4184: implement proactive storage compression for KAIROS UltraPlan
 func compressUltraPlanData(data []byte) (string, error) {
 	var b bytes.Buffer
 	w := gzip.NewWriter(&b)
