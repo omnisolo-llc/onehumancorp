@@ -7,3 +7,11 @@ go_test(
         "//srcs/server/lib/resilience/chaos",
     ],
 )
+
+go_test(
+    name = "kairos_parity_chaos_test",
+    srcs = ["kairos_parity_chaos_test.go"],
+    deps = [
+        "//srcs/server/orchestration/kairos",
+    ],
+)
