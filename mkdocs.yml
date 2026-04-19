@@ -52,6 +52,7 @@ nav:
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
       - Teammate Mesh Walkthrough: walkthroughs/teammate_mesh_walkthrough.md
+      - AutoDream CLI Guide: walkthroughs/autodream_cli_interactive_guide.md
       - walkthroughs/index.md
   - Operations:
       - operations/index.md
