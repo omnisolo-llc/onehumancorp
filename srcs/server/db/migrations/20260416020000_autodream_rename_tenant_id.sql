@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories_master (
     tenant_id VARCHAR NOT NULL,
     memory_type TEXT NOT NULL,
     content TEXT NOT NULL,
-    embedding BLOB,
+    embedding BYTEA,
     source_task_id VARCHAR,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS ohc_memory_embeddings (
     tenant_id VARCHAR NOT NULL,
     memory_type TEXT NOT NULL,
     content TEXT NOT NULL,
-    embedding BLOB,
+    embedding BYTEA,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     source_task_id VARCHAR
 );

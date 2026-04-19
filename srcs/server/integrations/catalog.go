@@ -2,6 +2,7 @@ package integrations
 
 import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/integrations/libsql"
 	"github.com/onehumancorp/mono/srcs/server/integrations/litefs"
 	"github.com/onehumancorp/mono/srcs/server/integrations/restic"
 )
@@ -28,6 +29,7 @@ var Catalog = []Integration{
 	&PlaneIntegration{},
 	&GitHubIssuesIntegration{},
 	&litefs.LiteFSIntegration{},
+	&libsql.LibSQLIntegration{},
 	&restic.ResticIntegration{},
 }
 
