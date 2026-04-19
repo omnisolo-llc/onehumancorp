@@ -66,7 +66,6 @@ declare module '@playwright/test' {
     not: {
       toBeVisible(options?: { timeout?: number }): Promise<void>;
       toContainText(text: string | RegExp, options?: { timeout?: number }): Promise<void>;
-      toBeVisible(options?: { timeout?: number }): Promise<void>;
       toBeEmpty(): Promise<void>;
     };
     toHaveValue(value: string): Promise<void>;
