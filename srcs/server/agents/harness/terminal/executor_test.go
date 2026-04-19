@@ -1,4 +1,4 @@
-package agents
+package terminal
 
 import (
 	"context"
@@ -45,5 +45,20 @@ func TestExecutor_Success(t *testing.T) {
 
 	if err == nil && !strings.Contains(string(out), "test") {
 		t.Fatalf("expected output to contain 'test', got: %s", string(out))
+	}
+}
+
+func TestExecutor_ValidationFailure(t *testing.T) {
+	realHarness := harness.NewIsolationHarness()
+	exec := NewExecutor(realHarness)
+
+	out, err := exec.ExecuteCommand(context.Background(), "zmodload zsh/net/tcp")
+
+	if err == nil {
+		t.Fatalf("expected validation error, got nil. Output: %s", string(out))
+	}
+
+	if err != ErrDangerousZSHBuiltin {
+		t.Fatalf("expected ErrDangerousZSHBuiltin, got: %v", err)
 	}
 }

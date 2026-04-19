@@ -16,6 +16,7 @@ go_library(
     deps = [
         "//srcs/server/telemetry",
         "//srcs/server/agents/builtin",
+
         "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
