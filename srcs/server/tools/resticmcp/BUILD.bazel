@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "resticmcp",
+    srcs = ["mcp.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/tools/resticmcp",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "resticmcp_test",
+    srcs = ["mcp_test.go"],
+    embed = [":resticmcp"],
+)
