@@ -42,7 +42,7 @@ func (p *DiscoveryProxy) isSQLite() bool {
 		return false
 	}
 	driverType := fmt.Sprintf("%T", p.db.Driver())
-	return driverType == "*sqlite.Driver" || driverType == "*sqlite.Driver"
+	return driverType == "*sqlite.Driver"
 }
 
 // SearchTools searches for tools based on intent.
