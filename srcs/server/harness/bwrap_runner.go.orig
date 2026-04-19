@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os/exec"
 	"time"
-	"strings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
@@ -85,14 +84,7 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
 	cmd.Stderr = &stderr
 
 	startTime := time.Now()
-
-	// Extract base tool name to avoid high cardinality metrics
-	toolName := "unknown"
-	parts := strings.Fields(command)
-	if len(parts) > 0 {
-		toolName = parts[0]
-	}
-	telemetry.RecordHarnessToolInvocation(ctx, toolName, "bwrap-runner")
+	telemetry.RecordHarnessToolInvocation(ctx, command, "bwrap-runner")
 
 	err := cmd.Run()
 	duration := time.Since(startTime).Seconds()
