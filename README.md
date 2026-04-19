@@ -1,14 +1,22 @@
 # One Human Corp
 
 ## Getting Started (Day One Onboarding)
-To begin your onboarding journey and easily set up the platform in your desired mode, run the setup and mode helpers from the root of the repository:
+
+To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.
+
+From the root of the repository, you must explicitly run the onboarding CLI:
 
 ```bash
-./deploy/scripts/ohc-setup.sh
-source deploy/scripts/ohc-mode.sh standalone
+./ohc_hybrid_cli.sh
 ```
 
-This initializes local configuration and lets you switch between `cloud`, `standalone`, and `headless` modes without an extra wrapper layer.
+**What this does:**
+- 🚀 Guides you through the **Developer Setup**
+- ⚙️ Configures your **Environment Variables**
+- 🩺 Runs deep system **Diagnostics**
+- 🔄 Allows seamless switching between `cloud`, `standalone`, and `headless` modes
+
+This premium onboarding flow eliminates friction and ensures maximum developer velocity for Day One setup.
 
 ## Identity
 One Human Corp is a hybrid cloud-native and local-first agentic platform. The same product can run as a horizontally scalable multi-tenant cloud service, a headless API for remote mobile or desktop clients, or a standalone desktop deployment that runs its own local backend.
