@@ -30,6 +30,7 @@ func generateID() string {
 type SharedTask struct {
 	ID              string     `json:"id"`
 	OrganizationID  string     `json:"organization_id"`
+	MissionID       string     `json:"mission_id"`
 	ParentPlanID    string     `json:"parent_plan_id"`
 	Dependencies    []string   `json:"dependencies"`
 	Title           string     `json:"title"`
@@ -170,12 +171,12 @@ func (tm *TaskManager) SetMeshTransport(mt MeshTransport) {
 
 // CreateTask creates a new shared task.
 // CreateTask creates a new pending task.
-func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, title, description, priority string) (*SharedTask, error) {
-	return tm.CreateTaskWithPlan(ctx, organizationID, "", nil, title, description, priority)
+func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, missionID, title, description, priority string) (*SharedTask, error) {
+	return tm.CreateTaskWithPlan(ctx, organizationID, missionID, "", nil, title, description, priority)
 }
 
 // CreateTaskWithPlan creates a new pending task with plan association.
-func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
+func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, missionID string, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
 	id := uuid.New().String()
 
 	// Verify dependencies don't form a cycle.
@@ -209,20 +210,20 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	}
 
-	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID).Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
+	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID, missionID).Scan(
+		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
 	)
 
 	if err != nil {
@@ -648,7 +649,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 
 	if tm.db.IsSQLite() {
 		query = `
-			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, st.mission_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
@@ -659,7 +660,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		}
 	} else {
 		query = `
-			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, st.mission_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
 			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
@@ -762,13 +763,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 			// Fetch updated task data
 			readQuery := `
-				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+				SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
 				FROM shared_tasks
 				WHERE id = $1
 			`
 			task := &SharedTask{}
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 			)
 
 			if errQuery != nil {
@@ -826,13 +827,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 			// Fetch updated task data
 			readQuery := `
-				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+				SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
 				FROM shared_tasks
 				WHERE id = $1
 			`
 			task := &SharedTask{}
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 			)
 
 			if errQuery != nil {
@@ -935,13 +936,13 @@ func (tm *TaskManager) GetTask(ctx context.Context, taskID string) (*SharedTask,
 	}
 
 	query := `
-		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at
+		SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at
 		FROM shared_tasks
 		WHERE id = $1 AND organization_id = $2
 	`
 	task := &SharedTask{}
 	err := tm.db.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.AssignedAgentID, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.AssignedAgentID, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
