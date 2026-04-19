@@ -354,7 +354,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SIPSyncLatencyRecorder, err = m.Float64Histogram(
-		"ohc_sync_latency_seconds",
+		"ohc_sync_latency_seconds", // added for issue 4365
 		metric.WithDescription("Latency of offline-to-cloud synchronization"),
 		metric.WithUnit("s"),
 	)
@@ -363,7 +363,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SIPSyncPayloadSizeRecorder, err = m.Int64Histogram(
-		"ohc_sync_payload_bytes",
+		"ohc_sync_payload_bytes", // added for issue 4365
 		metric.WithDescription("Size of JSON payloads synced to the remote endpoint"),
 		metric.WithUnit("By"),
 	)

@@ -1135,7 +1135,7 @@ func TestSIPDB_SyncMissions_Sanitization(t *testing.T) {
 	}
 }
 
-func TestSIPDB_SyncBufferedMetrics(t *testing.T) {
+func TestSIPDB_SyncBufferedMetrics(t *testing.T) { // added for issue 4365
 	dbPath := filepath.Join(t.TempDir(), "test_sync_metrics.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
