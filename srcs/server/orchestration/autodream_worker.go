@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -117,7 +118,13 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		// Since we delete the file, idempotency is mostly handled by file deletion, but if it fails to delete, it might duplicate.
 
 		memID := uuid.New().String()
-		embStr := formatFloat32SliceForVector(embedding)
+		var embStr string
+		if w.pool.IsSQLite() {
+			embBytes, _ := json.Marshal(embedding)
+			embStr = string(embBytes)
+		} else {
+			embStr = formatFloat32SliceForVector(embedding)
+		}
 
 		var query string
 		var args []interface{}
@@ -125,10 +132,14 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		if !w.pool.IsSQLite() {
 			// Using FOR UPDATE SKIP LOCKED on an agent_session_data row to fulfill the "AutoDreamWorker lock handling"
 			// requirement gracefully without breaking insertion idempotency.
-			// This locks a specific mission id in the agent_session_data table if it exists, to ensure another
-			// worker process isn't concurrently processing the same memory pipeline task.
-			_, lockErr := tx.Exec(ctx, "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", missionID)
+			res, lockErr := tx.Exec(ctx, "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", missionID)
 			if lockErr != nil {
+				tx.Rollback(ctx)
+				continue
+			}
+			if res == 0 {
+				// We couldn't acquire the lock (it was locked by another worker) or row doesn't exist.
+				// If row doesn't exist, we skip. It's safe to skip since we're processing a memory file that should correspond to a session.
 				tx.Rollback(ctx)
 				continue
 			}
@@ -231,7 +242,13 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 			}
 		}
 
-		embStr := formatFloat32SliceForVector(embedding)
+		var embStr string
+		if w.pool.IsSQLite() {
+			embBytes, _ := json.Marshal(embedding)
+			embStr = string(embBytes)
+		} else {
+			embStr = formatFloat32SliceForVector(embedding)
+		}
 
 		var query string
 		if w.pool.IsSQLite() {
@@ -246,6 +263,20 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 		} else {
 			slog.Debug("AutoDream: consolidated memory", "id", e.id)
 			telemetry.RecordAutoDreamConsolidation(ctx, "autodream_worker")
+			if w.mesh != nil {
+				payload := map[string]interface{}{
+					"agent_id":  "auto-dream-worker",
+					"action":    "CONSOLIDATED",
+					"status":    "SUCCESS",
+					"memory_id": e.id,
+				}
+				payloadBytes, err := json.Marshal(payload)
+				if err == nil {
+					w.mesh.BroadcastMeshEvent(ctx, "tasks", payloadBytes)
+				} else {
+					slog.Error("AutoDream: failed to marshal mesh event", "error", err)
+				}
+			}
 		}
 	}
 
