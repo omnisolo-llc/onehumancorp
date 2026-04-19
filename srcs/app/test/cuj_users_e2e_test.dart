@@ -116,7 +116,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Invite User'));
+      await tester.tap(find.textContaining('Invite'));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsOneWidget);
