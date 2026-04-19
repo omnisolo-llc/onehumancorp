@@ -44,6 +44,7 @@ nav:
       - "Interactive Api Playbook": api/api_playbook.md
   - Features:
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
+      - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md
       - features/index.md
       - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
   - Walkthroughs:
