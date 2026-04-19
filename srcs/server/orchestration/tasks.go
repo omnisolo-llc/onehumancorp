@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -262,12 +262,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 				"description":     task.Description,
 				"priority":        task.Priority,
 			}
-			if tm.mesh != nil {
-				payloadBytes, _ := json.Marshal(payload)
-				tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
-			} else if tm.hub != nil {
-				tm.hub.PublishTaskBroadcast(task.ID, payload)
-			}
+			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
 
@@ -291,7 +286,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
 				telemetry.RecordTaskClaimContention(ctx, "redis")
-				return nil, nil // Lock could not be acquired (task is locked)
+					return nil, nil // Lock could not be acquired (task is locked)
 			}
 			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
 		}
@@ -414,12 +409,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 				"agent_id": agentID,
 				"status":   task.Status,
 			}
-			if tm.mesh != nil {
-				payloadBytes, _ := json.Marshal(payload)
-				tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
-			} else if tm.hub != nil {
-				tm.hub.PublishTaskBroadcast(task.ID, payload)
-			}
+			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
 
@@ -467,12 +457,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 				"agent_id": agentID,
 				"status":   "REVIEW",
 			}
-			if tm.mesh != nil {
-				payloadBytes, _ := json.Marshal(payload)
-				tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
-			} else if tm.hub != nil {
-				tm.hub.PublishTaskBroadcast(taskID, payload)
-			}
+			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
 	}
 
@@ -560,12 +545,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				"agent_id": agentID,
 				"status":   "COMPLETED",
 			}
-			if tm.mesh != nil {
-				payloadBytes, _ := json.Marshal(payload)
-				tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
-			} else if tm.hub != nil {
-				tm.hub.PublishTaskBroadcast(taskID, payload)
-			}
+			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
 	}
 
@@ -900,12 +880,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 					"agent_id": agentID,
 					"status":   t.Status,
 				}
-				if tm.mesh != nil {
-					payloadBytes, _ := json.Marshal(payload)
-					tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
-				} else if tm.hub != nil {
-					tm.hub.PublishTaskBroadcast(t.ID, payload)
-				}
+				tm.hub.PublishTaskBroadcast(t.ID, payload)
 			}(task)
 		}
 	}
@@ -1060,12 +1035,7 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 				"agent_id": task.AssignedAgentID,
 				"status":   task.Status,
 			}
-			if tm.mesh != nil {
-				payloadBytes, _ := json.Marshal(payload)
-				tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
-			} else if tm.hub != nil {
-				tm.hub.PublishTaskBroadcast(task.ID, payload)
-			}
+			tm.hub.PublishTaskBroadcast(task.ID, payload)
 		}()
 	}
 
@@ -1127,12 +1097,7 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 				"task_id": taskID,
 				"action":  "DELETE",
 			}
-			if tm.mesh != nil {
-				payloadBytes, _ := json.Marshal(payload)
-				tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
-			} else if tm.hub != nil {
-				tm.hub.PublishTaskBroadcast(taskID, payload)
-			}
+			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
 	}
 
@@ -1178,3 +1143,4 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 
 	return nil
 }
+// added for Sub-Agent Orchestration Queue

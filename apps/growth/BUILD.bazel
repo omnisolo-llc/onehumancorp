@@ -6,8 +6,8 @@ go_library(
     importpath = "github.com/onehumancorp/mono/apps/growth",
     visibility = ["//visibility:private"],
     deps = [
-        "//lib/analytics",
-        "//services/growth",
+        "//srcs/server/lib/analytics",
+        "//srcs/server/services/growth_legacy",
         "@com_github_redis_go_redis_v9//:go-redis",
     ],
 )
@@ -23,7 +23,7 @@ go_test(
     srcs = ["main_test.go"],
     embed = [":growth_lib"],
     deps = [
-        "//lib/analytics",
+        "//srcs/server/lib/analytics",
         "@com_github_alicebob_miniredis_v2//:miniredis",
         "@com_github_redis_go_redis_v9//:go-redis",
     ],

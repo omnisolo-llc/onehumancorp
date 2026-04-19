@@ -3,11 +3,11 @@
 # Chaos Testing Resilience Report
 
 ## Experiment Scope
-- **Domain:** `lib/resilience/chaos` and `tests/chaos`
+- **Domain:** `srcs/server/lib/resilience/chaos` and `srcs/tests/chaos`
 - **Focus:** Validating latency spikes, connection drops, and testing hybrid failure models. Added custom `.agent-lock/` corruption experiment testing for the Agent Harness.
 
 ## Methodology
-- Developed `tests/chaos/chaos_system_test.go` and verified behavior logic for:
+- Developed `srcs/tests/chaos/chaos_system_test.go` and verified behavior logic for:
   - `LatencySpike` (verifying exact simulated sleep values)
   - `ConnectionDrop` (simulating socket exhaustion network failures)
   - `ResourceExhaustion`
@@ -21,7 +21,7 @@
 - [x] OHC Aesthetic tokens applied to Markdown reports.
 - [x] Zero Secrets exposed.
 - [x] > 95% Code Coverage in tests for tested files.
-- [x] Bazel checks fully passed (`bazelisk test //tests/chaos/...`).
+- [x] Bazel checks fully passed (`bazelisk test //srcs/tests/chaos/...`).
 - [x] Tests merged correctly for Cloud and Standalone modes parity.
 
 </div>
