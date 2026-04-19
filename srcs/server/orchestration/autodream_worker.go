@@ -1,5 +1,7 @@
 package orchestration
 
+// added for KAIROS Orchestration AutoDream Worker
+
 import (
 	"sync"
 
