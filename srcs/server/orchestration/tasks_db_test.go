@@ -78,7 +78,7 @@ func TestClaimTask_SQLite(t *testing.T) {
 
     to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
 
-    task, err := to.ClaimTask(ctxWithClaims, "spiffe://onehumancorp.io/agent/1")
+    task, err := to.ClaimTaskV4(ctxWithClaims, "org-1", "spiffe://onehumancorp.io/agent/1")
     if err != nil {
         t.Fatalf("ClaimTask failed: %v", err)
     }
@@ -95,7 +95,7 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Errorf("expected status 'IN_PROGRESS', got '%s'", task.Status)
     }
 
-    task3, err := to.ClaimTask(ctxWithClaims, "agent-2")
+    task3, err := to.ClaimTaskV4(ctxWithClaims, "org-1", "agent-2")
     if err != nil {
         t.Fatalf("ClaimTask failed: %v", err)
     }
@@ -169,9 +169,9 @@ func TestClaimTask_Postgres(t *testing.T) {
 
     to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
 
-    task, err := to.claimTaskPostgres(ctx, "org-1", "agent-pg")
+    task, err := to.ClaimTaskV4(ctx, "org-1", "agent-pg")
     if err != nil {
-        t.Fatalf("claimTaskPostgres failed: %v", err)
+        t.Fatalf("ClaimTaskV4 failed: %v", err)
     }
 
     if task == nil {
