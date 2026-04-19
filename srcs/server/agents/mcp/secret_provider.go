@@ -1,5 +1,7 @@
 package mcp
 
+// added for Hybrid Secrets Management MCP Proxy
+
 import (
 	"context"
 	"os"
