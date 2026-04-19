@@ -27,7 +27,7 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 		}
 		defer tx.Rollback(ctx)
 
-		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' LIMIT 1`
+		query = `SELECT st.id, st.organization_id, st.title, st.description, st.status, st.agent_id, st.priority, st.payload, st.parent_plan_id, st.dependencies, st.locked_until, st.created_at, st.updated_at FROM shared_tasks_decomposition st WHERE st.status = 'PENDING' AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS dep JOIN shared_tasks_decomposition d ON d.id = dep.value WHERE d.status != 'DONE' AND d.status != 'COMPLETED') LIMIT 1`
 		err = tx.QueryRow(ctx, query).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
@@ -54,8 +54,13 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 		UPDATE shared_tasks_decomposition
 		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = (
-			SELECT id FROM shared_tasks_decomposition
-			WHERE status = 'PENDING'
+			SELECT st.id FROM shared_tasks_decomposition st
+			WHERE st.status = 'PENDING'
+            AND NOT EXISTS (
+                SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
+                JOIN shared_tasks_decomposition d ON d.id = dep
+                WHERE d.status != 'DONE' AND d.status != 'COMPLETED'
+            )
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
