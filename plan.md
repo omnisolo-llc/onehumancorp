@@ -1,0 +1,7 @@
+1. Add `Task` and `TaskDependency` models: Provide the explicit string contents and the exact python script commands to append `Task` and `TaskDependency` structs into `srcs/server/orchestration/models.go` as described. Verify the added contents with `cat`.
+2. Create Database Migrations: Create a SQL migration script `srcs/server/db/migrations/060_shared_task_list.sql` using a heredoc block for PostgreSQL and SQLite to create `shared_task_list_tasks` and `shared_task_list_dependencies` tables. Verify with `cat`.
+3. Implement Repository Layer: Create `srcs/server/orchestration/shared_task_list_repo.go` with functions to `CreateTask`, `UpdateTaskStatus`, and `GetNextAvailableTask` handling SQLite and Postgres specific logic. The string contents are injected with a bash heredoc and then verified with `cat`.
+4. Write Unit Tests: Write a test file `srcs/server/orchestration/shared_task_list_repo_test.go` checking all functions utilizing the DB provider. Update `srcs/server/orchestration/BUILD.bazel` to include both the new `shared_task_list_repo.go` and `shared_task_list_repo_test.go` and verify the file was updated via `cat`. Run `bazelisk test //srcs/server/orchestration/...` to verify test passes locally.
+5. Repository Tests: Run `bazelisk build //...` and `bazelisk test //...` to ensure all rules are unbroken.
+6. Pre-commit Checks: Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+7. Submit PR: Submit the PR and include `issue_id: 5841`.
