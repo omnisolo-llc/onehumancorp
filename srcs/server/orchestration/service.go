@@ -2034,6 +2034,7 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 }
 
 func (h *Hub) ForkAgent(ctx context.Context, parentID string, directive string) (string, error) {
+	// added for ForkAgent context inheritance
 	parent, ok := h.Agent(parentID)
 	if !ok {
 		return "", fmt.Errorf("parent agent not found: %s", parentID)
