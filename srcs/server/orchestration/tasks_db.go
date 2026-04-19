@@ -286,3 +286,51 @@ func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, 
 
     return &Task{TaskID: id, Status: "IN_PROGRESS"}, nil
 }
+
+func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
+    if !to.mu.TryLock() && to.dbProvider.IsSQLite() {
+        telemetry.RecordPostgresLockContention(ctx, "claim_task_v4")
+        to.mu.Lock()
+    }
+    if to.dbProvider.IsSQLite() {
+        defer to.mu.Unlock()
+    }
+
+    tx, err := to.dbProvider.Begin(ctx)
+    if err != nil {
+        return nil, err
+    }
+    defer tx.Rollback(ctx)
+
+    query := `
+        SELECT id FROM shared_tasks_v4
+        WHERE status = 'PENDING' AND organization_id = $1
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+    `
+
+    if to.dbProvider.IsSQLite() {
+        query = `
+            SELECT id FROM shared_tasks_v4
+            WHERE status = 'PENDING' AND organization_id = $1
+            LIMIT 1
+        `
+    }
+
+    var id string
+    err = tx.QueryRow(ctx, query, orgID).Scan(&id)
+    if err != nil {
+        return nil, err
+    }
+
+    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS' WHERE id = $1", id)
+    if err != nil {
+        return nil, err
+    }
+
+    if err := tx.Commit(ctx); err != nil {
+        return nil, err
+    }
+
+    return &SharedTaskDB{ID: id, Status: "IN_PROGRESS"}, nil
+}
