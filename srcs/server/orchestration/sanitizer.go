@@ -63,3 +63,4 @@ func SanitizePayloadMap(data interface{}) interface{} {
 		return telemetry.RedactInterfacePII(v)
 	}
 }
+// trivial change for issue 4111
