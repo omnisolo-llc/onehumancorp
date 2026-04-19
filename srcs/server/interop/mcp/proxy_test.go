@@ -59,6 +59,8 @@ func (m *mockDBProvider) QueryRow(ctx context.Context, sql string, optionsAndArg
 func (m *mockDBProvider) Begin(ctx context.Context) (db.Tx, error) { return nil, nil }
 func (m *mockDBProvider) Close() {}
 func (m *mockDBProvider) Ping(ctx context.Context) error { return nil }
+func (m *mockDBProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) { return nil, nil }
+
 func (m *mockDBProvider) IsSQLite() bool { return true }
 func (m *mockDBProvider) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) { return nil, nil }
 
