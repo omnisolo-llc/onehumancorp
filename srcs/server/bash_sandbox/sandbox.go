@@ -48,13 +48,13 @@ type ExecutionEnvironment interface {
 }
 
 // Sandbox defines the configuration for secure bash execution.
-type Sandbox struct {
+type LocalEnvironment struct {
 	blockedPatterns []*regexp.Regexp
 }
 
 // NewSandbox creates a new Sandbox with default security rules.
-func NewSandbox() *Sandbox {
-	return &Sandbox{
+func NewSandbox() ExecutionEnvironment {
+	return &LocalEnvironment{
 		blockedPatterns: []*regexp.Regexp{
 			regexp.MustCompile(`(?i)\bsudo\b`),
 			regexp.MustCompile(`(?i)\brm\s+-rf\s+/`),
@@ -69,7 +69,7 @@ func NewSandbox() *Sandbox {
 }
 
 // ValidateContext checks if the command violates any security rules with context.
-func (s *Sandbox) ValidateContext(ctx context.Context, command string) error {
+func (s *LocalEnvironment) ValidateContext(ctx context.Context, command string) error {
 	for _, pattern := range s.blockedPatterns {
 		if pattern.MatchString(command) {
 			violationCount.Add(ctx, 1, metric.WithAttributes(attribute.String("pattern", pattern.String())))
@@ -80,7 +80,7 @@ func (s *Sandbox) ValidateContext(ctx context.Context, command string) error {
 }
 
 // ExecuteContext runs the command if it passes validation.
-func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir string) (string, error) {
+func (s *LocalEnvironment) ExecuteContext(ctx context.Context, command string, workDir string) (string, error) {
 	execCount.Add(ctx, 1)
 
 	if err := s.ValidateContext(ctx, command); err != nil {
@@ -89,13 +89,25 @@ func (s *Sandbox) ExecuteContext(ctx context.Context, command string, workDir st
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", command)
 	cmd.Env = []string{} // Clear inherited environment explicitly to prevent secret leaks
-	// Pass through essential PATH and set HOME to isolated directory
+	// Pass through environment variables except sensitive ones
+	blockedEnvPrefixes := []string{"OHC_API_KEY=", "GH_TOKEN=", "GITHUB_TOKEN=", "OTEL_EXPORTER_OTLP_HEADERS="}
 	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "PATH=") {
+		blocked := false
+		for _, prefix := range blockedEnvPrefixes {
+			if strings.HasPrefix(env, prefix) {
+				blocked = true
+				break
+			}
+		}
+		if !blocked && !strings.HasPrefix(env, "HOME=") {
 			cmd.Env = append(cmd.Env, env)
 		}
 	}
-	cmd.Env = append(cmd.Env, "HOME=.agent-home/")
+	homeDir := workDir
+	if homeDir == "" {
+		homeDir = os.TempDir()
+	}
+	cmd.Env = append(cmd.Env, "HOME="+homeDir)
 	if workDir != "" {
 		cmd.Dir = workDir
 	}
