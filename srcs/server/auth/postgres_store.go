@@ -37,6 +37,17 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 		}
 	}
 
+	// We'll verify uniqueness at application level or let the new constraints handle it.
+	// But let's first check if there's a collision in the same org.
+	existing, _ := r.GetByUsername(ctx, user.Username, user.OrganizationID)
+	if existing != nil {
+		return fmt.Errorf("username already taken")
+	}
+	existingEmail, _ := r.GetByEmail(ctx, user.Email, user.OrganizationID)
+	if existingEmail != nil {
+		return fmt.Errorf("email already registered")
+	}
+
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
@@ -142,6 +153,11 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 		if oidcSubject != "" {
 			oidcSubject = EncryptDeterministic(oidcSubject)
 		}
+	}
+
+	existingEmail, _ := r.GetByEmail(ctx, user.Email, user.OrganizationID)
+	if existingEmail != nil && existingEmail.ID != user.ID {
+		return fmt.Errorf("email already registered")
 	}
 
 	_, err := r.pool.Exec(ctx, `

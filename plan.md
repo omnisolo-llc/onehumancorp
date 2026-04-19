@@ -1,13 +1,17 @@
-1. **Update `srcs/server/telemetry/telemetry.go`**:
-   - Change `api_rate_limit_exceeded_count` to `ohc_api_rate_limit_exceeded_total` in `InitTelemetry` / `InitWithMeter` initialization for `RateLimitExceededCount`. The suffix `_total` is standard for counters in Prometheus, and `ohc_` is the project prefix.
-   - Example line 725: Change `"api_rate_limit_exceeded_count"` to `"ohc_api_rate_limit_exceeded_total"`.
-   - Update the description to indicate it's the total.
+1. **Update `Store.byName` and `Store.byEmail` types to handle organization scope**
+   - Change `byName map[string]*User` to `byName map[string]map[string]*User` (or composite key). Actually, looking at `Users`, the `organization_id` is crucial for cross-tenant data leakage. The `byName` should ideally map `orgID + "\x00" + username` -> `*User` or map[string]*User to keep changes minimal, or use a composite struct. Let's use `orgID + ":" + username` as composite key, or map of map. Wait, using composite key `orgID + "\x00" + username` is easiest. Let's use `orgID + ":" + username` or `orgID + "|" + username`. Even better: `type tenantKey struct { orgID, key string }`.
 
-2. **Verify tests and Build**:
-   - Run `bazelisk test //srcs/server/...` to ensure all tests pass.
-
-3. **Complete pre-commit steps**:
-   - Ensure proper testing, verification, review, and reflection are done by calling `pre_commit_instructions`.
-
-4. **Submit the PR**:
-   - Submit the PR with standard conventions. Format the title as `🧹 Maintainer: [Proactive Improvement] Implement API Rate Limit Prometheus Metrics`. Ensure description contains 💡 What, 🎯 Why, 📊 Impact, and 🔬 Measurement. Include `issue_id: 4018` in the final message.
+Let me use a `tenantKey` struct for byName, byEmail, and byOIDC.
+```go
+type tenantKey struct {
+    orgID string
+    key   string
+}
+```
+Update `Store`:
+```go
+    byName  map[tenantKey]*User
+    byEmail map[tenantKey]*User
+    byOIDC  map[tenantKey]*User
+```
+Then update all places using `byName`, `byEmail`, `byOIDC`.
