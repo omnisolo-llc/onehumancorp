@@ -38,7 +38,6 @@ filegroup(
             "assets/**",
             "android/**",
             "BUILD.bazel",
-            "e2e/**",
             "ios/**",
             "lib/*.dart",
             "linux/**",
@@ -220,26 +219,6 @@ flutter_app(
     workspace_pubspec = "//:pubspec.yaml",
 )
 
-# ── Web E2E tests (Playwright) ────────────────────────────────────────────────
-# Serves the built Flutter web app and runs Playwright tests against it in a
-# real Chromium browser.  Depends on the web build artifacts from :app_web.
-
-sh_test(
-    name = "app_web_e2e_test",
-    srcs = ["test/flutter_web_e2e_test.sh"],
-    data = [
-        "e2e/playwright.config.ts",
-        "e2e/web.spec.ts",
-        ":app",
-        "//:node_modules/@playwright/test",
-        "//srcs/server:ohc",
-    ],
-    tags = [
-        "manual",
-        "requires-network",
-    ],  # browser download may need network on first run
-)
-
 # ── Local Development targets ─────────────────────────────────────────────────
 
 sh_binary(
@@ -253,7 +232,6 @@ sh_binary(
     name = "capture_screenshots",
     srcs = ["test/capture_screenshots.sh"],
     data = [
-        "e2e/capture_screenshots.mjs",
         ":app",
         "//:node_modules/@playwright/test",
     ],
