@@ -1494,3 +1494,70 @@ func TestHandleSyncMissions(t *testing.T) {
 		t.Errorf("unexpected row data: status=%s, synced=%v", status, synced)
 	}
 }
+
+func TestForkAgent(t *testing.T) {
+	hub := NewHub()
+	defer hub.Close()
+
+	parent := Agent{
+		ID:             "parent-agent",
+		Name:           "Parent",
+		Role:           "TestRole",
+		OrganizationID: "Org",
+		Status:         StatusIdle,
+	}
+	hub.RegisterAgent(parent)
+	hub.RegisterAgent(Agent{
+		ID:             "user",
+		Name:           "User",
+		Role:           "UserRole",
+		OrganizationID: "Org",
+		Status:         StatusIdle,
+	})
+	hub.RegisterAgent(Agent{
+		ID:             "SYSTEM",
+		Name:           "SYSTEM",
+		Role:           "SystemRole",
+		OrganizationID: "Org",
+		Status:         StatusIdle,
+	})
+
+	err := hub.Publish(Message{
+		ID:        "msg-1",
+		ToAgent:   "parent-agent",
+		FromAgent: "user",
+		Content:   "Hello from user",
+	})
+	if err != nil {
+		t.Fatalf("Failed to publish: %v", err)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+
+	childID, err := hub.ForkAgent(context.Background(), "parent-agent", "Please perform a sub-task")
+	if err != nil {
+		t.Fatalf("ForkAgent failed: %v", err)
+	}
+
+	child, ok := hub.Agent(childID)
+	if !ok {
+		t.Fatalf("Child agent %s not found", childID)
+	}
+	if child.Role != parent.Role {
+		t.Errorf("Expected role %s, got %s", parent.Role, child.Role)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+	inbox := hub.Inbox(childID)
+	if len(inbox) != 2 {
+		t.Fatalf("Expected 2 messages in child inbox, got %d", len(inbox))
+	}
+
+	if inbox[0].Content != "Hello from user" {
+		t.Errorf("Expected first message 'Hello from user', got '%s'", inbox[0].Content)
+	}
+
+	if !strings.Contains(inbox[1].Content, "<task-notification>") || !strings.Contains(inbox[1].Content, "Please perform a sub-task") {
+		t.Errorf("Expected task notification in second message, got '%s'", inbox[1].Content)
+	}
+}
