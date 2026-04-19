@@ -126,6 +126,7 @@ go_test(
         "//srcs/server/db",
         "//srcs/server/interop",
         "//srcs/server/orchestration/mesh",
+        "//srcs/server/orchestration/state",
         "//srcs/server/settings",
         "//srcs/server/telemetry",
         "//srcs/server/lib/perf",
