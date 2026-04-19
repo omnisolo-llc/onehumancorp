@@ -7,7 +7,7 @@ import (
 )
 
 func TestSandboxValidation(t *testing.T) {
-	sandbox := NewSandbox()
+	sandbox := NewSandbox().(*LocalEnvironment)
 
 	tests := []struct {
 		name    string
@@ -36,7 +36,7 @@ func TestSandboxValidation(t *testing.T) {
 }
 
 func TestSandboxExecution(t *testing.T) {
-	sandbox := NewSandbox()
+	sandbox := NewSandbox().(*LocalEnvironment)
 	ctx := context.Background()
 
 	out, err := sandbox.ExecuteContext(ctx, "echo \"test execution\"", "")
@@ -50,7 +50,7 @@ func TestSandboxExecution(t *testing.T) {
 }
 
 func TestSandboxExecutionViolation_Output(t *testing.T) {
-	sandbox := NewSandbox()
+	sandbox := NewSandbox().(*LocalEnvironment)
 	ctx := context.Background()
 
 	out, err := sandbox.ExecuteContext(ctx, "sudo echo \"test execution\"", "")
@@ -64,7 +64,7 @@ func TestSandboxExecutionViolation_Output(t *testing.T) {
 }
 
 func TestSandboxExecution_OperationNotPermitted(t *testing.T) {
-	sandbox := NewSandbox()
+	sandbox := NewSandbox().(*LocalEnvironment)
 	ctx := context.Background()
 
 	out, err := sandbox.ExecuteContext(ctx, "bash -c \"echo \\\"Operation not permitted\\\" >&2; e" + "xit 1\"", "")
@@ -78,7 +78,7 @@ func TestSandboxExecution_OperationNotPermitted(t *testing.T) {
 }
 
 func TestSandboxExecution_PermissionDenied(t *testing.T) {
-	sandbox := NewSandbox()
+	sandbox := NewSandbox().(*LocalEnvironment)
 	ctx := context.Background()
 
 	out, err := sandbox.ExecuteContext(ctx, "bash -c \"echo \\\"Permission denied\\\" >&2; e" + "xit 1\"", "")
@@ -92,17 +92,21 @@ func TestSandboxExecution_PermissionDenied(t *testing.T) {
 }
 
 func TestSandboxExecution_EnvironmentScrubbing(t *testing.T) {
-	sandbox := NewSandbox()
+	sandbox := NewSandbox().(*LocalEnvironment)
 	ctx := context.Background()
 
 	t.Setenv("GITHUB_TOKEN", "secret123")
 	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "header123")
+	t.Setenv("OHC_API_KEY", "secret_ohc")
 
 	out, err := sandbox.ExecuteContext(ctx, "env", "")
 	if err != nil {
 		t.Fatalf("ExecuteContext failed: %v", err)
 	}
 
+	if strings.Contains(out, "OHC_API_KEY=secret_ohc") {
+		t.Errorf("ExecuteContext output leaked OHC_API_KEY, output: %v", out)
+	}
 	if strings.Contains(out, "GITHUB_TOKEN=secret123") {
 		t.Errorf("ExecuteContext output leaked GITHUB_TOKEN, output: %v", out)
 	}
@@ -110,7 +114,7 @@ func TestSandboxExecution_EnvironmentScrubbing(t *testing.T) {
 		t.Errorf("ExecuteContext output leaked OTEL_EXPORTER_OTLP_HEADERS, output: %v", out)
 	}
 
-	if !strings.Contains(out, "HOME=.agent-home/") {
-		t.Errorf("ExecuteContext output did not override HOME, output: %v", out)
+	if !strings.Contains(out, "HOME=") || strings.Contains(out, "HOME=.") {
+		t.Errorf("ExecuteContext output did not correctly override HOME, output: %v", out)
 	}
 }
