@@ -8,7 +8,9 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -73,6 +75,7 @@ func (s *LocalEnvironment) ValidateContext(ctx context.Context, command string) 
 	for _, pattern := range s.blockedPatterns {
 		if pattern.MatchString(command) {
 			violationCount.Add(ctx, 1, metric.WithAttributes(attribute.String("pattern", pattern.String())))
+			telemetry.RecordBubblewrapViolation(ctx)
 			return fmt.Errorf("command violates security policy: matched %s", pattern.String())
 		}
 	}
@@ -82,6 +85,12 @@ func (s *LocalEnvironment) ValidateContext(ctx context.Context, command string) 
 // ExecuteContext runs the command if it passes validation.
 func (s *LocalEnvironment) ExecuteContext(ctx context.Context, command string, workDir string) (string, error) {
 	execCount.Add(ctx, 1)
+	telemetry.RecordBubblewrapSpawn(ctx)
+
+	startTime := time.Now()
+	defer func() {
+		telemetry.RecordBubblewrapExecutionLatency(ctx, time.Since(startTime).Seconds())
+	}()
 
 	if err := s.ValidateContext(ctx, command); err != nil {
 		return fmt.Sprintf("<sandbox_violations>%v</sandbox_violations>", err), err
@@ -118,8 +127,10 @@ func (s *LocalEnvironment) ExecuteContext(ctx context.Context, command string, w
 		outputStr := string(out)
 		if strings.Contains(outputStr, "Operation not permitted") {
 			outputStr += "\n<sandbox_violations>Operation not permitted: sandbox boundary drop</sandbox_violations>"
+			telemetry.RecordBubblewrapViolation(ctx)
 		} else if strings.Contains(outputStr, "Permission denied") {
 			outputStr += "\n<sandbox_violations>Permission denied: sandbox boundary drop</sandbox_violations>"
+			telemetry.RecordBubblewrapViolation(ctx)
 		}
 
 		return outputStr, fmt.Errorf("execution failed: %w", err)
