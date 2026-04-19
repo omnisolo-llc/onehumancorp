@@ -25,6 +25,7 @@ func AllTools() []Tool {
 		GrepTool,
 		WebFetchTool,
 		WebSearchTool,
+		BrowserTool,
 		SendMessageTool,
 		TodoWriteTool,
 		TodoReadTool,

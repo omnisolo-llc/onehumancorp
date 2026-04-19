@@ -18,8 +18,8 @@ go_library(
 go_test(
     name = "mcp_test",
     srcs = [
-        "log_tool_test.go",
         "log_tool_coverage_test.go",
+        "log_tool_test.go",
         "proxy_test.go",
         "secrets_test.go",
     ],

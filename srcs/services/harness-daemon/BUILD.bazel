@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "harness-daemon",
+    srcs = ["daemon.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/services/harness-daemon",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_playwright_community_playwright_go//:playwright-go",
+    ],
+)
+
+go_test(
+    name = "harness-daemon_test",
+    srcs = ["daemon_test.go"],
+    embed = [":harness-daemon"],
+)

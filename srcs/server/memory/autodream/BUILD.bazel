@@ -9,8 +9,8 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/memory/autodream",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/memory",
         "//srcs/server/auth",
+        "//srcs/server/memory",
     ],
 )
 
@@ -19,9 +19,9 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":autodream"],
     deps = [
+        "//srcs/server/auth",
         "//srcs/server/db",
         "//srcs/server/memory",
-        "//srcs/server/auth",
         "@org_modernc_sqlite//:sqlite",
     ],
 )

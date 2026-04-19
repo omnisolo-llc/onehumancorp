@@ -63,8 +63,8 @@ func TestTools(t *testing.T) {
 
     // Verify all tools are correctly registered
     allTools := AllTools()
-    if len(allTools) != 17 {
-        t.Fatalf("Expected 17 tools, got %d", len(allTools))
+    if len(allTools) != 18 {
+        t.Fatalf("Expected 18 tools, got %d", len(allTools))
     }
 }
 
