@@ -56,7 +56,7 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) { /
 	}
 
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
-	err := worker.ConsolidateEpoch(r.Context())
+	err := worker.IngestCompletedTasks(r.Context())
 	if err != nil {
 		http.Error(w, "failed to synchronize AutoDream: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -130,7 +130,7 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
-	results, err := worker.SearchTruth(r.Context(), embedding, req.Limit)
+	results, err := worker.SearchMemories(r.Context(), embedding, req.Limit)
 	if err != nil {
 		http.Error(w, "failed to search AutoDream memories: "+err.Error(), http.StatusInternalServerError)
 		return

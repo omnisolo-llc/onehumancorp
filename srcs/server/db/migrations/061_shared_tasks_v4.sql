@@ -1,12 +1,13 @@
 -- +goose Up
 -- +goose StatementBegin
+DROP TABLE IF EXISTS shared_tasks_v4;
 CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
     id VARCHAR PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING',
-    assigned_agent_id VARCHAR,
+    agent_id VARCHAR,
     priority VARCHAR NOT NULL DEFAULT 'P2',
     payload TEXT,
     parent_plan_id TEXT,
@@ -18,4 +19,5 @@ CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
 
 -- +goose Down
 -- +goose StatementBegin
+DROP TABLE IF EXISTS shared_tasks_v4;
 -- +goose StatementEnd

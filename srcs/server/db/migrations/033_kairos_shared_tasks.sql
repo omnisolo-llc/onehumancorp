@@ -1,3 +1,4 @@
+-- issue_id: 3980
 CREATE TABLE IF NOT EXISTS shared_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,

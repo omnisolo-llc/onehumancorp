@@ -233,3 +233,78 @@ func TestAutoDreamWorker_ConsolidateMemories_MeshBroadcast(t *testing.T) {
 		}
 	}
 }
+
+func TestAutoDreamWorker_IngestCompletedTasks(t *testing.T) {
+	provider := setupTestDB(t)
+	worker := NewAutoDreamWorker(provider)
+	ctx := context.Background()
+
+	// Ensure table exists for test
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
+
+	// Insert test tasks
+	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, payload, status) VALUES (?, ?, ?, ?)",
+		"st-1", "Test Task 1", "{}", "COMPLETED")
+	if err != nil {
+		t.Fatalf("failed to insert test shared task: %v", err)
+	}
+
+	_, err = provider.Exec(ctx, "INSERT INTO swarm_tasks (id, title, payload, status) VALUES (?, ?, ?, ?)",
+		"sw-1", "Swarm Task 1", "{}", "COMPLETED")
+	if err != nil {
+		t.Fatalf("failed to insert test swarm task: %v", err)
+	}
+
+	err = worker.IngestCompletedTasks(ctx)
+	if err != nil {
+		t.Fatalf("IngestCompletedTasks failed: %v", err)
+	}
+
+	// Verify status updated to ARCHIVED
+	var status string
+	err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'st-1'").Scan(&status)
+	if err != nil || status != "ARCHIVED" {
+		t.Errorf("Expected shared_task status ARCHIVED, got %s (err: %v)", status, err)
+	}
+
+	err = provider.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = 'sw-1'").Scan(&status)
+	if err != nil || status != "ARCHIVED" {
+		t.Errorf("Expected swarm_task status ARCHIVED, got %s (err: %v)", status, err)
+	}
+
+	// Verify insertion into autodream_memories
+	var count int
+	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_type IN ('shared_tasks', 'swarm_tasks')").Scan(&count)
+	if err != nil || count != 2 {
+		t.Errorf("Expected 2 memories inserted, got %d (err: %v)", count, err)
+	}
+}
+
+func TestAutoDreamWorker_SearchMemories(t *testing.T) {
+	provider := setupTestDB(t)
+	worker := NewAutoDreamWorker(provider)
+	ctx := context.Background()
+
+	// Clean up table for isolated test
+	provider.Exec(ctx, "DELETE FROM autodream_memories")
+
+	// Insert test memories
+	for i := 0; i < 3; i++ {
+		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+			fmt.Sprintf("mem-search-%d", i), fmt.Sprintf("test content %d", i), "[0.0,0.0,0.0]")
+		if err != nil {
+			t.Fatalf("failed to insert mock memory for search: %v", err)
+		}
+	}
+
+	// In SQLite mode, it falls back to recency-based returning 3 results.
+	results, err := worker.SearchMemories(ctx, "[0.0,0.0,0.0]", 2)
+	if err != nil {
+		t.Fatalf("SearchMemories failed: %v", err)
+	}
+
+	if len(results) != 2 {
+		t.Errorf("Expected 2 results, got %d", len(results))
+	}
+}

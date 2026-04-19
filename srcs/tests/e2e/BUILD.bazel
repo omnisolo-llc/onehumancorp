@@ -7,6 +7,9 @@ go_test(
     name = "e2e_test",
     srcs = glob(["*_test.go"]),
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    data = [
+        "//srcs/server:ohc",
+    ],
     deps = [
         "@com_github_playwright_community_playwright_go//:playwright-go",
     ],
@@ -14,6 +17,6 @@ go_test(
     timeout = "eternal",
     tags = [
         "local",
-        "requires-docker",
+        "requires-network",
     ],
 )
