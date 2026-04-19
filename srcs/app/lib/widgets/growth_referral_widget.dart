@@ -24,7 +24,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
         duration: const Duration(milliseconds: 200),
         curve: Curves.easeOut,
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           child: BackdropFilter(
             filter: ImageFilter.compose(
               outer: ColorFilter.matrix(const <double>[
@@ -39,9 +39,15 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: const Color.fromRGBO(255, 255, 255, 0.03),
-                border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
-                borderRadius: BorderRadius.circular(16),
+                color: _isHovered
+                    ? const Color.fromRGBO(255, 255, 255, 0.05)
+                    : const Color.fromRGBO(255, 255, 255, 0.03),
+                border: Border.all(
+                  color: _isHovered
+                      ? const Color.fromRGBO(255, 255, 255, 0.1)
+                      : colorScheme.outline.withValues(alpha: 0.2),
+                ),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
