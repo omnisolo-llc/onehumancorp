@@ -295,9 +295,9 @@ func run(now time.Time, listen listenFunc) error {
 		}
 	}
 
+	var autodreamWorker *orchestration.AutoDreamWorker
 	if pool != nil {
-		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
-		autodreamWorker.Start(ctx)
+		autodreamWorker = orchestration.NewAutoDreamWorker(pool.Provider)
 
 		// Setup Semantic Distillation Worker
 		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
@@ -545,6 +545,11 @@ func run(now time.Time, listen listenFunc) error {
 
 	if cn := hub.CentrifugeNode(); cn != nil {
 		cn.SetMeshTransport(mesh)
+	}
+
+	if autodreamWorker != nil {
+		autodreamWorker.SetMeshTransport(mesh)
+		autodreamWorker.Start(ctx)
 	}
 
 	// Start gRPC server

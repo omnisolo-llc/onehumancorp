@@ -21,6 +21,7 @@ import (
 // AutoDreamWorker handles memory consolidation, pruning, and conflict resolution.
 type AutoDreamWorker struct {
 	pool db.Provider
+	mesh MeshTransport
 }
 
 // AutoDreamWorker options
@@ -35,6 +36,11 @@ func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
 	w := &AutoDreamWorker{pool: pool}
 	// Note: You can inject rueidis.Client and MinimaxClient into the struct if needed.
 	return w
+}
+
+// SetMeshTransport configures the transport layer to use for cross-node mesh broadcasts
+func (w *AutoDreamWorker) SetMeshTransport(mesh MeshTransport) {
+	w.mesh = mesh
 }
 
 // Start runs the AutoDream background pipelines.
