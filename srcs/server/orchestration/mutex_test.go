@@ -15,16 +15,16 @@ func TestSQLiteMutex_LockUnlock(t *testing.T) {
 	provider := db.NewTestProvider(t)
 	defer provider.Close()
 
-	lockProvider, err := NewDistributedLockProvider(ctx, provider, nil)
+	mutexProvider, err := NewMutexProvider(ctx, provider, nil)
 	require.NoError(t, err)
-	mutex := lockProvider.NewLock("test-lock-1")
+	mutex := mutexProvider.NewMutex("test-lock-1")
 
 	// Test successful lock
 	err = mutex.Lock(ctx, 5*time.Second)
 	require.NoError(t, err)
 
 	// Test fail to lock when already locked
-	mutex2 := lockProvider.NewLock("test-lock-1")
+	mutex2 := mutexProvider.NewMutex("test-lock-1")
 	err = mutex2.Lock(ctx, 5*time.Second)
 	assert.ErrorIs(t, err, ErrLockAcquisitionFailed)
 
@@ -46,9 +46,9 @@ func TestSQLiteMutex_Expiration(t *testing.T) {
 	provider := db.NewTestProvider(t)
 	defer provider.Close()
 
-	lockProvider, err := NewDistributedLockProvider(ctx, provider, nil)
+	mutexProvider, err := NewMutexProvider(ctx, provider, nil)
 	require.NoError(t, err)
-	mutex := lockProvider.NewLock("test-lock-exp")
+	mutex := mutexProvider.NewMutex("test-lock-exp")
 
 	// Lock with short TTL
 	err = mutex.Lock(ctx, 100*time.Millisecond)
@@ -58,7 +58,7 @@ func TestSQLiteMutex_Expiration(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Another mutex should be able to acquire the lock now
-	mutex2 := lockProvider.NewLock("test-lock-exp")
+	mutex2 := mutexProvider.NewMutex("test-lock-exp")
 	err = mutex2.Lock(ctx, 5*time.Second)
 	require.NoError(t, err)
 }

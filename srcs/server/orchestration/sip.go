@@ -433,7 +433,6 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 	err := withSipRetry(ctx, func() error {
 		prevTime, _ = s.getMissionUpdatedAt(ctx, missionID)
 
-		// RETURNING id used instead of RowsAffected for SQLite/Postgres compatibility
 		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
@@ -457,7 +456,6 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 	err := withSipRetry(ctx, func() error {
 		prevTime, _ = s.getMissionUpdatedAt(ctx, missionID)
 
-		// RETURNING id used instead of RowsAffected for SQLite/Postgres compatibility
 		err := s.db.QueryRow(ctx, "UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2 RETURNING id", missionID, s.orgID).Scan(&id)
 		if errors.Is(err, sql.ErrNoRows) || (err != nil && err.Error() == "no rows in result set") {
 			return errors.New("mission not found")
