@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS swarm_tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     mission_id TEXT NOT NULL,
     parent_plan_id TEXT,
     dependencies JSONB NOT NULL DEFAULT '[]',
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS swarm_tasks (
 
 -- For autoDream Memory Embeddings
 CREATE TABLE IF NOT EXISTS swarm_long_term_memory (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     topic TEXT NOT NULL,
     summary TEXT NOT NULL,
     embedding VECTOR(1536),

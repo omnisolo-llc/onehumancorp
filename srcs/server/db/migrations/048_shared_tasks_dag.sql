@@ -2,6 +2,7 @@
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS shared_tasks_dag (
     id VARCHAR PRIMARY KEY,
+    mission_id TEXT NOT NULL,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,

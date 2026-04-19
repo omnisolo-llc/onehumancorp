@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
 );
 
 CREATE TABLE IF NOT EXISTS sub_agent_queue (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
     parent_task_id UUID NOT NULL,
     payload JSONB,

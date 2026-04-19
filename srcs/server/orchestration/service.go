@@ -1924,7 +1924,7 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 		return
 	}
 
-	task, err := tm.CreateTask(r.Context(), req.MissionID, req.Title, req.Description, req.Priority)
+	task, err := tm.CreateTask(r.Context(), "", req.MissionID, req.Title, req.Description, req.Priority)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -2020,7 +2020,7 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 				filteredDeps = append(filteredDeps, dep)
 			}
 		}
-		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, req.TaskID, filteredDeps, st.Title, st.Description, st.Priority)
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, "", req.TaskID, filteredDeps, st.Title, st.Description, st.Priority)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
 			return
