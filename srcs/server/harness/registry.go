@@ -48,3 +48,16 @@ func (r *Registry) Get(name string) (AgentHarness, error) {
 	}
 	return harness, nil
 }
+
+// GetManager retrieves a harness as a SandboxManager if possible.
+func (r *Registry) GetManager(name string) (SandboxManager, error) {
+	h, err := r.Get(name)
+	if err != nil {
+		return nil, err
+	}
+	manager, ok := h.(SandboxManager)
+	if !ok {
+		return nil, fmt.Errorf("harness %q is not a SandboxManager", name)
+	}
+	return manager, nil
+}
