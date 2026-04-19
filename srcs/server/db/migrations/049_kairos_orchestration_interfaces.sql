@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS shared_tasks_temp_for_some_reason (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
