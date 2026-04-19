@@ -12,6 +12,7 @@ go_library(
         "telemetry_bridge.go",
         "token_forecast_worker.go",
         "mcp_sync_worker.go",
+        "sync_daemon.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",
     visibility = ["//visibility:public"],
@@ -34,6 +35,7 @@ go_test(
     srcs = [
         "ast_pii_linter_test.go",
         "buffer_test.go",
+        "buffer_pii_test.go",
         "compliance_test.go",
         "global_pii_linter_test.go",
         "privacy_test.go",
@@ -44,6 +46,7 @@ go_test(
         "telemetry_test.go",
         "token_forecast_worker_test.go",
         "mcp_sync_worker_test.go",
+        "sync_daemon_test.go",
     ],
     embed = [":telemetry"],
     data = ["telemetry.go"],
