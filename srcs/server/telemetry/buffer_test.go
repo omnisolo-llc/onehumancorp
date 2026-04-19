@@ -93,6 +93,18 @@ func TestBufferMetricFunc(t *testing.T) {
 	}
 	called = false
 
+	RecordSQLiteThrottledRequest(ctx, "write")
+	if !called {
+		t.Errorf("expected buffer call")
+	}
+	called = false
+
+	RecordSQLiteRetryEvent(ctx, "write")
+	if !called {
+		t.Errorf("expected buffer call")
+	}
+	called = false
+
 	RecordPostgresRetryExhausted(ctx, "write")
 	if !called {
 		t.Errorf("expected buffer call")
