@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "mcp",
     srcs = [
+        "blob_sync.go",
         "log_tool.go",
         "proxy.go",
         "secrets.go",
@@ -18,6 +19,7 @@ go_library(
 go_test(
     name = "mcp_test",
     srcs = [
+        "blob_sync_test.go",
         "log_tool_test.go",
         "log_tool_coverage_test.go",
         "proxy_test.go",
