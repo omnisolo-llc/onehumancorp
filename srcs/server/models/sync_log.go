@@ -2,7 +2,7 @@ package models
 
 import "time"
 
-// SyncLog tracks memories that have been synchronized to the cloud.
+// SyncLog tracks memory records that have been synchronized to the cloud.
 type SyncLog struct {
 	SyncID         string
 	MemoryID       string
