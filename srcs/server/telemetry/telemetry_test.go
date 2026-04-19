@@ -1,3 +1,4 @@
+// Enforce standalone privacy telemetry rules
 package telemetry
 
 import (
