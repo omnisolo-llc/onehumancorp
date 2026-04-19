@@ -1,0 +1,18 @@
+--- srcs/server/tools/hybridfsmcp/mcp_test.go
++++ srcs/server/tools/hybridfsmcp/mcp_test.go
+@@ -127,6 +127,15 @@
+	if err == nil {
+		t.Fatalf("expected error without claims")
+	}
++
++	// Test ListDir
++	entries, err := provider.ListDir(ctx, ".")
++	if err != nil {
++		t.Fatalf("expected no error, got %v", err)
++	}
++	if len(entries) != 1 || entries[0] != "test.txt" {
++		t.Fatalf("expected ['test.txt'], got %v", entries)
++	}
+ }
+
+ func TestHybridFSMCP(t *testing.T) {

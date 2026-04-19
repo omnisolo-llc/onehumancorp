@@ -1,0 +1,45 @@
+--- srcs/server/tools/hybridfsmcp/mcp_test.go
++++ srcs/server/tools/hybridfsmcp/mcp_test.go
+@@ -53,6 +53,7 @@
+
+ type MockS3Client struct {
+	objects map[string][]byte
++	err     bool
+ }
+
+ func NewMockS3Client() *MockS3Client {
+@@ -84,6 +85,10 @@
+	ch := make(chan minio.ObjectInfo)
+	go func() {
+		defer close(ch)
++		if m.err {
++			ch <- minio.ObjectInfo{Err: io.ErrUnexpectedEOF}
++			return
++		}
+		for k := range m.objects {
+			if strings.HasPrefix(k, opts.Prefix) {
+				ch <- minio.ObjectInfo{Key: k}
+@@ -127,6 +132,23 @@
+	if err == nil {
+		t.Fatalf("expected error without claims")
+	}
++
++	// Test ListDir
++	entries, err := provider.ListDir(ctx, ".")
++	if err != nil {
++		t.Fatalf("expected no error, got %v", err)
++	}
++	if len(entries) != 1 || entries[0] != "test.txt" {
++		t.Fatalf("expected ['test.txt'], got %v", entries)
++	}
++
++	// Test ListDir with mock client error
++	mockClient.err = true
++	_, err = provider.ListDir(ctx, ".")
++	if err == nil {
++		t.Fatalf("expected error on list objects")
++	}
++	mockClient.err = false
+ }
+
+ func TestHybridFSMCP(t *testing.T) {

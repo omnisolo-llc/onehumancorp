@@ -1,0 +1,21 @@
+--- srcs/server/tools/hybridfsmcp/mcp_test.go
++++ srcs/server/tools/hybridfsmcp/mcp_test.go
+@@ -53,6 +53,7 @@
+
+ type MockS3Client struct {
+	objects map[string][]byte
++	err     bool
+ }
+
+ func NewMockS3Client() *MockS3Client {
+@@ -84,6 +85,10 @@
+	ch := make(chan minio.ObjectInfo)
+	go func() {
+		defer close(ch)
++		if m.err {
++			ch <- minio.ObjectInfo{Err: io.ErrUnexpectedEOF}
++			return
++		}
+		for k := range m.objects {
+			if strings.HasPrefix(k, opts.Prefix) {
+				ch <- minio.ObjectInfo{Key: k}

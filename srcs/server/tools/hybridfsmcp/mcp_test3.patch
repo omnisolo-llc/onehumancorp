@@ -1,0 +1,17 @@
+--- srcs/server/tools/hybridfsmcp/mcp_test.go
++++ srcs/server/tools/hybridfsmcp/mcp_test.go
+@@ -142,6 +142,13 @@
+		t.Fatalf("expected error on list objects")
+	}
+	mockClient.err = false
++
++	// Test ReadFile with mock client error reading stream
++	mockClient.readErr = true
++	_, err = provider.ReadFile(ctx, "test.txt")
++	if err == nil {
++		t.Fatalf("expected error on read objects")
++	}
++	mockClient.readErr = false
+ }
+
+ func TestHybridFSMCP(t *testing.T) {

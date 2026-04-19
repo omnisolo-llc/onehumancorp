@@ -1,0 +1,41 @@
+--- srcs/server/tools/hybridfsmcp/mcp_test.go
++++ srcs/server/tools/hybridfsmcp/mcp_test.go
+@@ -51,8 +51,13 @@
+
+ func (m MockReadCloser) Close() error { return nil }
+
++type ErrorReadCloser struct {}
++func (m ErrorReadCloser) Read(p []byte) (n int, err error) { return 0, io.ErrUnexpectedEOF }
++func (m ErrorReadCloser) Close() error { return nil }
++
+ type MockS3Client struct {
+	objects map[string][]byte
+	err     bool
++	readErr bool
+ }
+
+ func NewMockS3Client() *MockS3Client {
+@@ -64,6 +69,9 @@
+
+ func (m *MockS3Client) GetObject(ctx context.Context, bucketName, objectName string, opts minio.GetObjectOptions) (io.ReadCloser, error) {
++	if m.readErr {
++		return ErrorReadCloser{}, nil
++	}
+	data, ok := m.objects[objectName]
+	if !ok {
+		// Mock minio error
+@@ -148,6 +156,13 @@
+		t.Fatalf("expected error on list objects")
+	}
+	mockClient.err = false
++
++	// Test ReadFile with mock client error reading stream
++	mockClient.readErr = true
++	_, err = provider.ReadFile(ctx, "test.txt")
++	if err == nil {
++		t.Fatalf("expected error on read objects")
++	}
++	mockClient.readErr = false
+ }
+
+ func TestHybridFSMCP(t *testing.T) {

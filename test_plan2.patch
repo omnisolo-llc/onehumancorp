@@ -1,0 +1,19 @@
+--- srcs/server/tools/hybridfsmcp/mcp_test.go
++++ srcs/server/tools/hybridfsmcp/mcp_test.go
+@@ -135,6 +135,16 @@
+	if len(entries) != 1 || entries[0] != "test.txt" {
+		t.Fatalf("expected ['test.txt'], got %v", entries)
+	}
++
++	// Test ListDir with mock client error
++	mockClient.objects["tenant/tenant1/fs/test2.txt"] = []byte("fail")
++	mockClient.err = true
++	_, err = provider.ListDir(ctx, ".")
++	if err == nil {
++		t.Fatalf("expected error on list objects")
++	}
++	mockClient.err = false
++	delete(mockClient.objects, "tenant/tenant1/fs/test2.txt")
+ }
+
+ func TestHybridFSMCP(t *testing.T) {
