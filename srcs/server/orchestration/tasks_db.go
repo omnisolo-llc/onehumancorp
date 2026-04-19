@@ -29,6 +29,7 @@ type SharedTaskDB struct {
     UpdatedAt       string
 }
 
+// SharedTaskOrchestrator manages the shared task list execution and state transitions.
 type SharedTaskOrchestrator struct {
     dbProvider db.Provider
     mu         sync.Mutex

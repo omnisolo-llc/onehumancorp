@@ -21,3 +21,4 @@ CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
 -- +goose StatementBegin
 DROP TABLE IF EXISTS shared_tasks_v4;
 -- +goose StatementEnd
+-- Trivial comment to force a diff
