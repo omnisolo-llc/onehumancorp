@@ -12,6 +12,7 @@ go_library(
     deps = [
         "//srcs/server/integrations/libsql",
         "//srcs/server/integrations/litefs",
+        "//srcs/server/integrations/etcd",
         "//srcs/proto:hub_go_proto",
         "@org_golang_google_protobuf//proto",
     ],
