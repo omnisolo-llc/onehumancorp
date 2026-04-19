@@ -218,6 +218,8 @@ type TeammateMesh interface {
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+	BroadcastMessage(ctx context.Context, msg Message) error
+	SubscribeMessages(ctx context.Context) (<-chan Message, error)
 }
 
 type RedisTeammateMesh struct {
@@ -282,6 +284,35 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 			slog.Error("RedisMeshTransport.SubscribeTasks error", "err", err)
 		}
 		close(ch)
+	}()
+	return ch, nil
+}
+
+func (rm *RedisMeshTransport) BroadcastMessage(ctx context.Context, msg Message) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	cmd := rm.client.B().Publish().Channel("mesh:messages").Message(string(data)).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisMeshTransport) SubscribeMessages(ctx context.Context) (<-chan Message, error) {
+	ch := make(chan Message, 100)
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:messages").Build(), func(msg rueidis.PubSubMessage) {
+			var m Message
+			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
+				select {
+				case ch <- m:
+				default:
+					slog.Warn("RedisMeshTransport.SubscribeMessages channel full, dropping message")
+				}
+			}
+		})
+		if err != nil {
+			slog.Error("RedisMeshTransport.SubscribeMessages error", "err", err)
+		}
 	}()
 	return ch, nil
 }
@@ -507,6 +538,8 @@ type MeshTransport interface {
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+	BroadcastMessage(ctx context.Context, msg Message) error
+	SubscribeMessages(ctx context.Context) (<-chan Message, error)
 	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
 	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
 	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
@@ -523,6 +556,8 @@ type MemoryMeshTransport struct {
 	subs           []map[chan Task]struct{}
 	coordBroadcast []chan MeshMessage
 	coordSubs      []map[chan MeshMessage]struct{}
+	messageBroadcast []chan Message
+	messageSubs      []map[chan Message]struct{}
 	coordMu        []sync.RWMutex
 
 	capsBroadcast []chan pb.AgentCapabilities
@@ -544,6 +579,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		subs:            make([]map[chan Task]struct{}, numShards),
 		coordBroadcast:  make([]chan MeshMessage, numShards),
 		coordSubs:       make([]map[chan MeshMessage]struct{}, numShards),
+		messageBroadcast: make([]chan Message, numShards),
+		messageSubs:      make([]map[chan Message]struct{}, numShards),
 		coordMu:         make([]sync.RWMutex, numShards),
 		capsBroadcast:   make([]chan pb.AgentCapabilities, numShards),
 		capsSubs:        make([]map[chan pb.AgentCapabilities]struct{}, numShards),
@@ -561,6 +598,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.subs[i] = make(map[chan Task]struct{})
 		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
 		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
+		lm.messageBroadcast[i] = make(chan Message, 10000)
+		lm.messageSubs[i] = make(map[chan Message]struct{})
 		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
 		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
@@ -570,6 +609,7 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 			go lm.persistWorker(i)
 		}
 		go lm.runCoord(i)
+		go lm.runMessages(i)
 		go lm.runCaps(i)
 	}
 	return lm
@@ -680,6 +720,63 @@ func (lm *MemoryMeshTransport) run(shardIdx int) {
 		}
 		lm.mu[shardIdx].RUnlock()
 	}
+}
+
+func (lm *MemoryMeshTransport) runMessages(shardIdx int) {
+	for msg := range lm.messageBroadcast[shardIdx] {
+		lm.mu[shardIdx].RLock()
+		for ch := range lm.messageSubs[shardIdx] {
+			select {
+			case ch <- msg:
+			default:
+				// drop message if subscriber is blocked
+			}
+		}
+		lm.mu[shardIdx].RUnlock()
+	}
+}
+
+func (lm *MemoryMeshTransport) BroadcastMessage(ctx context.Context, msg Message) error {
+	shardIdx := lm.getShard(msg.ID)
+	select {
+	case lm.messageBroadcast[shardIdx] <- msg:
+		return nil
+	default:
+		// Retry briefly before dropping
+		for i := 0; i < 3; i++ {
+			time.Sleep(10 * time.Millisecond)
+			select {
+			case lm.messageBroadcast[shardIdx] <- msg:
+				return nil
+			default:
+			}
+		}
+		slog.Warn("MemoryMeshTransport message broadcast channel full, dropping message after retries")
+		return fmt.Errorf("MemoryMeshTransport message broadcast channel full")
+	}
+}
+
+func (lm *MemoryMeshTransport) SubscribeMessages(ctx context.Context) (<-chan Message, error) {
+	// A subscriber receives from all shards
+	ch := make(chan Message, 100)
+	for i := 0; i < numShards; i++ {
+		lm.mu[i].Lock()
+		lm.messageSubs[i][ch] = struct{}{}
+		lm.mu[i].Unlock()
+	}
+
+	// Handle context cancellation
+	go func() {
+		<-ctx.Done()
+		for i := 0; i < numShards; i++ {
+			lm.mu[i].Lock()
+			delete(lm.messageSubs[i], ch)
+			lm.mu[i].Unlock()
+		}
+		close(ch)
+	}()
+
+	return ch, nil
 }
 
 func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {

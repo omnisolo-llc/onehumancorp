@@ -75,9 +75,9 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 	threshold := time.Now().Add(-1 * time.Hour).UTC()
 	var query string
 	if p.db.IsSQLite() {
-		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? LIMIT 50"
+		query = "SELECT entity_id as id, agent_id, reason as context_data FROM state_machine_transitions WHERE to_state = 'COMPLETED' AND occurred_at < ? LIMIT 50"
 	} else {
-		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
+		query = "SELECT entity_id as id, agent_id, reason as context_data FROM state_machine_transitions WHERE to_state = 'COMPLETED' AND occurred_at < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
 	}
 
 	rows, err := p.db.Query(ctx, query, threshold)
@@ -133,11 +133,11 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 				var insertQuery string
 				if p.db.IsSQLite() {
-					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, ?, 'session_compression')"
-					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
+					insertQuery = "INSERT INTO autodream_memories (task_id, content, embedding) VALUES (?, ?, ?)"
+					_, err = tx.Exec(ctx, insertQuery, s.ID, summary, embeddingStr)
 				} else {
-					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, 'system', $2, $3, $4::vector, 'session_compression')"
-					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
+					insertQuery = "INSERT INTO autodream_memories (task_id, content, embedding) VALUES ($1, $2, $3::vector)"
+					_, err = tx.Exec(ctx, insertQuery, s.ID, summary, embeddingStr)
 				}
 
 				if err != nil {
@@ -146,9 +146,9 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 				var delQuery string
 				if p.db.IsSQLite() {
-					delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+					delQuery = "DELETE FROM state_machine_transitions WHERE entity_id = ? AND to_state = 'COMPLETED'"
 				} else {
-					delQuery = "DELETE FROM agent_session_data WHERE session_id = $1"
+					delQuery = "DELETE FROM state_machine_transitions WHERE entity_id = $1 AND to_state = 'COMPLETED'"
 				}
 				_, err = tx.Exec(ctx, delQuery, s.ID)
 				if err != nil {

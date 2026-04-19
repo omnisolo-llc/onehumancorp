@@ -3,7 +3,7 @@ package orchestration
 import (
 	"context"
 	"testing"
-	"time"
+
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -11,7 +11,9 @@ import (
 
 func TestClaimDecompositionTask_SQLite(t *testing.T) {
 	telemetry.InitTelemetry()
-	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+	dbProvider := db.NewTestProvider(t)
+	var err error
+	_ = err
 	if err != nil {
 		t.Fatalf("failed to create sqlite provider: %v", err)
 	}
@@ -46,6 +48,7 @@ func TestClaimDecompositionTask_SQLite(t *testing.T) {
 	}
 
 	to := &DefaultTaskOrchestrator{db: dbProvider}
+	_ = to
 
 	task, err := to.ClaimDecompositionTask(ctx, "agent-1")
 	if err != nil {
@@ -67,7 +70,9 @@ func TestClaimDecompositionTask_SQLite(t *testing.T) {
 
 func TestClaimDecompositionTask_Postgres(t *testing.T) {
 	telemetry.InitTelemetry()
-	dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+	dbProvider := db.NewTestProvider(t)
+	var err error
+	_ = err
 	if err != nil {
 		t.Fatalf("failed to create sqlite provider: %v", err)
 	}
@@ -102,6 +107,7 @@ func TestClaimDecompositionTask_Postgres(t *testing.T) {
 	}
 
 	to := &DefaultTaskOrchestrator{db: dbProvider}
+	_ = to
 
 	// Because we use SQLite mock for postgres, claimDecompositionTaskPostgres will fail on FOR UPDATE SKIP LOCKED
 	// We'll just verify it's wired correctly.
