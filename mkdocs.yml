@@ -66,6 +66,7 @@ nav:
       - Task Tracking: operations/task-tracking.md
       - Issue Migration Seed: operations/github-issues-migration.md
       - Docs Audit: reports/docs-site-audit.md
+  - Visual Walkthrough: public/VISUAL_WALKTHROUGH.md
   - Releases:
       - public/index.md
       - Changelog: public/CHANGELOG.md
