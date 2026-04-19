@@ -137,7 +137,7 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 
 	// Update entity state
 	if entityType == "SHARED_TASK" {
-		updateQuery := `UPDATE shared_tasks SET status = $1, agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
+		updateQuery := `UPDATE shared_tasks SET status = $1, assigned_agent_id = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`
 		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update entity state: %w", err)
@@ -147,7 +147,7 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 	// Record audit log
 	transitionID := generateID()
 	auditQuery := `
-		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
+		INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, assigned_agent_id, reason)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	_, err := tx.Exec(ctx, auditQuery, transitionID, entityID, entityType, currentState, toState, agentID, reason)

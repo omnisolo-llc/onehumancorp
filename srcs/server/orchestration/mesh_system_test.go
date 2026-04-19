@@ -15,7 +15,7 @@ func TestMemoryMeshTransport_BroadcastAndSubscribe(t *testing.T) {
 			id TEXT PRIMARY KEY,
 			title TEXT,
 			status TEXT,
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			organization_id TEXT,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);

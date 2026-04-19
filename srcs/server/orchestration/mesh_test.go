@@ -46,7 +46,7 @@ func TestTeammateMesh_StandaloneMode(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Client 1 sends a message
-	msg := `{"agent_id":"agent-1","action":"CHAT","status":"SENT","sender_id":"agent-1","role":"SWE","content":"hello"}`
+	msg := `{"assigned_agent_id":"agent-1","action":"CHAT","status":"SENT","sender_id":"agent-1","role":"SWE","content":"hello"}`
 	err = conn1.WriteMessage(websocket.TextMessage, []byte(msg))
 	if err != nil {
 		t.Fatalf("client 1 write failed: %v", err)
@@ -132,7 +132,7 @@ func TestMemoryMeshTransport(t *testing.T) {
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			priority VARCHAR NOT NULL DEFAULT 'P2',
 			payload JSON,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING', -- PENDING, IN_PROGRESS, COMPLETED, BLOCKED
-    agent_id VARCHAR, -- Nullable until claimed
+    assigned_agent_id VARCHAR, -- Nullable until claimed
     priority VARCHAR NOT NULL DEFAULT 'P2',
     payload JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

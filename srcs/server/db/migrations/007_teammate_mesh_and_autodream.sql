@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     mission_id TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
-    assigned_agent_id TEXT,
+    assigned_assigned_agent_id TEXT,
     status TEXT NOT NULL DEFAULT 'PENDING',
     priority TEXT NOT NULL DEFAULT 'P2',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

@@ -36,7 +36,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 			description TEXT,
 			status TEXT NOT NULL,
 			priority TEXT,
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			organization_id TEXT NOT NULL,
 			payload TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -50,7 +50,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 		CREATE TABLE consolidated_memory (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			content TEXT NOT NULL,
 			embedding TEXT,
 			source_type TEXT NOT NULL,
@@ -63,7 +63,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	_, err = provider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS agent_session_data (
 			session_id TEXT PRIMARY KEY,
-			agent_id TEXT NOT NULL,
+			assigned_agent_id TEXT NOT NULL,
 			context_data TEXT NOT NULL,
 			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -73,7 +73,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 
 
 
-	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'))")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, assigned_agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'))")
 	require.NoError(t, err)
 
 	pipeline := NewAutoDreamPipeline(provider)
@@ -177,7 +177,7 @@ func TestAutoDreamPipeline_FilesMultipleChunks(t *testing.T) {
 		CREATE TABLE consolidated_memory (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			content TEXT NOT NULL,
 			embedding TEXT,
 			source_type TEXT NOT NULL,

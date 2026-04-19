@@ -154,7 +154,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 
 		updateQuery := `
 			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+			SET status = 'IN_PROGRESS', assigned_agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
 			WHERE id = $1 AND status = 'PENDING'
 		`
 		_, err = tx.Exec(to.workerCtx, updateQuery, taskID)
@@ -166,7 +166,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 		// Postgres mode: use FOR UPDATE SKIP LOCKED
 		query = `
 			UPDATE shared_tasks
-			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
+			SET status = 'IN_PROGRESS', assigned_agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
 			WHERE id = (
 				SELECT id FROM shared_tasks
 					WHERE status = 'PENDING' AND (priority = 'DELEGATED' OR payload->>'sub_agent_type' IS NOT NULL)

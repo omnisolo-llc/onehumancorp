@@ -21,7 +21,7 @@ func BenchmarkMemoryMeshTransport_Broadcast(b *testing.B) {
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			priority VARCHAR NOT NULL DEFAULT 'P2',
 			payload JSON,
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,

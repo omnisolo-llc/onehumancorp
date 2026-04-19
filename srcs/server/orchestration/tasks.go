@@ -350,6 +350,11 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to transition state: %w", err)
 	}
 
+	_, updateErr := tx.Exec(ctx, "UPDATE shared_tasks SET assigned_agent_id = $1 WHERE id = $2", agentID, fetchedTaskID)
+	if updateErr != nil {
+		return nil, fmt.Errorf("failed to assign agent: %w", updateErr)
+	}
+
 	// Fetch updated task data
 	readQuery := `
 		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
@@ -438,7 +443,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 	// Verify ownership first
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND assigned_agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -496,7 +501,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 
 	var createdAt time.Time
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND assigned_agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -935,7 +940,7 @@ func (tm *TaskManager) GetTask(ctx context.Context, taskID string) (*SharedTask,
 	}
 
 	query := `
-		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at
+		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(assigned_agent_id, ''), locked_until, created_at, updated_at
 		FROM shared_tasks
 		WHERE id = $1 AND organization_id = $2
 	`
@@ -1024,7 +1029,7 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 
 	query := `
 		UPDATE shared_tasks
-		SET title = $1, status = $2, priority = $3, agent_id = $4, payload = $5, locked_until = $6, updated_at = CURRENT_TIMESTAMP
+		SET title = $1, status = $2, priority = $3, assigned_agent_id = $4, payload = $5, locked_until = $6, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $7
 	`
 	_, err = tx.Exec(ctx, query, task.Title, task.Status, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)

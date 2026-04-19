@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING',
-    assigned_agent_id VARCHAR,
+    assigned_assigned_agent_id VARCHAR,
     priority VARCHAR NOT NULL DEFAULT 'P2',
     payload TEXT,
     parent_plan_id TEXT,

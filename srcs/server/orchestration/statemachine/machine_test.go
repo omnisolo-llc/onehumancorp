@@ -35,7 +35,7 @@ func setupTestDB(t *testing.T) db.Provider {
 			payload TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			priority INTEGER DEFAULT 0,
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			locked_until DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -46,7 +46,7 @@ func setupTestDB(t *testing.T) db.Provider {
 			entity_type TEXT NOT NULL,
 			from_state TEXT NOT NULL,
 			to_state TEXT NOT NULL,
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			reason TEXT,
 			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);

@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_master (
     status VARCHAR NOT NULL DEFAULT 'PENDING',
     priority VARCHAR NOT NULL DEFAULT 'P2',
     payload JSONB,
-    agent_id VARCHAR,
+    assigned_agent_id VARCHAR,
     parent_plan_id VARCHAR,
     deliberation_log JSONB,
     dependencies JSONB NOT NULL DEFAULT '[]',

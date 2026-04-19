@@ -58,7 +58,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			title TEXT NOT NULL,
 			description TEXT,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			priority TEXT NOT NULL DEFAULT 'P2',
 			payload TEXT NOT NULL DEFAULT '{}',
 			locked_until DATETIME,
@@ -81,7 +81,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			entity_type TEXT NOT NULL,
 			from_state TEXT NOT NULL,
 			to_state TEXT NOT NULL,
-			agent_id TEXT,
+			assigned_agent_id TEXT,
 			reason TEXT,
 			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
@@ -295,7 +295,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	approveTasksForExecution(t, tm, ctx, task.ID)
 	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
 
-	if claimedTask.ID != task.ID {
+	if claimedTask == nil || claimedTask.ID != task.ID {
 		t.Fatalf("claimed task id mismatch")
 	}
 
@@ -425,7 +425,7 @@ func getTaskHelper(t *testing.T, ctx context.Context, tm *TaskManager, taskID st
 	t.Helper()
 	var task SharedTask
 	query := `
-		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at, agent_id
+		SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at, assigned_agent_id
 		FROM shared_tasks
 		WHERE id = $1
 	`

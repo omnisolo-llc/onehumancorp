@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     title TEXT NOT NULL,
     description TEXT,
     status TEXT NOT NULL DEFAULT 'PENDING',
-    assigned_agent_id TEXT,
+    assigned_assigned_agent_id TEXT,
     priority TEXT NOT NULL DEFAULT 'P2',
     payload TEXT,
     parent_plan_id TEXT,

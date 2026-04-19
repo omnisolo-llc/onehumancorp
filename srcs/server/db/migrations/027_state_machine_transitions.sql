@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     entity_type TEXT NOT NULL,
     from_state TEXT NOT NULL,
     to_state TEXT NOT NULL,
-    agent_id TEXT,
+    assigned_agent_id TEXT,
     reason TEXT,
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );

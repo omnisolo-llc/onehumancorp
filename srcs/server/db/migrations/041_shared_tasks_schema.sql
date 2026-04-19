@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING',
-    agent_id VARCHAR,
+    assigned_assigned_agent_id VARCHAR,
     priority VARCHAR NOT NULL DEFAULT 'P2',
     payload JSONB,
     parent_plan_id TEXT,
