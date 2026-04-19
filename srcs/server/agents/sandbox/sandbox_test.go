@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// added for issue 5417
 func TestSandboxManager_EnvAndDir(t *testing.T) {
 	sm, err := NewSandboxManager()
 	if err != nil {
