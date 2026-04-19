@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "ast_validator.go",
         "bwrap_runner.go",
+        "manager.go",
         "registry.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/harness",
@@ -22,6 +23,7 @@ go_test(
     srcs = [
         "ast_validator_test.go",
         "bwrap_runner_test.go",
+        "manager_test.go",
     ],
     embed = [":harness"],
 )
