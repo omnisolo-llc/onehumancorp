@@ -692,9 +692,9 @@ String _generateCode(_ProtoFile proto, String inputPath) {
   buf.writeln('// ─── YAML serialization helper ───');
   buf.writeln('String _toYamlString(Object? value, {int indent = 0}) {');
   buf.writeln("  final pad = '  ' * indent;");
-  buf.writeln('  if (value == null) return "\\${pad}null";');
+  buf.writeln('  if (value == null) return "\${pad}null";');
   buf.writeln('  if (value is Map) {');
-  buf.writeln('    if (value.isEmpty) return "\\${pad}{}";');
+  buf.writeln('    if (value.isEmpty) return "\${pad}{}";');
   buf.writeln('    final lines = value.entries.map((e) {');
   buf.writeln("      final v = e.value;");
   buf.writeln("      if (v is Map || v is List) {");
@@ -705,7 +705,7 @@ String _generateCode(_ProtoFile proto, String inputPath) {
   buf.writeln("    return lines.join('\\n');");
   buf.writeln('  }');
   buf.writeln('  if (value is List) {');
-  buf.writeln('    if (value.isEmpty) return "\\${pad}[]";');
+  buf.writeln('    if (value.isEmpty) return "\${pad}[]";');
   buf.writeln('    return value');
   buf.writeln("        .map((e) => '\${pad}- \${_toYamlString(e, indent: indent + 1)}')");
   buf.writeln("        .join('\\n');");
