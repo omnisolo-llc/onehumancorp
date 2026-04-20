@@ -111,6 +111,9 @@ var (
 	awsAccessKeyRegex = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
 	// Use lookaround-like boundaries for AWS Secret Key as it can contain / or + which are non-word chars for \b
 	awsSecretKeyRegex = regexp.MustCompile(`(^|[^a-zA-Z0-9/+])[a-zA-Z0-9/+]{40}([^a-zA-Z0-9/+]|$)`)
+
+	// GlobalForecaster instance.
+	GlobalForecaster *Forecaster
 )
 
 func RedactPII(input string) string {
@@ -266,7 +269,14 @@ func InitTelemetry() (func(), error) {
 		return nil, err
 	}
 
+	// Initialize the global forecaster with 1 minute interval and 1 hour window.
+	GlobalForecaster = NewForecaster(1*time.Minute, 1*time.Hour)
+	GlobalForecaster.Start(context.Background())
+
 	return func() {
+		if GlobalForecaster != nil {
+			GlobalForecaster.Stop()
+		}
 		_ = provider.Shutdown(context.Background())
 	}, nil
 }
@@ -789,6 +799,11 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	err = initForecastingMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	SubAgentExecutionDuration, err = m.Float64Histogram(
 		"ohc_sub_agent_execution_duration_seconds",
 		metric.WithDescription("Duration of sub-agent execution in seconds"),
@@ -954,6 +969,10 @@ func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, m
 		attribute.String("role", role),
 		attribute.String("model", model),
 	))
+
+	if GlobalForecaster != nil {
+		GlobalForecaster.RecordUsage(organizationID, count)
+	}
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
