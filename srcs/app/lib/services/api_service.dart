@@ -515,7 +515,7 @@ class ApiService {
 
 
   Future<void> trackDownload(String os, String version) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('$baseUrl/api/growth/downloads'),
       headers: {
         'Content-Type': 'application/json',
