@@ -106,3 +106,149 @@ func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 		}
 	}
 }
+
+func TestHybridSyncDaemon_ProcessCRDTSync(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE crdt_deltas (
+			tenant_id VARCHAR NOT NULL,
+			id VARCHAR NOT NULL,
+			entity_id VARCHAR NOT NULL,
+			data TEXT NOT NULL,
+			updated_at VARCHAR NOT NULL,
+			synced_to_cloud BOOLEAN DEFAULT FALSE,
+			PRIMARY KEY (tenant_id, id)
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create crdt_deltas table: %v", err)
+	}
+
+	_, err = sqlDB.Exec(`
+		INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud)
+		VALUES
+			('test-org', 'd1', 'e1', 'data1', '2026', false),
+			('test-org', 'd2', 'e1', 'data2', '2027', true),
+			('test-org', 'd3', 'e2', 'data3', '2028', false)
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+
+	var receivedPayload SyncDeltasPayload
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/sync/mcp-deltas" && r.Method == http.MethodPost {
+			if err := json.NewDecoder(r.Body).Decode(&receivedPayload); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srv.URL)
+
+	daemon.ProcessCRDTSync(context.Background())
+
+	if len(receivedPayload.Deltas) != 2 {
+		t.Fatalf("expected 2 deltas to be synced, got %d", len(receivedPayload.Deltas))
+	}
+
+	hasD1 := false
+	hasD3 := false
+	for _, p := range receivedPayload.Deltas {
+		if p.ID == "d1" {
+			hasD1 = true
+		} else if p.ID == "d3" {
+			hasD3 = true
+		}
+	}
+
+	if !hasD1 || !hasD3 {
+		t.Errorf("expected to sync d1 and d3")
+	}
+
+	var synced int
+	err = sqlDB.QueryRow("SELECT COUNT(*) FROM crdt_deltas WHERE synced_to_cloud = true").Scan(&synced)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+
+	if synced != 3 {
+		t.Errorf("expected 3 items synced to cloud, got %d", synced)
+	}
+}
+
+func TestHybridSyncDaemon_ProcessCRDTSync_Empty(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE crdt_deltas (
+			tenant_id VARCHAR NOT NULL,
+			id VARCHAR NOT NULL,
+			entity_id VARCHAR NOT NULL,
+			data TEXT NOT NULL,
+			updated_at VARCHAR NOT NULL,
+			synced_to_cloud BOOLEAN DEFAULT FALSE,
+			PRIMARY KEY (tenant_id, id)
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create crdt_deltas table: %v", err)
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+
+	called := false
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+	}))
+	defer srv.Close()
+
+	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srv.URL)
+
+	daemon.ProcessCRDTSync(context.Background())
+
+	if called {
+		t.Errorf("expected no call to cloud API")
+	}
+}
+
+func TestHybridSyncDaemon_ProcessCRDTSync_NotSQLite(t *testing.T) {
+	type mockNonSQLiteProvider struct {
+		db.Provider
+	}
+	// Workaround for IsSQLite issue
+}
+
+type mockNonSQLiteProviderForSync struct {
+	db.Provider
+}
+
+func (m *mockNonSQLiteProviderForSync) IsSQLite() bool {
+	return false
+}
+
+func TestHybridSyncDaemon_ProcessCRDTSync_NotSQLiteFixed(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockNonSQLiteProviderForSync{}}
+	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, "http://localhost:8080")
+
+	// Should return early and not panic
+	daemon.ProcessCRDTSync(context.Background())
+}

@@ -204,6 +204,110 @@ func TestDBStateSyncProvider_SendToCloud_EmptyURL(t *testing.T) {
 	}
 }
 
+func TestDBStateSyncProvider_CRDTPush(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost:8080")
+
+	payload := map[string]interface{}{
+		"id":         "delta1",
+		"entity_id":  "e1",
+		"data":       "testdata",
+		"updated_at": "now",
+	}
+
+	claims := &auth.Claims{OrganizationID: "test-org"}
+	res, err := provider.CRDTPush(context.Background(), payload, claims)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	if res["status"] != "success" {
+		t.Errorf("expected success status, got %v", res["status"])
+	}
+}
+
+func TestDBStateSyncProvider_CRDTPush_MissingFields(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost:8080")
+
+	payload := map[string]interface{}{
+		"id": "delta1",
+		// missing other fields
+	}
+
+	claims := &auth.Claims{OrganizationID: "test-org"}
+	_, err := provider.CRDTPush(context.Background(), payload, claims)
+	if err == nil {
+		t.Fatal("expected error for missing fields")
+	}
+}
+
+func TestDBStateSyncProvider_CRDTPush_NotSQLite(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &concreteMockNonSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost:8080")
+
+	_, err := provider.CRDTPush(context.Background(), nil, nil)
+	if err == nil {
+		t.Fatal("expected error for not running in sqlite")
+	}
+}
+
+func TestDBStateSyncProvider_CRDTPush_ExecError(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockErrorSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost:8080")
+
+	payload := map[string]interface{}{
+		"id":         "delta1",
+		"entity_id":  "e1",
+		"data":       "testdata",
+		"updated_at": "now",
+	}
+
+	_, err := provider.CRDTPush(context.Background(), payload, nil)
+	if err == nil {
+		t.Fatal("expected error on exec")
+	}
+}
+
+func TestDBStateSyncProvider_CRDTPull(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost:8080")
+
+	claims := &auth.Claims{OrganizationID: "test-org"}
+	res, err := provider.CRDTPull(context.Background(), "e1", claims)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	if res["status"] != "success" {
+		t.Errorf("expected success status, got %v", res["status"])
+	}
+}
+
+func TestDBStateSyncProvider_CRDTPull_NotSQLite(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &concreteMockNonSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost:8080")
+
+	_, err := provider.CRDTPull(context.Background(), "e1", nil)
+	if err == nil {
+		t.Fatal("expected error for not running in sqlite")
+	}
+}
+
+func TestDBStateSyncProvider_CRDTPull_Mocked(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockErrorSQLiteProvider{}}
+	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost:8080")
+
+	res, err := provider.CRDTPull(context.Background(), "e1", nil)
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+
+	if res["crdt_state"] != "latest_mocked_state" {
+		t.Errorf("expected latest_mocked_state, got %v", res["crdt_state"])
+	}
+}
+
 func TestDBStateSyncProvider_SendToCloud_MarshalError(t *testing.T) {
 	provider := NewDBStateSyncProvider(&db.DB{}, "http://localhost")
 	_, err := provider.sendToCloud(context.Background(), "/api", http.MethodPost, make(chan int), nil)
