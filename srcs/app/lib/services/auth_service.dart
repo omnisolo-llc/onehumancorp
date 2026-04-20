@@ -23,12 +23,16 @@ class AuthUser {
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json, String token) {
+    final roles = json['roles'];
+    final role = (roles is List && roles.isNotEmpty)
+        ? roles.first as String
+        : json['role'] as String? ?? 'viewer';
     return AuthUser(
       id: json['id'] as String,
-      email: json['email'] as String,
-      name: json['name'] as String? ?? json['email'] as String,
-      role: json['role'] as String? ?? 'viewer',
-      organizationId: json['organization_id'] as String? ?? '',
+      email: json['email'] as String? ?? '',
+      name: json['username'] as String? ?? json['name'] as String? ?? json['email'] as String? ?? '',
+      role: role,
+      organizationId: json['organizationId'] as String? ?? json['organization_id'] as String? ?? '',
       token: token,
     );
   }
@@ -42,11 +46,11 @@ class AuthService {
   AuthService({required this.baseUrl, http.Client? client})
     : _client = client ?? http.Client();
 
-  Future<AuthUser> login(String email, String password) async {
+  Future<AuthUser> login(String usernameOrEmail, String password) async {
     final response = await _client.post(
       Uri.parse('$baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
+      body: jsonEncode({'username': usernameOrEmail, 'password': password}),
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
