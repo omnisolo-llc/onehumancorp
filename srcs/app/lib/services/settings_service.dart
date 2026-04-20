@@ -1,6 +1,18 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+String defaultBackendUrl() {
+  const envUrl = String.fromEnvironment('BACKEND_URL', defaultValue: '');
+  if (envUrl.isNotEmpty) {
+    return envUrl;
+  }
+  if (kIsWeb && (Uri.base.scheme == 'http' || Uri.base.scheme == 'https')) {
+    return Uri.base.origin;
+  }
+  return 'http://localhost:18789';
+}
 
 /// Client-side settings for the OHC dashboard.
 class ClientSettings {
@@ -30,7 +42,7 @@ class ClientSettings {
 
   factory ClientSettings.fromJson(Map<String, dynamic> json) {
     return ClientSettings(
-      backendUrl: json['backendUrl'] as String? ?? 'http://localhost:18789',
+      backendUrl: json['backendUrl'] as String? ?? defaultBackendUrl(),
       standaloneMode: json['standaloneMode'] as bool? ?? false,
       expertMode: json['expertMode'] as bool? ?? false,
     );
@@ -62,17 +74,12 @@ class ClientSettingsNotifier extends StateNotifier<AsyncValue<ClientSettings>> {
       final prefs = await _ref.watch(_prefsProvider.future);
       final json = prefs.getString(_key);
       if (json == null) {
-        // Check environment variable if web/desktop supports it via string.fromEnvironment
-        const envUrl = String.fromEnvironment(
-          'BACKEND_URL',
-          defaultValue: 'http://localhost:18789',
-        );
         const envStandalone = bool.fromEnvironment(
           'OHC_STANDALONE',
           defaultValue: false,
         );
         return ClientSettings(
-          backendUrl: envUrl,
+          backendUrl: defaultBackendUrl(),
           standaloneMode: envStandalone,
           expertMode: false,
         );
