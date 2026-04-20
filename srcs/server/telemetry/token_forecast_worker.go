@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// TokenForecastWorker calculates the moving average token burn rate per tenant using ohc_token_usage_total data.
+// TokenForecastWorker calculates the moving average token burn rate per tenant using ohc_token_usage_total data.using ohc_token_usage_total data.
 type TokenForecastWorker struct {
 	mu           sync.Mutex
 	usageHistory map[string][]tokenUsageRecord
