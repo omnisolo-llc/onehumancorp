@@ -93,13 +93,17 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("STATE_DIR=%s", stateDir),
 			fmt.Sprintf("OHC_RUNTIME_DIR=%s", stateDir),
 			"REDIS_URL=",
-			fmt.Sprintf("DATABASE_URL=sqlite://%s/ohc_state.db", stateDir),
+			// Use a unique per-test-instance SQLite database so that parallel
+			// test binaries (--local_test_jobs=4) do not share the same file
+			// and collide on migrations.
+			fmt.Sprintf("DATABASE_URL=sqlite://%s/ohc.db", stateDir),
+			fmt.Sprintf("OHC_RUNTIME_DIR=%s/runtime", stateDir),
 			// Point the OHC server at the in-process fake LLM so tests are
 			// deterministic and do not require a live AI API key.
 			fmt.Sprintf("OHC_LOCAL_LLM_ENDPOINT=%s/api/chat", llmURL),
 			fmt.Sprintf("OHC_LOCAL_LLM_EMBED_ENDPOINT=%s/api/embeddings", llmURL),
 			"OHC_LLM_PROVIDER=ollama",
-			fmt.Sprintf("GRPC_PORT=:%d", freePort()),
+			"CI=true",
 		)
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr
@@ -108,11 +112,14 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 
-		// Wait up to 120s for the server to be ready.
-		// 120s (instead of 60s) is necessary because up to 4 test binaries
-		// run in parallel (--local_test_jobs=4), each launching an OHC
-		// process; on resource-constrained CI hosts startup can be slow.
-		deadline := time.Now().Add(120 * time.Second)
+		// Wait up to 300s for the server to be ready.
+		// 300s (increased from 120s) is necessary because up to 4 test
+		// binaries run in parallel (--local_test_jobs=4), each launching an
+		// OHC process; on resource-constrained CI hosts startup can be slow.
+		// A 120s deadline was observed to cause sporadic failures for the
+		// e2e_agents_test, e2e_business_test and e2e_cuj_extended_test
+		// binaries when they all started simultaneously.
+		deadline := time.Now().Add(300 * time.Second)
 		ready := false
 		for time.Now().Before(deadline) {
 			resp, err := http.Get(baseURL + "/healthz")
