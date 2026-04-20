@@ -91,21 +91,11 @@ void main() {
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
-    testWidgets('Hire New Agent button is always visible', (tester) async {
+    testWidgets('Hire Agent button is always visible', (tester) async {
       await tester.pumpWidget(_wrapAgents([]));
       await tester.pumpAndSettle();
 
-      // Button may appear as FAB or in AppBar
-      expect(
-        find.byWidgetPredicate(
-          (w) =>
-              (w is FloatingActionButton) ||
-              (w is ElevatedButton &&
-                  w.child is Text &&
-                  (w.child as Text).data!.contains('Hire')),
-        ),
-        findsWidgets,
-      );
+      expect(find.widgetWithText(FilledButton, 'Hire Agent'), findsOneWidget);
     });
 
     testWidgets('seeded agent name renders in list', (tester) async {

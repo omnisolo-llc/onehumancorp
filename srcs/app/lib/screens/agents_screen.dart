@@ -210,18 +210,21 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            widget.agent.name,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: colorScheme.onSurface,
-                                              fontFamily: 'Outfit',
-                                            ),
-                                          ),
+                                       Row(
+                                         children: [
+                                           Expanded(
+                                             child: Text(
+                                               widget.agent.name,
+                                               maxLines: 1,
+                                               overflow: TextOverflow.ellipsis,
+                                               style: TextStyle(
+                                                 fontWeight: FontWeight.bold,
+                                                 fontSize: 16,
+                                                 color: colorScheme.onSurface,
+                                                 fontFamily: 'Outfit',
+                                               ),
+                                             ),
+                                           ),
                                           if (widget.agent.svidVerified) ...[
                                             const SizedBox(width: 6),
                                             Tooltip(

@@ -28,7 +28,7 @@ import 'package:ohc_app/services/api_service.dart';
 // The map matches the JSON shape returned by the OHC /api/meetings endpoint.
 Map<String, dynamic> _seededRoom(String id, String title, {int msgs = 0}) => {
   'id': id,
-  'title': title,
+  'name': title,
   'created_at': DateTime(2025, 1, 10).toIso8601String(),
   'transcript': List.generate(msgs, (i) => {'content': 'msg $i', 'role': 'user'}),
 };

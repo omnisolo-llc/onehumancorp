@@ -78,6 +78,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('alice'), findsWidgets);
+      await tester.scrollUntilVisible(find.textContaining('bob'), 200);
       expect(find.textContaining('bob'), findsWidgets);
     });
 
@@ -97,7 +98,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Invite'), findsOneWidget);
+      expect(find.widgetWithText(FloatingActionButton, 'Invite User'), findsOneWidget);
     });
 
     testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
@@ -116,7 +117,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Invite'));
+      await tester.tap(find.widgetWithText(FloatingActionButton, 'Invite User'));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsOneWidget);

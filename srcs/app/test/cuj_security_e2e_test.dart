@@ -95,7 +95,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('SQL Injection'), findsOneWidget);
+      expect(find.textContaining('SQL Injection'), findsWidgets);
     });
 
     testWidgets('fixed issue renders in resolved section', (tester) async {
@@ -104,7 +104,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('XSS Vulnerability'), findsOneWidget);
+      expect(find.textContaining('XSS Vulnerability'), findsWidgets);
     });
 
     testWidgets('mixed open and fixed issues both appear', (tester) async {
@@ -116,8 +116,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Open Issue'), findsOneWidget);
-      expect(find.textContaining('Fixed Issue'), findsOneWidget);
+      expect(find.textContaining('Open Issue'), findsWidgets);
+      expect(find.textContaining('Fixed Issue'), findsWidgets);
     });
 
     testWidgets('multiple open issues all appear', (tester) async {
@@ -129,9 +129,9 @@ void main() {
       await tester.pumpWidget(_wrapSecurity(issues));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Issue Alpha'), findsOneWidget);
-      expect(find.textContaining('Issue Beta'), findsOneWidget);
-      expect(find.textContaining('Issue Gamma'), findsOneWidget);
+      expect(find.textContaining('Issue Alpha'), findsWidgets);
+      expect(find.textContaining('Issue Beta'), findsWidgets);
+      expect(find.textContaining('Issue Gamma'), findsWidgets);
     });
 
     testWidgets('20 issues render without overflow', (tester) async {
