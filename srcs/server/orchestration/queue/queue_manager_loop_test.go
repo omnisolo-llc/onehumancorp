@@ -13,7 +13,6 @@ func TestQueueManagerLoop(t *testing.T) {
 	provider := db.NewTestProvider(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	defer func() { cancel() }()
 
 	schema := `
 	CREATE TABLE IF NOT EXISTS sub_agent_queue (
@@ -67,7 +66,8 @@ func TestQueueManagerLoop(t *testing.T) {
 
 	pollingCtx, pollingCancel := context.WithCancel(context.Background())
 	go qm.StartPolling(pollingCtx, "worker-1", 10*time.Millisecond, handler)
-	defer pollingCancel()
+	time.Sleep(100 * time.Millisecond)
+	pollingCancel() // stop polling
 
 	time.Sleep(100 * time.Millisecond)
 
