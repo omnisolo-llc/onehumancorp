@@ -4,10 +4,10 @@
 FlutterInfo = provider(
     doc = "Information about how to invoke the tool executable.",
     fields = {
-        "target_tool_path": "Path to the flutter executable for the target platform.",
-        "tool_files": "Files required for the flutter executable.",
-        "dart_tool_path": "Path to the dart executable for the target platform.",
-        "dart_files": "Files required for the dart executable.",
+        "target_tool_path": "Path to the tool executable for the target platform.",
+        "tool_files": """Files required in runfiles to make the tool executable available.
+
+May be empty if the target_tool_path points to a locally installed tool binary.""",
         "sdk_files": "All Flutter SDK files needed for the tool to work properly.",
     },
 )
@@ -32,22 +32,14 @@ def _flutter_toolchain_impl(ctx):
         tool_files = ctx.attr.target_tool.files.to_list()
         target_tool_path = _to_manifest_path(ctx, tool_files[0])
 
-    # Handle Dart tool
-    dart_files = []
-    dart_tool_path = ctx.attr.dart_tool_path
-    if ctx.attr.dart_tool:
-        dart_files = ctx.attr.dart_tool.files.to_list()
-        dart_tool_path = _to_manifest_path(ctx, dart_files[0])
-
     # Make the $(tool_BIN) variable available in places like genrules.
     # See https://docs.bazel.build/versions/main/be/make-variables.html#custom_variables
     template_variables = platform_common.TemplateVariableInfo({
         "FLUTTER_BIN": target_tool_path,
-        "DART_BIN": dart_tool_path,
     })
     default = DefaultInfo(
-        files = depset(tool_files + dart_files),
-        runfiles = ctx.runfiles(files = tool_files + dart_files),
+        files = depset(tool_files),
+        runfiles = ctx.runfiles(files = tool_files),
     )
 
     # Get SDK files if provided
@@ -58,8 +50,6 @@ def _flutter_toolchain_impl(ctx):
     flutterinfo = FlutterInfo(
         target_tool_path = target_tool_path,
         tool_files = tool_files,
-        dart_tool_path = dart_tool_path,
-        dart_files = dart_files,
         sdk_files = sdk_files,
     )
 
@@ -80,21 +70,12 @@ flutter_toolchain = rule(
     implementation = _flutter_toolchain_impl,
     attrs = {
         "target_tool": attr.label(
-            doc = "A hermetically downloaded flutter executable target.",
+            doc = "A hermetically downloaded executable target for the target platform.",
             mandatory = False,
             allow_single_file = True,
         ),
         "target_tool_path": attr.string(
-            doc = "Path to an existing flutter executable.",
-            mandatory = False,
-        ),
-        "dart_tool": attr.label(
-            doc = "A hermetically downloaded dart executable target.",
-            mandatory = False,
-            allow_single_file = True,
-        ),
-        "dart_tool_path": attr.string(
-            doc = "Path to an existing dart executable.",
+            doc = "Path to an existing executable for the target platform.",
             mandatory = False,
         ),
         "sdk_files": attr.label(

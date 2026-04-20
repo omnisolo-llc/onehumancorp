@@ -80,14 +80,7 @@ class CentrifugeService {
   /// Connect to the Centrifuge server.
   Future<void> connect() async {
     final factory = clientFactory ?? centrifuge.createClient;
-    final uri = Uri.parse(serverUrl);
-    final urlWithToken = uri.replace(
-      queryParameters: {
-        ...uri.queryParameters,
-        'ohc_token': token,
-      },
-    ).toString();
-    _client = factory(urlWithToken, centrifuge.ClientConfig(token: token));
+    _client = factory(serverUrl, centrifuge.ClientConfig(token: token));
     await _client!.connect();
   }
 
@@ -162,24 +155,10 @@ class CentrifugeService {
 // ── Providers ──────────────────────────────────────────────────────────────
 
 final centrifugeUrlProvider = Provider<String>(
-  (_) {
-    const configured = String.fromEnvironment('CENTRIFUGE_URL');
-    if (configured.isNotEmpty) {
-      return configured;
-    }
-
-    if (kIsWeb && (Uri.base.scheme == 'http' || Uri.base.scheme == 'https')) {
-      final wsScheme = Uri.base.scheme == 'https' ? 'wss' : 'ws';
-      return Uri(
-        scheme: wsScheme,
-        host: Uri.base.host,
-        port: Uri.base.hasPort ? Uri.base.port : null,
-        path: '/connection/websocket',
-      ).toString();
-    }
-
-    return 'ws://localhost:8000/connection/websocket';
-  },
+  (_) => const String.fromEnvironment(
+    'CENTRIFUGE_URL',
+    defaultValue: 'ws://localhost:8000/connection/websocket',
+  ),
 );
 
 final centrifugeServiceProvider = Provider<CentrifugeService?>((ref) {

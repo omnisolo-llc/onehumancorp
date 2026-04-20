@@ -25,8 +25,8 @@ go_library(
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_exporters_prometheus//:prometheus",
         "@io_opentelemetry_go_otel_metric//:metric",
+        "@io_opentelemetry_go_otel_sdk//resource",
         "@io_opentelemetry_go_otel_sdk_metric//:metric",
-
     ],
 )
 

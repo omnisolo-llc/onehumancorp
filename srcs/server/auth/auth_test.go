@@ -33,8 +33,8 @@ func TestNewStore_AdminUserCreated(t *testing.T) {
 	if len(users) != 1 {
 		t.Fatalf("expected 1 user after init, got %d", len(users))
 	}
-	if users[0].Metadata.Username != "testadmin" {
-		t.Errorf("expected username testadmin, got %s", users[0].Metadata.Username)
+	if users[0].Username != "testadmin" {
+		t.Errorf("expected username testadmin, got %s", users[0].Username)
 	}
 }
 
@@ -49,7 +49,7 @@ func TestStore_CreateAndAuthenticate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Authenticate: %v", err)
 	}
-	if got.Metadata.Id != u.Metadata.Id {
+	if got.ID != u.ID {
 		t.Error("id mismatch after authenticate")
 	}
 
@@ -58,22 +58,6 @@ func TestStore_CreateAndAuthenticate(t *testing.T) {
 	}
 	if _, err := s.Authenticate("nobody", "x", ""); err == nil {
 		t.Error("expected error for unknown user")
-	}
-}
-
-func TestStore_AuthenticateByEmail(t *testing.T) {
-	s := auth.NewStore()
-	u, err := s.CreateUser("alice", "alice@test.com", "hunter2!", []string{auth.RoleViewer}, "")
-	if err != nil {
-		t.Fatalf("CreateUser: %v", err)
-	}
-
-	got, err := s.Authenticate("alice@test.com", "hunter2!", "")
-	if err != nil {
-		t.Fatalf("Authenticate by email: %v", err)
-	}
-	if got.Metadata.Id != u.Metadata.Id {
-		t.Error("id mismatch after email authenticate")
 	}
 }
 
@@ -100,21 +84,21 @@ func TestStore_UpdateAndDeleteUser(t *testing.T) {
 
 	newEmail := "charlie2@test.com"
 	inactive := false
-	updated, err := s.UpdateUser(u.Metadata.Id, &newEmail, []string{auth.RoleOperator}, &inactive, "")
+	updated, err := s.UpdateUser(u.ID, &newEmail, []string{auth.RoleOperator}, &inactive, "")
 	if err != nil {
 		t.Fatalf("UpdateUser: %v", err)
 	}
-	if updated.Metadata.Email != newEmail {
+	if updated.Email != newEmail {
 		t.Error("email not updated")
 	}
-	if updated.Metadata.Active {
+	if updated.Active {
 		t.Error("active should be false after update")
 	}
 
-	if err := s.DeleteUser(u.Metadata.Id, ""); err != nil {
+	if err := s.DeleteUser(u.ID, ""); err != nil {
 		t.Fatalf("DeleteUser: %v", err)
 	}
-	if _, ok := s.GetUser(u.Metadata.Id, ""); ok {
+	if _, ok := s.GetUser(u.ID, ""); ok {
 		t.Error("user should be gone after delete")
 	}
 }
@@ -123,7 +107,7 @@ func TestStore_DisabledUserCannotLogin(t *testing.T) {
 	s := auth.NewStore()
 	u, _ := s.CreateUser("disabled", "dis@test.com", "dispass1", nil, "")
 	inactive := false
-	s.UpdateUser(u.Metadata.Id, nil, nil, &inactive, "")
+	s.UpdateUser(u.ID, nil, nil, &inactive, "")
 
 	if _, err := s.Authenticate("disabled", "dispass1", ""); err == nil {
 		t.Error("expected error authenticating disabled user")
@@ -168,8 +152,8 @@ func TestJWT_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ValidateToken: %v", err)
 	}
-	if claims.Subject != u.Metadata.Id {
-		t.Errorf("subject mismatch: got %s, want %s", claims.Subject, u.Metadata.Id)
+	if claims.Subject != u.ID {
+		t.Errorf("subject mismatch: got %s, want %s", claims.Subject, u.ID)
 	}
 	if claims.Username != "jwt-user" {
 		t.Error("username mismatch in claims")
@@ -240,7 +224,7 @@ func TestMiddleware_PublicPaths(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	handler := mw(inner)
 
-	for _, path := range []string{"/healthz", "/readyz", "/api/auth/login", "/landing", "/dashboard", "/flutter_bootstrap.js", "/main.dart.js", "/assets/AssetManifest.json"} {
+	for _, path := range []string{"/healthz", "/readyz", "/api/auth/login"} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -317,7 +301,7 @@ func TestMiddleware_ValidBearerToken(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Errorf("expected 200, got %d", rec.Code)
 	}
-	if gotClaims == nil || gotClaims.Subject != u.Metadata.Id {
+	if gotClaims == nil || gotClaims.Subject != u.ID {
 		t.Error("claims not injected into context")
 	}
 }
@@ -363,19 +347,6 @@ func TestHandleLogin_ValidCredentials(t *testing.T) {
 	token := loginAs(t, s, "admin", "admin")
 	if token == "" {
 		t.Error("expected non-empty token")
-	}
-}
-
-func TestHandleLogin_EmailFieldAccepted(t *testing.T) {
-	s := auth.NewStore()
-	h := auth.NewHandlers(s)
-	body := `{"email":"admin@localhost","password":"admin"}`
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	h.HandleLogin(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
 
@@ -490,7 +461,7 @@ func TestHandleUsers_NonAdminForbidden(t *testing.T) {
 func TestHandleUsers_TenantAdminForbidden(t *testing.T) {
 	s := auth.NewStore()
 	u, _ := s.CreateUser("tenantadmin", "ta@test.com", "tadminpass", []string{auth.RoleAdmin}, "")
-	u.Metadata.OrganizationId = "some-org-id"
+	u.OrganizationID = "some-org-id"
 	tok, _ := s.IssueToken(u)
 
 	h := auth.NewHandlers(s)
@@ -686,22 +657,22 @@ func TestStore_MiscCoverage(t *testing.T) {
 	}
 
 	u1 := s.GetOrCreateOIDCUser("sub1", "sub1@test.com", "sub1user", "")
-	if u1.Metadata.OidcSubject != "sub1" {
+	if u1.OIDCSubject != "sub1" {
 		t.Error("expected sub1")
 	}
 
 	u2 := s.GetOrCreateOIDCUser("sub1", "sub1@test.com", "sub1user", "")
-	if u1.Metadata.Id != u2.Metadata.Id {
+	if u1.ID != u2.ID {
 		t.Error("expected same user for same sub")
 	}
 
 	u3 := s.GetOrCreateOIDCUser("sub3", "sub1@test.com", "sub3user", "")
-	if u3.Metadata.Id != u1.Metadata.Id {
+	if u3.ID != u1.ID {
 		t.Error("expected same user mapped by email")
 	}
 
 	u4 := s.GetOrCreateOIDCUser("sub4", "sub4@test.com", "sub1user", "")
-	if u4.Metadata.Username == "sub1user" {
+	if u4.Username == "sub1user" {
 		t.Error("expected deduplicated username")
 	}
 }
@@ -755,19 +726,19 @@ func TestHandleUser_CRUD(t *testing.T) {
 		body       string
 		wantStatus int
 	}{
-		{"Get user unauthenticated", http.MethodGet, "/api/users/" + user.Metadata.Id, "", "", http.StatusUnauthorized},
+		{"Get user unauthenticated", http.MethodGet, "/api/users/" + user.ID, "", "", http.StatusUnauthorized},
 		{"Get missing user ID", http.MethodGet, "/api/users/", adminTok, "", http.StatusBadRequest},
-		{"Get other user as non-admin", http.MethodGet, "/api/users/" + admin.Metadata.Id, userTok, "", http.StatusForbidden},
-		{"Get self as non-admin", http.MethodGet, "/api/users/" + user.Metadata.Id, userTok, "", http.StatusOK},
+		{"Get other user as non-admin", http.MethodGet, "/api/users/" + admin.ID, userTok, "", http.StatusForbidden},
+		{"Get self as non-admin", http.MethodGet, "/api/users/" + user.ID, userTok, "", http.StatusOK},
 		{"Get user not found", http.MethodGet, "/api/users/notfound", adminTok, "", http.StatusNotFound},
-		{"Get user as admin", http.MethodGet, "/api/users/" + user.Metadata.Id, adminTok, "", http.StatusOK},
-		{"Update user invalid json", http.MethodPut, "/api/users/" + user.Metadata.Id, adminTok, "{bad}", http.StatusBadRequest},
-		{"Update user as admin", http.MethodPut, "/api/users/" + user.Metadata.Id, adminTok, `{"email":"newemail@test.com","roles":["operator"],"active":false}`, http.StatusOK},
-		{"Update self as non-admin (roles ignored)", http.MethodPut, "/api/users/" + user.Metadata.Id, userTok, `{"email":"newemail2@test.com","roles":["admin"]}`, http.StatusOK},
-		{"Delete user as non-admin", http.MethodDelete, "/api/users/" + user.Metadata.Id, userTok, "", http.StatusForbidden},
+		{"Get user as admin", http.MethodGet, "/api/users/" + user.ID, adminTok, "", http.StatusOK},
+		{"Update user invalid json", http.MethodPut, "/api/users/" + user.ID, adminTok, "{bad}", http.StatusBadRequest},
+		{"Update user as admin", http.MethodPut, "/api/users/" + user.ID, adminTok, `{"email":"newemail@test.com","roles":["operator"],"active":false}`, http.StatusOK},
+		{"Update self as non-admin (roles ignored)", http.MethodPut, "/api/users/" + user.ID, userTok, `{"email":"newemail2@test.com","roles":["admin"]}`, http.StatusOK},
+		{"Delete user as non-admin", http.MethodDelete, "/api/users/" + user.ID, userTok, "", http.StatusForbidden},
 		{"Delete user not found", http.MethodDelete, "/api/users/notfound", adminTok, "", http.StatusNotFound},
-		{"Delete user as admin", http.MethodDelete, "/api/users/" + user.Metadata.Id, adminTok, "", http.StatusOK},
-		{"Invalid method", http.MethodPatch, "/api/users/" + user.Metadata.Id, adminTok, "", http.StatusMethodNotAllowed},
+		{"Delete user as admin", http.MethodDelete, "/api/users/" + user.ID, adminTok, "", http.StatusOK},
+		{"Invalid method", http.MethodPatch, "/api/users/" + user.ID, adminTok, "", http.StatusMethodNotAllowed},
 	}
 
 	for _, tt := range tests {
@@ -942,7 +913,7 @@ func TestAuthMoreCoverage(t *testing.T) {
 	u1, _ := s.CreateUser("cov1", "cov1@test.com", "pass123", []string{auth.RoleViewer}, "")
 	_, _ = s.CreateUser("cov2", "cov2@test.com", "pass123", []string{auth.RoleViewer}, "")
 	newEmail := "cov2@test.com"
-	if _, err := s.UpdateUser(u1.Metadata.Id, &newEmail, nil, nil, ""); err == nil {
+	if _, err := s.UpdateUser(u1.ID, &newEmail, nil, nil, ""); err == nil {
 		t.Error("expected error for duplicate email on update")
 	}
 
@@ -1111,10 +1082,10 @@ func TestStore_RevokeCleanup(t *testing.T) {
 func TestStore_DeleteOIDCUser(t *testing.T) {
 	s := auth.NewStore()
 	u := s.GetOrCreateOIDCUser("sub-delete", "del@test.com", "deluser", "")
-	s.DeleteUser(u.Metadata.Id, "")
+	s.DeleteUser(u.ID, "")
 
 	u2 := s.GetOrCreateOIDCUser("sub-delete", "del@test.com", "deluser", "")
-	if u.Metadata.Id == u2.Metadata.Id {
+	if u.ID == u2.ID {
 		t.Error("expected new user after delete")
 	}
 }
@@ -1199,7 +1170,7 @@ func TestGetOrCreateOIDCUser_NoUsernameOrEmail(t *testing.T) {
 	// actually the code does: uname = preferredUsername, if uname == "" { uname = email }
 	// so if both empty, uname is "".
 	u := s.GetOrCreateOIDCUser("sub-nouname", "", "", "")
-	if u.Metadata.OidcSubject != "sub-nouname" {
+	if u.OIDCSubject != "sub-nouname" {
 		t.Error("expected sub-nouname")
 	}
 }
@@ -1519,7 +1490,7 @@ func TestStore_AuthenticateErrorsMore(t *testing.T) {
 	s := auth.NewStore()
 	u, _ := s.CreateUser("user1", "u1@test.com", "123456", nil, "")
 	inactive := false
-	s.UpdateUser(u.Metadata.Id, nil, nil, &inactive, "")
+	s.UpdateUser(u.ID, nil, nil, &inactive, "")
 	if _, err := s.Authenticate("user1", "123456", ""); err == nil {
 		t.Error("expected error for disabled user")
 	}

@@ -44,6 +44,7 @@ go_library(
         "//srcs/server/bash_sandbox",
         "//srcs/server/lib/integrations/hybrid_discovery",
         "//srcs/server/lib/perf",
+        "//srcs/server/telemetry",
         "//srcs/server/utils",
         "@com_github_google_uuid//:uuid",
     ],

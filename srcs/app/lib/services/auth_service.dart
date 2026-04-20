@@ -4,27 +4,31 @@ import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:ohc_app/models/user.dart';
-
 /// Currently authenticated user info.
 class AuthUser {
-  final User user;
+  final String id;
+  final String email;
+  final String name;
+  final String role;
+  final String organizationId;
   final String token;
 
   const AuthUser({
-    required this.user,
+    required this.id,
+    required this.email,
+    required this.name,
+    required this.role,
+    required this.organizationId,
     required this.token,
   });
 
-  String get id => user.metadata.id;
-  String get email => user.metadata.email;
-  String get name => user.metadata.username;
-  String get role => user.metadata.roles.isNotEmpty ? user.metadata.roles.first : 'viewer';
-  String get organizationId => user.metadata.organizationId;
-
   factory AuthUser.fromJson(Map<String, dynamic> json, String token) {
     return AuthUser(
-      user: User.fromJson(json),
+      id: json['id'] as String,
+      email: json['email'] as String,
+      name: json['name'] as String? ?? json['email'] as String,
+      role: json['role'] as String? ?? 'viewer',
+      organizationId: json['organization_id'] as String? ?? '',
       token: token,
     );
   }
@@ -38,11 +42,11 @@ class AuthService {
   AuthService({required this.baseUrl, http.Client? client})
     : _client = client ?? http.Client();
 
-  Future<AuthUser> login(String identifier, String password) async {
+  Future<AuthUser> login(String email, String password) async {
     final response = await _client.post(
       Uri.parse('$baseUrl/api/auth/login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'username': identifier, 'password': password}),
+      body: jsonEncode({'email': email, 'password': password}),
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -73,7 +77,13 @@ final _prefsProvider = FutureProvider<SharedPreferences>(
 final backendUrlProvider = Provider<String>((ref) {
   final settings = ref.watch(clientSettingsProvider).valueOrNull;
   if (settings != null) return settings.backendUrl;
-  return defaultBackendUrl();
+
+  // Fallback to environment variable if provided at compile time (Web/Desktop)
+  const envUrl = String.fromEnvironment(
+    'BACKEND_URL',
+    defaultValue: 'http://localhost:18789',
+  );
+  return envUrl;
 });
 
 final authServiceProvider = Provider<AuthService>((ref) {
