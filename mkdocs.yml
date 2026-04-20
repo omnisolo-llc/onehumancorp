@@ -48,6 +48,9 @@ nav:
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
       - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md
       - features/index.md
+      - KAIROS Sub-Agent Queue: features/kairos/sub_agent_queue.md
+      - KAIROS Distributed State Machine: features/kairos/distributed_state_machine.md
+      - KAIROS AutoDream Pipelines: features/kairos/autodream_pipelines.md
       - Hybrid LLM Routing Gateway MCP: research/[integrations]_hybrid_llm_routing_gateway_mcp.md
       - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
       - Hybrid Circuit Breaker MCP: research/[integrations]_hybrid_circuit_breaker_mcp.md
