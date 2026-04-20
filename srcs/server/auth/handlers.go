@@ -29,15 +29,14 @@ func NewHandlers(store *Store) *Handlers {
 
 type loginRequest struct {
 	Username       string `json:"username"`
-	Email          string `json:"email,omitempty"`
 	Password       string `json:"password"`
 	OrganizationID string `json:"organizationId,omitempty"`
 }
 
 type loginResponse struct {
-	Token     string        `json:"token"`
-	User      *UserMetadata `json:"user"`
-	ExpiresAt time.Time     `json:"expiresAt"`
+	Token     string     `json:"token"`
+	User      UserPublic `json:"user"`
+	ExpiresAt time.Time  `json:"expiresAt"`
 }
 
 // HandleLogin validates credentials and returns a signed JWT.  	POST /api/auth/login  {"username":"…","password":"…"}
@@ -57,16 +56,13 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
-	identifier := strings.TrimSpace(req.Username)
-	if identifier == "" {
-		identifier = strings.TrimSpace(req.Email)
-	}
-	if identifier == "" || req.Password == "" {
-		jsonError(w, "username or email and password required", http.StatusBadRequest)
+	req.Username = strings.TrimSpace(req.Username)
+	if req.Username == "" || req.Password == "" {
+		jsonError(w, "username and password required", http.StatusBadRequest)
 		return
 	}
 
-	user, err := h.store.Authenticate(identifier, req.Password, req.OrganizationID)
+	user, err := h.store.Authenticate(req.Username, req.Password, req.OrganizationID)
 	if err != nil {
 		jsonError(w, "invalid credentials", http.StatusUnauthorized)
 		return
@@ -80,7 +76,7 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, loginResponse{
 		Token:     token,
-		User:      PublicView(user),
+		User:      user.PublicView(),
 		ExpiresAt: time.Now().UTC().Add(tokenTTL),
 	})
 }
@@ -120,8 +116,8 @@ func (h *Handlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 	user, ok := h.store.GetUser(claims.Subject, claims.OrganizationID)
 	if !ok {
 		// OIDC user not yet materialised locally — return claims-derived info
-		writeJSON(w, http.StatusOK, &UserMetadata{
-			Id:       claims.Subject,
+		writeJSON(w, http.StatusOK, UserPublic{
+			ID:       claims.Subject,
 			Username: claims.Username,
 			Email:    claims.Email,
 			Roles:    claims.Roles,
@@ -129,7 +125,7 @@ func (h *Handlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	writeJSON(w, http.StatusOK, PublicView(user))
+	writeJSON(w, http.StatusOK, user.PublicView())
 }
 
 // ── user management ───────────────────────────────────────────────────────────
@@ -162,9 +158,9 @@ func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		users := h.store.ListUsers(claims.OrganizationID)
-		out := make([]*UserMetadata, 0, len(users))
+		out := make([]UserPublic, 0, len(users))
 		for _, u := range users {
-			out = append(out, PublicView(u))
+			out = append(out, u.PublicView())
 		}
 		writeJSON(w, http.StatusOK, out)
 
@@ -184,7 +180,7 @@ func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		writeJSON(w, http.StatusCreated, PublicView(user))
+		writeJSON(w, http.StatusCreated, user.PublicView())
 
 	default:
 		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -224,7 +220,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, "user not found", http.StatusNotFound)
 			return
 		}
-		writeJSON(w, http.StatusOK, PublicView(user))
+		writeJSON(w, http.StatusOK, user.PublicView())
 
 	case http.MethodPut:
 		var req updateUserRequest
@@ -244,7 +240,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 			jsonError(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		writeJSON(w, http.StatusOK, PublicView(user))
+		writeJSON(w, http.StatusOK, user.PublicView())
 
 	case http.MethodDelete:
 		if !isAdmin {

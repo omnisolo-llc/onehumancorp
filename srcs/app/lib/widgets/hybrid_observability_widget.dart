@@ -45,7 +45,7 @@ class HybridObservabilityWidget extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Operational Insights',
+                    'Hybrid Swarm Observability',
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 24,
@@ -58,7 +58,7 @@ class HybridObservabilityWidget extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Running Specialists',
+                        'Active Agents',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 16,
@@ -82,8 +82,8 @@ class HybridObservabilityWidget extends ConsumerWidget {
                       ),
                     ],
                   ),
-                  _MetricRow(label: 'Total Responsibilities', value: totalTasks.toString()),
-                  const _MetricRow(label: 'Avg Response Time', value: '45ms'),
+                  _MetricRow(label: 'Total Tasks', value: totalTasks.toString()),
+                  const _MetricRow(label: 'Avg Hybrid Latency', value: '45ms'),
                 ],
               ),
             ),

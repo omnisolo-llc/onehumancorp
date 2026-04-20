@@ -236,7 +236,7 @@ class _PipelineCardState extends State<_PipelineCard> {
                         ),
                       ],
                       const SizedBox(height: 24),
-                      if (pipeline.status.toLowerCase() == 'staging') ...[
+                      if (pipeline.status == 'staging') ...[
                         const Text(
                           'Promote to Production',
                           style: TextStyle(
@@ -249,10 +249,6 @@ class _PipelineCardState extends State<_PipelineCard> {
                           disabled: widget.isProcessing,
                           onApprove: widget.onPromote,
                           onReject: () {}, // Optional cancel
-                          trackText: 'Slide to Promote',
-                          loadingText: 'Promoting...',
-                          rejectText: 'Keep in Staging',
-                          semanticsLabel: 'Slide to promote pipeline',
                         ),
                       ],
                     ],

@@ -12,63 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const (
-	sqliteBusyTimeout    = 15000 * time.Millisecond
-	sqliteMaxRetries     = 5
-	sqliteRetryBaseDelay = 10 * time.Millisecond
-	sqliteRetryMaxDelay  = 100 * time.Millisecond
-)
-
 var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_]+)\s*::\s*json\s*->>\s*'([^']+)'`)
-
-func isSQLiteBusy(err error) bool {
-	if err == nil {
-		return false
-	}
-	errMsg := err.Error()
-	return strings.Contains(errMsg, "database is locked") || strings.Contains(errMsg, "SQLITE_BUSY")
-}
-
-func withSQLiteRetry(ctx context.Context, op func() error) error {
-	var err error
-	backoff := sqliteRetryBaseDelay
-	for i := 0; i < sqliteMaxRetries; i++ {
-		err = op()
-		if err == nil {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		if !isSQLiteBusy(err) {
-			return err
-		}
-
-		if i == 0 {
-			telemetry.RecordSQLiteLockContention(ctx, "provider_retry")
-		}
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(backoff):
-		}
-
-		backoff *= 2
-		if backoff > sqliteRetryMaxDelay {
-			backoff = sqliteRetryMaxDelay
-		}
-	}
-
-	if isSQLiteBusy(err) {
-		telemetry.RecordSQLiteRetryExhausted(ctx, "provider_retry")
-	}
-	return err
-}
 
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
 type SqliteProvider struct {
@@ -144,31 +88,21 @@ func convertBindVars(query string) string {
 // translateArgs translates pgx-style args if needed, though typically SQL standard positional args are similar enough.
 // SQLite natively expects `?` instead of `$1`, `$2`. Wait, no, SQLite actually accepts `$1`, `$2` bindings if using proper parameter names, but default `database/sql` positional parameters are usually just `?`. Wait, `database/sql` driver for SQLite usually supports `?`, `$1`, and `:name`. Let's assume standard passing works unless proven otherwise.
 func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
-	var res sql.Result
-	var err error
-	execErr := withSQLiteRetry(ctx, func() error {
-		start := time.Now()
-		res, err = p.db.ExecContext(ctx, convertBindVars(sqlQuery), arguments...)
-		trackQuery(ctx, "Exec", err, time.Since(start))
-		return err
-	})
-	if execErr != nil {
-		return 0, execErr
+	start := time.Now()
+	res, err := p.db.ExecContext(ctx, convertBindVars(sqlQuery), arguments...)
+	trackQuery(ctx, "Exec", err, time.Since(start))
+	if err != nil {
+		return 0, err
 	}
 	return sqliteRowsAffected(res)
 }
 
 func (p *SqliteProvider) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
-	var rows *sql.Rows
-	var err error
-	queryErr := withSQLiteRetry(ctx, func() error {
-		start := time.Now()
-		rows, err = p.db.QueryContext(ctx, convertBindVars(sqlQuery), optionsAndArgs...)
-		trackQuery(ctx, "Query", err, time.Since(start))
-		return err
-	})
-	if queryErr != nil {
-		return nil, queryErr
+	start := time.Now()
+	rows, err := p.db.QueryContext(ctx, convertBindVars(sqlQuery), optionsAndArgs...)
+	trackQuery(ctx, "Query", err, time.Since(start))
+	if err != nil {
+		return nil, err
 	}
 	return &SqliteRows{rows: rows}, nil
 }
@@ -181,16 +115,11 @@ func (p *SqliteProvider) QueryRow(ctx context.Context, sqlQuery string, optionsA
 }
 
 func (p *SqliteProvider) Begin(ctx context.Context) (Tx, error) {
-	var tx *sql.Tx
-	var err error
-	beginErr := withSQLiteRetry(ctx, func() error {
-		start := time.Now()
-		tx, err = p.db.BeginTx(ctx, nil)
-		trackQuery(ctx, "Begin", err, time.Since(start))
-		return err
-	})
-	if beginErr != nil {
-		return nil, beginErr
+	start := time.Now()
+	tx, err := p.db.BeginTx(ctx, nil)
+	trackQuery(ctx, "Begin", err, time.Since(start))
+	if err != nil {
+		return nil, err
 	}
 	return &SqliteTx{tx: tx}, nil
 }
@@ -334,31 +263,21 @@ type SqliteTx struct {
 }
 
 func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
-	var res sql.Result
-	var err error
-	execErr := withSQLiteRetry(ctx, func() error {
-		start := time.Now()
-		res, err = t.tx.ExecContext(ctx, convertBindVars(sqlQuery), arguments...)
-		trackQuery(ctx, "Tx.Exec", err, time.Since(start))
-		return err
-	})
-	if execErr != nil {
-		return 0, execErr
+	start := time.Now()
+	res, err := t.tx.ExecContext(ctx, convertBindVars(sqlQuery), arguments...)
+	trackQuery(ctx, "Tx.Exec", err, time.Since(start))
+	if err != nil {
+		return 0, err
 	}
 	return sqliteRowsAffected(res)
 }
 
 func (t *SqliteTx) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
-	var rows *sql.Rows
-	var err error
-	queryErr := withSQLiteRetry(ctx, func() error {
-		start := time.Now()
-		rows, err = t.tx.QueryContext(ctx, convertBindVars(sqlQuery), optionsAndArgs...)
-		trackQuery(ctx, "Tx.Query", err, time.Since(start))
-		return err
-	})
-	if queryErr != nil {
-		return nil, queryErr
+	start := time.Now()
+	rows, err := t.tx.QueryContext(ctx, convertBindVars(sqlQuery), optionsAndArgs...)
+	trackQuery(ctx, "Tx.Query", err, time.Since(start))
+	if err != nil {
+		return nil, err
 	}
 	return &SqliteRows{rows: rows}, nil
 }
@@ -371,14 +290,7 @@ func (t *SqliteTx) QueryRow(ctx context.Context, sqlQuery string, optionsAndArgs
 }
 
 func (t *SqliteTx) Commit(ctx context.Context) error {
-	var err error
-	commitErr := withSQLiteRetry(ctx, func() error {
-		start := time.Now()
-		err = t.tx.Commit()
-		trackQuery(ctx, "Tx.Commit", err, time.Since(start))
-		return err
-	})
-	return commitErr
+	return t.tx.Commit()
 }
 
 func (t *SqliteTx) Rollback(ctx context.Context) error {
