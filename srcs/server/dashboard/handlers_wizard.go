@@ -131,7 +131,7 @@ func hasEnabledProvider(providers []settings.AiProvider) bool {
 	return false
 }
 
-// handleWizardOnboardingVerify performs a diagnostic verification of the environment variables
+// handleWizardOnboardingVerify performs a diagnostic verification of env vars
 // and connection requirements for Day One onboarding.
 func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
