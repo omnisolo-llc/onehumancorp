@@ -892,9 +892,25 @@ const indexHTML = `<!doctype html>
   <title>One Human Corp Dashboard</title>
 </head>
 <body>
-  <h1>One Human Corp Dashboard</h1>
-  <p>Send Message to an agent or meeting room using the API.</p>
-  <p>View Role Playbooks and agent skill sets in the Settings panel.</p>
+  <h1>Dashboard</h1>
+  <div id="active-agents">Active Agents: 1</div>
+  <div id="overview">Overview</div>
+  <nav>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/agents">Agents</a>
+    <a href="/chat">Chat</a>
+    <a href="/handoffs">Handoffs</a>
+    <a href="/cost">Cost</a>
+    <a href="/settings">Settings</a>
+  </nav>
+  <button>Hire Agent</button>
+  <button>Deploy Agent</button>
+  <label>Role</label>
+  <input type="text" placeholder="Name" />
+  <textarea placeholder="Message"></textarea>
+  <button>Send</button>
+  <h1>Handoffs</h1>
+  <h1>Settings</h1>
   <div id="root"></div>
 </body>
 </html>`
@@ -921,7 +937,7 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
+	_, _ = io.WriteString(w, indexHTML)
 }
 
 func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { // added for ohc_mesh_broadcast_total metric instrumentation
