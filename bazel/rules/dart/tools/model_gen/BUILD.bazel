@@ -1,0 +1,14 @@
+load("@rules_flutter//flutter:defs.bzl", "flutter_library")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+
+package(default_visibility = ["//visibility:public"])
+
+# We use sh_binary to wrap the dart execution for the generator
+sh_binary(
+    name = "generate_domain_models",
+    srcs = ["generate_domain_models.sh"],
+    data = [
+        "generate_domain_models.dart",
+        "@rules_flutter//flutter:dart",
+    ],
+)

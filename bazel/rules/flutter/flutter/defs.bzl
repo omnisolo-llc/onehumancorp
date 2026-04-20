@@ -1308,7 +1308,7 @@ def _compute_repo_relative_path(ctx, artifact, repo_name):
 
     up_count = len(bin_segments) + len(short_segments)
     components = [".."] * up_count
-    components.extend(["external", repo_name, "lib"])
+    components.extend(["external", repo_name])
     return "/".join(components).replace("+", "%2B")
 
 def _dart_proto_library_impl(ctx):
@@ -1329,6 +1329,7 @@ def _dart_proto_library_impl(ctx):
     protobuf_repo = ctx.attr._protobuf_pkg.label.workspace_name
     fixnum_repo = ctx.attr._fixnum_pkg.label.workspace_name
     path_repo = ctx.attr._path_pkg.label.workspace_name
+    meta_repo = ctx.attr._meta_pkg.label.workspace_name
 
     package_entries = []
     for (pkg, repo) in [
@@ -1336,6 +1337,7 @@ def _dart_proto_library_impl(ctx):
         ("protobuf", protobuf_repo),
         ("fixnum", fixnum_repo),
         ("path", path_repo),
+        ("meta", meta_repo),
     ]:
         package_entries.append(
             """    {{
@@ -1369,7 +1371,7 @@ if [ ! -x "$DART_BIN" ]; then
     fi
 fi
 
-exec "$DART_BIN" external/{plugin_repo}/bin/protoc_plugin.dart "$@"
+exec "$DART_BIN" --packages="$DART_PACKAGE_CONFIG" "external/{plugin_repo}/bin/protoc_plugin.dart" "$@"
 """.format(
         package_config = package_config.basename,
         dart = dart_bin,
@@ -1386,6 +1388,7 @@ exec "$DART_BIN" external/{plugin_repo}/bin/protoc_plugin.dart "$@"
     protobuf_files = ctx.attr._protobuf_pkg[DefaultInfo].files
     fixnum_files = ctx.attr._fixnum_pkg[DefaultInfo].files
     path_files = ctx.attr._path_pkg[DefaultInfo].files
+    meta_files = ctx.attr._meta_pkg[DefaultInfo].files
 
     tool_inputs = depset(flutter_toolchain.flutterinfo.tool_files + flutter_toolchain.flutterinfo.sdk_files)
     additional_inputs = depset(
@@ -1395,6 +1398,7 @@ exec "$DART_BIN" external/{plugin_repo}/bin/protoc_plugin.dart "$@"
             protobuf_files,
             fixnum_files,
             path_files,
+            meta_files,
             tool_inputs,
         ],
     )
@@ -1487,6 +1491,9 @@ dart_proto_library = rule(
         ),
         "_path_pkg": attr.label(
             default = Label("@pub_path//:path_files"),
+        ),
+        "_meta_pkg": attr.label(
+            default = Label("@pub_meta//:meta_files"),
         ),
     },
     toolchains = ["//flutter:toolchain_type"],

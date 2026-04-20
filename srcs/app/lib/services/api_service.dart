@@ -106,7 +106,7 @@ class ApiService {
 
   Future<void> seedScenario(String scenario) async {
     final res = await _client.post(
-      Uri.parse('$baseUrl/api/seed'),
+      Uri.parse('$baseUrl/api/dev/seed'),
       headers: _headers,
       body: jsonEncode({'scenario': scenario}),
     );
@@ -127,20 +127,20 @@ class ApiService {
         .toList();
   }
 
-  Future<void> resolveHandoff(String handoffId, String resolution) async {
+  Future<void> resolveHandoff(String handoffId, String status) async {
     final res = await _client.post(
-      Uri.parse('$baseUrl/api/handoffs/$handoffId/resolve'),
+      Uri.parse('$baseUrl/api/handoffs/resolve'),
       headers: _headers,
-      body: jsonEncode({'resolution': resolution}),
+      body: jsonEncode({'handoffId': handoffId, 'status': status}),
     );
     _checkStatus(res);
   }
 
   Future<void> decideApproval(String approvalId, String decision) async {
     final res = await _client.post(
-      Uri.parse('$baseUrl/api/approvals/$approvalId/decide'),
+      Uri.parse('$baseUrl/api/approvals/decide'),
       headers: _headers,
-      body: jsonEncode({'decision': decision}),
+      body: jsonEncode({'approvalId': approvalId, 'decision': decision}),
     );
     _checkStatus(res);
   }
@@ -169,17 +169,24 @@ class ApiService {
     return Pipeline.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
-  Future<void> promotePipeline(String pipelineId) async {
+  Future<void> promotePipeline(
+    String pipelineId, {
+    String approvedBy = 'Human CEO',
+  }) async {
     final res = await _client.post(
-      Uri.parse('$baseUrl/api/pipelines/$pipelineId/promote'),
+      Uri.parse('$baseUrl/api/pipelines/promote'),
       headers: _headers,
+      body: jsonEncode({
+        'pipelineId': pipelineId,
+        'approvedBy': approvedBy,
+      }),
     );
     _checkStatus(res);
   }
 
   // ── Users & RBAC ─────────────────────────────────────────────────────────
 
-  Future<List<UserPublic>> listUsers() async {
+  Future<List<UserMetadata>> listUsers() async {
     final res = await _client.get(
       Uri.parse('$baseUrl/api/users'),
       headers: _headers,
@@ -187,18 +194,18 @@ class ApiService {
     _checkStatus(res);
     final list = jsonDecode(res.body) as List<dynamic>;
     return list
-        .map((e) => UserPublic.fromJson(e as Map<String, dynamic>))
+        .map((e) => UserMetadata.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
-  Future<UserPublic> createUser(Map<String, dynamic> data) async {
+  Future<UserMetadata> createUser(Map<String, dynamic> data) async {
     final res = await _client.post(
       Uri.parse('$baseUrl/api/users'),
       headers: _headers,
       body: jsonEncode(data),
     ).timeout(_timeout);
     _checkStatus(res);
-    return UserPublic.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
+    return UserMetadata.fromJson(jsonDecode(res.body) as Map<String, dynamic>);
   }
 
   Future<void> deleteUser(String userId) async {
@@ -508,7 +515,7 @@ class ApiService {
 
 
   Future<void> trackDownload(String os, String version) async {
-    final response = await http.post(
+    final response = await _client.post(
       Uri.parse('$baseUrl/api/growth/downloads'),
       headers: {
         'Content-Type': 'application/json',

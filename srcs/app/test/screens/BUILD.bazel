@@ -1,0 +1,107 @@
+# Copyright 2026 Author(s) of OHC
+# SPDX-License-Identifier: Apache-2.0
+
+load("@rules_flutter//flutter:defs.bzl", "flutter_test")
+
+# All screen-level widget tests under test/screens/.
+# Each target uses screens_for_tests which bundles screens_lib + mocktail.
+
+_EMBED = ["//srcs/app/lib/screens:screens_for_tests"]
+
+_PUBSPEC = "//:pubspec.yaml"
+
+flutter_test(
+    name = "agent_hire_wizard_screen_test",
+    srcs = ["agent_hire_wizard_screen_test.dart"],
+    embed = _EMBED,
+    test_files = ["agent_hire_wizard_screen_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "autodream_sync_walkthrough_screen_test",
+    srcs = ["autodream_sync_walkthrough_screen_test.dart"],
+    embed = _EMBED,
+    test_files = ["autodream_sync_walkthrough_screen_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "business_setup_wizard_screen_test",
+    srcs = ["business_setup_wizard_screen_test.dart"],
+    embed = _EMBED,
+    test_files = ["business_setup_wizard_screen_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "dashboard_screen_task_list_test",
+    srcs = ["dashboard_screen_task_list_test.dart"],
+    embed = _EMBED,
+    test_files = ["dashboard_screen_task_list_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "diagnostics_screen_test",
+    srcs = ["diagnostics_screen_test.dart"],
+    embed = _EMBED,
+    test_files = ["diagnostics_screen_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "prompt_tuning_wizard_screen_test",
+    srcs = ["prompt_tuning_wizard_screen_test.dart"],
+    embed = _EMBED,
+    test_files = ["prompt_tuning_wizard_screen_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "scaling_screen_test",
+    srcs = ["scaling_screen_test.dart"],
+    embed = _EMBED,
+    test_files = ["scaling_screen_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "secure_agent_config_screen_test",
+    srcs = ["secure_agent_config_screen_test.dart"],
+    embed = _EMBED,
+    test_files = ["secure_agent_config_screen_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "task_list_screen_test",
+    srcs = ["task_list_screen_test.dart"],
+    embed = _EMBED,
+    test_files = ["task_list_screen_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "visual_truth_audit_test",
+    srcs = ["visual_truth_audit_test.dart"],
+    embed = _EMBED,
+    test_files = ["visual_truth_audit_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+test_suite(
+    name = "all_tests",
+    tests = [
+        ":agent_hire_wizard_screen_test",
+        ":autodream_sync_walkthrough_screen_test",
+        ":business_setup_wizard_screen_test",
+        ":dashboard_screen_task_list_test",
+        ":diagnostics_screen_test",
+        ":prompt_tuning_wizard_screen_test",
+        ":scaling_screen_test",
+        ":secure_agent_config_screen_test",
+        ":task_list_screen_test",
+        ":visual_truth_audit_test",
+    ],
+)
