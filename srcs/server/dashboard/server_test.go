@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
@@ -66,6 +67,12 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 	hub.RegisterAgent(orchestration.Agent{ID: "swe-1", Name: "SWE", Role: "SOFTWARE_ENGINEER", OrganizationID: org.ID})
 	hub.OpenMeeting("kickoff", []string{"pm-1", "swe-1"})
 
+	sipdb, err := orchestration.NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create test sipdb: %v", err)
+	}
+	hub.SetSIPDB(sipdb)
+
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	if _, err := tracker.Track(billing.Usage{
 		AgentID:          "swe-1",
@@ -78,7 +85,7 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 		t.Fatalf("track returned error: %v", err)
 	}
 
-	app := &Server{org: org, hub: hub, tracker: tracker, integReg: integrations.NewRegistry()}
+	app := &Server{org: org, hub: hub, tracker: tracker, integReg: integrations.NewRegistry(), agentProviderRegistry: agents.DefaultRegistry()}
 	server := httptest.NewServer(NewServer(org, hub, tracker))
 	token := loginForTest(t, server.URL)
 	return app, server, token
