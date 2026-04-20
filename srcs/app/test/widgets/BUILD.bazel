@@ -1,0 +1,62 @@
+# Copyright 2026 Author(s) of OHC
+# SPDX-License-Identifier: Apache-2.0
+
+load("@rules_flutter//flutter:defs.bzl", "flutter_test")
+
+# Widget tests under test/widgets/.
+# Uses screens_for_tests (which includes widgets_lib + mocktail transitively).
+
+_EMBED = ["//srcs/app/lib/screens:screens_for_tests"]
+
+_PUBSPEC = "//:pubspec.yaml"
+
+flutter_test(
+    name = "agent_status_indicator_test",
+    srcs = ["agent_status_indicator_test.dart"],
+    embed = _EMBED,
+    test_files = ["agent_status_indicator_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "autodream_pipeline_widget_test",
+    srcs = ["autodream_pipeline_widget_test.dart"],
+    embed = _EMBED,
+    test_files = ["autodream_pipeline_widget_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "hybrid_observability_widget_test",
+    srcs = ["hybrid_observability_widget_test.dart"],
+    embed = _EMBED,
+    test_files = ["hybrid_observability_widget_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "swarm_observability_widget_test",
+    srcs = ["swarm_observability_widget_test.dart"],
+    embed = _EMBED,
+    test_files = ["swarm_observability_widget_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "vector_memory_visualizer_test",
+    srcs = ["vector_memory_visualizer_test.dart"],
+    embed = _EMBED,
+    test_files = ["vector_memory_visualizer_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+test_suite(
+    name = "all_tests",
+    tests = [
+        ":agent_status_indicator_test",
+        ":autodream_pipeline_widget_test",
+        ":hybrid_observability_widget_test",
+        ":swarm_observability_widget_test",
+        ":vector_memory_visualizer_test",
+    ],
+)
