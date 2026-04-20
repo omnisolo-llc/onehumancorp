@@ -13,10 +13,10 @@ void main() {
       ),
     );
 
-    expect(find.text('The Hybrid Agentic OS'), findsOneWidget);
-    expect(find.text('Zero Data Leakage'), findsOneWidget);
-    expect(find.text('Air-Gapped Autonomy'), findsOneWidget);
-    expect(find.text('Viral Referral Loop'), findsOneWidget);
+    expect(find.text('The Ultimate Business OS'), findsOneWidget);
+    expect(find.text('Automated Operations'), findsOneWidget);
+    expect(find.text('Total Data Privacy'), findsOneWidget);
+    expect(find.text('Unlimited Growth'), findsOneWidget);
     expect(find.text('Download for Mac'), findsOneWidget);
     expect(find.text('Download for Windows'), findsOneWidget);
     expect(find.text('Download for Linux'), findsOneWidget);

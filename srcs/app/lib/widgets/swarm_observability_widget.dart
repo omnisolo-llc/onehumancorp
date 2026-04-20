@@ -5,15 +5,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 
 // Simulate Teammate Mesh messages from Redis/WebSockets
-class MeshMessage {
+class ActivityEvent {
   final String agentName;
   final String action;
   final DateTime timestamp;
 
-  MeshMessage(this.agentName, this.action, this.timestamp);
+  ActivityEvent(this.agentName, this.action, this.timestamp);
 }
 
-final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
+final activityStreamProvider = StreamProvider.autoDispose<ActivityEvent>((ref) {
   final centrifuge = ref.watch(centrifugeServiceProvider);
   if (centrifuge == null) {
     return const Stream.empty();
@@ -27,7 +27,7 @@ final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
     final agentName = json['agent_id'] as String? ?? 'System';
     final action = json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
 
-    return MeshMessage(
+    return ActivityEvent(
       agentName,
       action,
       DateTime.now(),
@@ -35,15 +35,15 @@ final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
   });
 });
 
-class SwarmObservabilityWidget extends ConsumerStatefulWidget {
-  const SwarmObservabilityWidget({super.key});
+class WorkforceInsightsWidget extends ConsumerStatefulWidget {
+  const WorkforceInsightsWidget({super.key});
 
   @override
-  ConsumerState<SwarmObservabilityWidget> createState() => _SwarmObservabilityWidgetState();
+  ConsumerState<WorkforceInsightsWidget> createState() => _WorkforceInsightsWidgetState();
 }
 
-class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWidget> {
-  final List<MeshMessage> _messages = [];
+class _WorkforceInsightsWidgetState extends ConsumerState<WorkforceInsightsWidget> {
+  final List<ActivityEvent> _messages = [];
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -56,7 +56,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    ref.listen<AsyncValue<MeshMessage>>(meshStreamProvider, (previous, next) {
+    ref.listen<AsyncValue<ActivityEvent>>(activityStreamProvider, (previous, next) {
       if (next.hasValue && next.value != null) {
         setState(() {
           _messages.insert(0, next.value!);
@@ -68,7 +68,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
     });
 
     return Semantics(
-      label: 'Swarm Observability Dashboard',
+      label: 'Team Activity Feed',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
@@ -105,7 +105,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                       ),
                       const SizedBox(width: 12),
                       const Text(
-                        'Teammate Mesh Live Feed',
+                        'Workflow Collaboration Feed',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -122,7 +122,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                     child: _messages.isEmpty
                         ? Center(
                             child: Text(
-                              'Listening for swarm activity...',
+                              'Waiting for team activity...',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.5),
                                 fontFamily: 'Inter',

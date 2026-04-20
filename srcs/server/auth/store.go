@@ -15,6 +15,9 @@ import (
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	authpb "github.com/onehumancorp/mono/srcs/proto/ohc/auth"
 )
 
 // Built-in role names.
@@ -46,58 +49,20 @@ var rolePermissions = map[string][]string{
 	RoleViewer:   {"read"},
 }
 
-// User represents a persistent user account with encrypted credentials and role-based permissions within the platform.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type User struct {
-	ID             string    `json:"id"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	PasswordHash   string    `json:"-"` // never serialised to JSON
-	Roles          []string  `json:"roles"`
-	Active         bool      `json:"active"`
-	OrganizationID string    `json:"organizationId,omitempty"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
-	OIDCSubject    string    `json:"oidcSubject,omitempty"`
-}
+// User is an alias for the protobuf-defined User message.
+type User = authpb.User
 
-// UserPublic represents the sanitized, non-sensitive profile of a user suitable for external API consumption.
-// Accepts no parameters.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
-type UserPublic struct {
-	ID             string    `json:"id"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	Roles          []string  `json:"roles"`
-	Active         bool      `json:"active"`
-	OrganizationID string    `json:"organizationId,omitempty"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
-	OIDCSubject    string    `json:"oidcSubject,omitempty"`
-}
+// UserMetadata is an alias for the protobuf-defined UserMetadata message.
+type UserMetadata = authpb.UserMetadata
 
-// PublicView returns a UserPublic with no sensitive fields.
-// Accepts no parameters.
-// Returns UserPublic.
-// Produces no errors.
-// Has no side effects.
-func (u *User) PublicView() UserPublic {
-	return UserPublic{
-		ID:             u.ID,
-		Username:       u.Username,
-		Email:          u.Email,
-		Roles:          u.Roles,
-		Active:         u.Active,
-		OrganizationID: u.OrganizationID,
-		CreatedAt:      u.CreatedAt,
-		UpdatedAt:      u.UpdatedAt,
-		OIDCSubject:    u.OIDCSubject,
+// UserPublic was here.
+
+// PublicView returns a UserMetadata with no sensitive fields.
+func PublicView(u *User) *UserMetadata {
+	if u == nil {
+		return nil
 	}
+	return u.Metadata
 }
 
 // Role defines an operational role with an associated array of access permissions for Role-Based Access Control (RBAC).
@@ -195,7 +160,7 @@ func newStore(repo UserRepository) *Store {
 func (s *Store) seedDefaultAdmin(now time.Time) {
 	adminUser := envOr("ADMIN_USERNAME", "admin")
 	adminPass := envOr("ADMIN_PASSWORD", "admin")
-	adminEmail := envOr("ADMIN_EMAIL", "admin@localhost")
+	adminEmail := envOr("ADMIN_EMAIL", "admin@example.com")
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(adminPass), bcrypt.DefaultCost)
 	if err != nil {
@@ -204,14 +169,16 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 	}
 
 	admin := &User{
-		ID:           generateID(),
-		Username:     adminUser,
-		Email:        adminEmail,
+		Metadata: &UserMetadata{
+			Id:             generateID(),
+			Username:       adminUser,
+			Email:          adminEmail,
+			Roles:          []string{RoleAdmin},
+			Active:         true,
+			CreatedAt:      timestamppb.New(now),
+			UpdatedAt:      timestamppb.New(now),
+		},
 		PasswordHash: string(hash),
-		Roles:        []string{RoleAdmin},
-		Active:       true,
-		CreatedAt:    now,
-		UpdatedAt:    now,
 	}
 
 	if s.repo != nil {
@@ -231,7 +198,7 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 		return
 	}
 
-	s.users[admin.ID] = admin
+	s.users[admin.Metadata.Id] = admin
 	s.byName[tenantKey{"", adminUser}] = admin
 	s.byEmail[tenantKey{"", adminEmail}] = admin
 }
@@ -256,16 +223,19 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 		}
 
 		now := time.Now().UTC()
+		id := generateID()
 		u := &User{
-			ID:           generateID(),
-			Username:     username,
-			Email:        email,
+			Metadata: &UserMetadata{
+				Id:             id,
+				Username:       username,
+				Email:          email,
+				Roles:          append([]string(nil), roles...),
+				Active:         true,
+				OrganizationId: orgID,
+				CreatedAt:      timestamppb.New(now),
+				UpdatedAt:      timestamppb.New(now),
+			},
 			PasswordHash: string(hash),
-			Roles:        append([]string(nil), roles...),
-			Active:       true,
-			OrganizationID: orgID,
-			CreatedAt:    now,
-			UpdatedAt:    now,
 		}
 		if err := s.repo.CreateUser(context.Background(), u); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
@@ -290,34 +260,40 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:           generateID(),
-		Username:     username,
-		Email:        email,
+		Metadata: &UserMetadata{
+			Id:             generateID(),
+			Username:       username,
+			Email:          email,
+			Roles:          append([]string(nil), roles...),
+			Active:         true,
+			OrganizationId: orgID,
+			CreatedAt:      timestamppb.New(now),
+			UpdatedAt:      timestamppb.New(now),
+		},
 		PasswordHash: string(hash),
-		Roles:        append([]string(nil), roles...),
-		Active:       true,
-		OrganizationID: orgID,
-		CreatedAt:    now,
-		UpdatedAt:    now,
 	}
-	s.users[u.ID] = u
+	s.users[u.Metadata.Id] = u
 	s.byName[tenantKey{orgID, username}] = u
 	s.byEmail[tenantKey{orgID, email}] = u
 	return u, nil
 }
 
-// Authenticate validates username+password and returns the matching user.
+// Authenticate validates a username or email plus password and returns the matching user.
 // Accepts parameters: s *Store (No Constraints).
 // Returns (*User, error).
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (s *Store) Authenticate(username, password string, orgID string) (*User, error) {
+func (s *Store) Authenticate(identifier, password string, orgID string) (*User, error) {
 	if s.repo != nil {
-		u, err := s.repo.GetByUsername(context.Background(), username, orgID)
+		ctx := context.Background()
+		u, err := s.repo.GetByUsername(ctx, identifier, orgID)
+		if err != nil {
+			u, err = s.repo.GetByEmail(ctx, identifier, orgID)
+		}
 		if err != nil {
 			return nil, errors.New("invalid credentials")
 		}
-		if !u.Active {
+		if !u.Metadata.Active {
 			return nil, errors.New("account disabled")
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
@@ -327,18 +303,24 @@ func (s *Store) Authenticate(username, password string, orgID string) (*User, er
 	}
 
 	s.mu.RLock()
-	u, ok := s.byName[tenantKey{orgID, username}]
-	if !ok && (orgID == "sys" || orgID == "") {
-		u, ok = s.byName[tenantKey{"", username}]
+	u, ok := s.byName[tenantKey{orgID, identifier}]
+	if !ok {
+		u, ok = s.byEmail[tenantKey{orgID, identifier}]
 	}
-	if ok && orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
+	if !ok && (orgID == "sys" || orgID == "") {
+		u, ok = s.byName[tenantKey{"", identifier}]
+		if !ok {
+			u, ok = s.byEmail[tenantKey{"", identifier}]
+		}
+	}
+	if ok && orgID != "" && orgID != "sys" && u.Metadata.OrganizationId != orgID {
 		ok = false
 	}
 	s.mu.RUnlock()
 	if !ok {
 		return nil, errors.New("invalid credentials")
 	}
-	if !u.Active {
+	if !u.Metadata.Active {
 		return nil, errors.New("account disabled")
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
@@ -364,7 +346,7 @@ func (s *Store) GetUser(id string, orgID string) (*User, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	u, ok := s.users[id]
-	if ok && orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
+	if ok && orgID != "" && orgID != "sys" && u.Metadata.OrganizationId != orgID {
 		return nil, false
 	}
 	return u, ok
@@ -389,7 +371,7 @@ func (s *Store) ListUsers(orgID string) []*User {
 	defer s.mu.RUnlock()
 	out := make([]*User, 0)
 	for _, u := range s.users {
-		if orgID == "" || orgID == "sys" || u.OrganizationID == orgID {
+		if orgID == "" || orgID == "sys" || u.Metadata.OrganizationId == orgID {
 			out = append(out, u)
 		}
 	}
@@ -412,15 +394,15 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 			return nil, err
 		}
 		if emailPtr != nil {
-			u.Email = *emailPtr
+			u.Metadata.Email = *emailPtr
 		}
 		if roles != nil {
-			u.Roles = append([]string(nil), roles...)
+			u.Metadata.Roles = append([]string(nil), roles...)
 		}
 		if activePtr != nil {
-			u.Active = *activePtr
+			u.Metadata.Active = *activePtr
 		}
-		u.UpdatedAt = time.Now().UTC()
+		u.Metadata.UpdatedAt = timestamppb.Now()
 		if err := s.repo.UpdateUser(ctx, u); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
 		}
@@ -431,24 +413,24 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 	defer s.mu.Unlock()
 
 	u, ok := s.users[id]
-	if !ok || (orgID != "" && orgID != "sys" && u.OrganizationID != orgID) {
+	if !ok || (orgID != "" && orgID != "sys" && u.Metadata.OrganizationId != orgID) {
 		return nil, errors.New("user not found")
 	}
-	if emailPtr != nil && *emailPtr != u.Email {
-		if _, exists := s.byEmail[tenantKey{u.OrganizationID, *emailPtr}]; exists {
+	if emailPtr != nil && *emailPtr != u.Metadata.Email {
+		if _, exists := s.byEmail[tenantKey{u.Metadata.OrganizationId, *emailPtr}]; exists {
 			return nil, errors.New("email already registered")
 		}
-		delete(s.byEmail, tenantKey{u.OrganizationID, u.Email})
-		u.Email = *emailPtr
-		s.byEmail[tenantKey{u.OrganizationID, u.Email}] = u
+		delete(s.byEmail, tenantKey{u.Metadata.OrganizationId, u.Metadata.Email})
+		u.Metadata.Email = *emailPtr
+		s.byEmail[tenantKey{u.Metadata.OrganizationId, u.Metadata.Email}] = u
 	}
 	if roles != nil {
-		u.Roles = append([]string(nil), roles...)
+		u.Metadata.Roles = append([]string(nil), roles...)
 	}
 	if activePtr != nil {
-		u.Active = *activePtr
+		u.Metadata.Active = *activePtr
 	}
-	u.UpdatedAt = time.Now().UTC()
+	u.Metadata.UpdatedAt = timestamppb.Now()
 	return u, nil
 }
 
@@ -472,14 +454,14 @@ func (s *Store) DeleteUser(id string, orgID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	u, ok := s.users[id]
-	if !ok || (orgID != "" && orgID != "sys" && u.OrganizationID != orgID) {
+	if !ok || (orgID != "" && orgID != "sys" && u.Metadata.OrganizationId != orgID) {
 		return errors.New("user not found")
 	}
 	delete(s.users, id)
-	delete(s.byName, tenantKey{u.OrganizationID, u.Username})
-	delete(s.byEmail, tenantKey{u.OrganizationID, u.Email})
-	if u.OIDCSubject != "" {
-		delete(s.byOIDC, tenantKey{u.OrganizationID, u.OIDCSubject})
+	delete(s.byName, tenantKey{u.Metadata.OrganizationId, u.Metadata.Username})
+	delete(s.byEmail, tenantKey{u.Metadata.OrganizationId, u.Metadata.Email})
+	if u.Metadata.OidcSubject != "" {
+		delete(s.byOIDC, tenantKey{u.Metadata.OrganizationId, u.Metadata.OidcSubject})
 	}
 	return nil
 }
@@ -601,7 +583,7 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 	}
 	if email != "" {
 		if u, ok := s.byEmail[tenantKey{orgID, email}]; ok {
-			u.OIDCSubject = sub
+			u.Metadata.OidcSubject = sub
 			s.byOIDC[tenantKey{orgID, sub}] = u
 			return u
 		}
@@ -618,17 +600,19 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:          generateID(),
-		Username:    uname,
-		Email:       email,
-		Roles:       []string{RoleViewer},
-		Active:      true,
-		OrganizationID: orgID,
-		OIDCSubject: sub,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		Metadata: &UserMetadata{
+			Id:             generateID(),
+			Username:       uname,
+			Email:          email,
+			Roles:          []string{RoleViewer},
+			Active:         true,
+			OrganizationId: orgID,
+			OidcSubject:    sub,
+			CreatedAt:      timestamppb.New(now),
+			UpdatedAt:      timestamppb.New(now),
+		},
 	}
-	s.users[u.ID] = u
+	s.users[u.Metadata.Id] = u
 	if uname != "" {
 		s.byName[tenantKey{orgID, uname}] = u
 	}
@@ -650,10 +634,10 @@ func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername st
 
 	if email != "" {
 		if u, err := s.repo.GetByEmail(ctx, email, orgID); err == nil {
-			u.OIDCSubject = sub
-			u.UpdatedAt = time.Now().UTC()
+			u.Metadata.OidcSubject = sub
+			u.Metadata.UpdatedAt = timestamppb.Now()
 			if err := s.repo.UpdateUser(ctx, u); err != nil {
-				slog.Warn("failed to attach OIDC subject to existing user", "subject", sub, "error", err)
+				slog.Warn("failed to attach OIDC subject to existing user", "username", u.Metadata.Username, "error", err)
 			}
 			return u
 		} else if !errors.Is(err, ErrUserNotFound) {
@@ -668,30 +652,32 @@ func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername st
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:          generateID(),
-		Username:    uname,
-		Email:       email,
-		Roles:       []string{RoleViewer},
-		Active:      true,
-		OrganizationID: orgID,
-		OIDCSubject: sub,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		Metadata: &UserMetadata{
+			Id:             generateID(),
+			Username:       uname,
+			Email:          email,
+			Roles:          []string{RoleViewer},
+			Active:         true,
+			OrganizationId: orgID,
+			OidcSubject:    sub,
+			CreatedAt:      timestamppb.New(now),
+			UpdatedAt:      timestamppb.New(now),
+		},
 	}
 
 	for attempts := 0; attempts < 2; attempts++ {
-		if u.Username != "" {
-			if existing, err := s.repo.GetByUsername(ctx, u.Username, orgID); err == nil && existing != nil {
-				u.Username = u.Username + "_" + hex.EncodeToString(randomBytes(3))
+		if u.Metadata.Username != "" {
+			if existing, err := s.repo.GetByUsername(ctx, u.Metadata.Username, orgID); err == nil && existing != nil {
+				u.Metadata.Username = u.Metadata.Username + "_" + hex.EncodeToString(randomBytes(3))
 			} else if err != nil && !errors.Is(err, ErrUserNotFound) {
-				slog.Warn("failed to check OIDC username collision", "username", u.Username, "error", err)
+				slog.Warn("failed to check OIDC username collision", "username", u.Metadata.Username, "error", err)
 			}
 		}
 
 		if err := s.repo.CreateUser(ctx, u); err == nil {
 			return u
 		} else if normalizeRepositoryWriteError(err).Error() == "username already taken" {
-			u.Username = u.Username + "_" + hex.EncodeToString(randomBytes(3))
+			u.Metadata.Username = u.Metadata.Username + "_" + hex.EncodeToString(randomBytes(3))
 			continue
 		} else {
 			slog.Warn("failed to create OIDC user in repository", "subject", sub, "error", err)
