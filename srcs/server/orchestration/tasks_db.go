@@ -20,7 +20,7 @@ type SharedTaskDB struct {
     Title           string
     Description     *string
     Status          string
-    AssignedAgentID *string
+    AgentID         *string
     Priority        string
     Payload         *string
     ParentPlanID    *string
@@ -76,24 +76,24 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
         defer to.mu.Unlock()
 
         query := `
-            SELECT id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
+            SELECT id FROM shared_tasks
+            WHERE status = 'PENDING' AND organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM json_each(CASE WHEN t.dependencies IS NULL OR t.dependencies = '' THEN '[]' ELSE t.dependencies END) d
-                JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED' AND dep.organization_id = $1
+                SELECT 1 FROM task_dependencies td
+                JOIN shared_tasks d ON d.id = td.depends_on_task_id
+                WHERE td.task_id = shared_tasks.id AND d.status != 'COMPLETED' AND d.organization_id = $1
             )
             LIMIT 1
         `
         err = tx.QueryRow(ctx, query, orgID).Scan(&id)
     } else {
         query := `
-            SELECT id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
+            SELECT id FROM shared_tasks
+            WHERE status = 'PENDING' AND organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(CASE WHEN t.dependencies IS NULL THEN '[]'::jsonb ELSE t.dependencies::jsonb END) AS d(value)
-                JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED' AND dep.organization_id = $1
+                SELECT 1 FROM task_dependencies td
+                JOIN shared_tasks d ON d.id = td.depends_on_task_id
+                WHERE td.task_id = shared_tasks.id AND d.status != 'COMPLETED' AND d.organization_id = $1
             )
             LIMIT 1
             FOR UPDATE SKIP LOCKED
@@ -108,7 +108,7 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
         return nil, err
     }
 
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
+    _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
     if err != nil {
         return nil, err
     }
@@ -322,7 +322,7 @@ func (to *SharedTaskOrchestrator) CreateTaskV4(ctx context.Context, task *Shared
         task.Title,
         task.Description,
         status,
-        task.AssignedAgentID,
+        task.AgentID,
         priority,
         task.Payload,
         task.ParentPlanID,

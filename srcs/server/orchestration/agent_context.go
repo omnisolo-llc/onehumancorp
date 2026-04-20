@@ -8,7 +8,6 @@ type AgentContext struct {
 	AgentID         string
 	AgentType       string
 	ParentSessionID string
-	Env             map[string]string
 }
 
 type agentContextKey struct{}
