@@ -415,9 +415,9 @@
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
         "bzlTransitiveDigest": "j8m3lx6A4D72MhANI4XYvgxqARWGMbIj/GoiTDWi4tM=",
-        "usagesDigest": "xID8q9S7avymCpdCdZB7aEyamZKXmFxPWBCAmrDSWm8=",
+        "usagesDigest": "YCtjkK4u6pFfn0cpF+NhP6lfOsnzWtqDFzwME6dIMIo=",
         "recordedInputs": [
-          "FILE:@@//srcs/app/pub_deps.json 290da319b646eefaa3fc62a54d34116bacc6e23fcc8227df81ec735ca0e3d859"
+          "FILE:@@//srcs/app/pub_deps.json a67c2ec0ebb3c8aec991ecb2170d13891e789e471f259d721ce6fcc5fe69d055"
         ],
         "generatedRepoSpecs": {
           "pub__fe_analyzer_shared": {
@@ -515,7 +515,7 @@
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "dart_style",
-              "version": "3.1.8"
+              "version": "3.1.2"
             }
           },
           "pub_fake_async": {
