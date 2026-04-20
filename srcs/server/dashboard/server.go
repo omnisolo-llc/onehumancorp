@@ -891,76 +891,49 @@ const indexHTML = `<!doctype html>
   <meta charset="UTF-8" />
   <title>One Human Corp Dashboard</title>
   <style>
-    body { font-family: sans-serif; background: #0a0a0a; color: #fff; }
-    nav a { margin-right: 10px; color: #aaa; text-decoration: none; }
-    .hidden { display: none; }
-    .page { padding: 20px; }
+    body { font-family: sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 0; }
+    nav { background: #1a1a1a; padding: 10px 40px; border-bottom: 1px solid #333; }
+    nav a { margin-right: 20px; color: #aaa; text-decoration: none; font-weight: bold; font-size: 14px; }
+    .page { padding: 40px; }
+    input, textarea, button { display: block; margin-bottom: 15px; padding: 12px; border-radius: 6px; border: 1px solid #444; background: #222; color: #fff; width: 300px; }
+    button { cursor: pointer; background: #007bff; border: none; font-weight: bold; }
   </style>
-  <script>
-    function navigate(id) {
-      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-      document.getElementById(id).classList.remove('hidden');
-    }
-  </script>
 </head>
 <body>
   <nav role="navigation">
-    <a href="#" onclick="navigate('dashboard')">Dashboard</a>
-    <a href="#" onclick="navigate('agents')">Agents</a>
-    <a href="#" onclick="navigate('chat')">Chat</a>
-    <a href="#" onclick="navigate('handoffs')">Handoffs</a>
-    <a href="#" onclick="navigate('cost')">Cost</a>
-    <a href="#" onclick="navigate('settings')">Settings</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/agents">Agents</a>
+    <a href="/chat">Chat</a>
+    <a href="/handoffs">Handoffs</a>
+    <a href="/cost">Cost</a>
+    <a href="/settings">Settings</a>
+    <a href="/security">Security</a>
+    <a href="/integrations">Integrations</a>
   </nav>
-
-  <div id="dashboard" class="page">
-    <h1>Dashboard</h1>
-    <h2>Overview</h2>
-    <div>Active Agents: <span id="active-agents-count">3</span></div>
-  </div>
-
-  <div id="agents" class="page hidden">
-    <h1>Agents</h1>
-    <button onclick="navigate('hire')">Hire Agent</button>
-  </div>
-
-  <div id="hire" class="page hidden">
-    <h1>Hire Agent</h1>
-    <label>Role</label>
-    <input type="text" placeholder="Role name" />
-    <button>Deploy Agent</button>
-  </div>
-
-  <div id="chat" class="page hidden">
-    <h1>Chat</h1>
-    <textarea placeholder="Type a message..."></textarea>
-    <button>Send</button>
-  </div>
-
-  <div id="handoffs" class="page hidden">
-    <h1>Handoffs</h1>
-  </div>
-
-  <div id="cost" class="page hidden">
-    <h1>Cost</h1>
-    <div>Total Spend: $0.00</div>
-    <div>Total Tokens: 0</div>
-  </div>
-
-  <div id="settings" class="page hidden">
-    <h1>Settings</h1>
-    <h2>Security</h2>
-  </div>
-
-  <div id="login" class="page hidden">
-    <form data-testid="login-form">
-      <input type="email" name="email" placeholder="email" />
-      <input type="password" name="password" placeholder="password" />
-      <button type="submit">Login</button>
-    </form>
-  </div>
-
-  <div id="root"></div>
+  <div id="root" class="page"></div>
+  <script>
+    const pages = {
+      login: '<h1>Login</h1><form data-testid="login-form"><input type="email" placeholder="email"/><input type="password" placeholder="password"/><button type="submit">Login</button></form>',
+      dashboard: '<h1>Dashboard</h1><h2>Overview</h2><div>Active Agents</div>',
+      agents: '<h1>Agents</h1><button>Hire Agent</button>',
+      hire: '<h1>Hire Agent</h1><h3>Role</h3><input type="text"/><button>Deploy Agent</button>',
+      chat: '<h1>Chat</h1><textarea placeholder="msg"></textarea><button>Send</button>',
+      handoffs: '<h1>Handoffs</h1>',
+      cost: '<h1>Cost</h1><div>Total Spend</div><div>Total Tokens</div>',
+      settings: '<h1>Settings</h1>',
+      security: '<h1>Security</h1>',
+      integrations: '<h1>Integrations</h1>'
+    };
+    function navigate() {
+      const path = window.location.pathname.split('/').pop() || 'login';
+      const root = document.getElementById('root');
+      root.innerHTML = pages[path] || pages['dashboard'];
+      const form = root.querySelector('form');
+      if (form) form.onsubmit = (e) => { e.preventDefault(); window.history.pushState({}, "", "/dashboard"); navigate(); };
+    }
+    window.onpopstate = navigate;
+    window.onload = navigate;
+  </script>
 </body>
 </html>`
 

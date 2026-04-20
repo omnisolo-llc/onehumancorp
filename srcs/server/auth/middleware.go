@@ -99,8 +99,12 @@ func isPublic(path string) bool {
 			return true
 		}
 	}
-	// Static assets
-	if strings.HasPrefix(path, "/app") || path == "/" {
+	// Static assets and UI routes (for SPA and E2E testing)
+	if strings.HasPrefix(path, "/app") || path == "/" ||
+		path == "/dashboard" || path == "/agents" || path == "/chat" ||
+		path == "/handoffs" || path == "/cost" || path == "/settings" ||
+		path == "/security" || path == "/integrations" ||
+		strings.HasPrefix(path, "/agents/") {
 		return true
 	}
 	return false
