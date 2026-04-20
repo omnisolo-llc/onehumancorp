@@ -43,19 +43,12 @@ func findOhcBinary() string {
 
 // freePort returns an available TCP port on localhost.
 func freePort() int {
-	// Use a random port to avoid race conditions when multiple test binaries
-	// call freePort() simultaneously.
-	for i := 0; i < 10; i++ {
-		// Pick a random port between 20000 and 60000
-		port := 20000 + (time.Now().Nanosecond() % 40000)
-		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-		if err == nil {
-			l.Close()
-			return port
-		}
-		time.Sleep(10 * time.Millisecond)
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 18080
 	}
-	return 18080
+	defer l.Close()
+	return l.Addr().(*net.TCPAddr).Port
 }
 
 func TestMain(m *testing.M) {
@@ -91,15 +84,13 @@ func TestMain(m *testing.M) {
 			"OHC_SERVE_UI=true",
 			fmt.Sprintf("PORT=%d", port),
 			fmt.Sprintf("STATE_DIR=%s", stateDir),
-			fmt.Sprintf("OHC_RUNTIME_DIR=%s", stateDir),
 			"REDIS_URL=",
-			fmt.Sprintf("DATABASE_URL=sqlite://%s/ohc_state.db", stateDir),
+			"DATABASE_URL=",
 			// Point the OHC server at the in-process fake LLM so tests are
 			// deterministic and do not require a live AI API key.
 			fmt.Sprintf("OHC_LOCAL_LLM_ENDPOINT=%s/api/chat", llmURL),
 			fmt.Sprintf("OHC_LOCAL_LLM_EMBED_ENDPOINT=%s/api/embeddings", llmURL),
 			"OHC_LLM_PROVIDER=ollama",
-			fmt.Sprintf("GRPC_PORT=:%d", freePort()),
 		)
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr
