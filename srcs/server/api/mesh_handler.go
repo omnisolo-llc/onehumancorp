@@ -42,23 +42,24 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For legacy support we can broadcast the raw payload to a default channel if not specified
-	// Alternatively, try to decode standard event format
 	var payload struct {
-		Channel string `json:"channel"`
-		Data    json.RawMessage `json:"data"` // Changed to json.RawMessage
+		AgentID   string          `json:"agent_id"`
+		Channel   string          `json:"channel"`
+		EventType string          `json:"event_type"`
+		Data      json.RawMessage `json:"data"`
 	}
 
-	// Try to unmarshal structured payload, fallback to "default" channel
-	channel := "default"
-	var data []byte = bodyBytes
-
-	if err := json.Unmarshal(bodyBytes, &payload); err == nil && payload.Channel != "" {
-		channel = payload.Channel
-		data = payload.Data
+	if err := json.Unmarshal(bodyBytes, &payload); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
 	}
 
-	if err := h.transport.Publish(r.Context(), channel, data); err != nil {
+	if payload.AgentID == "" || payload.Channel == "" || payload.EventType == "" || payload.Data == nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.transport.Publish(r.Context(), payload.Channel, payload.Data); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to broadcast: %v", err), http.StatusInternalServerError)
 		return
 	}

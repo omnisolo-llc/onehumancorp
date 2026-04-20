@@ -31,7 +31,7 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 	handler := NewMeshHandler(transport)
 
 	t.Run("Valid Broadcast", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{"channel":"test","data":{"msg":"hello"}}`)))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{"agent_id":"agent123","channel":"test","event_type":"UPDATE","data":{"msg":"hello"}}`)))
 		w := httptest.NewRecorder()
 
 		handler.Broadcast(w, req)
@@ -41,14 +41,15 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 		}
 	})
 
-	t.Run("Valid Broadcast Raw Fallback", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`just some raw data`)))
+	t.Run("Invalid Broadcast Missing Fields", func(t *testing.T) {
+		// Missing agent_id and event_type
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{"channel":"test","data":{"msg":"hello"}}`)))
 		w := httptest.NewRecorder()
 
 		handler.Broadcast(w, req)
 
-		if w.Result().StatusCode != http.StatusOK {
-			t.Errorf("Expected status OK, got %d", w.Result().StatusCode)
+		if w.Result().StatusCode != http.StatusBadRequest {
+			t.Errorf("Expected status Bad Request, got %d", w.Result().StatusCode)
 		}
 	})
 
@@ -65,7 +66,7 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 
 	t.Run("Publish Error", func(t *testing.T) {
 		failHandler := NewMeshHandler(&mockFailingTransport{})
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{}`)))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{"agent_id":"agent123","channel":"test","event_type":"UPDATE","data":{"msg":"hello"}}`)))
 		w := httptest.NewRecorder()
 
 		failHandler.Broadcast(w, req)
