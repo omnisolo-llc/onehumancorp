@@ -21,14 +21,14 @@ class AgentsScreen extends ConsumerWidget {
     final snapshot = ref.watch(_agentsProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agents'),
+        title: const Text('Workforce'),
         actions: [
           Tooltip(
-            message: 'Hire a new agent',
+            message: 'Hire a new specialist',
             child: FilledButton.icon(
               onPressed: () => context.go('/agents/hire'),
               icon: const Icon(Icons.add),
-              label: const Text('Hire Agent'),
+              label: const Text('Hire Specialist'),
             ),
           ),
           const SizedBox(width: 16),
@@ -74,16 +74,16 @@ class _EmptyAgents extends StatelessWidget {
             color: Theme.of(context).colorScheme.outline,
           ),
           const SizedBox(height: 16),
-          Text('No agents yet', style: Theme.of(context).textTheme.titleLarge),
+          Text('No team members yet', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          const Text('Hire your first AI agent to get started.'),
+          const Text('Hire your first virtual specialist to get started.'),
           const SizedBox(height: 24),
           Tooltip(
-            message: 'Hire a new agent to your team',
+            message: 'Hire a new specialist to your team',
             child: FilledButton.icon(
               onPressed: onHire,
               icon: const Icon(Icons.add),
-              label: const Text('Hire New Agent'),
+              label: const Text('Hire New Specialist'),
             ),
           ),
         ],
@@ -173,7 +173,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
             : colorScheme.onSurfaceVariant;
 
     return Semantics(
-      label: 'Agent ${widget.agent.name}, Role: ${widget.agent.role}, Status: ${widget.agent.status}',
+      label: 'Specialist ${widget.agent.name}, Role: ${widget.agent.role}, Status: ${widget.agent.status}',
       button: true,
       child: SlideTransition(
         position: _slideAnimation,
@@ -225,7 +225,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                           if (widget.agent.svidVerified) ...[
                                             const SizedBox(width: 6),
                                             Tooltip(
-                                              message: 'SPIFFE mTLS Secured',
+                                              message: 'Verified Employee',
                                               child: Icon(
                                                 Icons.verified_user,
                                                 size: 16,

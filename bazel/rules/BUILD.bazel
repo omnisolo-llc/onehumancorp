@@ -12,3 +12,5 @@ js_binary(
     entry_point = ":ts_proto_wrapper.js",
     visibility = ["//visibility:public"],
 )
+
+# No longer using dart_binary for protoc_plugin_bin

@@ -4,7 +4,7 @@ publish_to: "none"
 version: 0.4.5+1
 
 environment:
-  sdk: "^3.7.2"
+  sdk: "^3.8.0"
 
 resolution: workspace
 
@@ -20,10 +20,10 @@ dependencies:
 
   # Networking
   http: ^1.2.1
-  web_socket_channel: ^2.4.0
-  centrifuge: ^0.14.1
-  protobuf: ^3.1.0
-  grpc: ^4.0.0
+  web_socket_channel: ^3.0.0
+  centrifuge: ^0.18.0
+  protobuf: ^6.0.0
+  grpc: ^5.1.0
 
   # Local storage
   shared_preferences: ^2.2.3
@@ -47,6 +47,8 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^3.0.0
   mocktail: ^1.0.4
+  analyzer: ^7.2.0
+  dart_style: ^3.0.1
 
 flutter:
   uses-material-design: true
