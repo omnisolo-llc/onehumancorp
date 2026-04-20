@@ -48,9 +48,9 @@ func mockLookupIP(host string) ([]net.IP, error) {
 }
 
 func TestValidateURL(t *testing.T) {
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
+	oldLookupIP := net.LookupIP
+	net.LookupIP = mockLookupIP
+	defer func() { net.LookupIP = oldLookupIP }()
 
 	tests := []struct {
 		name    string
@@ -73,19 +73,19 @@ func TestValidateURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateURL(tt.url)
+			err := ValidateURL(tt.url)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("validateURL(%q) error = %v, wantErr %v", tt.url, err, tt.wantErr)
+				t.Errorf("ValidateURL(%q) error = %v, wantErr %v", tt.url, err, tt.wantErr)
 			}
 		})
 	}
 
 	// DNS error test
 	t.Run("DNS Resolution Failed", func(t *testing.T) {
-		LookupIPFunc = func(host string) ([]net.IP, error) {
+		net.LookupIP = func(host string) ([]net.IP, error) {
 			return nil, net.UnknownNetworkError("unknown")
 		}
-		err := validateURL("http://unresolvable.local")
+		err := ValidateURL("http://unresolvable.local")
 		if err == nil {
 			t.Errorf("expected error for DNS resolution failure")
 		}
@@ -93,9 +93,9 @@ func TestValidateURL(t *testing.T) {
 }
 
 func TestConnectSSRF(t *testing.T) {
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
+	oldLookupIP := net.LookupIP
+	net.LookupIP = mockLookupIP
+	defer func() { net.LookupIP = oldLookupIP }()
 
 	r := NewRegistry()
 
@@ -121,9 +121,9 @@ func TestConnectSSRF(t *testing.T) {
 }
 
 func TestTestConnectionSSRF(t *testing.T) {
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
+	oldLookupIP := net.LookupIP
+	net.LookupIP = mockLookupIP
+	defer func() { net.LookupIP = oldLookupIP }()
 
 	r := NewRegistry()
 	_, _ = r.Connect("discord", "")
@@ -265,9 +265,9 @@ func TestConnectUpdatesStatus(t *testing.T) {
 }
 
 func TestConnectWithEmptyBaseURLPreservesExisting(t *testing.T) {
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
+	oldLookupIP := net.LookupIP
+	net.LookupIP = mockLookupIP
+	defer func() { net.LookupIP = oldLookupIP }()
 
 	r := NewRegistry()
 	_, _ = r.Connect("github", "https://api.github.com")
@@ -780,11 +780,11 @@ func TestSendChatMessageWithCreds(t *testing.T) {
 	AllowLocalIPsForTesting = true
 	defer func() { AllowLocalIPsForTesting = oldAllow }()
 
-	oldLookup := LookupIPFunc
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	oldLookup := net.LookupIP
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("8.8.8.8")}, nil
 	}
-	defer func() { LookupIPFunc = oldLookup }()
+	defer func() { net.LookupIP = oldLookup }()
 
 	oldBase := TelegramAPIBase
 	TelegramAPIBase = server.URL
@@ -879,11 +879,11 @@ func TestSendTelegramMessage(t *testing.T) {
 	AllowLocalIPsForTesting = true
 	defer func() { AllowLocalIPsForTesting = oldAllow }()
 
-	oldLookup := LookupIPFunc
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	oldLookup := net.LookupIP
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("127.0.0.1")}, nil
 	}
-	defer func() { LookupIPFunc = oldLookup }()
+	defer func() { net.LookupIP = oldLookup }()
 
 	oldBase := TelegramAPIBase
 	TelegramAPIBase = server.URL
@@ -921,11 +921,11 @@ func TestSendTelegramMessageError(t *testing.T) {
 	AllowLocalIPsForTesting = true
 	defer func() { AllowLocalIPsForTesting = oldAllow }()
 
-	oldLookup := LookupIPFunc
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	oldLookup := net.LookupIP
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("127.0.0.1")}, nil
 	}
-	defer func() { LookupIPFunc = oldLookup }()
+	defer func() { net.LookupIP = oldLookup }()
 
 	oldBase := TelegramAPIBase
 	TelegramAPIBase = server.URL
@@ -964,11 +964,11 @@ func TestTestConnectionTelegram(t *testing.T) {
 	AllowLocalIPsForTesting = true
 	defer func() { AllowLocalIPsForTesting = oldAllow }()
 
-	oldLookup := LookupIPFunc
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	oldLookup := net.LookupIP
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("127.0.0.1")}, nil
 	}
-	defer func() { LookupIPFunc = oldLookup }()
+	defer func() { net.LookupIP = oldLookup }()
 
 	oldBase := TelegramAPIBase
 	TelegramAPIBase = server.URL
@@ -1007,11 +1007,11 @@ func TestSafeClientDialContextErrors(t *testing.T) {
 	AllowLocalIPsForTesting = false // Ensure we trigger SSRF protections
 	defer func() { AllowLocalIPsForTesting = oldAllow }()
 
-	oldLookup := LookupIPFunc
-	defer func() { LookupIPFunc = oldLookup }()
+	oldLookup := net.LookupIP
+	defer func() { net.LookupIP = oldLookup }()
 
 	// 1. DNS Resolution failure
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return nil, net.UnknownNetworkError("unknown")
 	}
 	_, err := safeClient.Get("http://unresolvable.local/path")
@@ -1020,7 +1020,7 @@ func TestSafeClientDialContextErrors(t *testing.T) {
 	}
 
 	// 2. No IP addresses returned
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{}, nil
 	}
 	_, err = safeClient.Get("http://no-ips.local/path")
@@ -1029,7 +1029,7 @@ func TestSafeClientDialContextErrors(t *testing.T) {
 	}
 
 	// 3. Blocked IP address
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("127.0.0.1")}, nil
 	}
 	_, err = safeClient.Get("http://blocked.local/path")
@@ -1063,11 +1063,11 @@ func TestTestConnectionDiscord(t *testing.T) {
 	AllowLocalIPsForTesting = true
 	defer func() { AllowLocalIPsForTesting = oldAllow }()
 
-	oldLookup := LookupIPFunc
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	oldLookup := net.LookupIP
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("127.0.0.1")}, nil
 	}
-	defer func() { LookupIPFunc = oldLookup }()
+	defer func() { net.LookupIP = oldLookup }()
 
 	r := NewRegistry()
 	_, _ = r.Connect("discord", "")
@@ -1215,9 +1215,9 @@ func TestNewChatIntegrationsStartDisconnected(t *testing.T) {
 }
 
 func TestConnectAndDisconnectTelegram(t *testing.T) {
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
+	oldLookupIP := net.LookupIP
+	net.LookupIP = mockLookupIP
+	defer func() { net.LookupIP = oldLookupIP }()
 
 	r := NewRegistry()
 
@@ -1243,11 +1243,11 @@ func TestSendTelegramMessageErrors(t *testing.T) {
 	AllowLocalIPsForTesting = true
 	defer func() { AllowLocalIPsForTesting = oldAllow }()
 
-	oldLookup := LookupIPFunc
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	oldLookup := net.LookupIP
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("127.0.0.1")}, nil
 	}
-	defer func() { LookupIPFunc = oldLookup }()
+	defer func() { net.LookupIP = oldLookup }()
 
 	oldBase := TelegramAPIBase
 	defer func() { TelegramAPIBase = oldBase }()
@@ -1311,20 +1311,20 @@ func TestSendDiscordWebhookErrors(t *testing.T) {
 
 	// 2. NewRequest failure (bad URL parsing for NewRequestWithContext)
 	err = sendDiscordWebhook(context.Background(), "http://127.0.0.1\x7f/path", "user", "msg")
-	if err == nil || !strings.Contains(err.Error(), "invalid URL format") { // caught by validateURL first
+	if err == nil || !strings.Contains(err.Error(), "invalid URL format") { // caught by ValidateURL first
 		t.Errorf("expected validation error, got %v", err)
 	}
 
 	// Disable validation temporarily to trigger create request error
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	oldLookupIP := net.LookupIP
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		return []net.IP{net.ParseIP("127.0.0.1")}, nil
 	}
-	defer func() { LookupIPFunc = oldLookupIP }()
+	defer func() { net.LookupIP = oldLookupIP }()
 
 	// Trigger NewRequestWithContext error by passing an invalid method character implicitly via url
-	// Actually NewRequestWithContext fails on bad URL. But validateURL catches bad URLs first.
-	// We can skip NewRequestWithContext test as it is covered by validateURL or just test client.Do error
+	// Actually NewRequestWithContext fails on bad URL. But ValidateURL catches bad URLs first.
+	// We can skip NewRequestWithContext test as it is covered by ValidateURL or just test client.Do error
 
 	// 3. Client Do error
 	// A closed server will cause Do to fail
@@ -1336,9 +1336,9 @@ func TestSendDiscordWebhookErrors(t *testing.T) {
 }
 
 func TestTelegramAPIBaseSSRF(t *testing.T) {
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
+	oldLookupIP := net.LookupIP
+	net.LookupIP = mockLookupIP
+	defer func() { net.LookupIP = oldLookupIP }()
 
 	oldBase := TelegramAPIBase
 	defer func() { TelegramAPIBase = oldBase }()
@@ -1352,14 +1352,14 @@ func TestTelegramAPIBaseSSRF(t *testing.T) {
 	parsed, _ := url.Parse(validServer.URL)
 	validHost := parsed.Hostname()
 
-	oldLookup := LookupIPFunc
-	LookupIPFunc = func(host string) ([]net.IP, error) {
+	oldLookup := net.LookupIP
+	net.LookupIP = func(host string) ([]net.IP, error) {
 		if host == validHost {
 			return []net.IP{net.ParseIP("127.0.0.1")}, nil
 		}
 		return mockLookupIP(host)
 	}
-	defer func() { LookupIPFunc = oldLookup }()
+	defer func() { net.LookupIP = oldLookup }()
 
 	oldAllow := AllowLocalIPsForTesting
 
