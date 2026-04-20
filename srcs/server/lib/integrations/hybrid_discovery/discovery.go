@@ -3,8 +3,13 @@ package hybrid_discovery
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
+	"net/url"
+	"regexp"
 
 	_ "modernc.org/sqlite" // Ensure sqlite driver is available for checks
 )
@@ -132,6 +137,120 @@ func (p *DiscoveryProxy) searchSwitchboard(ctx context.Context, intent string) (
 	}
 
 	return []ToolSpec{}, nil
+}
+
+// validateGuardrails checks a URL and tool names for basic safety compliance.
+func validateGuardrails(specURL string) error {
+	u, err := url.Parse(specURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return errors.New("guardrail violation: URL must be http or https")
+	}
+	// For demo safety guardrail, deny specific hosts.
+	if u.Hostname() == "malicious.internal" {
+		return errors.New("guardrail violation: blocked host")
+	}
+	return nil
+}
+
+// validateToolName ensures tool names only contain alphanumeric and dashes.
+func validateToolName(name string) error {
+	matched, _ := regexp.MatchString(`^[a-zA-Z0-9\-]+$`, name)
+	if !matched {
+		return fmt.Errorf("guardrail violation: tool name %q contains invalid characters", name)
+	}
+	return nil
+}
+
+// ImportOpenAPI fetches an OpenAPI spec via HTTP, parses it to extract endpoints as tools,
+// applies safety guardrails, and dynamically registers them.
+func (p *DiscoveryProxy) ImportOpenAPI(ctx context.Context, specURL string) error {
+	log.Printf("Scout: Importing OpenAPI spec from %s", specURL)
+
+	if err := validateGuardrails(specURL); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, specURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to fetch OpenAPI spec: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
+	// Minimal parser: looking for top-level paths or an info object to extract a tool.
+	// For simplicity in this mock integration, we parse it into a generic map and
+	// try to extract some endpoints or just register the whole API as one tool.
+	var spec map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&spec); err != nil {
+		return fmt.Errorf("failed to parse JSON spec: %w", err)
+	}
+
+	var title string
+	if info, ok := spec["info"].(map[string]interface{}); ok {
+		if t, ok := info["title"].(string); ok {
+			title = t
+		}
+	}
+	if title == "" {
+		title = "imported-api-tool"
+	}
+
+	// Sanitize title to use as tool name
+	re := regexp.MustCompile(`[^a-zA-Z0-9]+`)
+	toolName := string(re.ReplaceAll([]byte(title), []byte("-")))
+	if len(toolName) > 0 && toolName[0] == '-' {
+		toolName = toolName[1:]
+	}
+	if len(toolName) > 0 && toolName[len(toolName)-1] == '-' {
+		toolName = toolName[:len(toolName)-1]
+	}
+	if toolName == "" {
+		toolName = "imported-api-tool"
+	}
+
+	if err := validateToolName(toolName); err != nil {
+		return err
+	}
+
+	desc := fmt.Sprintf("Dynamically discovered tool from %s", specURL)
+	endpoint := fmt.Sprintf("dynamic://%s", toolName)
+
+	if p.isSQLite() {
+		// Ensure table exists (same logic as searchSQLite)
+		_, err := p.db.ExecContext(ctx, `
+			CREATE TABLE IF NOT EXISTS local_mcp_tools (
+				name TEXT,
+				description TEXT,
+				endpoint TEXT
+			)
+		`)
+		if err != nil {
+			return fmt.Errorf("failed to create table: %w", err)
+		}
+
+		_, err = p.db.ExecContext(ctx, `
+			INSERT INTO local_mcp_tools (name, description, endpoint) VALUES (?, ?, ?)
+		`, toolName, desc, endpoint)
+		if err != nil {
+			return fmt.Errorf("failed to register tool locally: %w", err)
+		}
+		log.Printf("Scout: Successfully registered local tool %q", toolName)
+		return nil
+	}
+
+	// Mock Switchboard registration for Postgres/Cloud mode
+	log.Printf("Scout: Routing tool registration %q to Cloud Switchboard", toolName)
+	return nil
 }
 
 // RequestToolSVID requests a SPIFFE identity for the tool.

@@ -57,6 +57,16 @@ func TestBuiltinProvider_TypeAndDescription(t *testing.T) {
 	}
 }
 
+func TestScoutProvider_TypeAndDescription(t *testing.T) {
+	p := &ScoutProvider{}
+	if p.Type() != ProviderTypeScout {
+		t.Fatalf("expected type %q, got %q", ProviderTypeScout, p.Type())
+	}
+	if p.Description() == "" {
+		t.Fatal("expected non-empty description")
+	}
+}
+
 // ── isAuthenticated / GetCredentials before auth ──────────────────────────────
 
 func TestProviders_NotAuthenticatedBeforeAuthenticate(t *testing.T) {
@@ -190,6 +200,7 @@ func TestProviderTypeConstants(t *testing.T) {
 		ProviderTypeOpenClaw: "openclaw",
 		ProviderTypeIronClaw: "ironclaw",
 		ProviderTypeBuiltin:  "builtin",
+		ProviderTypeScout:    "scout",
 	}
 	for pt, expected := range types {
 		if string(pt) != expected {

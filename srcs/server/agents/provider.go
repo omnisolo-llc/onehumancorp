@@ -60,6 +60,13 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	ProviderTypeBuiltin ProviderType = "builtin"
+
+	// ProviderTypeScout targets the Scout sub-agent for autonomous tool integration.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeScout ProviderType = "scout"
 )
 
 // Credentials holds the authentication material for an external agent provider. Providers may use an API key, an OAuth bearer token, or both alongside any additional provider-specific configuration entries.
@@ -436,6 +443,67 @@ func (p *IronClawProvider) GetCredentials() Credentials { return p.load() }
 // Produces no errors.
 // Has no side effects.
 func (p *IronClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// ── Scout ─────────────────────────────────────────────────────────────────────
+
+// ScoutProvider implements Provider for the Scout resource scout and tool integrator.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type ScoutProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) Type() ProviderType { return ProviderTypeScout }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) Description() string {
+	return "Scout — autonomous resource scout and tool integrator capable of dynamic MCP capability registration"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) SupportedRoles() []string {
+	return []string{"TOOL_INTEGRATOR", "RESOURCE_SCOUT"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *ScoutProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *ScoutProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" {
+		return errors.New("scout provider requires an API key for proxy authentication")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // ── Builtin ───────────────────────────────────────────────────────────────────
 
