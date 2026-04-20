@@ -134,7 +134,7 @@ func TestSandboxViolationStore_Validation(t *testing.T) {
 		t.Errorf("Expected violation command 'sudo rm -rf /', got '%s'", violations[0].Command)
 	}
 
-	if !strings.Contains(violations[0].Error, "matched (?i)\\bsudo\\b") {
+	if !strings.Contains(violations[0].Error, "blocked command: sudo") {
 		t.Errorf("Expected error to contain matched pattern, got '%s'", violations[0].Error)
 	}
 }

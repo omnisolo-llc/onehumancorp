@@ -2,9 +2,10 @@ package integrations
 
 import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/integrations/etcd"
 	"github.com/onehumancorp/mono/srcs/server/integrations/libsql"
 	"github.com/onehumancorp/mono/srcs/server/integrations/litefs"
-	"github.com/onehumancorp/mono/srcs/server/integrations/etcd"
+	"github.com/onehumancorp/mono/srcs/server/integrations/ollama"
 )
 
 // Integration represents a plugin blueprint defining how to instantiate connections.
@@ -31,6 +32,7 @@ var Catalog = []Integration{
 	&litefs.LiteFSIntegration{},
 	&libsql.LibSQLIntegration{},
 	&etcd.EtcdIntegration{},
+	&ollama.OllamaIntegration{},
 }
 
 // GetCatalog returns all available integration providers.
