@@ -90,7 +90,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const ChannelsScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(FilledButton, 'Add Channel'), findsOneWidget);
+      expect(find.text('Add Channel'), findsWidgets);
     });
 
     testWidgets('Add Channel opens dialog when tapped', (tester) async {

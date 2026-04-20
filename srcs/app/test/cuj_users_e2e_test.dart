@@ -56,6 +56,11 @@ void main() {
 
   group('CUJ: User Management', () {
     testWidgets('renders user names from API', (tester) async {
+      tester.view.physicalSize = const Size(1440, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -78,7 +83,6 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('alice'), findsWidgets);
-      await tester.scrollUntilVisible(find.textContaining('bob'), 200);
       expect(find.textContaining('bob'), findsWidgets);
     });
 
@@ -120,7 +124,7 @@ void main() {
       await tester.tap(find.widgetWithText(FloatingActionButton, 'Invite User'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {

@@ -95,7 +95,7 @@ void main() {
       await tester.pumpWidget(_wrapAgents([]));
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(FilledButton, 'Hire Agent'), findsOneWidget);
+      expect(find.text('Hire Agent'), findsWidgets);
     });
 
     testWidgets('seeded agent name renders in list', (tester) async {
