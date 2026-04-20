@@ -7,5 +7,5 @@ CREATE TABLE swarm_task_dependencies (
     depends_on_task_id UUID REFERENCES swarm_tasks(id) ON DELETE CASCADE,
     PRIMARY KEY (task_id, depends_on_task_id)
 );
-CREATE INDEX idx_swarm_task_deps_task ON swarm_task_dependencies(task_id);
-CREATE INDEX idx_swarm_task_deps_depends ON swarm_task_dependencies(depends_on_task_id);
+CREATE INDEX IF NOT EXISTS idx_swarm_task_deps_task ON swarm_task_dependencies(task_id);
+CREATE INDEX IF NOT EXISTS idx_swarm_task_deps_depends ON swarm_task_dependencies(depends_on_task_id);

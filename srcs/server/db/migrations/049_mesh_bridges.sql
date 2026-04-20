@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS mesh_bridges (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX idx_mesh_bridges_org ON mesh_bridges(organization_id);
+CREATE INDEX IF NOT EXISTS idx_mesh_bridges_org ON mesh_bridges(organization_id);
 -- +goose StatementEnd
 
 -- +goose Down

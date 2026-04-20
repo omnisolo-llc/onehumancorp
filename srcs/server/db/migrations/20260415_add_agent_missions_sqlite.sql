@@ -19,7 +19,7 @@ SELECT id, status, payload, created_at FROM agent_missions;
 
 DROP TABLE agent_missions;
 ALTER TABLE agent_missions_new RENAME TO agent_missions;
-CREATE INDEX idx_missions_status ON agent_missions (status);
+CREATE INDEX IF NOT EXISTS idx_missions_status ON agent_missions (status);
 
 COMMIT;
 
@@ -44,7 +44,7 @@ SELECT id, status, payload, created_at FROM agent_missions;
 
 DROP TABLE agent_missions;
 ALTER TABLE agent_missions_old RENAME TO agent_missions;
-CREATE INDEX idx_missions_status ON agent_missions (status);
+CREATE INDEX IF NOT EXISTS idx_missions_status ON agent_missions (status);
 
 COMMIT;
 

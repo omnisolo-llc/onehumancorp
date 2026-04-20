@@ -14,4 +14,4 @@ ALTER TABLE autodream_memories ADD COLUMN source_type TEXT;
 UPDATE autodream_memories SET organization_id = 'default' WHERE organization_id IS NULL;
 UPDATE autodream_memories SET source_type = 'unknown' WHERE source_type IS NULL;
 
-CREATE INDEX idx_autodream_org ON autodream_memories(organization_id);
+CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_id);

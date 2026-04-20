@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS state_machine_transitions (
     reason TEXT,
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX idx_sm_entity ON state_machine_transitions(entity_id, entity_type);
+CREATE INDEX IF NOT EXISTS idx_sm_entity ON state_machine_transitions(entity_id, entity_type);

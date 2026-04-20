@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 ALTER TABLE autodream_memories ADD COLUMN processed_at TIMESTAMP WITH TIME ZONE;
-CREATE INDEX idx_autodream_memories_processed_at ON autodream_memories(processed_at);
+CREATE INDEX IF NOT EXISTS idx_autodream_memories_processed_at ON autodream_memories(processed_at);
 -- +goose StatementEnd
 
 -- +goose Down
