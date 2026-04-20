@@ -31,7 +31,7 @@ func setupSchedulerServer(t *testing.T) *Server {
 	}
 }
 
-func TestHandleSchedulerTasks_Get(t *testing.T) {
+func TestHandleSchedulerTasks_GetOriginal(t *testing.T) {
 	s := setupSchedulerServer(t)
 
 	// Add a task
