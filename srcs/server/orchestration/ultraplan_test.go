@@ -144,3 +144,59 @@ func TestUltraPlanManager(t *testing.T) {
 		t.Errorf("expected phase to be APPROVED (2 votes), got %v", planResult.StateMachine["phase"])
 	}
 }
+
+func TestUltraPlanManager_MutexLock(t *testing.T) {
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	// Ensure the table exists in memory DB for the test
+	_, _ = prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'DELIBERATING',
+			state_machine TEXT DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+
+	upm := NewUltraPlanManager(prov, nil, nil)
+	ctx := context.Background()
+
+	// Create plan
+	plan, err := upm.CreatePlan(ctx, "m-lock-test")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Try concurrent lock acquisition (simulated via db lock / transaction failure or timeout)
+	// Because SQLite TestProvider is memory shared, and SQLiteMutex locks via row insertion into distributed_locks,
+	// we can test the lock behavior.
+
+	// First, explicitly lock using the mutex provider
+	mutex := upm.mutexProvider.NewMutex("ultraplan:" + plan.ID)
+	err = mutex.Lock(ctx, 30*time.Second)
+	if err != nil {
+		t.Fatalf("expected to acquire lock, got %v", err)
+	}
+
+	// Wait, the lock is already acquired by us via mutex directly.
+	// Now if we try to call upm.UpdatePlanStatus, it will attempt to acquire the lock and fail.
+	err = upm.UpdatePlanStatus(ctx, plan.ID, "EXECUTING", map[string]interface{}{})
+	if err == nil {
+		t.Errorf("expected lock acquisition error on UpdatePlanStatus, got nil")
+	}
+
+	// Release lock manually
+	mutex.Unlock(ctx)
+
+	// Now it should succeed
+	err = upm.UpdatePlanStatus(ctx, plan.ID, "EXECUTING", map[string]interface{}{})
+	if err != nil {
+		t.Errorf("expected success after lock released, got %v", err)
+	}
+}

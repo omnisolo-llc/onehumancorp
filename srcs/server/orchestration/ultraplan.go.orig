@@ -100,10 +100,7 @@ func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *
 		CREATE TABLE IF NOT EXISTS ultraplan_votes (plan_id TEXT NOT NULL, agent_id TEXT NOT NULL, vote TEXT NOT NULL);
 	`)
 
-	mp, err := NewMutexProvider(ctx, provider, redisClient)
-	if err != nil {
-		telemetry.RecordError(ctx, fmt.Errorf("failed to initialize mutex provider: %w", err))
-	}
+	mp, _ := NewMutexProvider(ctx, provider, redisClient)
 	return &UltraPlanManager{
 		db:            provider,
 		redisClient:   redisClient,
