@@ -31,9 +31,6 @@ flutter_library(
     data = ["//srcs/app:app_assets"],
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        "@pub_yaml//:yaml",
-    ],
 )
 
 # Keep individual model names as aliases for any existing embed references.

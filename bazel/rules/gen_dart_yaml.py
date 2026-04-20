@@ -21,8 +21,6 @@ _HEADER = """\
 // ignore_for_file: unnecessary_import, unused_import, unused_shown_name
 
 import 'dart:convert';
-
-import 'package:yaml/yaml.dart';
 """
 
 # Dart helper functions emitted once per generated file.
@@ -67,6 +65,51 @@ String _protoToYaml(Object? value, [int depth = 0]) {
   }
   return '$value\n';
 }
+
+/// Parses a YAML/JSON string into a [Map<String, dynamic>].
+///
+/// Fast path: tries [jsonDecode] first (handles JSON and the block-YAML
+/// emitted by [_protoToYaml]).  Slow path: minimal line-oriented key: value
+/// parser for simple flat proto messages.
+Map<String, dynamic> _yamlToMap(String yaml) {
+  final trimmed = yaml.trim();
+  if (trimmed.isEmpty) return {};
+  try {
+    final decoded = jsonDecode(trimmed);
+    if (decoded is Map<String, dynamic>) return decoded;
+    return {};
+  } catch (_) {
+    final result = <String, dynamic>{};
+    for (final line in trimmed.split('\n')) {
+      final t = line.trim();
+      if (t.isEmpty || t.startsWith('#')) continue;
+      final colon = t.indexOf(':');
+      if (colon < 0) continue;
+      final key = t.substring(0, colon).trim();
+      final raw = t.substring(colon + 1).trim();
+      if (key.isEmpty) continue;
+      result[key] = _parseYamlScalar(raw);
+    }
+    return result;
+  }
+}
+
+dynamic _parseYamlScalar(String raw) {
+  if (raw == 'null' || raw == '~') return null;
+  if (raw == 'true') return true;
+  if (raw == 'false') return false;
+  final n = double.tryParse(raw);
+  if (n != null) return n % 1 == 0 ? n.toInt() : n;
+  if (raw.length >= 2) {
+    if (raw.startsWith('"') && raw.endsWith('"')) {
+      return raw.substring(1, raw.length - 1).replaceAll(r'\"', '"');
+    }
+    if (raw.startsWith("'") && raw.endsWith("'")) {
+      return raw.substring(1, raw.length - 1);
+    }
+  }
+  return raw;
+}
 """
 
 
@@ -79,9 +122,11 @@ extension {msg}YamlExt on {msg} {{
   String toYaml() => _protoToYaml(toProto3Json());
 
   /// Deserializes a YAML string into a [{msg}].
+  ///
+  /// The [yamlString] must be either valid JSON (which is valid YAML) or a
+  /// simple flat key: value document produced by [toYaml].
   static {msg} fromYaml(String yamlString) => {msg}()
-      ..mergeFromProto3Json(
-          jsonDecode(jsonEncode(loadYaml(yamlString))) as Map<String, dynamic>);
+      ..mergeFromProto3Json(_yamlToMap(yamlString));
 }}
 """
 

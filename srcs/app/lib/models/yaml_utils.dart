@@ -45,10 +45,8 @@ String modelToYaml(Object? value, [int depth = 0]) {
 /// Parses a YAML string and returns a [Map<String, dynamic>] suitable for
 /// passing to a model's [fromJson] factory.
 ///
-/// This implementation parses JSON (which is valid YAML) using [dart:convert].
-/// The [yaml] string should be produced by [modelToYaml] or be a valid JSON
-/// object.  For arbitrary block-YAML input add `package:yaml` and use
-/// `loadYaml` instead.
+/// Uses [dart:convert] only (no external package:yaml dep). Handles JSON
+/// (fast path) and simple flat key: value block-YAML (slow path).
 ///
 /// Returns an empty map if [yaml] is null or contains only whitespace.
 Map<String, dynamic> modelFromYaml(String yaml) {
@@ -83,64 +81,15 @@ dynamic _parseScalarYaml(String raw) {
   if (raw == 'null' || raw == '~') return null;
   if (raw == 'true') return true;
   if (raw == 'false') return false;
-  final num = double.tryParse(raw);
-  if (num != null) return num % 1 == 0 ? num.toInt() : num;
-  if (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) {
-    return raw.substring(1, raw.length - 1).replaceAll(r'\"', '"');
-  }
-  if (raw.startsWith("'") && raw.endsWith("'") && raw.length >= 2) {
-    return raw.substring(1, raw.length - 1);
+  final n = double.tryParse(raw);
+  if (n != null) return n % 1 == 0 ? n.toInt() : n;
+  if (raw.length >= 2) {
+    if (raw.startsWith('"') && raw.endsWith('"')) {
+      return raw.substring(1, raw.length - 1).replaceAll(r'\"', '"');
+    }
+    if (raw.startsWith("'") && raw.endsWith("'")) {
+      return raw.substring(1, raw.length - 1);
+    }
   }
   return raw;
-}
-
-///
-/// The output uses the block-style YAML that is most readable for humans.
-String modelToYaml(Object? value, [int depth = 0]) {
-  if (value == null) return 'null\n';
-  if (value is bool || value is num) return '$value\n';
-  if (value is String) {
-    if (value.isEmpty ||
-        value.contains(':') ||
-        value.contains('#') ||
-        value.contains('\n') ||
-        value.startsWith(' ') ||
-        value.startsWith('-') ||
-        value.startsWith("'")) {
-      final escaped = value.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
-      return '"$escaped"\n';
-    }
-    return '$value\n';
-  }
-  if (value is List) {
-    if (value.isEmpty) return '[]\n';
-    final indent = '  ' * depth;
-    final buf = StringBuffer('\n');
-    for (final item in value) {
-      buf.write('$indent- ${modelToYaml(item, depth + 1)}');
-    }
-    return buf.toString();
-  }
-  if (value is Map) {
-    if (value.isEmpty) return '{}\n';
-    final indent = '  ' * depth;
-    final buf = StringBuffer('\n');
-    for (final entry in value.entries) {
-      buf.write('$indent${entry.key}: ${modelToYaml(entry.value, depth + 1)}');
-    }
-    return buf.toString();
-  }
-  return '$value\n';
-}
-
-/// Parses a YAML string and returns a [Map<String, dynamic>] suitable for
-/// passing to a model's [fromJson] factory.
-///
-/// Returns an empty map if [yaml] is null or contains only whitespace.
-Map<String, dynamic> modelFromYaml(String yaml) {
-  if (yaml.trim().isEmpty) return {};
-  final doc = loadYaml(yaml);
-  if (doc == null) return {};
-  // Round-trip through JSON to normalise YamlMap/YamlList → plain Map/List.
-  return jsonDecode(jsonEncode(doc)) as Map<String, dynamic>;
 }

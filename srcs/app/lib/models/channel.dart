@@ -46,12 +46,6 @@ class ChatChannel {
     'created_at': createdAt.toIso8601String(),
   };
 
-  /// Serializes this ChatBackend to a YAML string.
-  String toYaml() => modelToYaml(toJson());
-
-  /// Deserializes a YAML string to a [ChatBackend].
-  static ChatBackend fromYaml(String yaml) => ChatBackend.fromJson(modelFromYaml(yaml));
-
   /// Serializes this ChatChannel to a YAML string.
   String toYaml() => modelToYaml(toJson());
 
@@ -110,6 +104,12 @@ class ChatBackend {
         return {'type': type.name};
     }
   }
+
+  /// Serializes this ChatBackend to a YAML string.
+  String toYaml() => modelToYaml(toJson());
+
+  /// Deserializes a YAML string to a [ChatBackend].
+  static ChatBackend fromYaml(String yaml) => ChatBackend.fromJson(modelFromYaml(yaml));
 
   static ChatBackendType _parseType(String s) {
     switch (s) {

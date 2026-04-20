@@ -47,11 +47,6 @@ pub.package(
     package = "protoc_plugin",
     version = "21.1.1",
 )
-pub.package(
-    name = "pub_yaml",
-    package = "yaml",
-    version = "3.1.3",
-)
 use_repo(
     pub,
     "pub_async",
@@ -79,7 +74,6 @@ use_repo(
     "pub_test_api",
     "pub_vector_math",
     "pub_vm_service",
-    "pub_yaml",
 )
 
 # Go dependencies for gazelle plugin

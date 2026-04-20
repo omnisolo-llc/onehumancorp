@@ -104,7 +104,6 @@ use_repo(
     "pub_web",
     "pub_web_socket_channel",
     "pub_xdg_directories",
-    "pub_yaml",
 )
 # ─────────────────────────────────────────────────────────────────────────────
 
