@@ -6,12 +6,10 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -43,19 +41,12 @@ func init() {
 // ProxyCapture is an HTTP handler that proxies requests and records telemetry.
 type ProxyCapture struct {
 	Transport http.RoundTripper
-	Mode      string
 }
 
 // NewProxyCapture creates a new ProxyCapture.
 func NewProxyCapture() *ProxyCapture {
-	mode := "cloud"
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		mode = "standalone"
-	}
-
 	return &ProxyCapture{
 		Transport: http.DefaultTransport,
-		Mode:      mode,
 	}
 }
 
@@ -125,10 +116,10 @@ func (p *ProxyCapture) handleConnect(w http.ResponseWriter, r *http.Request) {
 		duration := time.Since(start).Seconds()
 		ctx := context.Background()
 		if requestsCounter != nil {
-			requestsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("deployment_mode", p.Mode)))
+			requestsCounter.Add(ctx, 1)
 		}
 		if latencyHisto != nil {
-			latencyHisto.Record(ctx, duration, metric.WithAttributes(attribute.String("deployment_mode", p.Mode)))
+			latencyHisto.Record(ctx, duration)
 		}
 	}()
 
@@ -190,9 +181,9 @@ func (p *ProxyCapture) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := context.Background()
 	if requestsCounter != nil {
-		requestsCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("deployment_mode", p.Mode)))
+		requestsCounter.Add(ctx, 1)
 	}
 	if latencyHisto != nil {
-		latencyHisto.Record(ctx, duration, metric.WithAttributes(attribute.String("deployment_mode", p.Mode)))
+		latencyHisto.Record(ctx, duration)
 	}
 }
