@@ -18,6 +18,9 @@
 /bazelisk
 /CLAUDE_OHC.md
 /test-results
+/code_review_response.md
+/code_review_reply.json
+/mcp_code_review_response.md
 
 # Test binary, built with `go test -c`
 *.test
