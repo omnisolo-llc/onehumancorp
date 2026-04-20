@@ -23,6 +23,12 @@ func NewAnthropicClient(apiKey string) *AnthropicClient {
 }
 
 func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
+	if req.MaxTokens == 0 {
+		req.MaxTokens = 2048
+	} else if req.MaxTokens > 4096 {
+		req.MaxTokens = 4096
+	}
+
 	// Anthropic Messages API expects system prompt as a separate field, not in messages
 	// For simplicity, we assume req structure aligns with a translation layer, or we map it here.
 

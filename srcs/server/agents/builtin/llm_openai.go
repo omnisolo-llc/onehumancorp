@@ -23,6 +23,12 @@ func NewOpenAIClient(apiKey string) *OpenAIClient {
 }
 
 func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
+	if req.MaxTokens == 0 {
+		req.MaxTokens = 2048
+	} else if req.MaxTokens > 4096 {
+		req.MaxTokens = 4096
+	}
+
 	// Map our ChatRequest to OpenAI's payload
 	type openaiMessage struct {
 		Role    string `json:"role"`
@@ -44,6 +50,7 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 	payload := map[string]interface{}{
 		"model":       req.Model,
 		"messages":    messages,
+		"max_tokens":  req.MaxTokens,
 	}
 
 	body, _ := json.Marshal(payload)
