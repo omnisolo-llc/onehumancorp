@@ -567,8 +567,13 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 			var existingID string
 			err := tx.QueryRow(ctx, "SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED", missionID, s.orgID).Scan(&existingID)
 
-			if err != nil && err.Error() != "sql: no rows in result set" {
-				return err
+			if err != nil {
+				if err.Error() == "sql: no rows in result set" || strings.Contains(err.Error(), "lock timeout") || strings.Contains(err.Error(), "could not obtain lock") {
+					telemetry.RecordPostgresLockContention(ctx, "upsert_mission")
+				}
+				if err.Error() != "sql: no rows in result set" {
+					return err
+				}
 			}
 
 			if err != nil && err.Error() == "sql: no rows in result set" {

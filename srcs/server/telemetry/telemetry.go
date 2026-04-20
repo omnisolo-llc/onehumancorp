@@ -641,7 +641,7 @@ func InitWithMeter(m mockableMeter) error {
 
 	postgresLockContentionCounter, err = m.Int64Counter(
 		"ohc_postgres_lock_contention_total",
-		metric.WithDescription("Total PostgreSQL lock contentions"),
+		metric.WithDescription("Total PostgreSQL lock contentions across operations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -649,7 +649,7 @@ func InitWithMeter(m mockableMeter) error {
 
 	llmNetworkLatencyHistogram, err = m.Float64Histogram(
 		"ohc_llm_network_latency_seconds",
-		metric.WithDescription("Network latency to external LLM providers"),
+		metric.WithDescription("Network latency to external LLM providers per model"),
 	)
 	if err != nil {
 		errs = append(errs, err)

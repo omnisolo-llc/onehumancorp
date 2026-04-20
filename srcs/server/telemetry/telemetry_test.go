@@ -877,3 +877,15 @@ func TestRecordHarnessDbIoLatency(t *testing.T) {
 
 	RecordHarnessDbIoLatency(context.Background(), 15.2, "standalone")
 }
+
+func TestRecordPostgresLockContention(t *testing.T) {
+	postgresLockContentionCounter = nil
+	// Should not panic when nil
+	RecordPostgresLockContention(context.Background(), "test_op")
+}
+
+func TestRecordLLMNetworkLatency(t *testing.T) {
+	llmNetworkLatencyHistogram = nil
+	// Should not panic when nil
+	RecordLLMNetworkLatency(context.Background(), "gpt-4o", 1.23)
+}
