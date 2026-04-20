@@ -1,0 +1,12 @@
+issue_title: "[ui] 2026-04-10T08-03-57Z.md"
+issue_priority: "P0"
+issue_category: "feature"
+issue_description: |
+  The OHC swarm currently lacks a robust shared task list, realtime Teammate Mesh APIs, and an AutoDream data pipeline architecture. These are essential for true autonomous orchestration in both cloud-native and local-first deployments.
+
+  The architectural scaffolding (SQL migrations and Go interfaces) already exists natively in the repository. A design document was added.
+issue_todo_list:
+  - Verified existing SQL migrations (`srcs/server/db/migrations/20260420000000_shared_tasks_schema_pg.sql`, `srcs/server/db/migrations/20260420000000_shared_tasks_schema_sqlite.sql`).
+  - Verified existing Go interfaces (`srcs/server/orchestration/kairos/mesh.go`, `srcs/server/orchestration/mesh/mesh.go`).
+  - Created a comprehensive master design document at `docs/features/kairos/master_design_doc.md`.
+issue_label: "kairos, orchestration, mesh, completed"
