@@ -57,7 +57,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Build Your Team. Keep Full Control.',
+                          'Grow Your Swarm. Maintain Sovereignty.',
                           style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 20,
@@ -67,7 +67,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Scale your business to the cloud. Invite team members securely with zero data leakage.',
+                          'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
@@ -116,12 +116,12 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                           try {
                             await ref.read(apiServiceProvider)?.createReferral(
                               "anonymous",
-                              "business_referral_local",
+                              "xYz8vQ_local_sovereign",
                             );
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Business invite link copied: https://cloud.ohc.io/invite?token=business_referral_local',
+                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
                                     style: TextStyle(
                                       color: colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',

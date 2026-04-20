@@ -45,9 +45,10 @@ Map<String, dynamic> _fakeDashboard({double total = 987.65}) => {
   },
   'meetings': [],
   'costs': {
-    'total_cost_usd': total,
-    'total_tokens': 54321,
-    'agents': [],
+    'total': total,
+    'currency': 'USD',
+    'period': 'monthly',
+    'breakdown': {'gpt-4o': 500.0, 'claude-3': 487.65},
   },
   'agents': [],
   'statuses': [],
@@ -100,6 +101,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const CostDashboardScreen(), api));
       await tester.pumpAndSettle();
 
+      // Amount should appear somewhere in the rendered text
       expect(find.textContaining('1,234'), findsWidgets);
     });
 
