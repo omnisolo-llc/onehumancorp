@@ -13,6 +13,8 @@ type StateSyncProvider interface {
 	SyncUp(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
 	SyncDown(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
 	GetStatus(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
+	CRDTPush(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
+	CRDTPull(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
 }
 
 // Tool represents an MCP tool definition.
@@ -54,6 +56,16 @@ func (m *StateSyncMCP) ListTools() []Tool {
 			Description: "Get the current synchronization status.",
 			InputSchema: `{"type": "object", "properties": {}}`,
 		},
+		{
+			Name:        "crdt_push",
+			Description: "Push local CRDT deltas to the cloud.",
+			InputSchema: `{"type": "object", "properties": {}}`,
+		},
+		{
+			Name:        "crdt_pull",
+			Description: "Pull CRDT deltas from the cloud.",
+			InputSchema: `{"type": "object", "properties": {}}`,
+		},
 	}
 }
 
@@ -78,6 +90,10 @@ func (m *StateSyncMCP) CallTool(ctx context.Context, toolName string, arguments 
 		return m.provider.SyncDown(ctx, claims)
 	case "get_sync_status":
 		return m.provider.GetStatus(ctx, claims)
+	case "crdt_push":
+		return m.provider.CRDTPush(ctx, claims)
+	case "crdt_pull":
+		return m.provider.CRDTPull(ctx, claims)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", toolName)
 	}

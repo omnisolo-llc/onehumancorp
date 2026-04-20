@@ -3,18 +3,20 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "api",
     srcs = [
-        "sync_handler.go",
-        "sync_escalation_handler.go",
         "growth_handler.go",
+        "sync_crdt_handler.go",
+        "sync_escalation_handler.go",
+        "sync_handler.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/api",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/db",
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
         "//srcs/server/orchestration/queue",
-        "//srcs/server/telemetry",
         "//srcs/server/services/growth",
+        "//srcs/server/telemetry",
         "@io_opentelemetry_go_otel//:otel",
     ],
 )
@@ -22,16 +24,20 @@ go_library(
 go_test(
     name = "api_test",
     srcs = [
-        "sync_escalation_handler_test.go",
-        "growth_handler_test.go",
         "growth_e2e_test.go",
+        "growth_handler_test.go",
+        "sync_crdt_handler_test.go",
+        "sync_escalation_handler_test.go",
+        "sync_handler_test.go",
     ],
     embed = [":api"],
     deps = [
+        "//srcs/server/db",
+        "//srcs/server/lib/analytics",
         "//srcs/server/orchestration",
         "//srcs/server/orchestration/hybrid_sync",
         "//srcs/server/services/growth",
-        "//srcs/server/db",
-        "//srcs/server/lib/analytics",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//peer",
     ],
 )
