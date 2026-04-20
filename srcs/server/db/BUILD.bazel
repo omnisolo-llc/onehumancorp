@@ -83,6 +83,7 @@ go_library(
         "migrations/20260419010000_autodream_consolidated_memory_sqlite.sql",
         "migrations/20260423000000_shared_tasks_dag_pg.sql",
         "migrations/20260423000000_shared_tasks_dag_sqlite.sql",
+        "migrations/20260420201022_mcp_tools.sql",
                     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],

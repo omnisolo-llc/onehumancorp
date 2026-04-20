@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcp",
+    srcs = ["registry.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/mcp",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
+
+go_test(
+    name = "mcp_test",
+    srcs = ["registry_test.go"],
+    embed = [":mcp"],
+    deps = [
+        "//srcs/server/db",
+    ],
+)
