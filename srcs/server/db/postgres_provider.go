@@ -237,3 +237,5 @@ func (p *PgProvider) SearchMemories(ctx context.Context, organizationID string, 
 	}
 	return results, nil
 }
+
+// Trivial change for shared tasks schema issue 4352

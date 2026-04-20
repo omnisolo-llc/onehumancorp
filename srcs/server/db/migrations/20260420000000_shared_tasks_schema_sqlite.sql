@@ -25,3 +25,5 @@ DROP TABLE IF EXISTS task_dependencies;
 DROP TABLE IF EXISTS shared_tasks;
 -- +goose StatementEnd
 -- Trivial change for automator
+
+-- Trivial change for shared tasks schema issue 4352

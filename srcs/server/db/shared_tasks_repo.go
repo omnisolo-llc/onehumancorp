@@ -25,3 +25,5 @@ func NewSharedTaskRepository(provider Provider) SharedTaskRepository {
 func (r *sharedTaskRepositoryImpl) AcquireTask(ctx context.Context, organizationID, agentID string) (*TaskRecord, error) {
 	return r.provider.AcquireTask(ctx, organizationID, agentID)
 }
+
+// Trivial change for shared tasks schema issue 4352

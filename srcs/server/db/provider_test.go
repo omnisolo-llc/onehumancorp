@@ -148,3 +148,5 @@ func TestProvider_AcquireTask(t *testing.T) {
 		t.Errorf("Expected nil task, got %v", task3.ID)
 	}
 }
+
+// Trivial change for shared tasks schema issue 4352
