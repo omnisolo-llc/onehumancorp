@@ -32,8 +32,8 @@ func TestHandleUser_PutError(t *testing.T) {
 	store.CreateUser("u2", "u2@test.com", "password", []string{}, "")
 
 	reqBody := `{"email": "u2@test.com"}`
-	req := httptest.NewRequest(http.MethodPut, "/api/auth/users/"+u1.ID, bytes.NewBufferString(reqBody))
-	req.SetPathValue("id", u1.ID)
+	req := httptest.NewRequest(http.MethodPut, "/api/auth/users/"+u1.Metadata.Id, bytes.NewBufferString(reqBody))
+	req.SetPathValue("id", u1.Metadata.Id)
 
 	claims := &Claims{Roles: []string{RoleAdmin}}
 	ctx := context.WithValue(req.Context(), claimsContextKey, claims)
@@ -100,8 +100,8 @@ func TestHandleUser_InvalidJSON(t *testing.T) {
 	h := NewHandlers(store)
 	u, _ := store.CreateUser("u1", "u1@test.com", "password", []string{}, "")
 
-	req := httptest.NewRequest(http.MethodPut, "/api/auth/users/"+u.ID, bytes.NewBufferString("{invalid"))
-	req.SetPathValue("id", u.ID)
+	req := httptest.NewRequest(http.MethodPut, "/api/auth/users/"+u.Metadata.Id, bytes.NewBufferString("{invalid"))
+	req.SetPathValue("id", u.Metadata.Id)
 	// mock admin claim
 	claims := &Claims{Roles: []string{RoleAdmin}}
 	ctx := context.WithValue(req.Context(), claimsContextKey, claims)
@@ -185,8 +185,8 @@ func TestStoreGetOrCreateOIDCUser_Fallback(t *testing.T) {
 	s.CreateUser("fallback1", "fallback1@test.com", "password", nil, "")
 
 	u := s.GetOrCreateOIDCUser("sub123", "fallback1@test.com", "fallback1", "")
-	if u.OIDCSubject != "sub123" {
-		t.Errorf("expected sub123, got %s", u.OIDCSubject)
+	if u.Metadata.OidcSubject != "sub123" {
+		t.Errorf("expected sub123, got %s", u.Metadata.OidcSubject)
 	}
 }
 

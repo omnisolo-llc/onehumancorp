@@ -58,7 +58,7 @@ class Agent {
           if (word == 'qa') return 'QA';
           if (word == 'cfo') return 'CFO';
           if (word == 'seo') return 'SEO';
-          if (word == 'llm') return 'LLM';
+          if (word == 'builtin') return 'Built-in';
           if (word.isEmpty) return word;
           return word[0].toUpperCase() + word.substring(1);
         })

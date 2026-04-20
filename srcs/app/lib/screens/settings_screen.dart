@@ -73,13 +73,13 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                     title: Text(
                       settings.standaloneMode
-                          ? 'Desktop Standalone Mode'
-                          : 'Remote Client Mode',
+                          ? 'Local Business Engine'
+                          : 'Cloud Connection Mode',
                     ),
                     subtitle: Text(
                       settings.standaloneMode
-                          ? 'This device manages a local backend and lightweight local services.'
-                          : 'This app acts as a UI for a remote OHC server. Point Backend URL at a cloud or headless deployment.',
+                          ? 'This device runs your business operations locally for maximum privacy.'
+                          : 'This device connects to your secure business cloud.',
                     ),
                   ),
                 ),
@@ -98,9 +98,9 @@ class SettingsScreen extends ConsumerWidget {
 
                 SwitchListTile(
                   secondary: const Icon(Icons.computer),
-                  title: const Text('Standalone Mode'),
+                  title: const Text('Local Business Engine'),
                   subtitle: const Text(
-                    'Run a local desktop backend. Disable this to use the app as a remote client.',
+                    'Run your operations entirely on this device. Disable to use as a cloud terminal.',
                   ),
                   value: settings.standaloneMode,
                   onChanged:
@@ -111,16 +111,16 @@ class SettingsScreen extends ConsumerWidget {
 
                 if (settings.standaloneMode) ...[
                   const Divider(),
-                  const _SectionHeader(title: 'Local Backend'),
+                  const _SectionHeader(title: 'Business Engine Status'),
                   const _LocalBackendStatusCard(),
                 ],
 
                 const Divider(),
                 SwitchListTile(
                   secondary: const Icon(Icons.psychology),
-                  title: const Text('Expert Mode'),
+                  title: const Text('Advanced Options'),
                   subtitle: const Text(
-                    'Reveals raw config fields, JSON editors, CLI commands, and API endpoint URLs.',
+                    'Shows additional management tools and settings.',
                   ),
                   value: settings.expertMode,
                   onChanged:
@@ -316,7 +316,7 @@ class _LocalBackendStatusCardState
                                 : Theme.of(context).colorScheme.error,
                       ),
                       const SizedBox(width: 8),
-                      Text(running ? 'Service Running' : 'Service Stopped'),
+                      Text(running ? 'Engine Operational' : 'Engine Stopped'),
                       const Spacer(),
                       ElevatedButton(
                         onPressed:
@@ -391,7 +391,7 @@ class _LocalBackendStatusCardState
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                             : const Icon(Icons.medical_services),
-                    label: const Text('Run Doctor Diagnostics'),
+                    label: const Text('Run System Wellness Check'),
                   ),
                 ],
               ),

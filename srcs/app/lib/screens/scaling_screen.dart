@@ -34,12 +34,12 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
         .toLowerCase()
         .split(' ')
         .map((word) {
-          if (word == 'ai') return 'AI';
+          if (word == 'ai') return 'Smart';
           if (word == 'ceo') return 'CEO';
           if (word == 'qa') return 'QA';
           if (word == 'cfo') return 'CFO';
           if (word == 'seo') return 'SEO';
-          if (word == 'llm') return 'LLM';
+          if (word == 'llm') return 'Intelligence';
           if (word.isEmpty) return word;
           return word[0].toUpperCase() + word.substring(1);
         })
@@ -100,14 +100,14 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Agent Workforce Scaling',
+                    'Business Team Scaling',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Provision additional specialized agents to handle peak demand or complex sub-tasks.',
+                    'Expand your team with specialized expertise to handle business growth and complex projects.',
                     style: TextStyle(
                       color: Theme.of(
                         context,
@@ -224,8 +224,8 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                               : const Icon(Icons.rocket_launch),
                       label: Text(
                         _isProvisioning
-                            ? 'Provisioning...'
-                            : 'Initiate Scaling',
+                            ? 'Expanding Team...'
+                            : 'Initiate Growth',
                       ),
                     ),
                   ),
@@ -250,7 +250,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                         const Icon(Icons.terminal, size: 18),
                         const SizedBox(width: 8),
                         const Expanded(child: Text(
-                          'Provisioning Logs',
+                          'Growth Logs',
                           style: TextStyle(fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         )),

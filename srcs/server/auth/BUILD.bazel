@@ -16,7 +16,9 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/auth",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/proto:user_go_proto",
         "//srcs/server/db",
+        "@org_golang_google_protobuf//types/known/timestamppb",
         "@org_golang_x_crypto//bcrypt",
     ],
 )

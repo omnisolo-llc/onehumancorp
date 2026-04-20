@@ -8,15 +8,15 @@ import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
 
-class AgentHireWizardScreen extends ConsumerStatefulWidget {
-  const AgentHireWizardScreen({super.key});
+class SpecialistOnboardingWizardScreen extends ConsumerStatefulWidget {
+  const SpecialistOnboardingWizardScreen({super.key});
 
   @override
-  ConsumerState<AgentHireWizardScreen> createState() =>
-      _AgentHireWizardScreenState();
+  ConsumerState<SpecialistOnboardingWizardScreen> createState() =>
+      _SpecialistOnboardingWizardScreenState();
 }
 
-class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
+class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnboardingWizardScreen> {
   Offset _mainNodePos = const Offset(50, 50);
   Offset _subNodePos = const Offset(200, 50);
   int _step = 0;
@@ -107,7 +107,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                'Agent ${_nameController.text} hired successfully!',
+          'Specialist ${_nameController.text} onboarded successfully!',
               ),
             ),
           );
@@ -117,7 +117,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to hire agent: $e'),
+            content: Text('Failed to onboard specialist: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -133,7 +133,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Hire New Agent',
+          'Onboard New Specialist',
           style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
@@ -178,9 +178,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   )
                 else
                   Semantics(
-                    label: 'Deploy the configured agent',
+                    label: 'Launch the configured specialist',
                     child: Tooltip(
-                      message: 'Deploy agent to orchestration hub',
+                      message: 'Add specialist to your company network',
                       child: ElevatedButton(
                         onPressed: _isDeploying ? null : _handleDeploy,
                         child:
@@ -192,7 +192,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                                : const Text('Deploy Agent'),
+                                : const Text('Activate Specialist'),
                       ),
                     ),
                   ),
@@ -220,12 +220,12 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 1 — Select Agent Role',
+                  'Step 1 — Select Specialist Role',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Choose the primary capability profile for this new agent.',
+                  'Choose the primary expertise profile for this new specialist.',
                 ),
                 const SizedBox(height: 24),
                 Wrap(
@@ -260,11 +260,11 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 2 — Choose AI Provider',
+                  'Step 2 — Choose AI Service',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text('Select the AI backend that will power this agent.'),
+                const Text('Select the AI service that will power this specialist.'),
                 const SizedBox(height: 16),
                 if (_isLoading)
                   Center(
@@ -278,7 +278,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 else if (_providers.isEmpty)
                   const Center(
                     child: Text(
-                      'No AI providers available. Please configure one in Integrations.',
+                      'No AI services available. Please configure one in Settings.',
                     ),
                   )
                 else
@@ -302,14 +302,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 3 — Agent Details',
+                  'Step 3 — Specialist Details',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Agent Name',
+                    labelText: 'Specialist Name',
                     border: OutlineInputBorder(),
                     hintText: 'e.g. Senior Software Engineer',
                   ),
@@ -318,24 +318,24 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text(
-                    'This name will appear in transcripts and the org chart.',
+                    'This name will appear in professional transcripts and the org chart.',
                   ),
                 ),
               ],
             ),
           ),
           Step(
-            title: const Text('Topology'),
+            title: const Text('Ops Structure'),
             isActive: _step >= 3,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 4 — Sub-agent Topology',
+                  'Step 4 — Work Style',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text('How does this agent interact with others?'),
+                const Text('How does this specialist interact with others?'),
                 const SizedBox(height: 16),
                 RadioListTile<String>(
                   title: const Text('Independent Worker'),
@@ -347,7 +347,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 RadioListTile<String>(
                   title: const Text('Delegator / Supervisor'),
                   subtitle: const Text(
-                    'Can ask other agents for help (e.g. asking the Code Builder).',
+                    'Can collaborate with other specialists for complex tasks.',
                   ),
                   value: 'Delegator',
                   groupValue: _topologyPreset,
@@ -401,9 +401,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                               ),
                               child: const Column(
                                 children: [
-                                  Icon(Icons.smart_toy, color: Colors.white, size: 24),
+                                  Icon(Icons.person, color: Colors.white, size: 24),
                                   SizedBox(height: 4),
-                                  Text('This Agent', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center,),
+                                  Text('New Specialist', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center,),
                                 ],
                               ),
                             ),
@@ -456,27 +456,27 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 5 — Select Capabilities',
+                  'Step 5 — Permissions',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text('What permissions should this agent have?'),
+                const Text('What access should this specialist have?'),
                 const SizedBox(height: 16),
                 CheckboxListTile(
                   title: const Text('Read my emails'),
-                  subtitle: const Text('Grants EMAIL_READ permission'),
+                  subtitle: const Text('Can read your emails'),
                   value: _capEmailRead,
                   onChanged: (val) => setState(() => _capEmailRead = val!),
                 ),
                 CheckboxListTile(
                   title: const Text('Send messages on my behalf'),
-                  subtitle: const Text('Grants MESSAGING_SEND permission'),
+                  subtitle: const Text('Can send messages for you'),
                   value: _capMessagingSend,
                   onChanged: (val) => setState(() => _capMessagingSend = val!),
                 ),
                 CheckboxListTile(
                   title: const Text('Access business data'),
-                  subtitle: const Text('Grants DATA_ACCESS permission'),
+                  subtitle: const Text('Can access your business information'),
                   value: _capDataAccess,
                   onChanged: (val) => setState(() => _capDataAccess = val!),
                 ),
@@ -493,7 +493,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Step 6 — Resource Limits',
+                      'Step 6 — Workload',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -503,7 +503,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text('How much should this agent work per day?'),
+                const Text('Set how much work this specialist can handle.'),
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -530,14 +530,14 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 if (expertMode) ...[
                   const SizedBox(height: 24),
                   const Text(
-                    'Advanced Configuration',
+                    'Advanced Options',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _endpointUrlController,
                     decoration: const InputDecoration(
-                      labelText: 'Custom Endpoint URL (Optional)',
+                      labelText: 'Custom Connection Address (Optional)',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -545,7 +545,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   TextField(
                     controller: _tokenLimitController,
                     decoration: const InputDecoration(
-                      labelText: 'Token Limit (Optional)',
+                      labelText: 'Spending Limit (Optional)',
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
@@ -555,18 +555,18 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
             ),
           ),
           Step(
-            title: const Text('Confirm'),
+            title: const Text('Review'),
             isActive: _step >= 6,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 7 — Confirm Deployment',
+                  'Step 7 — Review and Activate',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Semantics(
-                  label: 'Confirm deployment summary',
+                  label: 'Review specialist activation summary',
                   child: GlassCard(
                     child: ListTile(
                         leading: CircleAvatar(
@@ -619,7 +619,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'This agent will be immediately provisioned with a SPIFFE identity, connected to the orchestration hub, and assigned to the default org chart branch.',
+                  'This specialist will be securely provisioned and added to your company workforce structure immediately.',
                   style: TextStyle(
                     color: Theme.of(
                       context,
