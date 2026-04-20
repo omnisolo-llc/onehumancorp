@@ -415,9 +415,9 @@
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
         "bzlTransitiveDigest": "j8m3lx6A4D72MhANI4XYvgxqARWGMbIj/GoiTDWi4tM=",
-        "usagesDigest": "YCtjkK4u6pFfn0cpF+NhP6lfOsnzWtqDFzwME6dIMIo=",
+        "usagesDigest": "Sqkvr4oUcYXX1yCGrt+Muv94MYr3R+i0BiZYJ0xvHgw=",
         "recordedInputs": [
-          "FILE:@@//srcs/app/pub_deps.json a67c2ec0ebb3c8aec991ecb2170d13891e789e471f259d721ce6fcc5fe69d055"
+          "FILE:@@//srcs/app/pub_deps.json c05c2eb6128e0138fb8709491d176fdf899ed54a51cdfcfc9a4f0583356daa59"
         ],
         "generatedRepoSpecs": {
           "pub__fe_analyzer_shared": {
@@ -431,7 +431,7 @@
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "analyzer",
-              "version": "7.7.1"
+              "version": "8.4.1"
             }
           },
           "pub_args": {

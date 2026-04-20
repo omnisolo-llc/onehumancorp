@@ -57,7 +57,7 @@
     },
     {
       "name": "dart_style",
-      "version": "3.1.2",
+      "version": "3.0.1",
       "kind": "transitive",
       "source": "hosted",
       "dependencies": [
@@ -183,7 +183,7 @@
     },
     {
       "name": "analyzer",
-      "version": "8.4.1",
+      "version": "7.7.1",
       "kind": "transitive",
       "source": "hosted",
       "dependencies": [
