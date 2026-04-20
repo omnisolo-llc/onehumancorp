@@ -74,6 +74,7 @@ func (t *HybridContextTool) Execute(ctx context.Context, payload map[string]inte
 
 type LocalFSSyncTool struct{}
 
+// Execute performs local file system operations based on the given payload.
 func (t *LocalFSSyncTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
     action, _ := payload["Action"].(string)
     path, _ := payload["Path"].(string)
