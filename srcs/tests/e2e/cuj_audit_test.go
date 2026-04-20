@@ -33,7 +33,7 @@ func TestCujAuditDashboardLoadMetrics(t *testing.T) {
 		t.Log("WARNING: Dashboard missing 'Active Agents' stat card")
 	}
 	if !hasDashboard {
-		t.Log("WARNING: Dashboard page heading not found")
+		t.Error("Dashboard page heading not found")
 	}
 	if !hasOverview {
 		t.Log("WARNING: Dashboard missing 'Overview' section")
@@ -71,21 +71,17 @@ func TestCujAuditHireAgentWizardHasRequiredSteps(t *testing.T) {
 
 	count, _ := page.GetByText("Role").Count()
 	if count == 0 {
-		t.Log("WARNING: Hire Agent wizard missing 'Role' step")
+		t.Error("Hire Agent wizard missing 'Role' step")
 	}
 
 	nameInput := page.Locator("input").First()
-	if n, _ := nameInput.Count(); n > 0 {
-		if err := nameInput.Fill("TestAgent", playwright.LocatorFillOptions{
-			Timeout: playwright.Float(shortTimeout),
-		}); err != nil {
-			t.Logf("Name input fill warning: %v", err)
-		}
+	if err := nameInput.Fill("TestAgent"); err != nil {
+		t.Logf("Name input fill warning: %v", err)
 	}
 
 	count, _ = page.GetByText("Deploy Agent").Count()
 	if count == 0 {
-		t.Log("WARNING: Hire Agent wizard missing 'Deploy Agent' button")
+		t.Error("Hire Agent wizard missing 'Deploy Agent' button")
 	}
 
 	t.Log("Hire Agent wizard has required steps")
@@ -102,7 +98,7 @@ func TestCujAuditChatScreenHasMessageInput(t *testing.T) {
 	textInput := page.Locator("input[type='text'], input[type='search'], textarea").First()
 	count, _ := textInput.Count()
 	if count == 0 {
-		t.Log("WARNING: Chat screen missing text input field")
+		t.Error("Chat screen missing text input field")
 	}
 
 	sendBtn := page.GetByText("Send").First()
@@ -124,7 +120,7 @@ func TestCujAuditHandoffsScreenShowsPendingItems(t *testing.T) {
 
 	count, _ := page.GetByText("Handoffs").Count()
 	if count == 0 {
-		t.Log("WARNING: Handoffs screen missing title")
+		t.Error("Handoffs screen missing title")
 	}
 
 	t.Log("Handoffs screen is accessible")
@@ -203,7 +199,7 @@ func TestCujAuditNavigationSidebarHasRequiredLinks(t *testing.T) {
 		elem := page.GetByText(item).First()
 		count, _ := elem.Count()
 		if count == 0 {
-			t.Logf("WARNING: Navigation missing '%s' link", item)
+			t.Errorf("Navigation missing '%s' link", item)
 		}
 	}
 
@@ -220,7 +216,7 @@ func TestCujAuditAgentsScreenHasHireButton(t *testing.T) {
 
 	count, _ := page.GetByText("Hire Agent").Count()
 	if count == 0 {
-		t.Log("WARNING: Agents screen missing 'Hire Agent' button")
+		t.Error("Agents screen missing 'Hire Agent' button")
 	}
 
 	t.Log("Agents screen has 'Hire Agent' button")
@@ -236,7 +232,7 @@ func TestCujAuditSettingsScreenHasSecuritySection(t *testing.T) {
 
 	count, _ := page.GetByText("Settings").Count()
 	if count == 0 {
-		t.Log("WARNING: Settings screen missing title")
+		t.Error("Settings screen missing title")
 	}
 
 	t.Log("Settings screen is accessible")
