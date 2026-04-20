@@ -30,13 +30,13 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
     });
   }
 
-  Future<void> _handleAcknowledge(String id) async {
+  Future<void> _handleApprove(String id) async {
     setState(() => _processingIds.add(id));
     try {
-      await ref.read(apiServiceProvider)!.resolveHandoff(id, 'acknowledged');
+      await ref.read(apiServiceProvider)!.resolveHandoff(id, 'approved');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Handoff acknowledged')),
+          const SnackBar(content: Text('Handoff approved successfully')),
         );
         _refresh();
       }
@@ -54,14 +54,14 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
     }
   }
 
-  Future<void> _handleResolve(String id) async {
+  Future<void> _handleReject(String id) async {
     setState(() => _processingIds.add(id));
     try {
-      await ref.read(apiServiceProvider)!.resolveHandoff(id, 'resolved');
+      await ref.read(apiServiceProvider)!.resolveHandoff(id, 'rejected');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Handoff resolved')));
+        ).showSnackBar(const SnackBar(content: Text('Handoff rejected')));
         _refresh();
       }
     } catch (e) {
@@ -233,35 +233,11 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
                           ),
                         ],
                         const SizedBox(height: 24),
-                        if (handoff.isPending)
-                          SlideToApprove(
-                            disabled: isProcessing,
-                            onApprove: () => _handleAcknowledge(handoff.id),
-                            onReject: () => _handleResolve(handoff.id),
-                            trackText: 'Slide to Acknowledge',
-                            loadingText: 'Updating handoff...',
-                            rejectText: 'Mark Resolved',
-                            semanticsLabel: 'Slide to acknowledge handoff',
-                          )
-                        else
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.secondaryContainer,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Handoff ${handoff.status}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSecondaryContainer,
-                              ),
-                            ),
-                          ),
+                        SlideToApprove(
+                          disabled: isProcessing,
+                          onApprove: () => _handleApprove(handoff.id),
+                          onReject: () => _handleReject(handoff.id),
+                        ),
                       ],
                     ),
                   ),
