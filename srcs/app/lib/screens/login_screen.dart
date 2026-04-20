@@ -263,7 +263,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in to orchestrate your swarm',
+                          'Sign in to manage your business',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'Inter',
@@ -273,9 +273,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 32),
                         TextFormField(
                           controller: _emailCtrl,
-                          keyboardType: TextInputType.emailAddress,
+                          keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'Email',
+                            labelText: 'Email or Username',
                             prefixIcon: const Icon(Icons.email_outlined),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -283,8 +283,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                           validator:
                               (v) =>
-                                  (v == null || !v.contains('@'))
-                                      ? 'Enter a valid email'
+                                  (v == null || v.trim().isEmpty)
+                                      ? 'Enter your email or username'
                                       : null,
                         ),
                         const SizedBox(height: 16),
