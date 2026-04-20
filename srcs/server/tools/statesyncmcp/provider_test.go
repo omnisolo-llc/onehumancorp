@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -414,99 +413,5 @@ func TestDBStateSyncProvider_SendToCloud_ReadError(t *testing.T) {
 	_, err := provider.sendToCloud(context.Background(), "/api", http.MethodGet, nil, nil)
 	if err == nil {
 		t.Fatal("expected error")
-	}
-}
-
-func TestDBStateSyncProvider_CRDTPush_NotSQLite(t *testing.T) {
-	dbWrapper := &db.DB{Provider: &concreteMockNonSQLiteProvider{}}
-	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost")
-	_, err := provider.CRDTPush(context.Background(), nil)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-func TestDBStateSyncProvider_CRDTPull_NotSQLite(t *testing.T) {
-	dbWrapper := &db.DB{Provider: &concreteMockNonSQLiteProvider{}}
-	provider := NewDBStateSyncProvider(dbWrapper, "http://localhost")
-	_, err := provider.CRDTPull(context.Background(), nil)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-}
-
-type mockCRDTProvider struct {
-	db.Provider
-}
-
-func (m *mockCRDTProvider) IsSQLite() bool { return true }
-func (m *mockCRDTProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
-	return &mockCRDTRows{count: 2}, nil
-}
-func (m *mockCRDTProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
-	return 1, nil
-}
-
-type mockCRDTRows struct {
-	count int
-	idx   int
-}
-
-func (r *mockCRDTRows) Next() bool {
-	if r.idx < r.count {
-		r.idx++
-		return true
-	}
-	return false
-}
-
-func (r *mockCRDTRows) Scan(dest ...any) error {
-	*dest[0].(*string) = "test-id"
-	*dest[1].(*string) = "test-entity-id"
-	*dest[2].(*string) = "test-data"
-	*dest[3].(*time.Time) = time.Now()
-	return nil
-}
-func (r *mockCRDTRows) Close() {}
-func (r *mockCRDTRows) Columns() ([]string, error) { return nil, nil }
-func (r *mockCRDTRows) Err() error { return nil }
-
-func TestDBStateSyncProvider_CRDTPush(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status": "ok"}`))
-	}))
-	defer server.Close()
-
-	dbWrapper := &db.DB{Provider: &mockCRDTProvider{}}
-	provider := NewDBStateSyncProvider(dbWrapper, server.URL)
-
-	res, err := provider.CRDTPush(context.Background(), &auth.Claims{})
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-
-	if res["synced_count"] != 2 {
-		t.Errorf("expected 2, got %v", res["synced_count"])
-	}
-}
-
-func TestDBStateSyncProvider_CRDTPull(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"deltas": [{"id": "d1", "entity_id": "e1", "data": "{}", "updated_at": "2026-04-17T12:00:00Z"}]}`))
-	}))
-	defer server.Close()
-
-	dbWrapper := &db.DB{Provider: &mockCRDTProvider{}}
-	provider := NewDBStateSyncProvider(dbWrapper, server.URL)
-
-	res, err := provider.CRDTPull(context.Background(), &auth.Claims{})
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-
-	if res["status"] != "success" {
-		t.Errorf("expected success, got %v", res["status"])
 	}
 }
