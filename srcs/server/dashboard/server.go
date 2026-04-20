@@ -609,6 +609,13 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
+	mux.HandleFunc("/api/v1/sync/mcp-deltas", auth.RequireRole("system", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			api.HandleCRDTPull(server.hub)(w, r)
+		} else {
+			api.HandleCRDTSync(server.hub)(w, r)
+		}
+	}))
 	mux.HandleFunc("/api/sync/escalation", auth.RequireRole("system", api.HandleSyncEscalation(server.hub)))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
 	// added for issue 4331: sync rag endpoint with system role
