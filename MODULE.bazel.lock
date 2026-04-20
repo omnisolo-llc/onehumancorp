@@ -487,10 +487,10 @@
     },
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
-        "bzlTransitiveDigest": "QcwFFSJyFW4fR2SNtEuhKlcLmTzlDwfxtWBtI4juz0w=",
-        "usagesDigest": "pN8S6Js9wjQ0/WJwuV27UhPOXRof5idV+4pVPO+Ukow=",
+        "bzlTransitiveDigest": "n7ikY1+oP7Nssu8MICB1PWFz7miMTtiZuw8PZ+8UIMc=",
+        "usagesDigest": "sj63Gvw5dXwAunfm1cZjACavGEiO1ubh/EpjdcNLw0U=",
         "recordedInputs": [
-          "FILE:@@//srcs/app/pub_deps.json 1560bc913a6b08cf84069fa98e0080297ffcad0db7f0c86241569f570b18360a"
+          "FILE:@@//srcs/app/pub_deps.json d8b343268926c7cf6dd76af09645a6eb3dc985e39e6a10d38e6d996f803f4895"
         ],
         "generatedRepoSpecs": {
           "pub_async": {
@@ -731,11 +731,11 @@
               "version": "3.1.0"
             }
           },
-          "pub_protobuf_v5": {
+          "pub_protobuf_v6": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "protobuf",
-              "version": "5.0.0"
+              "version": "6.0.0"
             }
           },
           "pub_protoc_plugin": {
@@ -897,6 +897,13 @@
             "attributes": {
               "package": "xdg_directories",
               "version": "1.1.0"
+            }
+          },
+          "pub_yaml": {
+            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
+            "attributes": {
+              "package": "yaml",
+              "version": "3.1.3"
             }
           }
         }
