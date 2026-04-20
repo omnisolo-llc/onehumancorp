@@ -1,4 +1,3 @@
--- Added for issue_id 4240
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS sub_agent_queue (
