@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "sandbox",
+    srcs = [
+        "sandbox.go",
+        "sandbox_darwin.go",
+        "sandbox_default.go",
+        "sandbox_linux.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/harness/sandbox",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "sandbox_test",
+    srcs = [
+        "sandbox_darwin_test.go",
+        "sandbox_default_test.go",
+        "sandbox_linux_test.go",
+        "sandbox_test.go",
+    ],
+    embed = [":sandbox"],
+    deps = ["@com_github_stretchr_testify//assert"],
+)
