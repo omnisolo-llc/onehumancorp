@@ -1,5 +1,6 @@
 import 'package:ohc_app/widgets/glass_card.dart';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,23 +73,26 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 ),
               ),
             ),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  const Text('A/B Test Variant:'),
-                  Switch(
-                    value: _showVariantB,
-                    onChanged: (val) {
-                      setState(() {
-                        _showVariantB = val;
-                      });
-                    },
-                  ),
-                ],
+            // A/B test toggle is only shown in debug builds; never expose
+            // internal experiment controls to production users.
+            if (kDebugMode)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Row(
+                  children: [
+                    const Text('A/B Test Variant:'),
+                    Switch(
+                      value: _showVariantB,
+                      onChanged: (val) {
+                        setState(() {
+                          _showVariantB = val;
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -105,7 +109,6 @@ class _HeaderSection extends StatelessWidget {
     return Column(
       children: [
         Image.asset(
-          package: 'ohc_app',
           'assets/logo.png',
           height: 80,
           errorBuilder: (context, error, stackTrace) {
