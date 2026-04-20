@@ -1,4 +1,6 @@
 /// Agent domain model.
+import 'yaml_utils.dart';
+
 class Agent {
   final String id;
   final String name;
@@ -42,6 +44,12 @@ class Agent {
     'created_at': createdAt.toIso8601String(),
     'svid_verified': svidVerified,
   };
+
+  /// Serializes this agent to a YAML string.
+  String toYaml() => modelToYaml(toJson());
+
+  /// Deserializes a YAML string to an [Agent].
+  static Agent fromYaml(String yaml) => Agent.fromJson(modelFromYaml(yaml));
 
   bool get isRunning => status.toLowerCase() == 'running' || status.toUpperCase() == 'ACTIVE';
   bool get isPending => status.toLowerCase() == 'pending' || status.toUpperCase() == 'IDLE';
