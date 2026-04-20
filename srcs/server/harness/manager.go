@@ -37,9 +37,16 @@ type SandboxManager interface {
 
 // Manager is the concrete implementation of SandboxManager.
 type Manager struct {
+	interceptor *PermissionInterceptor
 	config    Config
 	validator *ASTValidator
 	runner    *BwrapRunner
+}
+
+// WithInterceptor sets the permission interceptor for the manager.
+func (m *Manager) WithInterceptor(interceptor *PermissionInterceptor) *Manager {
+	m.interceptor = interceptor
+	return m
 }
 
 // NewManager creates a new SandboxManager implementation.
@@ -83,6 +90,13 @@ func (m *Manager) Execute(ctx context.Context, command string) (Result, error) {
 func (m *Manager) ExecuteWithPolicy(ctx context.Context, command string, policy *Policy) (Result, error) {
 	if policy == nil {
 		policy = &m.config.DefaultPolicy
+	}
+
+	// 0. Intercept and check permissions for the RAW command
+	if m.interceptor != nil {
+		if err := m.interceptor.CheckPermission(ctx, command); err != nil {
+			return Result{}, err
+		}
 	}
 
 	// 1. Wrap command
