@@ -1,3 +1,4 @@
+import 'yaml_utils.dart';
 /// SDLC Pipeline domain model.
 class Pipeline {
   final String id;
@@ -59,6 +60,12 @@ class Pipeline {
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
   };
+
+  /// Serializes this Pipeline to a YAML string.
+  String toYaml() => modelToYaml(toJson());
+
+  /// Deserializes a YAML string to a [Pipeline].
+  static Pipeline fromYaml(String yaml) => Pipeline.fromJson(modelFromYaml(yaml));
 
   bool get isActive => status == 'active' || status == 'running';
   bool get isCompleted => status == 'completed' || status == 'merged';
