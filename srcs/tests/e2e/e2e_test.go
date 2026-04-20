@@ -123,6 +123,9 @@ func TestMain(m *testing.M) {
 
 	// Install playwright browsers (no-op if already installed).
 	// This downloads browsers to ~/.cache/ms-playwright by default.
+	// Skip host-requirement validation so tests are hermetic and pass even
+	// when the host is missing optional system libraries (e.g. in CI containers).
+	os.Setenv("PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS", "1")
 	if err := playwright.Install(); err != nil {
 		fmt.Fprintf(os.Stderr, "playwright install: %v\n", err)
 		if serverCmd != nil {

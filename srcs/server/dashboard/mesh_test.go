@@ -282,3 +282,37 @@ func TestHandleMeshV2Broadcast(t *testing.T) {
 		}
 	})
 }
+
+
+func TestNewServer_CloudSubscription(t *testing.T) {
+	org := domain.Organization{ID: "org-mesh-cloud"}
+	hub := orchestration.NewHub("test-mesh-db", "memory://")
+
+	// Create mock centrifuge node to track publications
+	cn, _ := orchestration.NewCentrifugeNode()
+	hub.SetCentrifugeNode(cn)
+
+	t.Setenv("OHC_STANDALONE", "false")
+	// If REDIS_URL is not fully parsed by NewServer locally it will fallback, but we can verify it doesn't crash
+	t.Setenv("REDIS_URL", "redis://localhost:6379")
+
+	serverHandler := NewServer(org, hub, nil)
+	if serverHandler == nil {
+		t.Fatal("expected server handler to be initialized")
+	}
+}
+
+func TestNewServer_StandaloneSubscription(t *testing.T) {
+	org := domain.Organization{ID: "org-mesh-standalone"}
+	hub := orchestration.NewHub("test-mesh-db", "memory://")
+
+	cn, _ := orchestration.NewCentrifugeNode()
+	hub.SetCentrifugeNode(cn)
+
+	t.Setenv("OHC_STANDALONE", "true")
+
+	serverHandler := NewServer(org, hub, nil)
+	if serverHandler == nil {
+		t.Fatal("expected server handler to be initialized")
+	}
+}
