@@ -34,7 +34,7 @@ nav:
       - Chaos Engineering: architecture/chaos_engineering.md
       - KAIROS Features Design: architecture/kairos_hybrid_os_architecture.md
       - KAIROS Master Design: architecture/kairos_master_design_doc.md
-      - Hybrid PubSub MCP: research/[integrations]_hybrid_pubsub_mcp.md
+      - Hybrid PubSub MCP: technical/research/[integrations]_hybrid_pubsub_mcp.md
   - Developer:
       - developer/index.md
   - UI:
@@ -44,13 +44,17 @@ nav:
       - api/index.md
       - "Interactive Api Playbook": api/api_playbook.md
   - Features:
-      - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
-      - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
-      - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md
+      - Hybrid WebSockets MCP: technical/research/[integrations]_hybrid_websockets_mcp.md
+      - Hybrid Feature Flags MCP: technical/research/[integrations]_hybrid_feature_flags_mcp.md
+      - Hybrid SPIFFE Identity MCP: technical/research/[integrations]_hybrid_spiffe_identity_mcp.md
       - features/index.md
-      - Hybrid LLM Routing Gateway MCP: research/[integrations]_hybrid_llm_routing_gateway_mcp.md
-      - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
-      - Hybrid Circuit Breaker MCP: research/[integrations]_hybrid_circuit_breaker_mcp.md
+      - Hybrid LLM Routing Gateway MCP: technical/research/[integrations]_hybrid_llm_routing_gateway_mcp.md
+      - Hybrid Task Scheduler MCP: technical/research/[integrations]_hybrid_task_scheduler_mcp.md
+      - Hybrid Circuit Breaker MCP: technical/research/[integrations]_hybrid_circuit_breaker_mcp.md
+      - Hybrid Secure Credential Bridge: technical/research/[integrations]_hybrid_secure_credential_bridge.md
+      - Hybrid OLAP MCP: technical/research/[integrations]_hybrid_olap_mcp.md
+      - Hybrid Resource Observer MCP: technical/research/[integrations]_hybrid_resource_observer_mcp.md
+      - Hybrid Browser Control MCP: technical/research/[integrations]_hybrid_browser_control_mcp.md
   - Walkthroughs:
       - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
       - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
