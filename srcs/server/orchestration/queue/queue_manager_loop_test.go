@@ -11,8 +11,9 @@ import (
 
 func TestQueueManagerLoop(t *testing.T) {
 	provider := db.NewTestProvider(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
+	ctxPolling, cancelPolling := context.WithCancel(context.Background())
+	defer cancelPolling()
 
 	schema := `
 	CREATE TABLE IF NOT EXISTS sub_agent_queue (
@@ -64,10 +65,10 @@ func TestQueueManagerLoop(t *testing.T) {
 		return nil
 	}
 
-	go qm.StartPolling(ctx, "worker-1", 10*time.Millisecond, handler)
+	go qm.StartPolling(ctxPolling, "worker-1", 10*time.Millisecond, handler)
 
 	time.Sleep(100 * time.Millisecond)
-	cancel() // stop polling
+	cancelPolling() // stop polling
 
 	if len(processedJobs) != 2 {
 		t.Fatalf("Expected 2 jobs to be processed, got %d", len(processedJobs))
@@ -77,7 +78,7 @@ func TestQueueManagerLoop(t *testing.T) {
 	var status1, status2 string
 	// Retry loop for SQLITE_BUSY
 	for i := 0; i < 5; i++ {
-		err = provider.QueryRow(context.Background(), "SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&status1)
+		err = provider.QueryRow(ctx, "SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&status1)
 		if err == nil || (err != nil && !strings.Contains(err.Error(), "database is locked")) {
 			break
 		}
@@ -91,7 +92,7 @@ func TestQueueManagerLoop(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		err = provider.QueryRow(context.Background(), "SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&status2)
+		err = provider.QueryRow(ctx, "SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&status2)
 		if err == nil || (err != nil && !strings.Contains(err.Error(), "database is locked")) {
 			break
 		}

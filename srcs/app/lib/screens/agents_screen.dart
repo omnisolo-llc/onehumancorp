@@ -173,7 +173,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
             : colorScheme.onSurfaceVariant;
 
     return Semantics(
-      label: 'Agent ${widget.agent.name}, Role: ${widget.agent.role}, Status: ${widget.agent.status}',
+      label: 'Agent ${widget.agent.name}, Role: ${widget.agent.formattedRole}, Status: ${widget.agent.status}',
       button: true,
       child: SlideTransition(
         position: _slideAnimation,

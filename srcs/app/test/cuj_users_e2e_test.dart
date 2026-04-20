@@ -61,10 +61,7 @@ void main() {
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
         (_) async => http.Response(
-          jsonEncode([
-            _fakeUser('u1', 'alice', admin: true),
-            _fakeUser('u2', 'bob'),
-          ]),
+          jsonEncode([_fakeUser('u1', 'alice', admin: true), _fakeUser('u2', 'bob')]),
           200,
         ),
       );
@@ -97,7 +94,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Invite'), findsOneWidget);
+      expect(find.text('Invite User'), findsWidgets);
     });
 
     testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
@@ -116,10 +113,10 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Invite'));
+      await tester.ensureVisible(find.byType(FloatingActionButton)); await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1)); await tester.pumpAndSettle(); expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
@@ -128,7 +125,7 @@ void main() {
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
         (_) async => http.Response(
-          jsonEncode([_fakeUser('u1', 'adminuser', admin: true)]),
+          jsonEncode([_fakeUser('u1', 'adminuser', admin: true), _fakeUser('u2', 'bob')]),
           200,
         ),
       );

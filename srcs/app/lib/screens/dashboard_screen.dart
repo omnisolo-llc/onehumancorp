@@ -1,5 +1,6 @@
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/models/agent.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
@@ -464,11 +465,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      if (word.toUpperCase() == 'AI') return 'AI';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    final formattedRole = Agent.formatRole(widget.role);
 
     return Semantics(
       label: 'Scale $formattedRole role',

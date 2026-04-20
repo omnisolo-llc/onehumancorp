@@ -11,7 +11,7 @@ import (
 // NewTestProvider creates a new in-memory SQLite database provider for testing.
 func NewTestProvider(t *testing.T) Provider {
 	t.Helper()
-	db, err := sql.Open("sqlite", ":memory:")
+	db, err := sql.Open("sqlite", "file:test_provider.db?mode=memory&cache=shared")
 	if err != nil {
 		t.Fatalf("failed to open test sqlite db: %v", err)
 	}

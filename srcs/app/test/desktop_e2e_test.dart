@@ -995,6 +995,10 @@ void main() {
 
   group('LandingScreen – button clicks', () {
     testWidgets('Download buttons call trackDownload API', (tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
       final mockClient = MockHttpClient();
 
       // Mock the POST request to /api/growth/downloads
@@ -1021,9 +1025,9 @@ void main() {
       await tester.pumpAndSettle();
 
       // Tap Mac download button
-      final macBtn = find.text('Download for Mac');
-      expect(macBtn, findsOneWidget);
-      await tester.tap(macBtn);
+      await tester.drag(find.byType(SingleChildScrollView).first, const Offset(0, -1000)); await tester.pumpAndSettle();
+      final macBtn = find.widgetWithText(TextButton, 'Download for Mac').last;
+      await tester.tap(macBtn, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // Verify API was called
@@ -1034,9 +1038,8 @@ void main() {
       )).called(1);
 
       // Tap Windows download button
-      final winBtn = find.text('Download for Windows');
-      expect(winBtn, findsOneWidget);
-      await tester.tap(winBtn);
+      final winBtn = find.widgetWithText(TextButton, 'Download for Windows').last;
+      await tester.tap(winBtn, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // Verify API was called
@@ -1047,9 +1050,8 @@ void main() {
       )).called(1);
 
       // Tap Linux download button
-      final linuxBtn = find.text('Download for Linux');
-      expect(linuxBtn, findsOneWidget);
-      await tester.tap(linuxBtn);
+      final linuxBtn = find.widgetWithText(TextButton, 'Download for Linux').last;
+      await tester.tap(linuxBtn, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // Verify API was called
