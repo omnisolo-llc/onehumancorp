@@ -21,6 +21,8 @@ toc:
     path: /docs/technical/reports/index.md
   - title: Walkthroughs
     path: /docs/technical/walkthroughs/index.md
+  - title: KAIROS CLI Walkthrough
+    path: /docs/technical/walkthroughs/kairos_cli.md
   - title: Templates
     path: /docs/technical/templates/index.md
   - title: MCP Protocol
