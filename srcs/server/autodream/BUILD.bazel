@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "autodream",
     srcs = [
+        "pipeline.go",
         "store.go",
         "worker.go",
     ],
@@ -16,12 +17,15 @@ go_library(
 go_test(
     name = "autodream_test",
     srcs = [
+        "pipeline_test.go",
         "store_test.go",
         "worker_test.go",
     ],
     embed = [":autodream"],
     deps = [
         "//srcs/server/db",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "@org_modernc_sqlite//:sqlite",
     ],
 )
