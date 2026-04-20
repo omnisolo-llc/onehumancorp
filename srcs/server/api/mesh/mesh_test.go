@@ -142,7 +142,7 @@ func TestMeshHandlerBroadcastEvent(t *testing.T) {
     service := NewMemoryMeshService()
     handler := NewMeshHandler(service)
 
-    body := `{"agent_id": "worker-1", "channel": "orchestration.tasks", "action": "TaskTransition", "status": "success", "payload": {}}`
+    body := `{"agent_id": "worker-1", "channel": "orchestration.tasks", "event_type": "TASK_TRANSITION", "data": {"status": "success"}}`
     req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBufferString(body))
 
     // Add auth claims to context
@@ -157,4 +157,22 @@ func TestMeshHandlerBroadcastEvent(t *testing.T) {
     if w.Code != http.StatusOK {
         t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
     }
+}
+
+func TestMeshHandlerBroadcastInvalidPayload(t *testing.T) {
+	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
+	svc := NewMemoryMeshService()
+	handler := NewMeshHandler(svc)
+
+	// Missing channel and event_type and not a valid fallback intent
+	reqBody := []byte(`{"agent_id":"xyz","data":{"task_id":"123"}}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer(reqBody))
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	handler.Broadcast(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, w.Code)
+	}
 }

@@ -368,6 +368,7 @@ func TestHandleLogin_ValidCredentials(t *testing.T) {
 
 func TestHandleLogin_EmailFieldAccepted(t *testing.T) {
 	s := auth.NewStore()
+	s.CreateUser("admin", "admin@localhost", "admin", []string{"admin"}, "")
 	h := auth.NewHandlers(s)
 	body := `{"email":"admin@localhost","password":"admin"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(body))

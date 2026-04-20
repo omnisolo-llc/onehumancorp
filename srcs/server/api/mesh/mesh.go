@@ -164,16 +164,12 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fallback to parse either old payload or new KAIROS payload
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	var req struct {
-		Intent string `json:"intent"`
-	}
 	var sipReq struct {
 		AgentID   string          `json:"agent_id"`
 		Channel   string          `json:"channel"`
@@ -181,14 +177,20 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		Data      json.RawMessage `json:"data"`
 	}
 
+	var req struct {
+		Intent string `json:"intent"`
+	}
+
 	var intentStr string
 
-	if err := json.Unmarshal(bodyBytes, &sipReq); err == nil && sipReq.AgentID != "" && sipReq.EventType != "" {
+	if err := json.Unmarshal(bodyBytes, &sipReq); err == nil && sipReq.AgentID != "" && sipReq.Channel != "" && sipReq.EventType != "" && sipReq.Data != nil {
 		intentStr = string(bodyBytes)
 	} else if err := json.Unmarshal(bodyBytes, &req); err == nil && req.Intent != "" {
+		// fallback to old payload
 		intentStr = req.Intent
 	} else {
-		intentStr = string(bodyBytes)
+		http.Error(w, "Invalid payload structure: must comply with OHC-SIP specification", http.StatusBadRequest)
+		return
 	}
 
 	if err := h.Service.BroadcastIntent(r.Context(), intentStr); err != nil {
