@@ -35,6 +35,6 @@ go_test(
         "//srcs/server/domain",
         "//srcs/server/integrations/chatwoot",
         "//srcs/server/orchestration",
-        ],
-    embed = [":integrations"],
+        ":integrations",
+    ],
 )
