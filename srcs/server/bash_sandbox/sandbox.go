@@ -12,6 +12,7 @@ import (
 	"time"
 	"runtime"
 
+	"github.com/onehumancorp/mono/srcs/backend/harness/validation"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -140,6 +141,11 @@ func wrapCommandWithSandboxMacOS(ctx context.Context, command string, workDir st
 
 // ValidateContext checks if the command violates any security rules with context.
 func (s *LocalEnvironment) ValidateContext(ctx context.Context, command string) error {
+	validator := validation.NewBashASTValidator(s.violationStore)
+	if err := validator.Validate(ctx, command); err != nil {
+		telemetry.RecordBubblewrapViolation(ctx)
+		return fmt.Errorf("command violates security policy: %v", err)
+	}
 	for _, pattern := range s.blockedPatterns {
 		if pattern.MatchString(command) {
 			s.violationStore.RecordViolation(ctx, command, "matched " + pattern.String())
