@@ -47,7 +47,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS autodream_memories (
+		CREATE TABLE IF NOT EXISTS consolidated_memory (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			agent_id TEXT,
@@ -94,7 +94,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 
 	// Verify DB sessions were consolidated
 	var count int
-	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_type = 'session_compression'").Scan(&count)
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_type = 'session_compression'").Scan(&count)
 	require.NoError(t, err)
 	assert.Equal(t, 1, count)
 
@@ -186,7 +186,7 @@ func TestAutoDreamPipeline_FilesMultipleChunks(t *testing.T) {
 	ctx := context.Background()
 
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS autodream_memories (
+		CREATE TABLE IF NOT EXISTS consolidated_memory (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			agent_id TEXT,
@@ -235,7 +235,7 @@ func TestAutoDreamPipeline_FilesMultipleChunks(t *testing.T) {
 
 	// Check if chunks are stored
 	var count int
-	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories").Scan(&count)
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory").Scan(&count)
 	require.NoError(t, err)
 	// mission1 => 1 chunk (content is < 8000)
 	// mission2 => 2 chunks (content is > 8000)
