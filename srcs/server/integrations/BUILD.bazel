@@ -10,16 +10,31 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/integrations",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/proto:hub_go_proto",
+        "//srcs/server/integrations/etcd",
         "//srcs/server/integrations/libsql",
         "//srcs/server/integrations/litefs",
-        "//srcs/server/integrations/etcd",
-        "//srcs/proto:hub_go_proto",
+        "//srcs/server/integrations/nats",
         "@org_golang_google_protobuf//proto",
     ],
 )
 
 go_test(
     name = "integrations_test",
-    srcs = ["registry_test.go"],
+    srcs = [
+        "agent_interaction_test.go",
+        "feature_integration_test.go",
+        "frontend_backend_test.go",
+        "minimax_e2e_test.go",
+        "registry_test.go",
+    ],
     embed = [":integrations"],
+    deps = [
+        "//srcs/server/auth",
+        "//srcs/server/billing",
+        "//srcs/server/dashboard",
+        "//srcs/server/domain",
+        "//srcs/server/integrations/chatwoot",
+        "//srcs/server/orchestration",
+    ],
 )
