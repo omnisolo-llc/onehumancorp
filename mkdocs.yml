@@ -27,48 +27,49 @@ validation:
         omitted_files: ignore
 nav:
   - Home: index.md
-  - Chaos Parity Audit: technical/chaos_reports/hybrid_parity_audit.md
+  - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
-      - technical/architecture/index.md
-      - Chaos Engineering: technical/architecture/reliability/chaos-engineering.md
-      - KAIROS Features Design: technical/architecture/kairos/hybrid-os-architecture.md
-      - KAIROS Master Design: technical/architecture/kairos/master-design-doc.md
-      - Hybrid PubSub MCP: technical/research/[integrations]_hybrid_pubsub_mcp.md
+      - Universal Transport Bridge: architecture/universal_transport_bridge.md
+      - architecture/index.md
+      - Chaos Engineering: architecture/chaos_engineering.md
+      - KAIROS Features Design: architecture/kairos_hybrid_os_architecture.md
+      - KAIROS Master Design: architecture/kairos_master_design_doc.md
+      - Hybrid PubSub MCP: research/[integrations]_hybrid_pubsub_mcp.md
   - Developer:
-      - technical/developer/index.md
+      - developer/index.md
   - UI:
-      - Day One Onboarding: technical/ui/guide_proactive_onboarding.md
-      - Hybrid Health Check: technical/ui/guide_proactive_onboarding_health_check.md
+      - Day One Onboarding: ui/guide_proactive_onboarding.md
+      - Hybrid Health Check: ui/guide_proactive_onboarding_health_check.md
   - API:
-      - technical/api/index.md
-      - "Interactive Api Playbook": technical/api/api-playbook.md
+      - api/index.md
+      - "Interactive Api Playbook": api/api_playbook.md
   - Features:
-      - Hybrid WebSockets MCP: technical/research/[integrations]_hybrid_websockets_mcp.md
-      - Hybrid Feature Flags MCP: technical/research/[integrations]_hybrid_feature_flags_mcp.md
-      - Hybrid SPIFFE Identity MCP: technical/research/[integrations]_hybrid_spiffe_identity_mcp.md
-      - technical/features/index.md
-      - Hybrid LLM Routing Gateway MCP: technical/research/[integrations]_hybrid_llm_routing_gateway_mcp.md
-      - Hybrid Task Scheduler MCP: technical/research/[integrations]_hybrid_task_scheduler_mcp.md
-      - Hybrid Circuit Breaker MCP: technical/research/[integrations]_hybrid_circuit_breaker_mcp.md
+      - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
+      - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
+      - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md
+      - features/index.md
+      - Hybrid LLM Routing Gateway MCP: research/[integrations]_hybrid_llm_routing_gateway_mcp.md
+      - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
+      - Hybrid Circuit Breaker MCP: research/[integrations]_hybrid_circuit_breaker_mcp.md
   - Walkthroughs:
-      - Interactive API Playbook: technical/walkthroughs/interactive_api_playbook.md
-      - Visual Dashboard Guide: technical/walkthroughs/visual_dashboard_guide.md
-      - Agent Harness Visual Walkthrough: technical/walkthroughs/agent_harness_walkthrough.md
-      - AutoDream Walkthrough: technical/walkthroughs/kairos_autodream_walkthrough.md
-      - Capability Plugin Mesh: technical/walkthroughs/capability_plugin_mesh.md
-      - Edge LLM Offloading Protocol: technical/walkthroughs/edge_llm_offloading.md
-      - Teammate Mesh Walkthrough: technical/walkthroughs/teammate_mesh_walkthrough.md
-      - AutoDream CLI Guide: technical/walkthroughs/autodream_cli_interactive_guide.md
-      - technical/walkthroughs/index.md
+      - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
+      - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
+      - Agent Harness Visual Walkthrough: walkthroughs/agent_harness_walkthrough.md
+      - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
+      - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
+      - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
+      - Teammate Mesh Walkthrough: walkthroughs/teammate_mesh_walkthrough.md
+      - AutoDream CLI Guide: walkthroughs/autodream_cli_interactive_guide.md
+      - walkthroughs/index.md
   - Operations:
-      - technical/operations/index.md
-      - Task Tracking: technical/operations/task-tracking.md
-      - Issue Migration Seed: technical/operations/github-issues-migration.md
-      - Docs Audit: technical/reports/site-audit-report.md
+      - operations/index.md
+      - Task Tracking: operations/task-tracking.md
+      - Issue Migration Seed: operations/github-issues-migration.md
+      - Docs Audit: reports/docs-site-audit.md
   - Releases:
-      - business/public/index.md
-      - Changelog: business/public/changelog.md
-      - Release Notes: business/public/release_notes.md
+      - public/index.md
+      - Changelog: public/CHANGELOG.md
+      - Release Notes: public/release_notes.md
   - Archive:
-      - technical/archive/index.md
-      - Legacy Design: technical/archive/design/kairos-hybrid-architecture.md
+      - archive/index.md
+      - Legacy Design: archive/design/KAIROS_AI_OS_HYBRID_ARCHITECTURE.md
