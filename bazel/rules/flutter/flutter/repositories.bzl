@@ -74,18 +74,6 @@ filegroup(
 )
 
 filegroup(
-    name = "dart_vm_unix",
-    srcs = ["flutter/bin/cache/dart-sdk/bin/dart"],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
-    name = "dart_vm_windows",
-    srcs = ["flutter/bin/cache/dart-sdk/bin/dart.exe"],
-    visibility = ["//visibility:public"],
-)
-
-filegroup(
     name = "flutter_sdk",
     srcs = glob(["flutter/**/*"]) + [{sdk_packages}],
     visibility = ["//visibility:public"],
@@ -96,10 +84,6 @@ flutter_toolchain(
     target_tool = select({{
         "@platforms//os:windows": ":flutter_binary_windows",
         "//conditions:default": ":flutter_binary_unix",
-    }}),
-    dart_tool = select({{
-        "@platforms//os:windows": ":dart_binary_windows",
-        "//conditions:default": ":dart_binary_unix",
     }}),
     sdk_files = ":flutter_sdk",
 )

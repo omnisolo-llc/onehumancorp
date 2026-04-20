@@ -124,27 +124,6 @@ alias(
     visibility = ["//visibility:public"],
 )
 
-alias(
-    name = "dart_vm",
-    actual = select({{
-        "@platforms//os:windows": ":dart_vm_windows",
-        "//conditions:default": ":dart_vm_unix",
-    }}),
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "dart_vm_unix",
-    actual = "@@{repo}//:dart_vm_unix",
-    visibility = ["//visibility:public"],
-)
-
-alias(
-    name = "dart_vm_windows",
-    actual = "@@{repo}//:dart_vm_windows",
-    visibility = ["//visibility:public"],
-)
-
 # Platform-agnostic binary symlinks for shell scripts
 # Use rlocation("rules_flutter++flutter+flutter_sdk/bin/dart") to find these
 filegroup(

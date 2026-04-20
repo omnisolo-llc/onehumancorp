@@ -2,9 +2,9 @@ package db
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
 	"embed"
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io/fs"
@@ -23,15 +23,6 @@ var (
 	//go:embed migrations/*.sql
 	migrationsFS embed.FS
 )
-
-func appendSQLiteKeyPragma(sqliteDSN, key string) string {
-	if !strings.Contains(sqliteDSN, "?") {
-		sqliteDSN += "?"
-	} else {
-		sqliteDSN += "&"
-	}
-	return sqliteDSN + fmt.Sprintf("_pragma=key('%s')", key)
-}
 
 func splitSQLStatements(sqlText string) []string {
 	var (
@@ -243,7 +234,11 @@ func New(ctx context.Context) (*DB, error) {
 				key = "transient_memory_key"
 			}
 		}
-		sqliteDSN = appendSQLiteKeyPragma(sqliteDSN, key)
+		if !strings.Contains(sqliteDSN, "?") {
+			sqliteDSN += "?_pragma=key(" + key + ")"
+		} else {
+			sqliteDSN += "&_pragma=key(" + key + ")"
+		}
 
 		sqliteDB, sqliteErr := sql.Open("sqlite", sqliteDSN)
 		if sqliteErr != nil {
