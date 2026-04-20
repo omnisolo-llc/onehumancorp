@@ -608,7 +608,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
-		"ohc_sub_agent_queue_length",
+		"ohc.sub_agent.queue_length",
 		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
 	)
 	if err != nil {
@@ -1708,12 +1708,7 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 // RecordQueueLength correctly applies PII redaction before JSON marshaling.
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"delta": delta,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", string(payloadBytes))
+		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
