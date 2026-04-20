@@ -9,14 +9,14 @@ This section contains all technical documentation for the One Human Corp (OHC) p
 - [API Reference](api/index.md) - API documentation and reference
 - [Features & CUJs](features/index.md) - Feature documentation and Critical User Journeys
 - [Operations](operations/index.md) - Operational documentation and runbooks
-- [Research](research/index.md) - Technical research and analysis
-- [Reports](reports/index.md) - Technical reports and audits
+- [Research](research/) - Technical research and analysis
+- [Reports](reports/hybrid-report.md) - Technical reports and audits
 - [Walkthroughs](walkthroughs/index.md) - Step-by-step technical guides
-- [Templates](templates/index.md) - Document templates
-- [MCP Protocol](mcp/index.md) - Model Context Protocol documentation
+- [Templates](templates/) - Document templates
+- [MCP Protocol](mcp/hybrid-mcp-playbook.md) - Model Context Protocol documentation
 
 ## Quick Links
 
 - [System Design](architecture/system-design.md)
-- [KAIROS Orchestration](architecture/kairos/index.md)
+- [KAIROS Orchestration](architecture/kairos/hybrid-os-architecture.md)
 - [Hybrid MCP Protocol](mcp/hybrid-mcp-playbook.md)

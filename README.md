@@ -19,10 +19,27 @@ From the root of the repository, you must explicitly run the onboarding CLI:
 This premium onboarding flow eliminates friction and ensures maximum developer velocity for Day One setup.
 
 ## Identity
-One Human Corp is a hybrid cloud-native and local-first agentic platform. The same product can run as a horizontally scalable multi-tenant cloud service, a headless API for remote mobile or desktop clients, or a standalone desktop deployment that runs its own local backend.
+
+**One Human Corp (OHC)** is the world's most autonomous, aesthetically superior, and market-aware **Agentic Operating System**. OHC empowers a single human to orchestrate a vast swarm of AI agents with zero friction and maximum visual delight.
+
+### OHC Hybrid Architecture (OHC-HA)
+
+The system is built on a unified core that adapts to three distinct deployment archetypes:
+
+*   **Cloud-Native Mode**: Multi-tenant, K8s-orchestrated (PostgreSQL, Redis). Optimized for horizontal/vertical scaling, pod high-concurrency, and strict tenant isolation.
+*   **Standalone Desktop Mode**: Local single-user (SQLite). Optimized for low resource consumption, host-machine efficiency, and local-to-cloud synchronization. Services are designed to degrade gracefully when heavy dependencies (Redis/Chatwoot) are absent.
+*   **Thin Client Mode**: UI-only (Mobile/Desktop) connecting to Cloud via API/OAuth with configurable remote endpoints. Focuses on API reliability, auth stability, and low-latency interaction.
+
+### Core Values
+
+1.  **Absolute Autonomy**: Agents do not ask for permission; they propose and execute based on the Vision and Market Reality.
+2.  **Aesthetic Excellence**: Every interface and artifact must feel "Premium" (Glassmorphism, 20px blur, Outfit/Inter typography).
+3.  **Continuous Evolution**: We study competitors and the global market to improve OHC bit by bit daily.
+4.  **Swarm Intelligence**: All agents share state via the OHC Central Database (OHC-SIP).
+5.  **Full-Spectrum Observability**: Every feature exposes high-fidelity metrics via OpenTelemetry and Prometheus, with corresponding Grafana visualizations and internal dashboards.
 
 ## Product Vision & Market Strategy
-One Human Corp (OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OHC Market Strategy](docs/vision/market_strategy.md)**.
+One Human Corp (OHC) is the world's first **Hybrid Agentic OS**. For a deep dive into our competitive advantages and "Unfair Advantage" against Claude Code and Replit Agent, see the **[OHC Market Strategy](docs/business/vision/market_strategy.md)**.
 
 ## Architecture
 
@@ -68,9 +85,9 @@ graph TD;
 
 ### KAIROS Orchestration Documentation
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
-- **[Distributed State Machine](docs/features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
-- **[Sub-Agent Queue](docs/features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
-- **[AutoDream Pipeline](docs/features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
+- **[Distributed State Machine](docs/technical/features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
+- **[Sub-Agent Queue](docs/technical/features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
+- **[AutoDream Pipeline](docs/technical/features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ### Remote clients and standalone mode
 
