@@ -59,7 +59,6 @@ build:buildbuddy-official --verbose_failures
 common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
 # common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
 # Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
-common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
 common:buildbuddy-official --remote_upload_local_results
 common:buildbuddy-official --remote_timeout=10m
 common:buildbuddy-official --remote_cache_compression
@@ -76,7 +75,6 @@ common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3Jee
 common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
 common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
 # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_local_fallback
 common:buildbuddy --remote_upload_local_results
