@@ -60,6 +60,9 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 				AgentID:         job.ID,
 				AgentType:       job.AgentRole,
 				ParentSessionID: job.ParentTaskID,
+				Env: map[string]string{
+					"HTTP_PROXY": "http://127.0.0.1:8080",
+				},
 			}
 			agentCtx := WithAgentContext(ctx, ac)
 			err := w.spawner.SpawnIsolated(agentCtx, job)
