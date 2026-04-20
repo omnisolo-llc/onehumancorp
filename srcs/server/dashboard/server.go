@@ -609,6 +609,13 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
+	mux.HandleFunc("/api/v1/sync/mcp-deltas", auth.RequireRole("system", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			api.HandleCRDTPull(server.hub)(w, r)
+		} else {
+			api.HandleCRDTSync(server.hub)(w, r)
+		}
+	}))
 	mux.HandleFunc("/api/sync/escalation", auth.RequireRole("system", api.HandleSyncEscalation(server.hub)))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
 	// added for issue 4331: sync rag endpoint with system role
@@ -697,48 +704,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
-
-	// Start background mesh subscriptions
-	go func() {
-		ctx := context.Background()
-		if server.MeshBroker != nil {
-			_, _ = server.MeshBroker.Subscribe(ctx, "mesh:tasks", func(msg []byte) {
-				if server.hub != nil && server.hub.CentrifugeNode() != nil {
-					var payload map[string]interface{}
-					if err := json.Unmarshal(msg, &payload); err == nil {
-						server.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), payload)
-					}
-				}
-			})
-			_, _ = server.MeshBroker.Subscribe(ctx, "mesh:coordination", func(msg []byte) {
-				if server.hub != nil && server.hub.CentrifugeNode() != nil {
-					var payload map[string]interface{}
-					if err := json.Unmarshal(msg, &payload); err == nil {
-						agentID, _ := payload["agent_id"].(string)
-						if agentID == "" {
-							agentID = "system"
-						}
-						server.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
-							ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-							FromAgent: agentID,
-							ToAgent:   "system",
-							Type:      "mesh:coordination",
-							Content:   string(msg),
-						})
-					}
-				}
-			})
-			// swarm-events
-			_, _ = server.MeshBroker.Subscribe(ctx, "swarm-events", func(msg []byte) {
-				if server.hub != nil && server.hub.CentrifugeNode() != nil {
-					var payload map[string]interface{}
-					if err := json.Unmarshal(msg, &payload); err == nil {
-						server.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), payload)
-					}
-				}
-			})
-		}
-	}()
 
 	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
 }
@@ -1044,7 +1009,20 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { /
 	if err == nil {
 		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
 
-
+		// Map mesh channels to Centrifuge WebSocket channels for UI updates
+		if s.hub != nil && s.hub.CentrifugeNode() != nil {
+			if req.Channel == "mesh:tasks" {
+				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), payloadMap)
+			} else if req.Channel == "mesh:coordination" {
+				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
+					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+					FromAgent: req.AgentID,
+					ToAgent:   "system",
+					Type:      req.Channel,
+					Content:   string(payloadBytes),
+				})
+			}
+		}
 	} else {
 		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
 		return
@@ -2100,7 +2078,24 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
 
-
+		// Map mesh channels to Centrifuge WebSocket channels for UI updates
+		if s.hub != nil && s.hub.CentrifugeNode() != nil {
+			if req.Channel == "mesh:tasks" || req.Channel == "swarm-events" {
+				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), req.Data)
+			} else if req.Channel == "mesh:coordination" {
+				agentID, _ := req.Data["agent_id"].(string)
+				if agentID == "" {
+					agentID = "system"
+				}
+				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
+					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+					FromAgent: agentID,
+					ToAgent:   "system",
+					Type:      req.Channel,
+					Content:   string(payloadBytes),
+				})
+			}
+		}
 	} else {
 		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
 		return
