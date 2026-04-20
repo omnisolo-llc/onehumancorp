@@ -52,6 +52,7 @@ func (d *HybridSyncDaemon) Start(ctx context.Context) {
 			select {
 			case <-d.ticker.C:
 				d.ProcessSync(ctx)
+				d.ProcessCRDTSync(ctx)
 			case <-d.quit:
 				d.ticker.Stop()
 				return
@@ -193,4 +194,91 @@ func (d *HybridSyncDaemon) sendToCloud(ctx context.Context, payloads []SyncPaylo
 	}
 
 	return nil
+}
+
+type CRDTDelta struct {
+	ID        string `json:"id"`
+	EntityID  string `json:"entity_id"`
+	Data      string `json:"data"`
+	UpdatedAt string `json:"updated_at"`
+}
+
+type SyncDeltasPayload struct {
+	Deltas []CRDTDelta `json:"deltas"`
+}
+
+func (d *HybridSyncDaemon) ProcessCRDTSync(ctx context.Context) {
+	if !d.dbWrapper.IsSQLite() {
+		return
+	}
+
+	query := "SELECT id, entity_id, data, updated_at FROM crdt_deltas WHERE synced_to_cloud = false LIMIT 100"
+
+	rows, err := d.dbWrapper.Query(ctx, query)
+	if err != nil {
+		slog.Error("hybrid_sync: failed to query crdt_deltas", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	var deltas []CRDTDelta
+	var ids []string
+
+	for rows.Next() {
+		var delta CRDTDelta
+		if err := rows.Scan(&delta.ID, &delta.EntityID, &delta.Data, &delta.UpdatedAt); err != nil {
+			slog.Error("hybrid_sync: failed to scan crdt_deltas", "error", err)
+			continue
+		}
+		deltas = append(deltas, delta)
+		ids = append(ids, delta.ID)
+	}
+
+	if len(deltas) == 0 {
+		return
+	}
+
+	payload := SyncDeltasPayload{Deltas: deltas}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("hybrid_sync: failed to marshal CRDT deltas", "error", err)
+		return
+	}
+
+	syncEndpoint := fmt.Sprintf("%s/api/v1/sync/mcp-deltas", d.cloudAPIURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
+	if err != nil {
+		slog.Error("hybrid_sync: failed to create request for CRDT sync", "error", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
+		req.Header.Set("Authorization", "Bearer "+spiffeToken)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		slog.Error("hybrid_sync: failed to send CRDT deltas to cloud", "error", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		slog.Error("hybrid_sync: failed to send CRDT deltas to cloud", "status", resp.StatusCode, "body", string(body))
+		return
+	}
+
+	// Update the local SQLite database to mark as synced
+	for _, id := range ids {
+		updateQuery := "UPDATE crdt_deltas SET synced_to_cloud = true WHERE id = $1"
+		_, err := d.dbWrapper.Exec(ctx, updateQuery, id)
+		if err != nil {
+			slog.Error("hybrid_sync: failed to update synced_to_cloud status", "error", err)
+		}
+	}
+
+	slog.Debug("hybrid_sync: successfully synced CRDT deltas", "count", len(deltas))
 }
