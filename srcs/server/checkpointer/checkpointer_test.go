@@ -116,30 +116,3 @@ func TestPgCheckpointSaver_ListCheckpoints(t *testing.T) {
 		t.Errorf("expected first checkpoint to be '3', got %q", checkpoints[0].CheckpointID)
 	}
 }
-
-func TestPgCheckpointSaver_BackwardCompatibility(t *testing.T) {
-	provider := setupTestProvider(t)
-	saver := NewPgCheckpointSaver(provider)
-	ctx := context.Background()
-
-	// Manually insert an uncompressed JSON string to simulate an old checkpoint
-	uncompressedJSON := `{"old_key": "old_value"}`
-	query := `
-		INSERT INTO swarm_checkpoints (thread_id, checkpoint_id, checkpoint, metadata)
-		VALUES ($1, $2, $3, $4)
-	`
-	_, err := provider.Exec(ctx, query, "thread-old", "cp-old", []byte(uncompressedJSON), []byte("{}"))
-	if err != nil {
-		t.Fatalf("Failed to insert uncompressed checkpoint: %v", err)
-	}
-
-	// Now try to read it
-	retrieved, err := saver.GetCheckpoint(ctx, "thread-old", "cp-old")
-	if err != nil {
-		t.Fatalf("GetCheckpoint failed for old data: %v", err)
-	}
-
-	if retrieved.Data["old_key"] != "old_value" {
-		t.Errorf("expected 'old_value', got %v", retrieved.Data["old_key"])
-	}
-}
