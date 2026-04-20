@@ -1636,7 +1636,11 @@ app.handleWizardOnboardingVerify(rec, req)
 if rec.Code >= 500 { t.Errorf("server error %d", rec.Code) }
 }
 
+<<<<<<< HEAD
+func TestHandleSchedulerTasks_GetSmoke(t *testing.T) {
+=======
 func TestHandleSchedulerTasks_Get_Legacy(t *testing.T) {
+>>>>>>> 57ef68d (docs: add hybrid MCP research and fix test collision)
 app, _, _ := newTestServer(t)
 req := httptest.NewRequest(http.MethodGet, "/api/scheduler/tasks", nil)
 rec := httptest.NewRecorder()
