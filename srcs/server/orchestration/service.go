@@ -287,6 +287,7 @@ type Hub struct {
 	scheduler      *scheduler.Scheduler
 	settingsStore  *settings.Store
 	centrifugeNode *CentrifugeNode
+	meshTransport  MeshTransport
 	storage        storage.Provider
 	ctx            context.Context
 	cancel         context.CancelFunc
@@ -710,6 +711,16 @@ func (h *Hub) SetCentrifugeNode(cn *CentrifugeNode) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.centrifugeNode = cn
+}
+
+// SetMeshTransport configures the cross-node transport layer.
+func (h *Hub) SetMeshTransport(mt MeshTransport) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.meshTransport = mt
+	if h.centrifugeNode != nil {
+		h.centrifugeNode.SetMeshTransport(mt)
+	}
 }
 
 // CentrifugeNode returns the currently attached CentrifugeNode (may be nil).

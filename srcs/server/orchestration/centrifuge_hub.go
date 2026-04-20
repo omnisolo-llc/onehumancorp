@@ -172,6 +172,35 @@ func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
 	} else {
 		slog.Error("[centrifuge] failed to subscribe to capabilities from mesh transport", "error", err)
 	}
+
+	// Forward Direct Messages
+	if ch, err := mt.SubscribeAllDirectMessages(ctx); err == nil {
+		go func() {
+			for msg := range ch {
+				cm := Message{
+					ID:         "direct",
+					FromAgent:  msg.SenderID,
+					ToAgent:    msg.AgentID,
+					Type:       "mesh:direct",
+					Content:    msg.Content,
+					OccurredAt: msg.Timestamp,
+				}
+				cn.PublishAgentNotification(msg.AgentID, cm)
+			}
+		}()
+	} else {
+		slog.Error("[centrifuge] failed to subscribe to all direct messages from mesh transport", "error", err)
+	}
+
+	// Forward Generic Mesh Events
+	// We use 'teammate_mesh' as a catch-all topic for generic events published via BroadcastMeshEvent
+	if ch, err := mt.SubscribeMeshEvents(ctx, "teammate_mesh"); err == nil {
+		go func() {
+			for payload := range ch {
+				_, _ = cn.node.Publish("orchestration.tasks", payload)
+			}
+		}()
+	}
 }
 
 // Handler returns an http.Handler that serves the Centrifuge WebSocket endpoint.

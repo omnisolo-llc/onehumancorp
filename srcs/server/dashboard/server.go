@@ -44,6 +44,7 @@ type Server struct {
 	mu           sync.RWMutex
 	MeshBroker   orchmesh.MeshBroker
 	TeammateMesh *meshapi.TeammateMesh
+	MeshAPI      *orchestration.MeshAPI
 	org          domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
@@ -504,9 +505,18 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		} else {
 			server.TeammateMesh = meshapi.NewTeammateMesh(nil)
 		}
+
+		if mt, err := orchestration.NewRedisMeshTransport(os.Getenv("REDIS_URL")); err == nil {
+			server.MeshAPI = orchestration.NewMeshAPI(mt)
+			hub.SetMeshTransport(mt)
+		}
 	} else {
 		server.MeshBroker = orchmesh.NewLocalMeshBroker()
 		server.TeammateMesh = meshapi.NewTeammateMesh(nil)
+
+		mt := orchestration.NewMemoryMeshTransport(server.dbProvider)
+		server.MeshAPI = orchestration.NewMeshAPI(mt)
+		hub.SetMeshTransport(mt)
 	}
 	server.bootstrapInternalDefaultAgent()
 	// Load initial settings.
@@ -645,13 +655,22 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 
 	// Teammate Mesh APIs
-	mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.TeammateMesh.HandlePublish))
-	mux.HandleFunc("/api/mesh/subscribe", auth.RequireRole("system", server.TeammateMesh.HandleSubscribe))
-	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
-	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
-	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
-	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
-	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
+	if server.MeshAPI != nil {
+		mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.MeshAPI.HandleBroadcast)))
+		mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.MeshAPI.HandleBroadcast)))
+		mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.MeshAPI.HandlePublish))
+		mux.HandleFunc("/api/mesh/stream", auth.RequireRole("system", server.MeshAPI.HandleStream))
+		mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.MeshAPI.HandleDirect)))
+		mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.MeshAPI.HandleMailbox))
+	} else {
+		mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.TeammateMesh.HandlePublish))
+		mux.HandleFunc("/api/mesh/subscribe", auth.RequireRole("system", server.TeammateMesh.HandleSubscribe))
+		mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
+		mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
+		mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
+		mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
+		mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
+	}
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)

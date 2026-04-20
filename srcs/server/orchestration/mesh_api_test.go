@@ -24,17 +24,29 @@ func (m *mockMeshTransport) SubscribeMeshEvents(ctx context.Context, topic strin
 	return m.subChan, nil
 }
 
+func (m *mockMeshTransport) SendDirectMessage(ctx context.Context, toAgentID string, msg MeshMessage) error {
+	m.broadcastCalled = true
+	return nil
+}
+
+func (m *mockMeshTransport) SubscribeDirectMessages(ctx context.Context, agentID string) (<-chan MeshMessage, error) {
+	ch := make(chan MeshMessage, 1)
+	ch <- MeshMessage{AgentID: agentID, Content: "test mailbox"}
+	return ch, nil
+}
+
 func TestMeshAPI_Broadcast(t *testing.T) {
 	mockMesh := &mockMeshTransport{}
 	api := NewMeshAPI(mockMesh)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"task_id":"123"}`)))
+	payload := `{"agent_id":"agent-1","action":"mesh:tasks","status":"active","payload":{"task_id":"123"}}`
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(payload)))
 	w := httptest.NewRecorder()
 
 	api.HandleBroadcast(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
+		t.Errorf("expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
 	if !mockMesh.broadcastCalled {
@@ -96,5 +108,41 @@ func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
 				t.Errorf("expected %d, got %d", tt.statusCode, w.Code)
 			}
 		})
+	}
+}
+
+func TestMeshAPI_Direct(t *testing.T) {
+	mockMesh := &mockMeshTransport{}
+	api := NewMeshAPI(mockMesh)
+
+	payload := `{"agent_id":"agent-1","action":"DIRECT","content":"hello"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/direct", bytes.NewBuffer([]byte(payload)))
+	w := httptest.NewRecorder()
+
+	api.HandleDirect(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestMeshAPI_Mailbox(t *testing.T) {
+	mockMesh := &mockMeshTransport{}
+	api := NewMeshAPI(mockMesh)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/mesh/mailbox?agent_id=agent-1", nil)
+	w := httptest.NewRecorder()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	req = req.WithContext(ctx)
+
+	api.HandleMailbox(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte("test mailbox")) {
+		t.Errorf("expected body to contain 'test mailbox', got %s", w.Body.String())
 	}
 }

@@ -287,6 +287,72 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 	return ch, nil
 }
 
+func (rm *RedisMeshTransport) SubscribeAllDirectMessages(ctx context.Context) (<-chan MeshMessage, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeAllDirectMessages", time.Since(start)) }()
+
+	ch := make(chan MeshMessage, 100)
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Psubscribe().Pattern("mesh:direct:*").Build(), func(msg rueidis.PubSubMessage) {
+			var m MeshMessage
+			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
+				select {
+				case ch <- m:
+				default:
+				}
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisMeshTransport.SubscribeAllDirectMessages error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
+func (rm *RedisMeshTransport) SendDirectMessage(ctx context.Context, toAgentID string, msg MeshMessage) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SendDirectMessage", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "direct")
+	}
+
+	msg.AgentID = toAgentID // Ensure AgentID is set to the recipient for OHC-SIP compliance
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	cmd := rm.client.B().Publish().Channel("mesh:direct:" + toAgentID).Message(string(data)).Build()
+	return meshWithRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
+}
+
+func (rm *RedisMeshTransport) SubscribeDirectMessages(ctx context.Context, agentID string) (<-chan MeshMessage, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeDirectMessages", time.Since(start)) }()
+
+	ch := make(chan MeshMessage, 100)
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:direct:"+agentID).Build(), func(msg rueidis.PubSubMessage) {
+			var m MeshMessage
+			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
+				select {
+				case ch <- m:
+				default:
+					slog.Warn("RedisMeshTransport.SubscribeDirectMessages channel full, dropping message")
+				}
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisMeshTransport.SubscribeDirectMessages error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
 func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
@@ -512,6 +578,9 @@ type MeshTransport interface {
 	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
 	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
 	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
+	SendDirectMessage(ctx context.Context, toAgentID string, msg MeshMessage) error
+	SubscribeDirectMessages(ctx context.Context, agentID string) (<-chan MeshMessage, error)
+	SubscribeAllDirectMessages(ctx context.Context) (<-chan MeshMessage, error)
 }
 
 const numShards = 16
@@ -534,6 +603,12 @@ type MemoryMeshTransport struct {
 	eventsSubs      map[string][]map[chan []byte]struct{}
 	eventsMu        map[string][]sync.RWMutex
 	eventsGlobalMu  sync.RWMutex
+
+	directBroadcast []chan MeshMessage
+	directSubs      []map[string]map[chan MeshMessage]struct{}
+	directMu        []sync.RWMutex
+	directAllSubs   map[chan MeshMessage]struct{}
+	directAllMu     sync.RWMutex
 }
 
 func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
@@ -552,6 +627,10 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		eventsBroadcast: make(map[string][]chan []byte),
 		eventsSubs:      make(map[string][]map[chan []byte]struct{}),
 		eventsMu:        make(map[string][]sync.RWMutex),
+		directBroadcast: make([]chan MeshMessage, numShards),
+		directSubs:      make([]map[string]map[chan MeshMessage]struct{}, numShards),
+		directMu:        make([]sync.RWMutex, numShards),
+		directAllSubs:   make(map[chan MeshMessage]struct{}),
 	}
 
 	// Phase 2 (Implementation): "Parallel Execution" hooks using Worker Threads for the OHC "Team Mesh"
@@ -564,6 +643,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
 		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
 		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
+		lm.directBroadcast[i] = make(chan MeshMessage, 10000)
+		lm.directSubs[i] = make(map[string]map[chan MeshMessage]struct{})
 
 		// Spawn multiple worker threads per shard
 		for j := 0; j < 16; j++ {
@@ -572,6 +653,7 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		}
 		go lm.runCoord(i)
 		go lm.runCaps(i)
+		go lm.runDirect(i)
 	}
 	return lm
 }
@@ -915,6 +997,105 @@ func (lm *MemoryMeshTransport) runEvents(topic string, shardIdx int) {
 			muArray[shardIdx].RUnlock()
 		}
 		lm.eventsGlobalMu.RUnlock()
+	}
+}
+
+func (lm *MemoryMeshTransport) SendDirectMessage(ctx context.Context, toAgentID string, msg MeshMessage) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SendDirectMessage", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "direct")
+	}
+
+	msg.AgentID = toAgentID // Ensure AgentID is set to the recipient for in-memory routing
+	shardIdx := lm.getShard(toAgentID)
+	err := meshWithRetry(ctx, 3, func() error {
+		select {
+		case lm.directBroadcast[shardIdx] <- msg:
+			return nil
+		default:
+			return fmt.Errorf("MemoryMeshTransport direct broadcast channel full")
+		}
+	})
+
+	if err != nil {
+		slog.Warn("MemoryMeshTransport direct broadcast channel full, dropping message after retries", "toAgentID", toAgentID)
+	}
+	return nil
+}
+
+func (lm *MemoryMeshTransport) SubscribeDirectMessages(ctx context.Context, agentID string) (<-chan MeshMessage, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeDirectMessages", time.Since(start)) }()
+
+	ch := make(chan MeshMessage, 100)
+	shardIdx := lm.getShard(agentID)
+
+	lm.directMu[shardIdx].Lock()
+	if lm.directSubs[shardIdx][agentID] == nil {
+		lm.directSubs[shardIdx][agentID] = make(map[chan MeshMessage]struct{})
+	}
+	lm.directSubs[shardIdx][agentID][ch] = struct{}{}
+	lm.directMu[shardIdx].Unlock()
+
+	go func() {
+		<-ctx.Done()
+		lm.directMu[shardIdx].Lock()
+		if subs, ok := lm.directSubs[shardIdx][agentID]; ok {
+			delete(subs, ch)
+			if len(subs) == 0 {
+				delete(lm.directSubs[shardIdx], agentID)
+			}
+		}
+		lm.directMu[shardIdx].Unlock()
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
+func (lm *MemoryMeshTransport) SubscribeAllDirectMessages(ctx context.Context) (<-chan MeshMessage, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeAllDirectMessages", time.Since(start)) }()
+
+	ch := make(chan MeshMessage, 100)
+	lm.directAllMu.Lock()
+	lm.directAllSubs[ch] = struct{}{}
+	lm.directAllMu.Unlock()
+
+	go func() {
+		<-ctx.Done()
+		lm.directAllMu.Lock()
+		delete(lm.directAllSubs, ch)
+		lm.directAllMu.Unlock()
+		close(ch)
+	}()
+
+	return ch, nil
+}
+
+func (lm *MemoryMeshTransport) runDirect(shardIdx int) {
+	for msg := range lm.directBroadcast[shardIdx] {
+		lm.directMu[shardIdx].RLock()
+		if subs, ok := lm.directSubs[shardIdx][msg.AgentID]; ok {
+			for ch := range subs {
+				select {
+				case ch <- msg:
+				default:
+				}
+			}
+		}
+		lm.directMu[shardIdx].RUnlock()
+
+		lm.directAllMu.RLock()
+		for ch := range lm.directAllSubs {
+			select {
+			case ch <- msg:
+			default:
+			}
+		}
+		lm.directAllMu.RUnlock()
 	}
 }
 

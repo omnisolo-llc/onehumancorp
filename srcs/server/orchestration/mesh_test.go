@@ -216,9 +216,73 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 
 		select {
 		case payload := <-sub:
-			assert.Equal(t, []byte("payload"), payload)
+			if string(payload) != "payload" {
+				t.Errorf("expected payload, got %s", string(payload))
+			}
 		case <-time.After(1 * time.Second):
 			t.Fatal("timeout waiting for mesh event")
+		}
+	})
+
+	t.Run("DirectMessages", func(t *testing.T) {
+		agentID := "agent-direct-1"
+		sub, err := mt.SubscribeDirectMessages(ctx, agentID)
+		if err != nil {
+			t.Fatalf("failed to subscribe: %v", err)
+		}
+
+		msg := MeshMessage{
+			SenderID:  "system",
+			Action:    "DIRECT",
+			Status:    "OK",
+			Content:   "private hello",
+			Timestamp: time.Now(),
+		}
+
+		err = mt.SendDirectMessage(ctx, agentID, msg)
+		if err != nil {
+			t.Fatalf("failed to send direct message: %v", err)
+		}
+
+		select {
+		case received := <-sub:
+			if received.Content != msg.Content {
+				t.Errorf("expected %s, got %s", msg.Content, received.Content)
+			}
+			if received.AgentID != agentID {
+				t.Errorf("expected agent_id %s, got %s", agentID, received.AgentID)
+			}
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout waiting for direct message")
+		}
+	})
+
+	t.Run("SubscribeAllDirectMessages", func(t *testing.T) {
+		subAll, err := mt.SubscribeAllDirectMessages(ctx)
+		if err != nil {
+			t.Fatalf("failed to subscribe all: %v", err)
+		}
+
+		msg := MeshMessage{
+			SenderID:  "system",
+			Action:    "ALL_BROADCAST",
+			Status:    "OK",
+			Content:   "global direct hello",
+			Timestamp: time.Now(),
+		}
+
+		err = mt.SendDirectMessage(ctx, "any-agent", msg)
+		if err != nil {
+			t.Fatalf("failed to send direct message: %v", err)
+		}
+
+		select {
+		case received := <-subAll:
+			if received.Content != msg.Content {
+				t.Errorf("expected %s, got %s", msg.Content, received.Content)
+			}
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout waiting for all-direct message")
 		}
 	})
 }

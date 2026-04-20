@@ -20,6 +20,8 @@ func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/mesh/stream", api.HandleStream)
 	mux.HandleFunc("/api/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/mesh/connect", api.HandleConnect)
+	mux.HandleFunc("/api/mesh/direct", api.HandleDirect)
+	mux.HandleFunc("/api/mesh/mailbox", api.HandleMailbox)
 }
 
 func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
@@ -28,19 +30,55 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req map[string]interface{}
+	var req struct {
+		Channel string                 `json:"channel"`
+		AgentID string                 `json:"agent_id"`
+		Action  string                 `json:"action"`
+		Status  string                 `json:"status"`
+		Payload map[string]interface{} `json:"payload,omitempty"`
+	}
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	payload, err := json.Marshal(req)
+	if req.AgentID == "" || req.Action == "" || req.Status == "" {
+		http.Error(w, "Missing required OHC-SIP fields", http.StatusBadRequest)
+		return
+	}
+
+	topic := "tasks"
+	if req.Channel != "" {
+		topic = req.Channel
+	} else if req.Action != "" {
+		// Fallback for older agents that use action as the topic
+		topic = req.Action
+	}
+
+	// Standardize topic prefixes for Teammate Mesh
+	if topic != "mesh:tasks" && topic != "mesh:coordination" && !strings.HasPrefix(topic, "mesh:events:") {
+		if topic == "tasks" || topic == "coordination" {
+			topic = "mesh:" + topic
+		}
+	}
+
+	payloadMap := map[string]interface{}{
+		"agent_id": req.AgentID,
+		"action":   req.Action,
+		"status":   req.Status,
+	}
+	if req.Payload != nil {
+		payloadMap["payload"] = req.Payload
+	}
+
+	payload, err := json.Marshal(payloadMap)
 	if err != nil {
 		http.Error(w, "Failed to marshal payload", http.StatusInternalServerError)
 		return
 	}
 
-	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", payload); err != nil {
+	if err := api.meshTransport.BroadcastMeshEvent(r.Context(), topic, payload); err != nil {
 		http.Error(w, "Failed to broadcast", http.StatusInternalServerError)
 		return
 	}
@@ -120,6 +158,77 @@ func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
 
 func (api *MeshAPI) HandleConnect(w http.ResponseWriter, r *http.Request) {
 	api.HandleStream(w, r)
+}
+
+func (api *MeshAPI) HandleDirect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var msg MeshMessage
+	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if msg.AgentID == "" || msg.Action == "" {
+		http.Error(w, "Missing required fields (agent_id/action)", http.StatusBadRequest)
+		return
+	}
+
+	if err := api.meshTransport.SendDirectMessage(r.Context(), msg.AgentID, msg); err != nil {
+		http.Error(w, "Failed to send direct message", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success"}`))
+}
+
+func (api *MeshAPI) HandleMailbox(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	agentID := r.URL.Query().Get("agent_id")
+	if agentID == "" {
+		http.Error(w, "Missing agent_id", http.StatusBadRequest)
+		return
+	}
+
+	ch, err := api.meshTransport.SubscribeDirectMessages(r.Context(), agentID)
+	if err != nil {
+		http.Error(w, "Failed to subscribe to mailbox", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+		return
+	}
+
+	for {
+		select {
+		case msg, ok := <-ch:
+			if !ok {
+				return
+			}
+			payload, _ := json.Marshal(msg)
+			w.Write([]byte("data: "))
+			w.Write(payload)
+			w.Write([]byte("\n\n"))
+			flusher.Flush()
+		case <-r.Context().Done():
+			return
+		}
+	}
 }
 
 
