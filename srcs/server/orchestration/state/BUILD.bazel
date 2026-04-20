@@ -18,6 +18,7 @@ go_library(
 go_test(
     name = "state_test",
     srcs = [
+        "cloud_state_manager_test.go",
         "state_manager_test.go",
     ],
     embed = [":state"],
