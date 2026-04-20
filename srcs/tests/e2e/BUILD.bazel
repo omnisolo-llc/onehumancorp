@@ -179,6 +179,7 @@ go_test(
     srcs = _SHARED_SRCS + [
         "cuj_extended_test.go",
         "cuj_integration_test.go",
+        "e2e_scout_test.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
@@ -215,6 +216,58 @@ go_test(
     tags = _COMMON_TAGS,
 )
 
+# ── CUJ Chat (full request-response loop) ─────────────────────────────────────
+go_test(
+    name = "e2e_cuj_chat_test",
+    srcs = _SHARED_SRCS + ["cuj_chat_test.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS,
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)
+
+# ── CUJ Observability ─────────────────────────────────────────────────────────
+go_test(
+    name = "e2e_cuj_observability_test",
+    srcs = _SHARED_SRCS + ["cuj_observability_test.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS,
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)
+
+# ── CUJ Security ──────────────────────────────────────────────────────────────
+go_test(
+    name = "e2e_cuj_security_test",
+    srcs = _SHARED_SRCS + ["cuj_security_test.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS,
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)
+
+# ── CUJ Workflow & Pipelines ──────────────────────────────────────────────────
+go_test(
+    name = "e2e_cuj_workflow_test",
+    srcs = _SHARED_SRCS + ["cuj_workflow_test.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS,
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)
+
 # ── All-in-one (backward compat alias) ───────────────────────────────────────
 # Keep the original :e2e_test target as a test_suite so existing references
 # (//srcs/tests/e2e:e2e_test) continue to work.
@@ -234,5 +287,9 @@ test_suite(
         ":e2e_cuj_extended_test",
         ":e2e_cuj_accessibility_test",
         ":e2e_misc_test",
+        ":e2e_cuj_chat_test",
+        ":e2e_cuj_observability_test",
+        ":e2e_cuj_security_test",
+        ":e2e_cuj_workflow_test",
     ],
 )
