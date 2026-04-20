@@ -1964,7 +1964,7 @@ if rec.Code >= 500 { t.Errorf("server error %d", rec.Code) }
 
 func TestWriteJSON_PlainStruct(t *testing.T) {
 rec := httptest.NewRecorder()
-writeJSON(rec, http.StatusOK, map[string]string{"hello": "world"})
+writeJSON(rec, map[string]string{"hello": "world"})
 if rec.Code != http.StatusOK { t.Errorf("expected 200, got %d", rec.Code) }
 ct := rec.Header().Get("Content-Type")
 if !strings.Contains(ct, "json") { t.Errorf("expected JSON content-type, got %q", ct) }
@@ -1972,25 +1972,27 @@ if !strings.Contains(ct, "json") { t.Errorf("expected JSON content-type, got %q"
 
 func TestWriteJSON_StatusCreated(t *testing.T) {
 rec := httptest.NewRecorder()
-writeJSON(rec, http.StatusCreated, map[string]string{"id": "new-1"})
+rec.WriteHeader(http.StatusCreated)
+writeJSON(rec, map[string]string{"id": "new-1"})
 if rec.Code != http.StatusCreated { t.Errorf("expected 201, got %d", rec.Code) }
 }
 
 func TestWriteJSON_EmptyPayload(t *testing.T) {
 rec := httptest.NewRecorder()
-writeJSON(rec, http.StatusOK, map[string]any{})
+writeJSON(rec, map[string]any{})
 if rec.Code != http.StatusOK { t.Errorf("expected 200, got %d", rec.Code) }
 }
 
 func TestWriteJSON_NilPayload(t *testing.T) {
 rec := httptest.NewRecorder()
-writeJSON(rec, http.StatusNoContent, nil)
+rec.WriteHeader(http.StatusNoContent)
+writeJSON(rec, nil)
 if rec.Code != http.StatusNoContent { t.Errorf("expected 204, got %d", rec.Code) }
 }
 
 func TestWriteJSON_BodyContainsKey(t *testing.T) {
 rec := httptest.NewRecorder()
-writeJSON(rec, http.StatusOK, map[string]string{"key": "value"})
+writeJSON(rec, map[string]string{"key": "value"})
 body := rec.Body.String()
 if !strings.Contains(body, "value") { t.Errorf("expected body to contain 'value', got: %s", body) }
 }

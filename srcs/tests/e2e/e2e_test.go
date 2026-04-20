@@ -85,12 +85,17 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("PORT=%d", port),
 			fmt.Sprintf("STATE_DIR=%s", stateDir),
 			"REDIS_URL=",
-			"DATABASE_URL=",
+			// Use a unique per-test-instance SQLite database so that parallel
+			// test binaries (--local_test_jobs=4) do not share the same file
+			// and collide on migrations.
+			fmt.Sprintf("DATABASE_URL=sqlite://%s/ohc.db", stateDir),
+			fmt.Sprintf("OHC_RUNTIME_DIR=%s/runtime", stateDir),
 			// Point the OHC server at the in-process fake LLM so tests are
 			// deterministic and do not require a live AI API key.
 			fmt.Sprintf("OHC_LOCAL_LLM_ENDPOINT=%s/api/chat", llmURL),
 			fmt.Sprintf("OHC_LOCAL_LLM_EMBED_ENDPOINT=%s/api/embeddings", llmURL),
 			"OHC_LLM_PROVIDER=ollama",
+			"CI=true",
 		)
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr

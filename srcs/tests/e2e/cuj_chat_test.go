@@ -197,13 +197,9 @@ func TestChatAPIHealthzReturns200(t *testing.T) {
 func TestChatAPIUnauthorizedRequestReturns401(t *testing.T) {
 	assertAPIHealthy(t)
 	// Make a request without auth header
-	resp, err := apiPOSTForm(t, "/api/messages", map[string]string{
+	resp := apiPOSTForm(t, "/api/messages", map[string]string{
 		"content": "unauth",
 	})
-	if err != nil {
-		t.Logf("unauth request error (expected): %v", err)
-		return
-	}
 	defer resp.Body.Close()
 	if resp.StatusCode == 200 {
 		// Some servers might accept without auth (standalone mode)
