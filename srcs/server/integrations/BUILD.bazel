@@ -28,7 +28,6 @@ go_test(
         "minimax_e2e_test.go",
         "registry_test.go",
     ],
-    embed = [":integrations"],
     deps = [
         "//srcs/server/auth",
         "//srcs/server/billing",
@@ -36,5 +35,6 @@ go_test(
         "//srcs/server/domain",
         "//srcs/server/integrations/chatwoot",
         "//srcs/server/orchestration",
-    ],
+        ],
+    embed = [":integrations"],
 )
