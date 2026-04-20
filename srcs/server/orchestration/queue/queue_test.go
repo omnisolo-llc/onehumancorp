@@ -1,6 +1,9 @@
 package queue
 
 import (
+	"database/sql"
+	"time"
+
 	"context"
 	"testing"
 
@@ -165,4 +168,147 @@ func TestQueueManager(t *testing.T) {
 		t.Fatalf("expected nil job, got %v", polledJob2)
 	}
 }
-// added for Sub-Agent Orchestration Queue
+
+
+// added for Sub-Agent Orchestration Queue - issue_id: 4240
+
+func TestQueueManager_Postgres(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	mockProvider := &mockPostgresProvider{Provider: provider}
+	ctx := context.Background()
+
+	schema := `
+	CREATE TABLE IF NOT EXISTS sub_agent_queue (
+		id TEXT PRIMARY KEY,
+		organization_id TEXT NOT NULL,
+		parent_task_id TEXT NOT NULL,
+		payload JSONB,
+		status TEXT NOT NULL DEFAULT 'QUEUED',
+		worker_id TEXT,
+		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+	_, err := mockProvider.Exec(ctx, schema)
+	if err != nil {
+		t.Fatalf("failed to create schema: %v", err)
+	}
+
+	qm := NewQueueManager(mockProvider)
+
+	job := &SubAgentJob{
+		ID:             "job-pg-1",
+		OrganizationID: "org-1",
+		ParentTaskID:   "task-1",
+		Payload:        map[string]interface{}{"key": "value"},
+	}
+
+	err = qm.Enqueue(ctx, job)
+	if err != nil {
+		t.Fatalf("failed to enqueue: %v", err)
+	}
+
+	jobInvalid := &SubAgentJob{
+		ID:             "job-pg-2",
+		OrganizationID: "org-1",
+		ParentTaskID:   "task-1",
+		Payload:        map[string]interface{}{"key": make(chan int)},
+	}
+	err = qm.Enqueue(ctx, jobInvalid)
+	if err == nil {
+		t.Fatalf("expected error on enqueue invalid json")
+	}
+
+	polledJob, err := qm.Poll(ctx, "worker-1")
+	if err == nil {
+		t.Fatalf("expected error because sqlite doesn't support SKIP LOCKED, got %v", polledJob)
+	}
+}
+
+type mockPostgresProvider struct {
+	db.Provider
+}
+
+func (m *mockPostgresProvider) IsSQLite() bool {
+	return false
+}
+
+type mockRow struct {
+	err error
+	scanFunc func(dest ...any) error
+}
+
+func (m *mockRow) Scan(dest ...any) error {
+	if m.err != nil {
+		return m.err
+	}
+	if m.scanFunc != nil {
+		return m.scanFunc(dest...)
+	}
+	return nil
+}
+
+type mockPostgresProviderPoll struct {
+	db.Provider
+	err error
+	scanFunc func(dest ...any) error
+}
+
+func (m *mockPostgresProviderPoll) IsSQLite() bool {
+	return false
+}
+
+func (m *mockPostgresProviderPoll) QueryRow(ctx context.Context, query string, args ...any) db.Row {
+	return &mockRow{err: m.err, scanFunc: m.scanFunc}
+}
+
+func TestQueueManager_Postgres_Poll_Success(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	mockProvider := &mockPostgresProviderPoll{
+		Provider: provider,
+		scanFunc: func(dest ...any) error {
+			*dest[0].(*string) = "pg-id"
+			*dest[1].(*string) = "org"
+			*dest[2].(*string) = "task"
+			*dest[3].(*string) = `{"key":"pg-val"}`
+			*dest[4].(*string) = "RUNNING"
+			*dest[5].(*sql.NullString) = sql.NullString{String: "worker-1", Valid: true}
+			*dest[6].(*time.Time) = time.Now()
+			*dest[7].(*time.Time) = time.Now()
+			return nil
+		},
+	}
+
+	qm := NewQueueManager(mockProvider)
+	ctx := context.Background()
+
+	polledJob, err := qm.Poll(ctx, "worker-1")
+	if err != nil {
+		t.Fatalf("expected success, got %v", err)
+	}
+	if polledJob == nil {
+		t.Fatalf("expected job, got nil")
+	}
+	if polledJob.ID != "pg-id" {
+		t.Fatalf("expected pg-id, got %v", polledJob.ID)
+	}
+}
+
+func TestQueueManager_Postgres_Poll_NoRows(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	mockProvider := &mockPostgresProviderPoll{
+		Provider: provider,
+		err: sql.ErrNoRows,
+	}
+
+	qm := NewQueueManager(mockProvider)
+	ctx := context.Background()
+
+	polledJob, err := qm.Poll(ctx, "worker-1")
+	if err != nil {
+		t.Fatalf("expected nil err, got %v", err)
+	}
+	if polledJob != nil {
+		t.Fatalf("expected nil job, got %v", polledJob)
+	}
+}
