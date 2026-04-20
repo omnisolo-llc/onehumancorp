@@ -8,15 +8,15 @@ import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
 
-class SpecialistOnboardingWizardScreen extends ConsumerStatefulWidget {
-  const SpecialistOnboardingWizardScreen({super.key});
+class AgentHireWizardScreen extends ConsumerStatefulWidget {
+  const AgentHireWizardScreen({super.key});
 
   @override
-  ConsumerState<SpecialistOnboardingWizardScreen> createState() =>
-      _SpecialistOnboardingWizardScreenState();
+  ConsumerState<AgentHireWizardScreen> createState() =>
+      _AgentHireWizardScreenState();
 }
 
-class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnboardingWizardScreen> {
+class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   Offset _mainNodePos = const Offset(50, 50);
   Offset _subNodePos = const Offset(200, 50);
   int _step = 0;
@@ -107,7 +107,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-          'Specialist ${_nameController.text} onboarded successfully!',
+                'Agent ${_nameController.text} hired successfully!',
               ),
             ),
           );
@@ -117,7 +117,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to onboard specialist: $e'),
+            content: Text('Failed to hire agent: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -133,7 +133,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Onboard New Specialist',
+          'Hire New Agent',
           style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
         ),
         leading: IconButton(
@@ -178,9 +178,9 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                   )
                 else
                   Semantics(
-                    label: 'Launch the configured specialist',
+                    label: 'Deploy the configured agent',
                     child: Tooltip(
-                      message: 'Add specialist to your company network',
+                      message: 'Deploy agent to orchestration hub',
                       child: ElevatedButton(
                         onPressed: _isDeploying ? null : _handleDeploy,
                         child:
@@ -192,7 +192,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                                     strokeWidth: 2,
                                   ),
                                 )
-                                : const Text('Activate Specialist'),
+                                : const Text('Deploy Agent'),
                       ),
                     ),
                   ),
@@ -220,12 +220,12 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 1 — Select Specialist Role',
+                  'Step 1 — Select Agent Role',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Choose the primary expertise profile for this new specialist.',
+                  'Choose the primary capability profile for this new agent.',
                 ),
                 const SizedBox(height: 24),
                 Wrap(
@@ -260,11 +260,11 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 2 — Choose AI Service',
+                  'Step 2 — Choose AI Provider',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text('Select the AI service that will power this specialist.'),
+                const Text('Select the AI backend that will power this agent.'),
                 const SizedBox(height: 16),
                 if (_isLoading)
                   Center(
@@ -278,7 +278,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                 else if (_providers.isEmpty)
                   const Center(
                     child: Text(
-                      'No AI services available. Please configure one in Settings.',
+                      'No AI providers available. Please configure one in Integrations.',
                     ),
                   )
                 else
@@ -302,14 +302,14 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 3 — Specialist Details',
+                  'Step 3 — Agent Details',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: _nameController,
                   decoration: const InputDecoration(
-                    labelText: 'Specialist Name',
+                    labelText: 'Agent Name',
                     border: OutlineInputBorder(),
                     hintText: 'e.g. Senior Software Engineer',
                   ),
@@ -318,24 +318,24 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                 ListTile(
                   leading: const Icon(Icons.info_outline),
                   title: const Text(
-                    'This name will appear in professional transcripts and the org chart.',
+                    'This name will appear in transcripts and the org chart.',
                   ),
                 ),
               ],
             ),
           ),
           Step(
-            title: const Text('Ops Structure'),
+            title: const Text('Topology'),
             isActive: _step >= 3,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 4 — Work Style',
+                  'Step 4 — Sub-agent Topology',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text('How does this specialist interact with others?'),
+                const Text('How does this agent interact with others?'),
                 const SizedBox(height: 16),
                 RadioListTile<String>(
                   title: const Text('Independent Worker'),
@@ -347,7 +347,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                 RadioListTile<String>(
                   title: const Text('Delegator / Supervisor'),
                   subtitle: const Text(
-                    'Can collaborate with other specialists for complex tasks.',
+                    'Can ask other agents for help (e.g. asking the Code Builder).',
                   ),
                   value: 'Delegator',
                   groupValue: _topologyPreset,
@@ -401,9 +401,9 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                               ),
                               child: const Column(
                                 children: [
-                                  Icon(Icons.person, color: Colors.white, size: 24),
+                                  Icon(Icons.smart_toy, color: Colors.white, size: 24),
                                   SizedBox(height: 4),
-                                  Text('New Specialist', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center,),
+                                  Text('This Agent', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center,),
                                 ],
                               ),
                             ),
@@ -456,27 +456,27 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 5 — Permissions',
+                  'Step 5 — Select Capabilities',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text('What access should this specialist have?'),
+                const Text('What permissions should this agent have?'),
                 const SizedBox(height: 16),
                 CheckboxListTile(
                   title: const Text('Read my emails'),
-                  subtitle: const Text('Can read your emails'),
+                  subtitle: const Text('Grants EMAIL_READ permission'),
                   value: _capEmailRead,
                   onChanged: (val) => setState(() => _capEmailRead = val!),
                 ),
                 CheckboxListTile(
                   title: const Text('Send messages on my behalf'),
-                  subtitle: const Text('Can send messages for you'),
+                  subtitle: const Text('Grants MESSAGING_SEND permission'),
                   value: _capMessagingSend,
                   onChanged: (val) => setState(() => _capMessagingSend = val!),
                 ),
                 CheckboxListTile(
                   title: const Text('Access business data'),
-                  subtitle: const Text('Can access your business information'),
+                  subtitle: const Text('Grants DATA_ACCESS permission'),
                   value: _capDataAccess,
                   onChanged: (val) => setState(() => _capDataAccess = val!),
                 ),
@@ -493,7 +493,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Step 6 — Workload',
+                      'Step 6 — Resource Limits',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -503,7 +503,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text('Set how much work this specialist can handle.'),
+                const Text('How much should this agent work per day?'),
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -530,14 +530,14 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                 if (expertMode) ...[
                   const SizedBox(height: 24),
                   const Text(
-                    'Advanced Options',
+                    'Advanced Configuration',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: _endpointUrlController,
                     decoration: const InputDecoration(
-                      labelText: 'Custom Connection Address (Optional)',
+                      labelText: 'Custom Endpoint URL (Optional)',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -545,7 +545,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                   TextField(
                     controller: _tokenLimitController,
                     decoration: const InputDecoration(
-                      labelText: 'Spending Limit (Optional)',
+                      labelText: 'Token Limit (Optional)',
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
@@ -555,18 +555,18 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
             ),
           ),
           Step(
-            title: const Text('Review'),
+            title: const Text('Confirm'),
             isActive: _step >= 6,
             content: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 7 — Review and Activate',
+                  'Step 7 — Confirm Deployment',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Semantics(
-                  label: 'Review specialist activation summary',
+                  label: 'Confirm deployment summary',
                   child: GlassCard(
                     child: ListTile(
                         leading: CircleAvatar(
@@ -619,7 +619,7 @@ class _SpecialistOnboardingWizardScreenState extends ConsumerState<SpecialistOnb
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'This specialist will be securely provisioned and added to your company workforce structure immediately.',
+                  'This agent will be immediately provisioned with a SPIFFE identity, connected to the orchestration hub, and assigned to the default org chart branch.',
                   style: TextStyle(
                     color: Theme.of(
                       context,

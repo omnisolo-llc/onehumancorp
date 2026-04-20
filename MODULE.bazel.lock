@@ -316,7 +316,7 @@
   "moduleExtensions": {
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
-        "bzlTransitiveDigest": "96u1yJrVkcyTmeaomJxs7yVM+SEG2UC+3Gn6Li9F9GU=",
+        "bzlTransitiveDigest": "JkH1eDZCQD5f/N2wbACZXFt269f5zRFtw1vsk/vr8SQ=",
         "usagesDigest": "oUw6GuSrFUfs77OVGTbgKitMUJvsMzzqPeJUgim32og=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -325,12 +325,12 @@
           "google_protobuf_dart": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "sha256": "cae253935cb6d372a3df34bbbe82c3044f067e088d5216ac1f645c36b596a6ad",
-              "strip_prefix": "protobuf.dart-protoc_plugin-v25.0.0/protoc_plugin",
+              "sha256": "e83ae3109872f66d495437e98519c5ddc2e8369cb6aa393768ba50daf0bffa41",
+              "strip_prefix": "protobuf.dart-protoc_plugin-v23.0.0/protoc_plugin",
               "urls": [
-                "https://github.com/google/protobuf.dart/archive/refs/tags/protoc_plugin-v25.0.0.tar.gz"
+                "https://github.com/google/protobuf.dart/archive/refs/tags/protoc_plugin-v23.0.0.tar.gz"
               ],
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nfilegroup(\n    name = \"protoc_plugin_srcs\",\n    srcs = glob([\"**\"]),\n)\n\nfilegroup(\n    name = \"protoc_plugin_files\",\n    srcs = glob([\"**\"]),\n)"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nfilegroup(\n    name = \"protoc_plugin_srcs\",\n    srcs = glob([\"**\"]),\n)\n\n# We use the host's dart (provided by @flutter_sdk//:dart) to compile this.\n# Note: In a full hermetic build, you'd use a dart_binary rule, but since we are\n# bootstrapped by rules_flutter, we use an action or genrule.\ngenrule(\n    name = \"protoc_plugin_bin\",\n    srcs = [\n        \":protoc_plugin_srcs\",\n        \"bin/protoc_plugin.dart\",\n        \"@pub_collection//:collection_files\",\n        \"@pub_fixnum//:fixnum_files\",\n        \"@pub_meta//:meta_files\",\n        \"@pub_path//:path_files\",\n        \"@pub_protobuf_v5//:protobuf_files\",\n    ],\n    outs = [\"protoc-gen-dart\"],\n    cmd = \"export HOME=/tmp && \" +\n          \"SRC_REPO=external/+proto_deps_extension+google_protobuf_dart && \" +\n          \"WORK_REPO=google_protobuf_dart.work && \" +\n          \"rm -rf $$WORK_REPO && cp -LR $$SRC_REPO $$WORK_REPO && chmod -R u+w $$WORK_REPO && \" +\n          \"mkdir -p $$WORK_REPO/.dart_tool && \" +\n          \"printf 'String format(String source) => source;\\n' > $$WORK_REPO/lib/src/formatter.dart && \" +\n          \"echo '{\\\"configVersion\\\": 2,\\\"packages\\\": [\" +\n          \"{\\\"name\\\": \\\"protoc_plugin\\\", \\\"rootUri\\\": \\\"../\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"collection\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_collection\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"fixnum\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_fixnum\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"meta\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_meta\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"path\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_path\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"protobuf\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_protobuf_v5\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"}\" +\n          \"]}' > $$WORK_REPO/.dart_tool/package_config.json && \" +\n          \"$(location @flutter_sdk//:dart) compile exe $$WORK_REPO/bin/protoc_plugin.dart -o $@\",\n    executable = True,\n    tools = [\"@flutter_sdk//:dart\"],\n)"
             }
           }
         }
@@ -357,6 +357,79 @@
         }
       }
     },
+    "@@protobuf+//python/dist:system_python.bzl%system_python_extension": {
+      "general": {
+        "bzlTransitiveDigest": "qh0n9IrXU/xS94wxKQrG1J63zrLkA1Wy2Y3BQxptPcI=",
+        "usagesDigest": "AF5a9lHFrJtHw1GTt3jJOs7ZYl1+N2bkn1LbPFLoguA=",
+        "recordedInputs": [],
+        "generatedRepoSpecs": {
+          "system_python": {
+            "repoRuleId": "@@protobuf+//python/dist:system_python.bzl%system_python",
+            "attributes": {
+              "minimum_python_version": "3.9"
+            }
+          }
+        }
+      }
+    },
+    "@@pybind11_bazel+//:internal_configure.bzl%internal_configure_extension": {
+      "general": {
+        "bzlTransitiveDigest": "06cynZ1bCvvy8zHPrrDlXq+Z68xmjctHpfFxi+zEpJY=",
+        "usagesDigest": "D1r3lfzMuUBFxgG8V6o0bQTLMk3GkaGOaPzw53wrwyw=",
+        "recordedInputs": [
+          "REPO_MAPPING:pybind11_bazel+,bazel_tools bazel_tools",
+          "FILE:@@pybind11_bazel+//MODULE.bazel e6f4c20442eaa7c90d7190d8dc539d0ab422f95c65a57cc59562170c58ae3d34"
+        ],
+        "generatedRepoSpecs": {
+          "pybind11": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "build_file": "@@pybind11_bazel+//:pybind11-BUILD.bazel",
+              "strip_prefix": "pybind11-2.12.0",
+              "urls": [
+                "https://github.com/pybind/pybind11/archive/v2.12.0.zip"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "@@rules_android+//bzlmod_extensions:apksig.bzl%apksig_extension": {
+      "general": {
+        "bzlTransitiveDigest": "KrgiB8lWxqVdbipL9YIYOuGjS80xlZIM/EBvUg8SVd0=",
+        "usagesDigest": "zr/niBQ/s2fHozWAsg4vI70wAxcuFjG+QtM15qGkq9o=",
+        "recordedInputs": [
+          "REPO_MAPPING:rules_android+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "apksig": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "url": "https://android.googlesource.com/platform/tools/apksig/+archive/24e3075e68ebe17c0b529bb24bfda819db5e2f3b.tar.gz",
+              "build_file": "@@rules_android+//bzlmod_extensions:apksig.BUILD"
+            }
+          }
+        }
+      }
+    },
+    "@@rules_android+//bzlmod_extensions:com_android_dex.bzl%com_android_dex_extension": {
+      "general": {
+        "bzlTransitiveDigest": "WYXjwqaZbEnV+ZWsKE3oDMpF5XVw8hxzet83NtyT8TM=",
+        "usagesDigest": "c1Y/KGGjUYCyd8zNIVTUh1bynVXRFz6xGKaSCBpQANM=",
+        "recordedInputs": [
+          "REPO_MAPPING:rules_android+,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "com_android_dex": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "url": "https://android.googlesource.com/platform/dalvik/+archive/5a81c499a569731e2395f7c8d13c0e0d4e17a2b6.tar.gz",
+              "build_file": "@@rules_android+//bzlmod_extensions:com_android_dex.BUILD"
+            }
+          }
+        }
+      }
+    },
     "@@rules_android+//rules/android_sdk_repository:rule.bzl%android_sdk_repository_extension": {
       "general": {
         "bzlTransitiveDigest": "+rMrzIrv7sImYmkbXJYv+gFpTJQ79X3MpwwMLI2A+oA=",
@@ -372,29 +445,29 @@
     },
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
-        "bzlTransitiveDigest": "j8m3lx6A4D72MhANI4XYvgxqARWGMbIj/GoiTDWi4tM=",
-        "usagesDigest": "4TSmEzjj0CIsE8KzjzEJyZD1HqvMEpIQ1Q8qQyiG49g=",
+        "bzlTransitiveDigest": "n7ikY1+oP7Nssu8MICB1PWFz7miMTtiZuw8PZ+8UIMc=",
+        "usagesDigest": "F5btLbaFKudM6oKRMAcwNR1D7Ff8aUeJBVE4v2WiJZA=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "flutter_macos": {
             "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
             "attributes": {
               "platform": "macos",
-              "flutter_version": "3.32.0"
+              "flutter_version": "3.29.3"
             }
           },
           "flutter_linux": {
             "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
             "attributes": {
               "platform": "linux",
-              "flutter_version": "3.32.0"
+              "flutter_version": "3.29.3"
             }
           },
           "flutter_windows": {
             "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
             "attributes": {
               "platform": "windows",
-              "flutter_version": "3.32.0"
+              "flutter_version": "3.29.3"
             }
           },
           "flutter_toolchains": {
@@ -414,38 +487,17 @@
     },
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
-        "bzlTransitiveDigest": "j8m3lx6A4D72MhANI4XYvgxqARWGMbIj/GoiTDWi4tM=",
-        "usagesDigest": "Lpp+m2nZ2cCV+oyexjmjH+cbXGor5zcQsiUqV+YWDLk=",
+        "bzlTransitiveDigest": "n7ikY1+oP7Nssu8MICB1PWFz7miMTtiZuw8PZ+8UIMc=",
+        "usagesDigest": "pN8S6Js9wjQ0/WJwuV27UhPOXRof5idV+4pVPO+Ukow=",
         "recordedInputs": [
-          "FILE:@@//srcs/app/pub_deps.json 791f1e9aa7097f15ba169e03d4992c94db5cc4845051cb62fae1c1766f940b29"
+          "FILE:@@//srcs/app/pub_deps.json 1560bc913a6b08cf84069fa98e0080297ffcad0db7f0c86241569f570b18360a"
         ],
         "generatedRepoSpecs": {
-          "pub__fe_analyzer_shared": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "_fe_analyzer_shared",
-              "version": "85.0.0"
-            }
-          },
-          "pub_analyzer": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "analyzer",
-              "version": "7.7.1"
-            }
-          },
-          "pub_args": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "args",
-              "version": "2.7.0"
-            }
-          },
           "pub_async": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "async",
-              "version": "2.13.0"
+              "version": "2.12.0"
             }
           },
           "pub_boolean_selector": {
@@ -459,7 +511,7 @@
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "centrifuge",
-              "version": "0.18.0"
+              "version": "0.14.1"
             }
           },
           "pub_characters": {
@@ -467,13 +519,6 @@
             "attributes": {
               "package": "characters",
               "version": "1.4.0"
-            }
-          },
-          "pub_checked_yaml": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "checked_yaml",
-              "version": "2.0.3"
             }
           },
           "pub_clock": {
@@ -490,13 +535,6 @@
               "version": "1.19.1"
             }
           },
-          "pub_convert": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "convert",
-              "version": "3.1.2"
-            }
-          },
           "pub_crypto": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
@@ -511,18 +549,11 @@
               "version": "1.0.8"
             }
           },
-          "pub_dart_style": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "dart_style",
-              "version": "3.1.8"
-            }
-          },
           "pub_fake_async": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "fake_async",
-              "version": "1.3.3"
+              "version": "1.3.2"
             }
           },
           "pub_ffi": {
@@ -560,13 +591,6 @@
               "version": "2.6.1"
             }
           },
-          "pub_glob": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "glob",
-              "version": "2.1.3"
-            }
-          },
           "pub_go_router": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
@@ -574,39 +598,11 @@
               "version": "14.8.1"
             }
           },
-          "pub_google_identity_services_web": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "google_identity_services_web",
-              "version": "0.3.3+1"
-            }
-          },
-          "pub_googleapis_auth": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "googleapis_auth",
-              "version": "2.0.0"
-            }
-          },
-          "pub_grpc": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "grpc",
-              "version": "5.1.0"
-            }
-          },
           "pub_http": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "http",
               "version": "1.6.0"
-            }
-          },
-          "pub_http2": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "http2",
-              "version": "2.3.1"
             }
           },
           "pub_http_parser": {
@@ -623,18 +619,11 @@
               "version": "0.19.0"
             }
           },
-          "pub_json_annotation": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "json_annotation",
-              "version": "4.9.0"
-            }
-          },
           "pub_leak_tracker": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "leak_tracker",
-              "version": "10.0.9"
+              "version": "10.0.8"
             }
           },
           "pub_leak_tracker_flutter_testing": {
@@ -693,46 +682,11 @@
               "version": "1.0.4"
             }
           },
-          "pub_mutex": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "mutex",
-              "version": "3.1.0"
-            }
-          },
-          "pub_package_config": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "package_config",
-              "version": "2.2.0"
-            }
-          },
           "pub_path": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "path",
               "version": "1.9.1"
-            }
-          },
-          "pub_path_provider": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "path_provider",
-              "version": "2.1.5"
-            }
-          },
-          "pub_path_provider_android": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "path_provider_android",
-              "version": "2.2.19"
-            }
-          },
-          "pub_path_provider_foundation": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "path_provider_foundation",
-              "version": "2.4.2"
             }
           },
           "pub_path_provider_linux": {
@@ -770,32 +724,11 @@
               "version": "2.1.8"
             }
           },
-          "pub_powersync": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "powersync",
-              "version": "1.18.0"
-            }
-          },
-          "pub_powersync_core": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "powersync_core",
-              "version": "1.8.0"
-            }
-          },
-          "pub_powersync_flutter_libs": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "powersync_flutter_libs",
-              "version": "0.4.15+1"
-            }
-          },
           "pub_protobuf": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "protobuf",
-              "version": "6.0.0"
+              "version": "3.1.0"
             }
           },
           "pub_protobuf_v5": {
@@ -809,21 +742,7 @@
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "protoc_plugin",
-              "version": "21.1.2"
-            }
-          },
-          "pub_pub_semver": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "pub_semver",
-              "version": "2.2.0"
-            }
-          },
-          "pub_pubspec_parse": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "pubspec_parse",
-              "version": "1.5.0"
+              "version": "21.1.1"
             }
           },
           "pub_riverpod": {
@@ -887,34 +806,6 @@
             "attributes": {
               "package": "source_span",
               "version": "1.10.1"
-            }
-          },
-          "pub_sqlite3": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "sqlite3",
-              "version": "2.9.4"
-            }
-          },
-          "pub_sqlite3_flutter_libs": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "sqlite3_flutter_libs",
-              "version": "0.5.42"
-            }
-          },
-          "pub_sqlite3_web": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "sqlite3_web",
-              "version": "0.4.1"
-            }
-          },
-          "pub_sqlite_async": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "sqlite_async",
-              "version": "0.13.1"
             }
           },
           "pub_stack_trace": {
@@ -984,35 +875,21 @@
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "vm_service",
-              "version": "15.0.0"
-            }
-          },
-          "pub_watcher": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "watcher",
-              "version": "1.2.1"
+              "version": "14.3.1"
             }
           },
           "pub_web": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "web",
-              "version": "1.1.1"
-            }
-          },
-          "pub_web_socket": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "web_socket",
-              "version": "1.0.1"
+              "version": "0.5.1"
             }
           },
           "pub_web_socket_channel": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "web_socket_channel",
-              "version": "3.0.3"
+              "version": "2.4.5"
             }
           },
           "pub_xdg_directories": {
@@ -1020,13 +897,6 @@
             "attributes": {
               "package": "xdg_directories",
               "version": "1.1.0"
-            }
-          },
-          "pub_yaml": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "yaml",
-              "version": "3.1.3"
             }
           }
         }

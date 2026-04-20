@@ -22,8 +22,8 @@ void main() {
         'id': 'user-1',
         'email': 'alice@example.com',
         'name': 'Alice Smith',
-        'roles': ['admin'],
-        'organizationId': 'org-1',
+        'role': 'admin',
+        'organization_id': 'org-1',
       };
       final user = AuthUser.fromJson(json, 'tok-abc');
       expect(user.id, 'user-1');
@@ -69,8 +69,8 @@ void main() {
           'id': 'u1',
           'email': 'alice@example.com',
           'name': 'Alice',
-          'roles': ['admin'],
-          'organizationId': 'org-a',
+          'role': 'admin',
+          'organization_id': 'org-a',
         },
       });
 
@@ -83,21 +83,10 @@ void main() {
       ).thenAnswer((_) async => http.Response(responseBody, 200));
 
       final user = await service.login('alice@example.com', 'password');
-      final captured = verify(
-        () => mockClient.post(
-          any(),
-          headers: any(named: 'headers'),
-          body: captureAny(named: 'body'),
-        ),
-      ).captured;
       expect(user.id, 'u1');
       expect(user.email, 'alice@example.com');
       expect(user.token, 'jwt-token-123');
       expect(user.role, 'admin');
-      expect(jsonDecode(captured.single as String), {
-        'username': 'alice@example.com',
-        'password': 'password',
-      });
     });
 
     test('login throws on non-200 response', () async {

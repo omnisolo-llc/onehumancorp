@@ -1,7 +1,7 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("//bazel/rules:proto_go_grpc_library.bzl", "proto_go_grpc_library")
 load("//bazel/rules:proto_ts_library.bzl", "proto_ts_library")
-load("//bazel/rules/dart:proto_dart_library.bzl", "proto_dart_library")
+load("//bazel/rules:proto_dart_library.bzl", "proto_dart_library")
 
 proto_library(
     name = "hub_proto",
@@ -24,7 +24,6 @@ proto_ts_library(
 
 proto_dart_library(
     name = "hub_dart_proto",
-    generate_domain_models = True,
     protos = ":hub_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
@@ -41,181 +40,5 @@ proto_go_grpc_library(
     name = "model_go_proto",
     protos = ":model_proto",
     importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/model",
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "model_dart_proto",
-    generate_domain_models = True,
-    protos = ":model_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-proto_library(
-    name = "common_proto",
-    srcs = ["common.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "common_dart_proto",
-    generate_domain_models = True,
-    protos = ":common_proto",
-    visibility = ["//visibility:public"],
-)
-
-proto_library(
-    name = "agent_proto",
-    srcs = ["agent.proto"],
-    deps = [":common_proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_go_grpc_library(
-    name = "agent_go_proto",
-    protos = ":agent_proto",
-    importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/agent",
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "agent_dart_proto",
-    generate_domain_models = True,
-    protos = ":agent_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-proto_library(
-    name = "app_proto",
-    srcs = ["app.proto"],
-    deps = [
-        ":agent_proto",
-        ":billing_proto",
-        ":organization_proto",
-    ],
-    visibility = ["//visibility:public"],
-)
-
-proto_go_grpc_library(
-    name = "app_go_proto",
-    protos = ":app_proto",
-    importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/api/v1",
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "app_dart_proto",
-    generate_domain_models = True,
-    protos = ":app_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-proto_library(
-    name = "billing_proto",
-    srcs = ["billing.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_go_grpc_library(
-    name = "billing_go_proto",
-    protos = ":billing_proto",
-    importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/billing",
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "billing_dart_proto",
-    generate_domain_models = True,
-    protos = ":billing_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-proto_library(
-    name = "organization_proto",
-    srcs = ["organization.proto"],
-    deps = [":common_proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_go_grpc_library(
-    name = "organization_go_proto",
-    protos = ":organization_proto",
-    importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/organization",
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "organization_dart_proto",
-    generate_domain_models = True,
-    protos = ":organization_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-proto_library(
-    name = "skills_proto",
-    srcs = ["skills.proto"],
-    deps = [":common_proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_go_grpc_library(
-    name = "skills_go_proto",
-    protos = ":skills_proto",
-    importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/skills",
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "skills_dart_proto",
-    generate_domain_models = True,
-    protos = ":skills_proto",
-    visibility = ["//visibility:public"],
-)
-
-proto_library(
-    name = "agent_service_proto",
-    srcs = ["agent_service.proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_go_grpc_library(
-    name = "agent_service_go_proto",
-    protos = ":agent_service_proto",
-    importpath = "github.com/onehumancorp/mono/srcs/proto/agentservice",
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "agent_service_dart_proto",
-    generate_domain_models = True,
-    protos = ":agent_service_proto",
-    use_grpc = True,
-    visibility = ["//visibility:public"],
-)
-
-proto_library(
-    name = "user_proto",
-    srcs = ["user.proto"],
-    deps = ["@protobuf//:timestamp_proto"],
-    visibility = ["//visibility:public"],
-)
-
-proto_go_grpc_library(
-    name = "user_go_proto",
-    protos = ":user_proto",
-    importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/auth",
-    visibility = ["//visibility:public"],
-)
-
-proto_dart_library(
-    name = "user_dart_proto",
-    generate_domain_models = True,
-    protos = ":user_proto",
-    use_grpc = False,
     visibility = ["//visibility:public"],
 )
