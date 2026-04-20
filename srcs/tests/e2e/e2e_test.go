@@ -43,12 +43,19 @@ func findOhcBinary() string {
 
 // freePort returns an available TCP port on localhost.
 func freePort() int {
-	l, err := net.Listen("tcp", ":0")
-	if err != nil {
-		return 18080
+	// Use a random port to avoid race conditions when multiple test binaries
+	// call freePort() simultaneously.
+	for i := 0; i < 10; i++ {
+		// Pick a random port between 20000 and 60000
+		port := 20000 + (time.Now().Nanosecond() % 40000)
+		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			l.Close()
+			return port
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port
+	return 18080
 }
 
 func TestMain(m *testing.M) {
@@ -84,6 +91,7 @@ func TestMain(m *testing.M) {
 			"OHC_SERVE_UI=true",
 			fmt.Sprintf("PORT=%d", port),
 			fmt.Sprintf("STATE_DIR=%s", stateDir),
+			fmt.Sprintf("OHC_RUNTIME_DIR=%s", stateDir),
 			"REDIS_URL=",
 			// Use a unique per-test-instance SQLite database so that parallel
 			// test binaries (--local_test_jobs=4) do not share the same file
