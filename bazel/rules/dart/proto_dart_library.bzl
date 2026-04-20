@@ -129,6 +129,9 @@ def _proto_dart_library_impl(ctx):
             transitive = [
                 proto_info.transitive_sources,
                 ctx.attr._plugin_srcs.files,
+                ctx.attr._collection_pkg.files,
+                ctx.attr._dart_style_pkg.files,
+                ctx.attr._pub_semver_pkg.files,
                 ctx.attr._protobuf_pkg.files,
                 ctx.attr._fixnum_pkg.files,
                 ctx.attr._path_pkg.files,
