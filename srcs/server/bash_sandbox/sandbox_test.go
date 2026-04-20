@@ -154,3 +154,25 @@ func TestSandboxViolationStore_Execution(t *testing.T) {
 		t.Errorf("Expected error to contain 'Operation not permitted', got '%s'", violations[0].Error)
 	}
 }
+
+func TestSandboxValidation_AST(t *testing.T) {
+	sandbox := NewSandbox().(*LocalEnvironment)
+
+	tests := []struct {
+		name    string
+		command string
+		wantErr bool
+	}{
+		{"zmodload command", "zmodload zsh/net/tcp", true},
+		{"process substitution", "cat <(ls)", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := sandbox.ValidateContext(context.Background(), tt.command)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

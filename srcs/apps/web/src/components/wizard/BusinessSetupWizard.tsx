@@ -3,6 +3,24 @@ import { theme } from '../../styles/theme';
 
 const BusinessSetupWizard = () => {
   const [step, setStep] = useState(1);
+  const [expertMode, setExpertMode] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('expertMode');
+      if (saved === 'true') {
+        setExpertMode(true);
+      }
+    }
+  }, []);
+
+  const handleExpertModeToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setExpertMode(checked);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('expertMode', checked.toString());
+    }
+  };
   const [profile, setProfile] = useState({ name: '', industry: '', size: '', language: '' });
   const [goals, setGoals] = useState<string[]>([]);
   const [deployment, setDeployment] = useState('cloud');
@@ -115,6 +133,19 @@ const BusinessSetupWizard = () => {
           <button aria-label="Launch" title="Launch your AI team" onClick={launch} disabled={isLoading}>{isLoading ? 'Launching...' : 'Launch My AI Team >'}</button>
         </div>
       )}
+
+      <div style={{ marginTop: '20px' }}>
+        <label>
+          <input type="checkbox" checked={expertMode} onChange={handleExpertModeToggle} />
+          Expert Mode
+        </label>
+        {expertMode && (
+          <div style={{ ...theme.glassmorphism, padding: '10px', marginTop: '10px', fontFamily: 'monospace', borderRadius: '8px' }}>
+            <p>Raw Config Fields Revealed</p>
+            <pre>{JSON.stringify({ profile, goals, deployment, admin }, null, 2)}</pre>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
