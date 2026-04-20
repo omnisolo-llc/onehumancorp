@@ -15,10 +15,6 @@ type mockProvider struct {
 	syncDownErr    error
 	statusResult   map[string]interface{}
 	statusErr      error
-	crdtPushResult map[string]interface{}
-	crdtPushErr    error
-	crdtPullResult map[string]interface{}
-	crdtPullErr    error
 }
 
 func (m *mockProvider) SyncUp(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error) {
@@ -33,20 +29,12 @@ func (m *mockProvider) GetStatus(ctx context.Context, claims *auth.Claims) (map[
 	return m.statusResult, m.statusErr
 }
 
-func (m *mockProvider) CRDTPush(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error) {
-	return m.crdtPushResult, m.crdtPushErr
-}
-
-func (m *mockProvider) CRDTPull(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error) {
-	return m.crdtPullResult, m.crdtPullErr
-}
-
 func TestListTools(t *testing.T) {
 	mcp := NewStateSyncMCP(&mockProvider{}, true)
 	tools := mcp.ListTools()
 
-	if len(tools) != 5 {
-		t.Fatalf("expected 5 tools, got %d", len(tools))
+	if len(tools) != 3 {
+		t.Fatalf("expected 3 tools, got %d", len(tools))
 	}
 
 	names := map[string]bool{}
@@ -54,7 +42,7 @@ func TestListTools(t *testing.T) {
 		names[tool.Name] = true
 	}
 
-	for _, name := range []string{"sync_local_to_cloud", "sync_cloud_to_local", "get_sync_status", "crdt_push", "crdt_pull"} {
+	for _, name := range []string{"sync_local_to_cloud", "sync_cloud_to_local", "get_sync_status"} {
 		if !names[name] {
 			t.Errorf("missing tool: %s", name)
 		}
@@ -187,52 +175,4 @@ func (m *mockDBProvider) SearchMemories(ctx context.Context, organizationID stri
 
 func (m *mockDBProvider) IsSQLite() bool {
 	return m.isSQLite
-}
-
-func TestCallTool_CRDTPush(t *testing.T) {
-	expectedRes := map[string]interface{}{"status": "success", "synced_count": 2}
-	provider := &mockProvider{
-		crdtPushResult: expectedRes,
-	}
-
-	mcp := NewStateSyncMCP(provider, true)
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
-
-	res, err := mcp.CallTool(ctx, "crdt_push", nil)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-
-	resMap, ok := res.(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected map response")
-	}
-
-	if resMap["synced_count"] != 2 {
-		t.Errorf("expected count 2, got %v", resMap["synced_count"])
-	}
-}
-
-func TestCallTool_CRDTPull(t *testing.T) {
-	expectedRes := map[string]interface{}{"status": "success"}
-	provider := &mockProvider{
-		crdtPullResult: expectedRes,
-	}
-
-	mcp := NewStateSyncMCP(provider, true)
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
-
-	res, err := mcp.CallTool(ctx, "crdt_pull", nil)
-	if err != nil {
-		t.Fatalf("expected no error, got: %v", err)
-	}
-
-	resMap, ok := res.(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected map response")
-	}
-
-	if resMap["status"] != "success" {
-		t.Errorf("expected status 'success', got %v", resMap["status"])
-	}
 }
