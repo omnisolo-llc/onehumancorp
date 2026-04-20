@@ -243,28 +243,22 @@ func TestClaimTaskDag(t *testing.T) {
             organization_id TEXT NOT NULL,
             title TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'PENDING',
-            assigned_agent_id TEXT,
-            dependencies TEXT
+            agent_id TEXT
         )
     `)
     if err != nil { t.Fatalf("failed to create: %v", err) }
 
     _, err = dbProvider.Exec(ctx, `
-        CREATE TABLE IF NOT EXISTS state_machine_transitions (
-            id TEXT PRIMARY KEY,
-            entity_id TEXT NOT NULL,
-            entity_type TEXT NOT NULL,
-            from_state TEXT NOT NULL,
-            to_state TEXT NOT NULL,
-            agent_id TEXT,
-            reason TEXT,
-            occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        CREATE TABLE IF NOT EXISTS task_dependencies (
+            task_id TEXT NOT NULL,
+            depends_on_task_id TEXT NOT NULL
         )
     `)
-    if err != nil { t.Fatalf("failed to create state_machine_transitions: %v", err) }
+    if err != nil { t.Fatalf("failed to create: %v", err) }
 
-    dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'Test 1', 'COMPLETED', '[]')")
-    dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test 2', 'PENDING', '[\"task-1\"]')")
+    dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task-1', 'org-1', 'Test 1', 'COMPLETED')")
+    dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task-2', 'org-1', 'Test 2', 'PENDING')")
+    dbProvider.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('task-2', 'task-1')")
 
     to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
     task, err := to.ClaimTask(ctxWithClaims, "agent-1")
