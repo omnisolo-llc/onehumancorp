@@ -198,8 +198,6 @@ class _SkillCardState extends State<_SkillCard> {
   Widget build(BuildContext context) {
     final s = widget.skill;
     final colors = Theme.of(context).colorScheme;
-    final isReadOnlySkillPack =
-        s.version == '0.0.0' && !_installed && !_enabled;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -227,57 +225,35 @@ class _SkillCardState extends State<_SkillCard> {
                             color: colors.onSurface,
                           ),
                         ),
-                        if (s.version != '0.0.0') ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            'v${s.version}',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              color: colors.onSurfaceVariant,
-                              fontSize: 12,
-                            ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'v${s.version}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            color: colors.onSurfaceVariant,
+                            fontSize: 12,
                           ),
-                        ],
+                        ),
                         const Spacer(),
-                        if (isReadOnlySkillPack)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.secondaryContainer,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(
-                              'Imported Pack',
-                              style: TextStyle(
-                                color: colors.onSecondaryContainer,
-                                fontWeight: FontWeight.w600,
+                        if (_installed)
+                          Switch(
+                            value: _enabled,
+                            onChanged: _busy ? null : _toggleEnable,
+                          ),
+                        const SizedBox(width: 8),
+                        _busy
+                            ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : OutlinedButton(
+                              onPressed: _toggleInstall,
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: colors.primary.withValues(alpha: 0.5)),
                               ),
+                              child: Text(_installed ? 'Remove' : 'Install'),
                             ),
-                          )
-                        else ...[
-                          if (_installed)
-                            Switch(
-                              value: _enabled,
-                              onChanged: _busy ? null : _toggleEnable,
-                            ),
-                          const SizedBox(width: 8),
-                          _busy
-                              ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                              : OutlinedButton(
-                                onPressed: _toggleInstall,
-                                style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: colors.primary.withValues(alpha: 0.5)),
-                                ),
-                                child: Text(_installed ? 'Remove' : 'Install'),
-                              ),
-                        ],
                       ],
                     ),
                     if (s.description.isNotEmpty) ...[

@@ -67,11 +67,11 @@ func (c *Claims) HasRole(role string) bool {
 func (s *Store) IssueToken(u *User) (string, error) {
 	now := time.Now().UTC()
 	claims := Claims{
-		Subject:        u.Metadata.Id,
-		Username:       u.Metadata.Username,
-		Email:          u.Metadata.Email,
-		Roles:          append([]string(nil), u.Metadata.Roles...),
-		OrganizationID: u.Metadata.OrganizationId,
+		Subject:        u.ID,
+		Username:       u.Username,
+		Email:          u.Email,
+		Roles:          append([]string(nil), u.Roles...),
+		OrganizationID: u.OrganizationID,
 		IssuedAt:       now.Unix(),
 		Expires:        now.Add(tokenTTL).Unix(),
 		TokenID:        generateID(),
