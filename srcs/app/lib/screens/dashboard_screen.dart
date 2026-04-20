@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/widgets/swarm_observability_widget.dart';
+import 'package:ohc_app/widgets/swarm_observability_widget.dart'; // This file will be renamed in the next step, but currently defines WorkforceInsightsWidget
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
@@ -108,7 +108,7 @@ class _DashboardContent extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text("What's new ✨", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
-                          const Text("OHC v2.4 is available. Upgrade now for 2x faster orchestration.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                          const Text("OHC v2.4 is available. Upgrade now for 2x faster performance.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
                         ],
                       ),
                     ),
@@ -140,9 +140,9 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Active Agents',
+              label: 'Active Team Members',
               value: data.agents.where((a) => a.isRunning).length.toString(),
-              icon: Icons.smart_toy,
+              icon: Icons.people,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
@@ -158,20 +158,20 @@ class _DashboardContent extends StatelessWidget {
               color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
-              label: 'Total Org Members',
+              label: 'Total Staff',
               value: data.organization.members.length.toString(),
-              icon: Icons.people,
+              icon: Icons.groups_3,
               color: Theme.of(context).colorScheme.primaryContainer,
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ],
         ),
         const SizedBox(height: 32),
-        _SectionTitle('System Observability'),
+        _SectionTitle('Business Insights'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
-        const SwarmObservabilityWidget(),
+        const WorkforceInsightsWidget(),
         const SizedBox(height: 16),
         const HybridObservabilityWidget(),
         const SizedBox(height: 16),
@@ -205,10 +205,10 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),
-        _SectionTitle('Company Structure'),
+        _SectionTitle('Team Structure'),
         const SizedBox(height: 8),
         Text(
-          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
+          'Manage your staff allocation. Scale departments up or down to match current business demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontFamily: 'Inter',
@@ -246,9 +246,9 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'System Observability Panel',
+      label: 'System Performance Panel',
       child: Tooltip(
-        message: 'View System Health & Metrics',
+        message: 'View Operational Health & Metrics',
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
@@ -300,7 +300,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'Full-Spectrum Telemetry',
+                              'Business Performance Feed',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -317,9 +317,9 @@ class _ObservabilityWidget extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
+                            _Metric(label: 'Active Tasks', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
                             _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
+                            _Metric(label: 'Specialists', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
                       ],
@@ -363,7 +363,7 @@ class _StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            healthy ? 'System Nominal' : 'Degraded',
+            healthy ? 'Operational' : 'Attention Required',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -497,7 +497,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                                 ),
                                 const SizedBox(height: 6),
                                 Text(
-                                  '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                                  '${widget.count} Staff member${widget.count == 1 ? '' : 's'}',
                                   style: TextStyle(
                                     fontSize: 15,
                                     color: colors.onSurfaceVariant,
@@ -520,7 +520,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                               onPressed: widget.count > 0 && !_isScaling
                                   ? () => _scaleTo(widget.count - 1)
                                   : null,
-                              tooltip: 'Fire Agent',
+                              tooltip: 'Remove Position',
                             ),
                           ),
                           SizedBox(
@@ -554,7 +554,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                               onPressed: !_isScaling
                                   ? () => _scaleTo(widget.count + 1)
                                   : null,
-                              tooltip: 'Hire Agent',
+                              tooltip: 'Hire Staff',
                             ),
                           ),
                             ],

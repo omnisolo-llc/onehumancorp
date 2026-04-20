@@ -5,12 +5,20 @@ class SlideToApprove extends StatefulWidget {
   final VoidCallback onApprove;
   final VoidCallback onReject;
   final bool disabled;
+  final String trackText;
+  final String loadingText;
+  final String rejectText;
+  final String semanticsLabel;
 
   const SlideToApprove({
     super.key,
     required this.onApprove,
     required this.onReject,
     this.disabled = false,
+    this.trackText = 'Slide to Approve',
+    this.loadingText = 'Authorizing...',
+    this.rejectText = 'Reject Request',
+    this.semanticsLabel = 'Slide to Approve',
   });
 
   @override
@@ -88,7 +96,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              'Authorizing...',
+                              widget.loadingText,
                               style: TextStyle(
                                 color: colors.primary.withValues(alpha: 0.7),
                                 fontWeight: FontWeight.w500,
@@ -97,7 +105,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                           ],
                         )
                         : Text(
-                          'Slide to Approve',
+                          widget.trackText,
                           style: TextStyle(
                             color: colors.onSurfaceVariant.withValues(alpha: 0.5),
                             fontWeight: FontWeight.w500,
@@ -132,7 +140,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                 bottom: 4,
                 child: Semantics(
                   button: true,
-                  label: 'Slide to Approve',
+                  label: widget.semanticsLabel,
                   child: GestureDetector(
                     onHorizontalDragUpdate: _handleDragUpdate,
                     onHorizontalDragEnd: _handleDragEnd,
@@ -187,7 +195,7 @@ class _SlideToApproveState extends State<SlideToApprove> {
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
-            child: const Text('Reject Request'),
+            child: Text(widget.rejectText),
           ),
         ),
       ],
