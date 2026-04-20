@@ -415,9 +415,9 @@
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
         "bzlTransitiveDigest": "j8m3lx6A4D72MhANI4XYvgxqARWGMbIj/GoiTDWi4tM=",
-        "usagesDigest": "Lpp+m2nZ2cCV+oyexjmjH+cbXGor5zcQsiUqV+YWDLk=",
+        "usagesDigest": "xID8q9S7avymCpdCdZB7aEyamZKXmFxPWBCAmrDSWm8=",
         "recordedInputs": [
-          "FILE:@@//srcs/app/pub_deps.json 791f1e9aa7097f15ba169e03d4992c94db5cc4845051cb62fae1c1766f940b29"
+          "FILE:@@//srcs/app/pub_deps.json 290da319b646eefaa3fc62a54d34116bacc6e23fcc8227df81ec735ca0e3d859"
         ],
         "generatedRepoSpecs": {
           "pub__fe_analyzer_shared": {
@@ -809,7 +809,7 @@
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "protoc_plugin",
-              "version": "21.1.2"
+              "version": "25.0.0"
             }
           },
           "pub_pub_semver": {
