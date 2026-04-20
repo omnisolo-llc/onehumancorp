@@ -41,8 +41,7 @@ func (s *PgCheckpointSaver) GetCheckpoint(ctx context.Context, threadID string, 
 		return nil, fmt.Errorf("failed to parse created_at: %w", err)
 	}
 
-	decompressed, _ := decompressData(checkpointRaw)
-	if err := json.Unmarshal(decompressed, &cp.Data); err != nil {
+	if err := json.Unmarshal(checkpointRaw, &cp.Data); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal checkpoint data: %w", err)
 	}
 
@@ -60,11 +59,6 @@ func (s *PgCheckpointSaver) PutCheckpoint(ctx context.Context, cp *Checkpoint) e
 		return fmt.Errorf("failed to marshal checkpoint data: %w", err)
 	}
 
-	compressedRaw, err := compressData(checkpointRaw)
-	if err != nil {
-		compressedRaw = checkpointRaw
-	}
-
 	metadataRaw, err := json.Marshal(cp.Metadata)
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
@@ -80,7 +74,7 @@ func (s *PgCheckpointSaver) PutCheckpoint(ctx context.Context, cp *Checkpoint) e
 			created_at = EXCLUDED.created_at
 	`
 
-	_, err = s.provider.Exec(ctx, query, cp.ThreadID, cp.CheckpointID, cp.ParentID, compressedRaw, metadataRaw, cp.CreatedAt)
+	_, err = s.provider.Exec(ctx, query, cp.ThreadID, cp.CheckpointID, cp.ParentID, checkpointRaw, metadataRaw, cp.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to put checkpoint: %w", err)
 	}
@@ -116,8 +110,7 @@ func (s *PgCheckpointSaver) ListCheckpoints(ctx context.Context, threadID string
 			return nil, fmt.Errorf("failed to parse created_at: %w", err)
 		}
 
-		decompressed, _ := decompressData(checkpointRaw)
-		if err := json.Unmarshal(decompressed, &cp.Data); err != nil {
+		if err := json.Unmarshal(checkpointRaw, &cp.Data); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal checkpoint data: %w", err)
 		}
 
