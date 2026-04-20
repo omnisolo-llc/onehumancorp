@@ -29,6 +29,25 @@ func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string
 	return nil
 }
 
+type mockMinimaxClient struct {
+	MinimaxClient
+	Embeddings map[string][]float32
+	ReasonResp string
+}
+
+func (m *mockMinimaxClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	if m.Embeddings != nil {
+		if emb, ok := m.Embeddings[text]; ok {
+			return emb, nil
+		}
+	}
+	return make([]float32, 1536), nil
+}
+
+func (m *mockMinimaxClient) Reason(ctx context.Context, prompt string) (string, error) {
+	return m.ReasonResp, nil
+}
+
 func setupTestDB(t *testing.T) db.Provider {
 	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
@@ -239,21 +258,15 @@ func TestAutoDreamWorker_IngestCompletedTasks(t *testing.T) {
 	worker := NewAutoDreamWorker(provider)
 	ctx := context.Background()
 
-	// Ensure table exists for test
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
+	// Ensure tables exist for test
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, payload TEXT, status TEXT)")
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS consolidated_memory (id TEXT PRIMARY KEY, content TEXT, embedding TEXT, organization_id TEXT, agent_id TEXT, source_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
 
 	// Insert test tasks
-	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, payload, status) VALUES (?, ?, ?, ?)",
-		"st-1", "Test Task 1", "{}", "COMPLETED")
+	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks_decomposition (id, organization_id, title, payload, status) VALUES (?, ?, ?, ?, ?)",
+		"std-1", "org-1", "Unified Task 1", "{}", "COMPLETED")
 	if err != nil {
-		t.Fatalf("failed to insert test shared task: %v", err)
-	}
-
-	_, err = provider.Exec(ctx, "INSERT INTO swarm_tasks (id, title, payload, status) VALUES (?, ?, ?, ?)",
-		"sw-1", "Swarm Task 1", "{}", "COMPLETED")
-	if err != nil {
-		t.Fatalf("failed to insert test swarm task: %v", err)
+		t.Fatalf("failed to insert test task decomposition: %v", err)
 	}
 
 	err = worker.IngestCompletedTasks(ctx)
@@ -263,21 +276,54 @@ func TestAutoDreamWorker_IngestCompletedTasks(t *testing.T) {
 
 	// Verify status updated to ARCHIVED
 	var status string
-	err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'st-1'").Scan(&status)
+	err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks_decomposition WHERE id = 'std-1'").Scan(&status)
 	if err != nil || status != "ARCHIVED" {
-		t.Errorf("Expected shared_task status ARCHIVED, got %s (err: %v)", status, err)
+		t.Errorf("Expected shared_task_decomposition status ARCHIVED, got %s (err: %v)", status, err)
 	}
 
-	err = provider.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = 'sw-1'").Scan(&status)
-	if err != nil || status != "ARCHIVED" {
-		t.Errorf("Expected swarm_task status ARCHIVED, got %s (err: %v)", status, err)
-	}
-
-	// Verify insertion into autodream_memories
+	// Verify insertion into consolidated_memory
 	var count int
-	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_type IN ('shared_tasks', 'swarm_tasks')").Scan(&count)
-	if err != nil || count != 2 {
-		t.Errorf("Expected 2 memories inserted, got %d (err: %v)", count, err)
+	err = provider.QueryRow(ctx, "SELECT count(*) FROM consolidated_memory WHERE source_type = 'task_completion'").Scan(&count)
+	if err != nil || count != 1 {
+		t.Errorf("Expected 1 memory inserted, got %d (err: %v)", count, err)
+	}
+}
+
+func TestAutoDreamWorker_ConsolidateArchitecturalInsights(t *testing.T) {
+	provider := setupTestDB(t)
+	worker := NewAutoDreamWorker(provider)
+	ctx := context.Background()
+
+	mockLLM := &mockMinimaxClient{
+		ReasonResp: "Consolidated Architectural Insight",
+	}
+	worker.SetLLMClient(mockLLM)
+
+	// Ensure table exists for test
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS consolidated_memory (id TEXT PRIMARY KEY, content TEXT, embedding TEXT, organization_id TEXT, agent_id TEXT, source_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
+
+	// Insert some memories to synthesize
+	for i := 0; i < 5; i++ {
+		_, err := provider.Exec(ctx, "INSERT INTO consolidated_memory (id, content, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?)",
+			fmt.Sprintf("mem-%d", i), fmt.Sprintf("Episodic memory content %d", i), "org-1", "agent-1", "task_completion")
+		if err != nil {
+			t.Fatalf("failed to insert mock memory: %v", err)
+		}
+	}
+
+	worker.consolidateArchitecturalInsights(ctx)
+
+	// Verify insertion into consolidated_memory
+	var count int
+	err := provider.QueryRow(ctx, "SELECT count(*) FROM consolidated_memory WHERE source_type = 'architectural-insight'").Scan(&count)
+	if err != nil || count != 1 {
+		t.Errorf("Expected 1 architectural insight inserted, got %d (err: %v)", count, err)
+	}
+
+	var content string
+	err = provider.QueryRow(ctx, "SELECT content FROM consolidated_memory WHERE source_type = 'architectural-insight'").Scan(&content)
+	if err != nil || content != "Consolidated Architectural Insight" {
+		t.Errorf("Expected architectural insight content, got %s (err: %v)", content, err)
 	}
 }
 

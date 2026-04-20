@@ -22,6 +22,7 @@ import (
 type AutoDreamWorker struct {
 	pool db.Provider
 	mesh MeshTransport
+	llm  MinimaxClient
 }
 
 // AutoDreamWorker options
@@ -34,8 +35,15 @@ type AutoDreamWorkerOptions struct {
 // NewAutoDreamWorker creates a new AutoDream worker.
 func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
 	w := &AutoDreamWorker{pool: pool}
-	// Note: You can inject rueidis.Client and MinimaxClient into the struct if needed.
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+	if minimaxKey != "" {
+		w.llm = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), pool, nil)
+	}
 	return w
+}
+
+func (w *AutoDreamWorker) SetLLMClient(client MinimaxClient) {
+	w.llm = client
 }
 
 // SetMeshTransport configures the transport layer to use for cross-node mesh broadcasts
@@ -54,12 +62,101 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runConflictResolutionPipeline(ctx)
 	go w.runMemoryIngestionPipeline(ctx)
 	go w.runMissionIngestionPipeline(ctx)
-	go w.runMemoryIngestionPipeline(ctx)
 	go w.runSessionCompressionPipeline(ctx)
 	go w.runCompletedTasksIngestionPipeline(ctx)
+	go w.runArchitecturalConsolidationPipeline(ctx)
 }
 
-// runCompletedTasksIngestionPipeline processes COMPLETED tasks into autodream_memories.
+// runArchitecturalConsolidationPipeline periodically synthesizes architectural insights.
+func (w *AutoDreamWorker) runArchitecturalConsolidationPipeline(ctx context.Context) {
+	ticker := time.NewTicker(15 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			w.consolidateArchitecturalInsights(ctx)
+		}
+	}
+}
+
+func (w *AutoDreamWorker) consolidateArchitecturalInsights(ctx context.Context) {
+	slog.Info("AutoDream: starting architectural insight consolidation")
+
+	// Fetch recent consolidated memories that aren't already insights
+	query := `
+		SELECT content, organization_id
+		FROM consolidated_memory
+		WHERE source_type != 'architectural-insight'
+		ORDER BY created_at DESC
+		LIMIT 50
+	`
+	rows, err := w.pool.Query(ctx, query)
+	if err != nil {
+		slog.Error("AutoDream: failed to fetch memories for architectural insight", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	orgMemories := make(map[string][]string)
+	for rows.Next() {
+		var content, orgID string
+		if err := rows.Scan(&content, &orgID); err == nil {
+			orgMemories[orgID] = append(orgMemories[orgID], content)
+		}
+	}
+
+	client := w.llm
+	if client == nil {
+		return
+	}
+
+	for orgID, memories := range orgMemories {
+		prompt := "You are the OHC Architectural Consolidator. Synthesize the following episodic memories into a high-level architectural insight for this organization. Focus on long-term patterns and structural improvements:\n\n"
+		prompt += strings.Join(memories, "\n---\n")
+
+		ctxTimeout, cancel := context.WithTimeout(ctx, 45*time.Second)
+		insight, err := client.Reason(ctxTimeout, prompt)
+		cancel()
+
+		if err != nil {
+			slog.Warn("AutoDream: failed to synthesize architectural insight", "org_id", orgID, "error", err)
+			continue
+		}
+
+		// Embed and store
+		embedding := make([]float32, 1536)
+		ctxTimeout, cancel = context.WithTimeout(ctx, 15*time.Second)
+		resp, embedErr := client.GenerateEmbedding(ctxTimeout, insight)
+		cancel()
+		if embedErr == nil && len(resp) == 1536 {
+			embedding = resp
+		}
+
+		memID := uuid.New().String()
+		embStr := formatFloat32SliceForVector(embedding)
+
+		var insertQuery string
+		if w.pool.IsSQLite() {
+			insertQuery = `INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type)
+			               VALUES (?, ?, 'architectural-consolidator', ?, ?, 'architectural-insight')`
+		} else {
+			insertQuery = `INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type)
+			               VALUES ($1, $2, 'architectural-consolidator', $3, $4::vector, 'architectural-insight')`
+		}
+
+		_, err = w.pool.Exec(ctx, insertQuery, memID, orgID, insight, embStr)
+		if err != nil {
+			slog.Error("AutoDream: failed to store architectural insight", "org_id", orgID, "error", err)
+		} else {
+			slog.Info("AutoDream: stored architectural insight", "org_id", orgID)
+		}
+	}
+}
+
+// runCompletedTasksIngestionPipeline processes COMPLETED tasks into consolidated_memory.
 func (w *AutoDreamWorker) runCompletedTasksIngestionPipeline(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
@@ -74,7 +171,7 @@ func (w *AutoDreamWorker) runCompletedTasksIngestionPipeline(ctx context.Context
 	}
 }
 
-// ingestCompletedTasks queries shared_tasks for COMPLETED status and adds them to autodream_memories
+// ingestCompletedTasks queries shared_tasks_decomposition for COMPLETED status and adds them to consolidated_memory
 func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
@@ -89,9 +186,9 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 
 	var query string
 	if w.pool.IsSQLite() {
-		query = "SELECT id, title, description, payload FROM shared_tasks_master WHERE status = 'COMPLETED' LIMIT 50"
+		query = "SELECT id, organization_id, title, description, payload FROM shared_tasks_decomposition WHERE status IN ('DONE', 'COMPLETED') LIMIT 50"
 	} else {
-		query = "SELECT id, title, description, payload FROM shared_tasks_master WHERE status = 'COMPLETED' LIMIT 50 FOR UPDATE SKIP LOCKED"
+		query = "SELECT id, organization_id, title, description, payload FROM shared_tasks_decomposition WHERE status IN ('DONE', 'COMPLETED') LIMIT 50 FOR UPDATE SKIP LOCKED"
 	}
 
 	rows, err := tx.Query(ctx, query)
@@ -102,16 +199,17 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 	defer rows.Close()
 
 	type Task struct {
-		ID          string
-		Title       string
-		Description *string
-		Payload     *string
+		ID             string
+		OrganizationID string
+		Title          string
+		Description    *string
+		Payload        *string
 	}
 	var tasks []Task
 
 	for rows.Next() {
 		var t Task
-		if err := rows.Scan(&t.ID, &t.Title, &t.Description, &t.Payload); err == nil {
+		if err := rows.Scan(&t.ID, &t.OrganizationID, &t.Title, &t.Description, &t.Payload); err == nil {
 			tasks = append(tasks, t)
 		}
 	}
@@ -127,16 +225,13 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		}
 
 		var embeddingStr *string
-		minimaxKey := os.Getenv("MINIMAX_API_KEY")
-		if minimaxKey != "" {
-			client := NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
+		client := w.llm
+		if client != nil {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 			embedding, embedErr := client.GenerateEmbedding(ctxTimeout, content)
 			cancel()
 			if embedErr == nil && len(embedding) > 0 {
-				str := fmt.Sprintf("%v", embedding)
-				str = strings.ReplaceAll(strings.Trim(str, "[]"), " ", ",")
-				str = "[" + str + "]"
+				str := formatFloat32SliceForVector(embedding)
 				embeddingStr = &str
 			}
 		}
@@ -144,11 +239,11 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		var insertQuery string
 		memID := uuid.New().String()
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES (?, ?, ?, ?, 'system', 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
-			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
+			insertQuery = "INSERT INTO consolidated_memory (id, content, embedding, organization_id, agent_id, source_type, created_at) VALUES (?, ?, ?, ?, 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
+			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.OrganizationID)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, 'system', 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
-			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
+			insertQuery = "INSERT INTO consolidated_memory (id, content, embedding, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
+			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.OrganizationID)
 		}
 
 		if err != nil {
@@ -159,9 +254,9 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		telemetry.RecordAutoDreamConsolidation(ctx, "autodream_worker")
 
 		// Update task to ARCHIVED to avoid re-processing
-		updateQuery := "UPDATE shared_tasks_master SET status = 'ARCHIVED' WHERE id = $1"
+		updateQuery := "UPDATE shared_tasks_decomposition SET status = 'ARCHIVED' WHERE id = $1"
 		if w.pool.IsSQLite() {
-			updateQuery = "UPDATE shared_tasks_master SET status = 'ARCHIVED' WHERE id = ?"
+			updateQuery = "UPDATE shared_tasks_decomposition SET status = 'ARCHIVED' WHERE id = ?"
 		}
 		_, err = tx.Exec(ctx, updateQuery, task.ID)
 		if err != nil {
