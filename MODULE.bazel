@@ -35,7 +35,7 @@ local_path_override(
 )
 
 flutter = use_extension("@rules_flutter//flutter:extensions.bzl", "flutter")
-flutter.toolchain(flutter_version = "3.32.0")
+flutter.toolchain(flutter_version = "3.29.3")
 use_repo(
     flutter,
     "flutter_sdk",
@@ -55,9 +55,8 @@ use_repo(
     "pub_collection",
     "pub_crypto",
     "pub_cupertino_icons",
+    "pub_fake_async",
     "pub_ffi",
-    "pub_analyzer",
-    "pub_dart_style",
     "pub_file",
     "pub_fixnum",
     "pub_flutter_lints",
@@ -82,8 +81,7 @@ use_repo(
     "pub_platform",
     "pub_plugin_platform_interface",
     "pub_protobuf",
-    "pub_protoc_plugin",
-    "pub_pub_semver",
+    "pub_protobuf_v5",
     "pub_riverpod",
     "pub_shared_preferences",
     "pub_shared_preferences_android",
@@ -106,12 +104,9 @@ use_repo(
     "pub_web",
     "pub_web_socket_channel",
     "pub_xdg_directories",
-    "pub_yaml"
 )
-pub.package(name = "pub_protobuf", package = "protobuf", version = "6.0.0")
-pub.package(name = "pub_protoc_plugin", package = "protoc_plugin", version = "25.0.0")
-pub.package(name = "pub_dart_style", package = "dart_style", version = "3.1.8")
-pub.package(name = "pub_yaml", package = "yaml", version = "3.1.3")
+# ─────────────────────────────────────────────────────────────────────────────
+
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "23.6.0")
 use_repo(node, "nodejs")
@@ -141,7 +136,7 @@ go_deps.gazelle_override(
     ],
     path = "github.com/centrifugal/protocol",
 )
-use_repo(go_deps, "com_github_alicebob_miniredis_v2", "com_github_centrifugal_centrifuge", "com_github_google_uuid", "com_github_gorilla_websocket", "com_github_jackc_pgx_v5", "com_github_mattn_go_sqlite3", "com_github_minio_minio_go_v7", "com_github_modelcontextprotocol_go_sdk", "com_github_nats_io_nats_go", "com_github_playwright_community_playwright_go", "com_github_prometheus_client_golang", "com_github_redis_go_redis_v9", "com_github_redis_rueidis", "com_github_slack_go_slack", "com_github_smacker_go_tree_sitter", "com_github_spf13_afero", "com_github_spf13_viper", "com_github_stretchr_testify", "in_gopkg_yaml_v3", "io_opentelemetry_go_otel", "io_opentelemetry_go_otel_exporters_prometheus", "io_opentelemetry_go_otel_metric", "io_opentelemetry_go_otel_sdk_metric", "org_golang_google_adk", "org_golang_google_genai", "org_golang_google_grpc", "org_golang_google_grpc_cmd_protoc_gen_go_grpc", "org_golang_google_protobuf", "org_golang_x_crypto", "org_modernc_sqlite")
+use_repo(go_deps, "com_github_alicebob_miniredis_v2", "com_github_centrifugal_centrifuge", "com_github_google_uuid", "com_github_gorilla_websocket", "com_github_jackc_pgx_v5", "com_github_minio_minio_go_v7", "com_github_modelcontextprotocol_go_sdk", "com_github_nats_io_nats_go", "com_github_playwright_community_playwright_go", "com_github_prometheus_client_golang", "com_github_redis_go_redis_v9", "com_github_redis_rueidis", "com_github_slack_go_slack", "com_github_smacker_go_tree_sitter", "com_github_spf13_afero", "com_github_spf13_viper", "com_github_stretchr_testify", "in_gopkg_yaml_v3", "io_opentelemetry_go_otel", "io_opentelemetry_go_otel_exporters_prometheus", "io_opentelemetry_go_otel_metric", "io_opentelemetry_go_otel_sdk_metric", "org_golang_google_adk", "org_golang_google_genai", "org_golang_google_grpc", "org_golang_google_grpc_cmd_protoc_gen_go_grpc", "org_golang_google_protobuf", "org_golang_x_crypto", "org_modernc_sqlite")
 
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
@@ -181,7 +176,7 @@ oci.pull(
     platforms = ["linux/amd64"],
     tag = "alpine",
 )
-use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_static", "distroless_static_linux_amd64", "nginx_alpine", "nginx_alpine_linux_amd64")
+use_repo(oci, "distroless_static", "distroless_static_linux_amd64", "distroless_cc", "distroless_cc_linux_amd64", "nginx_alpine", "nginx_alpine_linux_amd64")
 
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")

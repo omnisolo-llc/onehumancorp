@@ -12,6 +12,7 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -151,7 +152,7 @@ func (r *TenantRegistry) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// If it's a public route like /api/auth/login, a 'public' tenant handles it gracefully.
 
 	// Only serve known public routes unauthenticated, block otherwise.
-	if auth.IsPublicPath(req.URL.Path) {
+	if req.URL.Path == "/api/auth/login" || req.URL.Path == "/api/health/hybrid" || req.URL.Path == "/healthz" || req.URL.Path == "/readyz" || req.URL.Path == "/metrics" || req.URL.Path == "/login" || req.URL.Path == "/favicon.ico" || req.URL.Path == "/" || strings.HasPrefix(req.URL.Path, "/assets/") {
 		h := r.Provision(defaultTenantOrganization("public"))
 		h.ServeHTTP(w, req)
 		return

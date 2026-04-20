@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/protobuf/types/known/timestamppb"
-
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
@@ -23,14 +21,14 @@ func NewPgUserRepository(pool db.Provider) *PgUserRepository {
 }
 
 func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
-	rolesJSON, _ := json.Marshal(user.Metadata.Roles)
-	var rolesArg any = user.Metadata.Roles
+	rolesJSON, _ := json.Marshal(user.Roles)
+	var rolesArg any = user.Roles
 	if r.pool.IsSQLite() {
 		rolesArg = string(rolesJSON)
 	}
 
-	email := user.Metadata.Email
-	oidcSubject := user.Metadata.OidcSubject
+	email := user.Email
+	oidcSubject := user.OIDCSubject
 
 	if r.pool.IsSQLite() {
 		email = EncryptDeterministic(email)
@@ -41,11 +39,11 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 
 	// We'll verify uniqueness at application level or let the new constraints handle it.
 	// But let's first check if there's a collision in the same org.
-	existing, _ := r.GetByUsername(ctx, user.Metadata.Username, user.Metadata.OrganizationId)
+	existing, _ := r.GetByUsername(ctx, user.Username, user.OrganizationID)
 	if existing != nil {
 		return fmt.Errorf("username already taken")
 	}
-	existingEmail, _ := r.GetByEmail(ctx, user.Metadata.Email, user.Metadata.OrganizationId)
+	existingEmail, _ := r.GetByEmail(ctx, user.Email, user.OrganizationID)
 	if existingEmail != nil {
 		return fmt.Errorf("email already registered")
 	}
@@ -53,10 +51,10 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		user.Metadata.Id, user.Metadata.Username, email, user.PasswordHash,
-		rolesArg, user.Metadata.Active, user.Metadata.OrganizationId,
+		user.ID, user.Username, email, user.PasswordHash,
+		rolesArg, user.Active, user.OrganizationID,
 		nilIfEmpty(oidcSubject),
-		user.Metadata.CreatedAt.AsTime(), user.Metadata.UpdatedAt.AsTime(),
+		user.CreatedAt, user.UpdatedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("pg: create user: %w", err)
@@ -115,40 +113,40 @@ func (r *PgUserRepository) ListUsers(ctx context.Context, orgID string) ([]*User
 
 	var users []*User
 	for rows.Next() {
-		u := &User{Metadata: &UserMetadata{}}
+		u := &User{}
 		var created, updated db.FlexTime
 
 		if r.pool.IsSQLite() {
 			var rolesJSON string
-			if err := rows.Scan(&u.Metadata.Id, &u.Metadata.Username, &u.Metadata.Email, &u.PasswordHash, &rolesJSON, &u.Metadata.Active, &u.Metadata.OrganizationId, &u.Metadata.OidcSubject, &created, &updated); err != nil {
+			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject, &created, &updated); err != nil {
 				return nil, fmt.Errorf("pg: scan user: %w", err)
 			}
-			_ = json.Unmarshal([]byte(rolesJSON), &u.Metadata.Roles)
-			u.Metadata.Email = DecryptDeterministic(u.Metadata.Email)
-			if u.Metadata.OidcSubject != "" {
-				u.Metadata.OidcSubject = DecryptDeterministic(u.Metadata.OidcSubject)
+			_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
+			u.Email = DecryptDeterministic(u.Email)
+			if u.OIDCSubject != "" {
+				u.OIDCSubject = DecryptDeterministic(u.OIDCSubject)
 			}
 		} else {
-			if err := rows.Scan(&u.Metadata.Id, &u.Metadata.Username, &u.Metadata.Email, &u.PasswordHash, &u.Metadata.Roles, &u.Metadata.Active, &u.Metadata.OrganizationId, &u.Metadata.OidcSubject, &created, &updated); err != nil {
+			if err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject, &created, &updated); err != nil {
 				return nil, fmt.Errorf("pg: scan user: %w", err)
 			}
 		}
-		u.Metadata.CreatedAt = timestamppb.New(created.Time)
-		u.Metadata.UpdatedAt = timestamppb.New(updated.Time)
+		u.CreatedAt = created.Time
+		u.UpdatedAt = updated.Time
 		users = append(users, u)
 	}
 	return users, nil
 }
 
 func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
-	rolesJSON, _ := json.Marshal(user.Metadata.Roles)
-	var rolesArg any = user.Metadata.Roles
+	rolesJSON, _ := json.Marshal(user.Roles)
+	var rolesArg any = user.Roles
 	if r.pool.IsSQLite() {
 		rolesArg = string(rolesJSON)
 	}
 
-	email := user.Metadata.Email
-	oidcSubject := user.Metadata.OidcSubject
+	email := user.Email
+	oidcSubject := user.OIDCSubject
 
 	if r.pool.IsSQLite() {
 		email = EncryptDeterministic(email)
@@ -157,29 +155,29 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 		}
 	}
 
-	existingEmail, _ := r.GetByEmail(ctx, user.Metadata.Email, user.Metadata.OrganizationId)
-	if existingEmail != nil && existingEmail.Metadata.Id != user.Metadata.Id {
+	existingEmail, _ := r.GetByEmail(ctx, user.Email, user.OrganizationID)
+	if existingEmail != nil && existingEmail.ID != user.ID {
 		return fmt.Errorf("email already registered")
 	}
 
 	var err error
-	if user.Metadata.OrganizationId == "" || user.Metadata.OrganizationId == "sys" {
+	if user.OrganizationID == "" || user.OrganizationID == "sys" {
 		_, err = r.pool.Exec(ctx, `
 			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
 			organization_id=$7, oidc_subject=$8, updated_at=$9
 			WHERE id=$1`,
-			user.Metadata.Id, user.Metadata.Username, email, user.PasswordHash,
-			rolesArg, user.Metadata.Active, user.Metadata.OrganizationId,
-			nilIfEmpty(oidcSubject), user.Metadata.UpdatedAt.AsTime(),
+			user.ID, user.Username, email, user.PasswordHash,
+			rolesArg, user.Active, user.OrganizationID,
+			nilIfEmpty(oidcSubject), user.UpdatedAt,
 		)
 	} else {
 		_, err = r.pool.Exec(ctx, `
 			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
 			organization_id=$7, oidc_subject=$8, updated_at=$9
 			WHERE id=$1 AND organization_id=$7`,
-			user.Metadata.Id, user.Metadata.Username, email, user.PasswordHash,
-			rolesArg, user.Metadata.Active, user.Metadata.OrganizationId,
-			nilIfEmpty(oidcSubject), user.Metadata.UpdatedAt.AsTime(),
+			user.ID, user.Username, email, user.PasswordHash,
+			rolesArg, user.Active, user.OrganizationID,
+			nilIfEmpty(oidcSubject), user.UpdatedAt,
 		)
 	}
 	if err != nil {
@@ -225,14 +223,14 @@ func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, err
 // --- helpers ---
 
 func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...any) (*User, error) {
-	u := &User{Metadata: &UserMetadata{}}
+	u := &User{}
 	var created, updated db.FlexTime
- 
+
 	if r.pool.IsSQLite() {
 		var rolesJSON string
 		err := r.pool.QueryRow(ctx, query, args...).Scan(
-			&u.Metadata.Id, &u.Metadata.Username, &u.Metadata.Email, &u.PasswordHash,
-			&rolesJSON, &u.Metadata.Active, &u.Metadata.OrganizationId, &u.Metadata.OidcSubject,
+			&u.ID, &u.Username, &u.Email, &u.PasswordHash,
+			&rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject,
 			&created, &updated,
 		)
 		if err != nil {
@@ -241,19 +239,19 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 			}
 			return nil, fmt.Errorf("pg: scan user: %w", err)
 		}
-		_ = json.Unmarshal([]byte(rolesJSON), &u.Metadata.Roles)
-		u.Metadata.CreatedAt = timestamppb.New(created.Time)
-		u.Metadata.UpdatedAt = timestamppb.New(updated.Time)
-		u.Metadata.Email = DecryptDeterministic(u.Metadata.Email)
-		if u.Metadata.OidcSubject != "" {
-			u.Metadata.OidcSubject = DecryptDeterministic(u.Metadata.OidcSubject)
+		_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
+		u.CreatedAt = created.Time
+		u.UpdatedAt = updated.Time
+		u.Email = DecryptDeterministic(u.Email)
+		if u.OIDCSubject != "" {
+			u.OIDCSubject = DecryptDeterministic(u.OIDCSubject)
 		}
 		return u, nil
 	}
- 
+
 	err := r.pool.QueryRow(ctx, query, args...).Scan(
-		&u.Metadata.Id, &u.Metadata.Username, &u.Metadata.Email, &u.PasswordHash,
-		&u.Metadata.Roles, &u.Metadata.Active, &u.Metadata.OrganizationId, &u.Metadata.OidcSubject,
+		&u.ID, &u.Username, &u.Email, &u.PasswordHash,
+		&u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject,
 		&created, &updated,
 	)
 	if err != nil {
@@ -262,8 +260,8 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 		}
 		return nil, fmt.Errorf("pg: scan user: %w", err)
 	}
-	u.Metadata.CreatedAt = timestamppb.New(created.Time)
-	u.Metadata.UpdatedAt = timestamppb.New(updated.Time)
+	u.CreatedAt = created.Time
+	u.UpdatedAt = updated.Time
 	return u, nil
 }
 
