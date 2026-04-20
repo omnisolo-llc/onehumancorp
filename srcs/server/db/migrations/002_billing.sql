@@ -13,5 +13,5 @@ CREATE TABLE IF NOT EXISTS usage_events (
     occurred_at       TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_usage_events_org ON usage_events (organization_id);
-CREATE INDEX idx_usage_events_agent ON usage_events (agent_id);
+CREATE INDEX IF NOT EXISTS idx_usage_events_org ON usage_events (organization_id);
+CREATE INDEX IF NOT EXISTS idx_usage_events_agent ON usage_events (agent_id);

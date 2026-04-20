@@ -17,6 +17,6 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
     next_run_at     TIMESTAMPTZ
 );
 
-CREATE INDEX idx_sched_tasks_org ON scheduled_tasks (organization_id);
-CREATE INDEX idx_sched_tasks_due ON scheduled_tasks (next_run_at)
+CREATE INDEX IF NOT EXISTS idx_sched_tasks_org ON scheduled_tasks (organization_id);
+CREATE INDEX IF NOT EXISTS idx_sched_tasks_due ON scheduled_tasks (next_run_at)
     WHERE status = 'pending';

@@ -38,7 +38,7 @@ func RecordRAGRecordsSynced(ctx context.Context, count int64) {
 		payloadMap := map[string]interface{}{
 			"count": count,
 		}
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		payloadBytes, _ := json.Marshal(payloadMap)
 		_ = BufferMetricFunc(ctx, "rag_records_synced", string(payloadBytes))
 	}
 	if ragRecordsSyncedTotal != nil {
@@ -51,7 +51,7 @@ func RecordRAGSyncError(ctx context.Context, errStr string) {
 		payloadMap := map[string]interface{}{
 			"error": errStr,
 		}
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		payloadBytes, _ := json.Marshal(payloadMap)
 		_ = BufferMetricFunc(ctx, "rag_sync_error", string(payloadBytes))
 	}
 	if ragSyncErrorsTotal != nil {
