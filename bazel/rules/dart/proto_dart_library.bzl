@@ -146,9 +146,9 @@ def _proto_dart_library_impl(ctx):
             domain_dart = domain_outs[i]
             ctx.actions.run(
                 executable = ctx.executable._model_gen_tool,
-                arguments = [proto_src.path, domain_dart.path],
+                arguments = [ctx.executable._dart_bin.path, proto_src.path, domain_dart.path],
                 inputs = depset(
-                    [proto_src],
+                    [proto_src, ctx.executable._dart_bin],
                     transitive = [proto_info.transitive_sources],
                 ),
                 outputs = [domain_dart],
