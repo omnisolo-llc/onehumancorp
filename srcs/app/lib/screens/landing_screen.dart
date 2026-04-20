@@ -14,7 +14,6 @@ class LandingScreen extends ConsumerStatefulWidget {
 }
 
 class _LandingScreenState extends ConsumerState<LandingScreen> {
-  bool _showVariantB = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +39,9 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _HeaderSection(isVariantB: _showVariantB),
+                      const _HeaderSection(),
                       const SizedBox(height: 48),
-                      _ValuePropGrid(isVariantB: _showVariantB),
+                      const _ValuePropGrid(),
                       const SizedBox(height: 48),
                       Wrap(
                         spacing: 16,
@@ -72,23 +71,6 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 ),
               ),
             ),
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  const Text('A/B Test Variant:'),
-                  Switch(
-                    value: _showVariantB,
-                    onChanged: (val) {
-                      setState(() {
-                        _showVariantB = val;
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -97,8 +79,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
 }
 
 class _HeaderSection extends StatelessWidget {
-  final bool isVariantB;
-  const _HeaderSection({required this.isVariantB});
+  const _HeaderSection();
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +107,7 @@ class _HeaderSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          isVariantB ? 'The Cloud-Native Agentic OS' : 'The Hybrid Agentic OS',
+          'The Ultimate Business OS',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             color: Theme.of(context).colorScheme.primary,
           ),
@@ -134,9 +115,7 @@ class _HeaderSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          isVariantB
-              ? 'Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform.'
-              : 'Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.',
+          'Build your company. Scale your vision. The gold standard for private business automation and secure workflow management.',
           style: Theme.of(context).textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
@@ -146,61 +125,32 @@ class _HeaderSection extends StatelessWidget {
 }
 
 class _ValuePropGrid extends StatelessWidget {
-  final bool isVariantB;
-  const _ValuePropGrid({required this.isVariantB});
+  const _ValuePropGrid();
 
   @override
   Widget build(BuildContext context) {
-    if (isVariantB) {
-      return Wrap(
-        spacing: 24,
-        runSpacing: 24,
-        alignment: WrapAlignment.center,
-        children: const [
-          _GlassCard(
-            icon: Icons.speed,
-            title: 'Global Performance',
-            description:
-                'Deploy agents in a horizontally scalable multi-tenant environment. High-concurrency ready.',
-          ),
-          _GlassCard(
-            icon: Icons.people,
-            title: 'Instant Collaboration',
-            description:
-                'Invite team members instantly. Shared intelligence across your entire organization.',
-          ),
-          _GlassCard(
-            icon: Icons.sync,
-            title: 'Always Connected',
-            description:
-                'Never worry about host machine resources. Our cloud manages everything seamlessly.',
-          ),
-        ],
-      );
-    }
-
     return Wrap(
       spacing: 24,
       runSpacing: 24,
       alignment: WrapAlignment.center,
       children: const [
         _GlassCard(
-          icon: Icons.shield,
-          title: 'Zero Data Leakage',
+          icon: Icons.business,
+          title: 'Automated Operations',
           description:
-              'All intelligence operations run completely local via SQLite. Absolute sovereignty over your IP.',
+              'Set up professional workflows that run your business on autopilot. No technical skills required.',
         ),
         _GlassCard(
-          icon: Icons.cloud_off,
-          title: 'Air-Gapped Autonomy',
+          icon: Icons.security,
+          title: 'Total Data Privacy',
           description:
-              'Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies.',
+              'Your business data belongs to you. We provide a secure, private environment for all your documents.',
         ),
         _GlassCard(
-          icon: Icons.group_add,
-          title: 'Viral Referral Loop',
+          icon: Icons.trending_up,
+          title: 'Unlimited Growth',
           description:
-              'Seamlessly bridge to the Cloud to collaborate with human team members when ready.',
+              'Scale from a single person to a full organization with our integrated business management tools.',
         ),
       ],
     );

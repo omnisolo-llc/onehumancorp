@@ -8,7 +8,7 @@ import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
 import 'package:ohc_app/screens/chat_screen.dart';
 import 'package:ohc_app/screens/channels_screen.dart';
-import 'package:ohc_app/screens/ai_config_screen.dart';
+import 'package:ohc_app/screens/skills_screen.dart';
 import 'package:ohc_app/screens/skills_screen.dart';
 import 'package:ohc_app/screens/logs_screen.dart';
 import 'package:ohc_app/screens/security_screen.dart';
@@ -24,10 +24,9 @@ import 'package:ohc_app/screens/pipelines_screen.dart';
 import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
-import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
+import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
-import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
@@ -46,7 +45,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLandingRoute = state.matchedLocation == '/landing';
 
       if (!isLoggedIn && !isLoginRoute && !isLandingRoute) return '/landing';
-      if (isLoggedIn && isLoginRoute) return '/dashboard';
+      if (isLoggedIn && (isLoginRoute || isLandingRoute)) return '/dashboard';
       return null;
     },
     routes: [
@@ -87,9 +86,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/channels',
             builder: (context, state) => const ChannelsScreen(),
           ),
-          GoRoute(
-            path: '/ai-config',
-            builder: (context, state) => const AiConfigScreen(),
           ),
           GoRoute(
             path: '/skills',
@@ -153,19 +149,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/wizards/billing',
             builder: (context, state) => const BillingWizardScreen(),
           ),
-          GoRoute(
-            path: '/agents/:id/tune',
-            builder: (context, state) => PromptTuningWizardScreen(
-              agentId: state.pathParameters['id'] ?? 'unknown',
-            ),
           ),
           GoRoute(
             path: '/agents/hire',
-            builder: (context, state) => const AgentHireWizardScreen(),
+            builder: (context, state) => const SpecialistOnboardingWizardScreen(),
           ),
-          GoRoute(
-            path: '/swarm-memory',
-            builder: (context, state) => const SwarmMemoryScreen(),
           ),
           GoRoute(
             path: '/autodream-sync',
@@ -211,19 +199,19 @@ class _Sidebar extends StatelessWidget {
         ),
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
-        _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
+        _NavItem(icon: Icons.smart_toy, label: 'Workforce', path: '/agents'),
         _NavItem(
           icon: Icons.checklist,
           label: 'Shared Tasks',
           path: '/orchestration/tasks',
         ),
-        _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
+        _NavItem(icon: Icons.memory, label: 'Knowledge Base', path: '/knowledge'),
         _NavItem(icon: Icons.sync, label: 'AutoDream Sync', path: '/autodream-sync'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
         _NavItem(
           icon: Icons.transfer_within_a_station,
-          label: 'Handoffs',
+          label: 'Client Transfers',
           path: '/handoffs',
         ),
         _NavItem(icon: Icons.bar_chart, label: 'Cost & Usage', path: '/cost'),
@@ -261,10 +249,10 @@ class _Sidebar extends StatelessWidget {
         const Divider(),
         _NavItem(
           icon: Icons.psychology,
-          label: 'AI Providers',
-          path: '/ai-config',
+          label: 'Intelligence Hub',
+          path: '/settings',
         ),
-        _NavItem(icon: Icons.extension, label: 'Skills', path: '/skills'),
+        _NavItem(icon: Icons.extension, label: 'Specialized Skills', path: '/skills'),
         _NavItem(icon: Icons.security, label: 'Security', path: '/security'),
         _NavItem(icon: Icons.terminal, label: 'Logs', path: '/logs'),
         const SizedBox(height: 8),
