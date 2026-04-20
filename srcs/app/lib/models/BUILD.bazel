@@ -27,26 +27,12 @@ flutter_library(
     srcs = glob(
         ["*.dart"],
         exclude = ["*_test.dart"],
-    ) + [
-        "//srcs/proto:agent_dart_proto",
-        "//srcs/proto:agent_service_dart_proto",
-        "//srcs/proto:app_dart_proto",
-        "//srcs/proto:billing_dart_proto",
-        "//srcs/proto:common_dart_proto",
-        "//srcs/proto:hub_dart_proto",
-        "//srcs/proto:model_dart_proto",
-        "//srcs/proto:organization_dart_proto",
-        "//srcs/proto:skills_dart_proto",
-        "//srcs/proto:user_dart_proto",
-    ],
+    ) + ["//srcs/proto:user_dart_proto"],
     data = ["//srcs/app:app_assets"],
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
-        "@pub_fixnum//:fixnum",
-        "@pub_grpc//:grpc",
         "@pub_protobuf//:protobuf",
-        "@pub_yaml//:yaml",
     ],
 )
 
