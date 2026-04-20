@@ -25,6 +25,16 @@ type StateMachineTransition struct {
 }
 
 type TaskDependency struct {
-	TaskID           string `json:"task_id" db:"task_id"`
-	DependsOnTaskID  string `json:"depends_on_task_id" db:"depends_on_task_id"`
+	TaskID          string `json:"task_id" db:"task_id"`
+	DependsOnTaskID string `json:"depends_on_task_id" db:"depends_on_task_id"`
+}
+
+type Task struct {
+	ID          string    `json:"id" db:"id"`
+	Status      string    `json:"status" db:"status"`
+	Title       string    `json:"title" db:"title"`
+	Description string    `json:"description" db:"description"`
+	AgentID     *string   `json:"agent_id" db:"agent_id"`
+	CreatedAt   time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
 }

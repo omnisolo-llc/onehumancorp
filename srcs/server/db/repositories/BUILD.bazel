@@ -25,6 +25,7 @@ go_test(
     deps = [
         "//srcs/server/db",
         "//srcs/server/db/models",
+        "@com_github_google_uuid//:uuid",
         "@org_modernc_sqlite//:sqlite",
     ],
 )

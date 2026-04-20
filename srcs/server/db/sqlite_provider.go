@@ -3,6 +3,8 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/db/models"
 	"regexp"
 	"strings"
 	"time"
@@ -295,4 +297,54 @@ func (t *SqliteTx) Commit(ctx context.Context) error {
 
 func (t *SqliteTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback()
+}
+
+func (p *SqliteProvider) CreateTask(ctx context.Context, task *models.Task) error {
+	start := time.Now()
+	query := `INSERT INTO tasks (id, title, description, status, agent_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`
+	_, err := p.Exec(ctx, query, task.ID, task.Title, task.Description, task.Status, task.AgentID, task.CreatedAt, task.UpdatedAt)
+	trackQuery(ctx, "CreateTask", err, time.Since(start))
+	return err
+}
+
+func (p *SqliteProvider) ClaimTask(ctx context.Context, taskID string) error {
+	start := time.Now()
+
+	// Use normal transaction without FOR UPDATE skips local sqlite locking errors
+	tx, err := p.Begin(ctx)
+	if err != nil {
+		trackQuery(ctx, "ClaimTask_Begin", err, time.Since(start))
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var currentStatus string
+	err = tx.QueryRow(ctx, "SELECT status FROM tasks WHERE id = ?", taskID).Scan(&currentStatus)
+	if err != nil {
+		if err == sql.ErrNoRows || err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+			trackQuery(ctx, "ClaimTask_NoRows", nil, time.Since(start))
+			return fmt.Errorf("task not found: %s", taskID)
+		}
+		trackQuery(ctx, "ClaimTask_Query", err, time.Since(start))
+		return err
+	}
+
+	if currentStatus != "PENDING" {
+		trackQuery(ctx, "ClaimTask_NotPending", nil, time.Since(start))
+		return fmt.Errorf("task not in PENDING state: %s", taskID)
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = ?", taskID)
+	if err != nil {
+		trackQuery(ctx, "ClaimTask_Update", err, time.Since(start))
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		trackQuery(ctx, "ClaimTask_Commit", err, time.Since(start))
+		return err
+	}
+
+	trackQuery(ctx, "ClaimTask", nil, time.Since(start))
+	return nil
 }

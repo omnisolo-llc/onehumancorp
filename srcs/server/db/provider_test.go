@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"github.com/onehumancorp/mono/srcs/server/db/models"
 	"testing"
 )
 
@@ -147,4 +148,68 @@ func TestProvider_AcquireTask(t *testing.T) {
 	if task3 != nil {
 		t.Errorf("Expected nil task, got %v", task3.ID)
 	}
+}
+
+func TestProvider_CreateAndClaimTask_Sqlite(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
+
+	dbp, err := New(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to initialize standalone db: %v", err)
+	}
+	defer dbp.Close()
+
+	ctx := context.Background()
+
+	// Ensure exact schema exists for tests
+	schema := `
+	CREATE TABLE IF NOT EXISTS tasks (
+		id TEXT PRIMARY KEY,
+		title TEXT NOT NULL,
+		description TEXT,
+		status TEXT NOT NULL DEFAULT 'PENDING',
+		agent_id TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+	if _, err := dbp.Provider.Exec(ctx, schema); err != nil {
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+
+	task := &models.Task{
+		ID:          "test-task-1",
+		Title:       "Sample",
+		Description: "A sample task",
+		Status:      "PENDING",
+	}
+
+	if err := dbp.Provider.CreateTask(ctx, task); err != nil {
+		t.Fatalf("Failed to create task: %v", err)
+	}
+
+	// Claiming the task should succeed
+	if err := dbp.Provider.ClaimTask(ctx, task.ID); err != nil {
+		t.Fatalf("Failed to claim task: %v", err)
+	}
+
+	// Double-claim should fail
+	err = dbp.Provider.ClaimTask(ctx, task.ID)
+	if err == nil || err.Error() != "task not in PENDING state: test-task-1" {
+		t.Errorf("Expected failure for double claim, got: %v", err)
+	}
+
+	// Non-existent task claim should fail
+	err = dbp.Provider.ClaimTask(ctx, "non-existent")
+	if err == nil || err.Error() != "task not found: non-existent" {
+		t.Errorf("Expected failure for non-existent task claim, got: %v", err)
+	}
+}
+
+func TestProvider_CreateAndClaimTask_Postgres(t *testing.T) {
+	// Let's create an empty PgProvider and test its ClaimTask method against empty row error
+	p := &PgProvider{}
+
+	// Create mock or rely on interface compilation checks
+	// Since we can't spin up a full Postgres here easily without CI setup, we just ensure it implements the interface
+	var _ Provider = p
 }

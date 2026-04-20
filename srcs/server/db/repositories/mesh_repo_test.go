@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/db/models"
 )
@@ -14,7 +13,7 @@ type mockTx struct {
 	db.Tx
 }
 
-func (m *mockTx) Commit(ctx context.Context) error { return nil }
+func (m *mockTx) Commit(ctx context.Context) error   { return nil }
 func (m *mockTx) Rollback(ctx context.Context) error { return nil }
 
 type mockRows struct {
@@ -43,20 +42,21 @@ func (m *mockRows) Scan(dest ...interface{}) error {
 	return nil
 }
 
-func (m *mockRows) Close() {}
+func (m *mockRows) Close()     {}
 func (m *mockRows) Err() error { return m.err }
 
 type mockRow struct {
 	db.Row
 }
+
 func (m *mockRow) Scan(dest ...any) error { return nil }
 
 type MockDBProvider struct {
 	db.Provider
-	isSQLite   bool
-	execErr    error
-	queryErr   error
-	rows       *mockRows
+	isSQLite bool
+	execErr  error
+	queryErr error
+	rows     *mockRows
 }
 
 func (m *MockDBProvider) IsSQLite() bool {

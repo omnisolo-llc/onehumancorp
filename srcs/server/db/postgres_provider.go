@@ -3,11 +3,13 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/db/models"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // PgProvider implements the Provider interface using pgxpool.
@@ -236,4 +238,53 @@ func (p *PgProvider) SearchMemories(ctx context.Context, organizationID string, 
 		}
 	}
 	return results, nil
+}
+
+func (p *PgProvider) CreateTask(ctx context.Context, task *models.Task) error {
+	start := time.Now()
+	query := `INSERT INTO tasks (id, title, description, status, agent_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`
+	_, err := p.Exec(ctx, query, task.ID, task.Title, task.Description, task.Status, task.AgentID, task.CreatedAt, task.UpdatedAt)
+	trackQuery(ctx, "CreateTask", err, time.Since(start))
+	return err
+}
+
+func (p *PgProvider) ClaimTask(ctx context.Context, taskID string) error {
+	start := time.Now()
+	tx, err := p.Begin(ctx)
+	if err != nil {
+		trackQuery(ctx, "ClaimTask_Begin", err, time.Since(start))
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	var currentStatus string
+	err = tx.QueryRow(ctx, "SELECT status FROM tasks WHERE id = $1 FOR UPDATE SKIP LOCKED", taskID).Scan(&currentStatus)
+	if err != nil {
+		if err == sql.ErrNoRows || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			telemetry.RecordPostgresLockContention(ctx, "claim_task")
+			trackQuery(ctx, "ClaimTask_NoRows", nil, time.Since(start))
+			return fmt.Errorf("task not found or locked: %s", taskID)
+		}
+		trackQuery(ctx, "ClaimTask_Query", err, time.Since(start))
+		return err
+	}
+
+	if currentStatus != "PENDING" {
+		trackQuery(ctx, "ClaimTask_NotPending", nil, time.Since(start))
+		return fmt.Errorf("task not in PENDING state: %s", taskID)
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE tasks SET status = 'IN_PROGRESS', updated_at = NOW() WHERE id = $1", taskID)
+	if err != nil {
+		trackQuery(ctx, "ClaimTask_Update", err, time.Since(start))
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		trackQuery(ctx, "ClaimTask_Commit", err, time.Since(start))
+		return err
+	}
+
+	trackQuery(ctx, "ClaimTask", nil, time.Since(start))
+	return nil
 }

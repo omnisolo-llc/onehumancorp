@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"github.com/onehumancorp/mono/srcs/server/db/models"
 	"strings"
 	"time"
 
@@ -50,6 +51,8 @@ type Provider interface {
 	Close()
 	Ping(ctx context.Context) error
 	IsSQLite() bool
+	CreateTask(ctx context.Context, task *models.Task) error
+	ClaimTask(ctx context.Context, taskID string) error
 	AcquireTask(ctx context.Context, organizationID, agentID string) (*TaskRecord, error)
 	SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error)
 }
