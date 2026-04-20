@@ -1,10 +1,12 @@
 package builtin
 
 import (
-	"fmt"
-	"time"
 	"context"
+	"fmt"
 	"os"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 
@@ -37,6 +39,7 @@ type AgentConfig struct {
 
 // SpawnTask launches a builtin task and returns state for polling.
 func SpawnTask(ctx context.Context, description, prompt, workDir string, cfg AgentConfig) (*TaskState, error) {
+	telemetry.RecordSubAgentSpawn(ctx)
 	id, err := generateTaskID()
 	if err != nil {
 		return nil, fmt.Errorf("spawn task: %w", err)

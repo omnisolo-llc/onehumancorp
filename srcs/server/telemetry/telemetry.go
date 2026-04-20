@@ -18,6 +18,7 @@ import (
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 var (
@@ -28,6 +29,7 @@ var (
 	RagEscalationCount               metric.Int64Counter
 
 	SubAgentExecutionDuration  metric.Float64Histogram
+	SubAgentSpawnTotal         metric.Int64Counter
 	SubAgentFailuresTotal      metric.Int64Counter
 	BubblewrapSpawnTotal       metric.Int64Counter
 	BubblewrapExecutionLatency metric.Float64Histogram
@@ -98,6 +100,8 @@ var (
 	autoDreamSyncDuration  metric.Float64Histogram
 	autoDreamQueryDuration metric.Float64Histogram // added for ohc_autodream_query_duration_seconds
 	meshBroadcastTotal     metric.Int64Counter
+
+	cachedDeploymentMode string
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`(?:\+\d{1,3}[- ]?)?\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
@@ -243,6 +247,8 @@ func RedactInterfacePII(val interface{}) interface{} {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitTelemetry() (func(), error) {
+	cachedDeploymentMode = GetDeploymentMode()
+
 	if (!envBoolDefault("OHC_MULTITENANT", true) || os.Getenv("OHC_STANDALONE") == "true") && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
 		// Enforce user data privacy and local sovereignty in Standalone Mode.
 		// Exporter is strictly opt-in and disabled by default.
@@ -255,7 +261,22 @@ func InitTelemetry() (func(), error) {
 		return nil, err
 	}
 
-	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+	res, err := resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(
+			resource.Default().SchemaURL(),
+			attribute.String("service.name", "ohc-agent-os"),
+			attribute.String("deployment_mode", cachedDeploymentMode),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	provider := sdkmetric.NewMeterProvider(
+		sdkmetric.WithReader(exporter),
+		sdkmetric.WithResource(res),
+	)
 	otel.SetMeterProvider(provider)
 
 	meter = provider.Meter("github.com/onehumancorp/mono/ohc")
@@ -280,6 +301,17 @@ type mockableMeter interface {
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
+}
+
+// GetDeploymentMode returns the current deployment mode ("standalone" or "cloud").
+func GetDeploymentMode() string {
+	if cachedDeploymentMode != "" {
+		return cachedDeploymentMode
+	}
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		return "standalone"
+	}
+	return "cloud"
 }
 
 // InitWithMeter functionality.
@@ -793,6 +825,14 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_sub_agent_execution_duration_seconds",
 		metric.WithDescription("Duration of sub-agent execution in seconds"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentSpawnTotal, err = m.Int64Counter(
+		"ohc_sub_agent_spawn_total",
+		metric.WithDescription("Total number of sub-agent spawns"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1655,18 +1695,14 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 // RecordAutoDreamSyncLatency records the duration of the AutoDream sync operation.
 func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode string) {
 	if autoDreamSyncDuration != nil {
-		autoDreamSyncDuration.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
-		))
+		autoDreamSyncDuration.Record(ctx, latency)
 	}
 }
 
 // RecordAutoDreamQueryLatency records the duration of the AutoDream RAG query.
 func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode string) {
 	if autoDreamQueryDuration != nil {
-		autoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
-		))
+		autoDreamQueryDuration.Record(ctx, latency)
 	}
 }
 
@@ -1689,9 +1725,7 @@ func RecordSIPSyncPayloadSize(ctx context.Context, bytes int) {
 // RecordMeshBroadcast increments the mesh broadcast counter.
 func RecordMeshBroadcast(ctx context.Context, mode string) {
 	if meshBroadcastTotal != nil {
-		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
-		))
+		meshBroadcastTotal.Add(ctx, 1)
 	}
 }
 
@@ -1811,6 +1845,13 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
 	if SubAgentExecutionDuration != nil {
 		SubAgentExecutionDuration.Record(ctx, duration)
+	}
+}
+
+// RecordSubAgentSpawn increments the counter for sub-agent spawns.
+func RecordSubAgentSpawn(ctx context.Context) {
+	if SubAgentSpawnTotal != nil {
+		SubAgentSpawnTotal.Add(ctx, 1)
 	}
 }
 
@@ -2005,7 +2046,8 @@ func RecordBubblewrapExecutionLatency(ctx context.Context, duration float64) {
 func RecordBubblewrapViolation(ctx context.Context) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"type": "bubblewrap_violation",
+			"type":            "bubblewrap_violation",
+			"deployment_mode": GetDeploymentMode(),
 		}
 
 		payloadBytes, _ := json.Marshal(payloadMap)
@@ -2015,22 +2057,17 @@ func RecordBubblewrapViolation(ctx context.Context) {
 		BubblewrapViolationTotal.Add(ctx, 1)
 	}
 }
-// added for tracking
 
 // RecordHarnessInitLatency records the latency of harness initialization.
 func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string) {
 	if HarnessInitLatency != nil {
-		HarnessInitLatency.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
-		))
+		HarnessInitLatency.Record(ctx, latency)
 	}
 }
 
 // RecordHarnessDbIoLatency records the latency of harness database I/O.
 func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string) {
 	if HarnessDbIoLatency != nil {
-		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
-		))
+		HarnessDbIoLatency.Record(ctx, latency)
 	}
 }

@@ -74,6 +74,9 @@ func TestInitTelemetry(t *testing.T) {
 	if AgentCostEstimateUSD == nil {
 		t.Error("expected AgentCostEstimateUSD to be initialized")
 	}
+	if SubAgentSpawnTotal == nil {
+		t.Error("expected SubAgentSpawnTotal to be initialized")
+	}
 
 	cleanup() // Clean up resources
 }
@@ -876,4 +879,13 @@ func TestRecordHarnessDbIoLatency(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	RecordHarnessDbIoLatency(context.Background(), 15.2, "standalone")
+}
+
+func TestRecordSubAgentSpawn(t *testing.T) {
+	cleanup, _ := InitTelemetry()
+	defer cleanup()
+
+	time.Sleep(10 * time.Millisecond)
+
+	RecordSubAgentSpawn(context.Background())
 }

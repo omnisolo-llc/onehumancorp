@@ -49,7 +49,7 @@ func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string, authorizer *Ca
 		authorizer:   authorizer,
 	}
 
-	telemetry.RecordHarnessInitLatency(context.Background(), float64(time.Since(start).Milliseconds()), mode)
+	telemetry.RecordHarnessInitLatency(context.Background(), float64(time.Since(start).Milliseconds()), "")
 
 	return proxy
 }
@@ -77,7 +77,7 @@ func (p *McpSyncProxy) Buffer(ctx context.Context, sessionID, capability, toolNa
 		"INSERT INTO hybrid_mcp_sync_queue (id, tool_name, arguments, status, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)",
 		id, toolName, string(argsBytes), "PENDING")
 
-	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
+	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), "")
 	if err != nil {
 		return "", fmt.Errorf("failed to buffer to db: %w", err)
 	}
@@ -90,7 +90,7 @@ func (p *McpSyncProxy) Sync(ctx context.Context) (int, error) {
 	start := time.Now()
 	rows, err := p.dbProvider.Query(ctx, "SELECT id, tool_name, arguments FROM hybrid_mcp_sync_queue WHERE status = 'PENDING' LIMIT 50")
 
-	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
+	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), "")
 	if err != nil {
 		return 0, fmt.Errorf("failed to query queue: %w", err)
 	}

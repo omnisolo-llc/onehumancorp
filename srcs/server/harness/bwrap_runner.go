@@ -5,6 +5,9 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // BwrapRunner executes commands inside a bubblewrap sandbox.
@@ -70,6 +73,9 @@ func (r *BwrapRunner) Execute(ctx context.Context, command string) (Result, erro
 
 // ExecuteWithPolicy runs the command with a specific policy.
 func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, policy *Policy) (Result, error) {
+	telemetry.RecordBubblewrapSpawn(ctx)
+	start := time.Now()
+
 	if err := r.validator.Validate(ctx, command); err != nil {
 		return Result{}, fmt.Errorf("command validation failed: %w", err)
 	}
@@ -82,6 +88,8 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
 	cmd.Stderr = &stderr
 
 	err := cmd.Run()
+	duration := time.Since(start).Seconds()
+	telemetry.RecordBubblewrapExecutionLatency(ctx, duration)
 	exitCode := 0
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
@@ -93,6 +101,7 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
             // unless we parse stderr.
             if exitCode == 1 && bytes.Contains(stderr.Bytes(), []byte("bwrap:")) {
                 violationCount.Add(ctx, 1)
+                telemetry.RecordBubblewrapViolation(ctx)
             }
 		} else {
             // Infrastructure error launching bwrap process
