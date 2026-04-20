@@ -239,18 +239,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Image.asset(
-                            package: 'ohc_app',
-                          'assets/logo.png',
-                          height: 80,
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Icon(
-                              Icons.auto_awesome,
-                              size: 64,
-                              color: Theme.of(context).colorScheme.primary,
-                            );
-                          },
-                        ),
+                            'assets/logo.png',
+                            height: 80,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                Icons.auto_awesome,
+                                size: 64,
+                                color: Theme.of(context).colorScheme.primary,
+                              );
+                            },
+                          ),
                         const SizedBox(height: 24),
                         const Text(
                           'One Human Corp',
@@ -295,6 +294,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             labelText: 'Password',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
+                              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
                               icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
                               onPressed: () {
                                 setState(() {
