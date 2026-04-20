@@ -1269,7 +1269,6 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 }
 
 // RecordSQLiteLockContention increments the global counter for SQLite database lock contention.
-// Used primarily to monitor Standalone Mode Swarm concurrency limits.
 func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
