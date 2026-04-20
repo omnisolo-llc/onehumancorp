@@ -142,15 +142,18 @@ def _proto_dart_library_impl(ctx):
 
     if ctx.attr.generate_domain_models:
         for i in range(len(srcs)):
-            pb_dart = outs[i * (4 if ctx.attr.use_grpc else 3)]
+            proto_src = srcs[i]
             domain_dart = domain_outs[i]
             ctx.actions.run(
                 executable = ctx.executable._model_gen_tool,
-                arguments = [pb_dart.path, domain_dart.path],
-                inputs = [pb_dart],
+                arguments = [proto_src.path, domain_dart.path],
+                inputs = depset(
+                    [proto_src],
+                    transitive = [proto_info.transitive_sources],
+                ),
                 outputs = [domain_dart],
                 mnemonic = "DomainModelGen",
-                progress_message = "Generating Domain Model for %s" % pb_dart.basename,
+                progress_message = "Generating Domain Model for %s" % proto_src.basename,
             )
 
     return [DefaultInfo(files = depset(outs + domain_outs))]

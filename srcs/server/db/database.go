@@ -136,15 +136,23 @@ func New(ctx context.Context) (*DB, error) {
 	if dsn == "" || strings.HasPrefix(dsn, "sqlite://") {
 		var dbPath string
 		if dsn == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("db: find home dir: %w", err)
+			if os.Getenv("CI") == "true" || strings.HasSuffix(os.Args[0], ".test") {
+				// Use unique path or memory for tests to prevent concurrent E2E test collisions
+				tmpDir := os.TempDir()
+				b := make([]byte, 8)
+				rand.Read(b)
+				dbPath = filepath.Join(tmpDir, fmt.Sprintf("ohc_state_%x.db", b))
+			} else {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return nil, fmt.Errorf("db: find home dir: %w", err)
+				}
+				openclawDir := filepath.Join(homeDir, ".openclaw")
+				if err := os.MkdirAll(openclawDir, 0700); err != nil {
+					return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
+				}
+				dbPath = filepath.Join(openclawDir, "ohc_state.db")
 			}
-			openclawDir := filepath.Join(homeDir, ".openclaw")
-			if err := os.MkdirAll(openclawDir, 0700); err != nil {
-				return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
-			}
-			dbPath = filepath.Join(openclawDir, "ohc_state.db")
 		} else {
 			dbPath = strings.TrimPrefix(dsn, "sqlite://")
 		}
