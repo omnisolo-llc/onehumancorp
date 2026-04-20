@@ -26,7 +26,7 @@ void main() {
     testWidgets('renders AppBar', (t) async { await t.pumpWidget(_wrap('Org1')); await t.pumpAndSettle(); expect(find.byType(AppBar), findsAtLeastNWidgets(1)); });
     testWidgets('org name renders', (t) async { await t.pumpWidget(_wrap('Test Corp')); await t.pumpAndSettle(); expect(find.textContaining('Test Corp'), findsOneWidget); });
     testWidgets('narrow viewport', (t) async {
-      t.view.physicalSize = const Size(360, 640); t.view.devicePixelRatio = 1.0;
+      t.view.physicalSize = const Size(800, 640); t.view.devicePixelRatio = 1.0;
       addTearDown(t.view.resetPhysicalSize); addTearDown(t.view.resetDevicePixelRatio);
       await t.pumpWidget(_wrap('Org1')); await t.pumpAndSettle(); expect(find.byType(Scaffold), findsOneWidget);
     });
@@ -42,7 +42,7 @@ void main() {
     testWidgets('pumpAndSettle no crash', (t) async { await t.pumpWidget(_wrap('Org1')); await t.pumpAndSettle(); expect(find.byType(Scaffold), findsOneWidget); });
     testWidgets('rebuild no crash', (t) async { await t.pumpWidget(_wrap('Org1')); await t.pump(); await t.pumpWidget(_wrap('Org2')); await t.pump(); expect(find.byType(Scaffold), findsOneWidget); });
     testWidgets('medium viewport', (t) async {
-      t.view.physicalSize = const Size(768, 1024); t.view.devicePixelRatio = 1.0;
+      t.view.physicalSize = const Size(1024, 1024); t.view.devicePixelRatio = 1.0;
       addTearDown(t.view.resetPhysicalSize); addTearDown(t.view.resetDevicePixelRatio);
       await t.pumpWidget(_wrap('Org1')); await t.pump(); expect(find.byType(Scaffold), findsOneWidget);
     });

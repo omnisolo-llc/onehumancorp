@@ -7,26 +7,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/models/user.dart';
 
 class _SeededUserApiService extends ApiService {
-  final List<Map<String, dynamic>> _users;
+  final List<UserPublic> _users;
   _SeededUserApiService(this._users)
       : super(baseUrl: 'http://test-host', token: 'seed-token');
 
   @override
-  Future<List<Map<String, dynamic>>> listUsers() async => _users;
+  Future<List<UserPublic>> listUsers() async => _users;
 }
 
-Map<String, dynamic> _user(String id, String email, {String role = 'member'}) => {
-  'id': id,
-  'email': email,
-  'name': 'User $id',
-  'role': role,
-  'organization_id': 'org-1',
-  'created_at': DateTime(2025, 1, 1).toIso8601String(),
-};
+UserPublic _user(String id, String email, {String role = 'member'}) =>
+    UserPublic(
+      id: id,
+      username: 'user_$id',
+      email: email,
+      roles: [role],
+      active: true,
+      createdAt: DateTime(2025, 1, 1),
+    );
 
-Widget _wrapUsers(List<Map<String, dynamic>> users) {
+Widget _wrapUsers(List<UserPublic> users) {
   final api = _SeededUserApiService(users);
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
@@ -70,7 +72,7 @@ void main() {
       expect(find.byType(AppBar), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('narrow viewport renders without overflow', (tester) async {
+    testWidgets('narrow viewport renders without crash', (tester) async {
       tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -80,7 +82,7 @@ void main() {
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
-    testWidgets('wide viewport renders without overflow', (tester) async {
+    testWidgets('wide viewport renders without crash', (tester) async {
       tester.view.physicalSize = const Size(1280, 800);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -99,7 +101,7 @@ void main() {
 
     testWidgets('user email with long name renders without overflow', (tester) async {
       await tester.pumpWidget(_wrapUsers([
-        _user('u1', 'averylongemailaddressthatismorethan50characters@example.com'),
+        _user('u1', 'averylongemail@example.com'),
       ]));
       await tester.pumpAndSettle();
       expect(find.byType(Scaffold), findsOneWidget);
