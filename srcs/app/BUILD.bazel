@@ -178,8 +178,34 @@ flutter_test(
     name = "app_desktop_e2e_test",
     srcs = ["test/desktop_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/desktop_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+# ── Standalone Flutter tests (no external server required) ───────────────────
+# These widget/smoke tests run with self-contained fakes and Riverpod overrides.
+
+flutter_test(
+    name = "app_widget_smoke_test",
+    srcs = ["test/widget_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/widget_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "app_setup_ui_test",
+    srcs = ["test/setup_ui_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/setup_ui_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "app_growth_referral_widget_test",
+    srcs = ["test/growth_referral_widget_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/growth_referral_widget_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
 
@@ -191,7 +217,6 @@ flutter_test(
     name = "cuj_auth_e2e_test",
     srcs = ["test/cuj_auth_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_auth_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -200,7 +225,6 @@ flutter_test(
     name = "cuj_agents_hire_e2e_test",
     srcs = ["test/cuj_agents_hire_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_agents_hire_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -209,7 +233,6 @@ flutter_test(
     name = "cuj_cost_e2e_test",
     srcs = ["test/cuj_cost_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_cost_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -218,7 +241,6 @@ flutter_test(
     name = "cuj_handoffs_e2e_test",
     srcs = ["test/cuj_handoffs_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_handoffs_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -227,7 +249,6 @@ flutter_test(
     name = "cuj_pipelines_e2e_test",
     srcs = ["test/cuj_pipelines_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_pipelines_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -236,7 +257,6 @@ flutter_test(
     name = "cuj_users_e2e_test",
     srcs = ["test/cuj_users_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_users_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -245,7 +265,6 @@ flutter_test(
     name = "cuj_integrations_e2e_test",
     srcs = ["test/cuj_integrations_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_integrations_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -254,7 +273,6 @@ flutter_test(
     name = "cuj_channels_extra_e2e_test",
     srcs = ["test/cuj_channels_extra_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_channels_extra_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -263,7 +281,6 @@ flutter_test(
     name = "cuj_scaling_e2e_test",
     srcs = ["test/cuj_scaling_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_scaling_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -272,14 +289,44 @@ flutter_test(
     name = "cuj_diagnostics_referrals_e2e_test",
     srcs = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_dashboard_e2e_test",
+    srcs = ["test/cuj_dashboard_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_dashboard_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_meetings_e2e_test",
+    srcs = ["test/cuj_meetings_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_meetings_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_security_e2e_test",
+    srcs = ["test/cuj_security_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_security_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_agents_management_e2e_test",
+    srcs = ["test/cuj_agents_management_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_agents_management_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
 
 test_suite(
     name = "cuj_e2e_tests",
-    tags = ["manual"],
     tests = [
         ":cuj_auth_e2e_test",
         ":cuj_agents_hire_e2e_test",
@@ -291,6 +338,10 @@ test_suite(
         ":cuj_channels_extra_e2e_test",
         ":cuj_scaling_e2e_test",
         ":cuj_diagnostics_referrals_e2e_test",
+        ":cuj_dashboard_e2e_test",
+        ":cuj_meetings_e2e_test",
+        ":cuj_security_e2e_test",
+        ":cuj_agents_management_e2e_test",
     ],
 )
 
