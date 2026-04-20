@@ -13,7 +13,7 @@ def _compute_repo_relative_path(ctx, artifact, repo_name):
     up_count = len(bin_segments) + len(short_segments)
     components = [".."] * up_count
     components.extend(["external", repo_name])
-    return "/".join(components).replace("+", "%2B")
+    return "/".join(components)
 
 def _proto_dart_library_impl(ctx):
     proto_info = ctx.attr.protos[ProtoInfo]
