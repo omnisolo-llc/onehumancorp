@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -81,6 +82,10 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
+	if token := os.Getenv("SPIFFE_IDENTITY_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("do request: %w", err)
@@ -104,15 +109,17 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 // InitStandaloneBuffer configures the telemetry system to buffer metrics locally in SQLite.
 func InitStandaloneBuffer(db *sql.DB) {
 	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		var data map[string]interface{}
+		var data interface{}
 		if err := json.Unmarshal([]byte(payload), &data); err == nil {
 			redactedData := RedactInterfacePII(data)
 			if redactedBytes, err := json.Marshal(redactedData); err == nil {
 				payload = string(redactedBytes)
 			}
+		} else {
+			payload = RedactPII(payload)
 		}
 
-		_, err := db.ExecContext(ctx, "INSERT INTO telemetry_buffer (metric_type, payload) VALUES ($1, $2)", metricType, payload)
+		_, err := db.ExecContext(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at) VALUES ($1, $2, CURRENT_TIMESTAMP)", metricType, payload)
 		if err != nil {
 			return fmt.Errorf("failed to buffer metric %s: %w", metricType, err)
 		}

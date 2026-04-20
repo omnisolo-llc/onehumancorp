@@ -1528,6 +1528,13 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 
 // RecordSyncLatency records the latency of the sync process.
 func RecordSyncLatency(ctx context.Context, latency float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency": latency,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "sync_latency", string(payloadBytes))
+	}
 	if SyncLatency == nil {
 		return
 	}
@@ -1536,6 +1543,13 @@ func RecordSyncLatency(ctx context.Context, latency float64) {
 
 // RecordSyncPayloadSize records the size of the sync payload.
 func RecordSyncPayloadSize(ctx context.Context, size int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"size": size,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "sync_payload_size", string(payloadBytes))
+	}
 	if SyncPayloadSize == nil {
 		return
 	}
@@ -1544,6 +1558,13 @@ func RecordSyncPayloadSize(ctx context.Context, size int64) {
 
 // RecordSyncDaemonBatchSize records the batch size processed by SyncDaemon.
 func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"batch_size": size,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "sync_daemon_batch_size", string(payloadBytes))
+	}
 	if syncDaemonBatchSize == nil {
 		return
 	}
@@ -1552,6 +1573,15 @@ func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
 func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus string, newStatus string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"mission_id": missionID,
+			"old_status": oldStatus,
+			"new_status": newStatus,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "swarm_task_transition", string(payloadBytes))
+	}
 	if swarmTaskTransitionsCounter == nil {
 		return
 	}
@@ -1809,6 +1839,13 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 
 // RecordSubAgentExecutionDuration records the duration of a sub-agent execution.
 func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"duration": duration,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "sub_agent_execution_duration", string(payloadBytes))
+	}
 	if SubAgentExecutionDuration != nil {
 		SubAgentExecutionDuration.Record(ctx, duration)
 	}
@@ -1816,6 +1853,9 @@ func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
 
 // RecordSubAgentFailure increments the counter for sub-agent failures.
 func RecordSubAgentFailure(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "sub_agent_failure", "{}")
+	}
 	if SubAgentFailuresTotal != nil {
 		SubAgentFailuresTotal.Add(ctx, 1)
 	}
@@ -1823,6 +1863,13 @@ func RecordSubAgentFailure(ctx context.Context) {
 
 // RecordIdentityVerification increments either success or failure counter based on the success flag.
 func RecordIdentityVerification(ctx context.Context, success bool) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"success": success,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "identity_verification", string(payloadBytes))
+	}
 	if success {
 		if IdentityVerificationSuccessTotal != nil {
 			IdentityVerificationSuccessTotal.Add(ctx, 1)
@@ -1836,6 +1883,9 @@ func RecordIdentityVerification(ctx context.Context, success bool) {
 
 // RecordSyncConflictResolved increments the sync conflicts resolved counter.
 func RecordSyncConflictResolved(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "sync_conflict_resolved", "{}")
+	}
 	if SyncConflictsResolvedTotal != nil {
 		SyncConflictsResolvedTotal.Add(ctx, 1)
 	}
@@ -1843,6 +1893,13 @@ func RecordSyncConflictResolved(ctx context.Context) {
 
 // RecordOmniContextBytes increments the OmniContext bytes routed counter.
 func RecordOmniContextBytes(ctx context.Context, bytes int64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"bytes": bytes,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "omni_context_bytes", string(payloadBytes))
+	}
 	if OmniContextBytesRouted != nil {
 		OmniContextBytesRouted.Add(ctx, bytes)
 	}
@@ -1850,6 +1907,9 @@ func RecordOmniContextBytes(ctx context.Context, bytes int64) {
 
 // RecordRagEscalation increments the RAG escalation counter.
 func RecordRagEscalation(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "rag_escalation", "{}")
+	}
 	if RagEscalationCount != nil {
 		RagEscalationCount.Add(ctx, 1)
 	}
@@ -1989,6 +2049,9 @@ func RecordAutoDreamSyncError(ctx context.Context, agentID, errorType string) {
 
 // RecordBubblewrapSpawn increments the counter for Bubblewrap sandbox spawns.
 func RecordBubblewrapSpawn(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		_ = BufferMetricFunc(ctx, "bubblewrap_spawn", "{}")
+	}
 	if BubblewrapSpawnTotal != nil {
 		BubblewrapSpawnTotal.Add(ctx, 1)
 	}
@@ -1996,6 +2059,13 @@ func RecordBubblewrapSpawn(ctx context.Context) {
 
 // RecordBubblewrapExecutionLatency records the latency of a Bubblewrap execution.
 func RecordBubblewrapExecutionLatency(ctx context.Context, duration float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"duration": duration,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "bubblewrap_execution_latency", string(payloadBytes))
+	}
 	if BubblewrapExecutionLatency != nil {
 		BubblewrapExecutionLatency.Record(ctx, duration)
 	}
@@ -2019,6 +2089,14 @@ func RecordBubblewrapViolation(ctx context.Context) {
 
 // RecordHarnessInitLatency records the latency of harness initialization.
 func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency":         latency,
+			"deployment_mode": mode,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "harness_init_latency", string(payloadBytes))
+	}
 	if HarnessInitLatency != nil {
 		HarnessInitLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
@@ -2028,6 +2106,14 @@ func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string)
 
 // RecordHarnessDbIoLatency records the latency of harness database I/O.
 func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency":         latency,
+			"deployment_mode": mode,
+		}
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "harness_db_io_latency", string(payloadBytes))
+	}
 	if HarnessDbIoLatency != nil {
 		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),

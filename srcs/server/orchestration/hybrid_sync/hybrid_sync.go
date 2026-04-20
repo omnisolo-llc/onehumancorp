@@ -178,6 +178,8 @@ func (d *HybridSyncDaemon) sendToCloud(ctx context.Context, payloads []SyncPaylo
 
 	if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
 		req.Header.Set("Authorization", "Bearer "+spiffeToken)
+	} else if token := os.Getenv("SPIRE_SVID_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
