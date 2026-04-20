@@ -4,7 +4,7 @@ The architecture section is the entry point for system-level design, runtime top
 
 ## Primary References
 
-- [System Design](../system-design.md)
+- [System Design](system-design.md)
 - [System Overview](system-overview.md)
 - [Hybrid OS Design](kairos/hybrid-os-design.md)
 

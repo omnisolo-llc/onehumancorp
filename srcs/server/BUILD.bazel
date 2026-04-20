@@ -37,14 +37,6 @@ go_binary(
     visibility = ["//visibility:public"],
 )
 
-# To build the standalone desktop distribution (SQLite + embedded NATS only,
-# no env-var overrides for storage backend), run:
-#
-#   bazel build //srcs/server:ohc --@rules_go//go/config:tags=standalone
-#
-# This activates the build constraints in config_standalone.go which force
-# SQLite and standalone mode regardless of DATABASE_URL / REDIS_URL env vars.
-
 genrule(
     name = "standalone_ohc_exec_file",
     srcs = ["standalone_ohc.sh"],
