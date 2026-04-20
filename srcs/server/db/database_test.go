@@ -27,3 +27,11 @@ UPDATE users SET name = "semi;colon" WHERE id = 1;
 		t.Fatalf("splitSQLStatements() = %#v, want %#v", got, want)
 	}
 }
+
+func TestAppendSQLiteKeyPragmaQuotesKey(t *testing.T) {
+	dsn := appendSQLiteKeyPragma("/tmp/ohc_state.db?_pragma=busy_timeout(15000)", "0730757854de7cd4")
+	want := "/tmp/ohc_state.db?_pragma=busy_timeout(15000)&_pragma=key('0730757854de7cd4')"
+	if dsn != want {
+		t.Fatalf("appendSQLiteKeyPragma() = %q, want %q", dsn, want)
+	}
+}

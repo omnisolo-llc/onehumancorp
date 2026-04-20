@@ -27,10 +27,13 @@ flutter_library(
     srcs = glob(
         ["*.dart"],
         exclude = ["*_test.dart"],
-    ),
+    ) + ["//srcs/proto:user_dart_proto"],
     data = ["//srcs/app:app_assets"],
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
+    deps = [
+        "@pub_protobuf//:protobuf",
+    ],
 )
 
 # Keep individual model names as aliases for any existing embed references.
