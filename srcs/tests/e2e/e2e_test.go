@@ -81,7 +81,7 @@ func TestMain(m *testing.M) {
 		serverCmd.Env = append(os.Environ(),
 			"OHC_STANDALONE=true",
 			"OHC_HEADLESS=true",
-			"OHC_SERVE_UI=true",
+			"OHC_SERVE_UI=false",
 			fmt.Sprintf("PORT=%d", port),
 			fmt.Sprintf("STATE_DIR=%s", stateDir),
 			"REDIS_URL=",
