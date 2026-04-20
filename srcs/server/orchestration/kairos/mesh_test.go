@@ -70,3 +70,35 @@ func TestNewTeammateMesh(t *testing.T) {
 	_, ok = mesh.(*RedisMesh)
 	assert.True(t, ok)
 }
+
+func TestLocalTeammateMesh_PublishSubscribe(t *testing.T) {
+	mesh := NewLocalTeammateMesh()
+
+	taskCh, err := mesh.SubscribeTasks()
+	assert.NoError(t, err)
+
+	coordCh, err := mesh.SubscribeCoordination()
+	assert.NoError(t, err)
+
+	taskMsg := []byte("task message")
+	err = mesh.PublishTask(taskMsg)
+	assert.NoError(t, err)
+
+	select {
+	case received := <-taskCh:
+		assert.Equal(t, taskMsg, received)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for task message")
+	}
+
+	coordMsg := []byte("coordination message")
+	err = mesh.PublishCoordination(coordMsg)
+	assert.NoError(t, err)
+
+	select {
+	case received := <-coordCh:
+		assert.Equal(t, coordMsg, received)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for coordination message")
+	}
+}

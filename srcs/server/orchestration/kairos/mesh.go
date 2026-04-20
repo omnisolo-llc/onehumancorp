@@ -79,6 +79,41 @@ func (r *RedisMesh) Subscribe(channel string) (<-chan []byte, error) {
 	return ch, nil
 }
 
+// LocalTeammateMesh implements TeammateMesh and provides explicit channels for mesh:tasks and mesh:coordination.
+type LocalTeammateMesh struct {
+	mesh *MemoryMesh
+}
+
+func NewLocalTeammateMesh() *LocalTeammateMesh {
+	return &LocalTeammateMesh{
+		mesh: NewMemoryMesh(),
+	}
+}
+
+func (l *LocalTeammateMesh) Publish(channel string, message []byte) error {
+	return l.mesh.Publish(channel, message)
+}
+
+func (l *LocalTeammateMesh) Subscribe(channel string) (<-chan []byte, error) {
+	return l.mesh.Subscribe(channel)
+}
+
+func (l *LocalTeammateMesh) PublishTask(message []byte) error {
+	return l.Publish("mesh:tasks", message)
+}
+
+func (l *LocalTeammateMesh) SubscribeTasks() (<-chan []byte, error) {
+	return l.Subscribe("mesh:tasks")
+}
+
+func (l *LocalTeammateMesh) PublishCoordination(message []byte) error {
+	return l.Publish("mesh:coordination", message)
+}
+
+func (l *LocalTeammateMesh) SubscribeCoordination() (<-chan []byte, error) {
+	return l.Subscribe("mesh:coordination")
+}
+
 func NewTeammateMesh(redisClient *redis.Client) TeammateMesh {
 	if redisClient != nil {
 		return NewRedisMesh(redisClient)
