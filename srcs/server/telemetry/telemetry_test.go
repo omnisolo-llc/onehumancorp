@@ -877,3 +877,11 @@ func TestRecordHarnessDbIoLatency(t *testing.T) {
 
 	RecordHarnessDbIoLatency(context.Background(), 15.2, "standalone")
 }
+
+func TestRecordASTValidationViolation(t *testing.T) {
+	RecordASTValidationViolation(context.Background())
+}
+
+func TestRecordBashExecution(t *testing.T) {
+	RecordBashExecution(context.Background())
+}

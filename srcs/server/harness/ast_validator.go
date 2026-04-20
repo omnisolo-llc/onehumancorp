@@ -25,7 +25,7 @@ func init() {
 	}
 }
 
-// ASTValidator validates bash commands using tree-sitter.
+// ASTValidator validates bash commands using tree-sitter. It checks for AST-based command validation.
 type ASTValidator struct {
 	mu     sync.Mutex
 	parser *sitter.Parser

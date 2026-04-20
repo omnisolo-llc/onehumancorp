@@ -13,6 +13,7 @@ import (
 	"runtime"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/harness"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -91,6 +92,7 @@ type ExecutionEnvironment interface {
 type LocalEnvironment struct {
 	blockedPatterns []*regexp.Regexp
 	violationStore  *SandboxViolationStore
+	astValidator  *harness.ASTValidator
 }
 
 // NewSandbox creates a new Sandbox with default security rules.
@@ -107,6 +109,7 @@ func NewSandbox() ExecutionEnvironment {
 			regexp.MustCompile(`=\(`),
 		},
 		violationStore: NewSandboxViolationStore(),
+		astValidator: harness.NewASTValidator(),
 	}
 }
 
@@ -147,12 +150,20 @@ func (s *LocalEnvironment) ValidateContext(ctx context.Context, command string) 
 			return fmt.Errorf("command violates security policy: matched %s", pattern.String())
 		}
 	}
+	if s.astValidator != nil {
+		if err := s.astValidator.Validate(ctx, command); err != nil {
+			s.violationStore.RecordViolation(ctx, command, "ast validation failed: " + err.Error())
+			telemetry.RecordASTValidationViolation(ctx)
+			return fmt.Errorf("command violates AST security policy: %w", err)
+		}
+	}
 	return nil
 }
 
 // ExecuteContext runs the command if it passes validation.
 func (s *LocalEnvironment) ExecuteContext(ctx context.Context, command string, workDir string) (string, error) {
 	execCount.Add(ctx, 1)
+	telemetry.RecordBashExecution(ctx)
 	telemetry.RecordBubblewrapSpawn(ctx)
 
 	startTime := time.Now()

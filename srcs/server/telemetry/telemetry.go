@@ -34,6 +34,8 @@ var (
 	HarnessInitLatency         metric.Float64Histogram
 	HarnessDbIoLatency         metric.Float64Histogram
 	BubblewrapViolationTotal   metric.Int64Counter
+	ASTValidationViolationTotal metric.Int64Counter
+	BashExecutionTotal metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
 	latencyHistogram           metric.Float64Histogram
@@ -836,6 +838,21 @@ func InitWithMeter(m mockableMeter) error {
 	BubblewrapViolationTotal, err = m.Int64Counter(
 		"ohc_bubblewrap_violation_total",
 		metric.WithDescription("Total number of Bubblewrap sandbox policy violations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	ASTValidationViolationTotal, err = m.Int64Counter(
+		"ohc_ast_validation_violation_total",
+		metric.WithDescription("Total number of AST validation policy violations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	BashExecutionTotal, err = m.Int64Counter(
+		"ohc_bash_execution_total",
+		metric.WithDescription("Total number of bash command executions tracked by Prometheus"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -2032,5 +2049,35 @@ func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string)
 		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
 		))
+	}
+}
+
+// RecordASTValidationViolation increments the counter for AST validation policy violations.
+func RecordASTValidationViolation(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"type": "ast_validation_violation",
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ast_validation_violation_total", string(payloadBytes))
+	}
+	if ASTValidationViolationTotal != nil {
+		ASTValidationViolationTotal.Add(ctx, 1)
+	}
+}
+
+// RecordBashExecution increments the counter for tracked bash executions.
+func RecordBashExecution(ctx context.Context) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"type": "bash_execution",
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "bash_execution_total", string(payloadBytes))
+	}
+	if BashExecutionTotal != nil {
+		BashExecutionTotal.Add(ctx, 1)
 	}
 }
