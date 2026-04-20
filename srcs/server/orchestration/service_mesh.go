@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// AdvertiseCapabilities advertises an agent's capabilities to the mesh
+// AdvertiseCapabilities (Realtime Teammate Mesh API) advertises an agent's capabilities to the mesh
 func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start)) }()

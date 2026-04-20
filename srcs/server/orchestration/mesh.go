@@ -503,6 +503,7 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 	return ch, nil
 }
 
+// MeshTransport defines Realtime Teammate Mesh APIs
 type MeshTransport interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
