@@ -56,7 +56,7 @@ func (s *Server) handleAutoDreamSync(w http.ResponseWriter, r *http.Request) { /
 	}
 
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
-	err := worker.IngestCompletedTasks(r.Context())
+	err := worker.ConsolidateEpoch(r.Context())
 	if err != nil {
 		http.Error(w, "failed to synchronize AutoDream: "+err.Error(), http.StatusInternalServerError)
 		return
