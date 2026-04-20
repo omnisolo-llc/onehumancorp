@@ -38,4 +38,4 @@ CREATE TABLE IF NOT EXISTS revoked_tokens (
 );
 
 -- GC index for periodic cleanup of expired revocations.
-CREATE INDEX idx_revoked_tokens_exp ON revoked_tokens (expires_at);
+CREATE INDEX IF NOT EXISTS idx_revoked_tokens_exp ON revoked_tokens (expires_at);
