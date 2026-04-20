@@ -11,10 +11,26 @@ _EMBED = ["//srcs/app/lib/screens:screens_for_tests"]
 _PUBSPEC = "//:pubspec.yaml"
 
 flutter_test(
+    name = "agent_mesh_message_tile_test",
+    srcs = ["agent_mesh_message_tile_test.dart"],
+    embed = _EMBED,
+    test_files = ["agent_mesh_message_tile_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
     name = "agent_status_indicator_test",
     srcs = ["agent_status_indicator_test.dart"],
     embed = _EMBED,
     test_files = ["agent_status_indicator_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "agent_task_progress_test",
+    srcs = ["agent_task_progress_test.dart"],
+    embed = _EMBED,
+    test_files = ["agent_task_progress_test.dart"],
     workspace_pubspec = _PUBSPEC,
 )
 
@@ -27,10 +43,26 @@ flutter_test(
 )
 
 flutter_test(
+    name = "hybrid_agent_status_test",
+    srcs = ["hybrid_agent_status_test.dart"],
+    embed = _EMBED,
+    test_files = ["hybrid_agent_status_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
     name = "hybrid_observability_widget_test",
     srcs = ["hybrid_observability_widget_test.dart"],
     embed = _EMBED,
     test_files = ["hybrid_observability_widget_test.dart"],
+    workspace_pubspec = _PUBSPEC,
+)
+
+flutter_test(
+    name = "swarm_observability_dashboard_test",
+    srcs = ["swarm_observability_dashboard_test.dart"],
+    embed = _EMBED,
+    test_files = ["swarm_observability_dashboard_test.dart"],
     workspace_pubspec = _PUBSPEC,
 )
 
@@ -53,9 +85,13 @@ flutter_test(
 test_suite(
     name = "all_tests",
     tests = [
+        ":agent_mesh_message_tile_test",
         ":agent_status_indicator_test",
+        ":agent_task_progress_test",
         ":autodream_pipeline_widget_test",
+        ":hybrid_agent_status_test",
         ":hybrid_observability_widget_test",
+        ":swarm_observability_dashboard_test",
         ":swarm_observability_widget_test",
         ":vector_memory_visualizer_test",
     ],

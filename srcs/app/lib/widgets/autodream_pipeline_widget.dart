@@ -35,22 +35,28 @@ class _AutoDreamPipelineWidgetState extends State<AutoDreamPipelineWidget> with 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            shape: BoxShape.circle,
-            border: Border.all(color: color.withOpacity(0.5), width: 2),
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.3),
-                blurRadius: 10,
-                spreadRadius: 2,
-              )
-            ],
+        Semantics(
+          label: label,
+          child: Tooltip(
+            message: 'Processing node: $label',
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                shape: BoxShape.circle,
+                border: Border.all(color: color.withOpacity(0.5), width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
           ),
-          child: Icon(icon, color: color, size: 24),
         ),
         const SizedBox(height: 8),
         Text(
@@ -89,15 +95,7 @@ class _AutoDreamPipelineWidgetState extends State<AutoDreamPipelineWidget> with 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
-        filter: ImageFilter.compose(
-          outer: const ColorFilter.matrix(<double>[
-            1.168, -0.153, -0.015, 0, 0,
-            -0.046, 1.061, -0.015, 0, 0,
-            -0.046, -0.152, 1.198, 0, 0,
-            0, 0, 0, 1, 0,
-          ]),
-          inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-        ),
+        filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
         child: Container(
           padding: const EdgeInsets.all(24.0),
           decoration: BoxDecoration(

@@ -29,6 +29,14 @@ void main() {
     expect(find.byIcon(Icons.scatter_plot), findsOneWidget);
     expect(find.byIcon(Icons.save_alt), findsOneWidget);
 
+    // Verify Semantics and Tooltips for accessibility
+    expect(find.byType(Semantics), findsWidgets);
+    expect(find.byType(Tooltip), findsWidgets);
+    expect(find.byTooltip('Processing node: Extract'), findsOneWidget);
+    expect(find.byTooltip('Processing node: Analyze'), findsOneWidget);
+    expect(find.byTooltip('Processing node: Embed'), findsOneWidget);
+    expect(find.byTooltip('Processing node: Store'), findsOneWidget);
+
     // Let animation run briefly
     await tester.pump(const Duration(milliseconds: 500));
 
