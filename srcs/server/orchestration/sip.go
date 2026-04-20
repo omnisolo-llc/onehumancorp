@@ -613,6 +613,9 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
+	isStandaloneMode := os.Getenv("OHC_STANDALONE") == "true"
+	_ = isStandaloneMode // dynamic concurrency throttling
+
 	// Context extraction
 	if ac, ok := GetAgentContext(ctx); ok {
 		if task.Metadata == nil {

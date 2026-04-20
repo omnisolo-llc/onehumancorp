@@ -261,6 +261,9 @@ func InitTelemetry() (func(), error) {
 	meter = provider.Meter("github.com/onehumancorp/mono/ohc")
 
 	initBridgeMetrics()
+	GlobalTokenForecastWorker = NewTokenForecastWorker(1*time.Minute, 0.2)
+	GlobalTokenForecastWorker.Start(context.Background())
+
 	err = InitWithMeter(meter)
 	if err != nil {
 		return nil, err
@@ -895,6 +898,9 @@ func Middleware(next http.Handler) http.Handler {
 // Has no side effects.
 var Verbosity = 1 // Default level
 
+var GlobalTokenForecastWorker *TokenForecastWorker
+
+
 // MetricsHandler provides an HTTP handler that exposes the collected Prometheus metrics.
 //
 // Accepts no parameters.
@@ -922,6 +928,10 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 	if tokenUsageCounter == nil {
 		return
 	}
+	if GlobalTokenForecastWorker != nil {
+
+	}
+
 	tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
@@ -948,6 +958,10 @@ func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, m
 	if AgentTokenUsageTotal == nil {
 		return
 	}
+	if GlobalTokenForecastWorker != nil {
+		GlobalTokenForecastWorker.RecordUsage(organizationID, count)
+	}
+
 	AgentTokenUsageTotal.Add(ctx, count, metric.WithAttributes(
 		attribute.String("agent_id", agentID),
 		attribute.String("organization_id", organizationID),

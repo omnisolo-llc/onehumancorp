@@ -1,0 +1,15 @@
+{
+  "title": "Token Burn Rate Forecasting",
+  "panels": [
+    {
+      "title": "Token Burn Rate Forecast (EWMA)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "ohc_token_burn_rate_forecast",
+          "legendFormat": "{{organization_id}}"
+        }
+      ]
+    }
+  ]
+}

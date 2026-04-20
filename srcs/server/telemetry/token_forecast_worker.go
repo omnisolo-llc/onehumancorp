@@ -6,31 +6,25 @@ import (
 	"time"
 )
 
-// TokenForecastWorker calculates the moving average token burn rate per tenant.
 type TokenForecastWorker struct {
 	mu           sync.Mutex
-	usageHistory map[string][]tokenUsageRecord
+	usageHistory map[string]float64 // Stores the current EWMA rate per tenant
 	interval     time.Duration
-	window       time.Duration
+	alpha        float64
+	currentUsage map[string]int64
 	stopCh       chan struct{}
 }
 
-type tokenUsageRecord struct {
-	timestamp time.Time
-	tokens    int64
-}
-
-// NewTokenForecastWorker creates a new TokenForecastWorker.
-func NewTokenForecastWorker(interval time.Duration, window time.Duration) *TokenForecastWorker {
+func NewTokenForecastWorker(interval time.Duration, alpha float64) *TokenForecastWorker {
 	return &TokenForecastWorker{
-		usageHistory: make(map[string][]tokenUsageRecord),
+		usageHistory: make(map[string]float64),
+		currentUsage: make(map[string]int64),
 		interval:     interval,
-		window:       window,
+		alpha:        alpha,
 		stopCh:       make(chan struct{}),
 	}
 }
 
-// Start begins the background worker loop.
 func (w *TokenForecastWorker) Start(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(w.interval)
@@ -49,61 +43,38 @@ func (w *TokenForecastWorker) Start(ctx context.Context) {
 	}()
 }
 
-// Stop halts the background worker.
 func (w *TokenForecastWorker) Stop() {
 	close(w.stopCh)
 }
 
-// RecordUsage records a new token usage event for a tenant.
-// In a real application, this might be hooked up to where tokens are actually counted,
-// or the worker might query a database. For this implementation, we'll provide a way
-// to feed data into it.
 func (w *TokenForecastWorker) RecordUsage(organizationID string, tokens int64) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-
-	now := time.Now()
-	w.usageHistory[organizationID] = append(w.usageHistory[organizationID], tokenUsageRecord{
-		timestamp: now,
-		tokens:    tokens,
-	})
-
-	// Prune old records outside the window
-	cutoff := now.Add(-w.window)
-	var filtered []tokenUsageRecord
-	for _, record := range w.usageHistory[organizationID] {
-		if record.timestamp.After(cutoff) {
-			filtered = append(filtered, record)
-		}
-	}
-	w.usageHistory[organizationID] = filtered
+	w.currentUsage[organizationID] += tokens
 }
 
 func (w *TokenForecastWorker) calculateAndRecordRates(ctx context.Context) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	now := time.Now()
-	cutoff := now.Add(-w.window)
+	intervalMinutes := w.interval.Minutes()
+	if intervalMinutes <= 0 {
+		return
+	}
 
-	for orgID, records := range w.usageHistory {
-		var totalTokens int64
-		var filtered []tokenUsageRecord
-
-		for _, record := range records {
-			if record.timestamp.After(cutoff) {
-				filtered = append(filtered, record)
-				totalTokens += record.tokens
-			}
+	for orgID, tokens := range w.currentUsage {
+		currentRate := float64(tokens) / intervalMinutes
+		oldEWMARate, exists := w.usageHistory[orgID]
+		var newEWMARate float64
+		if !exists {
+			newEWMARate = currentRate
+		} else {
+			newEWMARate = (w.alpha * currentRate) + ((1.0 - w.alpha) * oldEWMARate)
 		}
 
-		w.usageHistory[orgID] = filtered
+		w.usageHistory[orgID] = newEWMARate
+		w.currentUsage[orgID] = 0 // Reset current usage
 
-		// Calculate rate per minute
-		windowMinutes := w.window.Minutes()
-		if windowMinutes > 0 {
-			rate := float64(totalTokens) / windowMinutes
-			RecordTokenBurnRate(ctx, orgID, rate)
-		}
+		RecordTokenBurnRate(ctx, orgID, newEWMARate)
 	}
 }
