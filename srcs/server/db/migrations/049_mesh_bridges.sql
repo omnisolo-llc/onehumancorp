@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS mesh_bridges (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     remote_swarm_url VARCHAR NOT NULL,
     remote_organization_id VARCHAR NOT NULL,

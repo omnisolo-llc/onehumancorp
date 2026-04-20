@@ -74,3 +74,16 @@ The dashboard must maintain a 100/100 Lighthouse score for accessibility, ensuri
 - **Context Window Bloat:** Agent memory is forcefully summarized to fit within token limits, potentially losing subtle historical nuances.
 
 </div>
+
+## 9. Bridge Status Dashboard
+The "Bridge Status" dashboard must be integrated into the CEO UI using the following style guidelines:
+
+<style>
+.bridge-card {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+</style>

@@ -198,3 +198,4 @@ func (bm *BridgeManager) Status() map[string]string {
 	}
 	return status
 }
+//

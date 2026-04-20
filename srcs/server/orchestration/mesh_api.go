@@ -7,6 +7,7 @@ import (
 )
 
 type MeshAPI struct {
+	bridgeManager *BridgeManager
 	meshTransport MeshTransport
 }
 
@@ -14,7 +15,13 @@ func NewMeshAPI(mt MeshTransport) *MeshAPI {
 	return &MeshAPI{meshTransport: mt}
 }
 
+func (api *MeshAPI) SetBridgeManager(bm *BridgeManager) {
+	api.bridgeManager = bm
+}
+
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/v1/mesh/bridge/connect", api.HandleBridgeConnect)
+	mux.HandleFunc("/api/v1/mesh/bridge/status", api.HandleBridgeStatus)
 	mux.HandleFunc("/api/mesh/broadcast", api.HandleBroadcast)
 	mux.HandleFunc("/api/v1/mesh/broadcast", api.HandleMeshV1Broadcast)
 	mux.HandleFunc("/api/mesh/stream", api.HandleStream)
@@ -122,7 +129,6 @@ func (api *MeshAPI) HandleConnect(w http.ResponseWriter, r *http.Request) {
 	api.HandleStream(w, r)
 }
 
-
 func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -169,4 +175,63 @@ func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"success"}`))
+}
+
+func (api *MeshAPI) HandleBridgeConnect(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		RemoteSwarmURL       string `json:"remote_swarm_url"`
+		RemoteOrganizationID string `json:"remote_organization_id"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.RemoteSwarmURL == "" || req.RemoteOrganizationID == "" {
+		http.Error(w, "Missing required fields", http.StatusBadRequest)
+		return
+	}
+
+	if api.bridgeManager == nil {
+		http.Error(w, "BridgeManager not configured", http.StatusInternalServerError)
+		return
+	}
+
+	if err := api.bridgeManager.Connect(r.Context(), req.RemoteSwarmURL, req.RemoteOrganizationID, nil); err != nil {
+		http.Error(w, "Failed to connect to bridge", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success"}`))
+}
+
+func (api *MeshAPI) HandleBridgeStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if api.bridgeManager == nil {
+		http.Error(w, "BridgeManager not configured", http.StatusInternalServerError)
+		return
+	}
+
+	status := api.bridgeManager.Status()
+
+	respBytes, err := json.Marshal(status)
+	if err != nil {
+		http.Error(w, "Failed to marshal response", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(respBytes)
 }
