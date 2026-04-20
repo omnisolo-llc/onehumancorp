@@ -190,6 +190,15 @@ def _register_repo(repo_map, repo_name, package, version, origin):
                 ),
             )
         if version and existing["version"] and version != existing["version"]:
+            existing_from_module = any([entry.startswith("MODULE.bazel:") for entry in existing["origins"]])
+            new_from_module = origin.startswith("MODULE.bazel:")
+            if new_from_module and not existing_from_module:
+                existing["version"] = version
+                existing["origins"].append(origin)
+                return
+            if existing_from_module and not new_from_module:
+                existing["origins"].append(origin)
+                return
             fail(
                 "Repository '{}' has conflicting versions: '{}' from {} vs '{}' from {}".format(
                     repo_name,

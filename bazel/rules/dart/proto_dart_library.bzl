@@ -5,15 +5,14 @@ load("@bazel_skylib//lib:paths.bzl", "paths")
 
 def _compute_repo_relative_path(ctx, artifact, repo_name):
     """Compute relative path from generated artifact to an external repository root."""
-    bin_segments = [segment for segment in ctx.bin_dir.path.split("/") if segment]
     short_dir = paths.dirname(artifact.short_path)
     short_segments = []
     if short_dir and short_dir != ".":
         short_segments = [segment for segment in short_dir.split("/") if segment]
-    up_count = len(bin_segments) + len(short_segments)
+    up_count = 3 + len(short_segments)
     components = [".."] * up_count
     components.extend(["external", repo_name])
-    return "/".join(components).replace("+", "%2B")
+    return "/".join(components)
 
 def _proto_dart_library_impl(ctx):
     proto_info = ctx.attr.protos[ProtoInfo]
@@ -56,18 +55,33 @@ def _proto_dart_library_impl(ctx):
       "name": "protoc_plugin",
       "rootUri": "{plugin_root}",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.10"
     }}""".format(plugin_root = _compute_repo_relative_path(ctx, package_config, plugin_repo)),
     ]
 
     for pkg_name, pkg_label in [
+        ("_fe_analyzer_shared", ctx.attr._fe_analyzer_shared_pkg),
+        ("analyzer", ctx.attr._analyzer_pkg),
+        ("args", ctx.attr._args_pkg),
+        ("async", ctx.attr._async_pkg),
         ("collection", ctx.attr._collection_pkg),
+        ("convert", ctx.attr._convert_pkg),
+        ("crypto", ctx.attr._crypto_pkg),
+        ("file", ctx.attr._file_pkg),
         ("fixnum", ctx.attr._fixnum_pkg),
+        ("glob", ctx.attr._glob_pkg),
         ("meta", ctx.attr._meta_pkg),
+        ("package_config", ctx.attr._package_config_pkg),
         ("path", ctx.attr._path_pkg),
         ("protobuf", ctx.attr._protobuf_pkg),
         ("dart_style", ctx.attr._dart_style_pkg),
         ("pub_semver", ctx.attr._pub_semver_pkg),
+        ("source_span", ctx.attr._source_span_pkg),
+        ("string_scanner", ctx.attr._string_scanner_pkg),
+        ("term_glyph", ctx.attr._term_glyph_pkg),
+        ("typed_data", ctx.attr._typed_data_pkg),
+        ("watcher", ctx.attr._watcher_pkg),
+        ("yaml", ctx.attr._yaml_pkg),
     ]:
         pkg_root = _compute_repo_relative_path(ctx, package_config, pkg_label.label.workspace_name)
         package_entries.append(
@@ -75,7 +89,7 @@ def _proto_dart_library_impl(ctx):
       "name": "{name}",
       "rootUri": "{root}",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.10"
     }}""".format(name = pkg_name, root = pkg_root),
         )
 
@@ -129,10 +143,28 @@ def _proto_dart_library_impl(ctx):
             transitive = [
                 proto_info.transitive_sources,
                 ctx.attr._plugin_srcs.files,
+                ctx.attr._fe_analyzer_shared_pkg.files,
+                ctx.attr._analyzer_pkg.files,
+                ctx.attr._args_pkg.files,
+                ctx.attr._async_pkg.files,
                 ctx.attr._protobuf_pkg.files,
                 ctx.attr._fixnum_pkg.files,
                 ctx.attr._path_pkg.files,
                 ctx.attr._meta_pkg.files,
+                ctx.attr._collection_pkg.files,
+                ctx.attr._convert_pkg.files,
+                ctx.attr._crypto_pkg.files,
+                ctx.attr._dart_style_pkg.files,
+                ctx.attr._file_pkg.files,
+                ctx.attr._glob_pkg.files,
+                ctx.attr._package_config_pkg.files,
+                ctx.attr._pub_semver_pkg.files,
+                ctx.attr._source_span_pkg.files,
+                ctx.attr._string_scanner_pkg.files,
+                ctx.attr._term_glyph_pkg.files,
+                ctx.attr._typed_data_pkg.files,
+                ctx.attr._watcher_pkg.files,
+                ctx.attr._yaml_pkg.files,
             ],
         ),
         outputs = outs,
@@ -145,10 +177,14 @@ def _proto_dart_library_impl(ctx):
             proto_src = srcs[i]
             domain_dart = domain_outs[i]
             ctx.actions.run(
-                executable = ctx.executable._model_gen_tool,
-                arguments = [proto_src.path, domain_dart.path],
+                executable = dart,
+                arguments = [
+                    ctx.file._model_gen_script.path,
+                    proto_src.path,
+                    domain_dart.path,
+                ],
                 inputs = depset(
-                    [proto_src],
+                    [proto_src, ctx.file._model_gen_script],
                     transitive = [proto_info.transitive_sources],
                 ),
                 outputs = [domain_dart],
@@ -166,14 +202,29 @@ proto_dart_library = rule(
         "generate_domain_models": attr.bool(default = False),
         "_protoc": attr.label(default = "@protobuf//:protoc", executable = True, cfg = "exec"),
         "_dart_bin": attr.label(default = "@flutter_sdk//:dart_vm", executable = True, cfg = "exec"),
-        "_model_gen_tool": attr.label(default = "//bazel/rules/dart/tools/model_gen:generate_domain_models", executable = True, cfg = "exec"),
+        "_model_gen_script": attr.label(default = "//bazel/rules/dart/tools/model_gen:generate_domain_models.dart", allow_single_file = True),
         "_plugin_srcs": attr.label(default = "@google_protobuf_dart//:protoc_plugin_srcs"),
         "_protobuf_pkg": attr.label(default = "@pub_protobuf//:protobuf"),
+        "_fe_analyzer_shared_pkg": attr.label(default = "@pub__fe_analyzer_shared//:_fe_analyzer_shared"),
+        "_analyzer_pkg": attr.label(default = "@pub_analyzer//:analyzer"),
+        "_args_pkg": attr.label(default = "@pub_args//:args"),
+        "_async_pkg": attr.label(default = "@pub_async//:async"),
         "_fixnum_pkg": attr.label(default = "@pub_fixnum//:fixnum"),
         "_path_pkg": attr.label(default = "@pub_path//:path"),
         "_meta_pkg": attr.label(default = "@pub_meta//:meta"),
         "_collection_pkg": attr.label(default = "@pub_collection//:collection"),
+        "_convert_pkg": attr.label(default = "@pub_convert//:convert"),
         "_dart_style_pkg": attr.label(default = "@pub_dart_style//:dart_style"),
+        "_crypto_pkg": attr.label(default = "@pub_crypto//:crypto"),
+        "_file_pkg": attr.label(default = "@pub_file//:file"),
+        "_glob_pkg": attr.label(default = "@pub_glob//:glob"),
+        "_package_config_pkg": attr.label(default = "@pub_package_config//:package_config"),
         "_pub_semver_pkg": attr.label(default = "@pub_pub_semver//:pub_semver"),
+        "_source_span_pkg": attr.label(default = "@pub_source_span//:source_span"),
+        "_string_scanner_pkg": attr.label(default = "@pub_string_scanner//:string_scanner"),
+        "_term_glyph_pkg": attr.label(default = "@pub_term_glyph//:term_glyph"),
+        "_typed_data_pkg": attr.label(default = "@pub_typed_data//:typed_data"),
+        "_watcher_pkg": attr.label(default = "@pub_watcher//:watcher"),
+        "_yaml_pkg": attr.label(default = "@pub_yaml//:yaml"),
     },
 )

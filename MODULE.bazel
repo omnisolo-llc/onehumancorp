@@ -47,7 +47,9 @@ register_toolchains("@flutter_toolchains//:all")
 pub = use_extension("@rules_flutter//flutter:extensions.bzl", "pub")
 use_repo(
     pub,
+    "pub__fe_analyzer_shared",
     "pub_async",
+    "pub_args",
     "pub_boolean_selector",
     "pub_centrifuge",
     "pub_characters",
@@ -57,13 +59,18 @@ use_repo(
     "pub_cupertino_icons",
     "pub_ffi",
     "pub_analyzer",
+    "pub_convert",
     "pub_dart_style",
     "pub_file",
     "pub_fixnum",
     "pub_flutter_lints",
     "pub_flutter_riverpod",
     "pub_go_router",
+    "pub_glob",
+    "pub_googleapis_auth",
+    "pub_grpc",
     "pub_http",
+    "pub_http2",
     "pub_http_parser",
     "pub_intl",
     "pub_leak_tracker",
@@ -75,6 +82,7 @@ use_repo(
     "pub_material_color_utilities",
     "pub_meta",
     "pub_mocktail",
+    "pub_package_config",
     "pub_path",
     "pub_path_provider_linux",
     "pub_path_provider_platform_interface",
@@ -105,12 +113,25 @@ use_repo(
     "pub_vm_service",
     "pub_web",
     "pub_web_socket_channel",
+    "pub_watcher",
     "pub_xdg_directories",
     "pub_yaml"
 )
+pub.package(name = "pub__fe_analyzer_shared", package = "_fe_analyzer_shared", version = "99.0.0")
+pub.package(name = "pub_analyzer", package = "analyzer", version = "12.1.0")
+pub.package(name = "pub_args", package = "args", version = "2.7.0")
+pub.package(name = "pub_async", package = "async", version = "2.13.1")
+pub.package(name = "pub_convert", package = "convert", version = "3.1.2")
+pub.package(name = "pub_file", package = "file", version = "7.0.1")
+pub.package(name = "pub_glob", package = "glob", version = "2.1.3")
+pub.package(name = "pub_meta", package = "meta", version = "1.18.2")
+pub.package(name = "pub_package_config", package = "package_config", version = "2.2.0")
 pub.package(name = "pub_protobuf", package = "protobuf", version = "6.0.0")
 pub.package(name = "pub_protoc_plugin", package = "protoc_plugin", version = "25.0.0")
 pub.package(name = "pub_dart_style", package = "dart_style", version = "3.1.8")
+pub.package(name = "pub_source_span", package = "source_span", version = "1.10.2")
+pub.package(name = "pub_typed_data", package = "typed_data", version = "1.4.0")
+pub.package(name = "pub_watcher", package = "watcher", version = "1.2.1")
 pub.package(name = "pub_yaml", package = "yaml", version = "3.1.3")
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "23.6.0")

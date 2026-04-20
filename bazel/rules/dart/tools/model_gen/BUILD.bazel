@@ -3,7 +3,8 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 package(default_visibility = ["//visibility:public"])
 
-# We use sh_binary to wrap the dart execution for the generator
+# Legacy shell wrapper retained for direct/manual use; proto_dart_library runs the
+# generator with the hermetic Dart executable directly.
 sh_binary(
     name = "generate_domain_models",
     srcs = ["generate_domain_models.sh"],
