@@ -329,17 +329,17 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 		// Some drivers need ? others $1. Let's try replacing $1 with ?. Actually pgx supports $1, database/sql with sqlite supports ? and sometimes $1.
 		// Since we control both, sqlite supports $1 if named properly, but modernc/sqlite supports $1 natively in queries!
 		// But just to be safe let's query with parameter properly.
-		row := p.QueryRow(ctx, "SELECT COUNT(*) FROM schema_migrations WHERE filename = $1", f)
+		var query string
+		if p.Provider.IsSQLite() {
+			query = "SELECT COUNT(*) FROM schema_migrations WHERE filename = ?"
+		} else {
+			query = "SELECT COUNT(*) FROM schema_migrations WHERE filename = $1"
+		}
+
+		row := p.QueryRow(ctx, query, f)
 		err := row.Scan(&count)
 		if err != nil {
-			// modernc.sqlite might not like $1 by default without specific pragma, let's fallback to ? if error
-			if strings.Contains(err.Error(), "syntax error") || strings.Contains(err.Error(), "parameter") {
-				row = p.QueryRow(ctx, "SELECT COUNT(*) FROM schema_migrations WHERE filename = ?", f)
-				err = row.Scan(&count)
-			}
-			if err != nil {
-				return fmt.Errorf("db: check migration %s: %w", f, err)
-			}
+			return fmt.Errorf("db: check migration %s: %w", f, err)
 		}
 		if count > 0 {
 			continue
@@ -450,13 +450,17 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			}
 		}
 
-		_, err = tx.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES ($1)", f)
+		var insertQuery string
+		if p.Provider.IsSQLite() {
+			insertQuery = "INSERT INTO schema_migrations (filename) VALUES (?)"
+		} else {
+			insertQuery = "INSERT INTO schema_migrations (filename) VALUES ($1)"
+		}
+
+		_, err = tx.Exec(ctx, insertQuery, f)
 		if err != nil {
-			_, err2 := tx.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES (?)", f)
-			if err2 != nil {
-				_ = tx.Rollback(ctx)
-				return fmt.Errorf("db: record migration %s: %w", f, err)
-			}
+			_ = tx.Rollback(ctx)
+			return fmt.Errorf("db: record migration %s: %w", f, err)
 		}
 
 		if err := tx.Commit(ctx); err != nil {
