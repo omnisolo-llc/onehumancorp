@@ -17,6 +17,7 @@ import (
 )
 
 var (
+	// Instrumented for issue_id: 4240
 	meter            = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration/queue")
 	enqueueCounter, _ = meter.Int64Counter("queue_manager.enqueue.count")
 	pollCounter, _    = meter.Int64Counter("queue_manager.poll.count")
