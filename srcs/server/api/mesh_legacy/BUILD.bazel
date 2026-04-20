@@ -35,21 +35,3 @@ go_test(
         "@org_modernc_sqlite//:sqlite",
     ],
 )
-
-go_test(
-    name = "mesh_legacy_test",
-    srcs = [
-        "claim_test.go",
-        "lock_test.go",
-        "mesh_test.go",
-        "queue_test.go",
-    ],
-    embed = [":mesh_legacy"],
-    deps = [
-        "@com_github_gorilla_websocket//:websocket",
-        "@com_github_redis_go_redis_v9//:go-redis",
-        "@com_github_stretchr_testify//assert",
-        "@com_github_stretchr_testify//require",
-        "@org_modernc_sqlite//:sqlite",
-    ],
-)
