@@ -875,6 +875,7 @@ func Middleware(next http.Handler) http.Handler {
 		if r.URL.Path != "/healthz" && r.URL.Path != "/readyz" {
 			if requestCounter != nil && latencyHistogram != nil {
 				attributes := metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 					attribute.String("method", r.Method),
 					attribute.String("path", r.URL.Path),
 				)
@@ -923,6 +924,7 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 		return
 	}
 	tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("model", model),
@@ -949,6 +951,7 @@ func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, m
 		return
 	}
 	AgentTokenUsageTotal.Add(ctx, count, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("organization_id", organizationID),
 		attribute.String("role", role),
@@ -975,6 +978,7 @@ func RecordAgentCost(ctx context.Context, agentID, organizationID, role, model s
 		return
 	}
 	AgentCostEstimateUSD.Add(ctx, cost, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("organization_id", organizationID),
 		attribute.String("role", role),
@@ -1011,6 +1015,7 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 		return
 	}
 	agentApiCallsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("api", api),
@@ -1044,6 +1049,7 @@ func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
 		return
 	}
 	agentApiErrorsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("api", api),
@@ -1075,6 +1081,7 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 		return
 	}
 	humanInteractionsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("type", interactionType),
 	))
 
@@ -1102,6 +1109,7 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 		return
 	}
 	meetingEventsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("type", eventType),
 	))
 
@@ -1167,6 +1175,7 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 	}
 	if tokenBurnRateGauge != nil {
 		tokenBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("organization_id", organizationID),
 		))
 	}
@@ -1185,6 +1194,7 @@ func RecordUSDBurnRate(ctx context.Context, organizationID string, rate float64)
 	}
 	if usdBurnRateGauge != nil {
 		usdBurnRateGauge.Record(ctx, rate, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("organization_id", organizationID),
 		))
 	}
@@ -1196,6 +1206,7 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 		return
 	}
 	swarmTasksCompletedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("mission_id", missionID),
 	))
 
@@ -1225,6 +1236,7 @@ func RecordTokensSaved(ctx context.Context, operation string, cacheType string, 
 		return
 	}
 	tokensSavedCounter.Add(ctx, estimatedTokens, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
@@ -1245,6 +1257,7 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 		return
 	}
 	cacheHitsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
@@ -1264,6 +1277,7 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 		return
 	}
 	RateLimitExceededCount.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("endpoint", endpoint),
 	))
 }
@@ -1282,6 +1296,7 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 		return
 	}
 	sqliteLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1300,6 +1315,7 @@ func RecordSQLiteThrottledRequest(ctx context.Context, operation string) {
 		return
 	}
 	sqliteThrottledRequestCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1318,6 +1334,7 @@ func RecordSQLiteRetryEvent(ctx context.Context, operation string) {
 		return
 	}
 	sqliteRetryEventCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1336,6 +1353,7 @@ func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 		return
 	}
 	sqliteRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1354,6 +1372,7 @@ func RecordPostgresRetryExhausted(ctx context.Context, operation string) {
 		return
 	}
 	postgresRetryExhaustedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1364,6 +1383,7 @@ func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
 		return
 	}
 	TeammateMeshBroadcastsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("channel", channel),
 	))
 }
@@ -1390,6 +1410,7 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 		return
 	}
 	AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 	))
 }
@@ -1408,6 +1429,7 @@ func RecordAutoDreamConsolidation(ctx context.Context, agentID string) {
 		return
 	}
 	AutoDreamConsolidationTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 	))
 }
@@ -1426,6 +1448,7 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 		return
 	}
 	AutoDreamMemoriesCompressedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 	))
 }
@@ -1444,6 +1467,7 @@ func RecordPostgresLockContention(ctx context.Context, operation string) {
 		return
 	}
 	postgresLockContentionCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1463,6 +1487,7 @@ func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64)
 		return
 	}
 	llmNetworkLatencyHistogram.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("model", model),
 	))
 }
@@ -1514,6 +1539,7 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 		return
 	}
 	AgentTransitionLatency.Record(ctx, duration, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("transition", transitionType),
 	))
 }
@@ -1556,6 +1582,7 @@ func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus 
 		return
 	}
 	swarmTaskTransitionsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("mission_id", missionID),
 		attribute.String("old_status", oldStatus),
 		attribute.String("new_status", newStatus),
@@ -1608,6 +1635,7 @@ func RecordTaskEnqueued(ctx context.Context, taskID string) {
 		return
 	}
 	taskEnqueuedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("task_id", taskID),
 	))
 }
@@ -1627,6 +1655,7 @@ func RecordTaskFailed(ctx context.Context, taskID string, errStr string) {
 		return
 	}
 	taskFailedCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("task_id", taskID),
 		attribute.String("error", errStr),
 	))
@@ -1647,6 +1676,7 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 		return
 	}
 	cacheMissesCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 		attribute.String("cache_type", cacheType),
 	))
@@ -1656,6 +1686,7 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode string) {
 	if autoDreamSyncDuration != nil {
 		autoDreamSyncDuration.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("deployment_mode", mode),
 		))
 	}
@@ -1665,6 +1696,7 @@ func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode strin
 func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode string) {
 	if autoDreamQueryDuration != nil {
 		autoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("deployment_mode", mode),
 		))
 	}
@@ -1690,6 +1722,7 @@ func RecordSIPSyncPayloadSize(ctx context.Context, bytes int) {
 func RecordMeshBroadcast(ctx context.Context, mode string) {
 	if meshBroadcastTotal != nil {
 		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("deployment_mode", mode),
 		))
 	}
@@ -1701,6 +1734,7 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 		return
 	}
 	MeshLatencyRecorder.Record(ctx, latency.Seconds(), metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("operation", operation),
 	))
 }
@@ -1741,6 +1775,7 @@ func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success
 		return
 	}
 	ToolAutoCorrectionTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("status", status),
@@ -1763,6 +1798,7 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 		return
 	}
 	DeliberationPhaseDuration.Record(ctx, durationSeconds, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("plan_id", planID),
 		attribute.String("phase", phase),
 	))
@@ -1792,6 +1828,7 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 		return
 	}
 	agentExecutionTracesTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("agent_id", agentID),
 		attribute.String("trace_type", traceType),
 	))
@@ -1868,6 +1905,7 @@ func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorTyp
     }
     if AutoDreamIngestionErrorCounter != nil {
         AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
             attribute.String("agent_id", agentID),
             attribute.String("error_type", errorType),
         ))
@@ -1887,6 +1925,7 @@ func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorT
     }
     if AutoDreamCompressionErrorCounter != nil {
         AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
             attribute.String("agent_id", agentID),
             attribute.String("error_type", errorType),
         ))
@@ -1923,6 +1962,7 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 		return
 	}
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("mode", mode),
 	))
 }
@@ -1943,6 +1983,7 @@ func RecordSandboxViolation(ctx context.Context, violationType, agentID, path st
 		return
 	}
 	SandboxViolationsTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 		attribute.String("type", violationType),
 		attribute.String("agent_id", agentID),
 		attribute.String("path", path),
@@ -1962,6 +2003,7 @@ func RecordAutoDreamSyncSuccess(ctx context.Context, agentID string) {
 	}
 	if AutoDreamRecordsSyncedTotal != nil {
 		AutoDreamRecordsSyncedTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("agent_id", agentID),
 		))
 	}
@@ -1980,6 +2022,7 @@ func RecordAutoDreamSyncError(ctx context.Context, agentID, errorType string) {
 	}
 	if AutoDreamSyncErrorsTotal != nil {
 		AutoDreamSyncErrorsTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("agent_id", agentID),
 			attribute.String("error_type", errorType),
 		))
@@ -2021,6 +2064,7 @@ func RecordBubblewrapViolation(ctx context.Context) {
 func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string) {
 	if HarnessInitLatency != nil {
 		HarnessInitLatency.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("deployment_mode", mode),
 		))
 	}
@@ -2030,7 +2074,16 @@ func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string)
 func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string) {
 	if HarnessDbIoLatency != nil {
 		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("env_mode", GetEnvMode()),
 			attribute.String("deployment_mode", mode),
 		))
 	}
+}
+
+// GetEnvMode returns the current environment mode based on the OHC_STANDALONE flag.
+func GetEnvMode() string {
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		return "Standalone"
+	}
+	return "Cloud"
 }

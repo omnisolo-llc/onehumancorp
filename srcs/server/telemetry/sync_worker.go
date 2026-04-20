@@ -41,3 +41,14 @@ func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, endpoint string, in
 		}
 	}()
 }
+
+// TelemetrySyncWorker handles background syncing of metrics from SQLite to Cloud.
+type TelemetrySyncWorker struct {
+	Endpoint string
+	Interval time.Duration
+}
+
+// Start initiates the sync daemon.
+func (w *TelemetrySyncWorker) Start(ctx context.Context, syncFunc SyncFunc) {
+	StartSyncDaemon(ctx, syncFunc, w.Endpoint, w.Interval)
+}
