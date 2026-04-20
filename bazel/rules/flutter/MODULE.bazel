@@ -50,7 +50,7 @@ pub.package(
 pub.package(
     name = "pub_dart_style",
     package = "dart_style",
-    version = "3.1.8",
+    version = "3.1.2",
 )
 pub.package(
     name = "pub_pub_semver",
