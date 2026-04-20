@@ -32,6 +32,11 @@ graph TD
 | **Task Claiming** | `FOR UPDATE SKIP LOCKED` | Memory Queue |
 | **Scalability** | Horizontal (Cloud) / SQLite (Standalone) | Monolithic |
 
+See also:
+- [Sub-Agent Queue](../../features/kairos/sub_agent_queue.md)
+- [Distributed State Machine](../../features/kairos/distributed_state_machine.md)
+- [AutoDream Pipelines](../../features/kairos/autodream_pipelines.md)
+
 ## Interactive Endpoints
 
 ### 1. Create Orchestration Task
