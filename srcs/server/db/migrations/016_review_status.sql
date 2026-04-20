@@ -12,7 +12,7 @@
 -- We add indexes on status and locked_until for polling optimization
 -- Note: 'locked_until' may not exist on shared_tasks depending on schema evolution, so we only apply it to swarm_tasks which guarantees it.
 
-CREATE INDEX idx_swarm_tasks_status_locked_until ON swarm_tasks(status, locked_until);
+CREATE INDEX IF NOT EXISTS idx_swarm_tasks_status_locked_until ON swarm_tasks(status, locked_until);
 
 -- Note: We do not alter the CHECK constraint in SQLite via ALTER TABLE because it's not supported directly.
 
