@@ -85,6 +85,7 @@ go_library(
         "migrations/20260423000000_shared_tasks_dag_sqlite.sql",
         "migrations/20260424020000_mcp_audit_sync_log_pg.sql",
         "migrations/20260424020000_mcp_audit_sync_log_sqlite.sql",
+        "migrations/20260424030000_crdt_deltas.sql",
                     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
