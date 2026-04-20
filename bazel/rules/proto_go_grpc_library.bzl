@@ -23,9 +23,13 @@ def _proto_go_srcs_impl(ctx):
     gen_go_grpc = ctx.executable._gen_go_grpc
 
     # Build proto_path args
-    proto_paths = {".": True}
-    for p in proto_info.transitive_proto_path.to_list():
-        proto_paths[p] = True
+    proto_paths = {}
+    for src in srcs:
+        if proto_root and proto_root != ".":
+            proto_paths[proto_root] = True
+        else:
+            proto_paths[src.dirname] = True
+
     proto_path_args = " ".join(["--proto_path=" + p for p in proto_paths.keys()])
     proto_files = " ".join([src.path for src in srcs])
     out_dir = outs[0].dirname
@@ -40,11 +44,6 @@ def _proto_go_srcs_impl(ctx):
         proto_path_args = proto_path_args,
         proto_files = proto_files,
     )
-    # Move files from source_relative path to out_dir
-    wrapper_content += "find {out_dir} -name '*.pb.go' -exec mv {{}} {out_dir} \\;\n".format(out_dir = out_dir)
-    for out in outs:
-        if out.basename.endswith("_grpc.pb.go"):
-            wrapper_content += "if [ ! -f {out} ]; then echo 'package auth' > {out}; fi\n".format(out = out.path)
 
     ctx.actions.write(
         output = wrapper,

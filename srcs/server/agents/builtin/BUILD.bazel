@@ -26,7 +26,6 @@ go_library(
         "pubsub.go",
         "read.go",
         "scheduler.go",
-        "scout.go",
         "sendmessage.go",
         "sleep.go",
         "task.go",
@@ -42,7 +41,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/bash_sandbox",
-        "//srcs/server/lib/integrations/hybrid_discovery",
         "//srcs/server/lib/perf",
         "//srcs/server/utils",
         "@com_github_google_uuid//:uuid",
@@ -59,8 +57,6 @@ go_test(
         "prompt_test.go",
         "pubsub_test.go",
         "scheduler_benchmark_test.go",
-        "scout_test.go",
     ],
     embed = [":builtin"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
 )

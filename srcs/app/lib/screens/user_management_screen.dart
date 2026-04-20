@@ -16,7 +16,7 @@ class UserManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
-  late Future<List<UserMetadata>> _usersFuture;
+  late Future<List<UserPublic>> _usersFuture;
 
   @override
   void initState() {
@@ -97,7 +97,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
             child: GrowthReferralWidget(),
           ),
           Expanded(
-            child: FutureBuilder<List<UserMetadata>>(
+            child: FutureBuilder<List<UserPublic>>(
         future: _usersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -238,7 +238,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Invite your team to collaborate. This will generate a business invite link.',
+                    'Expand your sovereign swarm. This will generate a Cloud-Bridge invite link.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Inter',
@@ -275,12 +275,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           try {
                             await ref.read(apiServiceProvider)!.createReferral(
                               usernameController.text.isNotEmpty ? usernameController.text : "anonymous",
-                              "business_referral_local",
+                              "xYz8vQ_local_sovereign",
                             );
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Business invite link copied: https://cloud.ohc.io/invite?token=business_referral_local',
+                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
                                     style: TextStyle(
                                       color: Theme.of(context).colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',
@@ -303,7 +303,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                             }
                           }
                         },
-                        child: const Text('Create Invite'),
+                        child: const Text('Generate Secure Invite'),
                       ),
                     ],
                   ),

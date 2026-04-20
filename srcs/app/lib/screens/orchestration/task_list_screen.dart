@@ -31,40 +31,7 @@ class TaskListScreen extends ConsumerWidget {
           itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => _TasksUnavailable(message: '$err'),
-      ),
-    );
-  }
-}
-
-class _TasksUnavailable extends StatelessWidget {
-  final String message;
-
-  const _TasksUnavailable({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.checklist_rtl, size: 56, color: Colors.white70),
-            const SizedBox(height: 16),
-            const Text(
-              'Shared task orchestration is not exposed by this local runtime.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70),
-            ),
-          ],
-        ),
+        error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
       ),
     );
   }
