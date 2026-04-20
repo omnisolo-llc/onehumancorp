@@ -96,6 +96,20 @@ func TestBuiltinProvider_AlwaysAuthenticated(t *testing.T) {
 	}
 }
 
+func TestScoutProvider_AlwaysAuthenticated(t *testing.T) {
+	p := &ScoutProvider{}
+	if !p.IsAuthenticated() {
+		t.Fatal("scout provider should always be authenticated")
+	}
+	if err := p.Authenticate(Credentials{}); err != nil {
+		t.Fatalf("scout provider should accept any credentials: %v", err)
+	}
+	creds := p.GetCredentials()
+	if creds.APIKey != "" || creds.OAuthToken != "" {
+		t.Fatal("scout provider should return empty credentials")
+	}
+}
+
 func TestProviderSupportedRolesNotEmpty(t *testing.T) {
 	providers := []Provider{
 		&ClaudeProvider{},
@@ -104,6 +118,7 @@ func TestProviderSupportedRolesNotEmpty(t *testing.T) {
 		&OpenClawProvider{},
 		&IronClawProvider{},
 		&BuiltinProvider{},
+		&ScoutProvider{},
 	}
 	for _, p := range providers {
 		if len(p.SupportedRoles()) == 0 {
@@ -135,6 +150,7 @@ func TestDefaultRegistryContainsAllProviders(t *testing.T) {
 		ProviderTypeOpenClaw,
 		ProviderTypeIronClaw,
 		ProviderTypeBuiltin,
+		ProviderTypeScout,
 	}
 	for _, pt := range expected {
 		if _, ok := r.Get(pt); !ok {
@@ -216,6 +232,9 @@ func TestRegistry_Infos_ContainsAllFields(t *testing.T) {
 	for _, info := range infos {
 		if info.Type == ProviderTypeBuiltin && !info.IsAuthenticated {
 			t.Fatal("builtin provider should always report IsAuthenticated = true")
+		}
+		if info.Type == ProviderTypeScout && !info.IsAuthenticated {
+			t.Fatal("scout provider should always report IsAuthenticated = true")
 		}
 	}
 }

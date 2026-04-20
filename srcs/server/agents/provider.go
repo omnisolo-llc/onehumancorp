@@ -483,27 +483,21 @@ func (p *ScoutProvider) SupportedRoles() []string {
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
-func (p *ScoutProvider) Authenticate(creds Credentials) error {
-	if creds.APIKey == "" {
-		return errors.New("scout provider requires an API key for proxy authentication")
-	}
-	p.store(creds)
-	return nil
-}
+func (p *ScoutProvider) Authenticate(_ Credentials) error { return nil }
 
 // GetCredentials functionality.
 // Accepts no parameters.
 // Returns Credentials.
 // Produces no errors.
 // Has no side effects.
-func (p *ScoutProvider) GetCredentials() Credentials { return p.load() }
+func (p *ScoutProvider) GetCredentials() Credentials { return Credentials{} }
 
 // IsAuthenticated functionality.
 // Accepts no parameters.
 // Returns bool.
 // Produces no errors.
 // Has no side effects.
-func (p *ScoutProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+func (p *ScoutProvider) IsAuthenticated() bool { return true }
 
 // ── Builtin ───────────────────────────────────────────────────────────────────
 

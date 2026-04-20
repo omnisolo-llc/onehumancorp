@@ -7,9 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
 
 	_ "modernc.org/sqlite" // Ensure sqlite driver is available for checks
 )
@@ -139,7 +141,10 @@ func (p *DiscoveryProxy) searchSwitchboard(ctx context.Context, intent string) (
 	return []ToolSpec{}, nil
 }
 
-// validateGuardrails checks a URL and tool names for basic safety compliance.
+// SSRFGuardrailBypass allows tests to bypass SSRF checks for local httptest servers.
+var SSRFGuardrailBypass bool
+
+// validateGuardrails checks a URL and tool names for basic safety compliance, preventing SSRF.
 func validateGuardrails(specURL string) error {
 	u, err := url.Parse(specURL)
 	if err != nil {
@@ -148,10 +153,30 @@ func validateGuardrails(specURL string) error {
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return errors.New("guardrail violation: URL must be http or https")
 	}
-	// For demo safety guardrail, deny specific hosts.
-	if u.Hostname() == "malicious.internal" {
-		return errors.New("guardrail violation: blocked host")
+
+	if SSRFGuardrailBypass {
+		return nil
 	}
+
+	host := u.Hostname()
+
+	// Prevent loopback, localhost, and obvious internal ranges
+	if host == "localhost" || strings.HasPrefix(host, "127.") || host == "::1" || host == "169.254.169.254" {
+		return errors.New("guardrail violation: loopback and link-local addresses are forbidden")
+	}
+
+	// Resolve the host to verify the actual IP address
+	ips, err := net.LookupIP(host)
+	if err != nil {
+		return fmt.Errorf("guardrail violation: unable to resolve host %q", host)
+	}
+
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return fmt.Errorf("guardrail violation: resolved IP %s is private/loopback/link-local", ip.String())
+		}
+	}
+
 	return nil
 }
 

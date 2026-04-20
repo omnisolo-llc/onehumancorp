@@ -29,6 +29,7 @@ _COMMON_ENV = {
 _COMMON_TAGS = [
     "local",
     "requires-network",
+    "exclusive",
 ]
 
 # ── Auth CUJ ──────────────────────────────────────────────────────────────────
@@ -179,6 +180,7 @@ go_test(
     srcs = _SHARED_SRCS + [
         "cuj_extended_test.go",
         "cuj_integration_test.go",
+        "cuj_scout_test.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,

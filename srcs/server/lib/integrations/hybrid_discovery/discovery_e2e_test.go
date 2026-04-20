@@ -42,6 +42,9 @@ func TestE2E_ScoutOpenAPIIntegration(t *testing.T) {
 
 	ctx := context.Background()
 
+	SSRFGuardrailBypass = true
+	defer func() { SSRFGuardrailBypass = false }()
+
 	// Import the OpenAPI spec
 	err = proxy.ImportOpenAPI(ctx, ts.URL)
 	if err != nil {
@@ -79,8 +82,13 @@ func TestE2E_ScoutOpenAPIIntegration_Guardrails(t *testing.T) {
 		t.Error("expected error for invalid scheme, got nil")
 	}
 
-	err = proxy.ImportOpenAPI(ctx, "http://malicious.internal/spec.json")
+	err = proxy.ImportOpenAPI(ctx, "http://127.0.0.1/spec.json")
 	if err == nil {
-		t.Error("expected error for blocked host, got nil")
+		t.Error("expected error for loopback address, got nil")
+	}
+
+	err = proxy.ImportOpenAPI(ctx, "http://169.254.169.254/latest/meta-data")
+	if err == nil {
+		t.Error("expected error for link-local metadata address, got nil")
 	}
 }
