@@ -64,6 +64,7 @@ func TestProxyCapture_Success(t *testing.T) {
 				require.True(t, ok)
 				require.NotEmpty(t, data.DataPoints)
 				assert.Equal(t, int64(1), data.DataPoints[0].Value)
+				assert.True(t, data.DataPoints[0].Attributes.HasValue("deployment_mode"))
 			}
 		}
 	}
@@ -113,6 +114,7 @@ func TestProxyCapture_Failure(t *testing.T) {
 				require.True(t, ok)
 				require.NotEmpty(t, data.DataPoints)
 				assert.Equal(t, int64(1), data.DataPoints[0].Value)
+				assert.True(t, data.DataPoints[0].Attributes.HasValue("deployment_mode"))
 			}
 		}
 	}
