@@ -48,7 +48,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   mocktail: ^1.0.5
-  analyzer: ^12.1.0
+  analyzer: ^8.4.1
   dart_style: ^3.1.2
 
 flutter:

@@ -48,6 +48,11 @@ pub.package(
     version = "25.0.0",
 )
 pub.package(
+    name = "pub_analyzer",
+    package = "analyzer",
+    version = "8.4.1",
+)
+pub.package(
     name = "pub_dart_style",
     package = "dart_style",
     version = "3.1.2",
