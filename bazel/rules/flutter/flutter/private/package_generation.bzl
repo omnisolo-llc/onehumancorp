@@ -153,18 +153,10 @@ def _find_pub_command(repository_ctx):
         if path.exists:
             return _pub_command_prefix(str(path)), "flutter"
 
-    host_flutter = repository_ctx.which("flutter.bat" if os_name.startswith("windows") else "flutter")
-    if host_flutter:
-        return _pub_command_prefix(str(host_flutter)), "flutter"
-
     for candidate in dart_candidates:
         path = repository_ctx.path(candidate)
         if path.exists:
             return _pub_command_prefix(str(path)), "dart"
-
-    host_dart = repository_ctx.which("dart.exe" if os_name.startswith("windows") else "dart")
-    if host_dart:
-        return _pub_command_prefix(str(host_dart)), "dart"
 
     return None, None
 

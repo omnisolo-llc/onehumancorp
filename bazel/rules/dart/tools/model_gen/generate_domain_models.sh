@@ -28,11 +28,6 @@ for candidate in \
   fi
 done
 
-# Fall back to PATH dart if hermetic binary not found (should not happen in Bazel)
-if [[ -z "$DART" ]]; then
-  DART="$(command -v dart 2>/dev/null || true)"
-fi
-
 if [[ -z "$DART" ]]; then
   echo "ERROR: Could not locate dart binary. Hermetic build required." >&2
   exit 1

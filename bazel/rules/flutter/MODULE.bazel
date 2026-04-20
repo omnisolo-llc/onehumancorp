@@ -17,7 +17,7 @@ bazel_dep(name = "aspect_bazel_lib", version = "1.32.1", dev_dependency = True)
 bazel_dep(name = "buildifier_prebuilt", version = "6.1.2", dev_dependency = True)
 
 flutter = use_extension("//flutter:extensions.bzl", "flutter")
-flutter.toolchain(flutter_version = "3.24.0")
+flutter.toolchain(flutter_version = "3.38.4")
 use_repo(
     flutter,
     "flutter_sdk",
@@ -45,7 +45,7 @@ pub.package(
 pub.package(
     name = "pub_protoc_plugin",
     package = "protoc_plugin",
-    version = "21.1.2",
+    version = "25.0.0",
 )
 pub.package(
     name = "pub_dart_style",

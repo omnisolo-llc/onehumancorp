@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/apps/api/db"
+	"github.com/onehumancorp/mono/srcs/app/lib/features/api/db"
 	_ "modernc.org/sqlite"
 )
 

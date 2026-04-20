@@ -35,7 +35,7 @@ local_path_override(
 )
 
 flutter = use_extension("@rules_flutter//flutter:extensions.bzl", "flutter")
-flutter.toolchain(flutter_version = "3.32.0")
+flutter.toolchain(flutter_version = "3.38.4")
 use_repo(
     flutter,
     "flutter_sdk",

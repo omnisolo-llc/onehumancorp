@@ -3,7 +3,7 @@ description: One Human Corp Monorepo Workspace
 publish_to: "none"
 
 environment:
-  sdk: "^3.7.2"
+  sdk: "^3.10.0"
 
 workspace:
   - srcs/app
