@@ -51,4 +51,20 @@ if [[ -z "$DART" ]]; then
   exit 1
 fi
 
-exec "$DART" "$(dirname "$0")/generate_domain_models.dart" "$@"
+GENERATOR_DART=""
+for candidate in \
+    "$(dirname "$0")/generate_domain_models.dart" \
+    "$0.runfiles/_main/bazel/rules/dart/tools/model_gen/generate_domain_models.dart" \
+    "${RUNFILES_DIR:-}/_main/bazel/rules/dart/tools/model_gen/generate_domain_models.dart"; do
+  if [[ -f "$candidate" ]]; then
+    GENERATOR_DART="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$GENERATOR_DART" ]]; then
+  echo "ERROR: Could not locate generate_domain_models.dart in runfiles." >&2
+  exit 1
+fi
+
+exec "$DART" "$GENERATOR_DART" "$@"
