@@ -14,29 +14,10 @@ const claimsContextKey contextKey = "ohc_auth_claims"
 var publicPaths = []string{
 	"/healthz",
 	"/readyz",
-	"/metrics",
 	"/api/health/hybrid",
 	"/api/auth/login",
 	"/api/auth/powersync/jwks",
 	"/api/v1/scale/stream", // Manually authenticated inside handler for SSE query token bypass
-}
-
-var publicFrontendFiles = map[string]struct{}{
-	"/":                         {},
-	"/favicon.ico":              {},
-	"/flutter.js":               {},
-	"/flutter_bootstrap.js":     {},
-	"/flutter_service_worker.js": {},
-	"/main.dart.js":             {},
-	"/manifest.json":            {},
-	"/version.json":             {},
-}
-
-var publicFrontendPrefixes = []string{
-	"/assets/",
-	"/canvaskit/",
-	"/icons/",
-	"/packages/",
 }
 
 // Middleware returns an HTTP middleware that enforces JWT authentication. Requests to public paths pass through unauthenticated. All other requests must carry a valid Bearer token in the Authorization header or an "ohc_token" cookie.
@@ -48,7 +29,7 @@ func Middleware(store *Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Allow public routes
-			if IsPublicPath(r.URL.Path) {
+			if isPublic(r.URL.Path) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -109,38 +90,17 @@ func extractToken(r *http.Request) string {
 	if c, err := r.Cookie("ohc_token"); err == nil {
 		return c.Value
 	}
-	if strings.HasPrefix(r.URL.Path, "/connection/") {
-		if token := r.URL.Query().Get("ohc_token"); token != "" {
-			return token
-		}
-		if token := r.URL.Query().Get("token"); token != "" {
-			return token
-		}
-	}
 	return ""
 }
 
-func IsPublicPath(path string) bool {
+func isPublic(path string) bool {
 	for _, p := range publicPaths {
 		if strings.HasPrefix(path, p) {
 			return true
 		}
 	}
-
-	if _, ok := publicFrontendFiles[path]; ok {
-		return true
-	}
-	for _, prefix := range publicFrontendPrefixes {
-		if strings.HasPrefix(path, prefix) {
-			return true
-		}
-	}
-
-	// Allow client-side Flutter routes to fall through to the frontend bundle.
-	if strings.HasPrefix(path, "/api/") || strings.HasPrefix(path, "/connection/") {
-		return false
-	}
-	if strings.HasPrefix(path, "/") {
+	// Static assets
+	if strings.HasPrefix(path, "/app") || path == "/" {
 		return true
 	}
 	return false

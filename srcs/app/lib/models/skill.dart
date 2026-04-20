@@ -21,10 +21,7 @@ class Skill {
       name: json['name'] as String? ?? '',
       version: json['version'] as String? ?? '0.0.0',
       description: json['description'] as String? ?? '',
-      category:
-          json['category'] as String? ??
-          json['source'] as String? ??
-          'community',
+      category: json['category'] as String? ?? 'community',
       installed: json['installed'] as bool? ?? false,
       enabled: json['enabled'] as bool? ?? false,
     );

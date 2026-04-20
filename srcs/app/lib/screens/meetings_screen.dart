@@ -133,20 +133,65 @@ class _RoomCardState extends State<_RoomCard> {
   Future<void> _join() async {
     setState(() => _joining = true);
     try {
+      final api = widget.ref.read(apiServiceProvider);
+      final info = await api?.joinMeeting(widget.room['id'] as String);
+      if (mounted && info != null) {
+        _showJoinInfo(context, info);
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Meeting join links are not exposed by the current standalone API.',
-            ),
-          ),
-        );
+        ).showSnackBar(SnackBar(content: Text('Join failed: $e')));
       }
     } finally {
       if (mounted) setState(() => _joining = false);
     }
+  }
+
+  void _showJoinInfo(BuildContext context, Map<String, dynamic> info) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Join Meeting'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (info['join_url'] != null) ...[
+                  const Text(
+                    'Join URL:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(info['join_url'] as String),
+                ],
+                if (info['token'] != null) ...[
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Token:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  SelectableText(
+                    info['token'] as String,
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Done'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -258,16 +303,15 @@ class _CreateRoomDialogState extends State<_CreateRoomDialog> {
     if (_nameCtrl.text.trim().isEmpty) return;
     setState(() => _loading = true);
     try {
+      final api = widget.ref.read(apiServiceProvider);
+      await api?.createMeeting(_nameCtrl.text.trim());
+      widget.ref.invalidate(_meetingsProvider);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Meeting room creation is not exposed by the current standalone API.',
-            ),
-          ),
-        );
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

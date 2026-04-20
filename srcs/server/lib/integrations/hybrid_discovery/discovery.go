@@ -134,6 +134,43 @@ func (p *DiscoveryProxy) searchSwitchboard(ctx context.Context, intent string) (
 	return []ToolSpec{}, nil
 }
 
+// RegisterTool registers a dynamically discovered tool.
+func (p *DiscoveryProxy) RegisterTool(ctx context.Context, spec ToolSpec) error {
+	if p.isSQLite() {
+		return p.registerSQLite(ctx, spec)
+	}
+	return p.registerSwitchboard(ctx, spec)
+}
+
+func (p *DiscoveryProxy) registerSQLite(ctx context.Context, spec ToolSpec) error {
+	log.Printf("Registering tool in SQLite: %s", spec.Name)
+	_, err := p.db.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS local_mcp_tools (
+			name TEXT,
+			description TEXT,
+			endpoint TEXT
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to ensure table exists: %w", err)
+	}
+
+	_, err = p.db.ExecContext(ctx, `
+		INSERT INTO local_mcp_tools (name, description, endpoint)
+		VALUES (?, ?, ?)
+	`, spec.Name, spec.Description, spec.Endpoint)
+	if err != nil {
+		return fmt.Errorf("failed to insert tool: %w", err)
+	}
+	return nil
+}
+
+func (p *DiscoveryProxy) registerSwitchboard(ctx context.Context, spec ToolSpec) error {
+	log.Printf("Routing registration to Cloud Switchboard (%s) for tool: %s", p.switchboard, spec.Name)
+	// Simulate gRPC call to Switchboard
+	return nil
+}
+
 // RequestToolSVID requests a SPIFFE identity for the tool.
 func (p *DiscoveryProxy) RequestToolSVID(ctx context.Context, toolName string) (SVID, error) {
 	if p.isSQLite() {

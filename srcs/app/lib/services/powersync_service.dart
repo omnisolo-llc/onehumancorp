@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:powersync/powersync.dart';
 import 'package:path_provider/path_provider.dart';
@@ -18,12 +17,7 @@ class PowerSyncService {
   bool _initialized = false;
 
   PowerSyncService(this._ref) {
-  if (kIsWeb) {
-    return;
-  }
-  _init().catchError((Object _, StackTrace __) {
-    _initialized = false;
-  });
+    _init();
   }
 
   Future<void> _init() async {
@@ -82,7 +76,7 @@ class PowerSyncService {
     _db = PowerSyncDatabase(schema: schema, path: path);
     await _db!.initialize();
 
-    final backendUrl = settings?.backendUrl ?? defaultBackendUrl();
+    final backendUrl = settings?.backendUrl ?? 'http://localhost:18789';
 
     PowerSyncBackendConnector connector = _BackendConnector(
       backendUrl: backendUrl,

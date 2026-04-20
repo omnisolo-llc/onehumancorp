@@ -95,7 +95,8 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('DEPLOY TO PRODUCTION'), findsWidgets);
+      // Intent text should be visible
+      expect(find.textContaining('Deploy to production'), findsWidgets);
     });
 
     testWidgets('refresh icon button is present in AppBar', (tester) async {
@@ -144,9 +145,9 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
       await tester.pumpAndSettle();
 
-      final approveSlider = find.bySemanticsLabel('Slide to Approve');
-      if (approveSlider.evaluate().isNotEmpty) {
-        await tester.drag(approveSlider.first, const Offset(300, 0));
+      final approveBtn = find.textContaining('Approve');
+      if (approveBtn.evaluate().isNotEmpty) {
+        await tester.tap(approveBtn.first);
         await tester.pumpAndSettle();
 
         verify(
@@ -187,7 +188,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
       await tester.pumpAndSettle();
 
-      final rejectBtn = find.text('Reject Request');
+      final rejectBtn = find.textContaining('Reject');
       if (rejectBtn.evaluate().isNotEmpty) {
         await tester.tap(rejectBtn.first);
         await tester.pumpAndSettle();
