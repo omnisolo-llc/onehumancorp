@@ -81,7 +81,7 @@ func TestMain(m *testing.M) {
 		serverCmd.Env = append(os.Environ(),
 			"OHC_STANDALONE=true",
 			"OHC_HEADLESS=true",
-			"OHC_SERVE_UI=true",
+			"OHC_SERVE_UI=false",
 			fmt.Sprintf("PORT=%d", port),
 			fmt.Sprintf("STATE_DIR=%s", stateDir),
 			"REDIS_URL=",
@@ -99,11 +99,8 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 
-		// Wait up to 120s for the server to be ready.
-		// 120s (instead of 60s) is necessary because up to 4 test binaries
-		// run in parallel (--local_test_jobs=4), each launching an OHC
-		// process; on resource-constrained CI hosts startup can be slow.
-		deadline := time.Now().Add(120 * time.Second)
+		// Wait up to 60s for the server to be ready.
+		deadline := time.Now().Add(60 * time.Second)
 		ready := false
 		for time.Now().Before(deadline) {
 			resp, err := http.Get(baseURL + "/healthz")
@@ -128,35 +125,23 @@ func TestMain(m *testing.M) {
 	// This downloads browsers to ~/.cache/ms-playwright by default.
 	// Skip host-requirement validation so tests are hermetic and pass even
 	// when the host is missing optional system libraries (e.g. in CI containers).
-	// Failure is non-fatal: browser-based tests will be skipped automatically
-	// via newPage() which calls t.Skip() when bCtx is nil.
 	os.Setenv("PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS", "1")
-	playwrightReady := true
-	if installErr := playwright.Install(); installErr != nil {
-		fmt.Fprintf(os.Stderr, "playwright install: %v (browser tests will be skipped)\n", installErr)
-		playwrightReady = false
-	}
-
-	var err error
-	if playwrightReady {
-		pw, err = playwright.Run()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "playwright run: %v (browser tests will be skipped)\n", err)
-			playwrightReady = false
-			err = nil // reset so browser launch path does not inherit this error
-		}
-	}
-
-	if !playwrightReady {
-		// Browser unavailable: run tests in API-only mode.
-		// All tests that call newPage() will be skipped automatically.
-		browser = nil
-		bCtx = nil
-		code := m.Run()
+	if err := playwright.Install(); err != nil {
+		fmt.Fprintf(os.Stderr, "playwright install: %v\n", err)
 		if serverCmd != nil {
 			serverCmd.Process.Kill()
 		}
-		os.Exit(code)
+		os.Exit(1)
+	}
+
+	var err error
+	pw, err = playwright.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "playwright run: %v\n", err)
+		if serverCmd != nil {
+			serverCmd.Process.Kill()
+		}
+		os.Exit(1)
 	}
 
 	// Use Firefox instead of Chromium for better cross-platform compatibility
@@ -195,14 +180,11 @@ func TestMain(m *testing.M) {
 		BaseURL: playwright.String(baseURL),
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "browser context: %v (browser tests will be skipped)\n", err)
-		browser = nil
-		bCtx = nil
-		code := m.Run()
+		fmt.Fprintf(os.Stderr, "browser context: %v\n", err)
 		if serverCmd != nil {
 			serverCmd.Process.Kill()
 		}
-		os.Exit(code)
+		os.Exit(1)
 	}
 
 	code := m.Run()
