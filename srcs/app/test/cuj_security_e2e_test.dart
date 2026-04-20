@@ -24,6 +24,9 @@ import 'package:ohc_app/services/api_service.dart';
 
 // ── Seeded security data ────────────────────────────────────────────────────
 
+// _issue creates a SecurityIssue with the given id, title, optional severity
+// (defaults to "medium"), and optional fixed flag.  Use this helper to seed
+// the security screen with known issues instead of calling the real backend.
 SecurityIssue _issue(
   String id,
   String title, {

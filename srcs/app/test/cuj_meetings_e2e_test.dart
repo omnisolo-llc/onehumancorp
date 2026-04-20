@@ -23,6 +23,9 @@ import 'package:ohc_app/services/api_service.dart';
 
 // ── Seeded meeting data ─────────────────────────────────────────────────────
 
+// _seededRoom returns a meeting-room map with the given id and title.
+// [msgs] controls how many transcript messages the room contains.
+// The map matches the JSON shape returned by the OHC /api/meetings endpoint.
 Map<String, dynamic> _seededRoom(String id, String title, {int msgs = 0}) => {
   'id': id,
   'title': title,

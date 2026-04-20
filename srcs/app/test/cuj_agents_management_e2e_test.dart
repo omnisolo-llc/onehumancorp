@@ -26,6 +26,9 @@ import 'package:ohc_app/services/api_service.dart';
 
 // ── Seeded agent data ───────────────────────────────────────────────────────
 
+// _agent creates a seeded Agent with the given id and name.
+// [role] accepts any valid OHC agent role (e.g., "SOFTWARE_ENGINEER",
+// "DESIGNER"). [status] accepts "idle", "running", or "pending".
 Agent _agent(
   String id,
   String name, {
