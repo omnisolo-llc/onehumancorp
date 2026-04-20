@@ -2,6 +2,8 @@
 package telemetry
 
 import (
+	"strings"
+
 	"bytes"
 	"context"
 	"fmt"
@@ -860,20 +862,47 @@ func TestRecordHarnessInitLatency(t *testing.T) {
 	cleanup, _ := InitTelemetry()
 	defer cleanup()
 
+	// Setup buffer func
+	var capturedPayload string
+	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		capturedPayload = payload
+		return nil
+	}
+	defer func() { BufferMetricFunc = nil }()
+
 	// Wait for any background initialization.
 	time.Sleep(10 * time.Millisecond)
 
 	RecordHarnessInitLatency(context.Background(), 10.5, "cloud")
-	// If it doesn't panic, we consider it a success.
-	// Unfortunately, reading back values from otel metrics in tests requires an exporter setup.
-	// In this code base, we verify by ensuring no nil dereference happens.
+
+	if capturedPayload == "" {
+		t.Error("expected BufferMetricFunc to be called")
+	}
+	if !strings.Contains(capturedPayload, `"mode":"cloud"`) {
+		t.Errorf("expected payload to contain mode cloud, got: %s", capturedPayload)
+	}
 }
 
 func TestRecordHarnessDbIoLatency(t *testing.T) {
 	cleanup, _ := InitTelemetry()
 	defer cleanup()
 
+	// Setup buffer func
+	var capturedPayload string
+	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		capturedPayload = payload
+		return nil
+	}
+	defer func() { BufferMetricFunc = nil }()
+
 	time.Sleep(10 * time.Millisecond)
 
 	RecordHarnessDbIoLatency(context.Background(), 15.2, "standalone")
+
+	if capturedPayload == "" {
+		t.Error("expected BufferMetricFunc to be called")
+	}
+	if !strings.Contains(capturedPayload, `"mode":"standalone"`) {
+		t.Errorf("expected payload to contain mode standalone, got: %s", capturedPayload)
+	}
 }

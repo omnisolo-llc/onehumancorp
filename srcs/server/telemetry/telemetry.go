@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"strconv"
 	"reflect"
 	"context"
 	"encoding/json"
@@ -2019,6 +2020,10 @@ func RecordBubblewrapViolation(ctx context.Context) {
 
 // RecordHarnessInitLatency records the latency of harness initialization.
 func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadBytes := []byte(`{"latency":` + strconv.FormatFloat(latency, 'f', -1, 64) + `,"mode":"` + mode + `"}`)
+		_ = BufferMetricFunc(ctx, "harness_init_latency", string(payloadBytes))
+	}
 	if HarnessInitLatency != nil {
 		HarnessInitLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
@@ -2028,6 +2033,10 @@ func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string)
 
 // RecordHarnessDbIoLatency records the latency of harness database I/O.
 func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadBytes := []byte(`{"latency":` + strconv.FormatFloat(latency, 'f', -1, 64) + `,"mode":"` + mode + `"}`)
+		_ = BufferMetricFunc(ctx, "harness_db_io_latency", string(payloadBytes))
+	}
 	if HarnessDbIoLatency != nil {
 		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
