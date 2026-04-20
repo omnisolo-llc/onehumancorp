@@ -81,7 +81,7 @@ use_repo(
     "pub_platform",
     "pub_plugin_platform_interface",
     "pub_protobuf",
-    "pub_protobuf_v5",
+    "pub_protobuf_v6",
     "pub_riverpod",
     "pub_shared_preferences",
     "pub_shared_preferences_android",
@@ -104,6 +104,7 @@ use_repo(
     "pub_web",
     "pub_web_socket_channel",
     "pub_xdg_directories",
+    "pub_yaml",
 )
 # ─────────────────────────────────────────────────────────────────────────────
 

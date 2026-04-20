@@ -1,3 +1,4 @@
+import 'yaml_utils.dart';
 /// Chat channel model — mirrors the Rust core ChatChannel / ChatBackend.
 class ChatChannel {
   final String id;
@@ -44,6 +45,18 @@ class ChatChannel {
     'enabled': enabled,
     'created_at': createdAt.toIso8601String(),
   };
+
+  /// Serializes this ChatBackend to a YAML string.
+  String toYaml() => modelToYaml(toJson());
+
+  /// Deserializes a YAML string to a [ChatBackend].
+  static ChatBackend fromYaml(String yaml) => ChatBackend.fromJson(modelFromYaml(yaml));
+
+  /// Serializes this ChatChannel to a YAML string.
+  String toYaml() => modelToYaml(toJson());
+
+  /// Deserializes a YAML string to a [ChatChannel].
+  static ChatChannel fromYaml(String yaml) => ChatChannel.fromJson(modelFromYaml(yaml));
 }
 
 /// Supported chat backends — mirrors the Rust ChatBackend enum.
