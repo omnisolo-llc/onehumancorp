@@ -99,11 +99,14 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 
-		// Wait up to 120s for the server to be ready.
-		// 120s (instead of 60s) is necessary because up to 4 test binaries
-		// run in parallel (--local_test_jobs=4), each launching an OHC
-		// process; on resource-constrained CI hosts startup can be slow.
-		deadline := time.Now().Add(120 * time.Second)
+		// Wait up to 300s for the server to be ready.
+		// 300s (increased from 120s) is necessary because up to 4 test
+		// binaries run in parallel (--local_test_jobs=4), each launching an
+		// OHC process; on resource-constrained CI hosts startup can be slow.
+		// A 120s deadline was observed to cause sporadic failures for the
+		// e2e_agents_test, e2e_business_test and e2e_cuj_extended_test
+		// binaries when they all started simultaneously.
+		deadline := time.Now().Add(300 * time.Second)
 		ready := false
 		for time.Now().Before(deadline) {
 			resp, err := http.Get(baseURL + "/healthz")
