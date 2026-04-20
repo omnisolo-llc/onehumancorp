@@ -160,7 +160,7 @@ func newStore(repo UserRepository) *Store {
 func (s *Store) seedDefaultAdmin(now time.Time) {
 	adminUser := envOr("ADMIN_USERNAME", "admin")
 	adminPass := envOr("ADMIN_PASSWORD", "admin")
-	adminEmail := envOr("ADMIN_EMAIL", "admin@example.com")
+	adminEmail := envOr("ADMIN_EMAIL", "admin@localhost")
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(adminPass), bcrypt.DefaultCost)
 	if err != nil {

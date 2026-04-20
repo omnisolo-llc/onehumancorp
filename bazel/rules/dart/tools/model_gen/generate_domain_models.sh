@@ -19,9 +19,13 @@ fi
 # Try common runfile paths for the flutter_sdk dart binary
 DART=""
 for candidate in \
-    "$DART_SEARCH_ROOT/rules_flutter/flutter/dart" \
-    "$DART_SEARCH_ROOT/../flutter_sdk/dart" \
-    "$(find "$DART_SEARCH_ROOT" -name dart -type f 2>/dev/null | grep -v '.dart' | head -n 1)"; do
+    "$DART_SEARCH_ROOT/rules_flutter++flutter+flutter_sdk/bin/dart" \
+    "$DART_SEARCH_ROOT/rules_flutter++flutter+flutter_sdk/flutter/bin/cache/dart-sdk/bin/dart" \
+    "$DART_SEARCH_ROOT/_main/external/rules_flutter++flutter+flutter_sdk/bin/dart" \
+    "$DART_SEARCH_ROOT/_main/external/rules_flutter++flutter+flutter_sdk/flutter/bin/cache/dart-sdk/bin/dart" \
+    "$DART_SEARCH_ROOT/flutter_sdk/bin/dart" \
+    "$DART_SEARCH_ROOT/flutter_sdk/flutter/bin/cache/dart-sdk/bin/dart" \
+    "$(find "$DART_SEARCH_ROOT" \( -name dart -o -name dart.exe \) 2>/dev/null | grep -v '\.dart$' | head -n 1)"; do
   if [[ -x "$candidate" ]]; then
     DART="$candidate"
     break

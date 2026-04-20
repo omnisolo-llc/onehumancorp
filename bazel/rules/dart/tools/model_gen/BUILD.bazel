@@ -9,6 +9,7 @@ sh_binary(
     srcs = ["generate_domain_models.sh"],
     data = [
         "generate_domain_models.dart",
-        "@rules_flutter//flutter:dart",
+        "@flutter_sdk//:dart_bin",
+        "@flutter_sdk//:dart_vm",
     ],
 )
