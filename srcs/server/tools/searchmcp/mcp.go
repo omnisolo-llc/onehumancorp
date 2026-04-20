@@ -33,7 +33,7 @@ type SearchProvider interface {
 	Index(ctx context.Context, doc Document) error
 }
 
-// LocalSearchProvider implements SearchProvider using local SQLite FTS5.
+// LocalSearchProvider implements SearchProvider using local SQLite FTS5. This is used in Standalone mode.
 type LocalSearchProvider struct {
 	provider db.Provider
 }
