@@ -60,7 +60,6 @@ func TestHandleWizardConfigure(t *testing.T) {
 	}
 }
 
-// TestHandleWizardOnboardingVerify checks the onboarding verify endpoint
 func TestHandleWizardOnboardingVerify(t *testing.T) {
 	s := &Server{}
 
