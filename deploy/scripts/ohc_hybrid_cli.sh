@@ -32,7 +32,16 @@ while true; do
         3) bash "$SCRIPT_DIR/ohc-diagnostics.sh" || echo -e "${PURPLE}Diagnostics returned non-zero exit status.${RESET}" ;;
         4) bash "$SCRIPT_DIR/ohc-quick-start.sh" || echo -e "${PURPLE}Quick Start returned non-zero exit status.${RESET}" ;;
         5) bash "$SCRIPT_DIR/ohc-agent-wizard.sh" || echo -e "${PURPLE}Agent Provisioning returned non-zero exit status.${RESET}" ;;
-        6) if [ -f "$HOME/.ohc-local-data/standalone.db" ]; then echo -e "${GREEN}✓ Standalone DB is healthy at $HOME/.ohc-local-data/standalone.db${RESET}"; else echo -e "${PURPLE}✗ Standalone DB not found at $HOME/.ohc-local-data/standalone.db${RESET}"; fi ;;
+        6)
+            if ! command -v sqlite3 &> /dev/null; then
+                echo -e "${PURPLE}✗ sqlite3 is not installed. Please install it to perform the DB Health Check.${RESET}"
+            elif [ -f "local_standalone.db" ]; then
+                echo -e "${GREEN}✓ Standalone DB found. Checking tables...${RESET}"
+                sqlite3 "local_standalone.db" ".tables"
+            else
+                echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
+            fi
+            ;;
         0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
