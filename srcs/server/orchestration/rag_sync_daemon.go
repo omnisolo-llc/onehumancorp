@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type RagSyncDaemon struct {
@@ -99,7 +100,8 @@ func (d *RagSyncDaemon) ProcessSync(ctx context.Context) {
 	}
 
 	payload := map[string]interface{}{"records": records}
-	jsonData, err := json.Marshal(payload)
+	redactedMap := telemetry.RedactInterfacePII(payload)
+	jsonData, err := json.Marshal(redactedMap)
 	if err != nil {
 		return
 	}

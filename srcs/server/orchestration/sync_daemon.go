@@ -173,7 +173,8 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 }
 
 func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDaemonPayload) error {
-	jsonData, err := json.Marshal(payloads)
+	redactedPayloads := telemetry.RedactInterfacePII(payloads)
+	jsonData, err := json.Marshal(redactedPayloads)
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}

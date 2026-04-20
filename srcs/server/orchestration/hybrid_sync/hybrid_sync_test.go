@@ -75,9 +75,15 @@ func TestHybridSyncDaemon_ProcessSync(t *testing.T) {
 	for _, p := range receivedPayloads {
 		if p.MemoryID == "m1" {
 			hasM1 = true
-			expectedPayload := `{"details":" email is [REDACTED_EMAIL]","escalation_required":true}`
-			if p.Context != expectedPayload {
-				t.Errorf("expected sanitized context %q, got %q", expectedPayload, p.Context)
+			var actualMap map[string]interface{}
+			if err := json.Unmarshal([]byte(p.Context), &actualMap); err != nil {
+				t.Fatalf("failed to unmarshal actual context: %v", err)
+			}
+			if actualMap["details"] != " email is [REDACTED_EMAIL]" {
+				t.Errorf("expected sanitized email, got %v", actualMap["details"])
+			}
+			if actualMap["escalation_required"] != true {
+				t.Errorf("expected escalation_required true, got %v", actualMap["escalation_required"])
 			}
 		} else if p.MemoryID == "m3" {
 			hasM3 = true

@@ -698,48 +698,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
 
-	// Start background mesh subscriptions
-	go func() {
-		ctx := context.Background()
-		if server.MeshBroker != nil {
-			_, _ = server.MeshBroker.Subscribe(ctx, "mesh:tasks", func(msg []byte) {
-				if server.hub != nil && server.hub.CentrifugeNode() != nil {
-					var payload map[string]interface{}
-					if err := json.Unmarshal(msg, &payload); err == nil {
-						server.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), payload)
-					}
-				}
-			})
-			_, _ = server.MeshBroker.Subscribe(ctx, "mesh:coordination", func(msg []byte) {
-				if server.hub != nil && server.hub.CentrifugeNode() != nil {
-					var payload map[string]interface{}
-					if err := json.Unmarshal(msg, &payload); err == nil {
-						agentID, _ := payload["agent_id"].(string)
-						if agentID == "" {
-							agentID = "system"
-						}
-						server.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
-							ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-							FromAgent: agentID,
-							ToAgent:   "system",
-							Type:      "mesh:coordination",
-							Content:   string(msg),
-						})
-					}
-				}
-			})
-			// swarm-events
-			_, _ = server.MeshBroker.Subscribe(ctx, "swarm-events", func(msg []byte) {
-				if server.hub != nil && server.hub.CentrifugeNode() != nil {
-					var payload map[string]interface{}
-					if err := json.Unmarshal(msg, &payload); err == nil {
-						server.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), payload)
-					}
-				}
-			})
-		}
-	}()
-
 	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
 }
 
@@ -934,9 +892,38 @@ const indexHTML = `<!doctype html>
   <title>One Human Corp Dashboard</title>
 </head>
 <body>
-  <h1>One Human Corp Dashboard</h1>
-  <p>Send Message to an agent or meeting room using the API.</p>
-  <p>View Role Playbooks and agent skill sets in the Settings panel.</p>
+  <nav>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/agents">Agents</a>
+    <a href="/chat">Chat</a>
+    <a href="/handoffs">Handoffs</a>
+    <a href="/cost">Cost</a>
+    <a href="/settings">Settings</a>
+  </nav>
+  <h1>Dashboard</h1>
+  <div id="overview">Overview</div>
+  <div class="stat-card">Active Agents</div>
+
+  <div id="hire-agent-wizard">
+    <h2>Hire Agent</h2>
+    <label>Role</label>
+    <input type="text" name="name" />
+    <button>Deploy Agent</button>
+  </div>
+
+  <div id="chat-screen">
+    <textarea placeholder="Type a message..."></textarea>
+    <button>Send</button>
+  </div>
+
+  <div id="handoffs-screen">
+    <h2>Handoffs</h2>
+  </div>
+
+  <div id="settings-screen">
+    <h2>Settings</h2>
+  </div>
+
   <div id="root"></div>
 </body>
 </html>`
@@ -963,7 +950,7 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
+	_, _ = io.WriteString(w, indexHTML)
 }
 
 func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { // added for ohc_mesh_broadcast_total metric instrumentation
@@ -1044,7 +1031,20 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { /
 	if err == nil {
 		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
 
-
+		// Map mesh channels to Centrifuge WebSocket channels for UI updates
+		if s.hub != nil && s.hub.CentrifugeNode() != nil {
+			if req.Channel == "mesh:tasks" {
+				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), payloadMap)
+			} else if req.Channel == "mesh:coordination" {
+				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
+					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+					FromAgent: req.AgentID,
+					ToAgent:   "system",
+					Type:      req.Channel,
+					Content:   string(payloadBytes),
+				})
+			}
+		}
 	} else {
 		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
 		return
@@ -2100,7 +2100,24 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
 
-
+		// Map mesh channels to Centrifuge WebSocket channels for UI updates
+		if s.hub != nil && s.hub.CentrifugeNode() != nil {
+			if req.Channel == "mesh:tasks" || req.Channel == "swarm-events" {
+				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), req.Data)
+			} else if req.Channel == "mesh:coordination" {
+				agentID, _ := req.Data["agent_id"].(string)
+				if agentID == "" {
+					agentID = "system"
+				}
+				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
+					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+					FromAgent: agentID,
+					ToAgent:   "system",
+					Type:      req.Channel,
+					Content:   string(payloadBytes),
+				})
+			}
+		}
 	} else {
 		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
 		return

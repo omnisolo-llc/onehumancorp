@@ -85,8 +85,9 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 	}
 	defer tx.Rollback(ctx)
 
-	// In swarm_memory_embeddings, we look for items where json_extract(context, '$.escalation_required') = 1 or true.
-	query := "SELECT memory_id, context FROM swarm_memory_embeddings WHERE json_extract(context, '$.escalation_required') = 1 OR json_extract(context, '$.escalation_required') = 'true' LIMIT 100"
+	// In swarm_memory_embeddings, we look for items where json_extract(context, '$.escalation_required') is true or 1.
+	// SQLite json_extract returns 1 for true, 0 for false.
+	query := "SELECT memory_id, context FROM swarm_memory_embeddings WHERE json_extract(context, '$.escalation_required') = 1 LIMIT 100"
 
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
@@ -163,7 +164,8 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 }
 
 func (d *HybridSyncDaemon) sendToCloud(ctx context.Context, payloads []SyncPayload) error {
-	jsonData, err := json.Marshal(payloads)
+	redactedPayloads := telemetry.RedactInterfacePII(payloads)
+	jsonData, err := json.Marshal(redactedPayloads)
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
