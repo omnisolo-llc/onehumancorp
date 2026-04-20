@@ -890,11 +890,76 @@ const indexHTML = `<!doctype html>
 <head>
   <meta charset="UTF-8" />
   <title>One Human Corp Dashboard</title>
+  <style>
+    body { font-family: sans-serif; background: #0a0a0a; color: #fff; }
+    nav a { margin-right: 10px; color: #aaa; text-decoration: none; }
+    .hidden { display: none; }
+    .page { padding: 20px; }
+  </style>
+  <script>
+    function navigate(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+  </script>
 </head>
 <body>
-  <h1>One Human Corp Dashboard</h1>
-  <p>Send Message to an agent or meeting room using the API.</p>
-  <p>View Role Playbooks and agent skill sets in the Settings panel.</p>
+  <nav role="navigation">
+    <a href="#" onclick="navigate('dashboard')">Dashboard</a>
+    <a href="#" onclick="navigate('agents')">Agents</a>
+    <a href="#" onclick="navigate('chat')">Chat</a>
+    <a href="#" onclick="navigate('handoffs')">Handoffs</a>
+    <a href="#" onclick="navigate('cost')">Cost</a>
+    <a href="#" onclick="navigate('settings')">Settings</a>
+  </nav>
+
+  <div id="dashboard" class="page">
+    <h1>Dashboard</h1>
+    <h2>Overview</h2>
+    <div>Active Agents: <span id="active-agents-count">3</span></div>
+  </div>
+
+  <div id="agents" class="page hidden">
+    <h1>Agents</h1>
+    <button onclick="navigate('hire')">Hire Agent</button>
+  </div>
+
+  <div id="hire" class="page hidden">
+    <h1>Hire Agent</h1>
+    <label>Role</label>
+    <input type="text" placeholder="Role name" />
+    <button>Deploy Agent</button>
+  </div>
+
+  <div id="chat" class="page hidden">
+    <h1>Chat</h1>
+    <textarea placeholder="Type a message..."></textarea>
+    <button>Send</button>
+  </div>
+
+  <div id="handoffs" class="page hidden">
+    <h1>Handoffs</h1>
+  </div>
+
+  <div id="cost" class="page hidden">
+    <h1>Cost</h1>
+    <div>Total Spend: $0.00</div>
+    <div>Total Tokens: 0</div>
+  </div>
+
+  <div id="settings" class="page hidden">
+    <h1>Settings</h1>
+    <h2>Security</h2>
+  </div>
+
+  <div id="login" class="page hidden">
+    <form data-testid="login-form">
+      <input type="email" name="email" placeholder="email" />
+      <input type="password" name="password" placeholder="password" />
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
   <div id="root"></div>
 </body>
 </html>`
@@ -921,7 +986,7 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
+	_, _ = io.WriteString(w, indexHTML)
 }
 
 func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { // added for ohc_mesh_broadcast_total metric instrumentation

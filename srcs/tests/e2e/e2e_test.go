@@ -75,7 +75,7 @@ func TestMain(m *testing.M) {
 		serverCmd = exec.Command(ohcBin)
 		serverCmd.Env = append(os.Environ(),
 			"OHC_STANDALONE=true",
-			"OHC_HEADLESS=true",
+			"OHC_HEADLESS=false",
 			"OHC_SERVE_UI=true",
 			fmt.Sprintf("PORT=%d", port),
 			fmt.Sprintf("STATE_DIR=%s", stateDir),
