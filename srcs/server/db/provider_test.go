@@ -74,19 +74,19 @@ func TestProvider_AcquireTask(t *testing.T) {
 	// Setup SQLite table schema specific to our test
 	schema := `
 	CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
-		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
-		title TEXT NOT NULL,
+		id VARCHAR PRIMARY KEY,
+		organization_id VARCHAR NOT NULL,
+		title VARCHAR NOT NULL,
 		description TEXT,
-		status TEXT NOT NULL DEFAULT 'PENDING',
-		assigned_agent_id TEXT,
-		priority TEXT NOT NULL DEFAULT 'P2',
+		status VARCHAR NOT NULL DEFAULT 'PENDING',
+		assigned_agent_id VARCHAR,
+		priority VARCHAR NOT NULL DEFAULT 'P2',
 		payload TEXT,
 		parent_plan_id TEXT,
 		dependencies TEXT NOT NULL DEFAULT '[]',
-		locked_until DATETIME,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		locked_until TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`
 
 	_, err = provider.Exec(ctx, schema)

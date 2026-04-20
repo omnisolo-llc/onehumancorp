@@ -3,12 +3,14 @@ package tasks
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/google/uuid"
 )
 
+// TaskDecomposition represents a decomposed task in the shared task list.
 type TaskDecomposition struct {
 	ID              string
 	OrganizationID  string
@@ -20,133 +22,181 @@ type TaskDecomposition struct {
 	Payload         *string
 	ParentPlanID    *string
 	Dependencies    string
-	LockedUntil     *time.Time
+	LockedUntil     sql.NullTime
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
 
+var (
+	ErrTaskNotFound = errors.New("task not found")
+	ErrTaskClaimed  = errors.New("task already claimed or no tasks available")
+)
+
+// TaskDecompositionService manages the lifecycle of shared tasks.
 type TaskDecompositionService struct {
 	provider db.Provider
+	mu       sync.Mutex // fallback for sqlite concurrency handling
 }
 
+// NewTaskDecompositionService creates a new service instance.
 func NewTaskDecompositionService(provider db.Provider) *TaskDecompositionService {
 	return &TaskDecompositionService{
 		provider: provider,
 	}
 }
 
-func (s *TaskDecompositionService) Create(ctx context.Context, task TaskDecomposition) (string, error) {
-	if task.ID == "" {
-		task.ID = uuid.NewString()
-	}
-
-	query := `INSERT INTO shared_tasks_decomposition (
-		id, organization_id, title, description, status, assigned_agent_id,
-		priority, payload, parent_plan_id, dependencies, locked_until
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
-
+// CreateTask inserts a new task into the database.
+func (s *TaskDecompositionService) CreateTask(ctx context.Context, task *TaskDecomposition) error {
+	query := `
+		INSERT INTO shared_tasks_decomposition (
+			id, organization_id, title, description, status, assigned_agent_id,
+			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+		)
+	`
 	_, err := s.provider.Exec(ctx, query,
 		task.ID, task.OrganizationID, task.Title, task.Description, task.Status, task.AssignedAgentID,
-		task.Priority, task.Payload, task.ParentPlanID, task.Dependencies, task.LockedUntil,
+		task.Priority, task.Payload, task.ParentPlanID, task.Dependencies, task.LockedUntil, time.Now(), time.Now(),
 	)
-
-	if err != nil {
-		return "", err
-	}
-	return task.ID, nil
+	return err
 }
 
-func (s *TaskDecompositionService) Get(ctx context.Context, id string) (*TaskDecomposition, error) {
-	query := `SELECT id, organization_id, title, description, status, assigned_agent_id,
-		priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
-	FROM shared_tasks_decomposition WHERE id = $1`
-
+// GetTask retrieves a task by its ID.
+func (s *TaskDecompositionService) GetTask(ctx context.Context, id string) (*TaskDecomposition, error) {
+	query := `
+		SELECT
+			id, organization_id, title, description, status, assigned_agent_id,
+			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+		FROM shared_tasks_decomposition
+		WHERE id = $1
+	`
 	var task TaskDecomposition
-	err := s.provider.QueryRow(ctx, query, id).Scan(
+	row := s.provider.QueryRow(ctx, query, id)
+	err := row.Scan(
 		&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID,
 		&task.Priority, &task.Payload, &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 	)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrTaskNotFound
 		}
 		return nil, err
 	}
 	return &task, nil
 }
 
-func (s *TaskDecompositionService) UpdateState(ctx context.Context, id string, status string) error {
-	query := `UPDATE shared_tasks_decomposition SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-	_, err := s.provider.Exec(ctx, query, status, id)
+// UpdateTask updates an existing task.
+func (s *TaskDecompositionService) UpdateTask(ctx context.Context, task *TaskDecomposition) error {
+	query := `
+		UPDATE shared_tasks_decomposition
+		SET
+			title = $1, description = $2, status = $3, assigned_agent_id = $4,
+			priority = $5, payload = $6, parent_plan_id = $7, dependencies = $8, locked_until = $9, updated_at = $10
+		WHERE id = $11
+	`
+	_, err := s.provider.Exec(ctx, query,
+		task.Title, task.Description, task.Status, task.AssignedAgentID,
+		task.Priority, task.Payload, task.ParentPlanID, task.Dependencies, task.LockedUntil, time.Now(), task.ID,
+	)
 	return err
 }
 
-func (s *TaskDecompositionService) Claim(ctx context.Context, organizationID string, agentID string) (*TaskDecomposition, error) {
+// ClaimTask atomicity is handled based on db type.
+// For Postgres, it uses FOR UPDATE SKIP LOCKED.
+// For SQLite, it uses an application level lock around a simple transaction.
+func (s *TaskDecompositionService) ClaimTask(ctx context.Context, orgID string, agentID string) (*TaskDecomposition, error) {
+	if s.provider.IsSQLite() {
+		return s.claimTaskSQLite(ctx, orgID, agentID)
+	}
+	return s.claimTaskPostgres(ctx, orgID, agentID)
+}
+
+func (s *TaskDecompositionService) claimTaskPostgres(ctx context.Context, orgID string, agentID string) (*TaskDecomposition, error) {
+	query := `
+		UPDATE shared_tasks_decomposition
+		SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = $2
+		WHERE id = (
+			SELECT id
+			FROM shared_tasks_decomposition
+			WHERE organization_id = $3 AND status = 'PENDING'
+			ORDER BY priority ASC, created_at ASC
+			FOR UPDATE SKIP LOCKED
+			LIMIT 1
+		)
+		RETURNING id, organization_id, title, description, status, assigned_agent_id,
+			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+	`
+	var task TaskDecomposition
+	row := s.provider.QueryRow(ctx, query, agentID, time.Now(), orgID)
+	err := row.Scan(
+		&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID,
+		&task.Priority, &task.Payload, &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrTaskClaimed
+		}
+		return nil, err
+	}
+	return &task, nil
+}
+
+func (s *TaskDecompositionService) claimTaskSQLite(ctx context.Context, orgID string, agentID string) (*TaskDecomposition, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	tx, err := s.provider.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
-	var task TaskDecomposition
-	var query string
-
-	if s.provider.IsSQLite() {
-		// SQLite emulation for SKIP LOCKED - find one, then update it
-		// Need EXCLUSIVE transaction to avoid race conditions. Actually, db.Provider Begin starts a standard Tx.
-		// However, we can use the mutex approach if needed, or stick to this. SQLite standalone has lower concurrency.
-		query = `SELECT id, organization_id, title, description, status, assigned_agent_id,
-			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+	// Find pending task
+	querySelect := `
+		SELECT id
 		FROM shared_tasks_decomposition
-		WHERE status = 'PENDING' AND organization_id = $1 ORDER BY priority ASC, created_at ASC LIMIT 1`
-
-		err = tx.QueryRow(ctx, query, organizationID).Scan(
-			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID,
-			&task.Priority, &task.Payload, &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
-		)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
+		WHERE organization_id = $1 AND status = 'PENDING'
+		ORDER BY priority ASC, created_at ASC
+		LIMIT 1
+	`
+	var taskID string
+	err = tx.QueryRow(ctx, querySelect, orgID).Scan(&taskID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrTaskClaimed
 		}
-
-		updateQuery := `UPDATE shared_tasks_decomposition SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		// PostgreSQL with FOR UPDATE SKIP LOCKED
-		query = `SELECT id, organization_id, title, description, status, assigned_agent_id,
-			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
-		FROM shared_tasks_decomposition
-		WHERE status = 'PENDING' AND organization_id = $1 ORDER BY priority ASC, created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1`
-
-		err = tx.QueryRow(ctx, query, organizationID).Scan(
-			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID,
-			&task.Priority, &task.Payload, &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
-		)
-		if err != nil {
-			if err == sql.ErrNoRows {
-				return nil, nil
-			}
-			return nil, err
-		}
-
-		updateQuery := `UPDATE shared_tasks_decomposition SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
-	task.Status = "CLAIMED"
-	task.AssignedAgentID = &agentID
+	// Update task status to CLAIMED
+	queryUpdate := `
+		UPDATE shared_tasks_decomposition
+		SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = $2
+		WHERE id = $3
+	`
+	_, err = tx.Exec(ctx, queryUpdate, agentID, time.Now(), taskID)
+	if err != nil {
+		return nil, err
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 
-	return &task, nil
+	return s.GetTask(ctx, taskID)
+}
+
+// MarkTaskDone transitions a task to DONE status.
+func (s *TaskDecompositionService) MarkTaskDone(ctx context.Context, taskID string) error {
+	query := `UPDATE shared_tasks_decomposition SET status = 'DONE', updated_at = $1 WHERE id = $2`
+	_, err := s.provider.Exec(ctx, query, time.Now(), taskID)
+	return err
+}
+
+// MarkTaskFailed transitions a task to FAILED status.
+func (s *TaskDecompositionService) MarkTaskFailed(ctx context.Context, taskID string) error {
+	query := `UPDATE shared_tasks_decomposition SET status = 'FAILED', updated_at = $1 WHERE id = $2`
+	_, err := s.provider.Exec(ctx, query, time.Now(), taskID)
+	return err
 }

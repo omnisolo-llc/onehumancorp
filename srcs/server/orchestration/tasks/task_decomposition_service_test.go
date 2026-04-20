@@ -2,470 +2,290 @@ package tasks
 
 import (
 	"context"
-	"database/sql"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
+func ptrString(s string) *string {
+	return &s
+}
+
+func TestTaskDecompositionService_CreateAndGet(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	setupTestSchema(t, provider)
+
+	svc := NewTaskDecompositionService(provider)
+	ctx := context.Background()
+
+	task := &TaskDecomposition{
+		ID:             "test-id-1",
+		OrganizationID: "org-1",
+		Title:          "First Task",
+		Description:    ptrString("Description 1"),
+		Status:         "PENDING",
+		Priority:       "P1",
+		Payload:        ptrString(`{"key": "value"}`),
+		Dependencies:   "[]",
+	}
+
+	err := svc.CreateTask(ctx, task)
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	fetched, err := svc.GetTask(ctx, "test-id-1")
+	if err != nil {
+		t.Fatalf("failed to get task: %v", err)
+	}
+
+	if fetched.Title != "First Task" || fetched.OrganizationID != "org-1" {
+		t.Errorf("unexpected task fields: %+v", fetched)
+	}
+}
+
+func TestTaskDecompositionService_GetNotFound(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	setupTestSchema(t, provider)
+	svc := NewTaskDecompositionService(provider)
+	ctx := context.Background()
+
+	_, err := svc.GetTask(ctx, "nonexistent")
+	if !errors.Is(err, ErrTaskNotFound) {
+		t.Errorf("expected ErrTaskNotFound, got %v", err)
+	}
+}
+
+func TestTaskDecompositionService_UpdateTask(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	setupTestSchema(t, provider)
+	svc := NewTaskDecompositionService(provider)
+	ctx := context.Background()
+
+	task := &TaskDecomposition{
+		ID:             "test-id-2",
+		OrganizationID: "org-2",
+		Title:          "Old Title",
+		Status:         "PENDING",
+		Priority:       "P2",
+	}
+	err := svc.CreateTask(ctx, task)
+	if err != nil {
+		t.Fatalf("failed to create: %v", err)
+	}
+
+	task.Title = "New Title"
+	task.Status = "CLAIMED"
+	task.AssignedAgentID = ptrString("agent-x")
+
+	err = svc.UpdateTask(ctx, task)
+	if err != nil {
+		t.Fatalf("failed to update: %v", err)
+	}
+
+	fetched, err := svc.GetTask(ctx, "test-id-2")
+	if err != nil {
+		t.Fatalf("failed to get: %v", err)
+	}
+
+	if fetched.Title != "New Title" || fetched.Status != "CLAIMED" || *fetched.AssignedAgentID != "agent-x" {
+		t.Errorf("update did not persist correctly: %+v", fetched)
+	}
+}
+
+func TestTaskDecompositionService_ClaimTask(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	setupTestSchema(t, provider)
+	svc := NewTaskDecompositionService(provider)
+	ctx := context.Background()
+
+	task := &TaskDecomposition{
+		ID:             "test-id-3",
+		OrganizationID: "org-3",
+		Title:          "Claimable",
+		Status:         "PENDING",
+		Priority:       "P0",
+	}
+	_ = svc.CreateTask(ctx, task)
+
+	claimed, err := svc.ClaimTask(ctx, "org-3", "agent-claim")
+	if err != nil {
+		t.Fatalf("failed to claim task: %v", err)
+	}
+
+	if claimed.Status != "CLAIMED" || *claimed.AssignedAgentID != "agent-claim" {
+		t.Errorf("task not claimed correctly: %+v", claimed)
+	}
+
+	// Try claiming again, should return ErrTaskClaimed
+	_, err = svc.ClaimTask(ctx, "org-3", "agent-claim2")
+	if !errors.Is(err, ErrTaskClaimed) {
+		t.Errorf("expected ErrTaskClaimed, got %v", err)
+	}
+}
+
+func TestTaskDecompositionService_ClaimTaskConcurrency(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	setupTestSchema(t, provider)
+	svc := NewTaskDecompositionService(provider)
+	ctx := context.Background()
+
+	// Create 1 task
+	task := &TaskDecomposition{
+		ID:             "test-id-4",
+		OrganizationID: "org-4",
+		Title:          "Concurrent Claimable",
+		Status:         "PENDING",
+		Priority:       "P0",
+	}
+	_ = svc.CreateTask(ctx, task)
+
+	var wg sync.WaitGroup
+	successes := 0
+	failures := 0
+	var mu sync.Mutex
+
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(agentID string) {
+			defer wg.Done()
+			_, err := svc.ClaimTask(context.Background(), "org-4", agentID)
+			mu.Lock()
+			if err == nil {
+				successes++
+			} else if errors.Is(err, ErrTaskClaimed) {
+				failures++
+			}
+			mu.Unlock()
+		}("agent-" + string(rune(i)))
+	}
+	wg.Wait()
+
+	if successes != 1 {
+		t.Errorf("expected exactly 1 successful claim, got %d", successes)
+	}
+	if failures != 9 {
+		t.Errorf("expected exactly 9 failed claims, got %d", failures)
+	}
+}
+
+func setupTestSchema(t *testing.T, provider db.Provider) {
+	t.Helper()
+	schema := `
+	CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+		id VARCHAR PRIMARY KEY,
+		organization_id VARCHAR NOT NULL,
+		title VARCHAR NOT NULL,
+		description TEXT,
+		status VARCHAR NOT NULL DEFAULT 'PENDING',
+		assigned_agent_id VARCHAR,
+		priority VARCHAR NOT NULL DEFAULT 'P2',
+		payload TEXT,
+		parent_plan_id TEXT,
+		dependencies TEXT NOT NULL DEFAULT '[]',
+		locked_until TIMESTAMP,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+	_, err := provider.Exec(context.Background(), schema)
+	if err != nil {
+		t.Fatalf("failed to setup schema: %v", err)
+	}
+}
+
+// MockProvider forces IsSQLite() to return false to test the Postgres codepath.
 type MockProvider struct {
 	db.Provider
-	IsSQLiteFunc func() bool
-	ExecFunc     func(ctx context.Context, sql string, args ...any) (int64, error)
-	QueryRowFunc func(ctx context.Context, sql string, args ...any) db.Row
-	BeginFunc    func(ctx context.Context) (db.Tx, error)
 }
 
 func (m *MockProvider) IsSQLite() bool {
-	if m.IsSQLiteFunc != nil {
-		return m.IsSQLiteFunc()
-	}
 	return false
 }
 
-func (m *MockProvider) Exec(ctx context.Context, sql string, args ...any) (int64, error) {
-	if m.ExecFunc != nil {
-		return m.ExecFunc(ctx, sql, args...)
-	}
-	return 1, nil
-}
-
-func (m *MockProvider) QueryRow(ctx context.Context, sql string, args ...any) db.Row {
-	if m.QueryRowFunc != nil {
-		return m.QueryRowFunc(ctx, sql, args...)
-	}
-	return &MockRow{}
-}
-
-func (m *MockProvider) Begin(ctx context.Context) (db.Tx, error) {
-	if m.BeginFunc != nil {
-		return m.BeginFunc(ctx)
-	}
-	return &MockTx{}, nil
-}
-
+// MockRow implements db.Row
 type MockRow struct {
-	ScanFunc func(dest ...any) error
+	scanErr error
+	task    *TaskDecomposition
 }
 
 func (m *MockRow) Scan(dest ...any) error {
-	if m.ScanFunc != nil {
-		return m.ScanFunc(dest...)
+	if m.scanErr != nil {
+		return m.scanErr
 	}
+	*dest[0].(*string) = m.task.ID
+	*dest[1].(*string) = m.task.OrganizationID
+	*dest[2].(*string) = m.task.Title
+	*dest[3].(**string) = m.task.Description
+	*dest[4].(*string) = m.task.Status
+	*dest[5].(**string) = m.task.AssignedAgentID
+	*dest[6].(*string) = m.task.Priority
+	*dest[7].(**string) = m.task.Payload
+	*dest[8].(**string) = m.task.ParentPlanID
+	*dest[9].(*string) = m.task.Dependencies
+	// ignore timestamps for mock
 	return nil
 }
 
-type MockTx struct {
-	db.Tx
-	ExecFunc     func(ctx context.Context, sql string, args ...any) (int64, error)
-	QueryRowFunc func(ctx context.Context, sql string, args ...any) db.Row
-	CommitFunc   func(ctx context.Context) error
-	RollbackFunc func(ctx context.Context) error
+func (m *MockProvider) QueryRow(ctx context.Context, sql string, args ...any) db.Row {
+	// For testing claimTaskPostgres
+	task := &TaskDecomposition{
+		ID:             "pg-task-1",
+		OrganizationID: args[2].(string),
+		Title:          "PG Task",
+		Status:         "CLAIMED",
+		AssignedAgentID: ptrString(args[0].(string)),
+		Priority:       "P1",
+	}
+	return &MockRow{task: task}
 }
 
-func (m *MockTx) Exec(ctx context.Context, sql string, args ...any) (int64, error) {
-	if m.ExecFunc != nil {
-		return m.ExecFunc(ctx, sql, args...)
-	}
-	return 1, nil
-}
+func TestTaskDecompositionService_ClaimTaskPostgres(t *testing.T) {
+	provider := &MockProvider{}
+	svc := NewTaskDecompositionService(provider)
+	ctx := context.Background()
 
-func (m *MockTx) QueryRow(ctx context.Context, sql string, args ...any) db.Row {
-	if m.QueryRowFunc != nil {
-		return m.QueryRowFunc(ctx, sql, args...)
-	}
-	return &MockRow{}
-}
-
-func (m *MockTx) Commit(ctx context.Context) error {
-	if m.CommitFunc != nil {
-		return m.CommitFunc(ctx)
-	}
-	return nil
-}
-
-func (m *MockTx) Rollback(ctx context.Context) error {
-	if m.RollbackFunc != nil {
-		return m.RollbackFunc(ctx)
-	}
-	return nil
-}
-
-func TestCreate_WithID(t *testing.T) {
-	mockProvider := &MockProvider{
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			if args[0] != "test-id" {
-				t.Errorf("expected ID 'test-id', got %v", args[0])
-			}
-			return 1, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	id, err := svc.Create(context.Background(), TaskDecomposition{ID: "test-id"})
+	claimed, err := svc.ClaimTask(ctx, "org-pg", "agent-pg")
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("failed to claim task via postgres mock: %v", err)
 	}
-	if id != "test-id" {
-		t.Errorf("expected ID 'test-id', got %s", id)
+
+	if claimed.Status != "CLAIMED" || *claimed.AssignedAgentID != "agent-pg" || claimed.ID != "pg-task-1" {
+		t.Errorf("postgres mock task not claimed correctly: %+v", claimed)
 	}
 }
 
-func TestCreate_WithoutID(t *testing.T) {
-	mockProvider := &MockProvider{
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			if args[0] == "" {
-				t.Error("expected generated ID")
-			}
-			return 1, nil
-		},
+func TestTaskDecompositionService_Transitions(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	setupTestSchema(t, provider)
+	svc := NewTaskDecompositionService(provider)
+	ctx := context.Background()
+
+	task := &TaskDecomposition{
+		ID:             "test-id-5",
+		OrganizationID: "org-5",
+		Title:          "Transitionable",
+		Status:         "CLAIMED",
+		Priority:       "P0",
 	}
-	svc := NewTaskDecompositionService(mockProvider)
-	id, err := svc.Create(context.Background(), TaskDecomposition{})
+	_ = svc.CreateTask(ctx, task)
+
+	err := svc.MarkTaskDone(ctx, "test-id-5")
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("failed to mark done: %v", err)
 	}
-	if id == "" {
-		t.Error("expected generated ID")
+	fetched, _ := svc.GetTask(ctx, "test-id-5")
+	if fetched.Status != "DONE" {
+		t.Errorf("expected DONE, got %v", fetched.Status)
 	}
-}
 
-func TestCreate_Error(t *testing.T) {
-	expectedErr := errors.New("db error")
-	mockProvider := &MockProvider{
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			return 0, expectedErr
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Create(context.Background(), TaskDecomposition{})
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
-
-func TestGet_Success(t *testing.T) {
-	mockProvider := &MockProvider{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					*dest[0].(*string) = "test-id"
-					return nil
-				},
-			}
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Get(context.Background(), "test-id")
+	err = svc.MarkTaskFailed(ctx, "test-id-5")
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Fatalf("failed to mark failed: %v", err)
 	}
-	if task.ID != "test-id" {
-		t.Errorf("expected task ID 'test-id', got %s", task.ID)
-	}
-}
-
-func TestGet_NoRows(t *testing.T) {
-	mockProvider := &MockProvider{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					return sql.ErrNoRows
-				},
-			}
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Get(context.Background(), "test-id")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if task != nil {
-		t.Errorf("expected nil task, got %v", task)
-	}
-}
-
-func TestGet_Error(t *testing.T) {
-	expectedErr := errors.New("db error")
-	mockProvider := &MockProvider{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					return expectedErr
-				},
-			}
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Get(context.Background(), "test-id")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
-
-func TestUpdateState_Success(t *testing.T) {
-	mockProvider := &MockProvider{
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			if args[0] != "DONE" {
-				t.Errorf("expected status 'DONE', got %v", args[0])
-			}
-			return 1, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	err := svc.UpdateState(context.Background(), "test-id", "DONE")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-}
-
-func TestClaim_PG_Success(t *testing.T) {
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					*dest[0].(*string) = "test-id"
-					return nil
-				},
-			}
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return false },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if task.ID != "test-id" {
-		t.Errorf("expected task ID 'test-id', got %s", task.ID)
-	}
-}
-
-func TestClaim_PG_NoRows(t *testing.T) {
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					return sql.ErrNoRows
-				},
-			}
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return false },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if task != nil {
-		t.Errorf("expected nil task, got %v", task)
-	}
-}
-
-func TestClaim_PG_QueryError(t *testing.T) {
-	expectedErr := errors.New("query error")
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					return expectedErr
-				},
-			}
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return false },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
-
-func TestClaim_PG_UpdateError(t *testing.T) {
-	expectedErr := errors.New("update error")
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					*dest[0].(*string) = "test-id"
-					return nil
-				},
-			}
-		},
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			return 0, expectedErr
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return false },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
-
-func TestClaim_SQLite_Success(t *testing.T) {
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					*dest[0].(*string) = "test-id"
-					return nil
-				},
-			}
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return true },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if task.ID != "test-id" {
-		t.Errorf("expected task ID 'test-id', got %s", task.ID)
-	}
-}
-
-func TestClaim_SQLite_NoRows(t *testing.T) {
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					return sql.ErrNoRows
-				},
-			}
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return true },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	if task != nil {
-		t.Errorf("expected nil task, got %v", task)
-	}
-}
-
-func TestClaim_SQLite_QueryError(t *testing.T) {
-	expectedErr := errors.New("query error")
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					return expectedErr
-				},
-			}
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return true },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
-
-func TestClaim_SQLite_UpdateError(t *testing.T) {
-	expectedErr := errors.New("update error")
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					*dest[0].(*string) = "test-id"
-					return nil
-				},
-			}
-		},
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			return 0, expectedErr
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return true },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
-
-func TestClaim_BeginError(t *testing.T) {
-	expectedErr := errors.New("begin error")
-	mockProvider := &MockProvider{
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return nil, expectedErr
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
-
-func TestClaim_CommitError(t *testing.T) {
-	expectedErr := errors.New("commit error")
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					*dest[0].(*string) = "test-id"
-					return nil
-				},
-			}
-		},
-		CommitFunc: func(ctx context.Context) error {
-			return expectedErr
-		},
-	}
-	mockProvider := &MockProvider{
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
+	fetched, _ = svc.GetTask(ctx, "test-id-5")
+	if fetched.Status != "FAILED" {
+		t.Errorf("expected FAILED, got %v", fetched.Status)
 	}
 }
