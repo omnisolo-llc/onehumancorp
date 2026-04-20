@@ -1018,11 +1018,16 @@ void main() {
           overrides: [apiServiceProvider.overrideWithValue(api)],
         ),
       );
+      tester.view.physicalSize = const Size(1440, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
       await tester.pumpAndSettle();
 
       // Tap Mac download button
       final macBtn = find.text('Download for Mac');
       expect(macBtn, findsOneWidget);
+      await tester.ensureVisible(macBtn);
       await tester.tap(macBtn);
       await tester.pumpAndSettle();
 
@@ -1036,6 +1041,7 @@ void main() {
       // Tap Windows download button
       final winBtn = find.text('Download for Windows');
       expect(winBtn, findsOneWidget);
+      await tester.ensureVisible(winBtn);
       await tester.tap(winBtn);
       await tester.pumpAndSettle();
 
