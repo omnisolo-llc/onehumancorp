@@ -325,6 +325,166 @@ flutter_test(
     workspace_pubspec = "//:pubspec.yaml",
 )
 
+flutter_test(
+    name = "cuj_settings_e2e_test",
+    srcs = ["test/cuj_settings_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_settings_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_logs_e2e_test",
+    srcs = ["test/cuj_logs_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_logs_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_chat_screen_e2e_test",
+    srcs = ["test/cuj_chat_screen_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_chat_screen_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_user_management_e2e_test",
+    srcs = ["test/cuj_user_management_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_user_management_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_cost_dashboard_e2e_test",
+    srcs = ["test/cuj_cost_dashboard_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_cost_dashboard_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_diagnostics_e2e_test",
+    srcs = ["test/cuj_diagnostics_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_diagnostics_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_scaling_screen_e2e_test",
+    srcs = ["test/cuj_scaling_screen_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_scaling_screen_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_security_screen_e2e_test",
+    srcs = ["test/cuj_security_screen_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_security_screen_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_skills_e2e_test",
+    srcs = ["test/cuj_skills_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_skills_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_service_screen_e2e_test",
+    srcs = ["test/cuj_service_screen_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_service_screen_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_swarm_memory_e2e_test",
+    srcs = ["test/cuj_swarm_memory_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_swarm_memory_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_secure_agent_config_e2e_test",
+    srcs = ["test/cuj_secure_agent_config_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_secure_agent_config_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_integrations_screen_e2e_test",
+    srcs = ["test/cuj_integrations_screen_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_integrations_screen_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_handoffs_screen_e2e_test",
+    srcs = ["test/cuj_handoffs_screen_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_handoffs_screen_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_pipelines_screen_e2e_test",
+    srcs = ["test/cuj_pipelines_screen_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_pipelines_screen_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_landing_screen_e2e_test",
+    srcs = ["test/cuj_landing_screen_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_landing_screen_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_ai_config_e2e_test",
+    srcs = ["test/cuj_ai_config_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_ai_config_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_referrals_dashboard_e2e_test",
+    srcs = ["test/cuj_referrals_dashboard_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_referrals_dashboard_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_meetings_screen_extra_e2e_test",
+    srcs = ["test/cuj_meetings_screen_extra_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_meetings_screen_extra_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_dashboard_screen_extra_e2e_test",
+    srcs = ["test/cuj_dashboard_screen_extra_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_dashboard_screen_extra_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
 test_suite(
     name = "cuj_e2e_tests",
     tests = [
@@ -342,6 +502,26 @@ test_suite(
         ":cuj_meetings_e2e_test",
         ":cuj_security_e2e_test",
         ":cuj_agents_management_e2e_test",
+        ":cuj_settings_e2e_test",
+        ":cuj_logs_e2e_test",
+        ":cuj_chat_screen_e2e_test",
+        ":cuj_user_management_e2e_test",
+        ":cuj_cost_dashboard_e2e_test",
+        ":cuj_diagnostics_e2e_test",
+        ":cuj_scaling_screen_e2e_test",
+        ":cuj_security_screen_e2e_test",
+        ":cuj_skills_e2e_test",
+        ":cuj_service_screen_e2e_test",
+        ":cuj_swarm_memory_e2e_test",
+        ":cuj_secure_agent_config_e2e_test",
+        ":cuj_integrations_screen_e2e_test",
+        ":cuj_handoffs_screen_e2e_test",
+        ":cuj_pipelines_screen_e2e_test",
+        ":cuj_landing_screen_e2e_test",
+        ":cuj_ai_config_e2e_test",
+        ":cuj_referrals_dashboard_e2e_test",
+        ":cuj_meetings_screen_extra_e2e_test",
+        ":cuj_dashboard_screen_extra_e2e_test",
     ],
 )
 
