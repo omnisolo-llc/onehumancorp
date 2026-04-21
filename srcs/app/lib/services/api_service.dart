@@ -47,15 +47,23 @@ class ApiService {
     String name,
     String role, {
     String providerType = 'openclaw',
+    String? apiKey,
+    String? endpointUrl,
+    String? tokenLimit,
   }) async {
+    final body = <String, dynamic>{
+      'name': name,
+      'role': role,
+      'providerType': providerType,
+    };
+    if (apiKey != null && apiKey.isNotEmpty) body['apiKey'] = apiKey;
+    if (endpointUrl != null && endpointUrl.isNotEmpty) body['endpointUrl'] = endpointUrl;
+    if (tokenLimit != null && tokenLimit.isNotEmpty) body['tokenLimit'] = tokenLimit;
+
     final res = await _client.post(
       Uri.parse('$baseUrl/api/agents/hire'),
       headers: _headers,
-      body: jsonEncode({
-        'name': name,
-        'role': role,
-        'providerType': providerType,
-      }),
+      body: jsonEncode(body),
     );
     _checkStatus(res);
     return Agent.fromJson(jsonDecode(res.body) as Map<String, dynamic>);

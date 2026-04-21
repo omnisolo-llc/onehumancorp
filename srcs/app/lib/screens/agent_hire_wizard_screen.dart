@@ -37,6 +37,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   final _endpointUrlController = TextEditingController();
   final _tokenLimitController = TextEditingController();
 
+  final _apiKeyController = TextEditingController();
+  bool _obscureApiKey = true;
   bool _isDeploying = false;
   bool _isLoading = true;
   List<String> _roles = [];
@@ -87,6 +89,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     _nameController.dispose();
     _endpointUrlController.dispose();
     _tokenLimitController.dispose();
+    _apiKeyController.dispose();
     super.dispose();
   }
 
@@ -101,6 +104,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
           _nameController.text.trim(),
           _selectedRole,
           providerType: _selectedProvider,
+          apiKey: _apiKeyController.text.trim(),
+          endpointUrl: _endpointUrlController.text.trim(),
+          tokenLimit: _tokenLimitController.text.trim(),
         );
         if (mounted) {
           context.go('/agents');
@@ -422,22 +428,36 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                                 );
                               });
                             },
-                            child: Container(
-                              width: 100,
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white10,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: BackdropFilter(
+                                filter: ImageFilter.compose(
+                                  outer: ColorFilter.matrix(const <double>[
+                                    1.168, -0.153, -0.015, 0, 0,
+                                    -0.046, 1.061, -0.015, 0, 0,
+                                    -0.046, -0.152, 1.198, 0, 0,
+                                    0, 0, 0, 1, 0,
+                                  ]),
+                                  inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
                                 ),
-                              ),
-                              child: const Column(
-                                children: [
-                                  Icon(Icons.code, color: Colors.white70, size: 24),
-                                  SizedBox(height: 4),
-                                  Text('Code Builder', style: TextStyle(color: Colors.white70, fontSize: 10), textAlign: TextAlign.center,),
-                                ],
+                                child: Container(
+                                  width: 100,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white10,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                                    ),
+                                  ),
+                                  child: const Column(
+                                    children: [
+                                      Icon(Icons.code, color: Colors.white70, size: 24),
+                                      SizedBox(height: 4),
+                                      Text('Code Builder', style: TextStyle(color: Colors.white70, fontSize: 10), textAlign: TextAlign.center,),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -549,6 +569,26 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _apiKeyController,
+                    obscureText: _obscureApiKey,
+                    decoration: InputDecoration(
+                      labelText: 'API Key (Optional)',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        tooltip: _obscureApiKey ? 'Show API Key' : 'Hide API Key',
+                        onPressed: () {
+                          setState(() {
+                            _obscureApiKey = !_obscureApiKey;
+                          });
+                        },
+                      ),
+                    ),
                   ),
                 ],
               ],
