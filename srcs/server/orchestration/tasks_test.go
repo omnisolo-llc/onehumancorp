@@ -65,6 +65,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			ultraplan_phase TEXT,
 			deliberation_log TEXT,
 			depth INTEGER,
+			dependencies TEXT NOT NULL DEFAULT '[]',
 			locked_until TIMESTAMP,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
