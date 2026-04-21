@@ -26,6 +26,11 @@ build --spawn_strategy=remote,sandboxed,local
 build --incompatible_strict_action_env
 build --announce_rc
 
+# ── Remote execution resilience ───────────────────────────────────────────────
+# Automatically rewind and retry actions when their remote inputs are lost
+# (e.g. due to remote-cache eviction). Stabilised in Bazel 9.1.0.
+build --rewind_lost_inputs
+
 # ── Test defaults ─────────────────────────────────────────────────────────────
 # Show test output only on failure
 test --test_output=errors

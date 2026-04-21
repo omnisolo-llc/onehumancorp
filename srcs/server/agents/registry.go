@@ -36,6 +36,7 @@ func DefaultRegistry() *Registry {
 	r.Register(&OpenCodeProvider{})
 	r.Register(&OpenClawProvider{})
 	r.Register(&IronClawProvider{})
+	r.Register(&MiniMaxiProvider{})
 	r.Register(&BuiltinProvider{})
 	return r
 }
@@ -88,6 +89,7 @@ func (r *Registry) All() []Provider {
 		ProviderTypeOpenCode,
 		ProviderTypeOpenClaw,
 		ProviderTypeIronClaw,
+		ProviderTypeMiniMaxi,
 		ProviderTypeBuiltin,
 	}
 	seen := map[ProviderType]bool{}
@@ -126,10 +128,12 @@ func (r *Registry) Authenticate(t ProviderType, creds Credentials) error {
 // Produces no errors.
 // Has no side effects.
 type ProviderInfo struct {
-	Type            ProviderType `json:"type"`
-	Description     string       `json:"description"`
-	SupportedRoles  []string     `json:"supportedRoles"`
-	IsAuthenticated bool         `json:"isAuthenticated"`
+	Type             ProviderType `json:"type"`
+	Description      string       `json:"description"`
+	// RecommendedRoles lists roles this provider is optimised for.  It is
+	// advisory only – any provider type can be freely assigned to any role.
+	RecommendedRoles []string     `json:"recommendedRoles"`
+	IsAuthenticated  bool         `json:"isAuthenticated"`
 }
 
 // Infos returns a ProviderInfo summary for every registered provider.
@@ -142,10 +146,10 @@ func (r *Registry) Infos() []ProviderInfo {
 	out := make([]ProviderInfo, len(providers))
 	for i, p := range providers {
 		out[i] = ProviderInfo{
-			Type:            p.Type(),
-			Description:     p.Description(),
-			SupportedRoles:  p.SupportedRoles(),
-			IsAuthenticated: p.IsAuthenticated(),
+			Type:             p.Type(),
+			Description:      p.Description(),
+			RecommendedRoles: p.SupportedRoles(),
+			IsAuthenticated:  p.IsAuthenticated(),
 		}
 	}
 	return out
