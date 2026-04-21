@@ -138,6 +138,13 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	IntegrationTypeGitHubIssues IntegrationType = "github_issues"
+
+	// IntegrationTypeObsidian provides domain-specific context and typed constraints for IntegrationTypeObsidian operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	IntegrationTypeObsidian IntegrationType = "obsidian"
 )
 
 // ConnectionStatus reflects whether an integration is currently active and reachable.
