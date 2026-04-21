@@ -14,6 +14,14 @@ import (
 	"net"
 )
 
+type mockAgentService struct {
+	agentservicepb.UnimplementedAgentServiceServer
+}
+
+func (m *mockAgentService) Ping(ctx context.Context, req *agentservicepb.PingRequest) (*agentservicepb.PingResponse, error) {
+	return &agentservicepb.PingResponse{}, nil
+}
+
 // startAuthTestServer creates a test server with the given AuthConfig applied.
 func startAuthTestServer(t *testing.T, authCfg agentgrpc.AuthConfig) (*grpc.ClientConn, func()) {
 	t.Helper()
@@ -26,7 +34,7 @@ func startAuthTestServer(t *testing.T, authCfg agentgrpc.AuthConfig) (*grpc.Clie
 		grpc.ChainUnaryInterceptor(authCfg.UnaryInterceptor()),
 		grpc.ChainStreamInterceptor(authCfg.StreamInterceptor()),
 	)
-	agentservicepb.RegisterAgentServiceServer(srv, &agentservicepb.UnimplementedAgentServiceServer{})
+	agentservicepb.RegisterAgentServiceServer(srv, &mockAgentService{})
 
 	go func() { _ = srv.Serve(lis) }()
 

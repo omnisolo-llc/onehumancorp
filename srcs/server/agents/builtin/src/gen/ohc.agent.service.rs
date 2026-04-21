@@ -59,6 +59,8 @@ pub struct RunTaskRequest {
     /// process-level defaults.
     #[prost(message, optional, tag = "10")]
     pub toolset_config: ::core::option::Option<ToolsetConfig>,
+    #[prost(string, tag = "12")]
+    pub department: ::prost::alloc::string::String,
 }
 /// RunTaskEvent is a single streamed event from the agent back to the server.
 #[derive(Clone, PartialEq, ::prost::Message)]
