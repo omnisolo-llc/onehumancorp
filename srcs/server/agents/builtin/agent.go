@@ -42,6 +42,11 @@ func SpawnTask(ctx context.Context, description, prompt, workDir string, cfg Age
 		return nil, fmt.Errorf("spawn task: %w", err)
 	}
 
+	return SpawnTaskWithID(ctx, id, description, prompt, workDir, cfg)
+}
+
+// SpawnTaskWithID launches a builtin task with a specific ID and returns state for polling.
+func SpawnTaskWithID(ctx context.Context, id, description, prompt, workDir string, cfg AgentConfig) (*TaskState, error) {
 	outputFile := taskOutputPath(id)
 	ctx, cancel := context.WithCancel(ctx)
 

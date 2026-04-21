@@ -36,6 +36,7 @@ go_library(
         "webfetch.go",
         "websearch.go",
         "write.go",
+        "worktree.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
     visibility = ["//visibility:public"],
@@ -57,6 +58,7 @@ go_test(
         "prompt_test.go",
         "pubsub_test.go",
         "scheduler_benchmark_test.go",
+        "worktree_test.go",
     ],
     embed = [":builtin"],
 )

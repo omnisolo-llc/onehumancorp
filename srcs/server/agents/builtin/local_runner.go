@@ -81,6 +81,8 @@ cfg     AgentConfig
 mu     sync.Mutex
 tasks  map[string]*TaskState
 cancel context.CancelFunc
+
+worktreeManager *WorktreeManager
 }
 
 // NewRunner creates a Runner that will register itself in hub under the given
@@ -96,10 +98,11 @@ if role == "" {
 role = "SOFTWARE_ENGINEER"
 }
 return &Runner{
-agentID: agentID,
-hub:     hub,
-cfg:     cfg,
-tasks:   make(map[string]*TaskState),
+agentID:         agentID,
+hub:             hub,
+cfg:             cfg,
+tasks:           make(map[string]*TaskState),
+worktreeManager: NewWorktreeManager("../.ohc-worktrees"),
 }
 }
 
@@ -224,9 +227,27 @@ Status:       HubStatusActive,
 ProviderType: "builtin",
 })
 
-state, err := SpawnTask(ctx, description, prompt, workDir, r.cfg)
+// Create a new worktree for the task if a manager is available
+taskID, err := generateTaskID()
+if err != nil {
+    slog.Error("local agent runner: failed to generate task ID", "err", err)
+    return
+}
+worktreePath := workDir
+if r.worktreeManager != nil {
+    if wtPath, err := r.worktreeManager.Create(ctx, taskID); err == nil {
+        worktreePath = wtPath
+    } else {
+        slog.Warn("local agent runner: failed to create worktree, falling back to original workdir", "err", err)
+    }
+}
+
+state, err := SpawnTaskWithID(ctx, taskID, description, prompt, worktreePath, r.cfg)
 if err != nil {
 slog.Error("local agent runner: failed to spawn task", "err", err)
+if r.worktreeManager != nil && worktreePath != workDir {
+    r.worktreeManager.Cleanup(context.Background(), taskID)
+}
 r.hub.RegisterAgent(HubAgent{
 ID:           r.agentID,
 Name:         "local-agent",
@@ -274,6 +295,10 @@ Role:         "SOFTWARE_ENGINEER",
 Status:       HubStatusIdle,
 ProviderType: "builtin",
 })
+
+if r.worktreeManager != nil {
+    r.worktreeManager.Cleanup(context.Background(), state.ID)
+}
 
 r.publishCompletion(state, originMsg)
 return
