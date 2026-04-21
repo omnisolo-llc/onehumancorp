@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/utils"
 )
 
 // AnthropicClient implements LLMClient for Anthropic's Claude API.
@@ -45,14 +47,14 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 
 		messages = append(messages, antMessage{
 			Role:    role,
-			Content: m.Content,
+			Content: utils.MinifyJSONString(m.Content),
 		})
 	}
 
 	payload := map[string]interface{}{
 		"model":      req.Model,
 		"max_tokens": req.MaxTokens,
-		"system":     req.System,
+		"system":     utils.MinifyJSONString(req.System),
 		"messages":   messages,
 	}
 

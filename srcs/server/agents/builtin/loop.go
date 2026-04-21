@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/onehumancorp/mono/srcs/server/utils"
 )
 
 // Run executes the agent loop until completion or error.
@@ -118,6 +120,7 @@ func (a *BuiltinAgent) RunWithCallback(ctx context.Context, initialMessages []Me
 		// Execute tool calls
 		var toolResults []ToolResult
 		for _, tc := range resp.Message.ToolCalls {
+			tc.Arguments = json.RawMessage(utils.MinifyJSONString(string(tc.Arguments)))
 			result, err := a.executeToolCall(ctx, tc)
 			if err != nil {
 				toolResults = append(toolResults, ToolResult{
