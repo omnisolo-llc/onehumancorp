@@ -25,6 +25,7 @@ type SharedTaskDB struct {
     Payload         *string
     ParentPlanID    *string
     Dependencies    *string
+    DeploymentMode  *string
     CreatedAt       string
     UpdatedAt       string
 }
