@@ -553,6 +553,17 @@ class ApiService {
       throw Exception('API error ${res.statusCode}: ${res.body}');
     }
   }
+
+  Future<void> triggerHybridSync() async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/mcp/sync'),
+      headers: _headers,
+      body: jsonEncode({'action': 'sync_state'}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to trigger hybrid sync');
+    }
+  }
 }
 
 // ── Providers ──────────────────────────────────────────────────────────────

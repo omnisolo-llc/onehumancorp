@@ -25,6 +25,7 @@ type SharedTaskDB struct {
     Payload         *string
     ParentPlanID    *string
     Dependencies    *string
+    DeploymentMode  *string
     CreatedAt       string
     UpdatedAt       string
 }
@@ -79,9 +80,9 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
             SELECT t.id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM task_dependencies td
-                JOIN shared_tasks dep ON dep.id = td.depends_on_task_id
-                WHERE td.task_id = t.id AND dep.status != 'COMPLETED'
+                SELECT 1 FROM json_each(t.dependencies) d
+                JOIN shared_tasks dep ON dep.id = d.value
+                WHERE dep.status != 'COMPLETED'
             )
             LIMIT 1
         `
@@ -91,9 +92,9 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
             SELECT t.id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM task_dependencies td
-                JOIN shared_tasks dep ON dep.id = td.depends_on_task_id
-                WHERE td.task_id = t.id AND dep.status != 'COMPLETED'
+                SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) d
+                JOIN shared_tasks dep ON dep.id::text = d
+                WHERE dep.status != 'COMPLETED'
             )
             LIMIT 1
             FOR UPDATE SKIP LOCKED
@@ -334,4 +335,72 @@ func (to *SharedTaskOrchestrator) CreateTaskV4(ctx context.Context, task *Shared
     }
 
     return tx.Commit(ctx)
+}
+
+type TasksDB struct {
+	dbProvider db.Provider
+	mu         sync.Mutex
+}
+
+func NewTasksDB(dbProvider db.Provider) *TasksDB {
+	return &TasksDB{
+		dbProvider: dbProvider,
+	}
+}
+
+func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized: missing claims")
+	}
+	orgID := claims.OrganizationID
+
+	tx, err := to.dbProvider.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var id string
+
+	if to.dbProvider.IsSQLite() {
+		if !to.mu.TryLock() {
+			// Fallback to Lock
+			to.mu.Lock()
+		}
+		defer to.mu.Unlock()
+
+		query := `
+            SELECT t.id FROM shared_tasks t
+            WHERE t.status = 'PENDING' AND t.organization_id = $1
+            LIMIT 1
+        `
+		err = tx.QueryRow(ctx, query, orgID).Scan(&id)
+	} else {
+		query := `
+            SELECT t.id FROM shared_tasks t
+            WHERE t.status = 'PENDING' AND t.organization_id = $1
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+        `
+		err = tx.QueryRow(ctx, query, orgID).Scan(&id)
+	}
+
+	if err != nil {
+		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	return &Task{TaskID: id, Status: "ASSIGNED", AgentID: agentID}, nil
 }

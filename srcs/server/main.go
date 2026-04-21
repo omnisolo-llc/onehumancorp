@@ -128,6 +128,21 @@ var (
 	}
 )
 
+// corsMiddleware wraps an http.Handler to add CORS headers for cross-origin requests
+// from the Flutter web app.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Initializes structured JSON logging.
 // Accepts no parameters.
 // Returns nothing.
@@ -322,6 +337,9 @@ func run(now time.Time, listen listenFunc) error {
 
 		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
 		go missionIngestionWorker.Start(ctx)
+
+		autodreamNewWorker := workers.NewAutoDreamWorker(pool.Provider)
+		go autodreamNewWorker.Start(ctx)
 
 		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider)
 		go competitorAuditWorker.Start(ctx)
@@ -571,7 +589,7 @@ func run(now time.Time, listen listenFunc) error {
 	}()
 
 	slog.Info("serving API", "address", httpAddress)
-	return listen(httpAddress, handler)
+	return listen(httpAddress, corsMiddleware(handler))
 }
 
 // Entry point for the application.

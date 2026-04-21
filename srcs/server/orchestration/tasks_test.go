@@ -65,6 +65,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			ultraplan_phase TEXT,
 			deliberation_log TEXT,
 			depth INTEGER,
+			dependencies TEXT NOT NULL DEFAULT '[]',
 			locked_until TIMESTAMP,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -249,9 +250,9 @@ func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
 	approveTasksForExecution(t, tm, ctx, parentTask.ID, dependentTask.ID)
 
 	// Add dependency
-	_, err := tm.db.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", dependentTask.ID, parentTask.ID)
+	_, err := tm.db.Exec(ctx, "UPDATE shared_tasks SET dependencies = $1 WHERE id = $2", "[\""+parentTask.ID+"\"]", dependentTask.ID)
 	if err != nil {
-		t.Fatalf("failed to insert dependency: %v", err)
+		t.Fatalf("failed to update dependency: %v", err)
 	}
 
 	// Poll should only return the parent task because dependent is blocked

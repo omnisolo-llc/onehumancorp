@@ -2063,6 +2063,16 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		broker = s.MeshBroker // Already initialized to LocalMeshBroker
 	}
 
+	if req.Channel == "mesh:tasks" || req.Channel == "mesh:coordination" {
+		agentID, _ := req.Data["agent_id"].(string)
+		action, _ := req.Data["action"].(string)
+		status, _ := req.Data["status"].(string)
+		if agentID == "" || action == "" || status == "" {
+			http.Error(w, "invalid request: missing required fields (agent_id, action, status)", http.StatusBadRequest)
+			return
+		}
+	}
+
 	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
 
 	// Legacy publish for fallback/other agent systems expecting it via hub until fully migrated

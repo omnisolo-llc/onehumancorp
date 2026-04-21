@@ -116,3 +116,51 @@ func TestPgCheckpointSaver_ListCheckpoints(t *testing.T) {
 		t.Errorf("expected first checkpoint to be '3', got %q", checkpoints[0].CheckpointID)
 	}
 }
+
+func TestCompressDecompress(t *testing.T) {
+	original := []byte(`{"hello":"world","deep":{"nested":[1,2,3]}}`)
+
+	compressed, err := compressData(original)
+	if err != nil {
+		t.Fatalf("Failed to compress data: %v", err)
+	}
+
+	// Verify compressed data starts and ends with quotes to be valid JSON
+	if len(compressed) < 2 || compressed[0] != '"' || compressed[len(compressed)-1] != '"' {
+		t.Errorf("Compressed data is not properly quoted: %s", string(compressed))
+	}
+
+	decompressed, err := decompressData(compressed)
+	if err != nil {
+		t.Fatalf("Failed to decompress data: %v", err)
+	}
+
+	if string(decompressed) != string(original) {
+		t.Errorf("Expected decompressed data to match original. Got %s, want %s", string(decompressed), string(original))
+	}
+}
+
+func TestDecompressBackwardCompatibility(t *testing.T) {
+	// Old data (uncompressed JSON)
+	oldData := []byte(`{"hello":"world"}`)
+
+	decompressed, err := decompressData(oldData)
+	if err != nil {
+		t.Fatalf("Decompression of backward compatible data failed: %v", err)
+	}
+
+	if string(decompressed) != string(oldData) {
+		t.Errorf("Expected data to be returned as-is. Got %s, want %s", string(decompressed), string(oldData))
+	}
+
+	// Old data wrapped in quotes (e.g. if somehow just stringified) - this shouldn't be valid base64/gzip, so fallback to raw data
+	oldQuotedData := []byte(`"not-base64-or-gzip"`)
+	decompressed2, err := decompressData(oldQuotedData)
+	if err != nil {
+		t.Fatalf("Decompression of invalid quoted data failed: %v", err)
+	}
+
+	if string(decompressed2) != string(oldQuotedData) {
+		t.Errorf("Expected data to be returned as-is on fail. Got %s, want %s", string(decompressed2), string(oldQuotedData))
+	}
+}

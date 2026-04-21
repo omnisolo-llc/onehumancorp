@@ -5,6 +5,8 @@ class SharedTask {
   final String status;
   final String? agentId;
   final List<dynamic>? dependencies;
+  final String? parentTaskId;
+  final String? workflowState;
 
   SharedTask({
     required this.id,
@@ -12,6 +14,8 @@ class SharedTask {
     required this.status,
     this.agentId,
     this.dependencies,
+    this.parentTaskId,
+    this.workflowState,
   });
 
   factory SharedTask.fromJson(Map<String, dynamic> json) {
@@ -21,6 +25,8 @@ class SharedTask {
       status: json['status'] as String,
       agentId: json['agent_id'] as String?,
       dependencies: json['dependencies'] as List<dynamic>?,
+      parentTaskId: json['parent_task_id'] as String?,
+      workflowState: json['workflow_state'] as String?,
     );
   }
 }

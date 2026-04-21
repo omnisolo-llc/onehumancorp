@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -33,6 +34,7 @@ var (
 	BubblewrapExecutionLatency metric.Float64Histogram
 	HarnessInitLatency         metric.Float64Histogram
 	HarnessDbIoLatency         metric.Float64Histogram
+	TasksEscalatedTotal        metric.Int64Counter
 	BubblewrapViolationTotal   metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
@@ -193,6 +195,15 @@ func RedactInterfacePII(val interface{}) interface{} {
 		if rv.Kind() == reflect.String {
 			return RedactPII(rv.String())
 		}
+		if rv.Kind() == reflect.Ptr {
+			if rv.IsNil() {
+				return val
+			}
+			// We return the redacted element directly, which becomes a map[string]interface{}
+			// for structs. This allows json.Marshal to still serialize it identically
+			// without attempting to construct dynamic typed pointers.
+			return RedactInterfacePII(rv.Elem().Interface())
+		}
 		switch rv.Kind() {
 		case reflect.Slice, reflect.Array:
 			if rv.Len() == 0 {
@@ -231,7 +242,18 @@ func RedactInterfacePII(val interface{}) interface{} {
 				if field.PkgPath != "" {
 					continue
 				}
-				res[field.Name] = RedactInterfacePII(rv.Field(i).Interface())
+				key := field.Name
+				tag := field.Tag.Get("json")
+				if tag == "-" {
+					continue
+				}
+				if tag != "" {
+					parts := strings.Split(tag, ",")
+					if parts[0] != "" {
+						key = parts[0]
+					}
+				}
+				res[key] = RedactInterfacePII(rv.Field(i).Interface())
 			}
 			return res
 		}
@@ -830,6 +852,14 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	TasksEscalatedTotal, err = m.Int64Counter(
+		"tasks_escalated_total",
+		metric.WithDescription("Total number of tasks escalated to the cloud swarm"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	HarnessInitLatency, err = m.Float64Histogram(
 		"harness_init_latency",
 		metric.WithDescription("Latency of harness initialization"),
@@ -1172,6 +1202,24 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
+
+// RecordTokenBurnRatePredicted24h updates the forecast gauge for a tenant's predicted 24h token burn rate.
+func RecordTokenBurnRatePredicted24h(ctx context.Context, organizationID string, prediction float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"prediction_24h":  prediction,
+		}
+
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "token_burn_rate_predicted_24h", string(payloadBytes))
+	}
+	if TokenBurnRatePredicted24h != nil {
+		TokenBurnRatePredicted24h.Record(ctx, prediction, metric.WithAttributes(
+			attribute.String("organization_id", organizationID),
+		))
+	}
+}
 
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
@@ -2046,6 +2094,27 @@ func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string)
 	if HarnessDbIoLatency != nil {
 		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+var CapabilityViolationTotal metric.Int64Counter
+
+func initCapabilityMetrics(m metric.Meter) error {
+	var err error
+	CapabilityViolationTotal, err = m.Int64Counter(
+		"capability_violation_total",
+		metric.WithDescription("Total number of capability ACL violations"),
+	)
+	return err
+}
+
+// RecordCapabilityViolation increments the counter for capability ACL violations.
+func RecordCapabilityViolation(ctx context.Context, sessionID, capability string) {
+	if CapabilityViolationTotal != nil {
+		CapabilityViolationTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("session_id", sessionID),
+			attribute.String("capability", capability),
 		))
 	}
 }
