@@ -117,16 +117,15 @@ func TestTeammateMesh_MultiTenantIsolation(t *testing.T) {
 }
 
 func TestMemoryMeshTransport(t *testing.T) {
-	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
 	// Use NewTestProvider or db.New to init db
 	ctx := context.Background()
 
 	provider := db.NewTestProvider(t)
 	defer provider.Close()
 
-	// Explicitly define the schema within the test initialization
 	_, err := provider.Exec(ctx, `
-		CREATE TABLE shared_tasks (
+		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id VARCHAR NOT NULL,
 			title TEXT NOT NULL,
@@ -142,6 +141,7 @@ func TestMemoryMeshTransport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
+
 
 	mesh := NewMemoryMeshTransport(provider)
 
