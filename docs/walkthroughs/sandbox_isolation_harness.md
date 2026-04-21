@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+
 # OS-Level Sandbox Isolation Harness
 
 <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
@@ -34,3 +36,5 @@ sequenceDiagram
     A-->>B: Process Exit
     B-->>O: Return Exit Code & Metrics
 ```
+
+</div>
