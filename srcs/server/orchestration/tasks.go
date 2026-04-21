@@ -37,7 +37,7 @@ type SharedTask struct { // issue_id: 3980
 	Title           string     `json:"title"`
 	Description     string     `json:"description,omitempty"`
 	AssignedAgentID string     `json:"assigned_agent_id,omitempty"`
-	Status          string     `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED
+	Status          string     `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED, PROPOSAL_PENDING, DELIBERATING, REVISION_REQUIRED, APPROVED
 	Priority        string     `json:"priority"`
 	Payload         string     `json:"payload"`
 	LockedUntil     *time.Time `json:"locked_until,omitempty"`
@@ -132,12 +132,22 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	}
 	_ = tasks // Ignore if using PeekTasks, but let's implement a real check
 
-	query := `
-		SELECT st.id, st.status
-		FROM shared_tasks st
-		WHERE st.status = 'PENDING'
-		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
-	`
+	var query string
+	if tm.db.IsSQLite() {
+		query = `
+			SELECT st.id, st.status
+			FROM shared_tasks st
+			WHERE st.status = 'PENDING'
+			AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
+		`
+	} else {
+		query = `
+			SELECT st.id, st.status
+			FROM shared_tasks st
+			WHERE st.status = 'PENDING'
+			AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies::jsonb) AS d_id JOIN shared_tasks d ON d.id::text = d_id WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
+		`
+	}
 	rows, err := tm.db.Query(ctx, query)
 	if err != nil {
 		return
@@ -332,7 +342,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
+			AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1
 		`
@@ -343,7 +353,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
+			AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies::jsonb) AS d_id JOIN shared_tasks d ON d.id::text = d_id WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1 FOR UPDATE SKIP LOCKED
 		`
@@ -379,8 +389,13 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to read claimed task: %w", errQuery)
 	}
 
-	// Fetch dependencies from task_dependencies table
-	depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+	// Fetch dependencies
+	var depQuery string
+	if tm.db.IsSQLite() {
+		depQuery = `SELECT value FROM json_each((SELECT dependencies FROM shared_tasks WHERE id = $1))`
+	} else {
+		depQuery = `SELECT jsonb_array_elements_text(dependencies::jsonb) FROM shared_tasks WHERE id = $1`
+	}
 	depRows, err := tx.Query(ctx, depQuery, task.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dependencies: %w", err)
@@ -683,7 +698,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 			SELECT st.id, st.organization_id, st.mission_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
+			AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
@@ -694,7 +709,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 			SELECT st.id, st.organization_id, st.mission_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
+			AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies::jsonb) AS d_id JOIN shared_tasks d ON d.id::text = d_id WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
@@ -758,7 +773,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
+			AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT $2
 		`
@@ -825,7 +840,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				SELECT st.id
 				FROM shared_tasks st
 				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
+				AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies::jsonb) AS d_id JOIN shared_tasks d ON d.id::text = d_id WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 				ORDER BY st.priority ASC, st.created_at ASC
 				LIMIT $2 FOR UPDATE SKIP LOCKED
 		`
@@ -885,8 +900,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	}
 
 	for _, task := range claimedTasks {
-		// Fetch dependencies from task_dependencies table
-		depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+		// Fetch dependencies
+		var depQuery string
+		if tm.db.IsSQLite() {
+			depQuery = `SELECT value FROM json_each((SELECT dependencies FROM shared_tasks WHERE id = $1))`
+		} else {
+			depQuery = `SELECT jsonb_array_elements_text(dependencies::jsonb) FROM shared_tasks WHERE id = $1`
+		}
 		depRows, err := tx.Query(ctx, depQuery, task.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get dependencies: %w", err)
@@ -985,7 +1005,12 @@ func (tm *TaskManager) GetTask(ctx context.Context, taskID string) (*SharedTask,
 	}
 
 	// Fetch dependencies
-	depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+	var depQuery string
+	if tm.db.IsSQLite() {
+		depQuery = `SELECT value FROM json_each((SELECT dependencies FROM shared_tasks WHERE id = $1))`
+	} else {
+		depQuery = `SELECT jsonb_array_elements_text(dependencies::jsonb) FROM shared_tasks WHERE id = $1`
+	}
 	rows, err := tm.db.Query(ctx, depQuery, taskID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get dependencies: %w", err)
@@ -1067,16 +1092,13 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 	}
 
 	// Update dependencies
-	_, err = tx.Exec(ctx, "DELETE FROM task_dependencies WHERE task_id = $1", task.ID)
-	if err != nil {
-		return fmt.Errorf("failed to clear dependencies: %w", err)
+	depsJSON, _ := json.Marshal(task.Dependencies)
+	if task.Dependencies == nil {
+		depsJSON = []byte("[]")
 	}
-
-	for _, dep := range task.Dependencies {
-		_, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, dep)
-		if err != nil {
-			return fmt.Errorf("failed to update dependency: %w", err)
-		}
+	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET dependencies = $1 WHERE id = $2", string(depsJSON), task.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update dependencies: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -1140,10 +1162,7 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 
 	// Cascading delete is handled by database if foreign keys are configured,
 	// but let's be explicit for compatibility.
-	_, err = tx.Exec(ctx, "DELETE FROM task_dependencies WHERE task_id = $1 OR depends_on_task_id = $1", taskID)
-	if err != nil {
-		return fmt.Errorf("failed to delete task dependencies: %w", err)
-	}
+	// Cascading delete handled by DB or ignored since dependencies are embedded now.
 
 	_, err = tx.Exec(ctx, "DELETE FROM shared_tasks WHERE id = $1", taskID)
 	if err != nil {
@@ -1197,7 +1216,12 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 		}
 		visited[currID] = true
 
-		depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+		var depQuery string
+		if tm.db.IsSQLite() {
+			depQuery = `SELECT value FROM json_each((SELECT dependencies FROM shared_tasks WHERE id = $1))`
+		} else {
+			depQuery = `SELECT jsonb_array_elements_text(dependencies::jsonb) FROM shared_tasks WHERE id = $1`
+		}
 		rows, err := tm.db.Query(ctx, depQuery, currID)
 		if err != nil {
 			return fmt.Errorf("failed to check dependencies: %w", err)
