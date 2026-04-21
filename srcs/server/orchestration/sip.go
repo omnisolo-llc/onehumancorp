@@ -332,6 +332,10 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	err := withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO swarm_memory (key, value, updated_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
@@ -428,6 +432,10 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	var prevTime time.Time
 	var id string
 	err := withSipRetry(ctx, func() error {
@@ -451,6 +459,10 @@ func (s *SIPDB) CompleteMission(ctx context.Context, missionID string) error {
 // Produces errors: Explicit error handling.
 // Has side effects: Updates mission status in agent_missions table and syncs to remote.
 func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoint string) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	var prevTime time.Time
 	var id string
 	err := withSipRetry(ctx, func() error {
@@ -503,6 +515,10 @@ func (s *SIPDB) BurstMission(ctx context.Context, missionID string, remoteEndpoi
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) Heartbeat(ctx context.Context, agentID, role, status string) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO agent_status (agent_id, role, status, last_heartbeat, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP",
@@ -529,6 +545,10 @@ func envBoolDefault(key string, fallback bool) bool {
 
 // UpsertMission inserts or updates a mission in the agent_missions table.
 func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload string, forceLocal bool) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	var prevTime time.Time
 	var oldStatus string
 
@@ -690,6 +710,10 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the telemetry_buffer table.
 func (s *SIPDB) PruneBufferedMetrics(ctx context.Context, ageThreshold time.Duration) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	return withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
@@ -711,6 +735,10 @@ func (s *SIPDB) PruneBufferedMetrics(ctx context.Context, ageThreshold time.Dura
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the agent_missions table and updates stuck records.
 func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	return withSipRetry(ctx, func() error {
 		stuckThreshold := time.Now().Add(-1 * time.Hour).UTC().Format("2006-01-02 15:04:05")
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
@@ -756,6 +784,10 @@ type CapabilityPlugin struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts or updates a record in the capability_plugins table.
 func (s *SIPDB) RegisterCapabilityPlugin(ctx context.Context, plugin CapabilityPlugin) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at, organization_id)
@@ -835,6 +867,10 @@ type EpisodicMemory struct {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the swarm_memory_embeddings table.
 func (s *SIPDB) StoreEpisodicMemory(ctx context.Context, memory EpisodicMemory) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	err := withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			`INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id)
@@ -931,6 +967,10 @@ func (s *SIPDB) Provider() db.Provider {
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the telemetry_buffer table.
 func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	// Sanitize payload before storing in the buffer
 	var obj interface{}
 	if err := json.Unmarshal([]byte(payload), &obj); err == nil {
@@ -963,6 +1003,10 @@ func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload str
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the telemetry_buffer table.
 func (s *SIPDB) PruneTelemetryBuffer(ctx context.Context, ageThreshold time.Duration) error {
+	if err := acquireThrottle(ctx); err != nil {
+		return err
+	}
+	defer releaseThrottle()
 	return withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
@@ -978,6 +1022,10 @@ func (s *SIPDB) PruneTelemetryBuffer(ctx context.Context, ageThreshold time.Dura
 
 // SyncBufferedMetrics aggregates and syncs buffered telemetry metrics with the OHC-SIP Cloud DB.
 func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) (int, error) {
+	if err := acquireThrottle(ctx); err != nil {
+		return 0, err
+	}
+	defer releaseThrottle()
 	var records []struct {
 		id         int64
 		metricType string
@@ -1113,6 +1161,10 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 // Has side effects: Posts local RAG context to a remote endpoint, deletes local records on success.
 // Returns the number of synced records and an error.
 func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int, error) {
+	if err := acquireThrottle(ctx); err != nil {
+		return 0, err
+	}
+	defer releaseThrottle()
 	var syncedCount int
 
 	err := withSipRetry(ctx, func() error {
@@ -1249,6 +1301,10 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 // Has side effects: Posts pending missions to a remote endpoint and updates local status to SYNCED.
 // Returns the number of synced records and an error.
 func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, error) {
+	if err := acquireThrottle(ctx); err != nil {
+		return 0, err
+	}
+	defer releaseThrottle()
 	ctx, span := sipTracer.Start(ctx, "SyncMissions")
 	defer span.End()
 

@@ -62,6 +62,41 @@ func TestForecaster(t *testing.T) {
 	f.Stop()
 }
 
+func TestForecaster_EWMA(t *testing.T) {
+	meter := noop.NewMeterProvider().Meter("test")
+	tokenBurnRateGauge, _ = meter.Float64Gauge("ohc_token_burn_rate_forecast")
+	TokenBurnRatePredicted24h, _ = meter.Float64Gauge("ohc_token_burn_rate_predicted_24h")
+
+	// alpha = 0.5 for predictable testing
+	f := NewForecaster(10*time.Millisecond, 1*time.Minute)
+	f.alpha = 0.5
+	orgID := "tenant-ewma"
+
+	// Interval 1: 100 tokens. CurrentRate = 100 / (10ms in minutes)
+	// 10ms = 1/6000 minutes.
+	// currentRate = 100 / (1/6000) = 600,000 tokens/min.
+	// ewma = 600,000 (first record)
+	f.RecordUsage(orgID, 100)
+	f.calculateAndRecordRates(context.Background())
+
+	if f.ewmaRates[orgID] != 600000 {
+		t.Errorf("Expected EWMA 600000, got %f", f.ewmaRates[orgID])
+	}
+
+	// Interval 2: 0 tokens.
+	// currentRate = 0
+	// ewma = 0.5 * 0 + 0.5 * 600,000 = 300,000
+	// We need to simulate time passing or just clear usageHistory for this interval
+	f.mu.Lock()
+	f.usageHistory[orgID] = nil
+	f.mu.Unlock()
+	f.calculateAndRecordRates(context.Background())
+
+	if f.ewmaRates[orgID] != 300000 {
+		t.Errorf("Expected EWMA 300000, got %f", f.ewmaRates[orgID])
+	}
+}
+
 func TestForecaster_NoBudget(t *testing.T) {
 	meter := noop.NewMeterProvider().Meter("test")
 	TokenBurnRatePredicted24h, _ = meter.Float64Gauge("ohc_token_burn_rate_predicted_24h")

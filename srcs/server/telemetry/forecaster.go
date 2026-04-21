@@ -14,6 +14,8 @@ import (
 type Forecaster struct {
 	mu           sync.Mutex
 	usageHistory map[string][]tokenUsageRecord
+	ewmaRates    map[string]float64
+	alpha        float64
 	budgets      map[string]int64
 	interval     time.Duration
 	window       time.Duration
@@ -29,6 +31,8 @@ type tokenUsageRecord struct {
 func NewForecaster(interval time.Duration, window time.Duration) *Forecaster {
 	return &Forecaster{
 		usageHistory: make(map[string][]tokenUsageRecord),
+		ewmaRates:    make(map[string]float64),
+		alpha:        0.1, // Default smoothing factor for EWMA
 		budgets:      make(map[string]int64),
 		interval:     interval,
 		window:       window,
@@ -102,32 +106,46 @@ func (f *Forecaster) calculateAndRecordRates(ctx context.Context) {
 
 	now := time.Now()
 	cutoff := now.Add(-f.window)
+	intervalCutoff := now.Add(-f.interval)
 
 	for orgID, records := range f.usageHistory {
-		var totalTokens int64
+		var totalTokensInWindow int64
+		var totalTokensInInterval int64
 		var filtered []tokenUsageRecord
 
 		for _, record := range records {
 			if record.timestamp.After(cutoff) {
 				filtered = append(filtered, record)
-				totalTokens += record.tokens
+				totalTokensInWindow += record.tokens
+				if record.timestamp.After(intervalCutoff) {
+					totalTokensInInterval += record.tokens
+				}
 			}
 		}
 
 		f.usageHistory[orgID] = filtered
 
-		// Calculate rate per window (default 1h)
-		windowDuration := f.window.Minutes()
-		if windowDuration > 0 {
-			// tokens per minute
-			ratePerMin := float64(totalTokens) / windowDuration
-
-			// Extrapolate to 24h
-			prediction24h := ratePerMin * 60 * 24
-
-			f.recordRates(ctx, orgID, ratePerMin, prediction24h)
-			f.checkBudget(ctx, orgID, prediction24h)
+		// Calculate EWMA rate per minute
+		intervalMinutes := f.interval.Minutes()
+		if intervalMinutes <= 0 {
+			intervalMinutes = 1.0
 		}
+		currentRate := float64(totalTokensInInterval) / intervalMinutes
+
+		prevRate, exists := f.ewmaRates[orgID]
+		var ewmaRate float64
+		if !exists {
+			ewmaRate = currentRate
+		} else {
+			ewmaRate = f.alpha*currentRate + (1-f.alpha)*prevRate
+		}
+		f.ewmaRates[orgID] = ewmaRate
+
+		// Extrapolate to 24h using EWMA
+		prediction24h := ewmaRate * 60 * 24
+
+		f.recordRates(ctx, orgID, ewmaRate, prediction24h)
+		f.checkBudget(ctx, orgID, prediction24h)
 	}
 }
 
