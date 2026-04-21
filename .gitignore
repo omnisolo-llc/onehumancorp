@@ -21,6 +21,7 @@
 /code_review_response.md
 /code_review_reply.json
 /mcp_code_review_response.md
+/.[jJ]ules
 
 # Test binary, built with `go test -c`
 *.test
