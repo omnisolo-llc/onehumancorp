@@ -225,7 +225,7 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 			return
 		}
 
-		if err := s.repo.CreateUser(ctx, admin, ""); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+		if err := s.repo.CreateUser(ctx, admin); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate") {
 			slog.Warn("failed to seed default admin in repository", "error", err)
 		}
 		return
@@ -267,7 +267,7 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 			CreatedAt:    now,
 			UpdatedAt:    now,
 		}
-		if err := s.repo.CreateUser(context.Background(), u, orgID); err != nil {
+		if err := s.repo.CreateUser(context.Background(), u); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
 		}
 		return u, nil
@@ -421,7 +421,7 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 			u.Active = *activePtr
 		}
 		u.UpdatedAt = time.Now().UTC()
-		if err := s.repo.UpdateUser(ctx, u, orgID); err != nil {
+		if err := s.repo.UpdateUser(ctx, u); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
 		}
 		return u, nil
@@ -652,7 +652,7 @@ func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername st
 		if u, err := s.repo.GetByEmail(ctx, email, orgID); err == nil {
 			u.OIDCSubject = sub
 			u.UpdatedAt = time.Now().UTC()
-			if err := s.repo.UpdateUser(ctx, u, orgID); err != nil {
+			if err := s.repo.UpdateUser(ctx, u); err != nil {
 				slog.Warn("failed to attach OIDC subject to existing user", "subject", sub, "error", err)
 			}
 			return u
@@ -688,7 +688,7 @@ func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername st
 			}
 		}
 
-		if err := s.repo.CreateUser(ctx, u, orgID); err == nil {
+		if err := s.repo.CreateUser(ctx, u); err == nil {
 			return u
 		} else if normalizeRepositoryWriteError(err).Error() == "username already taken" {
 			u.Username = u.Username + "_" + hex.EncodeToString(randomBytes(3))
