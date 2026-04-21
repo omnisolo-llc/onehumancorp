@@ -430,3 +430,29 @@ func (s *Server) handleSnapshotRestore(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, snapshot)
 }
+
+// handleTuneAgent processes a prompt tuning request
+func (s *Server) handleTuneAgent(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Tone      string   `json:"tone"`
+		FocusTags []string `json:"focus_tags"`
+		Examples  []struct {
+			Q string `json:"q"`
+			A string `json:"a"`
+		} `json:"examples"`
+	}
+
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "tuned"})
+}

@@ -268,6 +268,16 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                 if (!widget.agent.isRunning) ...[
                                   const SizedBox(width: 8),
                                   FilledButton.tonalIcon(
+                                    onPressed: () => context.go('/agents/${widget.agent.id ?? widget.agent.name}/tune'),
+                                    icon: const Icon(Icons.tune, size: 16),
+                                    label: const Text('Tune this agent'),
+                                    style: FilledButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                                      minimumSize: const Size(0, 32),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  FilledButton.tonalIcon(
                                     onPressed: () => context.go('/wizards/fix/${widget.agent.id ?? widget.agent.name}'),
                                     icon: const Icon(Icons.build, size: 16),
                                     label: const Text('Help me fix this'),

@@ -387,3 +387,140 @@ test.describe('AutoDream Sync Walkthrough E2E', () => {
     await page.waitForSelector('text=Step 7 of 7');
   });
 });
+
+
+test.describe('Wizard and Onboarding E2E Tests', () => {
+
+  test.beforeEach(async ({ page }) => {
+    // Login before each test in this suite
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'ceo@onehumancorp.com');
+    await page.fill('input[type="password"]', 'admin');
+    await page.click('text=Login');
+    await page.waitForSelector('text=System Overview');
+  });
+
+  test('Business Setup Wizard Flow', async ({ page }) => {
+    await page.evaluate(() => {
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+    });
+    await page.goto('/'); // This now hits landing page
+
+    await page.click('text=Start Business Setup');
+
+    // Wait for step 1
+    await page.waitForSelector('text=Welcome! Your AI team, ready in minutes.');
+
+    // Next to step 2 (Company details)
+    await page.click('text=Next');
+    await page.waitForSelector('text=Company Name');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('Test Corp');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('Technology');
+
+    // Next to step 3 (Goals)
+    await page.click('text=Next');
+    await page.waitForSelector('text=Select Goals');
+    await page.click('text=Support');
+    await page.click('text=Build software');
+
+    // Next to step 4 (Deployment)
+    await page.click('text=Next');
+    await page.waitForSelector('text=Deployment Preference');
+
+    await page.click('text=Next');
+
+    // Step 5 (Admin details)
+    await page.waitForSelector('text=Admin Name');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('Admin User');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('admin@test.local');
+    await page.keyboard.press('Tab');
+    await page.keyboard.type('password123');
+
+    // Assert final button
+    await page.waitForSelector('text=Launch My AI Team →');
+  });
+
+  test('Agent Hire Wizard Flow', async ({ page }) => {
+    await page.click('text=Agents');
+
+    await page.waitForSelector('text=Hire New Agent');
+    await page.click('text=Hire New Agent');
+
+    await page.waitForSelector('text=Step 1 — Select Agent Role');
+
+    // Select role (Software Engineer)
+    await page.click('text=Software Engineer');
+    await page.click('text=Next');
+
+    // Step 2: Provider
+    await page.waitForSelector('text=Step 2 — Choose AI Provider');
+    await page.click('text=Next'); // Accept default
+
+    // Step 3: Name
+    await page.waitForSelector('text=Step 3 — Agent Details');
+    await page.keyboard.press('Tab'); // focus input
+    await page.keyboard.type('Support Bot');
+    await page.click('text=Next');
+
+    // Step 4: Topology
+    await page.waitForSelector('text=Step 4 — Sub-agent Topology');
+    await page.click('text=Next');
+
+    // Step 5: Capabilities
+    await page.waitForSelector('text=Step 5 — Select Capabilities');
+    await page.click('text=Read my emails');
+    await page.click('text=Next');
+
+    // Step 6: Limits
+    await page.waitForSelector('text=Step 6 — Resource Limits');
+    await page.click('text=Next');
+
+    // Step 7: Confirm
+    await page.waitForSelector('text=Step 7 — Confirm Deployment');
+    await page.waitForSelector('text=Support Bot');
+
+    // Deploy
+    await page.click('text=Deploy Agent');
+  });
+
+  test('Prompt Tuning Wizard Flow', async ({ page }) => {
+    await page.click('text=Agents');
+
+    await page.waitForSelector('text=Tune this agent');
+    await page.click('text=Tune this agent');
+
+    await page.waitForSelector('text=Personality & tone');
+
+    await page.click('text=Detailed');
+    await page.click('text=Next');
+
+    await page.waitForSelector('text=Domain focus');
+    await page.click('text=Only discuss business');
+    await page.click('text=Next');
+
+    await page.waitForSelector('text=Example interactions');
+    await page.click('text=Add Example');
+    await page.click('text=Next');
+
+    await page.waitForSelector('text=Review & Save');
+    await page.click('text=Save');
+  });
+
+  test('Ongoing Management Wizards', async ({ page }) => {
+    await page.click('text=Agents');
+
+    // Fix This
+    await page.waitForSelector('text=Help me fix this');
+    await page.click('text=Help me fix this');
+    await page.waitForSelector('text=Help me fix this');
+    await page.click('text=View Suggested Fix');
+    await page.waitForSelector('text=Suggested fix');
+    await page.click('text=Apply Fix');
+    // Return to agents handled implicitly if it doesn't fail
+  });
+});

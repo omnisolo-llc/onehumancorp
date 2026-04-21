@@ -200,7 +200,12 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (state.step == 0) ...[
-                            const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
+                            Hero(
+                              tag: 'welcome_hero_icon',
+                              child: Icon(Icons.auto_awesome, size: 64, color: Theme.of(context).colorScheme.primary),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
                           ] else if (state.step == 1) ...[
                             TextField(
                               decoration: const InputDecoration(labelText: 'Company Name', labelStyle: TextStyle(color: Colors.white70)),

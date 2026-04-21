@@ -228,27 +228,76 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   'Choose the primary capability profile for this new agent.',
                 ),
                 const SizedBox(height: 24),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children:
-                      _roles.map((role) {
-                        final isSelected = _selectedRole == role;
-                        final dummyAgent = Agent(id: '', name: '', role: role, status: '', organizationId: '', createdAt: DateTime.now());
-                        return ChoiceChip(
-                          label: Text(dummyAgent.formattedRole),
-                          selected: isSelected,
-                          onSelected: (selected) {
-                            setState(
-                              () => _selectedRole = selected ? role : '',
-                            );
-                            if (selected && _nameController.text.isEmpty) {
-                              _nameController.text =
-                                  'Senior ${dummyAgent.formattedRole}';
-                            }
-                          },
-                        );
-                      }).toList(),
+                                SizedBox(
+                  height: 300,
+                  child: GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 3,
+                    ),
+                    itemCount: _roles.length,
+                    itemBuilder: (context, index) {
+                      final role = _roles[index];
+                      final isSelected = _selectedRole == role;
+                      final dummyAgent = Agent(id: '', name: '', role: role, status: '', organizationId: '', createdAt: DateTime.now());
+                      return InkWell(
+                        onTap: () {
+                          setState(() => _selectedRole = isSelected ? '' : role);
+                          if (!isSelected && _nameController.text.isEmpty) {
+                            _nameController.text = 'Senior ${dummyAgent.formattedRole}';
+                          }
+                        },
+                        child: Card(
+                          color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(
+                              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                                  child: Text(
+                                    dummyAgent.formattedRole.isNotEmpty ? dummyAgent.formattedRole[0].toUpperCase() : '?',
+                                    style: TextStyle(color: Theme.of(context).colorScheme.primary),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        dummyAgent.formattedRole,
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Standard ${dummyAgent.formattedRole} capability',
+                                        style: TextStyle(fontSize: 10, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
