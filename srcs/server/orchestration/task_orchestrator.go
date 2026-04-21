@@ -641,11 +641,11 @@ func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, 
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	taskID := hex.EncodeToString(b)
-	_, err = tx.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ($1, $2, $3, $4)", taskID, orgID, title, "PENDING")
+	_, err = tx.Exec(ctx, "INSERT INTO ohc_tasks (id, organization_id, title, status) VALUES ($1, $2, $3, $4)", taskID, orgID, title, "PENDING")
 	if err != nil {
 		return "", err
 	}
-	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = $1 WHERE id = $2", "DECOMPOSING", taskID)
+	_, err = tx.Exec(ctx, "UPDATE ohc_tasks SET status = $1 WHERE id = $2", "DECOMPOSING", taskID)
 	if err != nil {
 		return "", err
 	}
