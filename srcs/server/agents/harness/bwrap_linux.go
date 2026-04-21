@@ -14,7 +14,7 @@ import (
 type BwrapHarness struct{}
 
 func NewIsolationHarness() IsolationHarness {
-	return &BwrapHarness{}
+	return NewPermissionInterceptor(&BwrapHarness{})
 }
 
 func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {
