@@ -1,0 +1,44 @@
+<<<<<<< SEARCH
+		ctx := auth.ContextWithClaims(req.Context(), &auth.Claims{
+			Roles: []string{"system"},
+			OrganizationID: "org-mesh",
+		})
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+
+		srv.handleMeshV2Broadcast(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200 OK, got %v", w.Code)
+		}
+	})
+
+	t.Run("ValidBroadcastSwarmEvents", func(t *testing.T) {
+=======
+		ctx := auth.ContextWithClaims(req.Context(), &auth.Claims{
+			Roles: []string{"system"},
+			OrganizationID: "org-mesh",
+		})
+		req = req.WithContext(ctx)
+
+		w := httptest.NewRecorder()
+
+		mockBroker.broadcastCalled = false
+
+		srv.handleMeshV2Broadcast(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200 OK, got %v", w.Code)
+		}
+
+		if !mockBroker.broadcastCalled {
+			t.Errorf("expected Broadcast to be called")
+		}
+		if mockBroker.lastChannel != "mesh:tasks" {
+			t.Errorf("expected channel mesh:tasks, got %s", mockBroker.lastChannel)
+		}
+	})
+
+	t.Run("ValidBroadcastSwarmEvents", func(t *testing.T) {
+>>>>>>> REPLACE
