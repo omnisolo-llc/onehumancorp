@@ -259,6 +259,27 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 		}()
 	}
 
+	if tm.mesh != nil {
+		go func() {
+			eventPayload, _ := json.Marshal(map[string]interface{}{
+				"task_id":         task.ID,
+				"status":          task.Status,
+				"organization_id": task.OrganizationID,
+				"title":           task.Title,
+				"priority":        task.Priority,
+			})
+			event := MeshEvent{
+				ID:        generateID(),
+				SenderID:  "system",
+				EventType: "TASK_CREATED",
+				Payload:   eventPayload,
+				Timestamp: time.Now(),
+			}
+			eventData, _ := json.Marshal(event)
+			_ = tm.mesh.BroadcastMeshEvent(context.Background(), "mesh:events:task_created", eventData)
+		}()
+	}
+
 	return &task, nil
 }
 
@@ -403,6 +424,25 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 				"status":   task.Status,
 			}
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
+		}()
+	}
+
+	if tm.mesh != nil {
+		go func() {
+			eventPayload, _ := json.Marshal(map[string]interface{}{
+				"task_id":  task.ID,
+				"agent_id": agentID,
+				"status":   task.Status,
+			})
+			event := MeshEvent{
+				ID:        generateID(),
+				SenderID:  agentID,
+				EventType: "STATUS_UPDATE",
+				Payload:   eventPayload,
+				Timestamp: time.Now(),
+			}
+			eventData, _ := json.Marshal(event)
+			_ = tm.mesh.BroadcastMeshEvent(context.Background(), "mesh:events:status_update", eventData)
 		}()
 	}
 

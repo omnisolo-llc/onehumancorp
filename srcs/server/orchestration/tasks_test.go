@@ -8,6 +8,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"time"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	_ "modernc.org/sqlite"
 )
@@ -119,6 +120,48 @@ func TestTaskManager_CreateTask(t *testing.T) {
 	}
 }
 
+type mockMesh struct {
+	MeshTransport
+	publishedEvents []MeshEvent
+}
+
+func (m *mockMesh) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+	var event MeshEvent
+	_ = json.Unmarshal(payload, &event)
+	m.publishedEvents = append(m.publishedEvents, event)
+	return nil
+}
+
+func TestTaskManager_CreateTask_MeshPublish(t *testing.T) {
+	t.Setenv("OHC_MULTITENANT", "false")
+
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	m := &mockMesh{}
+	tm.SetMeshTransport(m)
+
+	ctx := taskClaimsContext()
+	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if task == nil {
+		t.Fatalf("expected task, got nil")
+	}
+
+	time.Sleep(100 * time.Millisecond) // wait for goroutine
+
+	if len(m.publishedEvents) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(m.publishedEvents))
+	}
+
+	event := m.publishedEvents[0]
+	if event.EventType != "TASK_CREATED" {
+		t.Errorf("expected EventType 'TASK_CREATED', got %s", event.EventType)
+	}
+}
+
 func TestTaskManager_ClaimTask(t *testing.T) {
 	t.Setenv("OHC_MULTITENANT", "false")
 
@@ -165,6 +208,48 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 	if task3 != nil {
 		t.Fatalf("expected nil task, got %v", task3)
+	}
+}
+
+func TestTaskManager_ClaimTask_MeshPublish(t *testing.T) {
+	t.Setenv("OHC_MULTITENANT", "false")
+
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	m := &mockMesh{}
+	tm.SetMeshTransport(m)
+
+	ctx := taskClaimsContext()
+	task, _ := tm.CreateTask(ctx, "org-1", "Claim Publish Test", "Desc", "P1")
+
+	time.Sleep(100 * time.Millisecond) // wait for create broadcast
+	m.publishedEvents = nil // Reset
+
+    approveTasksForExecution(t, tm, ctx, task.ID)
+
+	claimed, err := tm.ClaimTask(ctx, task.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if claimed == nil {
+		t.Fatalf("expected claimed task, got nil")
+	}
+
+	time.Sleep(100 * time.Millisecond) // wait for claim broadcast
+
+	if len(m.publishedEvents) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(m.publishedEvents))
+	}
+
+	event := m.publishedEvents[0]
+	if event.EventType != "STATUS_UPDATE" {
+		t.Errorf("expected EventType 'STATUS_UPDATE', got %s", event.EventType)
+	}
+	var payloadMap map[string]interface{}
+	_ = json.Unmarshal(event.Payload, &payloadMap)
+	if payloadMap["status"] != "IN_PROGRESS" {
+		t.Errorf("expected payload status 'IN_PROGRESS', got %s", payloadMap["status"])
 	}
 }
 
