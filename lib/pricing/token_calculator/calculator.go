@@ -43,9 +43,18 @@ func CalculateNetworkCost(bytes int64, config CostConfig) float64 {
 	return math.Round(cost*10000) / 10000
 }
 
+func CalculateContextCompressionSavings(originalTokens, compressedTokens int, config CostConfig) float64 {
+	savedTokens := float64(originalTokens - compressedTokens)
+	if savedTokens < 0 {
+		savedTokens = 0
+	}
+	savings := savedTokens * config.CostPerInputToken
+	return math.Round(savings*10000) / 10000
+}
+
 type ModelPricing struct {
-	Name string
-	CostPerInputToken float64
+	Name               string
+	CostPerInputToken  float64
 	CostPerOutputToken float64
 }
 

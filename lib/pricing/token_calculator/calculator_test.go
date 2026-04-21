@@ -54,6 +54,17 @@ func TestCalculateNetworkCost(t *testing.T) {
 	}
 }
 
+func TestCalculateContextCompressionSavings(t *testing.T) {
+	config := CostConfig{
+		CostPerInputToken: 0.00001,
+	}
+	savings := CalculateContextCompressionSavings(10000, 2000, config) // 8000 tokens saved
+	expected := 0.0800
+	if savings != expected {
+		t.Errorf("expected %f, got %f", expected, savings)
+	}
+}
+
 func TestRouteToCheapestModel(t *testing.T) {
 	models := []ModelPricing{
 		{"ModelA", 0.0001, 0.0002},

@@ -2,7 +2,7 @@ package cost_auditor
 
 import (
 	"context"
-	"ohc/lib/pricing/token_calculator"
+	"github.com/onehumancorp/mono/lib/pricing/token_calculator"
 	"testing"
 )
 
@@ -68,30 +68,41 @@ func TestCostAuditor(t *testing.T) {
 		t.Errorf("expected new agent cost %f, got %f", expectedNewAgentCost, newAgentCost)
 	}
 
-	report := auditor.GenerateReport()
-	if report == "" {
-		t.Errorf("expected non-empty report")
+	savingsContext := auditor.RecordContextCompression(ctx, 10000, 2000)
+	if savingsContext != 0.08 {
+		t.Errorf("expected context savings 0.08, got %f", savingsContext)
 	}
-}
-
-func TestBudget(t *testing.T) {
-	config := token_calculator.CostConfig{
-		CostPerInputToken: 0.00001,
-		CostPerOutputToken: 0.00003,
+	totalContextSavings := auditor.GetTotalContextCompressionSavings()
+	if totalContextSavings != 0.08 {
+		t.Errorf("expected total context savings 0.08, got %f", totalContextSavings)
 	}
-	auditor := NewCostAuditor(config)
-	ctx := context.Background()
 
-	auditor.SetAgentBudget("miser-2", 0.01)
+	auditor.SetAgentBudget("miser-1", 1.0)
+	costCurrent, budget, underBudget := auditor.CheckAgentBudget("miser-1")
+	if !underBudget {
+		t.Errorf("expected to be under budget")
+	}
+	if budget != 1.0 {
+		t.Errorf("expected budget 1.0, got %f", budget)
+	}
+	if costCurrent != auditor.GetAgentCost("miser-1") {
+		t.Errorf("cost mismatch")
+	}
 
+	auditor.SetAgentBudget("miser-over", 0.01)
 	auditor.RecordEvent(ctx, AuditEvent{
-		AgentID: "miser-2",
-		InputTokens: 1000,
-		OutputTokens: 500,
+		AgentID:              "miser-over",
+		InputTokens:          100000,
+		OutputTokens:         100000,
+		CachedInputTokens:    0,
+		LocalEmbeddingTokens: 0,
 	})
-
-	if !auditor.IsAgentOverBudget("miser-2") {
-		t.Errorf("expected miser-2 to be over budget")
+	_, _, underBudgetOver := auditor.CheckAgentBudget("miser-over")
+	if underBudgetOver {
+		t.Errorf("expected to be over budget")
+	}
+	if !auditor.IsAgentOverBudget("miser-over") {
+		t.Errorf("expected IsAgentOverBudget to be true")
 	}
 
 	report := auditor.GenerateReport()
