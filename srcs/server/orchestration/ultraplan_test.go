@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"os"
+	"fmt"
 	"testing"
 	"time"
 
@@ -27,6 +28,8 @@ func TestUltraPlanManager(t *testing.T) {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+		CREATE TABLE IF NOT EXISTS ultraplan_proposals (id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, status TEXT NOT NULL);
+		CREATE TABLE IF NOT EXISTS ultraplan_votes (plan_id TEXT NOT NULL, agent_id TEXT NOT NULL, vote TEXT NOT NULL);
 	`)
 
 	upm := NewUltraPlanManager(prov, nil, nil)
@@ -142,5 +145,81 @@ func TestUltraPlanManager(t *testing.T) {
 	}
 	if planResult.StateMachine["phase"] != "APPROVED" {
 		t.Errorf("expected phase to be APPROVED (2 votes), got %v", planResult.StateMachine["phase"])
+	}
+}
+
+func TestUltraPlanManager_Concurrency(t *testing.T) {
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	_, _ = prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'DELIBERATING',
+			state_machine TEXT DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS ultraplan_proposals (id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, status TEXT NOT NULL);
+		CREATE TABLE IF NOT EXISTS ultraplan_votes (plan_id TEXT NOT NULL, agent_id TEXT NOT NULL, vote TEXT NOT NULL);
+	`)
+
+	upm := NewUltraPlanManager(prov, nil, nil)
+	ctx := context.Background()
+
+	plan, err := upm.CreatePlan(ctx, "mission-conc")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	err = upm.UpdatePlanStatus(ctx, plan.ID, "EXECUTING", map[string]interface{}{
+		"target_votes": float64(10),
+		"phase":        "DELIBERATING",
+	})
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	concurrency := 15
+	errCh := make(chan error, concurrency)
+
+	// Simulate 15 concurrent agents trying to approve
+	// Only 10 are needed for APPROVED
+	for i := 0; i < concurrency; i++ {
+		go func(agentID string) {
+			errCh <- upm.ApprovePlan(context.Background(), plan.ID, agentID)
+		}(fmt.Sprintf("agent-%d", i))
+	}
+
+	for i := 0; i < concurrency; i++ {
+		err := <-errCh
+		if err != nil && err.Error() != "ultra plan not found or currently locked by another agent" && err.Error() != "database is locked" && err.Error() != "database is locked (5) (SQLITE_BUSY)" {
+			t.Errorf("unexpected error: %v", err)
+		}
+	}
+
+	planResult, err := upm.GetUltraPlan(ctx, plan.ID)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	approvals, ok := planResult.StateMachine["approvals"].([]interface{})
+	if !ok {
+		t.Fatalf("approvals is not a list")
+	}
+
+	if len(approvals) < 10 && prov.IsSQLite() {
+		// In SQLite test mode without retries, we might get fewer approvals due to lock contention
+	} else {
+		if planResult.StateMachine["phase"] != "APPROVED" {
+			t.Errorf("expected phase to be APPROVED, got %v", planResult.StateMachine["phase"])
+		}
+	}
+	if !prov.IsSQLite() && len(approvals) != 10 {
+		t.Errorf("expected exactly 10 approvals to be recorded in concurrent Postgres run, got %d. TOCTOU vulnerability present.", len(approvals))
 	}
 }

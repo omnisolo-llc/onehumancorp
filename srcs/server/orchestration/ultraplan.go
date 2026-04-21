@@ -95,12 +95,6 @@ type UltraPlanManager struct {
 
 // NewUltraPlanManager initializes a new UltraPlanManager.
 func NewUltraPlanManager(provider db.Provider, redisClient rueidis.Client, hub *CentrifugeNode) *UltraPlanManager {
-	ctx := context.Background()
-	_, _ = provider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS ultraplan_proposals (id TEXT PRIMARY KEY, plan_id TEXT NOT NULL, status TEXT NOT NULL);
-		CREATE TABLE IF NOT EXISTS ultraplan_votes (plan_id TEXT NOT NULL, agent_id TEXT NOT NULL, vote TEXT NOT NULL);
-	`)
-
 	return &UltraPlanManager{
 		db:          provider,
 		redisClient: redisClient,
