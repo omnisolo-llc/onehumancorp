@@ -11,8 +11,8 @@ rust_library(
         "types.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
-    edition = "2021",
-    visibility = ["//srcs/server/agents/builtin_rust:__subpackages__"],
+    edition = "2024",
+    visibility = ["//srcs/server/agents/builtin:__subpackages__"],
     deps = [
         "@crates//:async-trait",
         "@crates//:chrono",

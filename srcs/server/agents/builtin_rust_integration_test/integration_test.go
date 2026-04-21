@@ -1,16 +1,16 @@
-// Package builtin_rust_integration_test runs integration tests against
+// Package builtin_integration_test runs integration tests against
 // the Rust builtin-agent gRPC binary. The binary is launched as a subprocess
 // on a random free port, and a Go gRPC client exercises all three RPCs.
 //
 // Tests are tagged "integration" and skipped in unit-test builds.  They can
 // be run explicitly:
 //
-//	bazel test //srcs/server/agents/builtin_rust_integration_test:integration_test --test_tag_filters=integration
+//	bazel test //srcs/server/agents/builtin_integration_test:integration_test --test_tag_filters=integration
 //
 // or:
 //
-//	go test ./srcs/server/agents/builtin_rust_integration_test/ -run . -v
-package builtin_rust_integration_test
+//	go test ./srcs/server/agents/builtin_integration_test/ -run . -v
+package builtin_integration_test
 
 import (
 	"context"
@@ -31,7 +31,7 @@ import (
 
 const (
 	// binary name / runfiles path for Bazel test.
-	binaryRunpath = "srcs/server/agents/builtin_rust/ohc-builtin-agent"
+	binaryRunpath = "srcs/server/agents/builtin/ohc-builtin-agent"
 	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
@@ -87,9 +87,9 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 	candidates := []string{
-		filepath.Join(root, "srcs/server/agents/builtin_rust/target/debug/ohc-builtin-agent"),
-		filepath.Join(root, "srcs/server/agents/builtin_rust/target/release/ohc-builtin-agent"),
-		filepath.Join(root, "bazel-bin/srcs/server/agents/builtin_rust/ohc-builtin-agent"),
+		filepath.Join(root, "srcs/server/agents/builtin/target/debug/ohc-builtin-agent"),
+		filepath.Join(root, "srcs/server/agents/builtin/target/release/ohc-builtin-agent"),
+		filepath.Join(root, "bazel-bin/srcs/server/agents/builtin/ohc-builtin-agent"),
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
@@ -97,7 +97,7 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 
-	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //srcs/server/agents/builtin_rust:ohc-builtin-agent`")
+	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //srcs/server/agents/builtin:ohc-builtin-agent`")
 	return ""
 }
 

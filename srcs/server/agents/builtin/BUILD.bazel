@@ -1,67 +1,77 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
-go_library(
-    name = "builtin",
+exports_files([
+    "Cargo.toml",
+    "Cargo.lock",
+])
+
+# Rust sources include pre-generated proto code in src/gen/.
+# No protoc dependency needed in the Bazel build.
+RUST_DEPS = [
+    "@crates//:base64",
+    "@crates//:chrono",
+    "@crates//:flate2",
+    "@crates//:futures",
+    "@crates//:glob",
+    "@crates//:hex",
+    "@crates//:hmac",
+    "@crates//:once_cell",
+    "@crates//:prost",
+    "@crates//:rand",
+    "@crates//:regex",
+    "@crates//:reqwest",
+    "@crates//:serde",
+    "@crates//:serde_json",
+    "@crates//:sha2",
+    "@crates//:tokio",
+    "@crates//:tokio-stream",
+    "@crates//:tonic",
+    "@crates//:tracing",
+    "@crates//:tracing-subscriber",
+    "@crates//:urlencoding",
+    "@crates//:uuid",
+]
+
+# Proc-macro crates must be in proc_macro_deps, not deps.
+RUST_PROC_MACRO_DEPS = [
+    "@crates//:async-recursion",
+    "@crates//:async-trait",
+]
+
+# Main agent library.
+rust_library(
+    name = "ohc_builtin_agent_lib",
     srcs = [
-        "agent.go",
-        "agent_tool.go",
-        "bash.go",
-        "budget.go",
-        "caveman.go",
-        "coordinator.go",
-        "edit.go",
-        "events.go",
-        "glob.go",
-        "grep.go",
-        "llm_anthropic.go",
-        "llm_ollama.go",
-        "llm_openai.go",
-        "local_notification.go",
-        "local_output.go",
-        "local_runner.go",
-        "local_task.go",
-        "loop.go",
-        "notification.go",
-        "prompt.go",
-        "pubsub.go",
-        "read.go",
-        "scheduler.go",
-        "sendmessage.go",
-        "sleep.go",
-        "task.go",
-        "todowrite.go",
-        "tools.go",
-        "toolsearch.go",
-        "types.go",
-        "validator.go",
-        "webfetch.go",
-        "websearch.go",
-        "write.go",
+        "src/agent.rs",
+        "src/lib.rs",
+        "src/service.rs",
     ],
-    importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
+    crate_name = "ohc_builtin_agent",
+    edition = "2024",
+    proc_macro_deps = RUST_PROC_MACRO_DEPS,
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/bash_sandbox",
-        "//srcs/server/lib/perf",
-        "//srcs/server/telemetry",
-        "//srcs/server/utils",
-        "@com_github_google_uuid//:uuid",
-        "@com_github_smacker_go_tree_sitter//:go-tree-sitter",
-        "@com_github_smacker_go_tree_sitter//bash",
-    ],
+        "//srcs/server/agents/builtin/src:core",
+        "//srcs/server/agents/builtin/src/gen:proto",
+        "//srcs/server/agents/builtin/src/llm",
+        "//srcs/server/agents/builtin/src/tools",
+    ] + RUST_DEPS,
 )
 
-go_test(
-    name = "builtin_test",
-    srcs = [
-        "agent_test.go",
-        "caveman_test.go",
-        "features_test.go",
-        "notification_test.go",
-        "prompt_test.go",
-        "pubsub_test.go",
-        "scheduler_benchmark_test.go",
-        "validator_test.go",
-    ],
-    embed = [":builtin"],
+rust_binary(
+    name = "ohc-builtin-agent",
+    srcs = ["src/main.rs"],
+    edition = "2024",
+    proc_macro_deps = RUST_PROC_MACRO_DEPS,
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "//srcs/server/agents/builtin/src:core",
+    ] + RUST_DEPS,
+)
+
+rust_test(
+    name = "unit_tests",
+    crate = ":ohc_builtin_agent_lib",
+    edition = "2024",
 )

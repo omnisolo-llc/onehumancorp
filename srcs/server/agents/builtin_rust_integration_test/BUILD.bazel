@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_test")
 go_test(
     name = "integration_test",
     srcs = ["integration_test.go"],
-    data = ["//srcs/server/agents/builtin_rust:ohc-builtin-agent"],
+    data = ["//srcs/server/agents/builtin:ohc-builtin-agent"],
     tags = ["integration"],
     deps = [
         "//srcs/proto/agentservice",
