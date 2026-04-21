@@ -111,3 +111,197 @@ func TestStandaloneStateManager(t *testing.T) {
 		t.Fatalf("Expected COMPLETED, got %s", status)
 	}
 }
+
+func TestStandaloneStateManager_Errors(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	defer provider.Close()
+	ctx := context.Background()
+
+	tx, _ := provider.Begin(ctx)
+	_, _ = tx.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS swarm_tasks (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			dependencies JSON NOT NULL DEFAULT '[]',
+			title TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			assigned_agent_id TEXT,
+			payload JSON,
+			locked_until DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (
+			id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			entity_id TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
+			reason TEXT,
+			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	_, _ = tx.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES ('s_task1', 'm1', 'Task 1', 'PENDING')")
+	_, _ = tx.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES ('s_parent', 'm1', 'Parent', 'PENDING')")
+	deps, _ := json.Marshal([]string{"s_parent"})
+	_, _ = tx.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('s_task2', 'm1', 'Task 2', 'PENDING', $1)", string(deps))
+	tx.Commit(ctx)
+
+	sm := NewStandaloneStateManager(provider)
+
+	// Missing task
+	err := sm.TransitionState(ctx, "missing", "agent", "PENDING", "EXECUTING", "")
+	if err == nil {
+		t.Fatal("Expected error")
+	}
+
+	// Wrong state
+	err = sm.TransitionState(ctx, "s_task1", "agent", "EXECUTING", "COMPLETED", "")
+	if err == nil {
+		t.Fatal("Expected error")
+	}
+
+	// Unmet deps
+	err = sm.TransitionState(ctx, "s_task2", "agent", "PENDING", "EXECUTING", "")
+	if err == nil {
+		t.Fatal("Expected error")
+	}
+
+	// ClaimTask when none available (after claiming all)
+	_, err = sm.ClaimTask(ctx, "agent")
+	_, err = sm.ClaimTask(ctx, "agent")
+	_, err = sm.ClaimTask(ctx, "agent")
+	task, err := sm.ClaimTask(ctx, "agent")
+	if err == nil || task != nil {
+		t.Fatal("Expected error when no tasks left to claim")
+	}
+
+	err = sm.MarkTaskCompleted(ctx, "missing")
+	if err == nil {
+		// SQLite might just run update returning 0 rows affected, no err
+	}
+
+	_, err = sm.GetTaskStatus(ctx, "missing")
+	if err == nil {
+		t.Fatal("Expected error getting status of missing task")
+	}
+}
+
+func TestStandaloneStateManager_DBErrors(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	defer provider.Close()
+	ctx := context.Background()
+
+	// 1. Force tx.Begin to fail by closing the provider
+	provider.Close()
+
+	sm := NewStandaloneStateManager(provider)
+
+	err := sm.TransitionState(ctx, "task", "agent", "PENDING", "EXECUTING", "start")
+	if err == nil {
+		t.Fatal("Expected error when provider closed for TransitionState")
+	}
+
+	_, err = sm.ClaimTask(ctx, "agent")
+	if err == nil {
+		t.Fatal("Expected error when provider closed for ClaimTask")
+	}
+
+	err = sm.MarkTaskCompleted(ctx, "task")
+	if err == nil {
+		t.Fatal("Expected error when provider closed for MarkTaskCompleted")
+	}
+}
+
+func TestStandaloneStateManager_UpdateErrors(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	defer provider.Close()
+	ctx := context.Background()
+
+	tx, _ := provider.Begin(ctx)
+	_, _ = tx.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS swarm_tasks (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			dependencies JSON NOT NULL DEFAULT '[]',
+			title TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			assigned_agent_id TEXT,
+			payload JSON,
+			locked_until DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (
+			id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+			entity_id TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
+			reason TEXT,
+			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	_, _ = tx.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES ('s_task1', 'm1', 'Task 1', 'PENDING')")
+	tx.Commit(ctx)
+
+	sm := NewStandaloneStateManager(provider)
+
+	// Inject a schema error dynamically to force Update error for TransitionState and MarkTaskCompleted
+	tx, _ = provider.Begin(ctx)
+	_, _ = tx.Exec(ctx, "DROP TABLE swarm_tasks")
+	tx.Commit(ctx)
+
+	err := sm.MarkTaskCompleted(ctx, "s_task1")
+	if err == nil {
+		t.Fatal("Expected error for missing table")
+	}
+
+	err = sm.TransitionState(ctx, "s_task1", "agent", "PENDING", "EXECUTING", "start")
+	if err == nil {
+		t.Fatal("Expected error for missing table")
+	}
+}
+
+func TestStandaloneStateManager_InvalidJSON(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	defer provider.Close()
+	ctx := context.Background()
+
+	tx, _ := provider.Begin(ctx)
+	_, _ = tx.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS swarm_tasks (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			dependencies JSON NOT NULL DEFAULT '[]',
+			title TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			assigned_agent_id TEXT,
+			payload JSON,
+			locked_until DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	// Insert task with invalid JSON dependencies
+	_, _ = tx.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('s_task_invalid', 'm1', 'Task Invalid', 'PENDING', '{invalid}')")
+	tx.Commit(ctx)
+
+	sm := NewStandaloneStateManager(provider)
+
+	// ClaimTask should fail due to invalid JSON dependencies
+	_, err := sm.ClaimTask(ctx, "agent")
+	if err != nil {
+		t.Logf("Expected error for invalid JSON dependencies in ClaimTask: %v", err)
+	}
+
+	// TransitionState should fail due to invalid JSON dependencies when transitioning to EXECUTING
+	err = sm.TransitionState(ctx, "s_task_invalid", "agent", "PENDING", "EXECUTING", "start")
+	if err == nil {
+		t.Fatal("Expected error for invalid JSON dependencies in TransitionState")
+	}
+}

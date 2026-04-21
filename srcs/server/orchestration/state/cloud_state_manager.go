@@ -148,7 +148,11 @@ func (m *CloudStateManager) ClaimTask(ctx context.Context, agentID string) (*Tas
 		return nil, err
 	}
 
-	_ = json.Unmarshal([]byte(depsStr), &task.Dependencies)
+	err = json.Unmarshal([]byte(depsStr), &task.Dependencies)
+	if err != nil {
+		tx.Rollback(ctx)
+		return nil, err
+	}
 
 	// Mark as locked
 	lockedUntil := time.Now().Add(5 * time.Minute)

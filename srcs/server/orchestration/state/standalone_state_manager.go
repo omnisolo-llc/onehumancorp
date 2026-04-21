@@ -107,7 +107,10 @@ func (m *StandaloneStateManager) ClaimTask(ctx context.Context, agentID string) 
 		return nil, err
 	}
 
-	_ = json.Unmarshal([]byte(depsStr), &task.Dependencies)
+	err = json.Unmarshal([]byte(depsStr), &task.Dependencies)
+	if err != nil {
+		return nil, err
+	}
 
 	lockedUntil := time.Now().Add(5 * time.Minute)
 	_, err = tx.Exec(ctx, "UPDATE swarm_tasks SET assigned_agent_id = $1, locked_until = $2 WHERE id = $3", agentID, lockedUntil, task.ID)
