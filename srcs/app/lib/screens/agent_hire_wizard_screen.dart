@@ -257,7 +257,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 2 — Choose Agent Type / Provider',
+                  'Step 2 — Choose Agent Provider Type',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
