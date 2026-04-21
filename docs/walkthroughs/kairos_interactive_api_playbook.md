@@ -54,6 +54,10 @@ graph TD
 **POST** `/api/v1/tasks/claim`
 - **Payload**: `{"agent_id": "agent_swe_007", "role": "swe"}`
 
+### 5.1 Fail a Task
+**POST** `/api/v1/tasks/{task_id}/fail`
+- **Payload**: `{"agent_id": "agent_swe_007", "reason": "Encountered unrecoverable merge conflict."}`
+
 ```mermaid
 sequenceDiagram
     participant Agent as Worker Agent

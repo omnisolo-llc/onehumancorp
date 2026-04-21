@@ -110,6 +110,18 @@ Marks a task as `COMPLETED` and unlocks dependent tasks in the DAG structure.
 }
 ```
 
+### 2.4 Fail a Task
+**Endpoint:** `POST /api/v1/tasks/{task_id}/fail`
+Marks a task as `FAILED` and records the failure reason.
+
+**Payload:**
+```json
+{
+  "agent_id": "agent_swe_007",
+  "reason": "Encountered unrecoverable merge conflict."
+}
+```
+
 ## 3. Hybrid Health Probes
 
 The Hybrid Health Probe monitors the status of the orchestration engine across different deployment modes.
