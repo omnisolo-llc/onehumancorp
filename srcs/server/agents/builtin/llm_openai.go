@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/utils"
 )
 
 // OpenAIClient implements LLMClient for OpenAI API.
@@ -31,13 +33,13 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 
 	var messages []openaiMessage
 	if req.System != "" {
-		messages = append(messages, openaiMessage{Role: "system", Content: req.System})
+		messages = append(messages, openaiMessage{Role: "system", Content: utils.MinifyJSONString(req.System)})
 	}
 
 	for _, m := range req.Messages {
 		messages = append(messages, openaiMessage{
 			Role:    string(m.Role),
-			Content: m.Content,
+			Content: utils.MinifyJSONString(m.Content),
 		})
 	}
 
