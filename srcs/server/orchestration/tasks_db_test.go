@@ -3,6 +3,8 @@ package orchestration
 import (
     "context"
     "testing"
+    "sync"
+    "time"
 
     "github.com/onehumancorp/mono/srcs/server/auth"
     "github.com/onehumancorp/mono/srcs/server/db"
@@ -91,8 +93,8 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Errorf("expected task ID 'task-2', got '%s'", task.ID)
     }
 
-    if task.Status != "IN_PROGRESS" {
-        t.Errorf("expected status 'IN_PROGRESS', got '%s'", task.Status)
+    if task.Status != "ASSIGNED" {
+        t.Errorf("expected status 'ASSIGNED', got '%s'", task.Status)
     }
 
     task3, err := to.ClaimTaskV4(ctxWithClaims, "org-1", "agent-2")
@@ -182,8 +184,8 @@ func TestClaimTask_Postgres(t *testing.T) {
         t.Errorf("expected task ID 'task-2', got '%s'", task.ID)
     }
 
-    if task.Status != "IN_PROGRESS" {
-        t.Errorf("expected status 'IN_PROGRESS', got '%s'", task.Status)
+    if task.Status != "ASSIGNED" {
+        t.Errorf("expected status 'ASSIGNED', got '%s'", task.Status)
     }
 }
 
@@ -273,5 +275,86 @@ func TestClaimTaskDag(t *testing.T) {
     }
     if task == nil || task.TaskID != "task-2" {
         t.Fatalf("expected to claim task-2")
+    }
+}
+
+type mockMesh struct {
+    Events []string
+    mu     sync.Mutex
+}
+
+func (m *mockMesh) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+    m.mu.Lock()
+    defer m.mu.Unlock()
+    m.Events = append(m.Events, topic)
+    return nil
+}
+
+func TestClaimTaskNewSchema(t *testing.T) {
+    telemetry.InitTelemetry()
+    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
+    if err != nil {
+        t.Fatalf("failed to create sqlite provider: %v", err)
+    }
+
+    ctx := context.Background()
+    claims := &auth.Claims{OrganizationID: "org-1"}
+    ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
+
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS shared_tasks (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            parent_plan_id TEXT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            assigned_agent_id TEXT,
+            dependencies TEXT NOT NULL DEFAULT '[]',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+    if err != nil { t.Fatalf("failed to create shared_tasks: %v", err) }
+
+    _, err = dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            entity_id TEXT NOT NULL,
+            entity_type TEXT NOT NULL,
+            from_state TEXT NOT NULL,
+            to_state TEXT NOT NULL,
+            agent_id TEXT,
+            reason TEXT,
+            occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `)
+    if err != nil { t.Fatalf("failed to create state_machine_transitions: %v", err) }
+
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-new-1', 'org-1', 'Test New 1', 'COMPLETED', '[]')")
+    if err != nil { t.Fatalf("failed to insert task: %v", err) }
+
+    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-new-2', 'org-1', 'Test New 2', 'PENDING', '[\"task-new-1\"]')")
+    if err != nil { t.Fatalf("failed to insert task: %v", err) }
+
+    mesh := &mockMesh{}
+    to := NewSharedTaskOrchestrator(dbProvider, mesh, nil)
+    task, err := to.ClaimTask(ctxWithClaims, "agent-1")
+    if err != nil {
+        t.Fatalf("ClaimTask failed: %v", err)
+    }
+    if task == nil || task.TaskID != "task-new-2" {
+        t.Fatalf("expected to claim task-new-2")
+    }
+
+    if task.Status != "ASSIGNED" {
+        t.Errorf("expected status 'ASSIGNED', got '%s'", task.Status)
+    }
+
+    time.Sleep(10 * time.Millisecond) // Wait for async event
+    mesh.mu.Lock()
+    defer mesh.mu.Unlock()
+    if len(mesh.Events) == 0 || mesh.Events[0] != "task.assigned" {
+        t.Errorf("expected 'task.assigned' event, got %v", mesh.Events)
     }
 }

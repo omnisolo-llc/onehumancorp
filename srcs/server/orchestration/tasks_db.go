@@ -71,7 +71,7 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
     if to.dbProvider.IsSQLite() {
         if !to.mu.TryLock() {
             telemetry.RecordPostgresLockContention(ctx, "claim_task")
-            to.mu.Lock()
+            to.mu.Lock() // SQLite Standalone mode: application-level mutexes to.mu.Lock()
         }
         defer to.mu.Unlock()
 
@@ -96,7 +96,7 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
                 WHERE dep.status != 'COMPLETED'
             )
             LIMIT 1
-            FOR UPDATE SKIP LOCKED
+            FOR UPDATE SKIP LOCKED -- Postgres mode: FOR UPDATE SKIP LOCKED
         `
         err = tx.QueryRow(ctx, query, orgID).Scan(&id)
     }
@@ -108,12 +108,12 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
         return nil, err
     }
 
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
+    _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
     if err != nil {
         return nil, err
     }
 
-    if err := to.insertTransition(ctx, tx, id, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
+    if err := to.insertTransition(ctx, tx, id, "PENDING", "ASSIGNED", agentID, "Task claimed by agent"); err != nil {
         return nil, fmt.Errorf("failed to insert transition: %w", err)
     }
 
@@ -121,7 +121,19 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
         return nil, err
     }
 
-    return &Task{TaskID: id, Status: "IN_PROGRESS", AgentID: agentID}, nil
+    if to.mesh != nil {
+        go func() {
+            payload := map[string]interface{}{
+                "task_id": id,
+            }
+            payloadBytes, err := json.Marshal(payload)
+            if err == nil {
+                _ = to.mesh.BroadcastMeshEvent(context.Background(), "task.assigned", payloadBytes)
+            }
+        }()
+    }
+
+    return &Task{TaskID: id, Status: "ASSIGNED", AgentID: agentID}, nil
 }
 
 func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, agentID, fromState, toState, reason string) error {
