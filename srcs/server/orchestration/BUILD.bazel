@@ -7,6 +7,9 @@ go_library(
     srcs = [
         "auth_interceptor.go",
         "autodream.go",
+        "task.go",
+        "task_repository.go",
+        "task_handler.go",
         "autodream_worker.go",
         "autodream_advanced.go",
         "cached_minimax_client.go",
@@ -74,6 +77,8 @@ go_test(
     srcs = [
         "auth_interceptor_test.go",
         "autodream_test.go",
+        "task_repository_test.go",
+        "task_handler_test.go",
         "autodream_worker_test.go",
         "autodream_advanced_test.go",
         "mission_ingestion_test.go",
