@@ -145,6 +145,7 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 }
 
 
+
 // TransitionState changes the state of a task and checks dependencies.
 func (sm *TaskStateMachine) TransitionState(ctx context.Context, taskID string, newState string) error {
 	if sm.mutexProvider != nil {
@@ -161,12 +162,21 @@ func (sm *TaskStateMachine) TransitionState(ctx context.Context, taskID string, 
 	}
 	defer tx.Rollback(ctx)
 
+	var oldState string
+	_ = tx.QueryRow(ctx, `SELECT status FROM shared_tasks WHERE id = $1`, taskID).Scan(&oldState)
+
 	_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, newState, taskID)
 	if err != nil {
 		return fmt.Errorf("failed to transition state: %w", err)
 	}
+
+	if oldState != "" {
+		_, _ = tx.Exec(ctx, `INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason, occurred_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`, generateID(), taskID, "task", oldState, newState, "system", "TransitionState")
+	}
+
 	return tx.Commit(ctx)
 }
+
 
 // CheckDependencies verifies if all prerequisites are met for a task.
 func (sm *TaskStateMachine) CheckDependencies(ctx context.Context, taskID string) (bool, error) {

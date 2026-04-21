@@ -19,6 +19,7 @@ func TestStateMachine_Concurrent(t *testing.T) {
 
 	ctx := context.Background()
 	tx, _ := provider.Begin(ctx)
+	tx.Exec(ctx, `CREATE TABLE state_machine_transitions (id TEXT, entity_id TEXT, entity_type TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, reason TEXT, occurred_at TIMESTAMP);
 	tx.Exec(ctx, `CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, parent_task_id TEXT, status TEXT, workflow_state TEXT, updated_at TIMESTAMP)`)
 	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('parent', 'org1', 'title1', 'EXECUTING')`)
 	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub1', 'org1', 'title1', 'parent', 'EXECUTING')`)
@@ -59,8 +60,9 @@ func TestStateMachine_TransitionAndDependencies(t *testing.T) {
 
 	// Initialize tables needed for tests
 	tx, _ := provider.Begin(ctx)
+	tx.Exec(ctx, `CREATE TABLE state_machine_transitions (id TEXT, entity_id TEXT, entity_type TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, reason TEXT, occurred_at TIMESTAMP);
 	tx.Exec(ctx, `CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, status TEXT, updated_at TIMESTAMP)`)
-	tx.Exec(ctx, `CREATE TABLE swarm_task_dependencies (task_id TEXT, depends_on_task_id TEXT, PRIMARY KEY(task_id, depends_on_task_id))`)
+	tx.Exec(ctx, `CREATE TABLE swarm_task_dependencies (task_id TEXT, depends_on_task_id TEXT, PRIMARY KEY(task_id, depends_on_task_id)); CREATE TABLE state_machine_transitions (id TEXT, entity_id TEXT, entity_type TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, reason TEXT, occurred_at TIMESTAMP);`)
 
 	// Insert tasks and dependency
 	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('taskA', 'org1', 'Task A', 'PENDING')`)
