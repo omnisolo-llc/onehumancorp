@@ -1,10 +1,16 @@
 package orchestration
 
+
 import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	pb "github.com/onehumancorp/mono/srcs/proto"
 )
+
 
 type MeshAPI struct {
 	meshTransport MeshTransport
@@ -23,6 +29,15 @@ func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleBroadcast", time.Since(start)) }()
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(r.Context(), "events")
+	} else {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -50,6 +65,15 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleStream", time.Since(start)) }()
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(r.Context(), "events")
+	} else {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
+	}
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -92,12 +116,21 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandlePublish", time.Since(start)) }()
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(r.Context(), "events")
+	} else {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var event MeshEvent
+	var event pb.MeshEvent
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -124,6 +157,15 @@ func (api *MeshAPI) HandleConnect(w http.ResponseWriter, r *http.Request) {
 
 
 func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleMeshV1Broadcast", time.Since(start)) }()
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(r.Context(), "events")
+	} else {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
