@@ -12,7 +12,7 @@ import (
 	"time"
 	"runtime"
 
-	"github.com/onehumancorp/mono/srcs/backend/harness/validation"
+	"github.com/onehumancorp/mono/srcs/server/harness/validation"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

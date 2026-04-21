@@ -849,6 +849,39 @@
           "mode": "single"
         }
       }
+    },
+    {
+      "type": "timeseries",
+      "title": "Token Burn Rate Forecast (24h Extrapolation)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 100
+      },
+      "targets": [
+        {
+          "expr": "ohc_token_burn_rate_predicted_24h",
+          "legendFormat": "{{organization_id}} predicted 24h usage"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "fillOpacity": 10
+          },
+          "unit": "short"
+        }
+      },
+      "transparent": true
     }
   ],
   "refresh": "",
