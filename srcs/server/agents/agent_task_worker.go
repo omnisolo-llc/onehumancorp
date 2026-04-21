@@ -6,17 +6,14 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"os"
+	"sync"
 	"time"
 
-	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/builtin/grpc"
 	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
+	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/builtin/grpc"
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
-	"os"
-)
-
-import (
-	"sync"
 )
 
 // TaskWorker periodically fetches open issues from the configured issue tracker (Plane)
