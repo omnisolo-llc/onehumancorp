@@ -137,9 +137,11 @@ func init() {
 	// Provide unified logging across Cloud and Local standalone modes
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
+	} else {
+		// Only wrap with PIIRedactingHandler if not in standalone mode, as per memory instructions
+		handler = telemetry.NewPIIRedactingHandler(handler)
 	}
-	redactingHandler := telemetry.NewPIIRedactingHandler(handler)
-	logger := slog.New(redactingHandler)
+	logger := slog.New(handler)
 	slog.SetDefault(logger)
 }
 
