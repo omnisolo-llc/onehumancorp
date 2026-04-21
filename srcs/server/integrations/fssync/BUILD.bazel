@@ -1,0 +1,18 @@
+
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "fssync",
+    srcs = [
+        "fssync.go",
+        "receiver.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/fssync",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "fssync_test",
+    srcs = ["fssync_test.go"],
+    embed = [":fssync"],
+)
