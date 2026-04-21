@@ -56,7 +56,7 @@ fi
 
 # Verify Standalone DB
 echo -e "\n${DIM}[Verifying Standalone Database]${RESET}"
-DB_FILE="${RUNTIME_DIR}/swarm.db"
+DB_FILE="${HOME}/.ohc-local-data/standalone.db"
 if [ -f "$DB_FILE" ]; then
     echo -e "  ${GREEN}✓ Local SQLite database exists${RESET}"
 else
