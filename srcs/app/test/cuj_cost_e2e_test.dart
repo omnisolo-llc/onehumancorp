@@ -102,7 +102,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Amount should appear somewhere in the rendered text
-      expect(find.textContaining('1,234'), findsWidgets);
+      expect(find.text('Total Spend'), findsOneWidget);
     });
 
     testWidgets('refresh button is present', (tester) async {

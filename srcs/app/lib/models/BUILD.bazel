@@ -28,7 +28,10 @@ flutter_library(
         ["*.dart"],
         exclude = ["*_test.dart"],
     ),
-    data = ["//srcs/app:app_assets"],
+    data = [
+        "//srcs/app:app_assets",
+        "//srcs/app:pub_deps.json",
+    ],
     pubspec = "//srcs/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
 )

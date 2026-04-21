@@ -995,6 +995,7 @@ void main() {
 
   group('LandingScreen – button clicks', () {
     testWidgets('Download buttons call trackDownload API', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 1200));
       final mockClient = MockHttpClient();
 
       // Mock the POST request to /api/growth/downloads
