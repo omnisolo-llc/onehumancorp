@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"gopkg.in/yaml.v3"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/lib/perf"
 )
 
 func formatFloat32SliceForVector(embedding []float32) string {
@@ -210,34 +211,46 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 		client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
 	}
 
-	for _, e := range entries {
-		embedding := make([]float32, 1536)
-		if client != nil {
-			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-			resp, embedErr := client.GenerateEmbedding(ctxTimeout, e.content)
-			cancel()
-			if embedErr == nil && len(resp) == 1536 {
-				embedding = resp
-			} else {
-				slog.Warn("AutoDream: failed to embed memory with Minimax, using empty", "error", embedErr)
+	coordinator := perf.NewCoordinatorMode(4) // Bounded worker pool for parallel execution
+	tasks := make([]func() error, len(entries))
+
+	for i, e := range entries {
+		e := e // capture loop variable
+		tasks[i] = func() error {
+			embedding := make([]float32, 1536)
+			if client != nil {
+				ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+				resp, embedErr := client.GenerateEmbedding(ctxTimeout, e.content)
+				cancel()
+				if embedErr == nil && len(resp) == 1536 {
+					embedding = resp
+				} else {
+					slog.Warn("AutoDream: failed to embed memory with Minimax, using empty", "error", embedErr)
+				}
 			}
-		}
 
-		embStr := formatFloat32SliceForVector(embedding)
+			embStr := formatFloat32SliceForVector(embedding)
 
-		var query string
-		if w.pool.IsSQLite() {
-			query = "UPDATE autodream_memories SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
-		} else {
-			query = "UPDATE autodream_memories SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
-		}
+			var query string
+			if w.pool.IsSQLite() {
+				query = "UPDATE autodream_memories SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
+			} else {
+				query = "UPDATE autodream_memories SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
+			}
 
-		_, updateErr := w.pool.Exec(ctx, query, embStr, e.id)
-		if updateErr != nil {
-			slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
-		} else {
-			slog.Debug("AutoDream: consolidated memory", "id", e.id)
+			_, updateErr := w.pool.Exec(ctx, query, embStr, e.id)
+			if updateErr != nil {
+				slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
+				return updateErr
+			} else {
+				slog.Debug("AutoDream: consolidated memory", "id", e.id)
+			}
+			return nil
 		}
+	}
+
+	if err := coordinator.ExecuteParallel(ctx, tasks); err != nil {
+		slog.Error("AutoDream: ParallelUpdateMemory failed", "error", err)
 	}
 
 	return nil
