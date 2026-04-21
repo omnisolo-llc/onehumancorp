@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
@@ -38,15 +39,16 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 }
 
 func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
-	// The problem states we need to implement AutoDreamWorker.
-	// Since consolidated_memory does not have source_mission_id, we will format content as "Task [ID]: [content]"
-	query := `SELECT id, organization_id, COALESCE(description, '') AS content
-	          FROM shared_tasks_decomposition
-	          WHERE status IN ('DONE', 'COMPLETED')
-	          AND id NOT IN (SELECT id FROM consolidated_memory WHERE source_type = 'task-consolidation')`
+	query := `SELECT id, organization_id, COALESCE(payload, '') AS content
+	          FROM tasks
+	          WHERE status IN ('COMPLETED', 'DONE') AND (auto_dreamed = false OR auto_dreamed IS NULL)`
 
 	rows, err := w.pool.Query(ctx, query)
 	if err != nil {
+		// Tolerate error if column does not exist yet (e.g. before migration)
+		if strings.Contains(err.Error(), "no such column: auto_dreamed") || strings.Contains(err.Error(), "column \"auto_dreamed\" does not exist") {
+			return
+		}
 		slog.Error("AutoDreamWorker: failed to query completed tasks", "error", err)
 		return
 	}
@@ -70,6 +72,12 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 		}
 		tasks = append(tasks, t)
 	}
+	// Always close rows before executing queries in the loop
+	rows.Close()
+
+	if len(tasks) == 0 {
+		return
+	}
 
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
 	var client orchestration.MinimaxClient
@@ -78,10 +86,15 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 	}
 
 	for _, t := range tasks {
+		summary := fmt.Sprintf("Summary of task: %s", t.Content)
+		if t.Content == "" {
+			summary = "Task completed successfully with no payload."
+		}
+
 		var embedding []float32
 		if client != nil {
 			embCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			resp, embErr := client.GenerateEmbedding(embCtx, t.Content)
+			resp, embErr := client.GenerateEmbedding(embCtx, summary)
 			cancel()
 			if embErr == nil && len(resp) == 1536 {
 				embedding = resp
@@ -90,6 +103,8 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 
 		if len(embedding) == 0 {
 			embedding = make([]float32, 1536)
+			// Mock data
+			embedding[0] = 0.1
 		}
 
 		strs := make([]string, len(embedding))
@@ -98,23 +113,24 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 		}
 		embStr := "[" + strings.Join(strs, ",") + "]"
 
-		// We will use t.ID as the memID so we can avoid duplicates easily (since we check for `id NOT IN ... WHERE source_type = 'task-consolidation'`)
-		// But in the query above we did `id NOT IN (SELECT id FROM consolidated_memory)`. Wait, we should use task ID as the consolidated_memory ID.
-		memID := t.ID
-		content := fmt.Sprintf("Task [%s]: %s", t.ID, t.Content)
+		memID := uuid.New().String()
 
-		insertQuery := `INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type)
-		               VALUES ($1, $2, 'autodream-worker', $3, $4, 'task-consolidation')`
-		_, err := w.pool.Exec(ctx, insertQuery, memID, t.OrganizationID, content, embStr)
+		insertQuery := `INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding)
+		               VALUES ($1, $2, $3, $4, $5)`
+		_, err := w.pool.Exec(ctx, insertQuery, memID, t.OrganizationID, t.ID, summary, embStr)
 		if err != nil {
-			insertQueryPg := `INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type)
-			               VALUES ($1, $2, 'autodream-worker', $3, $4::vector, 'task-consolidation')`
-			_, errPg := w.pool.Exec(ctx, insertQueryPg, memID, t.OrganizationID, content, embStr)
+			insertQueryPg := `INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding)
+			               VALUES ($1, $2, $3, $4, $5::vector)`
+			_, errPg := w.pool.Exec(ctx, insertQueryPg, memID, t.OrganizationID, t.ID, summary, embStr)
 			if errPg != nil {
 				slog.Error("AutoDreamWorker: failed to insert memory", "task_id", t.ID, "error", errPg)
-			} else {
-				slog.Info("AutoDreamWorker: ingested completed task (pg fallback)", "task_id", t.ID)
+				continue
 			}
+		}
+
+		updateTaskQuery := `UPDATE tasks SET auto_dreamed = true WHERE id = $1`
+		if _, err := w.pool.Exec(ctx, updateTaskQuery, t.ID); err != nil {
+			slog.Error("AutoDreamWorker: failed to update task auto_dreamed status", "task_id", t.ID, "error", err)
 		} else {
 			slog.Info("AutoDreamWorker: ingested completed task", "task_id", t.ID)
 		}
