@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type MeshAPI struct {
@@ -23,6 +26,10 @@ func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleBroadcast", time.Since(start)) }()
+	telemetry.RecordMeshMessageThroughput(r.Context(), "HandleBroadcast")
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -50,6 +57,9 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleStream", time.Since(start)) }()
+
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -84,6 +94,7 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 			w.Write(msg)
 			w.Write([]byte("\n\n"))
 			flusher.Flush()
+			telemetry.RecordMeshMessageThroughput(r.Context(), "HandleStream")
 		case <-r.Context().Done():
 			// Explicitly return on context cancellation just in case.
 			return
@@ -92,6 +103,10 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandlePublish", time.Since(start)) }()
+	telemetry.RecordMeshMessageThroughput(r.Context(), "HandlePublish")
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -124,6 +139,10 @@ func (api *MeshAPI) HandleConnect(w http.ResponseWriter, r *http.Request) {
 
 
 func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleMeshV1Broadcast", time.Since(start)) }()
+	telemetry.RecordMeshMessageThroughput(r.Context(), "HandleMeshV1Broadcast")
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return

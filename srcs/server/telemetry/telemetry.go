@@ -39,6 +39,7 @@ var (
 	requestCounter             metric.Int64Counter
 	latencyHistogram           metric.Float64Histogram
 	MeshLatencyRecorder        metric.Float64Histogram
+	MeshMsgThroughput          metric.Int64Counter
 	SIPSyncLatencyRecorder     metric.Float64Histogram
 	SIPSyncPayloadSizeRecorder metric.Int64Histogram
 
@@ -340,6 +341,14 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MeshMsgThroughput, err = m.Int64Counter(
+		"ohc_mesh_message_throughput",
+		metric.WithDescription("Throughput of messages over the realtime teammate mesh"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1732,6 +1741,15 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 	if meshBroadcastTotal != nil {
 		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+// RecordMeshMessageThroughput records the throughput of messages over the teammate mesh.
+func RecordMeshMessageThroughput(ctx context.Context, operation string) {
+	if MeshMsgThroughput != nil {
+		MeshMsgThroughput.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("operation", operation),
 		))
 	}
 }

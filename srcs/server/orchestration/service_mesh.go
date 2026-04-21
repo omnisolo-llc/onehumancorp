@@ -35,6 +35,8 @@ func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.Ag
 		return nil, fmt.Errorf("failed to broadcast capabilities: %w", err)
 	}
 
+	telemetry.RecordMeshMessageThroughput(ctx, "AdvertiseCapabilities")
+
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "capabilities")
 	} else {
@@ -78,6 +80,7 @@ func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_Di
 			if err := stream.Send(&caps); err != nil {
 				return err
 			}
+			telemetry.RecordMeshMessageThroughput(ctx, "DiscoverAgents")
 		}
 	}
 }
@@ -126,6 +129,7 @@ func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream p
 			if err := stream.Send(event); err != nil {
 				return err
 			}
+			telemetry.RecordMeshMessageThroughput(ctx, "StreamMeshEvents")
 
 			if telemetry.BufferMetricFunc == nil {
 				telemetry.RecordMeshBroadcast(ctx, "events")
