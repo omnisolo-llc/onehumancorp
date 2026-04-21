@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -193,6 +194,15 @@ func RedactInterfacePII(val interface{}) interface{} {
 		if rv.Kind() == reflect.String {
 			return RedactPII(rv.String())
 		}
+		if rv.Kind() == reflect.Ptr {
+			if rv.IsNil() {
+				return val
+			}
+			// We return the redacted element directly, which becomes a map[string]interface{}
+			// for structs. This allows json.Marshal to still serialize it identically
+			// without attempting to construct dynamic typed pointers.
+			return RedactInterfacePII(rv.Elem().Interface())
+		}
 		switch rv.Kind() {
 		case reflect.Slice, reflect.Array:
 			if rv.Len() == 0 {
@@ -231,7 +241,18 @@ func RedactInterfacePII(val interface{}) interface{} {
 				if field.PkgPath != "" {
 					continue
 				}
-				res[field.Name] = RedactInterfacePII(rv.Field(i).Interface())
+				key := field.Name
+				tag := field.Tag.Get("json")
+				if tag == "-" {
+					continue
+				}
+				if tag != "" {
+					parts := strings.Split(tag, ",")
+					if parts[0] != "" {
+						key = parts[0]
+					}
+				}
+				res[key] = RedactInterfacePII(rv.Field(i).Interface())
 			}
 			return res
 		}
