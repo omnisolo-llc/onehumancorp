@@ -1,0 +1,56 @@
+--- deploy/docker/grafana/provisioning/dashboards/kairos_hybrid_metrics.json
++++ deploy/docker/grafana/provisioning/dashboards/kairos_hybrid_metrics.json
+@@ -668,5 +668,59 @@
+         "y": 16
+       }
+     }
++  ],
++  "panels": [
++    {
++      "title": "AutoDream Memory Processing Pipeline",
++      "type": "text",
++      "options": {
++        "content": "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);\">\n  <h2 style=\"color: #fff; margin-bottom: 10px;\">AutoDream Worker Observability</h2>\n  <p style=\"color: #aaa;\">Metrics exported: <br>• <strong>autodream_memories_processed_total</strong> <br>• <strong>autodream_consolidation_errors_total</strong> <br>• <strong>autodream_batch_processing_duration_seconds</strong></p>\n</div>",
++        "mode": "html"
++      },
++      "gridPos": {
++        "h": 6,
++        "w": 12,
++        "x": 0,
++        "y": 24
++      }
++    },
++    {
++      "title": "Processed Memories (Rate)",
++      "type": "timeseries",
++      "targets": [
++        {
++          "expr": "rate(autodream_memories_processed_total[5m])",
++          "legendFormat": "{{mode}}"
++        }
++      ],
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 0,
++        "y": 30
++      }
++    },
++    {
++      "title": "Consolidation Errors (Total)",
++      "type": "stat",
++      "targets": [
++        {
++          "expr": "sum(autodream_consolidation_errors_total)",
++          "legendFormat": "{{mode}}"
++        }
++      ],
++      "gridPos": {
++        "h": 8,
++        "w": 12,
++        "x": 12,
++        "y": 30
++      }
++    }
+   ]
+ }

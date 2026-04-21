@@ -12,8 +12,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/autodream"
+	"gopkg.in/yaml.v3"
 )
 
 func formatFloat32SliceForVector(embedding []float32) string {
@@ -39,6 +40,14 @@ type MemoryFile struct {
 // (migration path: legacy agents wrote memory files there).  If the env var is
 // empty this pipeline is a no-op — new agents write directly to the DB.
 func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
+	startTime := time.Now()
+	mode := "cloud"
+	if w.pool.IsSQLite() {
+		mode = "standalone"
+	}
+	defer func() {
+		autodream.BatchProcessingDuration.WithLabelValues(mode).Observe(time.Since(startTime).Seconds())
+	}()
 	memoryDir := os.Getenv("OHC_MEMORY_DIR")
 	if memoryDir == "" {
 		return nil // file-based ingestion disabled; agents write to DB directly
@@ -147,18 +156,17 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		} else {
 			slog.Info("AutoDream: processed memory file", "file", file)
 			os.Remove(file)
+			autodream.MemoriesProcessedTotal.WithLabelValues(mode).Inc()
 		}
 	}
 
 	return nil
 }
 
-
-
 // AutoDreamWorkerDaemon runs ProcessMemories periodically.
 type AutoDreamWorkerDaemon struct {
-	worker *AutoDreamWorker
-	done   chan struct{}
+	worker   *AutoDreamWorker
+	done     chan struct{}
 	stopOnce sync.Once
 }
 
@@ -169,10 +177,17 @@ func NewAutoDreamWorkerDaemon(worker *AutoDreamWorker) *AutoDreamWorkerDaemon {
 	}
 }
 
-
 // ConsolidateMemories processes the backlog of episodic memories into embeddings.
 // It fetches up to 100 rows where processed_at IS NULL.
 func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
+	startTime := time.Now()
+	mode := "cloud"
+	if w.pool.IsSQLite() {
+		mode = "standalone"
+	}
+	defer func() {
+		autodream.BatchProcessingDuration.WithLabelValues(mode).Observe(time.Since(startTime).Seconds())
+	}()
 	var rows db.Rows
 	var err error
 
@@ -235,8 +250,10 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 		_, updateErr := w.pool.Exec(ctx, query, embStr, e.id)
 		if updateErr != nil {
 			slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
+			autodream.ConsolidationErrorsTotal.WithLabelValues(mode).Inc()
 		} else {
 			slog.Debug("AutoDream: consolidated memory", "id", e.id)
+			autodream.MemoriesProcessedTotal.WithLabelValues(mode).Inc()
 		}
 	}
 
