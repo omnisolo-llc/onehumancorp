@@ -144,3 +144,78 @@ func TestUltraPlanManager(t *testing.T) {
 		t.Errorf("expected phase to be APPROVED (2 votes), got %v", planResult.StateMachine["phase"])
 	}
 }
+
+func TestUltraPlanStateMachine_TransitionPhase(t *testing.T) {
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	ctx := context.Background()
+	_, _ = prov.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
+			id TEXT PRIMARY KEY,
+			mission_id TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'DELIBERATING',
+			state_machine TEXT DEFAULT '{}',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+
+	upm := NewUltraPlanManager(prov, nil, nil)
+	sm := NewUltraPlanStateMachine(upm)
+
+	plan, err := upm.CreatePlan(ctx, "m-transition-1", map[string]interface{}{"phase": "START"})
+	if err != nil {
+		t.Fatalf("expected no error creating plan, got %v", err)
+	}
+
+	// Successful transition
+	err = sm.TransitionPhase(ctx, plan.ID, "START", "MIDDLE")
+	if err != nil {
+		t.Fatalf("expected successful transition, got %v", err)
+	}
+
+	updatedPlan, _ := upm.GetUltraPlan(ctx, plan.ID)
+	if updatedPlan.StateMachine["phase"] != "MIDDLE" {
+		t.Errorf("expected phase MIDDLE, got %v", updatedPlan.StateMachine["phase"])
+	}
+
+	// Failed transition due to phase mismatch
+	err = sm.TransitionPhase(ctx, plan.ID, "START", "END")
+	if err == nil {
+		t.Fatal("expected error transitioning from wrong phase, got nil")
+	}
+
+	// Transition without expected phase check
+	err = sm.TransitionPhase(ctx, plan.ID, "", "END")
+	if err != nil {
+		t.Fatalf("expected successful transition, got %v", err)
+	}
+
+	finalPlan, _ := upm.GetUltraPlan(ctx, plan.ID)
+	if finalPlan.StateMachine["phase"] != "END" {
+		t.Errorf("expected phase END, got %v", finalPlan.StateMachine["phase"])
+	}
+}
+
+func TestUltraPlanManager_LockingFallback(t *testing.T) {
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	upm := NewUltraPlanManager(prov, nil, nil)
+	ctx := context.Background()
+
+	// Should acquire SQLite lock
+	ownerID, err := upm.acquireLock(ctx, "test-plan")
+	if err != nil {
+		t.Fatalf("expected no error acquiring sqlite lock, got %v", err)
+	}
+	if ownerID != "sqlite" && ownerID != "postgres" {
+		t.Errorf("expected ownerID sqlite or postgres, got %v", ownerID)
+	}
+
+	err = upm.releaseLock(ctx, "test-plan", ownerID)
+	if err != nil {
+		t.Fatalf("expected no error releasing sqlite lock, got %v", err)
+	}
+}

@@ -227,26 +227,57 @@ func (m *UltraPlanManager) ApprovePlan(ctx context.Context, planID string, agent
 	}, "PHASE_CHANGED")
 }
 
-// modifyStateMachine abstracts the boilerplate for fetching, updating, and locking the state machine.
-func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string, modifier func(*UltraPlan) (bool, error), eventType string) error {
+func (m *UltraPlanManager) acquireLock(ctx context.Context, planID string) (string, error) {
 	if m.redisClient != nil {
 		lockKey := "lock:ultraplan:" + planID
-		cmd := m.redisClient.B().Set().Key(lockKey).Value("system").Nx().Ex(30 * time.Second).Build()
+		ownerID := uuid.New().String()
+		cmd := m.redisClient.B().Set().Key(lockKey).Value(ownerID).Nx().Ex(30 * time.Second).Build()
 		err := m.redisClient.Do(ctx, cmd).Error()
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
-				return errors.New("ultra plan is currently locked")
+				return "", errors.New("ultra plan is currently locked")
 			}
-			return fmt.Errorf("failed to acquire lock: %w", err)
+			return "", fmt.Errorf("failed to acquire lock: %w", err)
 		}
-		defer func() {
-			delCmd := m.redisClient.B().Del().Key(lockKey).Build()
-			_ = m.redisClient.Do(ctx, delCmd).Error()
-		}()
+		return ownerID, nil
 	} else if m.db.IsSQLite() {
 		m.mu.Lock()
-		defer m.mu.Unlock()
+		return "sqlite", nil
 	}
+	return "postgres", nil
+}
+
+func (m *UltraPlanManager) releaseLock(ctx context.Context, planID string, ownerID string) error {
+	if m.redisClient != nil {
+		lockKey := "lock:ultraplan:" + planID
+		script := `
+if redis.call("get", KEYS[1]) == ARGV[1] then
+    return redis.call("del", KEYS[1])
+else
+    return 0
+end
+`
+		cmd := m.redisClient.B().Eval().Script(script).Numkeys(1).Key(lockKey).Arg(ownerID).Build()
+		err := m.redisClient.Do(ctx, cmd).Error()
+		if err != nil {
+			return fmt.Errorf("failed to release lock: %w", err)
+		}
+		return nil
+	} else if m.db.IsSQLite() {
+		m.mu.Unlock()
+	}
+	return nil
+}
+
+// modifyStateMachine abstracts the boilerplate for fetching, updating, and locking the state machine.
+func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string, modifier func(*UltraPlan) (bool, error), eventType string) error {
+	ownerID, err := m.acquireLock(ctx, planID)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = m.releaseLock(context.Background(), planID, ownerID)
+	}()
 
 	tx, err := m.db.Begin(ctx)
 	if err != nil {
@@ -362,24 +393,13 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 		return fmt.Errorf("failed to compress state_machine: %w", err)
 	}
 
-	if m.redisClient != nil {
-		lockKey := "lock:ultraplan:" + planID
-		cmd := m.redisClient.B().Set().Key(lockKey).Value("system").Nx().Ex(30 * time.Second).Build()
-		err := m.redisClient.Do(ctx, cmd).Error()
-		if err != nil {
-			if rueidis.IsRedisNil(err) {
-				return errors.New("ultra plan is currently locked")
-			}
-			return fmt.Errorf("failed to acquire lock: %w", err)
-		}
-		defer func() {
-			delCmd := m.redisClient.B().Del().Key(lockKey).Build()
-			_ = m.redisClient.Do(ctx, delCmd).Error()
-		}()
-	} else if m.db.IsSQLite() {
-		m.mu.Lock()
-		defer m.mu.Unlock()
+	ownerID, err := m.acquireLock(ctx, planID)
+	if err != nil {
+		return err
 	}
+	defer func() {
+		_ = m.releaseLock(context.Background(), planID, ownerID)
+	}()
 
 	// Begin TX for atomicity
 	tx, err := m.db.Begin(ctx)
@@ -480,5 +500,24 @@ func (m *UltraPlanManager) GetUltraPlan(ctx context.Context, planID string) (*Ul
 	return &plan, nil
 }
 
+
+type UltraPlanStateMachine struct {
+	manager *UltraPlanManager
+}
+
+func NewUltraPlanStateMachine(manager *UltraPlanManager) *UltraPlanStateMachine {
+	return &UltraPlanStateMachine{manager: manager}
+}
+
+func (sm *UltraPlanStateMachine) TransitionPhase(ctx context.Context, planID string, expectedCurrentPhase string, newPhase string) error {
+	return sm.manager.modifyStateMachine(ctx, planID, func(plan *UltraPlan) (bool, error) {
+		currentPhase, _ := plan.StateMachine["phase"].(string)
+		if expectedCurrentPhase != "" && currentPhase != expectedCurrentPhase {
+			return false, fmt.Errorf("expected current phase %q, got %q", expectedCurrentPhase, currentPhase)
+		}
+		plan.StateMachine["phase"] = newPhase
+		return true, nil
+	}, "PHASE_CHANGED")
+}
 
 // HandleCreateUltraPlan HTTP handler for creating a proposal.
