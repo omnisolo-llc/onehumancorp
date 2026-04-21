@@ -264,7 +264,6 @@ func TestRustAgent_MultiPing(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		i := i
 		t.Run(fmt.Sprintf("ping%d", i), func(t *testing.T) {
-			t.Parallel()
 			ctx, cancel := context.WithTimeout(context.Background(), rpcTimeout)
 			defer cancel()
 			_, err := client.Ping(ctx, &agentservicepb.PingRequest{})
