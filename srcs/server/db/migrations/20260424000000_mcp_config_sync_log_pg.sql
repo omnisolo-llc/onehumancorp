@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS mcp_config_sync_log (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_mcp_config_sync_log_tenant_key ON mcp_config_sync_log(tenant_id, key);
+CREATE INDEX idx_mcp_config_sync_log_tenant_key ON mcp_config_sync_log(tenant_id, key);
