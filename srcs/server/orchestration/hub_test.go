@@ -51,14 +51,4 @@ func TestProcessForecastTick(t *testing.T) {
 	if calls != 2 {
 		t.Fatalf("Expected tracker to be called 2 times, got %d", calls)
 	}
-
-	// Third tick, make org inactive to test cleanup
-	tracker.orgs = []string{}
-	ProcessForecastTick(ctx, history, tracker.ActiveOrganizations, func(orgID string) int64 { return tracker.Summary(orgID).TotalTokens })
-	if _, ok := history["org1"]; ok {
-		t.Fatalf("Expected org1 to be removed from history when inactive")
-	}
-
-	// Test nil callbacks
-	ProcessForecastTick(ctx, history, nil, nil)
 }

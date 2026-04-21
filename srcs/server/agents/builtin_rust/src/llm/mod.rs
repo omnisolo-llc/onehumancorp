@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse};
+use crate::types::{ChatRequest, ChatResponse};
 
 #[async_trait]
 pub trait LlmClient: Send + Sync {
