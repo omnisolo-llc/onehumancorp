@@ -287,6 +287,26 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 	return ch, nil
 }
 
+func (rm *RedisMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {
+	msg := map[string]interface{}{
+		"agent_id": agentID,
+		"action":   action,
+		"status":   status,
+	}
+	if len(payload) > 0 {
+		msg["payload"] = json.RawMessage(payload)
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return rm.BroadcastMeshEvent(ctx, channel, data)
+}
+
+func (rm *RedisMeshTransport) SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error) {
+	return rm.SubscribeMeshEvents(ctx, channel)
+}
+
 func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
@@ -512,6 +532,8 @@ type MeshTransport interface {
 	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
 	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
 	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
+	PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error
+	SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error)
 }
 
 const numShards = 16
@@ -668,6 +690,26 @@ func (lm *MemoryMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task,
 	}()
 
 	return ch, nil
+}
+
+func (lm *MemoryMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {
+	msg := map[string]interface{}{
+		"agent_id": agentID,
+		"action":   action,
+		"status":   status,
+	}
+	if len(payload) > 0 {
+		msg["payload"] = json.RawMessage(payload)
+	}
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return lm.BroadcastMeshEvent(ctx, channel, data)
+}
+
+func (lm *MemoryMeshTransport) SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error) {
+	return lm.SubscribeMeshEvents(ctx, channel)
 }
 
 func (lm *MemoryMeshTransport) run(shardIdx int) {
