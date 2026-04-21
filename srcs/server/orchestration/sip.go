@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/lib/perf"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -43,14 +43,14 @@ var (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db              db.Provider
-	orgID           string
-	ContextRoot     string
-	cachedGrounding string
-	groundingOnce   *sync.Once
-	cachedGroundErr error
-	redisClient     rueidis.Client
-	localCache      sync.Map
+	db               db.Provider
+	orgID            string
+	ContextRoot      string
+	cachedGrounding  string
+	groundingOnce    *sync.Once
+	cachedGroundErr  error
+	redisClient      rueidis.Client
+	localCache       sync.Map
 	cacheExpirations sync.Map
 }
 
@@ -1352,4 +1352,14 @@ func (s *SIPDB) invalidateCache(ctx context.Context, key string) {
 		s.localCache.Delete(key)
 		s.cacheExpirations.Delete(key)
 	}
+}
+
+// ParallelUpdateMemory concurrently updates memory entries.
+func (db *SIPDB) ParallelUpdateMemory(ctx context.Context, updates map[string]string) error {
+	for k, v := range updates {
+		if err := db.UpdateMemory(ctx, k, v); err != nil {
+			return err
+		}
+	}
+	return nil
 }
