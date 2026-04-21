@@ -15,6 +15,7 @@ go_library(
         "//srcs/server/integrations/etcd",
         "//srcs/server/integrations/ollama",
         "//srcs/server/integrations/powersync",
+        "//srcs/server/integrations/restic",
         "//srcs/proto:hub_go_proto",
         "@org_golang_google_protobuf//proto",
     ],
