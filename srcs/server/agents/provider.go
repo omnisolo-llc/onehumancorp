@@ -455,7 +455,7 @@ func (p *MiniMaxiProvider) Type() ProviderType { return ProviderTypeMiniMaxi }
 
 // Description returns a short description of MiniMaxi.
 func (p *MiniMaxiProvider) Description() string {
-	return "MiniMaxi — cloud AI API with Anthropic-compatible endpoint (api.minimaxi.chat/v1). Supports all roles."
+	return "MiniMaxi — cloud AI API with Anthropic-compatible endpoint (api.minimaxi.chat/v1). Can be used for any role (SWE, legal, sales, etc.)."
 }
 
 // SupportedRoles returns the full set of known roles because MiniMaxi can serve any domain.
