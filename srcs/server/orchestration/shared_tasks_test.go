@@ -65,7 +65,7 @@ func TestClaimTask(t *testing.T) {
         t.Fatalf("failed to create task: %v", err)
     }
 
-    claimedTask, err := ClaimTask(ctx, provider, "agent-1")
+    claimedTask, err := ClaimTask(ctx, provider, "org-1", "agent-1")
     if err != nil {
         t.Fatalf("failed to claim task: %v", err)
     }
@@ -74,8 +74,8 @@ func TestClaimTask(t *testing.T) {
         t.Errorf("expected agent-1, got %v", *claimedTask.AssignedAgentID)
     }
 
-    if claimedTask.Status != "ASSIGNED" {
-        t.Errorf("expected status ASSIGNED, got %v", claimedTask.Status)
+    if claimedTask.Status != "IN_PROGRESS" {
+        t.Errorf("expected status IN_PROGRESS, got %v", claimedTask.Status)
     }
 
     err = TransitionTask(ctx, provider, claimedTask.ID, "DONE")
@@ -93,7 +93,7 @@ func TestClaimTask(t *testing.T) {
     }
 
     // Test claiming when no tasks are available
-    noTask, err := ClaimTask(ctx, provider, "agent-1")
+    noTask, err := ClaimTask(ctx, provider, "org-1", "agent-1")
     if err != nil {
         t.Fatalf("expected nil error when no tasks are available, got %v", err)
     }
@@ -120,7 +120,7 @@ func TestClaimTask_PostgresLocking(t *testing.T) {
 	ctx := context.Background()
 	provider := &mockPGProvider{}
 
-	_, err := ClaimTask(ctx, provider, "agent-1")
+	_, err := ClaimTask(ctx, provider, "org-1", "agent-1")
 	if err != nil {
 		t.Fatalf("expected nil error on sql.ErrNoRows, got %v", err)
 	}
