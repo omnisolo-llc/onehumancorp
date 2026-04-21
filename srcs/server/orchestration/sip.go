@@ -279,7 +279,7 @@ func initializeTables(provider db.Provider) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			organization_id TEXT DEFAULT 'system'
 		);`,
-		`CREATE TABLE IF NOT EXISTS telemetry_buffer (
+		`CREATE TABLE IF NOT EXISTS local_telemetry_buffer (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			metric_type TEXT NOT NULL,
 			payload TEXT NOT NULL,
@@ -688,16 +688,16 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
 // Returns error.
 // Produces errors: Explicit error handling.
-// Has side effects: Deletes records from the telemetry_buffer table.
+// Has side effects: Deletes records from the local_telemetry_buffer table.
 func (s *SIPDB) PruneBufferedMetrics(ctx context.Context, ageThreshold time.Duration) error {
 	return withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		var err error
 		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM local_telemetry_buffer WHERE id IN (SELECT id FROM local_telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
 		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM local_telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM local_telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
 		}
 
 		return err
@@ -922,13 +922,17 @@ func (s *SIPDB) Provider() db.Provider {
 // Accepts parameters: ctx context.Context, metricType string, payload string.
 // Returns error.
 // Produces errors: Explicit error handling.
-// Has side effects: Inserts a record into the telemetry_buffer table.
+// Has side effects: Inserts a record into the local_telemetry_buffer table.
 func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
-	// Sanitize payload before storing in the buffer
+	// Sanitize and Redact PII from payload before storing in the buffer to ensure data sovereignty.
 	var obj interface{}
 	if err := json.Unmarshal([]byte(payload), &obj); err == nil {
+		// Apply architectural sanitization (stripping [PRIVATE] and rag_context)
 		sanitizedObj := SanitizePayloadMap(obj)
-		if b, err := json.Marshal(sanitizedObj); err == nil {
+		// Apply strict PII scrubbing via telemetry.RedactInterfacePII
+		redactedObj := telemetry.RedactInterfacePII(sanitizedObj)
+
+		if b, err := json.Marshal(redactedObj); err == nil {
 			payload = string(b)
 		}
 	} else {
@@ -937,7 +941,7 @@ func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload str
 
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
-			"INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3)",
+			"INSERT INTO local_telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3)",
 			metricType, payload, s.orgID,
 		)
 		return err
@@ -948,22 +952,22 @@ func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload str
 // Accepts parameters: ctx context.Context, remoteEndpoint string.
 // Returns error.
 // Produces errors: Explicit error handling.
-// Has side effects: Posts aggregated metrics to a remote endpoint and deletes successful syncs from telemetry_buffer.
+// Has side effects: Posts aggregated metrics to a remote endpoint and deletes successful syncs from local_telemetry_buffer.
 // Returns the number of synced records and an error.
-// PruneTelemetryBuffer removes telemetry metrics older than a specified duration from the telemetry_buffer table.
+// PruneTelemetryBuffer removes telemetry metrics older than a specified duration from the local_telemetry_buffer table.
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
 // Returns error.
 // Produces errors: Explicit error handling.
-// Has side effects: Deletes records from the telemetry_buffer table.
+// Has side effects: Deletes records from the local_telemetry_buffer table.
 func (s *SIPDB) PruneTelemetryBuffer(ctx context.Context, ageThreshold time.Duration) error {
 	return withSipRetry(ctx, func() error {
 		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		var err error
 		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM local_telemetry_buffer WHERE id IN (SELECT id FROM local_telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
 		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM local_telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM local_telemetry_buffer WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
 		}
 		return err
 	})
@@ -979,7 +983,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 
 	err := withSipRetry(ctx, func() error {
 		records = nil
-		query := "SELECT id, metric_type, payload FROM telemetry_buffer WHERE organization_id = $1 ORDER BY id ASC LIMIT 500"
+		query := "SELECT id, metric_type, payload FROM local_telemetry_buffer WHERE organization_id = $1 ORDER BY id ASC LIMIT 500"
 		if !s.db.IsSQLite() {
 			query += " FOR UPDATE SKIP LOCKED"
 		}
@@ -1039,8 +1043,12 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 					var obj map[string]interface{}
 					if err := json.Unmarshal([]byte(rec.payload), &obj); err == nil {
 						obj["metric_type"] = rec.metricType
+						// Final pass: Architectural sanitization
 						sanitizedObj := SanitizePayloadMap(obj)
-						b, _ := json.Marshal(sanitizedObj)
+						// Final pass: Strict PII scrubbing before sync
+						redactedObj := telemetry.RedactInterfacePII(sanitizedObj)
+
+						b, _ := json.Marshal(redactedObj)
 						processedPayloads[i] = string(b)
 					} else {
 						sanitizedStr, _ := SanitizePayload(rec.payload)
@@ -1093,7 +1101,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	// Delete successfully synced records
 	err = withSipRetry(ctx, func() error {
 		idList := strings.Join(idsToDelete, ",")
-		_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM telemetry_buffer WHERE id IN (%s)", idList))
+		_, err := s.db.Exec(ctx, fmt.Sprintf("DELETE FROM local_telemetry_buffer WHERE id IN (%s)", idList))
 		return err
 	})
 	return len(records), err

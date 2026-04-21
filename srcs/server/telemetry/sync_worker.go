@@ -10,10 +10,10 @@ import (
 // to a remote endpoint. This is implemented by orchestration.SIPDB.SyncBufferedMetrics.
 type SyncFunc func(ctx context.Context, remoteEndpoint string) (int, error)
 
-// StartSyncDaemon starts a background worker that periodically calls syncFunc
+// StartTelemetrySyncWorker starts a background worker that periodically calls syncFunc
 // to push locally buffered metrics to the cloud API endpoint.
 // It uses the specified interval and respects context cancellation.
-func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, endpoint string, interval time.Duration) {
+func StartTelemetrySyncWorker(ctx context.Context, syncFunc SyncFunc, endpoint string, interval time.Duration) {
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()

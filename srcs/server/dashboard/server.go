@@ -1071,19 +1071,24 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
+// handleTelemetrySync processes batches of telemetry records synced from standalone environments.
 func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
+	// Define structure for batch telemetry records
 	var payloads []struct {
 		MetricType string `json:"metric_type"`
 		Payload    string `json:"payload"`
 	}
 
+	// Limit request size to 10MB to prevent OOM
+	r.Body = http.MaxBytesReader(w, r.Body, 10*1024*1024)
+
 	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
+		http.Error(w, "invalid request body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -1091,9 +1096,11 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 	for _, p := range payloads {
 		var data map[string]interface{}
 		if err := json.Unmarshal([]byte(p.Payload), &data); err != nil {
-			continue // Skip malformed payloads
+			slog.Warn("skipping malformed telemetry payload", "metric_type", p.MetricType, "error", err)
+			continue
 		}
 
+		// Re-dispatch metrics to the Cloud's OpenTelemetry meters
 		switch p.MetricType {
 		case "token_usage":
 			agentID, _ := data["agent_id"].(string)
@@ -1105,6 +1112,26 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 				count = int64(c)
 			}
 			telemetry.RecordTokenUsage(ctx, agentID, role, model, tokenType, count)
+		case "agent_token_usage":
+			agentID, _ := data["agent_id"].(string)
+			orgID, _ := data["organization_id"].(string)
+			role, _ := data["role"].(string)
+			model, _ := data["model"].(string)
+			var count int64
+			if c, ok := data["count"].(float64); ok {
+				count = int64(c)
+			}
+			telemetry.RecordAgentTokenUsage(ctx, agentID, orgID, role, model, count)
+		case "agent_cost":
+			agentID, _ := data["agent_id"].(string)
+			orgID, _ := data["organization_id"].(string)
+			role, _ := data["role"].(string)
+			model, _ := data["model"].(string)
+			var cost float64
+			if c, ok := data["cost"].(float64); ok {
+				cost = c
+			}
+			telemetry.RecordAgentCost(ctx, agentID, orgID, role, model, cost)
 		case "agent_api_call":
 			agentID, _ := data["agent_id"].(string)
 			role, _ := data["role"].(string)
@@ -1124,10 +1151,155 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 		case "swarm_task_completed":
 			missionID, _ := data["mission_id"].(string)
 			telemetry.RecordSwarmTaskCompleted(ctx, missionID)
-		default:
-			if telemetry.BufferMetricFunc != nil {
-				_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
+		case "tokens_saved":
+			op, _ := data["operation"].(string)
+			cacheType, _ := data["cache_type"].(string)
+			var count int64
+			if c, ok := data["estimated_tokens"].(float64); ok {
+				count = int64(c)
 			}
+			telemetry.RecordTokensSaved(ctx, op, cacheType, count)
+		case "cache_hit":
+			op, _ := data["operation"].(string)
+			cacheType, _ := data["cache_type"].(string)
+			telemetry.RecordCacheHit(ctx, op, cacheType)
+		case "cache_miss":
+			op, _ := data["operation"].(string)
+			cacheType, _ := data["cache_type"].(string)
+			telemetry.RecordCacheMiss(ctx, op, cacheType)
+		case "api_rate_limit_exceeded":
+			endpoint, _ := data["endpoint"].(string)
+			telemetry.RecordApiRateLimitExceeded(ctx, endpoint)
+		case "sqlite_lock_contention":
+			op, _ := data["operation"].(string)
+			telemetry.RecordSQLiteLockContention(ctx, op)
+		case "sqlite_throttled_request":
+			op, _ := data["operation"].(string)
+			telemetry.RecordSQLiteThrottledRequest(ctx, op)
+		case "sqlite_retry_event":
+			op, _ := data["operation"].(string)
+			telemetry.RecordSQLiteRetryEvent(ctx, op)
+		case "sqlite_retry_exhausted":
+			op, _ := data["operation"].(string)
+			telemetry.RecordSQLiteRetryExhausted(ctx, op)
+		case "postgres_retry_exhausted":
+			op, _ := data["operation"].(string)
+			telemetry.RecordPostgresRetryExhausted(ctx, op)
+		case "autodream_memory_ingested":
+			agentID, _ := data["agent_id"].(string)
+			telemetry.RecordAutoDreamMemoryIngested(ctx, agentID)
+		case "autodream_consolidation_total":
+			agentID, _ := data["agent_id"].(string)
+			telemetry.RecordAutoDreamConsolidation(ctx, agentID)
+		case "autodream_memory_compressed":
+			agentID, _ := data["agent_id"].(string)
+			telemetry.RecordAutoDreamMemoryCompressed(ctx, agentID)
+		case "postgres_lock_contention":
+			op, _ := data["operation"].(string)
+			telemetry.RecordPostgresLockContention(ctx, op)
+		case "llm_network_latency":
+			model, _ := data["model"].(string)
+			var latency float64
+			if l, ok := data["latency"].(float64); ok {
+				latency = l
+			}
+			telemetry.RecordLLMNetworkLatency(ctx, model, latency)
+		case "task_queue_length":
+			var amount int64
+			if a, ok := data["amount"].(float64); ok {
+				amount = int64(a)
+			}
+			telemetry.RecordTaskQueueLength(ctx, amount)
+		case "task_processed":
+			var latency float64
+			if l, ok := data["latency"].(float64); ok {
+				latency = l
+			}
+			telemetry.RecordTaskProcessed(ctx, time.Duration(latency*float64(time.Second)))
+		case "agent_transition_latency":
+			tt, _ := data["transition_type"].(string)
+			var duration float64
+			if d, ok := data["duration"].(float64); ok {
+				duration = d
+			}
+			telemetry.RecordAgentTransitionLatency(ctx, tt, duration)
+		case "swarm_task_queue_length":
+			var delta int
+			if d, ok := data["delta"].(float64); ok {
+				delta = int(d)
+			}
+			telemetry.RecordSwarmTaskQueueLength(ctx, delta)
+		case "swarm_task_processing_latency":
+			var latencyMS float64
+			if l, ok := data["latency_ms"].(float64); ok {
+				latencyMS = l
+			}
+			telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
+		case "task_enqueued":
+			taskID, _ := data["task_id"].(string)
+			telemetry.RecordTaskEnqueued(ctx, taskID)
+		case "task_failed":
+			taskID, _ := data["task_id"].(string)
+			errStr, _ := data["error"].(string)
+			telemetry.RecordTaskFailed(ctx, taskID, errStr)
+		case "ohc_sub_agent_queue_length":
+			var delta int
+			if d, ok := data["delta"].(float64); ok {
+				delta = int(d)
+			}
+			telemetry.RecordQueueLength(ctx, delta)
+		case "tool_autocorrection_total":
+			agentID, _ := data["agent_id"].(string)
+			role, _ := data["role"].(string)
+			status, _ := data["status"].(string)
+			telemetry.RecordToolAutoCorrection(ctx, agentID, role, status == "success")
+		case "deliberation_phase_duration_seconds":
+			planID, _ := data["plan_id"].(string)
+			phase, _ := data["phase"].(string)
+			var duration float64
+			if d, ok := data["duration"].(float64); ok {
+				duration = d
+			}
+			telemetry.RecordDeliberationPhaseDuration(ctx, planID, phase, duration)
+		case "agent_execution_traces_total":
+			agentID, _ := data["agent_id"].(string)
+			traceType, _ := data["trace_type"].(string)
+			telemetry.RecordAgentExecutionTrace(ctx, agentID, traceType)
+		case "autodream_ingestion_error":
+			agentID, _ := data["agent_id"].(string)
+			errorType, _ := data["error_type"].(string)
+			telemetry.RecordAutoDreamIngestionError(ctx, agentID, errorType)
+		case "autodream_compression_error":
+			agentID, _ := data["agent_id"].(string)
+			errorType, _ := data["error_type"].(string)
+			telemetry.RecordAutoDreamCompressionError(ctx, agentID, errorType)
+		case "sub_agent_queue_delay":
+			var delay float64
+			if d, ok := data["delay"].(float64); ok {
+				delay = d
+			}
+			telemetry.RecordSubAgentQueueDelay(ctx, delay)
+		case "task_claim_contention":
+			mode, _ := data["mode"].(string)
+			telemetry.RecordTaskClaimContention(ctx, mode)
+		case "sandbox_violation_total":
+			vt, _ := data["type"].(string)
+			aid, _ := data["agent_id"].(string)
+			path, _ := data["path"].(string)
+			telemetry.RecordSandboxViolation(ctx, vt, aid, path)
+		case "autodream_records_synced_total":
+			agentID, _ := data["agent_id"].(string)
+			telemetry.RecordAutoDreamSyncSuccess(ctx, agentID)
+		case "autodream_sync_errors_total":
+			agentID, _ := data["agent_id"].(string)
+			errorType, _ := data["error_type"].(string)
+			telemetry.RecordAutoDreamSyncError(ctx, agentID, errorType)
+		case "bubblewrap_violation_total":
+			telemetry.RecordBubblewrapViolation(ctx)
+		default:
+			// Fallback: If we don't have a specific handler, just log it.
+			// In a real cloud environment, we might push to a generic Int64Counter.
+			slog.Debug("unhandled telemetry metric type received from standalone", "metric_type", p.MetricType)
 		}
 	}
 

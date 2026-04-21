@@ -232,13 +232,13 @@ func TestSIPDB_PruneBufferedMetrics(t *testing.T) {
 
 	// Insert metrics:
 	// 1. New metric (should not be deleted)
-	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('type', 'payload', datetime('now'), 'system')")
+	_, err = db.db.Exec(ctx, "INSERT INTO local_telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('type', 'payload', datetime('now'), 'system')")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// 2. Old metric (should be deleted)
-	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('type', 'payload', datetime('now', '-2 days'), 'system')")
+	_, err = db.db.Exec(ctx, "INSERT INTO local_telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('type', 'payload', datetime('now', '-2 days'), 'system')")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -249,7 +249,7 @@ func TestSIPDB_PruneBufferedMetrics(t *testing.T) {
 	}
 
 	var count int
-	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM local_telemetry_buffer").Scan(&count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,13 +333,13 @@ func TestSIPDB_PruneTelemetryBuffer(t *testing.T) {
 	ctx := context.Background()
 
 	// Insert old telemetry
-	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('metric1', 'data1', datetime('now', '-2 days'), 'system')")
+	_, err = db.db.Exec(ctx, "INSERT INTO local_telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('metric1', 'data1', datetime('now', '-2 days'), 'system')")
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Insert new telemetry
-	_, err = db.db.Exec(ctx, "INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('metric2', 'data2', datetime('now'), 'system')")
+	_, err = db.db.Exec(ctx, "INSERT INTO local_telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ('metric2', 'data2', datetime('now'), 'system')")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -350,7 +350,7 @@ func TestSIPDB_PruneTelemetryBuffer(t *testing.T) {
 	}
 
 	var count int
-	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM local_telemetry_buffer").Scan(&count)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1155,7 +1155,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) { // added for issue 4365
 	}
 
 	var count int
-	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM local_telemetry_buffer").Scan(&count)
 	if err != nil || count != 2 {
 		t.Fatalf("Expected 2 metrics, got %d, err: %v", count, err)
 	}
@@ -1180,7 +1180,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) { // added for issue 4365
 		t.Fatalf("Expected payload %s, got %s", expectedBody, string(reqBody))
 	}
 
-	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM local_telemetry_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
 	}

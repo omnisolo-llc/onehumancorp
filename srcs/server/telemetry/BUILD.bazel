@@ -47,6 +47,7 @@ go_test(
         "token_forecast_worker_test.go",
         "mcp_sync_worker_test.go",
         "sync_daemon_test.go",
+        "standalone_sync_test.go",
     ],
     embed = [":telemetry"],
     data = ["telemetry.go"],

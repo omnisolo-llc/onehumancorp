@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestStartSyncDaemon(t *testing.T) {
+func TestStartTelemetrySyncWorker(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	syncCount := 0
@@ -26,7 +26,7 @@ func TestStartSyncDaemon(t *testing.T) {
 	mockM := &mockMeter{}
 	_ = InitWithMeter(mockM)
 
-	StartSyncDaemon(ctx, syncFunc, "http://localhost:8080/api/telemetry/sync", 10*time.Millisecond)
+	StartTelemetrySyncWorker(ctx, syncFunc, "http://localhost:8080/api/telemetry/sync", 10*time.Millisecond)
 
 	time.Sleep(50 * time.Millisecond)
 	cancel()
@@ -37,7 +37,7 @@ func TestStartSyncDaemon(t *testing.T) {
 	}
 }
 
-func TestStartSyncDaemon_ContextCancel(t *testing.T) {
+func TestStartTelemetrySyncWorker_ContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	syncCount := 0
@@ -48,7 +48,7 @@ func TestStartSyncDaemon_ContextCancel(t *testing.T) {
 
 	cancel() // Cancel immediately
 
-	StartSyncDaemon(ctx, syncFunc, "http://localhost", 10*time.Millisecond)
+	StartTelemetrySyncWorker(ctx, syncFunc, "http://localhost", 10*time.Millisecond)
 
 	time.Sleep(50 * time.Millisecond)
 
