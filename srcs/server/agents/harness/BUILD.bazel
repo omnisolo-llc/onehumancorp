@@ -7,14 +7,11 @@ go_library(
         "bwrap_linux.go",
         "sandbox_darwin.go",
         "fallback.go",
-        "interceptor.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/harness",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/telemetry",
-        "@com_github_smacker_go_tree_sitter//:go-tree-sitter",
-        "@com_github_smacker_go_tree_sitter//bash",
     ],
 )
 
@@ -25,7 +22,6 @@ go_test(
         "bwrap_test.go",
         "sandbox_test.go",
         "fallback_test.go",
-        "interceptor_test.go",
     ],
     embed = [":harness"],
 )

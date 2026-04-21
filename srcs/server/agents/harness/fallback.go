@@ -10,7 +10,7 @@ import (
 type FallbackHarness struct{}
 
 func NewIsolationHarness() IsolationHarness {
-	return NewPermissionInterceptor(&FallbackHarness{})
+	return &FallbackHarness{}
 }
 
 func (h *FallbackHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {

@@ -11,7 +11,7 @@ import (
 )
 
 
-func ClaimTask(ctx context.Context, database db.Provider, organizationID string, agentID string) (*SharedTaskDecomposition, error) {
+func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*SharedTaskDecomposition, error) {
 	var task SharedTaskDecomposition
 	var desc, parent sql.NullString
     var agent *string
@@ -27,8 +27,8 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 		}
 		defer tx.Rollback(ctx)
 
-		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' AND organization_id = $1 LIMIT 1`
-		err = tx.QueryRow(ctx, query, organizationID).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
+		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' LIMIT 1`
+		err = tx.QueryRow(ctx, query).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, nil
@@ -36,7 +36,7 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 			return nil, err
 		}
 
-		_, err = tx.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, agentID, task.ID)
+		_, err = tx.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, agentID, task.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -47,22 +47,22 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 
         // update memory struct
         agent = &agentID
-        task.Status = "IN_PROGRESS"
+        task.Status = "ASSIGNED"
 
 	} else {
 		query = `
 		UPDATE shared_tasks_decomposition
-		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = (
 			SELECT id FROM shared_tasks_decomposition
-			WHERE status = 'PENDING' AND organization_id = $2
+			WHERE status = 'PENDING'
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
 		RETURNING id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
 	    `
 
-		err := database.QueryRow(ctx, query, agentID, organizationID).Scan(
+		err := database.QueryRow(ctx, query, agentID).Scan(
 			&task.ID,
 			&task.OrganizationID,
 			&task.Title,

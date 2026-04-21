@@ -25,7 +25,6 @@ type SharedTaskDB struct {
     Payload         *string
     ParentPlanID    *string
     Dependencies    *string
-    DeploymentMode  *string
     CreatedAt       string
     UpdatedAt       string
 }
@@ -77,24 +76,24 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
         defer to.mu.Unlock()
 
         query := `
-            SELECT t.id FROM shared_tasks t
+            SELECT id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM json_each(t.dependencies) d
+                SELECT 1 FROM json_each(CASE WHEN t.dependencies IS NULL OR t.dependencies = '' THEN '[]' ELSE t.dependencies END) d
                 JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED'
+                WHERE dep.status != 'COMPLETED' AND dep.organization_id = $1
             )
             LIMIT 1
         `
         err = tx.QueryRow(ctx, query, orgID).Scan(&id)
     } else {
         query := `
-            SELECT t.id FROM shared_tasks t
+            SELECT id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) d
-                JOIN shared_tasks dep ON dep.id::text = d
-                WHERE dep.status != 'COMPLETED'
+                SELECT 1 FROM jsonb_array_elements_text(CASE WHEN t.dependencies IS NULL THEN '[]'::jsonb ELSE t.dependencies::jsonb END) AS d(value)
+                JOIN shared_tasks dep ON dep.id = d.value
+                WHERE dep.status != 'COMPLETED' AND dep.organization_id = $1
             )
             LIMIT 1
             FOR UPDATE SKIP LOCKED

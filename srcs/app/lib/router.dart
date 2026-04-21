@@ -35,34 +35,17 @@ import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
-/// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
-/// [GoRouter.refreshListenable], so the router re-evaluates its redirect
-/// guards without being fully recreated.
-class _GoRouterAuthNotifier extends ChangeNotifier {
-  _GoRouterAuthNotifier(Ref ref) {
-    ref.listen(authStateProvider, (_, __) => notifyListeners());
-  }
-}
-
 final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authStateProvider);
 
   return GoRouter(
     initialLocation: '/landing',
-    refreshListenable: _GoRouterAuthNotifier(ref),
     redirect: (context, state) {
-      final authState = ref.read(authStateProvider);
-      // Don't redirect while auth state is still loading (avoids navigation
-      // resets during login/logout transitions).
-      if (authState.isLoading) return null;
-
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
 
-      // Allow these public routes without authentication.
-      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) {
-        return '/landing';
-      }
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) return '/landing';
       if (isLoggedIn && isLoginRoute) return '/dashboard';
       return null;
     },
@@ -72,14 +55,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
-          // Business setup requires authentication — moved inside the shell.
-          GoRoute(
-            path: '/business_setup',
-            builder: (context, state) => const BusinessSetupWizardScreen(),
-          ),
           GoRoute(
             path: '/orchestration/tasks',
             builder: (context, state) => const TaskListScreen(),
+          ),
+          GoRoute(
+            path: '/business_setup',
+            builder: (context, state) => const BusinessSetupWizardScreen(),
           ),
           GoRoute(
             path: '/diagnostics',

@@ -244,7 +244,7 @@ func TestClaimTaskDag(t *testing.T) {
             title TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'PENDING',
             assigned_agent_id TEXT,
-            dependencies TEXT NOT NULL DEFAULT '[]'
+            dependencies TEXT
         )
     `)
     if err != nil { t.Fatalf("failed to create: %v", err) }

@@ -1,4 +1,3 @@
-import 'yaml_utils.dart';
 /// AI provider configuration model.
 class AiProvider {
   final String id;
@@ -47,10 +46,4 @@ class AiProvider {
     'models': models,
     'is_official': isOfficial,
   };
-
-  /// Serializes this AiProvider to a YAML string.
-  String toYaml() => modelToYaml(toJson());
-
-  /// Deserializes a YAML string to a [AiProvider].
-  static AiProvider fromYaml(String yaml) => AiProvider.fromJson(modelFromYaml(yaml));
 }

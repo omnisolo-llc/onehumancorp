@@ -103,7 +103,6 @@ func TestProviderSupportedRolesNotEmpty(t *testing.T) {
 		&OpenCodeProvider{},
 		&OpenClawProvider{},
 		&IronClawProvider{},
-		&MiniMaxiProvider{},
 		&BuiltinProvider{},
 	}
 	for _, p := range providers {
@@ -209,8 +208,8 @@ func TestRegistry_Infos_ContainsAllFields(t *testing.T) {
 		if info.Description == "" {
 			t.Errorf("ProviderInfo.Description must not be empty for %q", info.Type)
 		}
-		if len(info.RecommendedRoles) == 0 {
-			t.Errorf("ProviderInfo.RecommendedRoles must not be empty for %q", info.Type)
+		if len(info.SupportedRoles) == 0 {
+			t.Errorf("ProviderInfo.SupportedRoles must not be empty for %q", info.Type)
 		}
 	}
 	// Builtin provider is always authenticated.

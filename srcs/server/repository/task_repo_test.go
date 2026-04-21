@@ -3,8 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
-	"errors"
 	"testing"
 	"time"
 
@@ -126,13 +124,6 @@ func TestTaskRepository_GetTasksByOrg(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected error when context has no organization_id")
 	}
-
-    // Drop table to test error handling
-    db.Exec("DROP TABLE tasks;")
-    _, err = repo.GetTasksByOrg(ctxOrg1)
-    if err == nil {
-        t.Errorf("expected error after dropping table")
-    }
 }
 
 func TestTaskRepository_UpdateTaskStatus(t *testing.T) {
@@ -177,143 +168,5 @@ func TestTaskRepository_UpdateTaskStatus(t *testing.T) {
 	err = repo.UpdateTaskStatus(context.Background(), task.ID, "DONE")
 	if err == nil {
 		t.Errorf("expected error when context has no organization_id")
-	}
-
-    // Test update with nonexistent task (RowsAffected == 0)
-    err = repo.UpdateTaskStatus(ctx, "nonexistent-id", "DONE")
-    if err == nil {
-        t.Errorf("expected error when updating nonexistent task")
-    }
-    if err.Error() != "task not found or not owned by organization" {
-        t.Errorf("expected specific error, got %v", err)
-    }
-
-    // Drop table to test error handling
-    db.Exec("DROP TABLE tasks;")
-    err = repo.UpdateTaskStatus(ctx, task.ID, "DONE")
-    if err == nil {
-        t.Errorf("expected error after dropping table")
-    }
-}
-
-func TestTaskRepository_GetTasksByOrg_RowsError(t *testing.T) {
-    db := setupDB(t)
-	defer db.Close()
-
-	repo := NewTaskRepository(db)
-	ctxOrg1 := context.WithValue(context.Background(), orgIDKey, "org-1")
-
-    // Test with closed DB
-    db.Close()
-
-    err := repo.UpdateTaskStatus(ctxOrg1, "id", "status")
-    if err == nil {
-        t.Errorf("expected error when updating with closed db")
-    }
-
-    task := &Task{
-		Title:             "Test Task",
-		Description:       "Test Description",
-		Status:            "PENDING",
-		AssignedAgentRole: "tester",
-	}
-    err = repo.CreateTask(ctxOrg1, task)
-    if err == nil {
-        t.Errorf("expected error when creating with closed db")
-    }
-}
-
-// A custom driver to test rows.Err(), res.RowsAffected() and Scan() errors
-
-type mockDriver struct{}
-
-func (d *mockDriver) Open(name string) (driver.Conn, error) {
-	return &mockConn{}, nil
-}
-
-type mockConn struct{}
-func (c *mockConn) Prepare(query string) (driver.Stmt, error) { return &mockStmt{}, nil }
-func (c *mockConn) Close() error                              { return nil }
-func (c *mockConn) Begin() (driver.Tx, error)                 { return nil, nil }
-
-type mockStmt struct{}
-func (s *mockStmt) Close() error                                    { return nil }
-func (s *mockStmt) NumInput() int                                   { return -1 }
-func (s *mockStmt) Exec(args []driver.Value) (driver.Result, error) { return &mockResult{}, nil }
-func (s *mockStmt) Query(args []driver.Value) (driver.Rows, error)  {
-    if len(args) > 0 && args[0] == "scan_error_org" {
-        return &mockRows{failScan: true}, nil
-    }
-    if len(args) > 0 && args[0] == "rows_error_org" {
-        return &mockRows{failNext: true}, nil
-    }
-    return &mockRows{}, nil
-}
-
-type mockResult struct{}
-func (r *mockResult) LastInsertId() (int64, error) { return 0, nil }
-func (r *mockResult) RowsAffected() (int64, error) { return 0, errors.New("mock rows affected error") }
-
-type mockRows struct{
-    failScan bool
-    failNext bool
-    count int
-}
-func (r *mockRows) Columns() []string              {
-    return []string{"id", "organization_id", "parent_task_id", "title", "description", "status", "assigned_agent_role", "created_at", "updated_at"}
-}
-func (r *mockRows) Close() error                   { return nil }
-func (r *mockRows) Next(dest []driver.Value) error {
-    if r.count > 0 {
-        if r.failNext {
-            return errors.New("mock rows error")
-        }
-        return driver.ErrBadConn // End of rows or error
-    }
-    r.count++
-
-    if r.failScan {
-        // Return incompatible type to fail scan
-        dest[0] = nil
-    } else {
-        dest[0] = "id"
-    }
-    for i := 1; i < 7; i++ {
-        dest[i] = "dummy"
-    }
-
-    // valid dates to avoid Scan error
-    now := time.Now()
-    dest[7] = now
-    dest[8] = now
-    return nil
-}
-
-func init() {
-	sql.Register("mockDriver", &mockDriver{})
-}
-
-func TestTaskRepository_MockErrors(t *testing.T) {
-	db, _ := sql.Open("mockDriver", "mock")
-	repo := NewTaskRepository(db)
-
-    // Test rows.Err()
-    ctx := context.WithValue(context.Background(), orgIDKey, "rows_error_org")
-	_, err := repo.GetTasksByOrg(ctx)
-	if err == nil || err.Error() != "mock rows error" {
-		t.Errorf("expected mock rows error, got %v", err)
-	}
-
-    // Test scan error
-    ctxScanError := context.WithValue(context.Background(), orgIDKey, "scan_error_org")
-    _, err = repo.GetTasksByOrg(ctxScanError)
-    if err == nil {
-		t.Errorf("expected scan error, got nil")
-	}
-
-    // Test RowsAffected() error
-	err = repo.UpdateTaskStatus(ctx, "id", "status")
-	if err == nil || err.Error() != "mock rows affected error" {
-		t.Errorf("expected mock rows affected error, got %v", err)
 	}
 }

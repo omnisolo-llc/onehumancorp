@@ -323,9 +323,6 @@ func run(now time.Time, listen listenFunc) error {
 		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
 		go missionIngestionWorker.Start(ctx)
 
-		autodreamNewWorker := workers.NewAutoDreamWorker(pool.Provider)
-		go autodreamNewWorker.Start(ctx)
-
 		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider)
 		go competitorAuditWorker.Start(ctx)
 
