@@ -130,8 +130,8 @@ func TestCorruptAgentLockPathDoesNotExist(t *testing.T) {
 		t.Fatalf("expected simulated agent lock corruption error, got %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(tmpDir, ".agent-lock", "corrupt.lock")); !os.IsNotExist(err) {
-		t.Fatalf("expected corrupt.lock file to not be created, but it was")
+	if _, err := os.Stat(filepath.Join(tmpDir, ".agent-lock", "corrupt.lock")); os.IsNotExist(err) {
+		t.Fatalf("expected corrupt.lock file to be created, but it was not")
 	}
 }
 
@@ -173,8 +173,8 @@ func TestCorruptMailboxPathDoesNotExist(t *testing.T) {
 		t.Fatalf("expected simulated mailbox corruption error, got %v", err)
 	}
 
-	if _, err := os.Stat(filepath.Join(tmpDir, ".agent-task", "mailbox", "corrupt.msg")); !os.IsNotExist(err) {
-		t.Fatalf("expected corrupt.msg file to not be created, but it was")
+	if _, err := os.Stat(filepath.Join(tmpDir, ".agent-task", "mailbox", "corrupt.msg")); os.IsNotExist(err) {
+		t.Fatalf("expected corrupt.msg file to be created, but it was not")
 	}
 }
 

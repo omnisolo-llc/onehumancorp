@@ -3,9 +3,9 @@ package chaos
 import (
 	"context"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
-	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -61,17 +61,17 @@ func (c ChaosMode) String() string {
 
 // Injector is responsible for injecting chaos into operations.
 type Injector struct {
-	mode ChaosMode
-	mu   sync.Mutex
-	rand *rand.Rand
+	mode     ChaosMode
+	mu       sync.Mutex
+	rand     *rand.Rand
 	basePath string
 }
 
 // NewInjector creates a new Chaos Injector.
 func NewInjector(mode ChaosMode, seed int64) *Injector {
 	return &Injector{
-		mode: mode,
-		rand: rand.New(rand.NewSource(seed)),
+		mode:     mode,
+		rand:     rand.New(rand.NewSource(seed)),
 		basePath: ".",
 	}
 }
@@ -116,15 +116,13 @@ func (i *Injector) Inject(ctx context.Context) error {
 		}
 	case CorruptAgentLock:
 		lockPath := i.basePath + "/.agent-lock/"
-		if _, err := os.Stat(lockPath); !os.IsNotExist(err) {
-			_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
-		}
+		os.MkdirAll(lockPath, 0755)
+		_ = os.WriteFile(lockPath+"corrupt.lock", []byte("chaos corrupted this lock"), 0644)
 		return &ChaosError{Message: "chaos: simulated agent lock corruption"}
 	case CorruptMailbox:
 		mailboxPath := i.basePath + "/.agent-task/mailbox/"
-		if _, err := os.Stat(mailboxPath); !os.IsNotExist(err) {
-			_ = os.WriteFile(mailboxPath+"corrupt.msg", []byte("chaos corrupted this mailbox"), 0644)
-		}
+		os.MkdirAll(mailboxPath, 0755)
+		_ = os.WriteFile(mailboxPath+"corrupt.msg", []byte("chaos corrupted this mailbox"), 0644)
 		return &ChaosError{Message: "chaos: simulated mailbox corruption"}
 	}
 	return nil
