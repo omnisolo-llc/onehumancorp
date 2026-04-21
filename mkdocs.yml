@@ -30,6 +30,7 @@ nav:
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
       - Universal Transport Bridge: architecture/universal_transport_bridge.md
+      - RAG Synthesis: architecture/rag_synthesis.md
       - architecture/index.md
       - Chaos Engineering: architecture/chaos_engineering.md
       - KAIROS Features Design: architecture/kairos_hybrid_os_architecture.md
