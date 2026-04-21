@@ -34,6 +34,7 @@ func AllTools() []Tool {
 		TaskListTool,
 		TaskUpdateTool,
 		SleepTool,
+		ScoutRegisterTool,
 	}
 }
 

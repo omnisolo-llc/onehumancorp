@@ -26,6 +26,7 @@ go_library(
         "pubsub.go",
         "read.go",
         "scheduler.go",
+        "scout_tool.go",
         "sendmessage.go",
         "sleep.go",
         "task.go",
@@ -42,6 +43,8 @@ go_library(
     deps = [
         "//srcs/server/bash_sandbox",
         "//srcs/server/lib/perf",
+        "//srcs/server/lib/integrations/hybrid_discovery",
+        "//srcs/server/lib/integrations/scout",
         "//srcs/server/utils",
         "@com_github_google_uuid//:uuid",
     ],

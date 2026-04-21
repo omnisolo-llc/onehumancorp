@@ -30,6 +30,7 @@ var toolManifest = []struct{ Name, Desc, Params string }{
 	{"Agent", "Spawn a background sub-agent to perform a task concurrently.", ""},
 	{"TaskStop", "Stop a running background agent task.", ""},
 	{"TaskStatus", "Get the status and progress of a background agent task.", ""},
+	{"ScoutRegister", "Parse an OpenAPI spec from a URL and dynamically register endpoints as MCP tools.", ""},
 }
 
 func getAllToolsManifest() []struct{ Name, Description, Parameters string } {

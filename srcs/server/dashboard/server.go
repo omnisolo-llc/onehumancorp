@@ -1543,6 +1543,17 @@ func defaultSkillPacks() []SkillPack {
 			},
 			ImportedAt: now,
 		},
+		{
+			ID:          "builtin-integrations-scout",
+			Name:        "Resource Scout & Tool Integrator",
+			Domain:      "integrations",
+			Description: "Specialized agent dedicated to finding external resources, APIs, and safely registering them as MCP tools.",
+			Source:      "builtin",
+			Roles: []SkillPackRole{
+				{Role: "SCOUT", BasePrompt: "You are the Scout agent. Your role is to find external APIs, parse their OpenAPI specifications, and dynamically register them with the swarm via the Dynamic Tool Discovery MCP. Ensure all discovered tools respect OHC safety guardrails before integration."},
+			},
+			ImportedAt: now,
+		},
 	}
 }
 

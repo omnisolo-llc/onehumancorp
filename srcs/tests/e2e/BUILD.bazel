@@ -13,7 +13,10 @@ _SHARED_SRCS = [
 ]
 
 _COMMON_DEPS = [
+    "//srcs/server/agents/builtin",
+    "//srcs/server/lib/integrations/hybrid_discovery",
     "@com_github_playwright_community_playwright_go//:playwright-go",
+    "@org_modernc_sqlite//:sqlite",
 ]
 
 _COMMON_DATA = [
@@ -179,6 +182,7 @@ go_test(
     srcs = _SHARED_SRCS + [
         "cuj_extended_test.go",
         "cuj_integration_test.go",
+        "scout_integration_test.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
