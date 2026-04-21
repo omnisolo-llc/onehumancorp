@@ -7,6 +7,9 @@ cleanup_tmp_files() {
     if [ -d "${STATE_DIR}" ]; then
       # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
       find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
+
+      # Prune legacy Linear artifacts if they leak into the standalone environment
+      find "${STATE_DIR}" -name "*linear*" -type f -delete 2>/dev/null || true
     fi
   fi
 }

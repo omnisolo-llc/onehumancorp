@@ -11,28 +11,37 @@ final sharedTasksProvider = FutureProvider<List<SharedTask>>((ref) async {
   return rawTasks.map((t) => SharedTask.fromJson(t)).toList();
 });
 
-class TaskListScreen extends ConsumerWidget {
+class TaskListScreen extends StatelessWidget {
   const TaskListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tasksAsync = ref.watch(sharedTasksProvider);
-
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Shared Task List', style: TextStyle(fontFamily: 'Outfit')),
         backgroundColor: Colors.transparent,
       ),
-      body: tasksAsync.when(
-        data: (tasks) => ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: tasks.length,
-          itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
+      body: const TaskListView(),
+    );
+  }
+}
+
+class TaskListView extends ConsumerWidget {
+  const TaskListView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksAsync = ref.watch(sharedTasksProvider);
+
+    return tasksAsync.when(
+      data: (tasks) => ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: tasks.length,
+        itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
       ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
     );
   }
 }
