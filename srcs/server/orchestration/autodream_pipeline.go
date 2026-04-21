@@ -12,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/lib/pricing"
 )
 
 // EmbeddingClient interface for dependency injection and testing
@@ -23,11 +24,12 @@ type EmbeddingClient interface {
 type AutoDreamPipeline struct {
 	db     db.Provider
 	client EmbeddingClient
+	cache  *pricing.LocalEmbeddingCache
 	done   chan struct{}
 }
 
 // NewAutoDreamPipeline creates a new pipeline instance
-func NewAutoDreamPipeline(provider db.Provider) *AutoDreamPipeline {
+func NewAutoDreamPipeline(provider db.Provider, cache *pricing.LocalEmbeddingCache) *AutoDreamPipeline {
 	var client EmbeddingClient
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
 	if minimaxKey != "" {
@@ -37,6 +39,7 @@ func NewAutoDreamPipeline(provider db.Provider) *AutoDreamPipeline {
 	return &AutoDreamPipeline{
 		db:     provider,
 		client: client,
+		cache:  cache,
 		done:   make(chan struct{}),
 	}
 }
@@ -104,13 +107,22 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		for _, s := range sessions {
 			summary := s.ContextData
 			var embeddingStr string
-			if p.client != nil {
+			if p.cache != nil {
+				if cached, ok := p.cache.Get(summary); ok {
+					embeddingStr = cached
+				}
+			}
+
+			if embeddingStr == "" && p.client != nil {
 				ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
 				embedding, embedErr := p.client.GenerateEmbedding(ctxTimeout, summary)
 				cancel()
 				if embedErr == nil && len(embedding) > 0 {
 					if bytes, err := json.Marshal(embedding); err == nil {
 						embeddingStr = string(bytes)
+						if p.cache != nil {
+							p.cache.Set(summary, embeddingStr)
+						}
 					}
 				}
 			}
@@ -209,13 +221,22 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		missionID := strings.TrimSuffix(filepath.Base(file), ".yml")
 
 		embeddingStr := "[0.0, 0.0, 0.0]"
-		if p.client != nil {
+		if p.cache != nil {
+			if cached, ok := p.cache.Get(contentToEmbed); ok {
+				embeddingStr = cached
+			}
+		}
+
+		if embeddingStr == "[0.0, 0.0, 0.0]" && p.client != nil {
 			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
 			resp, err := p.client.GenerateEmbedding(ctxTimeout, contentToEmbed)
 			cancel()
 			if err == nil && len(resp) > 0 {
 				if bytes, err := json.Marshal(resp); err == nil {
 					embeddingStr = string(bytes)
+					if p.cache != nil {
+						p.cache.Set(contentToEmbed, embeddingStr)
+					}
 				}
 			} else if err != nil {
 				slog.Warn("AutoDreamPipeline: failed to generate embedding", "error", err)

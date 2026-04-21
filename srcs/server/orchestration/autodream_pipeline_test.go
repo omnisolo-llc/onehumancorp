@@ -2,6 +2,8 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
+	_ "modernc.org/sqlite"
 	"testing"
 	"time"
 
@@ -17,7 +19,9 @@ func (m *mockEmbeddingClient) GenerateEmbedding(ctx context.Context, text string
 }
 
 func TestAutoDreamPipeline_Process(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+	dbConn, err := sql.Open("sqlite", ":memory:")
+	require.NoError(t, err)
+	provider := db.NewSqliteProvider(dbConn)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -64,13 +68,10 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-
-
-
 	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'))")
 	require.NoError(t, err)
 
-	pipeline := NewAutoDreamPipeline(provider)
+	pipeline := NewAutoDreamPipeline(provider, nil)
 
 	// Mock the LLM client
 	pipeline.client = &mockEmbeddingClient{}
@@ -90,10 +91,12 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 }
 
 func TestAutoDreamPipeline_StartStop(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+	dbConn, err := sql.Open("sqlite", ":memory:")
+	require.NoError(t, err)
+	provider := db.NewSqliteProvider(dbConn)
 	require.NoError(t, err)
 
-	pipeline := NewAutoDreamPipeline(provider)
+	pipeline := NewAutoDreamPipeline(provider, nil)
 
 	go pipeline.Start(context.Background())
 

@@ -30,6 +30,7 @@ go_library(
         "mesh.go",
         "shared_tasks.go",
         "models.go",
+        "autodream_pipeline.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -65,8 +66,9 @@ go_library(
         "@org_modernc_sqlite//:sqlite",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
-            "//srcs/server/lib/resilience",
-],
+        "//srcs/server/lib/resilience",
+        "//srcs/server/lib/pricing",
+    ],
 )
 
 go_test(
@@ -104,6 +106,7 @@ go_test(
         "lock_chaos_test.go",
         "chaos_thin_client_test.go",
         "sentry_chaos_test.go",
+        "autodream_pipeline_test.go",
     ],
     embed = [":orchestration"],
     deps = [
@@ -131,5 +134,8 @@ go_test(
         "@org_golang_google_protobuf//proto",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@org_modernc_sqlite//:sqlite",
-],
+        "@com_github_stretchr_testify//require",
+        "@com_github_stretchr_testify//assert",
+        "//srcs/server/lib/pricing",
+    ],
 )
