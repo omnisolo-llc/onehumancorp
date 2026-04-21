@@ -1,7 +1,0 @@
-type: memory
-domain: KAIROS Orchestration
-observations:
-  - The OHC Hybrid Agentic OS requires a robust distributed system for orchestrating sub-agents across Cloud and Standalone modes.
-  - A gap exists in standardizing the "autoDream" memory consolidation pipeline architecture and Shared Task Lists.
-decisions:
-  - Drafted the master architectural design (KAIROS_AI_OS_HYBRID_MASTER_PLAN.md) to formalize database schemas for the Shared Task List, Teammate Mesh APIs, and pgvector-backed autoDream system.

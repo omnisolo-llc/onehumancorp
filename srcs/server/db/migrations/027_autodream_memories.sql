@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS autodream_memories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     topic TEXT NOT NULL,
     content TEXT NOT NULL,
     embedding vector(1536),

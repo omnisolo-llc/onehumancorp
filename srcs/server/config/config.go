@@ -99,6 +99,7 @@ var (
 func Load() *AppConfig {
 	once.Do(func() {
 		instance = loadViper()
+		standaloneEnforce(instance)
 	})
 	return instance
 }

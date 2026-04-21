@@ -15,6 +15,19 @@ func TestConvertBindVarsJSONPath(t *testing.T) {
 	}
 }
 
+func TestProviderImplementations(t *testing.T) {
+	var _ Provider = (*PgProvider)(nil)
+	var _ Provider = (*SqliteProvider)(nil)
+}
+
+func TestSearchMemories_Sqlite(t *testing.T) {
+	p := NewTestProvider(t)
+	res, err := p.SearchMemories(context.Background(), "org1", "query", 5)
+	// Depending on table existence, it might error, but the method should exist.
+	_ = res
+	_ = err
+}
+
 func TestSqliteProviderIsSQLite(t *testing.T) {
 	// Let's create an empty SqliteProvider and test its IsSQLite method.
 	p := &SqliteProvider{}

@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,8 +13,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gopkg.in/yaml.v3"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	_ "github.com/onehumancorp/mono/srcs/server/orchestration/autodream"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"gopkg.in/yaml.v3"
 )
 
 func formatFloat32SliceForVector(embedding []float32) string {
@@ -50,6 +54,10 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	if len(matches) == 0 {
 		return nil // No files to process
 	}
+	mode := kairos.GetMode()
+	start := time.Now()
+	_ = mode
+	_ = start
 
 	// Apply batch limit of 500 as requested
 	if len(matches) > 500 {
@@ -110,7 +118,13 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		// Since we delete the file, idempotency is mostly handled by file deletion, but if it fails to delete, it might duplicate.
 
 		memID := uuid.New().String()
-		embStr := formatFloat32SliceForVector(embedding)
+		var embStr string
+		if w.pool.IsSQLite() {
+			embBytes, _ := json.Marshal(embedding)
+			embStr = string(embBytes)
+		} else {
+			embStr = formatFloat32SliceForVector(embedding)
+		}
 
 		var query string
 		var args []interface{}
@@ -118,10 +132,14 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		if !w.pool.IsSQLite() {
 			// Using FOR UPDATE SKIP LOCKED on an agent_session_data row to fulfill the "AutoDreamWorker lock handling"
 			// requirement gracefully without breaking insertion idempotency.
-			// This locks a specific mission id in the agent_session_data table if it exists, to ensure another
-			// worker process isn't concurrently processing the same memory pipeline task.
-			_, lockErr := tx.Exec(ctx, "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", missionID)
+			res, lockErr := tx.Exec(ctx, "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED", missionID)
 			if lockErr != nil {
+				tx.Rollback(ctx)
+				continue
+			}
+			if res == 0 {
+				// We couldn't acquire the lock (it was locked by another worker) or row doesn't exist.
+				// If row doesn't exist, we skip. It's safe to skip since we're processing a memory file that should correspond to a session.
 				tx.Rollback(ctx)
 				continue
 			}
@@ -153,12 +171,163 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	return nil
 }
 
+// IngestCompletedTasks fetches COMPLETED tasks from shared_tasks and swarm_tasks, embeds them, and stores them in autodream_memories.
+func (w *AutoDreamWorker) IngestCompletedTasks(ctx context.Context) error {
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+	var client MinimaxClient
+	if minimaxKey != "" {
+		client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
+	}
 
+	err1 := w.ingestTasksFromTable(ctx, "shared_tasks", client)
+	err2 := w.ingestTasksFromTable(ctx, "swarm_tasks", client)
+
+	if err1 != nil {
+		return err1
+	}
+	return err2
+}
+
+func (w *AutoDreamWorker) ingestTasksFromTable(ctx context.Context, tableName string, client MinimaxClient) error {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if w.pool.IsSQLite() {
+		query = fmt.Sprintf("SELECT id, title, COALESCE(payload, '{}') FROM %s WHERE status = 'COMPLETED' LIMIT 500", tableName)
+	} else {
+		query = fmt.Sprintf("SELECT id, title, COALESCE(payload, '{}') FROM %s WHERE status = 'COMPLETED' LIMIT 500 FOR UPDATE SKIP LOCKED", tableName)
+	}
+
+	rows, err := tx.Query(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to fetch completed %s: %w", tableName, err)
+	}
+
+	type taskEntry struct {
+		id      string
+		title   string
+		payload string
+	}
+	var entries []taskEntry
+	for rows.Next() {
+		var e taskEntry
+		if err := rows.Scan(&e.id, &e.title, &e.payload); err == nil {
+			entries = append(entries, e)
+		}
+	}
+	rows.Close()
+
+	if len(entries) == 0 {
+		return nil
+	}
+
+	for _, e := range entries {
+		contentToEmbed := fmt.Sprintf("Task Title: %s\nPayload: %s", e.title, e.payload)
+		embedding := make([]float32, 1536)
+		if client != nil {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+			resp, embedErr := client.GenerateEmbedding(ctxTimeout, contentToEmbed)
+			cancel()
+			if embedErr == nil && len(resp) == 1536 {
+				embedding = resp
+			} else {
+				slog.Warn("AutoDream: failed to embed task with Minimax, using empty", "error", embedErr)
+			}
+		}
+
+		memID := uuid.New().String()
+		var embStr string
+		if w.pool.IsSQLite() {
+			embBytes, _ := json.Marshal(embedding)
+			embStr = string(embBytes)
+		} else {
+			embStr = formatFloat32SliceForVector(embedding)
+		}
+
+		var insertQuery string
+		if w.pool.IsSQLite() {
+			insertQuery = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, processed_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+		} else {
+			insertQuery = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, processed_at, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+		}
+
+		_, err = tx.Exec(ctx, insertQuery, memID, contentToEmbed, embStr, e.id, "system", "auto-dream-worker", tableName)
+		if err != nil {
+			slog.Error("AutoDream: failed to insert completed task memory", "error", err)
+			continue
+		}
+
+		updateQuery := fmt.Sprintf("UPDATE %s SET status = 'ARCHIVED' WHERE id = $1 RETURNING id", tableName)
+		var retId string
+		err = tx.QueryRow(ctx, updateQuery, e.id).Scan(&retId)
+		if err != nil && err.Error() != "sql: no rows in result set" && err.Error() != "no rows in result set" {
+			slog.Error("AutoDream: failed to update task status to ARCHIVED", "error", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
+	}
+	return nil
+}
+
+// SearchMemories queries the autodream_memories vector database.
+func (w *AutoDreamWorker) SearchMemories(ctx context.Context, embedding string, limit int) ([]TruthSearchResult, error) {
+	if w.pool.IsSQLite() {
+		query := `
+			SELECT id, content, 0 as distance
+			FROM autodream_memories
+			ORDER BY created_at DESC
+			LIMIT $1
+		`
+		rows, err := w.pool.Query(ctx, query, limit)
+		if err != nil {
+			return nil, fmt.Errorf("failed to search memories with SQLite fallback: %w", err)
+		}
+		defer rows.Close()
+
+		var results []TruthSearchResult
+		for rows.Next() {
+			var res TruthSearchResult
+			if err := rows.Scan(&res.MemoryID, &res.Context, &res.Distance); err != nil {
+				continue
+			}
+			results = append(results, res)
+		}
+		return results, nil
+	}
+
+	query := `
+		SELECT id, content, embedding <=> $1::vector as distance
+		FROM autodream_memories
+		ORDER BY distance ASC
+		LIMIT $2
+	`
+	rows, err := w.pool.Query(ctx, query, embedding, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search memories with pgvector: %w", err)
+	}
+	defer rows.Close()
+
+	var results []TruthSearchResult
+	for rows.Next() {
+		var res TruthSearchResult
+		if err := rows.Scan(&res.MemoryID, &res.Context, &res.Distance); err != nil {
+			continue
+		}
+		results = append(results, res)
+	}
+	return results, nil
+}
 
 // AutoDreamWorkerDaemon runs ProcessMemories periodically.
 type AutoDreamWorkerDaemon struct {
-	worker *AutoDreamWorker
-	done   chan struct{}
+	worker   *AutoDreamWorker
+	done     chan struct{}
 	stopOnce sync.Once
 }
 
@@ -169,22 +338,30 @@ func NewAutoDreamWorkerDaemon(worker *AutoDreamWorker) *AutoDreamWorkerDaemon {
 	}
 }
 
-
 // ConsolidateMemories processes the backlog of episodic memories into embeddings.
 // It fetches up to 100 rows where processed_at IS NULL.
 func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
+	tx, err := w.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
 	var rows db.Rows
-	var err error
 
 	if w.pool.IsSQLite() {
-		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100")
+		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 500")
 	} else {
 		// Postgres lock row for update so no other worker picks it up
-		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100 FOR UPDATE SKIP LOCKED")
+		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 500 FOR UPDATE SKIP LOCKED")
 	}
 	if err != nil {
 		return fmt.Errorf("failed to fetch unprocessed memories: %w", err)
 	}
+	mode := kairos.GetMode()
+	start := time.Now()
+	_ = mode
+	_ = start
 
 	type memEntry struct {
 		id      string
@@ -223,23 +400,48 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 			}
 		}
 
-		embStr := formatFloat32SliceForVector(embedding)
+		var embStr string
+		if w.pool.IsSQLite() {
+			embBytes, _ := json.Marshal(embedding)
+			embStr = string(embBytes)
+		} else {
+			embStr = formatFloat32SliceForVector(embedding)
+		}
 
 		var query string
 		if w.pool.IsSQLite() {
-			query = "UPDATE autodream_memories SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
+			query = "UPDATE autodream_memories SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id"
 		} else {
-			query = "UPDATE autodream_memories SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2"
+			query = "UPDATE autodream_memories SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id"
 		}
 
-		_, updateErr := w.pool.Exec(ctx, query, embStr, e.id)
-		if updateErr != nil {
+		var retId string
+		updateErr := tx.QueryRow(ctx, query, embStr, e.id).Scan(&retId)
+		if updateErr != nil && updateErr.Error() != "sql: no rows in result set" && updateErr.Error() != "no rows in result set" {
 			slog.Error("AutoDream: failed to update memory", "id", e.id, "error", updateErr)
 		} else {
 			slog.Debug("AutoDream: consolidated memory", "id", e.id)
+			telemetry.RecordAutoDreamConsolidation(ctx, "autodream_worker")
+			if w.mesh != nil {
+				payload := map[string]interface{}{
+					"agent_id":  "auto-dream-worker",
+					"action":    "CONSOLIDATED",
+					"status":    "SUCCESS",
+					"memory_id": e.id,
+				}
+				payloadBytes, err := json.Marshal(payload)
+				if err == nil {
+					w.mesh.BroadcastMeshEvent(ctx, "tasks", payloadBytes)
+				} else {
+					slog.Error("AutoDream: failed to marshal mesh event", "error", err)
+				}
+			}
 		}
 	}
 
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
+	}
 	return nil
 }
 
@@ -257,6 +459,9 @@ func (d *AutoDreamWorkerDaemon) Start(ctx context.Context) {
 		case <-ticker.C:
 			if err := d.worker.ProcessMemories(ctx); err != nil {
 				slog.Error("AutoDreamWorkerDaemon: failed to process memories", "error", err)
+			}
+			if err := d.worker.IngestCompletedTasks(ctx); err != nil {
+				slog.Error("AutoDreamWorkerDaemon: failed to ingest completed tasks", "error", err)
 			}
 			if err := d.worker.ConsolidateMemories(ctx); err != nil {
 				slog.Error("AutoDreamWorkerDaemon: failed to consolidate memories", "error", err)

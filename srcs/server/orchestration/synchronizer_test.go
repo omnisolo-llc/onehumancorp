@@ -169,7 +169,7 @@ func TestSwarmSynchronizer_Sanitization(t *testing.T) {
 	input := "John Doe's phone is 555-1234"
 	expected := sanitizeContext(input)
 
-	// Assuming RedactPII works or strips something, just check it does not panic
+	// Assuming RedactPII works or strips something, check that it does not panic
 	// and doesn't just prepend [SANITIZED] anymore
 	assert.NotEqual(t, "[SANITIZED] John Doe's phone is 555-1234", expected)
 }

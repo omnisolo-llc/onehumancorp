@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "growth",
+    srcs = ["experiments.go"],
+    importpath = "ohc/srcs/services/growth",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "growth_test",
+    srcs = ["experiments_test.go"],
+    embed = [":growth"],
+)

@@ -137,3 +137,24 @@ func TestMeshHandlerStream(t *testing.T) {
 		t.Errorf("expected 'hello stream', got '%s'", string(msg))
 	}
 }
+
+func TestMeshHandlerBroadcastEvent(t *testing.T) {
+    service := NewMemoryMeshService()
+    handler := NewMeshHandler(service)
+
+    body := `{"agent_id": "worker-1", "channel": "orchestration.tasks", "action": "TaskTransition", "status": "success", "payload": {}}`
+    req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBufferString(body))
+
+    // Add auth claims to context
+    claims := &auth.Claims{OrganizationID: "org-1"}
+    ctx := context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, claims)
+    req = req.WithContext(ctx)
+
+    w := httptest.NewRecorder()
+
+    handler.Broadcast(w, req)
+
+    if w.Code != http.StatusOK {
+        t.Errorf("expected status %d, got %d", http.StatusOK, w.Code)
+    }
+}

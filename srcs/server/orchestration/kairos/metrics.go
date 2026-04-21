@@ -8,6 +8,8 @@ import (
 
 var (
 	// TransitionsTotal tracks the total number of KAIROS state transitions.
+	// Hybrid metrics coverage for Cloud vs Standalone modes.
+	// (Hybrid Metrics coverage for Cloud vs Standalone modes)
 	TransitionsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "ohc_kairos_transitions_total",

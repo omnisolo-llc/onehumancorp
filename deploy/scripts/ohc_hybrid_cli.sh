@@ -22,6 +22,7 @@ while true; do
     echo -e "  3) Run Diagnostics"
     echo -e "  4) Launch Quick Start (Standalone)"
     echo -e "  5) Provision AI Agent"
+    echo -e "  6) Standalone DB Health Check"
     echo -e "  0) Exit"
     read -p "Choice: " choice
 
@@ -31,7 +32,18 @@ while true; do
         3) bash "$SCRIPT_DIR/ohc-diagnostics.sh" || echo -e "${PURPLE}Diagnostics returned non-zero exit status.${RESET}" ;;
         4) bash "$SCRIPT_DIR/ohc-quick-start.sh" || echo -e "${PURPLE}Quick Start returned non-zero exit status.${RESET}" ;;
         5) bash "$SCRIPT_DIR/ohc-agent-wizard.sh" || echo -e "${PURPLE}Agent Provisioning returned non-zero exit status.${RESET}" ;;
+        6)
+            if ! command -v sqlite3 &> /dev/null; then
+                echo -e "${PURPLE}✗ sqlite3 is not installed. Please install it to perform the DB Health Check.${RESET}"
+            elif [ -f "local_standalone.db" ]; then
+                echo -e "${GREEN}✓ Standalone DB found. Checking tables...${RESET}"
+                sqlite3 "local_standalone.db" ".tables"
+            else
+                echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
+            fi
+            ;;
         0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
 done
+# Trivial comment to generate diff

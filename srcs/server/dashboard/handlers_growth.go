@@ -139,7 +139,7 @@ type ViralCoefficientResponse struct {
 	KFactor          float64 `json:"kFactor"` // conversions per unique inviter
 }
 
-func (s *Server) handleDownloads(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleDownloads(w http.ResponseWriter, r *http.Request) { // Proactive download tracking
 	switch r.Method {
 	case http.MethodGet:
 		s.mu.RLock()

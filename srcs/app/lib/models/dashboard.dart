@@ -1,3 +1,4 @@
+import 'yaml_utils.dart';
 import 'package:ohc_app/models/agent.dart';
 
 /// Dashboard snapshot domain model.
@@ -54,12 +55,14 @@ class Organization {
   final String name;
   final String domain;
   final List<OrganizationMember> members;
+  final List<RoleProfile> roleProfiles;
 
   const Organization({
     required this.id,
     required this.name,
     required this.domain,
     required this.members,
+    required this.roleProfiles,
   });
 
   factory Organization.fromJson(Map<String, dynamic> json) {
@@ -74,6 +77,25 @@ class Organization {
               )
               .toList() ??
           [],
+      roleProfiles:
+          (json['roleProfiles'] as List<dynamic>?)
+              ?.map(
+                (e) => RoleProfile.fromJson(e as Map<String, dynamic>),
+              )
+              .toList() ??
+          [],
+    );
+  }
+}
+
+class RoleProfile {
+  final String role;
+
+  const RoleProfile({required this.role});
+
+  factory RoleProfile.fromJson(Map<String, dynamic> json) {
+    return RoleProfile(
+      role: json['role'] as String? ?? '',
     );
   }
 }

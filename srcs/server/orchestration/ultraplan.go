@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"github.com/google/uuid"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +21,7 @@ import (
 )
 
 // compressUltraPlanData compresses the given byte slice using gzip and encodes it to base64 string.
+// added for issue 4184: implement proactive storage compression for KAIROS UltraPlan
 func compressUltraPlanData(data []byte) (string, error) {
 	var b bytes.Buffer
 	w := gzip.NewWriter(&b)
@@ -127,7 +129,7 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 	var plan UltraPlan
 	var query string
 	if m.db.IsSQLite() {
-		plan.ID = generateID()
+		plan.ID = uuid.New().String()
 		query = `
 			INSERT INTO swarm_ultra_plans (id, mission_id, state_machine, status, created_at, updated_at)
 			VALUES ($1, $2, $3, 'DELIBERATING', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
@@ -160,14 +162,14 @@ func (m *UltraPlanManager) CreatePlan(ctx context.Context, missionID string, sta
 		// Use Publish function instead of the hallucinated PublishTaskBroadcast
 		go func() {
 			msg := Message{
-				ID:        generateID(),
+				ID:        uuid.New().String(),
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "ULTRAPLAN_CREATE",
-				Payload:   string(stateMachineJSON),
-				Status:    plan.Status,
+				Content:   string(stateMachineJSON),
+
 			}
-			_ = m.hub.Publish(msg)
+				m.hub.PublishCoordinationMessage(msg)
 		}()
 	}
 
@@ -330,14 +332,14 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 	if m.hub != nil {
 		go func() {
 			msg := Message{
-				ID:        generateID(),
+				ID:        uuid.New().String(),
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      eventType,
-				Payload:   string(updatedJSON),
-				Status:    plan.Status,
+				Content:   string(updatedJSON),
+
 			}
-			_ = m.hub.Publish(msg)
+				m.hub.PublishCoordinationMessage(msg)
 		}()
 	}
 
@@ -441,14 +443,14 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 		// Use Publish function or custom logic instead of the hallucinated PublishTaskBroadcast
 		go func() {
 			msg := Message{
-				ID:        generateID(),
+				ID:        uuid.New().String(),
 				FromAgent: "system",
 				ToAgent:   "system",
 				Type:      "ULTRAPLAN_UPDATE",
-				Payload:   string(stateMachineJSON),
-				Status:    newStatus,
+				Content:   string(stateMachineJSON),
+
 			}
-			_ = m.hub.Publish(msg)
+				m.hub.PublishCoordinationMessage(msg)
 		}()
 	}
 

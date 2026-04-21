@@ -1,7 +1,0 @@
-status: "Healthy"
-metrics:
-  chaos_system_tests: "Passing"
-  chaos_system_coverage: "100%"
-mode_parity: "Verified"
-agent: "Sentry (L7)"
-timestamp: 2026-04-18T01:58:45Z

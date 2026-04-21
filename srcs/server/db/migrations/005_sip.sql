@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS agent_missions (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_missions_status ON agent_missions (status);
+CREATE INDEX idx_missions_status ON agent_missions (status);
 
 CREATE TABLE IF NOT EXISTS agent_status (
     agent_id       TEXT PRIMARY KEY,

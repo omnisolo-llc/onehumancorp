@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
@@ -39,10 +38,12 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 }
 
 func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
+	// The problem states we need to implement AutoDreamWorker.
+	// Since consolidated_memory does not have source_mission_id, we will format content as "Task [ID]: [content]"
 	query := `SELECT id, organization_id, COALESCE(description, '') AS content
 	          FROM shared_tasks_decomposition
 	          WHERE status IN ('DONE', 'COMPLETED')
-	          AND id NOT IN (SELECT source_mission_id FROM autodream_memories WHERE source_mission_id IS NOT NULL)`
+	          AND id NOT IN (SELECT id FROM consolidated_memory WHERE source_type = 'task-consolidation')`
 
 	rows, err := w.pool.Query(ctx, query)
 	if err != nil {
@@ -97,15 +98,18 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 		}
 		embStr := "[" + strings.Join(strs, ",") + "]"
 
-		memID := uuid.New().String()
+		// We will use t.ID as the memID so we can avoid duplicates easily (since we check for `id NOT IN ... WHERE source_type = 'task-consolidation'`)
+		// But in the query above we did `id NOT IN (SELECT id FROM consolidated_memory)`. Wait, we should use task ID as the consolidated_memory ID.
+		memID := t.ID
+		content := fmt.Sprintf("Task [%s]: %s", t.ID, t.Content)
 
-		insertQuery := `INSERT INTO autodream_memories (id, organization_id, source_mission_id, content, embedding, agent_id, source_type)
-		               VALUES ($1, $2, $3, $4, $5, 'autodream-worker', 'task-consolidation')`
-		_, err := w.pool.Exec(ctx, insertQuery, memID, t.OrganizationID, t.ID, t.Content, embStr)
+		insertQuery := `INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type)
+		               VALUES ($1, $2, 'autodream-worker', $3, $4, 'task-consolidation')`
+		_, err := w.pool.Exec(ctx, insertQuery, memID, t.OrganizationID, content, embStr)
 		if err != nil {
-			insertQueryPg := `INSERT INTO autodream_memories (id, organization_id, source_mission_id, content, embedding, agent_id, source_type)
-			               VALUES ($1, $2, $3, $4, $5::vector, 'autodream-worker', 'task-consolidation')`
-			_, errPg := w.pool.Exec(ctx, insertQueryPg, memID, t.OrganizationID, t.ID, t.Content, embStr)
+			insertQueryPg := `INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type)
+			               VALUES ($1, $2, 'autodream-worker', $3, $4::vector, 'task-consolidation')`
+			_, errPg := w.pool.Exec(ctx, insertQueryPg, memID, t.OrganizationID, content, embStr)
 			if errPg != nil {
 				slog.Error("AutoDreamWorker: failed to insert memory", "task_id", t.ID, "error", errPg)
 			} else {

@@ -1,49 +1,59 @@
-# OHC KAIROS Master Orchestration Design
+# Kairos: Master Design Doc
 
-## 1. Overview
-The KAIROS Orchestrator acts as the central brain for the OHC Swarm. It decomposes complex user intents into manageable tasks, tracks their execution via a state machine, and synchronizes memory via the AutoDream pipeline.
+## Overview
+This document outlines the architectural design for the Kairos system, specifically focusing on the Shared Task List and Realtime Teammate Mesh components, as well as the initial framework for AutoDream data pipelines.
 
-## 2. Shared Task List Architecture
-To support both Cloud-Native and Standalone Desktop modes, the Shared Task List relies on a hybrid DB schema.
-- **Tasks Table**: `id`, `title`, `description`, `status`, `assigned_agent`, `created_at`, `updated_at`.
-- **Hybrid Support**: Uses `datetime('now')` for SQLite and `NOW()` for PostgreSQL.
+## 1. Shared Task List Architecture
+The Shared Task List manages the swarm's high-level objectives and granular sub-tasks, ensuring consistency across the Hybrid Architecture (Cloud PostgreSQL and Local SQLite).
 
-## 3. Realtime Teammate Mesh APIs
-The Teammate Mesh facilitates inter-agent communication and task state broadcasting.
-- **Channels**: Standardized channels such as `mesh:tasks` and `mesh:coordination`.
-- **Implementation (Cloud)**: Backed by Redis Pub/Sub (e.g., using `rueidis`).
-- **Implementation (Local)**: Backed by an in-memory event bus to degrade gracefully when Redis is absent.
+### Database Schema
+*   **Tables:** `shared_tasks`, `task_dependencies`
+*   **Fields:**
+    *   `id` (UUID/TEXT)
+    *   `organization_id` (String)
+    *   `title` (String)
+    *   `description` (String)
+    *   `status` (String - PENDING, IN_PROGRESS, COMPLETED, FAILED)
+    *   `priority` (String - P0, P1, P2)
+    *   `agent_id` (String - assigned agent)
+    *   `created_at`, `updated_at` (Timestamps)
+*   **Compatibility:**
+    *   PostgreSQL utilizes native `UUID` and `TIMESTAMP WITH TIME ZONE`.
+    *   SQLite adapts with `TEXT` for IDs and `DATETIME` for timestamps.
 
-## 4. AutoDream Data Pipeline
-The AutoDream pipeline is responsible for long-term memory consolidation.
-- **Vector Embeddings**: Vector embeddings generated from agent episodic memory are stored. In Go, these are mapped to `[]byte` natively (not `[]float32` JSON).
-- **Consolidation Cycle**: Background jobs periodically summarize raw task logs and commit the resulting embeddings to the vector DB (pgvector or local SQLite equivalent).
+### API Contracts
+*   `POST /api/orchestration/tasks`: Create a new task or sub-task.
+*   `GET /api/orchestration/tasks`: Retrieve tasks, optionally filtered by agent, status, or organization.
 
-## 5. Sub-Agent Orchestration & State Machine
-- **State Tracking**: A distributed state machine tracks the lifecycle of complex architectural tasks to prevent deadlocks.
-- **Coordination**: Uses distributed Redis locks in Cloud mode to coordinate concurrent access to shared resources.
+## 2. Teammate Mesh Architecture
+The Teammate Mesh provides a low-latency, real-time communication layer for agent coordination and event broadcasting.
 
-## 6. Premium Visual Identity
-All orchestration dashboards must adhere to the OHC Premium Aesthetic:
-- Glassmorphism effects with a 20px background blur.
-- Background tint: `rgba(255, 255, 255, 0.03)`.
-- Typography: Outfit/Inter font families.
+### Transport Layer
+*   **Cloud-Native Mode:** Utilizes Redis Pub/Sub (`redis_mesh.go`).
+*   **Standalone Desktop Mode:** Employs a local memory-based pub/sub bus (`local_mesh.go`).
 
-## 7. Sequence Diagrams
+### Channels
+*   `mesh:tasks`: Used for broadcasting task lifecycle events (creation, assignment, completion).
+*   `mesh:coordination`: Used for synchronous worker state transitions and inter-agent capability advertisements.
+*   `mesh:presence`: Used for heartbeat and status updates (IDLE, WORKING).
 
-### Shared Task Assignment Flow
-```mermaid
-sequenceDiagram
-    participant Planner Agent
-    participant KAIROS DB (Tasks)
-    participant Implementer Agent
-    participant AutoDream Pipeline
-
-    Planner Agent->>KAIROS DB (Tasks): Insert Task (status: PENDING)
-    Implementer Agent->>KAIROS DB (Tasks): Query for PENDING Task
-    KAIROS DB (Tasks)-->>Implementer Agent: Return Task ID
-    Implementer Agent->>KAIROS DB (Tasks): UPDATE Task (status: IN_PROGRESS)
-    Implementer Agent->>Implementer Agent: Execute Task
-    Implementer Agent->>KAIROS DB (Tasks): UPDATE Task (status: DONE)
-    Implementer Agent->>AutoDream Pipeline: Submit Episodic Logs
+### Core Interfaces (Go)
+```go
+type TeammateMesh interface {
+    Publish(ctx context.Context, topic string, payload []byte) error
+    Subscribe(ctx context.Context, topic string, handler func(msg []byte)) (Subscription, error)
+    AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error)
+    ReleaseLock(ctx context.Context, key string) error
+    RegisterPresence(ctx context.Context, agentID string, status string) error
+    GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
+}
 ```
+
+## 3. AutoDream Data Pipeline Architecture
+The AutoDream pipeline handles the consolidation of short-term episodic memory into long-term embedded knowledge.
+
+### Processing Flow
+1.  **Short-term Memory:** Agents generate episodic summaries during task execution.
+2.  **Episodic Summaries:** These summaries are buffered locally or in the cloud.
+3.  **Embedding (LLM):** A background worker extracts insights and generates vector embeddings.
+4.  **Vector DB:** The embeddings are stored in `consolidated_memory` using `pgvector` (PostgreSQL) or a local blob/approximate index (SQLite).

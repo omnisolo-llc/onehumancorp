@@ -38,7 +38,6 @@ filegroup(
             "assets/**",
             "android/**",
             "BUILD.bazel",
-            "e2e/**",
             "ios/**",
             "lib/*.dart",
             "linux/**",
@@ -184,6 +183,117 @@ flutter_test(
     workspace_pubspec = "//:pubspec.yaml",
 )
 
+# ── CUJ e2e Flutter test targets ─────────────────────────────────────────────
+# Each target covers one critical user journey (CUJ) to enable fine-grained
+# caching: a code change in one feature only invalidates the related target.
+
+flutter_test(
+    name = "cuj_auth_e2e_test",
+    srcs = ["test/cuj_auth_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_auth_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_agents_hire_e2e_test",
+    srcs = ["test/cuj_agents_hire_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_agents_hire_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_cost_e2e_test",
+    srcs = ["test/cuj_cost_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_cost_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_handoffs_e2e_test",
+    srcs = ["test/cuj_handoffs_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_handoffs_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_pipelines_e2e_test",
+    srcs = ["test/cuj_pipelines_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_pipelines_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_users_e2e_test",
+    srcs = ["test/cuj_users_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_users_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_integrations_e2e_test",
+    srcs = ["test/cuj_integrations_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_integrations_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_channels_extra_e2e_test",
+    srcs = ["test/cuj_channels_extra_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_channels_extra_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_scaling_e2e_test",
+    srcs = ["test/cuj_scaling_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_scaling_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_diagnostics_referrals_e2e_test",
+    srcs = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+test_suite(
+    name = "cuj_e2e_tests",
+    tags = ["manual"],
+    tests = [
+        ":cuj_auth_e2e_test",
+        ":cuj_agents_hire_e2e_test",
+        ":cuj_cost_e2e_test",
+        ":cuj_handoffs_e2e_test",
+        ":cuj_pipelines_e2e_test",
+        ":cuj_users_e2e_test",
+        ":cuj_integrations_e2e_test",
+        ":cuj_channels_extra_e2e_test",
+        ":cuj_scaling_e2e_test",
+        ":cuj_diagnostics_referrals_e2e_test",
+    ],
+)
+
 # ── Flutter web app build ─────────────────────────────────────────────────────
 # Builds the Flutter app for the web platform.  The resulting artifacts are used
 # by the Playwright e2e test target below.
@@ -220,26 +330,6 @@ flutter_app(
     workspace_pubspec = "//:pubspec.yaml",
 )
 
-# ── Web E2E tests (Playwright) ────────────────────────────────────────────────
-# Serves the built Flutter web app and runs Playwright tests against it in a
-# real Chromium browser.  Depends on the web build artifacts from :app_web.
-
-sh_test(
-    name = "app_web_e2e_test",
-    srcs = ["test/flutter_web_e2e_test.sh"],
-    data = [
-        "e2e/playwright.config.ts",
-        "e2e/web.spec.ts",
-        ":app",
-        "//:node_modules/@playwright/test",
-        "//srcs/server:ohc",
-    ],
-    tags = [
-        "manual",
-        "requires-network",
-    ],  # browser download may need network on first run
-)
-
 # ── Local Development targets ─────────────────────────────────────────────────
 
 sh_binary(
@@ -253,7 +343,6 @@ sh_binary(
     name = "capture_screenshots",
     srcs = ["test/capture_screenshots.sh"],
     data = [
-        "e2e/capture_screenshots.mjs",
         ":app",
         "//:node_modules/@playwright/test",
     ],

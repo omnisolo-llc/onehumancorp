@@ -3,13 +3,14 @@ package queue
 import (
 	"context"
 	"errors"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"testing"
 	"strings"
 	"time"
 )
 
 func TestQueueManagerLoop(t *testing.T) {
-	provider := newTestProvider(t)
+	provider := db.NewTestProvider(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -67,6 +68,7 @@ func TestQueueManagerLoop(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 	cancel() // stop polling
+	time.Sleep(50 * time.Millisecond)
 
 	if len(processedJobs) != 2 {
 		t.Fatalf("Expected 2 jobs to be processed, got %d", len(processedJobs))

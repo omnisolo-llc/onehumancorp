@@ -120,6 +120,12 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	RolePayrollManager Role = "PAYROLL_MANAGER"
+	// RoleAINewsCollector defines the standard operational responsibilities and system access boundaries for the AINewsCollector persona.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	RoleAINewsCollector Role = "AI_NEWS_COLLECTOR"
 )
 
 // Member represents a distinct individual (human or AI agent) assigned to a specific role within the organizational hierarchy.
@@ -187,6 +193,7 @@ func NewSoftwareCompany(id, name, ceoName string, now time.Time) Organization {
 		{ID: id + "-swe-2", Name: "Software Engineer 2", Role: RoleSoftwareEngineer, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-qa-1", Name: "QA Tester", Role: RoleQATester, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-security-1", Name: "Security Engineer", Role: RoleSecurityEngineer, ManagerID: directorID, IsHuman: false},
+		{ID: id + "-news-1", Name: "AI News Collector", Role: RoleAINewsCollector, ManagerID: directorID, IsHuman: false},
 	}
 
 	return Organization{
@@ -367,6 +374,20 @@ func defaultSoftwareCompanyRoleProfiles() []RoleProfile {
 				"code diffs",
 				"dependency inventory",
 				"deployment risk",
+			},
+		},
+		{
+			Role:       RoleAINewsCollector,
+			BasePrompt: "Continuously monitor and retrieve the latest news and industry updates relevant to the organization.",
+			Capabilities: []string{
+				"Scrape news sources",
+				"Summarize articles",
+				"Filter by relevance",
+			},
+			ContextInputs: []string{
+				"news feeds",
+				"search queries",
+				"market trends",
 			},
 		},
 	}

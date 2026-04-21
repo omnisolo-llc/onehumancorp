@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	meshapi "github.com/onehumancorp/mono/api/mesh"
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
+	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -27,8 +27,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
@@ -611,6 +611,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
 	mux.HandleFunc("/api/sync/escalation", auth.RequireRole("system", api.HandleSyncEscalation(server.hub)))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))
+	// added for issue 4331: sync rag endpoint with system role
 	mux.HandleFunc("/api/orchestration/sync/rag", auth.RequireRole("system", server.handleSyncRAG))
 	mux.HandleFunc("/api/mcp/rag/sync", auth.RequireRole("system", server.handleMcpRagSync))
 	// Phase 5 – Compute Optimisation / Hardware-Aware Scheduling
@@ -647,6 +648,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.TeammateMesh.HandlePublish))
 	mux.HandleFunc("/api/mesh/subscribe", auth.RequireRole("system", server.TeammateMesh.HandleSubscribe))
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
+	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
@@ -656,7 +658,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/auth/me", server.authHandlers.HandleMe)
 	// PowerSync Endpoints
 	mux.HandleFunc("/api/auth/powersync/jwks", auth.PowerSyncJWKSHandler())
-	mux.HandleFunc("/api/auth/powersync/token", auth.PowerSyncTokenHandler(server.authStore))
+	mux.HandleFunc("/api/auth/powersync/token", auth.RequireRole("viewer", auth.PowerSyncTokenHandler(server.authStore)))
 	// User management (admin only)
 	mux.HandleFunc("/api/users", server.authHandlers.HandleUsers)
 	mux.HandleFunc("/api/users/", server.authHandlers.HandleUser)
@@ -922,7 +924,7 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.WriteString(w, `<!doctype html><html><head><title>Frontend</title></head><body><h1>One Human Corp — Web client not found</h1><p>Please ensure that the Flutter web client has been built and that FRONTEND_STATIC_DIR is correctly set.</p></body></html>`)
 }
 
-func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { // added for ohc_mesh_broadcast_total metric instrumentation
 	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		mode = "standalone"
@@ -1942,7 +1944,7 @@ type pipelinePromoteRequest struct {
 }
 
 // handleStream pushes real-time state changes via Server-Sent Events (SSE)
-func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) { // added for streaming real-time orchestration events
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)

@@ -291,9 +291,14 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 	shard.usages = append(shard.usages, usage)
 	shard.mu.Unlock()
 
-	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "prompt", usage.PromptTokens)
-	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "completion", usage.CompletionTokens)
-	telemetry.RecordTokenUsage(context.Background(), usage.AgentID, usage.AgentRole, usage.Model, "cached", usage.CachedTokens)
+	ctx := context.Background()
+	telemetry.RecordTokenUsage(ctx, usage.AgentID, usage.AgentRole, usage.Model, "prompt", usage.PromptTokens)
+	telemetry.RecordTokenUsage(ctx, usage.AgentID, usage.AgentRole, usage.Model, "completion", usage.CompletionTokens)
+	telemetry.RecordTokenUsage(ctx, usage.AgentID, usage.AgentRole, usage.Model, "cached", usage.CachedTokens)
+
+	// Record unified agent metrics
+	telemetry.RecordAgentTokenUsage(ctx, usage.AgentID, usage.OrganizationID, usage.AgentRole, usage.Model, usage.PromptTokens+usage.CompletionTokens+usage.CachedTokens)
+	telemetry.RecordAgentCost(ctx, usage.AgentID, usage.OrganizationID, usage.AgentRole, usage.Model, usage.CostUSD)
 
 	return usage, nil
 }

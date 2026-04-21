@@ -2,7 +2,11 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "config",
-    srcs = ["config.go"],
+    srcs = [
+        "config.go",
+        "config_standalone.go",
+        "config_standalone_stub.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/server/config",
     visibility = ["//visibility:public"],
     deps = [

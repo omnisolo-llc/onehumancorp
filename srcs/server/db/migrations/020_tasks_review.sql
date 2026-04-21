@@ -4,7 +4,7 @@
 CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
 
 -- Since swarm_tasks is no longer guaranteed to have 'locked_until' in all migration paths for SQLite, we will rely on shared_tasks logic.
--- CREATE INDEX IF NOT EXISTS idx_swarm_tasks_status_locked_until ON swarm_tasks(status, locked_until);
+-- CREATE INDEX idx_swarm_tasks_status_locked_until ON swarm_tasks(status, locked_until);
 
 -- Drop the old constraint if it exists.
 -- In SQLite this syntax will be ignored by our migrator, but we can just skip it,

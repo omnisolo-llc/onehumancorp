@@ -2,7 +2,7 @@ package growth
 
 import (
 	"context"
-	"github.com/onehumancorp/mono/lib/analytics"
+	"github.com/onehumancorp/mono/srcs/server/lib/analytics"
 	"sync"
 )
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/google/uuid"
 )
 
@@ -18,9 +19,12 @@ type McpSyncProxy struct {
 	dbProvider   db.Provider
 	cloudGateway string
 	httpClient   *http.Client
+	mode         string
+	authorizer   *CapabilityAuthorizer
 }
 
-func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string) *McpSyncProxy {
+func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string, authorizer *CapabilityAuthorizer) *McpSyncProxy {
+	start := time.Now()
 	// For SPIFFE mTLS we would typically use a SPIFFE workload API client to get the tls.Config.
 	// We configure a basic TLS client here as placeholder/simulation of mTLS if not fully fleshed out.
 	tr := &http.Transport{
@@ -28,15 +32,34 @@ func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string) *McpSyncProxy 
 			// In production, configure mTLS certificates
 		},
 	}
-	return &McpSyncProxy{
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+
+	if authorizer == nil {
+		authorizer = NewCapabilityAuthorizer(nil)
+	}
+
+	proxy := &McpSyncProxy{
 		dbProvider:   dbProvider,
 		cloudGateway: cloudGateway,
 		httpClient:   &http.Client{Timeout: 10 * time.Second, Transport: tr},
+		mode:         mode,
+		authorizer:   authorizer,
 	}
+
+	telemetry.RecordHarnessInitLatency(context.Background(), float64(time.Since(start).Milliseconds()), mode)
+
+	return proxy
+}
+
+func (p *McpSyncProxy) GetAuthorizer() *CapabilityAuthorizer {
+	return p.authorizer
 }
 
 // Buffer buffers a tool execution request into the local SQLite database.
-func (p *McpSyncProxy) Buffer(ctx context.Context, toolName string, arguments map[string]interface{}) (string, error) {
+func (p *McpSyncProxy) Buffer(ctx context.Context, sessionID, capability, toolName string, arguments map[string]interface{}) (string, error) {
 	if !p.dbProvider.IsSQLite() {
 		// If we are in the cloud (Postgres), we might just directly push to the gateway or queue,
 		// but the prompt mentions "buffer integration metadata locally in SQLite during Standalone mode"
@@ -49,9 +72,12 @@ func (p *McpSyncProxy) Buffer(ctx context.Context, toolName string, arguments ma
 		return "", fmt.Errorf("failed to marshal arguments: %w", err)
 	}
 
+	start := time.Now()
 	_, err = p.dbProvider.Exec(ctx,
 		"INSERT INTO hybrid_mcp_sync_queue (id, tool_name, arguments, status, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)",
 		id, toolName, string(argsBytes), "PENDING")
+
+	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
 	if err != nil {
 		return "", fmt.Errorf("failed to buffer to db: %w", err)
 	}
@@ -61,7 +87,10 @@ func (p *McpSyncProxy) Buffer(ctx context.Context, toolName string, arguments ma
 
 // Sync periodically syncs buffered tool executions to the cloud gateway.
 func (p *McpSyncProxy) Sync(ctx context.Context) (int, error) {
+	start := time.Now()
 	rows, err := p.dbProvider.Query(ctx, "SELECT id, tool_name, arguments FROM hybrid_mcp_sync_queue WHERE status = 'PENDING' LIMIT 50")
+
+	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query queue: %w", err)
 	}

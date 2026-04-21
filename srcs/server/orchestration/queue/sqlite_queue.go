@@ -201,3 +201,4 @@ func (q *SQLiteTaskQueue) Fail(ctx context.Context, jobID string, reason string)
 	_, err = q.provider.Exec(ctx, updateQuery, status, nextRunAfter, lockUntil, time.Now().Format(time.RFC3339Nano), payloadStr, jobID)
 	return err
 }
+// added for Sub-Agent Orchestration Queue
