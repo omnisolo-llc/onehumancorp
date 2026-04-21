@@ -430,6 +430,101 @@ func (s *Server) handleScaleStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *Server) handleTelemetrySyncV1(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var batch []struct {
+		MetricName string      `json:"metric_name"`
+		Payload    interface{} `json:"payload"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&batch); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	ctx := r.Context()
+	for _, item := range batch {
+		payloadBytes, _ := json.Marshal(item.Payload)
+		// We re-record the metric in the Cloud TSDB but with deployment_mode="standalone"
+		// The specific telemetry recording functions should be called here or a generic one.
+		// Since we want to ensure deployment_mode="standalone", we can use attributes.
+
+		// For now, let's use the existing Record... functions if they support it,
+		// but most don't take extra labels.
+		// A better way is to have a generic recorder that takes name and labels.
+
+		// According to the problem statement: "Ensure that synced metrics append the deployment_mode="standalone" label."
+		// AND "all Prometheus histogram_quantile queries rely on sum() by specific labels (such as le, mode, deployment_mode)"
+
+		// Let's implement a dispatcher similar to handleTelemetrySync but more robust.
+		s.dispatchTelemetryV1(ctx, item.MetricName, item.Payload)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) dispatchTelemetryV1(ctx context.Context, name string, payload interface{}) {
+	data, ok := payload.(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	// Force deployment_mode="standalone" attribute to all recorded metrics here.
+	// We inject it into the context or pass it explicitly to the recording functions.
+	// Since our Record... functions in telemetry.go now use helpers that can handle
+	// extra attributes, we should pass it there.
+
+	// For now, let's use the standard ones but ensure they get labeled.
+	// Actually, the requirement says "append the deployment_mode=standalone label".
+	// The helpers in telemetry_helpers.go don't currently support overriding the mode.
+	// Let's modify them.
+
+	switch name {
+	case "token_usage":
+		agentID, _ := data["agent_id"].(string)
+		role, _ := data["role"].(string)
+		model, _ := data["model"].(string)
+		tokenType, _ := data["type"].(string)
+		var count int64
+		if c, ok := data["count"].(float64); ok {
+			count = int64(c)
+		}
+		telemetry.RecordTokenUsageWithMode(ctx, agentID, role, model, tokenType, count, "standalone")
+	case "agent_token_usage":
+		agentID, _ := data["agent_id"].(string)
+		orgID, _ := data["organization_id"].(string)
+		role, _ := data["role"].(string)
+		model, _ := data["model"].(string)
+		var count int64
+		if c, ok := data["count"].(float64); ok {
+			count = int64(c)
+		}
+		telemetry.RecordAgentTokenUsageWithMode(ctx, agentID, orgID, role, model, count, "standalone")
+	case "agent_cost":
+		agentID, _ := data["agent_id"].(string)
+		orgID, _ := data["organization_id"].(string)
+		role, _ := data["role"].(string)
+		model, _ := data["model"].(string)
+		cost, _ := data["cost"].(float64)
+		telemetry.RecordAgentCostWithMode(ctx, agentID, orgID, role, model, cost, "standalone")
+	case "swarm_task_completed":
+		missionID, _ := data["mission_id"].(string)
+		telemetry.RecordSwarmTaskCompletedWithMode(ctx, missionID, "standalone")
+	case "agent_api_call":
+		agentID, _ := data["agent_id"].(string)
+		role, _ := data["role"].(string)
+		api, _ := data["api"].(string)
+		telemetry.RecordAgentApiCallWithMode(ctx, agentID, role, api, "standalone")
+	default:
+		slog.Debug("Received unhandled offline telemetry metric", "name", name)
+	}
+}
+
 func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

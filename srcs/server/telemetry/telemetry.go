@@ -919,80 +919,35 @@ func MetricsHandler() http.Handler {
 // Produces no errors.
 // Has no side effects.
 func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType string, count int64) {
-	if tokenUsageCounter == nil {
-		return
-	}
-	tokenUsageCounter.Add(ctx, count, metric.WithAttributes(
+	attrs := []attribute.KeyValue{
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("model", model),
 		attribute.String("type", tokenType),
-	))
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id": agentID,
-			"role":     role,
-			"model":    model,
-			"type":     tokenType,
-			"count":    count,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
 	}
+	recordInt64Count(ctx, tokenUsageCounter, "token_usage", count, attrs)
 }
 
 // RecordAgentTokenUsage increments the centralized agent token counter.
 func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, model string, count int64) {
-	if AgentTokenUsageTotal == nil {
-		return
-	}
-	AgentTokenUsageTotal.Add(ctx, count, metric.WithAttributes(
+	attrs := []attribute.KeyValue{
 		attribute.String("agent_id", agentID),
 		attribute.String("organization_id", organizationID),
 		attribute.String("role", role),
 		attribute.String("model", model),
-	))
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id":        agentID,
-			"organization_id": organizationID,
-			"role":            role,
-			"model":           model,
-			"count":           count,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "agent_token_usage", string(payloadBytes))
 	}
+	recordInt64Count(ctx, AgentTokenUsageTotal, "agent_token_usage", count, attrs)
 }
 
 // RecordAgentCost records the estimated USD cost of an agent operation.
 func RecordAgentCost(ctx context.Context, agentID, organizationID, role, model string, cost float64) {
-	if AgentCostEstimateUSD == nil {
-		return
-	}
-	AgentCostEstimateUSD.Add(ctx, cost, metric.WithAttributes(
+	attrs := []attribute.KeyValue{
 		attribute.String("agent_id", agentID),
 		attribute.String("organization_id", organizationID),
 		attribute.String("role", role),
 		attribute.String("model", model),
-	))
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id":        agentID,
-			"organization_id": organizationID,
-			"role":            role,
-			"model":           model,
-			"cost":            cost,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "agent_cost", string(payloadBytes))
 	}
+	recordFloat64Count(ctx, AgentCostEstimateUSD, "agent_cost", cost, attrs)
 }
 
 // RecordAgentApiCall increments the global counter for external tool or API invocations made by agents.
@@ -1007,25 +962,12 @@ func RecordAgentCost(ctx context.Context, agentID, organizationID, role, model s
 // Produces no errors.
 // Has no side effects.
 func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
-	if agentApiCallsCounter == nil {
-		return
-	}
-	agentApiCallsCounter.Add(ctx, 1, metric.WithAttributes(
+	attrs := []attribute.KeyValue{
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("api", api),
-	))
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id": agentID,
-			"role":     role,
-			"api":      api,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
 	}
+	recordInt64Count(ctx, agentApiCallsCounter, "agent_api_call", 1, attrs)
 }
 
 // RecordAgentApiError increments the global counter for external tool or API invocations errors made by agents.
@@ -1040,25 +982,12 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 // Produces no errors.
 // Has no side effects.
 func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
-	if agentApiErrorsCounter == nil {
-		return
-	}
-	agentApiErrorsCounter.Add(ctx, 1, metric.WithAttributes(
+	attrs := []attribute.KeyValue{
 		attribute.String("agent_id", agentID),
 		attribute.String("role", role),
 		attribute.String("api", api),
-	))
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id": agentID,
-			"role":     role,
-			"api":      api,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "agent_api_error", string(payloadBytes))
 	}
+	recordInt64Count(ctx, agentApiErrorsCounter, "agent_api_error", 1, attrs)
 }
 
 // RecordHumanInteraction increments the global counter for events involving direct human oversight.
@@ -1192,21 +1121,10 @@ func RecordUSDBurnRate(ctx context.Context, organizationID string, rate float64)
 
 // RecordSwarmTaskCompleted increments the global counter for completed swarm tasks.
 func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
-	if swarmTasksCompletedCounter == nil {
-		return
-	}
-	swarmTasksCompletedCounter.Add(ctx, 1, metric.WithAttributes(
+	attrs := []attribute.KeyValue{
 		attribute.String("mission_id", missionID),
-	))
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"mission_id": missionID,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
 	}
+	recordInt64Count(ctx, swarmTasksCompletedCounter, "swarm_task_completed", 1, attrs)
 }
 
 // RecordTokensSaved increments the global counter for estimated tokens saved by cache hits.
@@ -1370,10 +1288,7 @@ func RecordTeammateMeshBroadcast(ctx context.Context, channel string) {
 
 // RecordTeammateMeshDirectMessage increments the global counter for Teammate Mesh direct messages.
 func RecordTeammateMeshDirectMessage(ctx context.Context) {
-	if TeammateMeshDirectMessagesCounter == nil {
-		return
-	}
-	TeammateMeshDirectMessagesCounter.Add(ctx, 1)
+	recordInt64Count(ctx, TeammateMeshDirectMessagesCounter, "teammate_mesh_direct_messages_total", 1, nil)
 }
 
 // RecordAutoDreamMemoryIngested increments the counter when AutoDream ingests a memory.
@@ -1816,9 +1731,7 @@ func RecordSubAgentExecutionDuration(ctx context.Context, duration float64) {
 
 // RecordSubAgentFailure increments the counter for sub-agent failures.
 func RecordSubAgentFailure(ctx context.Context) {
-	if SubAgentFailuresTotal != nil {
-		SubAgentFailuresTotal.Add(ctx, 1)
-	}
+	recordInt64Count(ctx, SubAgentFailuresTotal, "ohc_sub_agent_failures_total", 1, nil)
 }
 
 // RecordIdentityVerification increments either success or failure counter based on the success flag.
@@ -1850,9 +1763,7 @@ func RecordOmniContextBytes(ctx context.Context, bytes int64) {
 
 // RecordRagEscalation increments the RAG escalation counter.
 func RecordRagEscalation(ctx context.Context) {
-	if RagEscalationCount != nil {
-		RagEscalationCount.Add(ctx, 1)
-	}
+	recordInt64Count(ctx, RagEscalationCount, "rag_escalation_count", 1, nil)
 }
 
 // RecordAutoDreamIngestionError records an ingestion error.

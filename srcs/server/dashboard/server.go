@@ -643,6 +643,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Standalone Cloud Sync Endpoints
 	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
+	mux.HandleFunc("/api/v1/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySyncV1))
 
 	// Teammate Mesh APIs
 	mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.TeammateMesh.HandlePublish))

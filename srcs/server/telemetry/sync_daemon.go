@@ -6,30 +6,36 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
+// SyncDaemon handles periodic synchronization of offline telemetry from local storage to the cloud.
 type SyncDaemon struct {
-	db          *sql.DB
-	cloudURL    string
+	db           *sql.DB
+	cloudURL     string
 	syncInterval time.Duration
-	batchSize   int
+	batchSize    int
 }
 
+// NewSyncDaemon creates a new instance of SyncDaemon.
 func NewSyncDaemon(db *sql.DB, cloudURL string, syncInterval time.Duration, batchSize int) *SyncDaemon {
 	return &SyncDaemon{
-		db:          db,
-		cloudURL:    cloudURL,
+		db:           db,
+		cloudURL:     cloudURL,
 		syncInterval: syncInterval,
-		batchSize:   batchSize,
+		batchSize:    batchSize,
 	}
 }
 
+// Start begins the background synchronization process.
 func (d *SyncDaemon) Start(ctx context.Context) {
 	ticker := time.NewTicker(d.syncInterval)
 	defer ticker.Stop()
+
+	slog.Info("Starting TelemetrySyncDaemon", "cloud_url", d.cloudURL, "interval", d.syncInterval)
 
 	for {
 		select {
@@ -37,16 +43,17 @@ func (d *SyncDaemon) Start(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if err := d.syncOnce(ctx); err != nil {
-				log.Printf("Telemetry sync failed: %v", err)
+				slog.Error("Telemetry sync failed", "error", err)
 			}
 		}
 	}
 }
 
 func (d *SyncDaemon) syncOnce(ctx context.Context) error {
-	rows, err := d.db.QueryContext(ctx, "SELECT id, metric_type, payload FROM telemetry_buffer ORDER BY id ASC LIMIT $1", d.batchSize)
+	// Query the new offline_telemetry_buffer table
+	rows, err := d.db.QueryContext(ctx, "SELECT id, metric_name, payload_bytes FROM offline_telemetry_buffer ORDER BY id ASC LIMIT ?", d.batchSize)
 	if err != nil {
-		return fmt.Errorf("query telemetry_buffer: %w", err)
+		return fmt.Errorf("query offline_telemetry_buffer: %w", err)
 	}
 	defer rows.Close()
 
@@ -55,13 +62,21 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 
 	for rows.Next() {
 		var id int64
-		var metricType, payload string
-		if err := rows.Scan(&id, &metricType, &payload); err != nil {
-			return fmt.Errorf("scan telemetry_buffer: %w", err)
+		var metricName string
+		var payloadBytes []byte
+		if err := rows.Scan(&id, &metricName, &payloadBytes); err != nil {
+			return fmt.Errorf("scan offline_telemetry_buffer: %w", err)
 		}
+
+		var payloadData interface{}
+		if err := json.Unmarshal(payloadBytes, &payloadData); err != nil {
+			slog.Warn("Failed to unmarshal telemetry payload", "id", id, "error", err)
+			continue
+		}
+
 		payloads = append(payloads, map[string]interface{}{
-			"metric_type": metricType,
-			"payload":     payload,
+			"metric_name": metricName,
+			"payload":     payloadData,
 		})
 		ids = append(ids, id)
 	}
@@ -75,7 +90,8 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, d.cloudURL+"/api/telemetry/sync", bytes.NewReader(body))
+	// Send to the v1 sync endpoint
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, d.cloudURL+"/api/v1/telemetry/sync", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("new request: %w", err)
 	}
@@ -91,13 +107,19 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	// Delete synced rows
-	for _, id := range ids {
-		if _, err := d.db.ExecContext(ctx, "DELETE FROM telemetry_buffer WHERE id = $1", id); err != nil {
-			return fmt.Errorf("delete telemetry_buffer id=%d: %w", id, err)
+	// Efficient batch deletion for successfully synced records
+	if len(ids) > 0 {
+		idStrs := make([]string, len(ids))
+		for i, id := range ids {
+			idStrs[i] = fmt.Sprintf("%d", id)
+		}
+		query := fmt.Sprintf("DELETE FROM offline_telemetry_buffer WHERE id IN (%s)", strings.Join(idStrs, ","))
+		if _, err := d.db.ExecContext(ctx, query); err != nil {
+			return fmt.Errorf("batch delete offline_telemetry_buffer: %w", err)
 		}
 	}
 
+	slog.Debug("Successfully synced telemetry batch", "count", len(ids))
 	return nil
 }
 
@@ -112,7 +134,8 @@ func InitStandaloneBuffer(db *sql.DB) {
 			}
 		}
 
-		_, err := db.ExecContext(ctx, "INSERT INTO telemetry_buffer (metric_type, payload) VALUES ($1, $2)", metricType, payload)
+		// Insert into offline_telemetry_buffer
+		_, err := db.ExecContext(ctx, "INSERT INTO offline_telemetry_buffer (metric_name, payload_bytes) VALUES (?, ?)", metricType, []byte(payload))
 		if err != nil {
 			return fmt.Errorf("failed to buffer metric %s: %w", metricType, err)
 		}
