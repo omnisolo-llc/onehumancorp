@@ -1,3 +1,4 @@
+import 'yaml_utils.dart';
 /// User domain model for RBAC and identity.
 class UserPublic {
   final String id;
@@ -38,6 +39,12 @@ class UserPublic {
     'active': active,
     'created_at': createdAt.toIso8601String(),
   };
+
+  /// Serializes this UserPublic to a YAML string.
+  String toYaml() => modelToYaml(toJson());
+
+  /// Deserializes a YAML string to a [UserPublic].
+  static UserPublic fromYaml(String yaml) => UserPublic.fromJson(modelFromYaml(yaml));
 
   bool get isAdmin => roles.contains('admin');
 }

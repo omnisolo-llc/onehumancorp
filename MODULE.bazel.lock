@@ -316,7 +316,7 @@
   "moduleExtensions": {
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
-        "bzlTransitiveDigest": "JkH1eDZCQD5f/N2wbACZXFt269f5zRFtw1vsk/vr8SQ=",
+        "bzlTransitiveDigest": "fqriFRbq45Y0SGRhj5dAU3t6mwYtVsworK9aBha0kho=",
         "usagesDigest": "oUw6GuSrFUfs77OVGTbgKitMUJvsMzzqPeJUgim32og=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -325,12 +325,12 @@
           "google_protobuf_dart": {
             "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
             "attributes": {
-              "sha256": "e83ae3109872f66d495437e98519c5ddc2e8369cb6aa393768ba50daf0bffa41",
-              "strip_prefix": "protobuf.dart-protoc_plugin-v23.0.0/protoc_plugin",
+              "sha256": "cae253935cb6d372a3df34bbbe82c3044f067e088d5216ac1f645c36b596a6ad",
+              "strip_prefix": "protobuf.dart-protoc_plugin-v25.0.0/protoc_plugin",
               "urls": [
-                "https://github.com/google/protobuf.dart/archive/refs/tags/protoc_plugin-v23.0.0.tar.gz"
+                "https://github.com/google/protobuf.dart/archive/refs/tags/protoc_plugin-v25.0.0.tar.gz"
               ],
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nfilegroup(\n    name = \"protoc_plugin_srcs\",\n    srcs = glob([\"**\"]),\n)\n\n# We use the host's dart (provided by @flutter_sdk//:dart) to compile this.\n# Note: In a full hermetic build, you'd use a dart_binary rule, but since we are\n# bootstrapped by rules_flutter, we use an action or genrule.\ngenrule(\n    name = \"protoc_plugin_bin\",\n    srcs = [\n        \":protoc_plugin_srcs\",\n        \"bin/protoc_plugin.dart\",\n        \"@pub_collection//:collection_files\",\n        \"@pub_fixnum//:fixnum_files\",\n        \"@pub_meta//:meta_files\",\n        \"@pub_path//:path_files\",\n        \"@pub_protobuf_v5//:protobuf_files\",\n    ],\n    outs = [\"protoc-gen-dart\"],\n    cmd = \"export HOME=/tmp && \" +\n          \"SRC_REPO=external/+proto_deps_extension+google_protobuf_dart && \" +\n          \"WORK_REPO=google_protobuf_dart.work && \" +\n          \"rm -rf $$WORK_REPO && cp -LR $$SRC_REPO $$WORK_REPO && chmod -R u+w $$WORK_REPO && \" +\n          \"mkdir -p $$WORK_REPO/.dart_tool && \" +\n          \"printf 'String format(String source) => source;\\n' > $$WORK_REPO/lib/src/formatter.dart && \" +\n          \"echo '{\\\"configVersion\\\": 2,\\\"packages\\\": [\" +\n          \"{\\\"name\\\": \\\"protoc_plugin\\\", \\\"rootUri\\\": \\\"../\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"collection\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_collection\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"fixnum\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_fixnum\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"meta\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_meta\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"path\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_path\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"protobuf\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_protobuf_v5\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"}\" +\n          \"]}' > $$WORK_REPO/.dart_tool/package_config.json && \" +\n          \"$(location @flutter_sdk//:dart) compile exe $$WORK_REPO/bin/protoc_plugin.dart -o $@\",\n    executable = True,\n    tools = [\"@flutter_sdk//:dart\"],\n)"
+              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nfilegroup(\n    name = \"protoc_plugin_srcs\",\n    srcs = glob([\"**\"]),\n)\n\n# Compile the protoc-gen-dart plugin using the hermetic Dart SDK from\n# @flutter_sdk//:dart.  The formatter stub avoids pulling dart_style and\n# pub_semver into the sandbox while still producing valid generated code.\ngenrule(\n    name = \"protoc_plugin_bin\",\n    srcs = [\n        \":protoc_plugin_srcs\",\n        \"bin/protoc_plugin.dart\",\n        \"@pub_collection//:collection_files\",\n        \"@pub_fixnum//:fixnum_files\",\n        \"@pub_meta//:meta_files\",\n        \"@pub_path//:path_files\",\n        \"@pub_protobuf_v6//:protobuf_files\",\n    ],\n    outs = [\"protoc-gen-dart\"],\n    cmd = \"export HOME=/tmp && \" +\n          \"SRC_REPO=external/+proto_deps_extension+google_protobuf_dart && \" +\n          \"WORK_REPO=google_protobuf_dart.work && \" +\n          \"rm -rf $$WORK_REPO && cp -LR $$SRC_REPO $$WORK_REPO && chmod -R u+w $$WORK_REPO && \" +\n          \"mkdir -p $$WORK_REPO/.dart_tool && \" +\n          \"printf 'String format(String source) => source;\\n' > $$WORK_REPO/lib/src/formatter.dart && \" +\n          \"echo '{\\\"configVersion\\\": 2,\\\"packages\\\": [\" +\n          \"{\\\"name\\\": \\\"protoc_plugin\\\", \\\"rootUri\\\": \\\"../\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"collection\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_collection\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"fixnum\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_fixnum\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"meta\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_meta\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"path\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_path\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"protobuf\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_protobuf_v6\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"}\" +\n          \"]}' > $$WORK_REPO/.dart_tool/package_config.json && \" +\n          \"$(location @flutter_sdk//:dart) compile exe $$WORK_REPO/bin/protoc_plugin.dart -o $@\",\n    executable = True,\n    tools = [\"@flutter_sdk//:dart\"],\n)"
             }
           }
         }
@@ -445,7 +445,7 @@
     },
     "@@rules_flutter+//flutter:extensions.bzl%flutter": {
       "general": {
-        "bzlTransitiveDigest": "n7ikY1+oP7Nssu8MICB1PWFz7miMTtiZuw8PZ+8UIMc=",
+        "bzlTransitiveDigest": "yEZVxv7vZRafxjfcsnAXXLLUTd6kAL7/4QnInr7y+bk=",
         "usagesDigest": "F5btLbaFKudM6oKRMAcwNR1D7Ff8aUeJBVE4v2WiJZA=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
@@ -487,10 +487,10 @@
     },
     "@@rules_flutter+//flutter:extensions.bzl%pub": {
       "general": {
-        "bzlTransitiveDigest": "n7ikY1+oP7Nssu8MICB1PWFz7miMTtiZuw8PZ+8UIMc=",
-        "usagesDigest": "pN8S6Js9wjQ0/WJwuV27UhPOXRof5idV+4pVPO+Ukow=",
+        "bzlTransitiveDigest": "yEZVxv7vZRafxjfcsnAXXLLUTd6kAL7/4QnInr7y+bk=",
+        "usagesDigest": "sj63Gvw5dXwAunfm1cZjACavGEiO1ubh/EpjdcNLw0U=",
         "recordedInputs": [
-          "FILE:@@//srcs/app/pub_deps.json 1560bc913a6b08cf84069fa98e0080297ffcad0db7f0c86241569f570b18360a"
+          "FILE:@@//srcs/app/pub_deps.json d8b343268926c7cf6dd76af09645a6eb3dc985e39e6a10d38e6d996f803f4895"
         ],
         "generatedRepoSpecs": {
           "pub_async": {
@@ -731,11 +731,11 @@
               "version": "3.1.0"
             }
           },
-          "pub_protobuf_v5": {
+          "pub_protobuf_v6": {
             "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
             "attributes": {
               "package": "protobuf",
-              "version": "5.0.0"
+              "version": "6.0.0"
             }
           },
           "pub_protoc_plugin": {
@@ -897,6 +897,13 @@
             "attributes": {
               "package": "xdg_directories",
               "version": "1.1.0"
+            }
+          },
+          "pub_yaml": {
+            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
+            "attributes": {
+              "package": "yaml",
+              "version": "3.1.3"
             }
           }
         }

@@ -1,6 +1,16 @@
 """Rule for generating Dart code from Protobuf using protoc-gen-dart.
 
 Uses the hermetic protoc-gen-dart built from @google_protobuf_dart//:protoc_plugin_bin.
+
+Generated outputs per proto source:
+  • <name>.pb.dart      – message classes with getters/setters, toProto/fromProto
+  • <name>.pbenum.dart  – enum classes
+  • <name>.pbjson.dart  – JSON helpers (toJSON/fromJSON via toProto3Json /
+                          mergeFromProto3Json)
+  • <name>.pbgrpc.dart  – gRPC service stubs (when use_grpc = True)
+  • <name>.pbyaml.dart  – YAML helpers (toYaml / fromYaml) backed by the
+                          package:yaml library (when generate_yaml = True,
+                          which is the default)
 """
 
 load("@rules_proto//proto:defs.bzl", "ProtoInfo")
@@ -11,7 +21,9 @@ def _proto_dart_library_impl(ctx):
     proto_root = proto_info.proto_source_root
 
     outs = []
-    # Modern protoc-gen-dart emits .pb.dart, .pbenum.dart, .pbjson.dart and,
+    yaml_outs = []
+
+    # protoc-gen-dart emits .pb.dart, .pbenum.dart, .pbjson.dart and,
     # when gRPC is enabled, .pbgrpc.dart.
     for src in srcs:
         basename = src.basename.replace(".proto", "")
@@ -20,15 +32,17 @@ def _proto_dart_library_impl(ctx):
         outs.append(ctx.actions.declare_file(basename + ".pbjson.dart"))
         if ctx.attr.use_grpc:
             outs.append(ctx.actions.declare_file(basename + ".pbgrpc.dart"))
+        if ctx.attr.generate_yaml:
+            yaml_outs.append(ctx.actions.declare_file(basename + ".pbyaml.dart"))
 
     protoc = ctx.executable._protoc
     plugin = ctx.executable._plugin
-    
-    # Build proto_path args
+
+    # Build --proto_path arguments from all transitive sources.
     proto_paths = {}
     for src in proto_info.transitive_sources.to_list():
         proto_paths[src.dirname] = True
-    
+
     if proto_root and proto_root != ".":
         proto_paths[proto_root] = True
     else:
@@ -39,7 +53,7 @@ def _proto_dart_library_impl(ctx):
     out_dir = ctx.bin_dir.path
     dart_out_prefix = "grpc:" if ctx.attr.use_grpc else ""
 
-    # Create wrapper script
+    # ── protoc wrapper ──────────────────────────────────────────────────────
     wrapper = ctx.actions.declare_file(ctx.label.name + "_protoc_wrapper.sh")
     wrapper_content = "#!/bin/bash\nset -euo pipefail\n"
     wrapper_content += "{protoc} --plugin=protoc-gen-dart={plugin} --dart_out={dart_out_prefix}{out_dir} {proto_path_args} {proto_files}\n".format(
@@ -68,8 +82,23 @@ def _proto_dart_library_impl(ctx):
         progress_message = "Generating Dart from %s" % ctx.label,
     )
 
+    # ── YAML helper generation ───────────────────────────────────────────────
+    # For each proto source file, run gen_dart_yaml.py to produce a
+    # .pbyaml.dart file containing toYaml() / fromYaml() extension methods.
+    if ctx.attr.generate_yaml and yaml_outs:
+        yaml_gen = ctx.executable._yaml_gen
+        for src, yaml_out in zip(srcs, yaml_outs):
+            ctx.actions.run(
+                executable = yaml_gen,
+                arguments = [src.path, yaml_out.path],
+                inputs = [src],
+                outputs = [yaml_out],
+                mnemonic = "ProtoDartYaml",
+                progress_message = "Generating YAML helpers for %s" % src.basename,
+            )
+
     return [
-        DefaultInfo(files = depset(outs)),
+        DefaultInfo(files = depset(outs + yaml_outs)),
     ]
 
 proto_dart_library = rule(
@@ -82,7 +111,11 @@ proto_dart_library = rule(
         ),
         "use_grpc": attr.bool(
             default = False,
-            doc = "Whether to generate gRPC service files.",
+            doc = "Whether to generate gRPC service stubs (.pbgrpc.dart).",
+        ),
+        "generate_yaml": attr.bool(
+            default = True,
+            doc = "Whether to generate YAML helpers (.pbyaml.dart) using gen_dart_yaml.py.",
         ),
         "_protoc": attr.label(
             default = "@protobuf//:protoc",
@@ -91,6 +124,11 @@ proto_dart_library = rule(
         ),
         "_plugin": attr.label(
             default = "@google_protobuf_dart//:protoc_plugin_bin",
+            executable = True,
+            cfg = "exec",
+        ),
+        "_yaml_gen": attr.label(
+            default = "//bazel/rules:gen_dart_yaml",
             executable = True,
             cfg = "exec",
         ),

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -111,6 +112,9 @@ var (
 	awsAccessKeyRegex = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
 	// Use lookaround-like boundaries for AWS Secret Key as it can contain / or + which are non-word chars for \b
 	awsSecretKeyRegex = regexp.MustCompile(`(^|[^a-zA-Z0-9/+])[a-zA-Z0-9/+]{40}([^a-zA-Z0-9/+]|$)`)
+
+	// GlobalForecaster instance.
+	GlobalForecaster *Forecaster
 )
 
 func RedactPII(input string) string {
@@ -190,6 +194,15 @@ func RedactInterfacePII(val interface{}) interface{} {
 		if rv.Kind() == reflect.String {
 			return RedactPII(rv.String())
 		}
+		if rv.Kind() == reflect.Ptr {
+			if rv.IsNil() {
+				return val
+			}
+			// We return the redacted element directly, which becomes a map[string]interface{}
+			// for structs. This allows json.Marshal to still serialize it identically
+			// without attempting to construct dynamic typed pointers.
+			return RedactInterfacePII(rv.Elem().Interface())
+		}
 		switch rv.Kind() {
 		case reflect.Slice, reflect.Array:
 			if rv.Len() == 0 {
@@ -228,7 +241,18 @@ func RedactInterfacePII(val interface{}) interface{} {
 				if field.PkgPath != "" {
 					continue
 				}
-				res[field.Name] = RedactInterfacePII(rv.Field(i).Interface())
+				key := field.Name
+				tag := field.Tag.Get("json")
+				if tag == "-" {
+					continue
+				}
+				if tag != "" {
+					parts := strings.Split(tag, ",")
+					if parts[0] != "" {
+						key = parts[0]
+					}
+				}
+				res[key] = RedactInterfacePII(rv.Field(i).Interface())
 			}
 			return res
 		}
@@ -266,7 +290,14 @@ func InitTelemetry() (func(), error) {
 		return nil, err
 	}
 
+	// Initialize the global forecaster with 1 minute interval and 1 hour window.
+	GlobalForecaster = NewForecaster(1*time.Minute, 1*time.Hour)
+	GlobalForecaster.Start(context.Background())
+
 	return func() {
+		if GlobalForecaster != nil {
+			GlobalForecaster.Stop()
+		}
 		_ = provider.Shutdown(context.Background())
 	}, nil
 }
@@ -608,7 +639,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
-		"ohc_sub_agent_queue_length",
+		"ohc.sub_agent.queue_length",
 		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
 	)
 	if err != nil {
@@ -789,6 +820,11 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	err = initForecastingMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	SubAgentExecutionDuration, err = m.Float64Histogram(
 		"ohc_sub_agent_execution_duration_seconds",
 		metric.WithDescription("Duration of sub-agent execution in seconds"),
@@ -954,6 +990,10 @@ func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, m
 		attribute.String("role", role),
 		attribute.String("model", model),
 	))
+
+	if GlobalForecaster != nil {
+		GlobalForecaster.RecordUsage(organizationID, count)
+	}
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
@@ -1269,6 +1309,7 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 }
 
 // RecordSQLiteLockContention increments the global counter for SQLite database lock contention.
+// Used primarily to monitor Standalone Mode Swarm concurrency limits.
 func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
@@ -1708,12 +1749,7 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 // RecordQueueLength correctly applies PII redaction before JSON marshaling.
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"delta": delta,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", string(payloadBytes))
+		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {

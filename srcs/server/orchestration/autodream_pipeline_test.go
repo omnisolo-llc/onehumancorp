@@ -2,9 +2,9 @@ package orchestration
 
 import (
 	"context"
-	"testing"
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -47,13 +47,24 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE consolidated_memory (
+		CREATE TABLE IF NOT EXISTS consolidated_memory (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			agent_id TEXT,
 			content TEXT NOT NULL,
 			embedding TEXT,
 			source_type TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	require.NoError(t, err)
+
+	_, err = provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS swarm_long_term_memory (
+			id TEXT PRIMARY KEY,
+			topic TEXT NOT NULL,
+			summary TEXT NOT NULL,
+			embedding TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
@@ -70,9 +81,6 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-
-
-
 	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'))")
 	require.NoError(t, err)
 
@@ -87,6 +95,10 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	// Verify DB sessions were consolidated
 	var count int
 	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_type = 'session_compression'").Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM swarm_long_term_memory WHERE topic = 'Session Compression: s1'").Scan(&count)
 	require.NoError(t, err)
 	assert.Equal(t, 1, count)
 
@@ -174,13 +186,24 @@ func TestAutoDreamPipeline_FilesMultipleChunks(t *testing.T) {
 	ctx := context.Background()
 
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE consolidated_memory (
+		CREATE TABLE IF NOT EXISTS consolidated_memory (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			agent_id TEXT,
 			content TEXT NOT NULL,
 			embedding TEXT,
 			source_type TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	require.NoError(t, err)
+
+	_, err = provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS swarm_long_term_memory (
+			id TEXT PRIMARY KEY,
+			topic TEXT NOT NULL,
+			summary TEXT NOT NULL,
+			embedding TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 	`)
@@ -216,5 +239,9 @@ func TestAutoDreamPipeline_FilesMultipleChunks(t *testing.T) {
 	require.NoError(t, err)
 	// mission1 => 1 chunk (content is < 8000)
 	// mission2 => 2 chunks (content is > 8000)
+	assert.Equal(t, 3, count)
+
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM swarm_long_term_memory").Scan(&count)
+	require.NoError(t, err)
 	assert.Equal(t, 3, count)
 }

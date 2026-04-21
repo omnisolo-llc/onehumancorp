@@ -9,6 +9,7 @@ go_library(
         "config_sync.go",
         "config_sync_api.go",
         "secrets.go",
+        "tools.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/interop/mcp",
     visibility = ["//visibility:public"],
@@ -36,6 +37,16 @@ go_test(
     deps = [
         "//srcs/server/db",
         "//srcs/server/auth",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "tools_test",
+    srcs = ["tools_test.go"],
+    embed = [":mcp"],
+    deps = [
+        "//srcs/server/db",
         "@com_github_google_uuid//:uuid",
     ],
 )

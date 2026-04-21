@@ -92,6 +92,10 @@ func TestMeshHandler_Subscribe(t *testing.T) {
 		}
 		defer ws.Close()
 
+		// Wait briefly to ensure the server has time to upgrade the connection
+		// and subscribe to the transport channel before we publish.
+		time.Sleep(50 * time.Millisecond)
+
 		// Publish a message to see if it's received
 		msgStr := "hello websocket"
 		err = transport.Publish(context.Background(), "test", []byte(msgStr))
