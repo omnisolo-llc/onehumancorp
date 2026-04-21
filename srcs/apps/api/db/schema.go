@@ -18,6 +18,7 @@ func CreateSchema(db *sql.DB, isSQLite bool) error {
 			status TEXT DEFAULT 'PENDING',
 			assigned_agent TEXT,
 			payload TEXT,
+			deployment_mode TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);`
@@ -40,6 +41,7 @@ func CreateSchema(db *sql.DB, isSQLite bool) error {
 			status VARCHAR(50) DEFAULT 'PENDING',
 			assigned_agent VARCHAR(255),
 			payload JSONB,
+			deployment_mode VARCHAR(50),
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		);`
