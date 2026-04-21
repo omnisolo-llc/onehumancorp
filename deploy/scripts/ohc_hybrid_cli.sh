@@ -23,6 +23,7 @@ while true; do
     echo -e "  4) Launch Quick Start (Standalone)"
     echo -e "  5) Provision AI Agent"
     echo -e "  6) Standalone DB Health Check"
+    echo -e "  8) Seed Database with Mock Data"
     echo -e "  0) Exit"
     read -p "Choice: " choice
 
@@ -42,6 +43,7 @@ while true; do
                 echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
             fi
             ;;
+        8) bash "$SCRIPT_DIR/ohc-seed-data.sh" || echo -e "${PURPLE}Data Seeder returned non-zero exit status.${RESET}" ;;
         0) echo "Exiting..."; exit 0 ;;
         *) echo -e "${PURPLE}Invalid choice.${RESET}" ;;
     esac
