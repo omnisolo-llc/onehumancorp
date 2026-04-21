@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/orchestration/task_dag_view.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -10,7 +10,7 @@ class MockApiService extends Mock implements ApiService {}
 
 void main() {
 
-  testWidgets('TaskListScreen uses GlassCard correctly', (WidgetTester tester) async {
+  testWidgets('TaskDAGView uses GlassCard correctly', (WidgetTester tester) async {
     final mockApiService = MockApiService();
     when(() => mockApiService.listSharedTasks()).thenAnswer((_) async => [
       {
@@ -25,7 +25,7 @@ void main() {
         overrides: [
           apiServiceProvider.overrideWithValue(mockApiService),
         ],
-        child: const MaterialApp(home: TaskListScreen()),
+        child: const MaterialApp(home: TaskDAGView()),
       ),
     );
     await tester.pumpAndSettle();

@@ -1,8 +1,11 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
+import 'package:ohc_app/services/api_service.dart';
+import 'dart:convert';
 
 // Simulate Teammate Mesh messages from Redis/WebSockets
 class MeshMessage {
@@ -13,25 +16,35 @@ class MeshMessage {
   MeshMessage(this.agentName, this.action, this.timestamp);
 }
 
+
 final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
-  final centrifuge = ref.watch(centrifugeServiceProvider);
-  if (centrifuge == null) {
+  final api = ref.watch(apiServiceProvider);
+  if (api == null) {
     return const Stream.empty();
   }
 
-  return centrifuge.subscribeRaw('mesh:tasks').map((data) {
-    final Map<String, dynamic> json = data as Map<String, dynamic>;
+  return api.streamMeshEvents().map((data) {
+    try {
+      final Map<String, dynamic> json = jsonDecode(data);
+      final agentName = json['agent_id'] as String? ?? 'System';
+      final action = json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
 
-    // Extract agent name and action from the payload
-    // The payload format from Hub.PublishTaskBroadcast must be parsed precisely via `agent_id`, `action`, and `status`.
-    final agentName = json['agent_id'] as String? ?? 'System';
-    final action = json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
-
-    return MeshMessage(
-      agentName,
-      action,
-      DateTime.now(),
-    );
+      return MeshMessage(
+        agentName,
+        action,
+        DateTime.now(),
+      );
+    } catch (e) {
+      // In case of malformed JSON or fallback testing
+      return MeshMessage(
+        'System',
+        data,
+        DateTime.now(),
+      );
+    }
+  }).handleError((error) {
+    // If the stream fails, return an error message indicator
+    return MeshMessage('System', 'Offline (Local Only View)', DateTime.now());
   });
 });
 
@@ -45,6 +58,7 @@ class SwarmObservabilityWidget extends ConsumerStatefulWidget {
 class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWidget> {
   final List<MeshMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
+  bool _isLocalOnly = false;
 
   @override
   void dispose() {
@@ -58,6 +72,11 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
 
     ref.listen<AsyncValue<MeshMessage>>(meshStreamProvider, (previous, next) {
       if (next.hasValue && next.value != null) {
+        if (next.value!.action == 'Offline (Local Only View)') {
+          setState(() {
+            _isLocalOnly = true;
+          });
+        }
         setState(() {
           _messages.insert(0, next.value!);
           if (_messages.length > 50) {
@@ -104,17 +123,19 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                         child: Icon(Icons.wifi_tethering, color: colors.primary, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
+                      Text(
                         'Teammate Mesh Live Feed',
-                        style: TextStyle(
+                        style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Outfit',
+
                           color: Colors.white,
                         ),
                       ),
                       const Spacer(),
-                      _PulsingStatusIndicator(),
+                      _isLocalOnly
+                          ? Text('Local Only', style: TextStyle(color: Colors.orangeAccent, fontFamily: GoogleFonts.inter().fontFamily, fontSize: 12))
+                          : _PulsingStatusIndicator(),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -125,7 +146,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                               'Listening for swarm activity...',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.5),
-                                fontFamily: 'Inter',
+                                fontFamily: GoogleFonts.inter().fontFamily,
                               ),
                             ),
                           )
@@ -193,12 +214,12 @@ class _PulsingStatusIndicatorState extends State<_PulsingStatusIndicator> with S
           ),
         ),
         const SizedBox(width: 8),
-        const Text(
+        Text(
           'Live',
-          style: TextStyle(
+          style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,
             color: Colors.greenAccent,
             fontWeight: FontWeight.bold,
-            fontFamily: 'Inter',
+
           ),
         ),
       ],
@@ -292,10 +313,10 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                         children: [
                           Text(
                             widget.message.agentName,
-                            style: const TextStyle(
+                            style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily,
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontFamily: 'Outfit',
+
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -303,7 +324,7 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                             widget.message.action,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.8),
-                              fontFamily: 'Inter',
+                              fontFamily: GoogleFonts.inter().fontFamily,
                             ),
                           ),
                         ],

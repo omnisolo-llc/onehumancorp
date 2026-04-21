@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
@@ -56,10 +57,10 @@ class _VectorMemoryVisualizerWidgetState extends State<VectorMemoryVisualizerWid
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'AutoDream Consolidation',
-                style: TextStyle(
-                  fontFamily: 'Outfit',
+                style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily,
+
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -97,10 +98,10 @@ class _VectorMemoryVisualizerWidgetState extends State<VectorMemoryVisualizerWid
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'pgvector dimension: 1536',
-                style: TextStyle(
-                  fontFamily: 'Inter',
+                style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,
+
                   fontSize: 12,
                   color: Colors.white54,
                 ),

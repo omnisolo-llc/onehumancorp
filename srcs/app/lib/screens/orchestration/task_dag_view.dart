@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
@@ -11,8 +12,8 @@ final sharedTasksProvider = FutureProvider<List<SharedTask>>((ref) async {
   return rawTasks.map((t) => SharedTask.fromJson(t)).toList();
 });
 
-class TaskListScreen extends ConsumerWidget {
-  const TaskListScreen({super.key});
+class TaskDAGView extends ConsumerWidget {
+  const TaskDAGView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,7 +22,7 @@ class TaskListScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Shared Task List', style: TextStyle(fontFamily: 'Outfit')),
+        title: Text('Shared Task List', style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily)),
         backgroundColor: Colors.transparent,
       ),
       body: tasksAsync.when(
@@ -51,8 +52,8 @@ class _TaskGlassCard extends StatelessWidget {
         children: [
           Text(
             task.title,
-            style: const TextStyle(
-              fontFamily: 'Outfit',
+            style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily,
+
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
@@ -61,8 +62,8 @@ class _TaskGlassCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Status: ${task.status}',
-            style: TextStyle(
-              fontFamily: 'Inter',
+            style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,
+
               color: _getStatusColor(task.status),
             ),
           ),
@@ -70,14 +71,14 @@ class _TaskGlassCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Agent: ${task.agentId}',
-              style: const TextStyle(fontFamily: 'Inter', color: Colors.white70),
+              style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,  color: Colors.white70),
             ),
           ],
           if (task.dependencies != null && task.dependencies!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
               'Dependencies: ${task.dependencies!.join(', ')}',
-              style: const TextStyle(fontFamily: 'Inter', color: Colors.white54, fontSize: 12),
+              style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,  color: Colors.white54, fontSize: 12),
             ),
           ],
         ],

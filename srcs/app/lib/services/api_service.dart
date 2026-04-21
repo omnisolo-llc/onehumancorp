@@ -436,6 +436,28 @@ class ApiService {
     return list.cast<String>();
   }
 
+
+  Stream<String> streamMeshEvents() async* {
+    final req = http.Request('GET', Uri.parse('$baseUrl/api/mesh/stream'));
+    req.headers.addAll(_headers);
+    final res = await _client.send(req);
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw Exception('API error ${res.statusCode}');
+    }
+
+    await for (final chunk in res.stream.transform(utf8.decoder)) {
+      final lines = chunk.split('\n');
+      for (final line in lines) {
+        if (line.startsWith('data: ')) {
+          final data = line.substring(6).trim();
+          if (data.isNotEmpty) {
+            yield data;
+          }
+        }
+      }
+    }
+  }
+
   Stream<String> streamScaleEvents() async* {
     final req = http.Request('GET', Uri.parse('$baseUrl/api/v1/scale/stream'));
     req.headers.addAll(_headers);

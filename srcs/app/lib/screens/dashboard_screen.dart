@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -11,7 +12,8 @@ import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
-import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/orchestration/task_dag_view.dart';
+import 'package:ohc_app/widgets/vector_memory_visualizer.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -27,7 +29,7 @@ class DashboardScreen extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: Text('Dashboard', style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily,  fontWeight: FontWeight.bold)),
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
@@ -44,7 +46,7 @@ class DashboardScreen extends ConsumerWidget {
             (e, _) => Center(
               child: Text(
                 'Error: $e',
-                style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
+                style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error),
               ),
             ),
         data: (data) => _DashboardContent(data: data, ref: ref),
@@ -107,8 +109,8 @@ class _DashboardContent extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("What's new ✨", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
-                          const Text("OHC v2.4 is available. Upgrade now for 2x faster orchestration.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                          Text("What's new ✨", style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily, fontWeight: FontWeight.bold,  color: Theme.of(context).colorScheme.onSurface)),
+                          Text("OHC v2.4 is available. Upgrade now for 2x faster orchestration.", style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,  fontSize: 13)),
                         ],
                       ),
                     ),
@@ -173,6 +175,8 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const SwarmObservabilityWidget(),
         const SizedBox(height: 16),
+        const VectorMemoryVisualizerWidget(),
+        const SizedBox(height: 16),
         const HybridObservabilityWidget(),
         const SizedBox(height: 16),
         SizedBox(
@@ -195,7 +199,7 @@ class _DashboardContent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
-                child: const TaskListScreen(),
+                child: const TaskDAGView(),
               ),
             ),
           ),
@@ -211,7 +215,7 @@ class _DashboardContent extends StatelessWidget {
           'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontFamily: 'Inter',
+                fontFamily: GoogleFonts.inter().fontFamily,
               ),
         ),
         const SizedBox(height: 16),
@@ -301,11 +305,11 @@ class _ObservabilityWidget extends StatelessWidget {
                             const SizedBox(width: 16),
                             Text(
                               'Full-Spectrum Telemetry',
-                              style: TextStyle(
+                              style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily,
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: colors.onSurface,
-                                fontFamily: 'Outfit',
+
                               ),
                             ),
                             const Spacer(),
@@ -364,11 +368,11 @@ class _StatusBadge extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             healthy ? 'System Nominal' : 'Degraded',
-            style: TextStyle(
+            style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: color,
-              fontFamily: 'Inter',
+
             ),
           ),
         ],
@@ -395,11 +399,11 @@ class _Metric extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           value,
-          style: TextStyle(
+          style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,
             fontSize: 28,
             fontWeight: FontWeight.bold,
             color: color,
-            fontFamily: 'Inter',
+
           ),
         ),
         const SizedBox(height: 4),
@@ -408,7 +412,7 @@ class _Metric extends StatelessWidget {
           style: TextStyle(
             fontSize: 14,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontFamily: 'Inter',
+            fontFamily: GoogleFonts.inter().fontFamily,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -449,7 +453,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to scale ${widget.role}: $e', style: const TextStyle(fontFamily: 'Inter')),
+            content: Text('Failed to scale ${widget.role}: $e', style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily)),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -487,10 +491,10 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                               children: [
                                 Text(
                                   formattedRole,
-                                  style: const TextStyle(
+                                  style: TextStyle(fontFamily: GoogleFonts.outfit().fontFamily,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
-                                    fontFamily: 'Outfit',
+
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -498,10 +502,10 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                                 const SizedBox(height: 6),
                                 Text(
                                   '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
-                                  style: TextStyle(
+                                  style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,
                                     fontSize: 15,
                                     color: colors.onSurfaceVariant,
-                                    fontFamily: 'Inter',
+
                                   ),
                                 ),
                               ],
@@ -537,10 +541,10 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                                     )
                                   : Text(
                                       '${widget.count}',
-                                      style: const TextStyle(
+                                      style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 20,
-                                        fontFamily: 'Inter',
+
                                       ),
                                     ),
                             ),
@@ -579,7 +583,7 @@ class _SectionTitle extends StatelessWidget {
       text,
       style: Theme.of(
         context,
-      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontFamily: GoogleFonts.outfit().fontFamily),
     );
   }
 }
@@ -674,18 +678,18 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                                     const SizedBox(height: 16),
                                     Text(
                                       widget.value,
-                                      style: TextStyle(
+                                      style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily,
                                         fontSize: 36,
                                         fontWeight: FontWeight.bold,
                                         color: effectiveIconColor,
-                                        fontFamily: 'Inter',
+
                                       ),
                                     ),
                                     const SizedBox(height: 6),
                                     Text(
                                       widget.label,
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontFamily: 'Inter',
+                                        fontFamily: GoogleFonts.inter().fontFamily,
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),

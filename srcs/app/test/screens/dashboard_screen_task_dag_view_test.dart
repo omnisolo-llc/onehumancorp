@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
-import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/orchestration/task_dag_view.dart';
 import 'package:ohc_app/models/dashboard.dart';
 
 // Provide a mock dashboard snapshot
@@ -18,7 +18,7 @@ final mockDashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref
 });
 
 void main() {
-  testWidgets('DashboardScreen includes TaskListScreen with Glassmorphism', (WidgetTester tester) async {
+  testWidgets('DashboardScreen includes TaskDAGView with Glassmorphism', (WidgetTester tester) async {
     // Increase size so we can scroll or everything fits
     tester.view.physicalSize = const Size(1920, 1080);
     tester.view.devicePixelRatio = 1.0;
@@ -40,16 +40,16 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
 
-    // Since TaskListScreen is in a scroll view, we might need to scroll
+    // Since TaskDAGView is in a scroll view, we might need to scroll
     final listFinder = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
-      find.byType(TaskListScreen),
+      find.byType(TaskDAGView),
       500.0,
       scrollable: listFinder,
       maxScrolls: 50,
     );
 
-    expect(find.byType(TaskListScreen), findsOneWidget);
+    expect(find.byType(TaskDAGView), findsOneWidget);
 
     // reset view properties
     addTearDown(tester.view.resetPhysicalSize);
