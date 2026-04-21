@@ -14,6 +14,25 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/mesh"
 )
 
+
+type mockImmediateTransport struct {
+	mesh.MeshTransport
+}
+
+func (m *mockImmediateTransport) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
+	ch := make(chan []byte, 10)
+	for i := 0; i < 10; i++ {
+		ch <- []byte("immediate message")
+	}
+	return ch, nil
+}
+
+type badReader struct{}
+
+func (badReader) Read(p []byte) (n int, err error) {
+	return 0, fmt.Errorf("simulated read error")
+}
+
 type mockFailingTransport struct {
 	mesh.MeshTransport
 }
@@ -24,6 +43,16 @@ func (m *mockFailingTransport) Publish(ctx context.Context, channel string, payl
 
 func (m *mockFailingTransport) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
 	return nil, fmt.Errorf("simulated subscribe error")
+}
+
+
+type mockCustomTransport struct {
+	mesh.MeshTransport
+	subChan chan []byte
+}
+
+func (m *mockCustomTransport) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
+	return m.subChan, nil
 }
 
 func TestMeshHandler_Broadcast(t *testing.T) {
@@ -72,6 +101,17 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 
 		if w.Result().StatusCode != http.StatusInternalServerError {
 			t.Errorf("Expected status InternalServerError, got %d", w.Result().StatusCode)
+		}
+	})
+
+	t.Run("Broadcast Read Body Error", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", badReader{})
+		w := httptest.NewRecorder()
+
+		handler.Broadcast(w, req)
+
+		if w.Result().StatusCode != http.StatusBadRequest {
+			t.Errorf("Expected status Bad Request, got %d", w.Result().StatusCode)
 		}
 	})
 }
@@ -144,5 +184,109 @@ func TestMeshHandler_Subscribe(t *testing.T) {
 		if err == nil && !strings.Contains(string(msg), "Failed to subscribe") {
 			t.Errorf("Expected error message, got: %s", string(msg))
 		}
+	})
+
+	t.Run("Subscribe WebSocket Upgrade Error", func(t *testing.T) {
+		// Not a websocket request
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/mesh/subscribe", nil)
+		w := httptest.NewRecorder()
+
+		handler.Subscribe(w, req)
+
+		if w.Result().StatusCode != http.StatusBadRequest {
+			t.Errorf("Expected status Bad Request for failed upgrade, got %d", w.Result().StatusCode)
+		}
+	})
+
+	t.Run("Subscribe Context Cancelled", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+
+		testServer := httptest.NewServer(http.HandlerFunc(handler.Subscribe))
+		defer testServer.Close()
+
+		wsURLTest := "ws" + strings.TrimPrefix(testServer.URL, "http") + "?channel=test"
+
+		ws, _, err := websocket.DefaultDialer.Dial(wsURLTest, nil)
+		if err != nil {
+			t.Fatalf("Could not open websocket connection: %v", err)
+		}
+
+		_ = ctx
+		ws.Close()
+		cancel()
+
+		time.Sleep(50 * time.Millisecond)
+	})
+
+	t.Run("Subscribe Write Error", func(t *testing.T) {
+		testServer := httptest.NewServer(http.HandlerFunc(handler.Subscribe))
+		defer testServer.Close()
+
+		wsURLTest := "ws" + strings.TrimPrefix(testServer.URL, "http") + "?channel=test_write_err"
+		ws, _, err := websocket.DefaultDialer.Dial(wsURLTest, nil)
+		if err != nil {
+			t.Fatalf("Could not open websocket connection: %v", err)
+		}
+
+		time.Sleep(50 * time.Millisecond)
+
+		ws.Close()
+		transport.Publish(context.Background(), "test_write_err", []byte("msg"))
+		time.Sleep(50 * time.Millisecond)
+	})
+
+
+	t.Run("Subscribe Write Error And Closed Channel", func(t *testing.T) {
+		subChan := make(chan []byte, 1)
+		customTransport := &mockCustomTransport{subChan: subChan}
+		customHandler := NewMeshHandler(customTransport)
+
+		testServer := httptest.NewServer(http.HandlerFunc(customHandler.Subscribe))
+		defer testServer.Close()
+
+		wsURLTest := "ws" + strings.TrimPrefix(testServer.URL, "http") + "?channel=test"
+		ws, _, err := websocket.DefaultDialer.Dial(wsURLTest, nil)
+		if err != nil {
+			t.Fatalf("Could not open websocket connection: %v", err)
+		}
+
+		// Close connection so WriteMessage will fail
+		ws.Close()
+
+		// Send message to subChan
+		subChan <- []byte("msg")
+
+		// Wait for handler to hit write error and return
+		time.Sleep(50 * time.Millisecond)
+
+		// Reconnect
+		ws2, _, err2 := websocket.DefaultDialer.Dial(wsURLTest, nil)
+		if err2 != nil {
+			t.Fatalf("Could not open websocket connection: %v", err2)
+		}
+
+		// Close the channel so !ok is hit
+		close(subChan)
+
+		// Wait for handler to hit !ok and return
+		time.Sleep(50 * time.Millisecond)
+
+		ws2.Close()
+	})
+
+	t.Run("Subscribe Immediate Write Error", func(t *testing.T) {
+		immHandler := NewMeshHandler(&mockImmediateTransport{})
+		testServer := httptest.NewServer(http.HandlerFunc(immHandler.Subscribe))
+		defer testServer.Close()
+
+		wsURLTest := "ws" + strings.TrimPrefix(testServer.URL, "http") + "?channel=imm"
+		ws, _, err := websocket.DefaultDialer.Dial(wsURLTest, nil)
+		if err != nil {
+			t.Fatalf("Could not open websocket connection: %v", err)
+		}
+
+		ws.Close()
+
+		time.Sleep(50 * time.Millisecond)
 	})
 }
