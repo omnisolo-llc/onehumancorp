@@ -1,5 +1,4 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
-load("//bazel/rules:proto_go_grpc_library.bzl", "go_proto_library_with_tags")
 load("//bazel/rules:proto_go_grpc_library.bzl", "proto_go_grpc_library")
 load("//bazel/rules:proto_ts_library.bzl", "proto_ts_library")
 load("//bazel/rules:proto_dart_library.bzl", "proto_dart_library")

@@ -5,7 +5,7 @@ use tonic::{Request, Response, Status};
 
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
-use crate::llm::{
+use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
 use crate::memory::{inject_memories_into_prompt, MemoryEntry, MemoryStore};
@@ -13,7 +13,7 @@ use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
 };
-use crate::tools::{
+use ohc_builtin_agent_tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos,
 };
@@ -209,7 +209,7 @@ impl AgentService for AgentServiceImpl {
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-        let tools = crate::tools::all_tools(todos, task_store, mailbox);
+        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
         let agent = Arc::new(Agent::new(llm, tools));
 
         let (tx, rx) = mpsc::channel::<Result<RunTaskEvent, Status>>(64);
@@ -322,7 +322,7 @@ impl AgentService for AgentServiceImpl {
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
             let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
             let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-            let tools = crate::tools::all_tools(todos, task_store, mailbox);
+            let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
             let agent = Agent::new(llm, tools);
 
             let mut no_op = |_: AgentEvent| {};
