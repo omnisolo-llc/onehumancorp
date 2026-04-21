@@ -42,23 +42,30 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For legacy support we can broadcast the raw payload to a default channel if not specified
-	// Alternatively, try to decode standard event format
-	var payload struct {
-		Channel string `json:"channel"`
-		Data    json.RawMessage `json:"data"` // Changed to json.RawMessage
+	var sipReq struct {
+		AgentID string          `json:"agent_id"`
+		Action  string          `json:"action"`
+		Status  string          `json:"status"`
+		Channel string          `json:"channel"`
+		Data    json.RawMessage `json:"data"`
 	}
 
-	// Try to unmarshal structured payload, fallback to "default" channel
-	channel := "default"
-	var data []byte = bodyBytes
-
-	if err := json.Unmarshal(bodyBytes, &payload); err == nil && payload.Channel != "" {
-		channel = payload.Channel
-		data = payload.Data
+	if err := json.Unmarshal(bodyBytes, &sipReq); err != nil {
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		return
 	}
 
-	if err := h.transport.Publish(r.Context(), channel, data); err != nil {
+	if sipReq.AgentID == "" || sipReq.Action == "" || sipReq.Status == "" {
+		http.Error(w, "Missing required OHC-SIP fields (agent_id, action, status)", http.StatusBadRequest)
+		return
+	}
+
+	channel := sipReq.Channel
+	if channel == "" {
+		channel = "default"
+	}
+
+	if err := h.transport.Publish(r.Context(), channel, bodyBytes); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to broadcast: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -116,5 +123,25 @@ func (h *MeshHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		case <-ctx.Done():
 			return
 		}
+	}
+}
+
+func (h *MeshHandler) Capabilities(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	skill := r.URL.Query().Get("skill")
+	agents, err := h.transport.DiscoverAgents(r.Context(), skill)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to discover agents: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"capabilities": agents}); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }

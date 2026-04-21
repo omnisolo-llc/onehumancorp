@@ -10,6 +10,7 @@ import (
 type MeshTransport interface {
 	Publish(ctx context.Context, channel string, payload []byte) error
 	Subscribe(ctx context.Context, channel string) (<-chan []byte, error)
+	DiscoverAgents(ctx context.Context, skill string) ([]interface{}, error)
 }
 
 // MemoryTransport implements MeshTransport using Go channels.
@@ -101,4 +102,12 @@ func (r *RedisTransport) Subscribe(ctx context.Context, channel string) (<-chan 
 	}()
 
 	return ch, nil
+}
+
+func (m *MemoryTransport) DiscoverAgents(ctx context.Context, skill string) ([]interface{}, error) {
+	return nil, nil
+}
+
+func (r *RedisTransport) DiscoverAgents(ctx context.Context, skill string) ([]interface{}, error) {
+	return nil, nil
 }

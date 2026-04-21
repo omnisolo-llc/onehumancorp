@@ -219,7 +219,6 @@ type TeammateMesh interface {
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
-	DiscoverAgents(ctx context.Context, skill string) ([]pb.AgentCapabilities, error)
 }
 
 type RedisTeammateMesh struct {
@@ -352,10 +351,6 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 		close(ch)
 	}()
 	return ch, nil
-}
-
-func (rm *RedisMeshTransport) DiscoverAgents(ctx context.Context, skill string) ([]pb.AgentCapabilities, error) {
-	return GlobalAgentRegistry.DiscoverAgents(skill), nil
 }
 
 func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
@@ -492,10 +487,6 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 	return ch, nil
 }
 
-func (rm *RedisTeammateMesh) DiscoverAgents(ctx context.Context, skill string) ([]pb.AgentCapabilities, error) {
-	return GlobalAgentRegistry.DiscoverAgents(skill), nil
-}
-
 func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
 	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
@@ -543,7 +534,6 @@ type MeshTransport interface {
 	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
 	PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error
 	SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error)
-	DiscoverAgents(ctx context.Context, skill string) ([]pb.AgentCapabilities, error)
 }
 
 const numShards = 16
@@ -802,10 +792,6 @@ func (lm *MemoryMeshTransport) runCoord(shardIdx int) {
 	}
 }
 
-func (lm *MemoryMeshTransport) DiscoverAgents(ctx context.Context, skill string) ([]pb.AgentCapabilities, error) {
-	return GlobalAgentRegistry.DiscoverAgents(skill), nil
-}
-
 func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start)) }()
@@ -1046,43 +1032,19 @@ func (lm *MemoryMeshTransport) SubscribeChannel(ctx context.Context, channel str
 
 type AgentRegistry struct {
 	mu     sync.RWMutex
-	agents map[string]pb.AgentCapabilities
+	agents map[string]*pb.Agent
 }
 
 var GlobalAgentRegistry = &AgentRegistry{
-	agents: make(map[string]pb.AgentCapabilities),
+	agents: make(map[string]*pb.Agent),
 }
 
-func (r *AgentRegistry) DiscoverAgents(skill string) []pb.AgentCapabilities {
+func (r *AgentRegistry) DiscoverAgents(skill string) []*pb.Agent {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	var res []pb.AgentCapabilities
+	var res []*pb.Agent
 	for _, a := range r.agents {
-		if skill == "" {
-			res = append(res, a)
-			continue
-		}
-		for _, s := range a.GetSupportedSkills() {
-			if s == skill {
-				res = append(res, a)
-				break
-			}
-		}
+		res = append(res, a)
 	}
 	return res
-}
-
-func (r *AgentRegistry) ListenToCapabilities(ctx context.Context, transport MeshTransport) error {
-	ch, err := transport.SubscribeCapabilities(ctx)
-	if err != nil {
-		return err
-	}
-	go func() {
-		for caps := range ch {
-			r.mu.Lock()
-			r.agents[caps.GetAgentId()] = caps
-			r.mu.Unlock()
-		}
-	}()
-	return nil
 }

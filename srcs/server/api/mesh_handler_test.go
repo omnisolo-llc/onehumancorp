@@ -31,7 +31,7 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 	handler := NewMeshHandler(transport)
 
 	t.Run("Valid Broadcast", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{"channel":"test","data":{"msg":"hello"}}`)))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{"agent_id":"a1","action":"CREATE","status":"PENDING","channel":"test","data":{"msg":"hello"}}`)))
 		w := httptest.NewRecorder()
 
 		handler.Broadcast(w, req)
@@ -42,13 +42,14 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 	})
 
 	t.Run("Valid Broadcast Raw Fallback", func(t *testing.T) {
+		// Expect 400 because OHC-SIP fields are missing
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`just some raw data`)))
 		w := httptest.NewRecorder()
 
 		handler.Broadcast(w, req)
 
-		if w.Result().StatusCode != http.StatusOK {
-			t.Errorf("Expected status OK, got %d", w.Result().StatusCode)
+		if w.Result().StatusCode != http.StatusBadRequest {
+			t.Errorf("Expected status BadRequest, got %d", w.Result().StatusCode)
 		}
 	})
 
@@ -65,7 +66,7 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 
 	t.Run("Publish Error", func(t *testing.T) {
 		failHandler := NewMeshHandler(&mockFailingTransport{})
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{}`)))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(`{"agent_id":"a1","action":"CREATE","status":"PENDING","channel":"test","data":{}}`)))
 		w := httptest.NewRecorder()
 
 		failHandler.Broadcast(w, req)
