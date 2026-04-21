@@ -1,1 +1,3 @@
-One Human Corp (OHC) is a hybrid cloud-native and local-first agentic operating system designed to empower a single human to orchestrate a swarm of AI agents.
+# README Summary
+
+One Human Corp is a highly scalable, hybrid-architecture agentic operating system designed to empower a single user to efficiently manage vast swarms of AI agents.
