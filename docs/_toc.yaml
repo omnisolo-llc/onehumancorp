@@ -17,6 +17,8 @@ toc:
     path: /docs/technical/operations/index.md
   - title: Research
     path: /docs/technical/research/index.md
+  - title: NATS Hybrid Event Mesh
+    path: /docs/research/[backend]_nats_hybrid_event_mesh.md
   - title: Reports
     path: /docs/technical/reports/index.md
   - title: Walkthroughs
