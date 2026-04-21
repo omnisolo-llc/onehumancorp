@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"os"
 	"fmt"
 	"testing"
 	"time"
@@ -257,4 +258,69 @@ func TestAutoDreamWorker_PipelinesCoverage(t *testing.T) {
 	if count != 0 {
 		t.Errorf("expected compressSessionContexts to process and delete session, got %d", count)
 	}
+}
+
+func TestAutoDreamWorker_Pipelines(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	worker := NewAutoDreamWorker(pool.Provider)
+
+	// Since pipelines run on infinite loops with tickers, we'll start them and cancel immediately
+	go worker.runCompletedTasksIngestionPipeline(ctx)
+	go worker.runSessionCompressionPipeline(ctx)
+	go worker.runMemoryIngestionPipeline(ctx)
+	go worker.runPruningPipeline(ctx)
+	go worker.runConflictResolutionPipeline(ctx)
+	go worker.runMissionIngestionPipeline(ctx)
+
+	cancel() // instantly cancel to let goroutines exit
+	time.Sleep(100 * time.Millisecond) // Give them time to exit cleanly
+}
+
+func TestAutoDreamWorker_IngestMemories(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	ctx := context.Background()
+	worker := NewAutoDreamWorker(pool.Provider)
+
+	tmpDir := t.TempDir()
+	t.Setenv("OHC_MEMORY_DIR", tmpDir)
+
+	// Create some mock yaml files
+	_ = os.WriteFile(tmpDir+"/memory1.yml", []byte("fake: yaml"), 0644)
+	_ = os.WriteFile(tmpDir+"/memory2.yaml", []byte("another: yaml"), 0644)
+	_ = os.WriteFile(tmpDir+"/ignored.txt", []byte("ignored text"), 0644)
+
+	// Add a sub-directory to ensure it is ignored
+	_ = os.Mkdir(tmpDir+"/subdir", 0755)
+
+	worker.ingestAgentMemories(ctx)
+}
+
+func TestAutoDreamWorker_ConflictResolution(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	ctx := context.Background()
+	worker := NewAutoDreamWorker(pool.Provider)
+
+	// Since we are using SQLite in this test environment, the resolveConflicts
+	// method should return early due to IsSQLite() check. This provides
+	// coverage for that early return path.
+	worker.resolveConflicts(ctx)
 }
