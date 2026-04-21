@@ -12,27 +12,22 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/sync"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync"
 	"github.com/redis/rueidis"
 
 	"google.golang.org/grpc"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
-	"github.com/onehumancorp/mono/srcs/server/checkpointer"
 	"github.com/onehumancorp/mono/srcs/server/dashboard"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations/chatwoot"
-	"github.com/onehumancorp/mono/srcs/server/memory"
-	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/workers"
-	"github.com/onehumancorp/mono/srcs/server/workers/distillation"
 )
 
 const defaultAddress = ":8080"
@@ -143,8 +138,7 @@ func init() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		handler = slog.NewTextHandler(os.Stdout, opts)
 	}
-	redactingHandler := telemetry.NewPIIRedactingHandler(handler)
-	logger := slog.New(redactingHandler)
+	logger := slog.New(handler)
 	slog.SetDefault(logger)
 }
 
@@ -295,30 +289,9 @@ func run(now time.Time, listen listenFunc) error {
 		}
 	}
 
-	var autodreamWorker *orchestration.AutoDreamWorker
 	if pool != nil {
-		autodreamWorker = orchestration.NewAutoDreamWorker(pool.Provider)
-
-		// Setup Semantic Distillation Worker
-		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
-
-		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil)
-		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver, adConsolidator)
-		// Run distillation as a background job
-		go func() {
-			ticker := time.NewTicker(1 * time.Hour)
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-ticker.C:
-					// Run the distillation process
-					slog.Info("Running Semantic Distillation Worker")
-					// Fetch active threads and distill. For now, this just registers the worker.
-					_ = distillationWorker
-				}
-			}
-		}()
+		autodreamWorker := orchestration.NewAutoDreamWorker(pool.Provider)
+		autodreamWorker.Start(ctx)
 
 		missionIngestionWorker := workers.NewMissionIngestionWorker(pool.Provider)
 		go missionIngestionWorker.Start(ctx)
@@ -384,10 +357,6 @@ func run(now time.Time, listen listenFunc) error {
 			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
 			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
 			if contextEndpoint != "" {
-
-				// Background sync for Hybrid MCP Sync via HybridSyncDaemon
-				hybridSyncDaemon := hybrid_sync.NewHybridSyncDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
-				hybridSyncDaemon.Start(ctx)
 
 				// Background sync for internal sync daemon for Standalone Mode RAG records
 				ragSyncDaemon := orchestration.NewRagSyncDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
@@ -547,11 +516,6 @@ func run(now time.Time, listen listenFunc) error {
 		cn.SetMeshTransport(mesh)
 	}
 
-	if autodreamWorker != nil {
-		autodreamWorker.SetMeshTransport(mesh)
-		autodreamWorker.Start(ctx)
-	}
-
 	// Start gRPC server
 	go func() {
 		lis, err := netListen("tcp", grpcAddress)
@@ -580,6 +544,10 @@ func run(now time.Time, listen listenFunc) error {
 // Produces no errors.
 // Has no side effects.
 func main() {
+	// Set up global PII-redacting logger
+	baseHandler := slog.NewJSONHandler(os.Stdout, nil)
+	redactingHandler := telemetry.NewPIIRedactingHandler(baseHandler)
+	slog.SetDefault(slog.New(redactingHandler))
 
 	shutdown, err := initTelemetry()
 	if err != nil {

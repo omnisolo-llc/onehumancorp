@@ -1,0 +1,5 @@
+agent: Implementer
+status: HEALTHY
+mission: Simplify Cloud vs Standalone Onboarding Modes
+domain: apps/onboarding, services/onboarding
+timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -30,11 +29,6 @@ var (
 
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
-	BubblewrapSpawnTotal       metric.Int64Counter
-	BubblewrapExecutionLatency metric.Float64Histogram
-	HarnessInitLatency         metric.Float64Histogram
-	HarnessDbIoLatency         metric.Float64Histogram
-	BubblewrapViolationTotal   metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
 	latencyHistogram           metric.Float64Histogram
@@ -43,8 +37,6 @@ var (
 	SIPSyncPayloadSizeRecorder metric.Int64Histogram
 
 	tokenUsageCounter                  metric.Int64Counter
-	AgentTokenUsageTotal               metric.Int64Counter
-	AgentCostEstimateUSD               metric.Float64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -63,15 +55,12 @@ var (
 	tokensSavedCounter                 metric.Int64Counter
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
-	AutoDreamConsolidationTotal        metric.Int64Counter
 	AutoDreamIngestionErrorCounter metric.Int64Counter
 	AutoDreamCompressionErrorCounter metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
 	subAgentQueueLengthGauge           metric.Int64UpDownCounter
-	AutoDreamRecordsSyncedTotal metric.Int64Counter
-	AutoDreamSyncErrorsTotal    metric.Int64Counter
 	SubAgentQueueDelayHistogram        metric.Float64Histogram
 	TaskClaimContentionTotal           metric.Int64Counter
 	SandboxViolationsTotal             metric.Int64Counter
@@ -93,11 +82,9 @@ var (
 	sqliteLockContentionCounter   metric.Int64Counter
 	sqliteRetryExhaustedCounter   metric.Int64Counter
 	postgresRetryExhaustedCounter metric.Int64Counter
-	sqliteThrottledRequestCounter metric.Int64Counter
-	sqliteRetryEventCounter       metric.Int64Counter
 
 	autoDreamSyncDuration  metric.Float64Histogram
-	autoDreamQueryDuration metric.Float64Histogram // added for ohc_autodream_query_duration_seconds
+	autoDreamQueryDuration metric.Float64Histogram
 	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -112,9 +99,6 @@ var (
 	awsAccessKeyRegex = regexp.MustCompile(`\bAKIA[0-9A-Z]{16}\b`)
 	// Use lookaround-like boundaries for AWS Secret Key as it can contain / or + which are non-word chars for \b
 	awsSecretKeyRegex = regexp.MustCompile(`(^|[^a-zA-Z0-9/+])[a-zA-Z0-9/+]{40}([^a-zA-Z0-9/+]|$)`)
-
-	// GlobalForecaster instance.
-	GlobalForecaster *Forecaster
 )
 
 func RedactPII(input string) string {
@@ -194,15 +178,6 @@ func RedactInterfacePII(val interface{}) interface{} {
 		if rv.Kind() == reflect.String {
 			return RedactPII(rv.String())
 		}
-		if rv.Kind() == reflect.Ptr {
-			if rv.IsNil() {
-				return val
-			}
-			// We return the redacted element directly, which becomes a map[string]interface{}
-			// for structs. This allows json.Marshal to still serialize it identically
-			// without attempting to construct dynamic typed pointers.
-			return RedactInterfacePII(rv.Elem().Interface())
-		}
 		switch rv.Kind() {
 		case reflect.Slice, reflect.Array:
 			if rv.Len() == 0 {
@@ -241,18 +216,7 @@ func RedactInterfacePII(val interface{}) interface{} {
 				if field.PkgPath != "" {
 					continue
 				}
-				key := field.Name
-				tag := field.Tag.Get("json")
-				if tag == "-" {
-					continue
-				}
-				if tag != "" {
-					parts := strings.Split(tag, ",")
-					if parts[0] != "" {
-						key = parts[0]
-					}
-				}
-				res[key] = RedactInterfacePII(rv.Field(i).Interface())
+				res[field.Name] = RedactInterfacePII(rv.Field(i).Interface())
 			}
 			return res
 		}
@@ -290,14 +254,7 @@ func InitTelemetry() (func(), error) {
 		return nil, err
 	}
 
-	// Initialize the global forecaster with 1 minute interval and 1 hour window.
-	GlobalForecaster = NewForecaster(1*time.Minute, 1*time.Hour)
-	GlobalForecaster.Start(context.Background())
-
 	return func() {
-		if GlobalForecaster != nil {
-			GlobalForecaster.Stop()
-		}
 		_ = provider.Shutdown(context.Background())
 	}, nil
 }
@@ -307,7 +264,6 @@ func InitTelemetry() (func(), error) {
 type mockableMeter interface {
 	Int64Counter(name string, options ...metric.Int64CounterOption) (metric.Int64Counter, error)
 	Int64UpDownCounter(name string, options ...metric.Int64UpDownCounterOption) (metric.Int64UpDownCounter, error)
-	Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error)
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
@@ -322,48 +278,11 @@ func InitWithMeter(m mockableMeter) error {
 	if m == nil {
 		return fmt.Errorf("meter is nil")
 	}
-
 	var err error
-	AutoDreamRecordsSyncedTotal, err = m.Int64Counter("autodream_records_synced_total",
-		metric.WithDescription("Total number of autodream records successfully synced"),
-	)
-	if err != nil {
-		return err
-	}
-	AutoDreamSyncErrorsTotal, err = m.Int64Counter("autodream_sync_errors_total",
-		metric.WithDescription("Total number of autodream sync errors"),
-	)
-	if err != nil {
-		return err
-	}
 	var errs []error
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	sqliteThrottledRequestCounter, err = m.Int64Counter(
-		"ohc_sqlite_throttled_request_total",
-		metric.WithDescription("Total times SQLite write operations were throttled by concurrency limiter."),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	sqliteRetryEventCounter, err = m.Int64Counter(
-		"ohc_sqlite_retry_event_total",
-		metric.WithDescription("Total times SQLite transactions were retried due to lock errors."),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	AutoDreamConsolidationTotal, err = m.Int64Counter(
-		"ohc_autodream_consolidation_total",
-		metric.WithDescription("Total number of AutoDream consolidation cycles"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -387,7 +306,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SIPSyncLatencyRecorder, err = m.Float64Histogram(
-		"ohc_sync_latency_seconds", // added for issue 4365
+		"ohc_sync_latency_seconds",
 		metric.WithDescription("Latency of offline-to-cloud synchronization"),
 		metric.WithUnit("s"),
 	)
@@ -396,7 +315,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	SIPSyncPayloadSizeRecorder, err = m.Int64Histogram(
-		"ohc_sync_payload_bytes", // added for issue 4365
+		"ohc_sync_payload_bytes",
 		metric.WithDescription("Size of JSON payloads synced to the remote endpoint"),
 		metric.WithUnit("By"),
 	)
@@ -489,22 +408,6 @@ func InitWithMeter(m mockableMeter) error {
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
 		metric.WithDescription("Total tokens used by agents"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	AgentTokenUsageTotal, err = m.Int64Counter(
-		"ohc_agent_token_usage_total",
-		metric.WithDescription("Total tokens consumed by agents across all models"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	AgentCostEstimateUSD, err = m.Float64Counter(
-		"ohc_agent_cost_estimate_usd",
-		metric.WithDescription("Cumulative estimated USD cost of agent LLM operations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -639,7 +542,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	subAgentQueueLengthGauge, err = m.Int64UpDownCounter(
-		"ohc.sub_agent.queue_length",
+		"ohc_sub_agent_queue_length",
 		metric.WithDescription("The current number of jobs in the sub-agent task queue"),
 	)
 	if err != nil {
@@ -753,8 +656,8 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	RateLimitExceededCount, err = m.Int64Counter(
-		"ohc_api_rate_limit_exceeded_total",
-		metric.WithDescription("Total number of API rate limit exceeded (HTTP 429) occurrences."),
+		"api_rate_limit_exceeded_count",
+		metric.WithDescription("Total number of API rate limit exceeded (HTTP 429) occurrences"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -820,58 +723,10 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
-	err = initForecastingMetrics(m)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
 	SubAgentExecutionDuration, err = m.Float64Histogram(
 		"ohc_sub_agent_execution_duration_seconds",
 		metric.WithDescription("Duration of sub-agent execution in seconds"),
 		metric.WithUnit("s"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	BubblewrapSpawnTotal, err = m.Int64Counter(
-		"ohc_bubblewrap_spawn_total",
-		metric.WithDescription("Total number of Bubblewrap spawns"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	BubblewrapExecutionLatency, err = m.Float64Histogram(
-		"ohc_bubblewrap_execution_latency_seconds",
-		metric.WithDescription("Latency of Bubblewrap execution in seconds"),
-		metric.WithUnit("s"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	HarnessInitLatency, err = m.Float64Histogram(
-		"harness_init_latency",
-		metric.WithDescription("Latency of harness initialization"),
-		metric.WithUnit("ms"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	HarnessDbIoLatency, err = m.Float64Histogram(
-		"harness_db_io_latency",
-		metric.WithDescription("Latency of harness database I/O"),
-		metric.WithUnit("ms"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	BubblewrapViolationTotal, err = m.Int64Counter(
-		"ohc_bubblewrap_violation_total",
-		metric.WithDescription("Total number of Bubblewrap sandbox policy violations"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -973,65 +828,9 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 			"type":     tokenType,
 			"count":    count,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "token_usage", string(payloadBytes))
-	}
-}
-
-// RecordAgentTokenUsage increments the centralized agent token counter.
-func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, model string, count int64) {
-	if AgentTokenUsageTotal == nil {
-		return
-	}
-	AgentTokenUsageTotal.Add(ctx, count, metric.WithAttributes(
-		attribute.String("agent_id", agentID),
-		attribute.String("organization_id", organizationID),
-		attribute.String("role", role),
-		attribute.String("model", model),
-	))
-
-	if GlobalForecaster != nil {
-		GlobalForecaster.RecordUsage(organizationID, count)
-	}
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id":        agentID,
-			"organization_id": organizationID,
-			"role":            role,
-			"model":           model,
-			"count":           count,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "agent_token_usage", string(payloadBytes))
-	}
-}
-
-// RecordAgentCost records the estimated USD cost of an agent operation.
-func RecordAgentCost(ctx context.Context, agentID, organizationID, role, model string, cost float64) {
-	if AgentCostEstimateUSD == nil {
-		return
-	}
-	AgentCostEstimateUSD.Add(ctx, cost, metric.WithAttributes(
-		attribute.String("agent_id", agentID),
-		attribute.String("organization_id", organizationID),
-		attribute.String("role", role),
-		attribute.String("model", model),
-	))
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id":        agentID,
-			"organization_id": organizationID,
-			"role":            role,
-			"model":           model,
-			"cost":            cost,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "agent_cost", string(payloadBytes))
 	}
 }
 
@@ -1062,8 +861,8 @@ func RecordAgentApiCall(ctx context.Context, agentID, role, api string) {
 			"role":     role,
 			"api":      api,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "agent_api_call", string(payloadBytes))
 	}
 }
@@ -1095,8 +894,8 @@ func RecordAgentApiError(ctx context.Context, agentID, role, api string) {
 			"role":     role,
 			"api":      api,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "agent_api_error", string(payloadBytes))
 	}
 }
@@ -1122,8 +921,8 @@ func RecordHumanInteraction(ctx context.Context, interactionType string) {
 		payloadMap := map[string]interface{}{
 			"type": interactionType,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "human_interaction", string(payloadBytes))
 	}
 }
@@ -1149,8 +948,8 @@ func RecordMeetingEvent(ctx context.Context, eventType string) {
 		payloadMap := map[string]interface{}{
 			"type": eventType,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "meeting_event", string(payloadBytes))
 	}
 }
@@ -1201,8 +1000,8 @@ func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float6
 			"organization_id": organizationID,
 			"rate":            rate,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "token_burn_rate_forecast", string(payloadBytes))
 	}
 	if tokenBurnRateGauge != nil {
@@ -1219,8 +1018,8 @@ func RecordUSDBurnRate(ctx context.Context, organizationID string, rate float64)
 			"organization_id": organizationID,
 			"rate":            rate,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "usd_burn_rate_forecast", string(payloadBytes))
 	}
 	if usdBurnRateGauge != nil {
@@ -1243,8 +1042,8 @@ func RecordSwarmTaskCompleted(ctx context.Context, missionID string) {
 		payloadMap := map[string]interface{}{
 			"mission_id": missionID,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "swarm_task_completed", string(payloadBytes))
 	}
 }
@@ -1257,8 +1056,8 @@ func RecordTokensSaved(ctx context.Context, operation string, cacheType string, 
 			"cache_type":       cacheType,
 			"estimated_tokens": estimatedTokens,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "tokens_saved", string(payloadBytes))
 	}
 	if tokensSavedCounter == nil {
@@ -1277,8 +1076,8 @@ func RecordCacheHit(ctx context.Context, operation string, cacheType string) {
 			"operation":  operation,
 			"cache_type": cacheType,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "cache_hit", string(payloadBytes))
 	}
 	if cacheHitsCounter == nil {
@@ -1296,8 +1095,8 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 		payloadMap := map[string]interface{}{
 			"endpoint": endpoint,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "api_rate_limit_exceeded", string(payloadBytes))
 	}
 	if RateLimitExceededCount == nil {
@@ -1309,14 +1108,13 @@ func RecordApiRateLimitExceeded(ctx context.Context, endpoint string) {
 }
 
 // RecordSQLiteLockContention increments the global counter for SQLite database lock contention.
-// Used primarily to monitor Standalone Mode Swarm concurrency limits.
 func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"operation": operation,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "sqlite_lock_contention", string(payloadBytes))
 	}
 	if sqliteLockContentionCounter == nil {
@@ -1327,50 +1125,14 @@ func RecordSQLiteLockContention(ctx context.Context, operation string) {
 	))
 }
 
-// RecordSQLiteThrottledRequest increments the counter when a database request is throttled in Standalone mode.
-func RecordSQLiteThrottledRequest(ctx context.Context, operation string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"operation": operation,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "sqlite_throttled_request", string(payloadBytes))
-	}
-	if sqliteThrottledRequestCounter == nil {
-		return
-	}
-	sqliteThrottledRequestCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("operation", operation),
-	))
-}
-
-// RecordSQLiteRetryEvent increments the counter when a database request executes a retry backoff.
-func RecordSQLiteRetryEvent(ctx context.Context, operation string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"operation": operation,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "sqlite_retry_event", string(payloadBytes))
-	}
-	if sqliteRetryEventCounter == nil {
-		return
-	}
-	sqliteRetryEventCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("operation", operation),
-	))
-}
-
 // RecordSQLiteRetryExhausted increments the global counter for SQLite transaction failed after exhausting retries.
 func RecordSQLiteRetryExhausted(ctx context.Context, operation string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"operation": operation,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "sqlite_retry_exhausted", string(payloadBytes))
 	}
 	if sqliteRetryExhaustedCounter == nil {
@@ -1387,8 +1149,8 @@ func RecordPostgresRetryExhausted(ctx context.Context, operation string) {
 		payloadMap := map[string]interface{}{
 			"operation": operation,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "postgres_retry_exhausted", string(payloadBytes))
 	}
 	if postgresRetryExhaustedCounter == nil {
@@ -1424,31 +1186,13 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 			payloadMap := map[string]interface{}{
 				"agent_id": agentID,
 			}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+			redactedMap := RedactInterfacePII(payloadMap)
+			payloadBytes, _ := json.Marshal(redactedMap)
 			_ = BufferMetricFunc(ctx, "autodream_memory_ingested", string(payloadBytes))
 		}
 		return
 	}
 	AutoDreamMemoriesIngestedCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("agent_id", agentID),
-	))
-}
-
-// RecordAutoDreamConsolidation increments the counter when an AutoDream consolidation cycle completes.
-func RecordAutoDreamConsolidation(ctx context.Context, agentID string) {
-	if AutoDreamConsolidationTotal == nil {
-		if BufferMetricFunc != nil {
-			payloadMap := map[string]interface{}{
-				"agent_id": agentID,
-			}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-			_ = BufferMetricFunc(ctx, "autodream_consolidation_total", string(payloadBytes))
-		}
-		return
-	}
-	AutoDreamConsolidationTotal.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("agent_id", agentID),
 	))
 }
@@ -1460,8 +1204,8 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 			payloadMap := map[string]interface{}{
 				"agent_id": agentID,
 			}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+			redactedMap := RedactInterfacePII(payloadMap)
+			payloadBytes, _ := json.Marshal(redactedMap)
 			_ = BufferMetricFunc(ctx, "autodream_memory_compressed", string(payloadBytes))
 		}
 		return
@@ -1477,8 +1221,8 @@ func RecordPostgresLockContention(ctx context.Context, operation string) {
 		payloadMap := map[string]interface{}{
 			"operation": operation,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "postgres_lock_contention", string(payloadBytes))
 	}
 	if postgresLockContentionCounter == nil {
@@ -1496,8 +1240,8 @@ func RecordLLMNetworkLatency(ctx context.Context, model string, latency float64)
 			"model":   model,
 			"latency": latency,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "llm_network_latency", string(payloadBytes))
 	}
 	if llmNetworkLatencyHistogram == nil {
@@ -1514,8 +1258,8 @@ func RecordTaskQueueLength(ctx context.Context, amount int64) {
 		payloadMap := map[string]interface{}{
 			"amount": amount,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "task_queue_length", string(payloadBytes))
 	}
 	if TaskQueueLengthGauge == nil {
@@ -1530,8 +1274,8 @@ func RecordTaskProcessed(ctx context.Context, latency time.Duration) {
 		payloadMap := map[string]interface{}{
 			"latency": latency.Seconds(),
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "task_processed", string(payloadBytes))
 	}
 	if TaskProcessingLatency == nil {
@@ -1547,8 +1291,8 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 			"transition_type": transitionType,
 			"duration":        duration,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "agent_transition_latency", string(payloadBytes))
 	}
 	if AgentTransitionLatency == nil {
@@ -1609,8 +1353,8 @@ func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
 		payloadMap := map[string]interface{}{
 			"delta": delta,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "swarm_task_queue_length", string(payloadBytes))
 	}
 	if swarmTaskQueueLengthGauge == nil {
@@ -1625,8 +1369,8 @@ func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 		payloadMap := map[string]interface{}{
 			"latency_ms": latencyMS,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "swarm_task_processing_latency", string(payloadBytes))
 	}
 	if swarmTaskProcessingLatency == nil {
@@ -1641,8 +1385,8 @@ func RecordTaskEnqueued(ctx context.Context, taskID string) {
 		payloadMap := map[string]interface{}{
 			"task_id": taskID,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "task_enqueued", string(payloadBytes))
 	}
 	if taskEnqueuedCounter == nil {
@@ -1660,8 +1404,8 @@ func RecordTaskFailed(ctx context.Context, taskID string, errStr string) {
 			"task_id": taskID,
 			"error":   errStr,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "task_failed", string(payloadBytes))
 	}
 	if taskFailedCounter == nil {
@@ -1680,8 +1424,8 @@ func RecordCacheMiss(ctx context.Context, operation string, cacheType string) {
 			"operation":  operation,
 			"cache_type": cacheType,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "cache_miss", string(payloadBytes))
 	}
 	if cacheMissesCounter == nil {
@@ -1746,10 +1490,9 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 	))
 }
 
-// RecordQueueLength correctly applies PII redaction before JSON marshaling.
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", fmt.Sprintf("%d", delta))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
@@ -1769,8 +1512,8 @@ func RecordToolAutoCorrection(ctx context.Context, agentID, role string, success
 			"role":     role,
 			"status":   status,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "tool_autocorrection_total", string(payloadBytes))
 	}
 	if ToolAutoCorrectionTotal == nil {
@@ -1791,8 +1534,8 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 			"phase":    phase,
 			"duration": durationSeconds,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "deliberation_phase_duration_seconds", string(payloadBytes))
 	}
 	if DeliberationPhaseDuration == nil {
@@ -1837,7 +1580,6 @@ func RecordAgentExecutionTrace(ctx context.Context, agentID, traceType string) {
 			"agent_id":   agentID,
 			"trace_type": traceType,
 		}
-
 		payloadBytes, _ := json.Marshal(payloadMap)
 		_ = BufferMetricFunc(ctx, "agent_execution_traces_total", string(payloadBytes))
 	}
@@ -1898,8 +1640,8 @@ func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorTyp
             "agent_id": agentID,
             "error_type": errorType,
         }
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+        redactedMap := RedactInterfacePII(payloadMap)
+        payloadBytes, _ := json.Marshal(redactedMap)
         _ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
     }
     if AutoDreamIngestionErrorCounter != nil {
@@ -1917,8 +1659,8 @@ func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorT
             "agent_id": agentID,
             "error_type": errorType,
         }
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+        redactedMap := RedactInterfacePII(payloadMap)
+        payloadBytes, _ := json.Marshal(redactedMap)
         _ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
     }
     if AutoDreamCompressionErrorCounter != nil {
@@ -1935,8 +1677,8 @@ func RecordSubAgentQueueDelay(ctx context.Context, delay float64) {
 		payloadMap := map[string]interface{}{
 			"delay": delay,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "sub_agent_queue_delay", string(payloadBytes))
 	}
 	if SubAgentQueueDelayHistogram == nil {
@@ -1951,8 +1693,8 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 		payloadMap := map[string]interface{}{
 			"mode": mode,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "task_claim_contention", string(payloadBytes))
 	}
 	if TaskClaimContentionTotal == nil {
@@ -1971,8 +1713,8 @@ func RecordSandboxViolation(ctx context.Context, violationType, agentID, path st
 			"agent_id": agentID,
 			"path":     path,
 		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
 		_ = BufferMetricFunc(ctx, "sandbox_violation_total", string(payloadBytes))
 	}
 	if SandboxViolationsTotal == nil {
@@ -1983,90 +1725,4 @@ func RecordSandboxViolation(ctx context.Context, violationType, agentID, path st
 		attribute.String("agent_id", agentID),
 		attribute.String("path", path),
 	))
-}
-
-
-// RecordAutoDreamSyncSuccess increments the successful sync counter.
-func RecordAutoDreamSyncSuccess(ctx context.Context, agentID string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id": agentID,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "autodream_records_synced_total", string(payloadBytes))
-	}
-	if AutoDreamRecordsSyncedTotal != nil {
-		AutoDreamRecordsSyncedTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("agent_id", agentID),
-		))
-	}
-}
-
-// RecordAutoDreamSyncError increments the sync error counter.
-func RecordAutoDreamSyncError(ctx context.Context, agentID, errorType string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"agent_id": agentID,
-			"error_type": errorType,
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "autodream_sync_errors_total", string(payloadBytes))
-	}
-	if AutoDreamSyncErrorsTotal != nil {
-		AutoDreamSyncErrorsTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("agent_id", agentID),
-			attribute.String("error_type", errorType),
-		))
-	}
-}
-
-
-// RecordBubblewrapSpawn increments the counter for Bubblewrap sandbox spawns.
-func RecordBubblewrapSpawn(ctx context.Context) {
-	if BubblewrapSpawnTotal != nil {
-		BubblewrapSpawnTotal.Add(ctx, 1)
-	}
-}
-
-// RecordBubblewrapExecutionLatency records the latency of a Bubblewrap execution.
-func RecordBubblewrapExecutionLatency(ctx context.Context, duration float64) {
-	if BubblewrapExecutionLatency != nil {
-		BubblewrapExecutionLatency.Record(ctx, duration)
-	}
-}
-
-// RecordBubblewrapViolation increments the counter for Bubblewrap sandbox policy violations.
-func RecordBubblewrapViolation(ctx context.Context) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"type": "bubblewrap_violation",
-		}
-
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "bubblewrap_violation_total", string(payloadBytes))
-	}
-	if BubblewrapViolationTotal != nil {
-		BubblewrapViolationTotal.Add(ctx, 1)
-	}
-}
-// added for tracking
-
-// RecordHarnessInitLatency records the latency of harness initialization.
-func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string) {
-	if HarnessInitLatency != nil {
-		HarnessInitLatency.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
-		))
-	}
-}
-
-// RecordHarnessDbIoLatency records the latency of harness database I/O.
-func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string) {
-	if HarnessDbIoLatency != nil {
-		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
-		))
-	}
 }

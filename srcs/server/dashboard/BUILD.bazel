@@ -22,7 +22,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "//srcs/server/api/mesh_legacy:mesh",
+        "//api/mesh",
         "@com_github_redis_go_redis_v9//:go-redis",
         "//srcs/server/api",
         "@com_github_redis_rueidis//:rueidis",
@@ -40,8 +40,6 @@ go_library(
         "//srcs/server/settings",
         "//srcs/server/telemetry",
         "//srcs/server/tools/blobinspector",
-        "//srcs/server/tools/localstatefulproxy",
-        "//srcs/server/tools/edgeoffloadmcp",
         "//srcs/server/lib/integrations/hybridfsmcp",
         "@io_opentelemetry_go_otel//:otel",
         "//srcs/server/utils",

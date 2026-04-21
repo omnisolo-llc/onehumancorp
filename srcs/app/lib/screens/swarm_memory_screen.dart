@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:ohc_app/widgets/vector_memory_visualizer.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -91,11 +90,6 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
                   const Text('Vector Memory Observability', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
                   const SizedBox(height: 16),
                   const VectorMemoryVisualizerWidget(),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () => context.go('/autodream-sync'),
-                    child: const Text('View AutoDream Sync Walkthrough'),
-                  ),
                 ],
               ),
             ),

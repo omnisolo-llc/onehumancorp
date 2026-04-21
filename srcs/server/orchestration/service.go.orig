@@ -1,0 +1,2112 @@
+package orchestration
+
+
+import (
+	"google.golang.org/protobuf/proto"
+
+
+
+
+	"strings"
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"sync"
+	"time"
+
+	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/scheduler"
+	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/storage"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
+)
+
+var (
+	featureRegex = regexp.MustCompile(`\[Feature:\s*([^\]]+)\]`)
+)
+
+
+// Status indicates the current operational phase of an AI agent within the workforce.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type Status string
+
+const (
+	// StatusIdle represents the IDLE lifecycle phase of a tracked entity within the event-driven state machine.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	StatusIdle Status = "IDLE"
+	// StatusActive represents the ACTIVE lifecycle phase of a tracked entity within the event-driven state machine.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	StatusActive Status = "ACTIVE"
+	// StatusInMeeting represents the INMEETING lifecycle phase of a tracked entity within the event-driven state machine.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	StatusInMeeting Status = "IN_MEETING"
+	// StatusBlocked represents the BLOCKED lifecycle phase of a tracked entity within the event-driven state machine.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	StatusBlocked Status = "BLOCKED"
+	// StatusWaitingForTools represents the WAITINGFORTOOLS lifecycle phase of a tracked entity within the event-driven state machine.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	StatusWaitingForTools Status = "WAITING_FOR_TOOLS"
+)
+
+// Event type constants for the asynchronous pub/sub agent interaction protocol.
+const (
+	// EventTask provides domain-specific context and typed constraints for EventTask operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventTask = "task"
+	// EventStatus provides domain-specific context and typed constraints for EventStatus operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventStatus = "status"
+	// EventHandoff provides domain-specific context and typed constraints for EventHandoff operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventHandoff = "handoff"
+	// EventCodeReviewed provides domain-specific context and typed constraints for EventCodeReviewed operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventCodeReviewed = "CodeReviewed"
+	// EventTestsFailed provides domain-specific context and typed constraints for EventTestsFailed operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventTestsFailed = "TestsFailed"
+	// EventTestsPassed provides domain-specific context and typed constraints for EventTestsPassed operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventTestsPassed = "TestsPassed"
+	// EventSpecApproved provides domain-specific context and typed constraints for EventSpecApproved operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventSpecApproved = "SpecApproved"
+	// EventBlockerRaised provides domain-specific context and typed constraints for EventBlockerRaised operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventBlockerRaised = "BlockerRaised"
+	// EventBlockerCleared provides domain-specific context and typed constraints for EventBlockerCleared operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventBlockerCleared = "BlockerCleared"
+	// EventPRCreated provides domain-specific context and typed constraints for EventPRCreated operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventPRCreated = "PRCreated"
+	// EventPRMerged provides domain-specific context and typed constraints for EventPRMerged operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventPRMerged = "PRMerged"
+	// EventDesignReviewed provides domain-specific context and typed constraints for EventDesignReviewed operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventDesignReviewed = "DesignReviewed"
+	// EventApprovalNeeded provides domain-specific context and typed constraints for EventApprovalNeeded operations across the application.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	EventApprovalNeeded = "ApprovalNeeded"
+)
+
+// Agent represents an autonomous AI actor registered in the orchestration Hub, tracking its identity, role, and current state.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type Agent struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Role           string `json:"role"`
+	OrganizationID string `json:"organizationId"`
+	Status         Status `json:"status"`
+	// ProviderType identifies the external agent implementation backing this worker
+	// (e.g. "claude", "gemini", "opencode").  An empty string or "builtin" means
+	// the platform's own lightweight agent is used.
+	ProviderType string `json:"providerType,omitempty"`
+	Region       string `json:"region,omitempty"`
+}
+
+// Message represents a discrete packet of communication between agents within a meeting room, containing the content and sender identity.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type Message struct {
+	ID         string    `json:"id"`
+	FromAgent  string    `json:"fromAgent"`
+	ToAgent    string    `json:"toAgent"`
+	Type       string    `json:"type"`
+	Content    string    `json:"content"`
+	MeetingID  string    `json:"meetingId,omitempty"`
+	OccurredAt time.Time `json:"occurredAt"`
+}
+
+// DelegateTask allows an agent in Delegate Mode to act as a routing proxy.
+// It inspects an incoming task, updates the sender and recipient fields,
+// and forwards the task to the best-fit specialist agent from the registry.
+//
+//   - fromAgentID: string; The unique identifier of the delegating agent.
+//   - toAgentID: string; The unique identifier of the specialist agent.
+//   - task: Message; The task payload to be delegated.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns DelegateTask(fromAgentID, toAgentID string, task Message) error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (h *Hub) DelegateTask(fromAgentID, toAgentID string, task Message) error {
+	if err := CheckDocumentationGate(task.Content); err != nil {
+		return err
+	}
+
+	if _, ok := h.Agent(fromAgentID); !ok {
+		return errors.New("sender agent is not registered")
+	}
+	toAgent, ok := h.Agent(toAgentID)
+	if !ok {
+		return errors.New("recipient agent is not registered")
+	}
+
+	task.FromAgent = fromAgentID
+	task.ToAgent = toAgentID
+
+	err := h.Publish(task)
+	if err == nil && h.sipDB != nil {
+		isStandalone := !envBoolDefault("OHC_MULTITENANT", true)
+		if isStandalone {
+			// In standalone mode, synchronously delegate to prevent connection contention
+			// caused by thousands of unbounded goroutines hitting the SIPDB.
+			_ = h.sipDB.DelegateMission(context.Background(), task.ID, toAgent.Role, task)
+		} else {
+			// In cloud mode, Postgres can handle concurrent connections easily.
+			go func(t Message, r string) {
+				_ = h.sipDB.DelegateMission(context.Background(), t.ID, r, t)
+			}(task, toAgent.Role)
+		}
+	}
+	return err
+}
+
+// MeetingRoom provides a thread-safe, isolated collaborative space where multiple agents can exchange messages and context.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type MeetingRoom struct {
+	ID           string    `json:"id"`
+	Agenda       string    `json:"agenda,omitempty"`
+	Participants []string  `json:"participants"`
+	Transcript   []Message `json:"transcript"`
+}
+
+// Hub acts as the central, thread-safe asynchronous message broker and state registry for all active agents and meeting rooms.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type Hub struct {
+	mu             sync.RWMutex
+	agents         map[string]Agent
+	inbox          map[string][]Message
+	meetings       map[string]MeetingRoom
+	minimaxAPIKey  string
+	subs           map[string][]chan struct{}
+	sipDB          *SIPDB
+	tokenTrackers  map[string]struct{}
+	GetTokenUsage  func(ctx context.Context) map[string]int64
+	autoCorTrack   map[string]struct{}
+	eventLogChan   chan interface{}
+	repo           HubRepository
+	scheduler      *scheduler.Scheduler
+	settingsStore  *settings.Store
+	centrifugeNode *CentrifugeNode
+	storage        storage.Provider
+	ctx            context.Context
+	cancel         context.CancelFunc
+	taskManager    *TaskManager
+}
+
+func (h *Hub) TaskManager() *TaskManager {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.taskManager
+}
+
+// Close gracefully stops the Hub and its background workers.
+func (h *Hub) Close() {
+	if h.cancel != nil {
+		h.cancel()
+	}
+}
+
+// NewHub constructs a new instance of an orchestration Hub, pre-allocated with empty registries.
+//
+// Accepts no parameters.
+// Returns *Hub.
+// Produces no errors.
+// Has no side effects.
+func NewHub() *Hub {
+	return newHub(nil, nil)
+}
+
+// NewHubWithRepository creates a Hub backed by the provided repositories.
+func NewHubWithRepository(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
+	return newHub(repo, taskRepo)
+}
+
+func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
+	sched := scheduler.NewScheduler()
+	if taskRepo != nil {
+		sched = scheduler.NewSchedulerWithRepository(taskRepo)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	h := &Hub{
+		agents:        map[string]Agent{},
+		inbox:         map[string][]Message{},
+		meetings:      map[string]MeetingRoom{},
+		subs:          map[string][]chan struct{}{},
+		tokenTrackers: map[string]struct{}{},
+		autoCorTrack:  map[string]struct{}{},
+		eventLogChan:  make(chan interface{}, 100),
+		repo:          repo,
+		scheduler:     sched,
+		settingsStore: settings.NewStore(),
+		ctx:           ctx,
+		cancel:        cancel,
+	}
+
+
+	// Default to a stub S3 provider if we can't initialize a local one
+	h.storage = storage.NewS3Provider("ohc-blobs")
+	if local, err := storage.NewLocalProvider(".agent-task/blobs"); err == nil {
+		h.storage = local
+	}
+
+	// Create a dummy/empty taskManager. Real deployment will set a DB provider.
+	// TaskManager doesn't export a default without a DB, but we can set one when needed.
+	go h.eventLogWorker(h.ctx, "events.jsonl")
+	go h.tokenBurnRateWorker(h.ctx)
+	return h
+}
+
+// tokenBurnRateWorker calculates moving average token burn rate and emits forecasting metrics.
+func (h *Hub) tokenBurnRateWorker(ctx context.Context) {
+	ticker := time.NewTicker(1 * time.Minute)
+	defer ticker.Stop()
+
+	// Store history of usage for calculating moving average (e.g. over the last 5 minutes)
+	// Map of organizationID to a slice of totalTokens recorded each minute
+	history := make(map[string][]int64)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			h.calculateTokenBurnRate(ctx, history)
+		}
+	}
+}
+
+
+
+func (h *Hub) calculateTokenBurnRate(ctx context.Context, history map[string][]int64) {
+	if h.GetTokenUsage == nil {
+		return
+	}
+	usages := h.GetTokenUsage(ctx)
+
+	// Track which orgs are active this tick
+	activeOrgs := make(map[string]bool)
+
+	for orgID, totalTokens := range usages {
+		activeOrgs[orgID] = true
+		if totalTokens > 0 {
+			hist := history[orgID]
+			hist = append(hist, totalTokens)
+
+			// Keep only the last 5 data points for a 5-minute moving average
+			if len(hist) > 5 {
+				hist = hist[1:]
+			}
+			history[orgID] = hist
+
+			if len(hist) > 1 {
+				// Calculate moving average burn rate (tokens per minute)
+				rate := float64(hist[len(hist)-1]-hist[0]) / float64(len(hist)-1)
+				telemetry.RecordTokenBurnRate(ctx, orgID, rate)
+			}
+		} else {
+			delete(history, orgID)
+		}
+	}
+
+	// Clean up any orgs that were not in the usages map
+	for orgID := range history {
+		if !activeOrgs[orgID] {
+			delete(history, orgID)
+		}
+	}
+}
+
+// eventLogWorker processes event logs and writes them sequentially to the specified file.
+func (h *Hub) eventLogWorker(ctx context.Context, filename string) {
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		slog.Error("failed to open event log file", "filename", filename, "error", err)
+		return
+	}
+	defer f.Close()
+
+	// ⚡ BOLT: [Unbuffered synchronous disk writes to the events.jsonl sidecar logs] - Randomized Selection from Top 5
+	bw := bufio.NewWriter(f)
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			bw.Flush()
+			return
+		case logEntry, ok := <-h.eventLogChan:
+			if !ok {
+				bw.Flush()
+				return
+			}
+			b, err := json.Marshal(logEntry)
+			if err != nil {
+				slog.Error("failed to marshal event log", "error", err)
+				continue
+			}
+
+			var m map[string]interface{}
+			if err := json.Unmarshal(b, &m); err == nil {
+				telemetry.RedactInterfacePII(m)
+				b, _ = json.Marshal(m)
+			}
+
+			if _, err := bw.Write(append(b, '\n')); err != nil {
+				slog.Error("failed to write to event log file", "filename", filename, "error", err)
+			}
+
+			// If we've drained the channel, flush immediately to avoid latency
+			if len(h.eventLogChan) == 0 {
+				bw.Flush()
+			}
+
+		case <-ticker.C:
+			if err := bw.Flush(); err != nil {
+				slog.Error("failed to flush event log buffer", "error", err)
+			}
+		}
+	}
+}
+
+// LogEvent queues an event to be written sequentially to events.jsonl via the background worker.
+// Accepts parameters: h *Hub (No Constraints).
+// Returns LogEvent(event interface{}).
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) LogEvent(event interface{}) {
+	select {
+	case h.eventLogChan <- event:
+	default:
+		slog.Warn("eventLogChan is full, dropping event")
+	}
+}
+
+// TokenEfficientContextSummarization securely processes token efficient context summarization.
+//
+// Parameters:
+//
+//   - eventID: string; Unique event identifier.
+//
+//   - agentID: string; Identifier of the invoking agent.
+//
+//   - payload: []byte; The operation payload containing specific context instructions.
+//
+//   - error: Error object if validation or processing fails.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns TokenEfficientContextSummarization(eventID, agentID string, payload []byte) error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (h *Hub) TokenEfficientContextSummarization(eventID, agentID string, payload []byte) error {
+	h.mu.Lock()
+	if _, exists := h.tokenTrackers[eventID]; exists {
+		h.mu.Unlock()
+		return errors.New("event already being processed")
+	}
+	h.tokenTrackers[eventID] = struct{}{}
+	h.mu.Unlock()
+
+	defer func() {
+		h.mu.Lock()
+		delete(h.tokenTrackers, eventID)
+		h.mu.Unlock()
+	}()
+
+	var temp struct {
+		Context string `json:"context"`
+	}
+	dec := json.NewDecoder(bytes.NewReader(payload))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&temp); err != nil {
+		return fmt.Errorf("invalid payload: %w", err)
+	}
+
+	client := NewMinimaxClient(h.MinimaxAPIKey())
+
+	// Safely encode the untrusted payload as JSON to prevent prompt injection.
+	contextPayload, _ := json.Marshal(map[string]string{
+		"context": telemetry.RedactPII(temp.Context),
+	})
+	prompt := fmt.Sprintf("Summarize the following context efficiently to save tokens: %s", string(contextPayload))
+	summarizedContext, err := client.Reason(context.Background(), prompt)
+	if err != nil {
+		return fmt.Errorf("summarization failed: %w", err)
+	}
+
+	h.eventLogChan <- map[string]interface{}{
+		"event_id":           eventID,
+		"agent_id":           agentID,
+		"type":               "TokenEfficientContextSummarization",
+		"summarized_context": summarizedContext,
+	}
+
+	return nil
+}
+
+// ToolParameterAutoCorrection securely processes tool parameter auto-correction.
+//
+// Parameters:
+//
+//   - eventID: string; Unique event identifier.
+//
+//   - agentID: string; Identifier of the invoking agent.
+//
+//   - payload: []byte; The operation payload containing tool parameters.
+//
+//   - error: Error object if validation or processing fails.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns ToolParameterAutoCorrection(eventID, agentID string, payload []byte) error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (h *Hub) ToolParameterAutoCorrection(eventID, agentID string, payload []byte) (err error) {
+	defer func() { telemetry.RecordToolAutoCorrection(context.Background(), agentID, "agent", err == nil) }()
+	h.mu.Lock()
+	if _, exists := h.autoCorTrack[eventID]; exists {
+		h.mu.Unlock()
+		return errors.New("event already being processed")
+	}
+	h.autoCorTrack[eventID] = struct{}{}
+	h.mu.Unlock()
+
+	defer func() {
+		h.mu.Lock()
+		delete(h.autoCorTrack, eventID)
+		h.mu.Unlock()
+	}()
+
+	var structTemp struct {
+		ID    string `json:"id,omitempty"`
+		Value string `json:"value,omitempty"`
+		Name  string `json:"name,omitempty"`
+	}
+	dec := json.NewDecoder(bytes.NewReader(payload))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&structTemp); err != nil {
+		return fmt.Errorf("invalid payload: %w", err)
+	}
+
+	temp := make(map[string]interface{})
+	if structTemp.ID != "" {
+		temp["id"] = structTemp.ID
+	}
+	if structTemp.Value != "" {
+		temp["value"] = structTemp.Value
+	}
+	if structTemp.Name != "" {
+		temp["name"] = structTemp.Name
+	}
+
+	corrected := false
+	for k, v := range temp {
+		if strVal, ok := v.(string); ok {
+			var intVal int
+			if _, err := fmt.Sscanf(strVal, "%d", &intVal); err == nil {
+				// To ensure it's purely numerical without any extra characters, check if fmt.Sprintf back matches.
+				if fmt.Sprintf("%d", intVal) == strVal {
+					temp[k] = intVal
+					corrected = true
+				}
+			}
+		}
+	}
+
+	tempBytes, _ := json.Marshal(temp)
+
+	// Create protobuf event representing the autocoorection
+	pbEvent := pb.ToolParameterAutoCorrectionEvent_builder{
+		EventId: proto.String(eventID),
+		AgentId: proto.String(agentID),
+		Payload: tempBytes,
+	}.Build()
+
+	h.LogEvent(map[string]interface{}{
+		"event_id":  pbEvent.GetEventId(),
+		"agent_id":  pbEvent.GetAgentId(),
+		"type":      "ToolParameterAutoCorrection",
+		"payload":   temp,
+		"corrected": corrected,
+	})
+
+	return nil
+}
+
+// SetSIPDB injects a database-driven Swarm Intelligence Protocol interface.
+// Accepts parameters: h *Hub (No Constraints).
+// Returns SetSIPDB(sipDB *SIPDB).
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) SetSIPDB(sipDB *SIPDB) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.sipDB = sipDB
+}
+
+func (h *Hub) Storage() storage.Provider {
+	return h.storage
+}
+
+func (h *Hub) SetStorage(provider storage.Provider) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.storage = provider
+}
+
+// SIPDB returns the configured database-driven Swarm Intelligence Protocol interface.
+func (h *Hub) SIPDB() *SIPDB {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.sipDB
+}
+
+// GetSIPDB retrieves the current SIP database interface.
+// Accepts parameters: h *Hub (No Constraints).
+// Returns GetSIPDB() *SIPDB.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) GetSIPDB() *SIPDB {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.sipDB
+}
+
+// RegisterAgent enrolls an agent into the Hub, allocating an inbox and initialising its Status.  Parameters:   - agent: Agent; The worker object containing ID, Name, Role, and Organization context.
+// Accepts parameters: h *Hub (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) RegisterAgent(agent Agent) {
+	if agent.Status == "" {
+		agent.Status = StatusIdle
+	}
+
+	if h.repo != nil {
+		if err := h.repo.RegisterAgent(context.Background(), agent); err != nil {
+			slog.Error("failed to register agent in repository", "agent_id", agent.ID, "error", err)
+			return
+		}
+
+		h.mu.RLock()
+		sipDB := h.sipDB
+		h.mu.RUnlock()
+		if sipDB != nil {
+			go func(a Agent) {
+				_ = sipDB.Heartbeat(context.Background(), a.ID, a.Role, string(a.Status))
+			}(agent)
+		}
+		return
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	h.agents[agent.ID] = agent
+
+	if h.sipDB != nil {
+		go func(a Agent) {
+			_ = h.sipDB.Heartbeat(context.Background(), a.ID, a.Role, string(a.Status))
+		}(agent)
+	}
+}
+
+// SetMinimaxAPIKey functionality.
+// Accepts parameters: h *Hub (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) SetMinimaxAPIKey(key string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.minimaxAPIKey = key
+}
+
+// MinimaxAPIKey functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) MinimaxAPIKey() string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.minimaxAPIKey
+}
+
+// Scheduler returns the Hub's task scheduler.
+func (h *Hub) Scheduler() *scheduler.Scheduler {
+	return h.scheduler
+}
+
+// SettingsStore returns the Hub's settings store.
+func (h *Hub) SettingsStore() *settings.Store {
+	return h.settingsStore
+}
+
+// SetSettingsStore injects a custom settings store.
+func (h *Hub) SetSettingsStore(s *settings.Store) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.settingsStore = s
+}
+
+// SetCentrifugeNode attaches a CentrifugeNode to the Hub so that every
+// published message is also fanned out to the corresponding Centrifuge
+// channel for real-time client delivery.
+func (h *Hub) SetCentrifugeNode(cn *CentrifugeNode) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.centrifugeNode = cn
+}
+
+// CentrifugeNode returns the currently attached CentrifugeNode (may be nil).
+func (h *Hub) CentrifugeNode() *CentrifugeNode {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.centrifugeNode
+}
+
+// PublishTaskBroadcast fans out a task update to the Teammate Mesh.
+func (h *Hub) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
+	h.mu.RLock()
+	cn := h.centrifugeNode
+	h.mu.RUnlock()
+
+	if cn != nil {
+		cn.PublishTaskBroadcast(taskID, payload)
+	}
+}
+
+//   - id: string; The unique identifier of the agent.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns Agent(id string) (Agent, bool).
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) Agent(id string) (Agent, bool) {
+	if h.repo != nil {
+		agent, ok, err := h.repo.GetAgent(context.Background(), id)
+		if err != nil {
+			slog.Error("failed to load agent from repository", "agent_id", id, "error", err)
+			return Agent{}, false
+		}
+		return agent, ok
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	agent, ok := h.agents[id]
+	return agent, ok
+}
+
+// OpenMeeting instantiates a new collaborative context window and marks all participants as InMeeting.
+//
+//   - id: string; Unique identifier for the room.
+//   - participants: []string; A list of agent IDs to be enrolled in the discussion.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns OpenMeeting(id string, participants []string) MeetingRoom.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) OpenMeeting(id string, participants []string) MeetingRoom {
+	if h.repo != nil {
+		ctx := context.Background()
+		meeting := MeetingRoom{ID: id, Participants: append([]string(nil), participants...)}
+		if err := h.repo.CreateMeeting(ctx, meeting); err != nil {
+			slog.Error("failed to create meeting in repository", "meeting_id", id, "error", err)
+			return MeetingRoom{}
+		}
+		for _, participant := range participants {
+			if err := h.repo.UpdateAgentStatus(ctx, participant, StatusInMeeting); err != nil {
+				slog.Warn("failed to mark participant in meeting", "meeting_id", id, "agent_id", participant, "error", err)
+			}
+		}
+
+		go telemetry.RecordMeetingEvent(context.Background(), "opened")
+		return meeting
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	meeting := MeetingRoom{ID: id, Participants: append([]string(nil), participants...)}
+	h.meetings[id] = meeting
+	for _, participant := range participants {
+		agent := h.agents[participant]
+		agent.Status = StatusInMeeting
+		h.agents[participant] = agent
+	}
+
+	go telemetry.RecordMeetingEvent(context.Background(), "opened")
+	return meeting
+}
+
+// OpenMeetingWithAgenda creates a meeting room with an explicit agenda descriptor.
+//
+//   - id: string; Unique identifier for the room.
+//   - agenda: string; The primary objective guiding the agents' conversation.
+//   - participants: []string; A list of agent IDs to be enrolled in the discussion.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns OpenMeetingWithAgenda(id, agenda string, participants []string) MeetingRoom.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) OpenMeetingWithAgenda(id, agenda string, participants []string) MeetingRoom {
+	if h.repo != nil {
+		ctx := context.Background()
+		meeting := MeetingRoom{ID: id, Agenda: agenda, Participants: append([]string(nil), participants...)}
+		if err := h.repo.CreateMeeting(ctx, meeting); err != nil {
+			slog.Error("failed to create meeting with agenda in repository", "meeting_id", id, "error", err)
+			return MeetingRoom{}
+		}
+		for _, participant := range participants {
+			if err := h.repo.UpdateAgentStatus(ctx, participant, StatusInMeeting); err != nil {
+				slog.Warn("failed to mark participant in meeting", "meeting_id", id, "agent_id", participant, "error", err)
+			}
+		}
+
+		go telemetry.RecordMeetingEvent(context.Background(), "opened")
+		return meeting
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	meeting := MeetingRoom{ID: id, Agenda: agenda, Participants: append([]string(nil), participants...)}
+	h.meetings[id] = meeting
+	for _, participant := range participants {
+		agent := h.agents[participant]
+		agent.Status = StatusInMeeting
+		h.agents[participant] = agent
+	}
+
+	go telemetry.RecordMeetingEvent(context.Background(), "opened")
+	return meeting
+}
+
+// FireAgent removes an agent from the hub and clears their inbox.  Parameters:   - id: string; The unique identifier of the agent to terminate.
+// Accepts parameters: h *Hub (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) FireAgent(id string) {
+	if h.repo != nil {
+		if err := h.repo.RemoveAgent(context.Background(), id); err != nil {
+			slog.Error("failed to remove agent from repository", "agent_id", id, "error", err)
+		}
+		return
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	delete(h.agents, id)
+	delete(h.inbox, id)
+}
+
+// Publish validates and routes a message to a direct recipient, a meeting room, or both.
+//
+//   - message: Message; The event payload containing routing headers and content.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns Publish(message Message) error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (h *Hub) Publish(message Message) error {
+	if h.repo != nil {
+		return h.publishRepository(message)
+	}
+
+	h.mu.Lock()
+	sender, senderOk := h.agents[message.FromAgent]
+	if !senderOk {
+		h.mu.Unlock()
+		return errors.New("sender agent is not registered")
+	}
+
+	if message.ToAgent != "" {
+		if _, ok := h.agents[message.ToAgent]; !ok {
+			h.mu.Unlock()
+			return errors.New("recipient agent is not registered")
+		}
+	}
+
+	if message.MeetingID != "" {
+		if _, ok := h.meetings[message.MeetingID]; !ok {
+			h.mu.Unlock()
+			return errors.New("meeting room is not registered")
+		}
+	}
+
+	if message.ToAgent != "" {
+		inbox := h.inbox[message.ToAgent]
+		if cap(inbox) == 0 {
+			inbox = getMessageSlice()
+		}
+
+		h.inbox[message.ToAgent] = append(inbox, message)
+
+		if subs, ok := h.subs[message.ToAgent]; ok {
+			for _, sub := range subs {
+				select {
+				case sub <- struct{}{}:
+				default:
+				}
+			}
+		}
+	}
+
+	if message.MeetingID != "" {
+		meeting, ok := h.meetings[message.MeetingID]
+		if !ok {
+			h.mu.Unlock()
+			return errors.New("meeting room is not registered")
+		}
+
+		if cap(meeting.Transcript) == 0 {
+			meeting.Transcript = getMessageSlice()
+		}
+		meeting.Transcript = append(meeting.Transcript, message)
+
+		// ⚡ BOLT: [Aggressive AI Context Summarization] - Randomized Selection from Top 5
+		if len(meeting.Transcript) > 10 && h.minimaxAPIKey != "" {
+			minimaxKey := h.minimaxAPIKey
+			// Copy transcript for async processing to avoid retaining the backing array long-term
+			// We only need the FromAgent and Content.
+			type transcriptLine struct {
+				Agent   string `json:"agent"`
+				Content string `json:"content"`
+			}
+			var lines []transcriptLine
+			for _, msg := range meeting.Transcript {
+				lines = append(lines, transcriptLine{Agent: msg.FromAgent, Content: msg.Content}) // Redact in goroutine
+			}
+
+			go func(mID string, tLines []transcriptLine) {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				client := NewMinimaxClient(minimaxKey)
+
+				// Redact PII in the goroutine to save main thread CPU
+				for i, line := range tLines {
+					tLines[i].Content = telemetry.RedactPII(line.Content)
+				}
+				jsonPayload, _ := json.Marshal(tLines)
+				prompt := "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n" + string(jsonPayload)
+
+				summary, err := client.Reason(ctx, prompt)
+				if err == nil && summary != "" {
+					h.mu.Lock()
+					if mtg, ok := h.meetings[mID]; ok {
+						newTranscript := []Message{
+							{
+								ID:         "summary-" + time.Now().UTC().Format("20060102150405"),
+								FromAgent:  "SYSTEM_SUMMARIZER",
+								ToAgent:    "all",
+								Type:       EventStatus,
+								Content:    "[CONTEXT SUMMARIZED]: " + summary,
+								MeetingID:  mID,
+								OccurredAt: time.Now().UTC(),
+							},
+						}
+						if len(mtg.Transcript) > 3 {
+							newTranscript = append(newTranscript, mtg.Transcript[len(mtg.Transcript)-3:]...)
+						} else {
+							newTranscript = append(newTranscript, mtg.Transcript...)
+						}
+						mtg.Transcript = newTranscript
+						h.meetings[mID] = mtg
+					}
+					h.mu.Unlock()
+				} else {
+					slog.Warn("context summarization failed", "meeting_id", mID, "error", err)
+				}
+			}(message.MeetingID, lines)
+		}
+
+		h.meetings[message.MeetingID] = meeting
+		sender.Status = StatusInMeeting
+
+		for _, participant := range meeting.Participants {
+			if subs, ok := h.subs[participant]; ok {
+				for _, sub := range subs {
+					select {
+					case sub <- struct{}{}:
+					default:
+					}
+				}
+			}
+		}
+	} else {
+		sender.Status = StatusActive
+	}
+
+	h.agents[message.FromAgent] = sender
+	centrifugeNode := h.centrifugeNode
+
+	h.mu.Unlock()
+
+	// ⚡ BOLT: [Parallel Execution] Async worker for telemetry, PII redaction and logging
+	// Move heavy regex processing (redactPII) to a background goroutine to free up the Publisher thread
+	go func(sID, sRole, mType, mContent string) {
+		telemetry.RecordAgentApiCall(context.Background(), sID, sRole, "publish")
+		if mType != EventStatus {
+			telemetry.LogAgentExecution(context.Background(), sID, sRole, "publish", mType, telemetry.RedactPII(mContent))
+		}
+	}(sender.ID, sender.Role, message.Type, message.Content)
+
+	if centrifugeNode != nil {
+		go func(m Message, cn *CentrifugeNode) {
+			if m.MeetingID != "" {
+				cn.PublishMeetingMessage(m.MeetingID, m)
+			}
+			if m.ToAgent != "" && m.Type != "mesh:tasks" && m.Type != "mesh:coordination" && m.Type != "mesh:direct" && m.Type != "mesh:presence" {
+				cn.PublishAgentNotification(m.ToAgent, m)
+			}
+			if m.Type == "mesh:tasks" {
+				var payload map[string]interface{}
+				if err := json.Unmarshal([]byte(m.Content), &payload); err == nil {
+					cn.PublishTaskBroadcast(m.ID, payload)
+				}
+			} else if m.Type == "mesh:coordination" {
+				cn.PublishCoordinationMessage(m)
+			} else if m.Type == "mesh:presence" {
+				var payload map[string]interface{}
+				if err := json.Unmarshal([]byte(m.Content), &payload); err == nil {
+					agentID, _ := payload["agent_id"].(string)
+					status, _ := payload["status"].(string)
+					cn.PublishPresenceBroadcast(agentID, status)
+				}
+			} else if m.Type == "mesh:direct" && m.ToAgent != "" {
+				cn.PublishAgentNotification(m.ToAgent, m)
+			}
+		}(message, centrifugeNode)
+	}
+
+	return nil
+}
+
+func (h *Hub) publishRepository(message Message) error {
+	ctx := context.Background()
+
+	sender, ok, err := h.repo.GetAgent(ctx, message.FromAgent)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errors.New("sender agent is not registered")
+	}
+
+	var meetingParticipants []string
+	if message.MeetingID != "" {
+		meeting, ok, err := h.repo.GetMeeting(ctx, message.MeetingID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("meeting room is not registered")
+		}
+		meetingParticipants = append([]string(nil), meeting.Participants...)
+	}
+
+	if message.ToAgent != "" {
+		_, ok, err := h.repo.GetAgent(ctx, message.ToAgent)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return errors.New("recipient agent is not registered")
+		}
+	}
+
+	if message.ToAgent != "" {
+		if err := h.repo.PushMessage(ctx, message.ToAgent, message); err != nil {
+			return err
+		}
+	}
+
+	if message.MeetingID != "" {
+		if err := h.repo.AppendTranscript(ctx, message.MeetingID, message); err != nil {
+			return err
+		}
+		sender.Status = StatusInMeeting
+	} else {
+		sender.Status = StatusActive
+	}
+
+	if err := h.repo.UpdateAgentStatus(ctx, message.FromAgent, sender.Status); err != nil {
+		slog.Error("failed to update sender status in repository", "agent_id", message.FromAgent, "status", sender.Status, "error", err)
+	}
+
+	cn := h.notifyRealtimeTargets(message, meetingParticipants)
+
+	go telemetry.RecordAgentApiCall(context.Background(), sender.ID, sender.Role, "publish")
+	if message.Type != EventStatus {
+		go telemetry.LogAgentExecution(context.Background(), sender.ID, sender.Role, "publish", message.Type, telemetry.RedactPII(message.Content))
+	}
+
+	if cn != nil {
+		go func() {
+			if message.MeetingID != "" {
+				cn.PublishMeetingMessage(message.MeetingID, message)
+			}
+			if message.ToAgent != "" && message.Type != "mesh:tasks" && message.Type != "mesh:coordination" && message.Type != "mesh:direct" && message.Type != "mesh:presence" {
+				cn.PublishAgentNotification(message.ToAgent, message)
+			}
+			if message.Type == "mesh:tasks" {
+				var payload map[string]interface{}
+				if err := json.Unmarshal([]byte(message.Content), &payload); err == nil {
+					cn.PublishTaskBroadcast(message.ID, payload)
+				}
+			} else if message.Type == "mesh:coordination" {
+				cn.PublishCoordinationMessage(message)
+			} else if message.Type == "mesh:presence" {
+				var payload map[string]interface{}
+				if err := json.Unmarshal([]byte(message.Content), &payload); err == nil {
+					agentID, _ := payload["agent_id"].(string)
+					status, _ := payload["status"].(string)
+					cn.PublishPresenceBroadcast(agentID, status)
+				}
+			} else if message.Type == "mesh:direct" && message.ToAgent != "" {
+				cn.PublishAgentNotification(message.ToAgent, message)
+			}
+		}()
+	}
+
+	return nil
+}
+
+func (h *Hub) notifyRealtimeTargets(message Message, meetingParticipants []string) *CentrifugeNode {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	if message.ToAgent != "" {
+		if subs, ok := h.subs[message.ToAgent]; ok {
+			for _, sub := range subs {
+				select {
+				case sub <- struct{}{}:
+				default:
+				}
+			}
+		}
+	}
+
+	for _, participant := range meetingParticipants {
+		if subs, ok := h.subs[participant]; ok {
+			for _, sub := range subs {
+				select {
+				case sub <- struct{}{}:
+				default:
+				}
+			}
+		}
+	}
+
+	return h.centrifugeNode
+}
+
+// Subscribe returns a channel that receives real-time messages for the given agent.
+// Accepts no parameters.
+//   - agentID: string; Description
+//
+// Returns value, value.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) Subscribe(agentID string) (<-chan struct{}, func()) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	ch := make(chan struct{}, 1)
+	h.subs[agentID] = append(h.subs[agentID], ch)
+
+	unsubscribe := func() {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		subs := h.subs[agentID]
+		for i, sub := range subs {
+			if sub == ch {
+				// Prevent memory leak from lingering reference in underlying array
+				subs[i] = nil
+				h.subs[agentID] = append(subs[:i], subs[i+1:]...)
+				break
+			}
+		}
+		if len(h.subs[agentID]) == 0 {
+			delete(h.subs, agentID)
+		}
+	}
+
+	return ch, unsubscribe
+}
+
+// Inbox retrieves all undelivered or direct messages routed exclusively to a single agent.
+//
+//   - agentID: string; The unique identifier of the worker.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns Inbox(agentID string) []Message.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) Inbox(agentID string) []Message {
+	if h.repo != nil {
+		inbox, err := h.repo.PopMessages(context.Background(), agentID)
+		if err != nil {
+			slog.Error("failed to read inbox from repository", "agent_id", agentID, "error", err)
+			return nil
+		}
+		return inbox
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	inbox := h.inbox[agentID]
+	if len(inbox) == 0 {
+		return nil
+	}
+
+	// ⚡ BOLT: [O(1) Inbox draining instead of O(N) slice copy] - Randomized Selection from Top 5
+	// To prevent memory leak of map keys over time, delete the key entirely.
+	delete(h.inbox, agentID)
+	return inbox
+}
+
+var messageSlicePool = sync.Pool{
+	New: func() interface{} {
+		s := make([]Message, 0, 16)
+		return &s
+	},
+}
+
+func getMessageSlice() []Message {
+	return *messageSlicePool.Get().(*[]Message)
+}
+
+func putMessageSlice(s []Message) {
+	if cap(s) > 1024 {
+		return
+	}
+	// clear elements to avoid memory leaks
+	clear(s)
+	s = s[:0]
+	messageSlicePool.Put(&s)
+}
+
+// Meeting retrieves the current state and transcript of a specified virtual meeting room.
+//
+//   - id: string; The unique identifier of the room.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns Meeting(id string) (MeetingRoom, bool).
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) Meeting(id string) (MeetingRoom, bool) {
+	if h.repo != nil {
+		meeting, ok, err := h.repo.GetMeeting(context.Background(), id)
+		if err != nil {
+			slog.Error("failed to load meeting from repository", "meeting_id", id, "error", err)
+			return MeetingRoom{}, false
+		}
+		go telemetry.RecordMeetingEvent(context.Background(), "opened")
+		return meeting, ok
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	meeting, ok := h.meetings[id]
+	go telemetry.RecordMeetingEvent(context.Background(), "opened")
+	return meeting, ok
+}
+
+// Meetings fetches a point-in-time snapshot of all active meeting rooms.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns Meetings() []MeetingRoom.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) Meetings() []MeetingRoom {
+	if h.repo != nil {
+		meetings, err := h.repo.ListMeetings(context.Background())
+		if err != nil {
+			slog.Error("failed to list meetings from repository", "error", err)
+			return nil
+		}
+		go telemetry.RecordMeetingEvent(context.Background(), "opened")
+		return meetings
+	}
+
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	meetings := make([]MeetingRoom, 0, len(h.meetings))
+	for _, meeting := range h.meetings {
+		meetings = append(meetings, meeting)
+	}
+
+	go telemetry.RecordMeetingEvent(context.Background(), "opened")
+	return meetings
+}
+
+// Agents retrieves a point-in-time snapshot of the entire registered workforce, ordered by ID.
+//
+// Accepts parameters: h *Hub (No Constraints).
+// Returns Agents() []Agent.
+// Produces no errors.
+// Has no side effects.
+func (h *Hub) Agents() []Agent {
+	if h.repo != nil {
+		agents, err := h.repo.ListAgents(context.Background())
+		if err != nil {
+			slog.Error("failed to list agents from repository", "error", err)
+			return nil
+		}
+		sort.Slice(agents, func(i, j int) bool {
+			return agents[i].ID < agents[j].ID
+		})
+		return agents
+	}
+
+	h.mu.RLock()
+	agents := make([]Agent, 0, len(h.agents))
+	for _, agent := range h.agents {
+		agents = append(agents, agent)
+	}
+	h.mu.RUnlock()
+
+	// ⚡ BOLT: [O(n log n) sorting inside read lock] - Randomized Selection from Top 5
+	sort.Slice(agents, func(i, j int) bool {
+		return agents[i].ID < agents[j].ID
+	})
+
+	return agents
+}
+
+// RegisterHubService HubServiceServer implements the gRPC HubService defined in hub.proto.
+// Accepts parameters: s *grpc.Server (No Constraints), hub *Hub (No Constraints), mesh MeshTransport.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func RegisterHubService(s *grpc.Server, hub *Hub, mesh MeshTransport) {
+	pb.RegisterHubServiceServer(s, &HubServiceServer{hub: hub, mesh: mesh})
+}
+
+// HubServiceServer implements the gRPC interface for the orchestration Hub, facilitating remote agent registration and message streaming.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type HubServiceServer struct {
+	pb.UnimplementedHubServiceServer
+	hub  *Hub
+	mesh MeshTransport
+}
+
+// NewHubServiceServer functionality.
+// Accepts parameters: hub *Hub (No Constraints).
+// Returns *HubServiceServer.
+// Produces no errors.
+// Has no side effects.
+func NewHubServiceServer(hub *Hub, mesh MeshTransport) *HubServiceServer {
+	return &HubServiceServer{hub: hub, mesh: mesh}
+}
+
+// RegisterAgent functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns (*pb.RegisterAgentResponse, error).
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) RegisterAgent(ctx context.Context, req *pb.RegisterAgentRequest) (*pb.RegisterAgentResponse, error) {
+	agentReq := req.GetAgent()
+	agent := Agent{
+		ID:             agentReq.GetId(),
+		Name:           agentReq.GetName(),
+		Role:           agentReq.GetRole(),
+		OrganizationID: agentReq.GetOrganizationId(),
+		Status:         Status(agentReq.GetStatus()),
+		ProviderType:   agentReq.GetProviderType(),
+	}
+	s.hub.RegisterAgent(agent)
+	return pb.RegisterAgentResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// OpenMeeting functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns (*pb.MeetingRoom, error).
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) OpenMeeting(ctx context.Context, req *pb.OpenMeetingRequest) (*pb.MeetingRoom, error) {
+	meeting := s.hub.OpenMeetingWithAgenda(req.GetMeetingId(), req.GetAgenda(), req.GetParticipants())
+	return pb.MeetingRoom_builder{
+		Id:           proto.String(meeting.ID),
+		Agenda:       proto.String(meeting.Agenda),
+		Participants: meeting.Participants,
+	}.Build(), nil
+}
+
+// Publish functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns (*pb.PublishMessageResponse, error).
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) Publish(ctx context.Context, req *pb.PublishMessageRequest) (*pb.PublishMessageResponse, error) {
+	msgReq := req.GetMessage()
+	msg := Message{
+		ID:         msgReq.GetId(),
+		FromAgent:  msgReq.GetFromAgent(),
+		ToAgent:    msgReq.GetToAgent(),
+		Type:       msgReq.GetType(),
+		Content:    msgReq.GetContent(),
+		MeetingID:  msgReq.GetMeetingId(),
+		OccurredAt: time.Unix(msgReq.GetOccurredAtUnix(), 0),
+	}
+	if err := s.hub.Publish(msg); err != nil {
+		return nil, status.Errorf(codes.Internal, "publish failed: %v", err)
+	}
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// DelegateTask functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns (*pb.DelegateTaskResponse, error).
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) DelegateTask(ctx context.Context, req *pb.DelegateTaskRequest) (*pb.DelegateTaskResponse, error) {
+	msgReq := req.GetTask()
+	msg := Message{
+		ID:         msgReq.GetId(),
+		FromAgent:  msgReq.GetFromAgent(),
+		ToAgent:    msgReq.GetToAgent(),
+		Type:       msgReq.GetType(),
+		Content:    msgReq.GetContent(),
+		MeetingID:  msgReq.GetMeetingId(),
+		OccurredAt: time.Unix(msgReq.GetOccurredAtUnix(), 0),
+	}
+
+	err := s.hub.DelegateTask(req.GetFromAgentId(), req.GetToAgentId(), msg)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "delegate task failed: %v", err)
+	}
+
+	return pb.DelegateTaskResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+// StreamMessages functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) StreamMessages(req *pb.StreamMessagesRequest, stream pb.HubService_StreamMessagesServer) error {
+	agentID := req.GetAgentId()
+
+	// 1. Subscribe for new real-time messages to eliminate polling latency.
+	// We must subscribe first to avoid missing any messages published between
+	// draining the inbox and subscribing.
+	ch, unsubscribe := s.hub.Subscribe(agentID)
+	defer unsubscribe()
+
+	sendNewMessages := func() error {
+		msgs := s.hub.Inbox(agentID)
+		if len(msgs) > 0 {
+			defer putMessageSlice(msgs)
+		}
+		for _, m := range msgs {
+			if err := stream.Send(pb.Message_builder{
+				Id:             proto.String(m.ID),
+				FromAgent:      proto.String(m.FromAgent),
+				ToAgent:        proto.String(m.ToAgent),
+				Type:           proto.String(m.Type),
+				Content:        proto.String(m.Content),
+				MeetingId:      proto.String(m.MeetingID),
+				OccurredAtUnix: proto.Int64(m.OccurredAt.Unix()),
+			}.Build()); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// 2. Drain any pre-existing messages in the inbox.
+	if err := sendNewMessages(); err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case <-ch:
+			if err := sendNewMessages(); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// Reason functionality.
+// Accepts parameters: s *HubServiceServer (No Constraints).
+// Returns (*pb.ReasonResponse, error).
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *HubServiceServer) Reason(ctx context.Context, req *pb.ReasonRequest) (*pb.ReasonResponse, error) {
+	client := NewMinimaxClient(s.hub.MinimaxAPIKey())
+	content, err := client.Reason(ctx, req.GetPrompt())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "minimax reasoning failed: %v", err)
+	}
+	return pb.ReasonResponse_builder{Content: proto.String(content)}.Build(), nil
+}
+
+// MinimaxAPIURL is the endpoint for Minimax reasoning.
+// ⚡ BOLT: [Configurable endpoint] - Randomized Selection from Top 5
+var MinimaxAPIURL = "https://api.minimax.io/v1/chat/completions"
+
+// MinimaxEmbeddingAPIURL is the endpoint for Minimax embeddings.
+var MinimaxEmbeddingAPIURL = "https://api.minimax.io/v1/embeddings"
+
+// CircuitBreaker state
+type CircuitBreaker struct {
+	mu           sync.Mutex
+	failures     int
+	lastFailure  time.Time
+	maxFailures  int
+	resetTimeout time.Duration
+}
+
+func (cb *CircuitBreaker) Allow() bool {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	if cb.failures >= cb.maxFailures {
+		if time.Since(cb.lastFailure) > cb.resetTimeout {
+			cb.failures = 0
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func (cb *CircuitBreaker) RecordSuccess() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.failures = 0
+}
+
+func (cb *CircuitBreaker) RecordFailure() {
+	cb.mu.Lock()
+	defer cb.mu.Unlock()
+	cb.failures++
+	cb.lastFailure = time.Now()
+}
+
+// MinimaxClient handles interaction with the Minimax Model 2.7.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type MinimaxClient interface {
+	Reason(ctx context.Context, prompt string) (string, error)
+	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
+}
+
+type minimaxClientImpl struct {
+	APIKey string
+	cb     *CircuitBreaker
+}
+
+var globalCircuitBreaker *CircuitBreaker
+var globalCircuitBreakerOnce *sync.Once = &sync.Once{}
+
+// ResetCircuitBreakerForTest resets the global circuit breaker instance for testing.
+func ResetCircuitBreakerForTest() {
+	globalCircuitBreaker = nil
+	globalCircuitBreakerOnce = &sync.Once{}
+}
+
+// NewMinimaxClient functionality.
+// Accepts parameters: apiKey string (No Constraints).
+// Returns MinimaxClient.
+// Produces no errors.
+// Has no side effects.
+func NewMinimaxClient(apiKey string) MinimaxClient {
+	globalCircuitBreakerOnce.Do(func() {
+		globalCircuitBreaker = &CircuitBreaker{
+			maxFailures:  3,
+			resetTimeout: 120 * time.Second,
+		}
+	})
+
+	return &minimaxClientImpl{
+		APIKey: apiKey,
+		cb:     globalCircuitBreaker,
+	}
+}
+
+var bufferPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
+}
+
+var sharedHTTPClient = &http.Client{
+	Timeout: 120 * time.Second,
+}
+
+// Reason functionality.
+// Accepts parameters: c *minimaxClientImpl (No Constraints).
+// Returns (string, error).
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, error) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordLLMNetworkLatency(ctx, "minimax-reasoning", time.Since(start).Seconds())
+	}()
+	if !c.cb.Allow() {
+		return "", errors.New("circuit breaker is open")
+	}
+
+	if c.APIKey == "" {
+		c.cb.RecordFailure()
+		return "", errors.New("minimax API key is not configured")
+	}
+
+	url := MinimaxAPIURL
+	// Optimization: construct the JSON payload manually to avoid
+	// maps and slices allocations.
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+
+	// Escape the prompt manually
+	escapedPrompt, _ := json.Marshal(prompt)
+	buf.WriteString(`{"model":"MiniMax-M2.7","messages":[{"role":"user","content":`)
+	buf.Write(escapedPrompt)
+	buf.WriteString(`}]}`)
+
+	// Retrieve bytes once
+	payloadBytes := buf.Bytes()
+
+	// Retry loop to handle transient empty responses from Minimax.
+	var lastErr error
+	for i := 0; i < 3; i++ {
+		// Need a new request for each retry because the body buffer is consumed.
+		// Re-create the request using the same buffer bytes.
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
+		if err != nil {
+			return "", err
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+
+		// ⚡ BOLT: [Reused HTTP Client] - Randomized Selection from Top 5
+		// Prevents severe connection and resource leaks by reusing connection pools on every request.
+		resp, err := sharedHTTPClient.Do(req)
+		if err != nil {
+			c.cb.RecordFailure()
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == 529 {
+				// Retry on high load without recording circuit breaker failure immediately
+				resp.Body.Close()
+				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
+				time.Sleep(2 * time.Second) // Longer backoff for overloaded
+				continue
+			}
+			c.cb.RecordFailure()
+			respBody, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			lastErr = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		var result struct {
+			Choices []struct {
+				Message struct {
+					Content string `json:"content"`
+				} `json:"message"`
+			} `json:"choices"`
+		}
+
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		resp.Body.Close()
+
+		if err != nil {
+			c.cb.RecordFailure()
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if len(result.Choices) == 0 {
+			c.cb.RecordFailure()
+			lastErr = errors.New("empty response from minimax")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		c.cb.RecordSuccess()
+		return result.Choices[0].Message.Content, nil
+	}
+
+	return "", lastErr
+}
+
+func ResetGlobalCircuitBreakerForTest() {
+	if globalCircuitBreaker != nil {
+		globalCircuitBreaker.RecordSuccess()
+	}
+}
+
+// CheckDocumentationGate verifies that the necessary documentation exists for a feature.
+func CheckDocumentationGate(content string) error {
+	matches := featureRegex.FindStringSubmatch(content)
+	if len(matches) > 1 {
+		featureName := matches[1]
+		baseDir := filepath.Join("docs", "features", featureName)
+
+		requiredFiles := []string{"design-doc.md", "cuj.md", "test-plan.md"}
+		for _, file := range requiredFiles {
+			path := filepath.Join(baseDir, file)
+			if _, err := os.Stat(path); os.IsNotExist(err) {
+				return fmt.Errorf("missing required documentation: %s", path)
+			}
+		}
+	}
+	return nil
+}
+
+func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordLLMNetworkLatency(ctx, "minimax-reasoning", time.Since(start).Seconds())
+	}()
+	if !c.cb.Allow() {
+		return nil, errors.New("circuit breaker is open")
+	}
+
+	if c.APIKey == "" {
+		c.cb.RecordFailure()
+		return nil, errors.New("minimax API key is not configured")
+	}
+
+	url := MinimaxEmbeddingAPIURL
+
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+
+	escapedText, _ := json.Marshal(text)
+	buf.WriteString(`{"model":"embo-01","texts":[`)
+	buf.Write(escapedText)
+	buf.WriteString(`]}`)
+
+	payloadBytes := buf.Bytes()
+	var lastErr error
+
+	for i := 0; i < 3; i++ {
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(payloadBytes))
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+
+		resp, err := sharedHTTPClient.Do(req)
+		if err != nil {
+			c.cb.RecordFailure()
+			lastErr = err
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			if resp.StatusCode == 529 {
+				resp.Body.Close()
+				lastErr = fmt.Errorf("minimax API overloaded (status 529)")
+				time.Sleep(2 * time.Second)
+				continue
+			}
+			c.cb.RecordFailure()
+			lastErr = fmt.Errorf("minimax API error: status %d", resp.StatusCode)
+			resp.Body.Close()
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		// Success path
+		c.cb.RecordSuccess()
+		var result struct {
+			Vectors [][]float32 `json:"vectors"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			resp.Body.Close()
+			return nil, fmt.Errorf("failed to decode response: %w", err)
+		}
+		resp.Body.Close()
+
+		if len(result.Vectors) == 0 {
+			return nil, errors.New("empty response from minimax")
+		}
+
+		return result.Vectors[0], nil
+	}
+
+	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
+}
+
+// RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.
+func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
+	mux.HandleFunc("/api/sync/missions", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleSyncMissions(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	mux.HandleFunc("/api/orchestration/tasks/decompose", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleDecomposeTask(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	mux.HandleFunc("/api/orchestration/tasks", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			handleCreateTask(w, r, tm)
+			return
+		}
+		if r.Method == http.MethodGet {
+			handlePollTasks(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	mux.HandleFunc("/api/orchestration/tasks/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/status") {
+			handleUpdateTaskStatus(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+}
+
+func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var payloads []SyncDaemonPayload
+	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	for _, payload := range payloads {
+		// Assuming we do an INSERT on conflict UPDATE or just an INSERT
+		// Let's implement an upsert logic using tm.db
+		// Or using K8s cloud orchestration agent_missions table
+		query := `INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
+				  VALUES ($1, $2, $3, true)
+				  ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, payload = EXCLUDED.payload, synced_to_cloud = true`
+		if tm.db.IsSQLite() {
+			query = `INSERT INTO agent_missions (id, status, payload, synced_to_cloud)
+					 VALUES ($1, $2, $3, 1)
+					 ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, payload = EXCLUDED.payload, synced_to_cloud = 1`
+		}
+
+		_, err := tm.db.Exec(r.Context(), query, payload.ID, payload.Status, payload.Payload)
+		if err != nil {
+			slog.Error("failed to inject synced mission", "error", err, "id", payload.ID)
+			continue
+		}
+
+		// KAIROS Orchestration broadcasts task updates
+		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
+			"action": "sync",
+			"status": payload.Status,
+			"agent_id": "system", // Or something appropriate
+			"payload": payload.Payload,
+		})
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func handleCreateTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var req struct {
+		MissionID   string `json:"mission_id"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Priority    string `json:"priority"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	task, err := tm.CreateTask(r.Context(), req.MissionID, req.Title, req.Description, req.Priority)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(task)
+}
+
+func handlePollTasks(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	agentID := r.URL.Query().Get("agent_id")
+	if agentID == "" {
+		http.Error(w, "agent_id query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	limit := 10 // Default limit
+
+	tasks, err := tm.PollTasks(r.Context(), agentID, limit)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if tasks == nil {
+		tasks = []*SharedTask{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tasks)
+}
+
+func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) != 5 || parts[4] != "status" {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+	taskID := parts[3]
+
+	var req struct {
+		Status  string `json:"status"`
+		AgentID string `json:"agent_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var err error
+	switch req.Status {
+	case "REVIEW":
+		err = tm.ReviewTask(r.Context(), taskID, req.AgentID)
+	case "COMPLETED":
+		err = tm.CompleteTask(r.Context(), taskID, req.AgentID)
+	default:
+		http.Error(w, "invalid status transition", http.StatusBadRequest)
+		return
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+
+
+
+func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	var req struct {
+		OrganizationID string `json:"organization_id"`
+		TaskID         string `json:"task_id"`
+		SubTasks       []struct {
+			Title        string   `json:"title"`
+			Description  string   `json:"description"`
+			Priority     string   `json:"priority"`
+			Dependencies []string `json:"dependencies"`
+		} `json:"sub_tasks"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	var createdTasks []*SharedTask
+	for _, st := range req.SubTasks {
+		// Sub-tasks do not depend on the parent task. The parent task should ideally depend on them, but
+		// for now we just create the sub-tasks with their own explicitly provided dependencies.
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, st.Dependencies, st.Title, st.Description, st.Priority)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
+			return
+		}
+		// Set parent_plan_id and inherit parent's depth + 1
+		if tx, err := tm.db.Begin(r.Context()); err == nil {
+			_, _ = tx.Exec(r.Context(), `
+				UPDATE shared_tasks
+				SET parent_plan_id = $1,
+				    depth = (SELECT depth FROM shared_tasks WHERE id = $1) + 1
+				WHERE id = $2
+			`, req.TaskID, t.ID)
+			_ = tx.Commit(r.Context())
+		}
+		createdTasks = append(createdTasks, t)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(createdTasks)
+}
+
+func (s *HubServiceServer) AdvertiseCapabilities(ctx context.Context, req *pb.AgentCapabilities) (*pb.PublishMessageResponse, error) {
+	if s.mesh == nil {
+		return nil, status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	if err := s.mesh.AdvertiseCapabilities(ctx, *req); err != nil {
+		return nil, err
+	}
+	if meshMsgThroughput != nil {
+		meshMsgThroughput.Add(ctx, 1)
+	}
+	return &pb.PublishMessageResponse{Success: true}, nil
+}
+
+func (s *HubServiceServer) DiscoverAgents(req *pb.Query, stream pb.HubService_DiscoverAgentsServer) error {
+	if s.mesh == nil {
+		return status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	ch, err := s.mesh.SubscribeCapabilities(stream.Context())
+	if err != nil {
+		return err
+	}
+	for cap := range ch {
+		if err := stream.Send(&cap); err != nil {
+			return err
+		}
+		if meshMsgThroughput != nil {
+			meshMsgThroughput.Add(stream.Context(), 1)
+		}
+	}
+	return nil
+}
+
+func (s *HubServiceServer) StreamMeshEvents(req *pb.EventStreamRequest, stream pb.HubService_StreamMeshEventsServer) error {
+	if s.mesh == nil {
+		return status.Error(codes.Unimplemented, "mesh transport not configured")
+	}
+	ch, err := s.mesh.SubscribeMeshEvents(stream.Context(), req.GetTopic())
+	if err != nil {
+		return err
+	}
+	for payload := range ch {
+		event := &pb.MeshEvent{
+			Topic:   req.GetTopic(),
+			Payload: payload,
+		}
+		if err := stream.Send(event); err != nil {
+			return err
+		}
+		if meshMsgThroughput != nil {
+			meshMsgThroughput.Add(stream.Context(), 1)
+		}
+	}
+	return nil
+}

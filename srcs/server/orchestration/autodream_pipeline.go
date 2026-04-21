@@ -3,7 +3,6 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -11,8 +10,6 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
-
-	"github.com/google/uuid"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
@@ -137,15 +134,9 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 				if p.db.IsSQLite() {
 					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, ?, 'session_compression')"
 					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
-					if err == nil {
-						_, err = tx.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES (?, ?, ?, ?)", uuid.New().String(), "Session Compression: "+s.ID, summary, embeddingStr)
-					}
 				} else {
 					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, 'system', $2, $3, $4::vector, 'session_compression')"
 					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
-					if err == nil {
-						_, err = tx.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES ($1, $2, $3, $4::vector)", uuid.New().String(), "Session Compression: "+s.ID, summary, embeddingStr)
-					}
 				}
 
 				if err != nil {
@@ -215,100 +206,50 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 			continue
 		}
 
-		chunks := chunkText(contentToEmbed, 8000)
 		missionID := strings.TrimSuffix(filepath.Base(file), ".yml")
 
-		success := true
-		for i, chunk := range chunks {
-			memID := missionID
-			if len(chunks) > 1 {
-				memID = fmt.Sprintf("%s-chunk%d", missionID, i)
-			}
-
-			var vec []string
-			for i := 0; i < 1536; i++ {
-				vec = append(vec, "0.0")
-			}
-			embeddingStr := "[" + strings.Join(vec, ",") + "]"
-
-			if p.client != nil {
-				ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-				resp, err := p.client.GenerateEmbedding(ctxTimeout, chunk)
-				cancel()
-				if err == nil && len(resp) > 0 {
-					if bytes, err := json.Marshal(resp); err == nil {
-						embeddingStr = string(bytes)
-					}
-				} else if err != nil {
-					slog.Warn("AutoDreamPipeline: failed to generate embedding", "error", err)
+		embeddingStr := "[0.0, 0.0, 0.0]"
+		if p.client != nil {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+			resp, err := p.client.GenerateEmbedding(ctxTimeout, contentToEmbed)
+			cancel()
+			if err == nil && len(resp) > 0 {
+				if bytes, err := json.Marshal(resp); err == nil {
+					embeddingStr = string(bytes)
 				}
-			}
-
-			var insertQuery string
-			var insertArgs []interface{}
-
-			if p.db.IsSQLite() {
-				insertQuery = `
-					INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-					VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
-					ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
-				`
-				insertArgs = []interface{}{memID, chunk, embeddingStr}
-				if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
-					slog.Warn("AutoDreamPipeline: failed to insert memory chunk", "id", memID, "error", err)
-					success = false
-				} else {
-					_, err = p.db.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES (?, ?, ?, ?)", uuid.New().String(), "Memory File: "+memID, chunk, embeddingStr)
-					if err != nil {
-						slog.Warn("AutoDreamPipeline: failed to insert into swarm_long_term_memory", "id", memID, "error", err)
-						success = false
-					} else {
-						slog.Debug("AutoDreamPipeline: consolidated memory chunk", "id", memID)
-					}
-				}
-			} else {
-				insertQuery = `
-					INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-					VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
-					ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
-				`
-				insertArgs = []interface{}{memID, chunk, embeddingStr}
-				if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
-					slog.Warn("AutoDreamPipeline: failed to insert memory chunk", "id", memID, "error", err)
-					success = false
-				} else {
-					_, err = p.db.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES ($1, $2, $3, $4::vector)", uuid.New().String(), "Memory File: "+memID, chunk, embeddingStr)
-					if err != nil {
-						slog.Warn("AutoDreamPipeline: failed to insert into swarm_long_term_memory", "id", memID, "error", err)
-						success = false
-					} else {
-						slog.Debug("AutoDreamPipeline: consolidated memory chunk", "id", memID)
-					}
-				}
+			} else if err != nil {
+				slog.Warn("AutoDreamPipeline: failed to generate embedding", "error", err)
 			}
 		}
-		if success {
+
+		var insertQuery string
+		var insertArgs []interface{}
+
+		memID := missionID
+
+		if p.db.IsSQLite() {
+			insertQuery = `
+				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
+				VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
+				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+			`
+			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
+		} else {
+			insertQuery = `
+				INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
+				VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
+				ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
+			`
+			insertArgs = []interface{}{memID, contentToEmbed, embeddingStr}
+		}
+
+		if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
+			slog.Warn("AutoDreamPipeline: failed to insert memory", "id", memID, "error", err)
+		} else {
+			slog.Debug("AutoDreamPipeline: consolidated memory", "id", memID)
 			os.Remove(file)
 		}
 	}
 
 	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(matches))
-}
-
-// chunkText splits a string into chunks of a given maximum size (in runes).
-func chunkText(text string, chunkSize int) []string {
-	if chunkSize <= 0 {
-		return []string{text}
-	}
-	runes := []rune(text)
-	var chunks []string
-	for len(runes) > 0 {
-		if len(runes) < chunkSize {
-			chunks = append(chunks, string(runes))
-			break
-		}
-		chunks = append(chunks, string(runes[:chunkSize]))
-		runes = runes[chunkSize:]
-	}
-	return chunks
 }

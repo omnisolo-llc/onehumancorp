@@ -70,7 +70,6 @@ func IsValidTransition(fromState, toState string) bool {
 }
 
 // Transition performs a state transition for the given entity
-// added for KAIROS State Machine Audit Logging & Transition Safety
 func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, toState, agentID, reason string) error {
 	start := time.Now()
 	tx, err := sm.dbProvider.Begin(ctx)
@@ -157,27 +156,20 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 	}
 
 	broadcastFunc := func() {
-		payload := map[string]interface{}{
-			"entity_id":   entityID,
-			"entity_type": entityType,
-			"from_state":  currentState,
-			"to_state":    toState,
-			"agent_id":    agentID,
-			"reason":      reason,
+		if sm.broadcast != nil {
+			payload := map[string]interface{}{
+				"entity_id":   entityID,
+				"entity_type": entityType,
+				"from_state":  currentState,
+				"to_state":    toState,
+				"agent_id":    agentID,
+				"reason":      reason,
+			}
+			sm.broadcast(entityID, payload)
 		}
-		sm.BroadcastTransition(entityID, payload)
 	}
 
 	return broadcastFunc, nil
-}
-
-
-// BroadcastTransition is a helper that publishes the transition event to Teammate Mesh (mesh:tasks).
-// added for KAIROS State Machine Audit Logging & Transition Safety
-func (sm *StateMachine) BroadcastTransition(entityID string, payload map[string]interface{}) {
-	if sm.broadcast != nil {
-		sm.broadcast(entityID, payload)
-	}
 }
 
 // generateID generates a pseudo-uuid for SQLite compatibility.

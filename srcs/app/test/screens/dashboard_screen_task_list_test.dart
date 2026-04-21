@@ -8,7 +8,7 @@ import 'package:ohc_app/models/dashboard.dart';
 // Provide a mock dashboard snapshot
 final mockDashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   return DashboardSnapshot(
-    organization: const Organization(id: 'org1', name: 'Test Org', domain: 'test.com', members: [], roleProfiles: []),
+    organization: const Organization(id: 'org1', name: 'Test Org', domain: 'test.com', members: []),
     meetings: [],
     costs: const CostSummary(totalCostUSD: 0.0, totalTokens: 0, agents: []),
     agents: [],
@@ -40,16 +40,16 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
 
-    // Since TaskListView is in a scroll view, we might need to scroll
+    // Since TaskListScreen is in a scroll view, we might need to scroll
     final listFinder = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
-      find.byType(TaskListView),
+      find.byType(TaskListScreen),
       500.0,
       scrollable: listFinder,
       maxScrolls: 50,
     );
 
-    expect(find.byType(TaskListView), findsOneWidget);
+    expect(find.byType(TaskListScreen), findsOneWidget);
 
     // reset view properties
     addTearDown(tester.view.resetPhysicalSize);

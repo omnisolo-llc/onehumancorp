@@ -1,21 +1,5 @@
 # Release Notes
 
-
-## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
-- Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.
-- Privacy/Offline (Standalone): Enhance AutoDream Vector Data Pipelines for standalone privacy.
-
-## v0.4.4 (Cloud) / v0.4.4+1 (Standalone)
-- Scaling (Cloud): Parallel execution for SyncMissions and SyncContextSync, Optimize OHC-SIP synchronization latency.
-- Privacy/Offline (Standalone): Add Agent Harness architecture research report, Add Telemetry for SQLite lock contention.
-
-## v0.4.3 (Cloud) / v0.4.3+1 (Standalone)
-- Scaling (Cloud): Optimise Orchestration & Observability.
-- Privacy/Offline (Standalone): Add AutoDream Sync Walkthrough.
-
-## v0.4.2 (Cloud) / v0.4.2+1 (Standalone)
-- Scaling (Cloud): Implement Local Embedding Caching for Cost Optimization.
-- Privacy/Offline (Standalone): Enhance standalone performance via Local Embedding Caching.
 ## v0.4.1 (Cloud) / v0.4.1+1 (Standalone)
 - Scaling (Cloud): Architect Cross-Mode Database Schema Syncer via MCP, Optimize PopMessages latency.
 - Privacy/Offline (Standalone): Fix PII redaction for nested slog groups, Bulk Team Invite UI in Flutter App.

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../widgets/glass_card.dart';
 
@@ -84,8 +85,6 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _endpointUrlController.dispose();
-    _tokenLimitController.dispose();
     super.dispose();
   }
 
@@ -142,7 +141,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ),
       ),
       body: Stepper(
-        type: StepperType.vertical,
+        type: StepperType.horizontal,
         currentStep: _step,
         onStepContinue: () {
           if (_step < 6) {
@@ -352,16 +351,6 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   groupValue: _topologyPreset,
                   onChanged: (val) => setState(() => _topologyPreset = val!),
                 ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('Show Advanced Settings'),
-                  subtitle: const Text('Reveal visual sub-agent topology and technical fields.'),
-                  value: expertMode,
-                  onChanged: (val) {
-                    final notifier = ref.read(clientSettingsProvider.notifier);
-                    notifier.updateExpertMode(val);
-                  },
-                ),
                 if (expertMode) ...[
                   const SizedBox(height: 16),
                   Container(
@@ -543,17 +532,15 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  TextField(
-                    controller: _endpointUrlController,
-                    decoration: const InputDecoration(
+                  const TextField(
+                    decoration: InputDecoration(
                       labelText: 'Custom Endpoint URL (Optional)',
                       border: OutlineInputBorder(),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  TextField(
-                    controller: _tokenLimitController,
-                    decoration: const InputDecoration(
+                  const TextField(
+                    decoration: InputDecoration(
                       labelText: 'Token Limit (Optional)',
                       border: OutlineInputBorder(),
                     ),

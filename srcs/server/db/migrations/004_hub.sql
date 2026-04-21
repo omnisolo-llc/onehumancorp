@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS agent_inbox (
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_inbox_agent ON agent_inbox (agent_id);
+CREATE INDEX IF NOT EXISTS idx_inbox_agent ON agent_inbox (agent_id);
 
 CREATE TABLE IF NOT EXISTS meeting_rooms (
     id           TEXT PRIMARY KEY,
@@ -43,4 +43,4 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
     occurred_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_transcript_meeting ON meeting_transcripts (meeting_id);
+CREATE INDEX IF NOT EXISTS idx_transcript_meeting ON meeting_transcripts (meeting_id);

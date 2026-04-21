@@ -3,7 +3,6 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
-	"github.com/google/uuid"
 	"fmt"
 	"log/slog"
 	"time"
@@ -47,7 +46,7 @@ type RedisTaskQueue struct {
 }
 
 func (q *RedisTaskQueue) Enqueue(ctx context.Context, queueName string, payload map[string]interface{}) (string, error) {
-	id := uuid.New().String()
+	id := generateID()
 
 	// Create job data
 	jobData := map[string]interface{}{
@@ -69,7 +68,7 @@ func (q *RedisTaskQueue) Enqueue(ctx context.Context, queueName string, payload 
 }
 
 func (q *RedisTaskQueue) EnqueueDelayed(ctx context.Context, queueName string, payload map[string]interface{}, delay time.Duration) (string, error) {
-	id := uuid.New().String()
+	id := generateID()
 
 	// Create job data
 	jobData := map[string]interface{}{
@@ -177,7 +176,7 @@ func (q *SQLiteTaskQueue) EnqueueDelayed(ctx context.Context, queueName string, 
 		return "", err
 	}
 
-	id := uuid.New().String()
+	id := generateID()
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return "", err
@@ -268,7 +267,7 @@ type JobQueue struct {
 
 // MapHighLevelTask maps and delegates a high-level queued task into SharedTaskDB records.
 func (jq *JobQueue) MapHighLevelTask(ctx context.Context, task *QueuedTask) error {
-	id := uuid.New().String() // This function exists in tasks.go as a package-level function
+	id := generateID() // This function exists in tasks.go as a package-level function
 	title, _ := task.Payload["title"].(string)
 	orgID, _ := task.Payload["organization_id"].(string)
 

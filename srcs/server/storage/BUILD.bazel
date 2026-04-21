@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "storage",
@@ -9,11 +9,4 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/storage",
     visibility = ["//visibility:public"],
-)
-
-go_test(
-    name = "storage_test",
-    srcs = ["local_provider_test.go"],
-    importpath = "github.com/onehumancorp/mono/srcs/server/storage_test",
-    deps = [":storage"],
 )

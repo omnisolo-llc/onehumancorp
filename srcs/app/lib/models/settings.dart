@@ -1,4 +1,3 @@
-import 'yaml_utils.dart';
 /// Application settings domain model.
 class Settings {
   final String? minimaxApiKey;
@@ -30,10 +29,4 @@ class Settings {
     'backend_url': backendUrl,
     'standalone_mode': standaloneMode,
   };
-
-  /// Serializes this Settings to a YAML string.
-  String toYaml() => modelToYaml(toJson());
-
-  /// Deserializes a YAML string to a [Settings].
-  static Settings fromYaml(String yaml) => Settings.fromJson(modelFromYaml(yaml));
 }

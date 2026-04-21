@@ -7,14 +7,13 @@ import (
 	"os/exec"
 )
 
-// added for issue 5417
 type SandboxManager struct {
 	SandboxDir string
 }
 
-func NewSandboxManager(sessionID string) (*SandboxManager, error) {
-	dir := fmt.Sprintf("/tmp/ohc-agent-sessions/%s", sessionID)
-	if err := os.MkdirAll(dir, 0700); err != nil {
+func NewSandboxManager() (*SandboxManager, error) {
+	dir, err := os.MkdirTemp("", "ohc_sandbox_*")
+	if err != nil {
 		return nil, err
 	}
 	if err := os.Chmod(dir, 0700); err != nil {

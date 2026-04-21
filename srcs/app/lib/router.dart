@@ -28,41 +28,23 @@ import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
-import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
-/// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
-/// [GoRouter.refreshListenable], so the router re-evaluates its redirect
-/// guards without being fully recreated.
-class _GoRouterAuthNotifier extends ChangeNotifier {
-  _GoRouterAuthNotifier(Ref ref) {
-    ref.listen(authStateProvider, (_, __) => notifyListeners());
-  }
-}
-
 final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authStateProvider);
 
   return GoRouter(
     initialLocation: '/landing',
-    refreshListenable: _GoRouterAuthNotifier(ref),
     redirect: (context, state) {
-      final authState = ref.read(authStateProvider);
-      // Don't redirect while auth state is still loading (avoids navigation
-      // resets during login/logout transitions).
-      if (authState.isLoading) return null;
-
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
 
-      // Allow these public routes without authentication.
-      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) {
-        return '/landing';
-      }
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) return '/landing';
       if (isLoggedIn && isLoginRoute) return '/dashboard';
       return null;
     },
@@ -72,14 +54,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
-          // Business setup requires authentication — moved inside the shell.
-          GoRoute(
-            path: '/business_setup',
-            builder: (context, state) => const BusinessSetupWizardScreen(),
-          ),
           GoRoute(
             path: '/orchestration/tasks',
             builder: (context, state) => const TaskListScreen(),
+          ),
+          GoRoute(
+            path: '/business_setup',
+            builder: (context, state) => const BusinessSetupWizardScreen(),
           ),
           GoRoute(
             path: '/diagnostics',
@@ -186,10 +167,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SwarmMemoryScreen(),
           ),
           GoRoute(
-            path: '/autodream-sync',
-            builder: (context, state) => const AutoDreamSyncWalkthroughScreen(),
-          ),
-          GoRoute(
             path: '/growth-experiments',
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
@@ -236,7 +213,6 @@ class _Sidebar extends StatelessWidget {
           path: '/orchestration/tasks',
         ),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
-        _NavItem(icon: Icons.sync, label: 'AutoDream Sync', path: '/autodream-sync'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
         _NavItem(

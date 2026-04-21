@@ -8,7 +8,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-func TestMemoryMeshTransport_BroadcastAndSubscribe(t *testing.T) {
+func TestLocalTeammateMesh_BroadcastAndSubscribe(t *testing.T) {
 	provider := db.NewTestProvider(t)
 	_, err := provider.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
@@ -24,7 +24,7 @@ func TestMemoryMeshTransport_BroadcastAndSubscribe(t *testing.T) {
 		t.Fatalf("failed to create table: %v", err)
 	}
 
-	mesh := NewMemoryMeshTransport(provider)
+	mesh := NewLocalTeammateMesh(provider)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

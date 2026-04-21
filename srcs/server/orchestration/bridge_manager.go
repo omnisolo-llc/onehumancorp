@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 

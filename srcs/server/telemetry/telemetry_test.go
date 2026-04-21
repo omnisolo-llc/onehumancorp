@@ -1,4 +1,3 @@
-// Enforce standalone privacy telemetry rules
 package telemetry
 
 import (
@@ -50,15 +49,6 @@ func TestInitTelemetry(t *testing.T) {
 	if swarmTasksCompletedCounter == nil {
 		t.Error("expected swarmTasksCompletedCounter to be initialized")
 	}
-	if BubblewrapSpawnTotal == nil {
-		t.Error("expected BubblewrapSpawnTotal to be initialized")
-	}
-	if BubblewrapExecutionLatency == nil {
-		t.Error("expected BubblewrapExecutionLatency to be initialized")
-	}
-	if BubblewrapViolationTotal == nil {
-		t.Error("expected BubblewrapViolationTotal to be initialized")
-	}
 	if SIPSyncLatencyRecorder == nil {
 		t.Error("expected SIPSyncLatencyRecorder to be initialized")
 	}
@@ -67,12 +57,6 @@ func TestInitTelemetry(t *testing.T) {
 	}
 	if AgentTransitionLatency == nil {
 		t.Error("expected AgentTransitionLatency to be initialized")
-	}
-	if AgentTokenUsageTotal == nil {
-		t.Error("expected AgentTokenUsageTotal to be initialized")
-	}
-	if AgentCostEstimateUSD == nil {
-		t.Error("expected AgentCostEstimateUSD to be initialized")
 	}
 
 	cleanup() // Clean up resources
@@ -167,17 +151,8 @@ func (m *mockMeter) RegisterCallback(callback metric.Callback, instruments ...me
 	return nil, nil
 }
 
-type mockFloat64Counter struct {
-	metric.Float64Counter
-}
-
-func (m *mockFloat64Counter) Add(ctx context.Context, incr float64, options ...metric.AddOption) {}
-
 func (m *mockMeter) Float64Counter(name string, options ...metric.Float64CounterOption) (metric.Float64Counter, error) {
-	if m.failCounters {
-		return nil, fmt.Errorf("mock counter error")
-	}
-	return &mockFloat64Counter{}, nil
+	return nil, nil
 }
 
 func (m *mockMeter) Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
@@ -395,23 +370,6 @@ func TestRecordFunctions(t *testing.T) {
 		RecordAgentTransitionLatency(ctx, "pending_to_running", 1.23)
 	})
 
-	t.Run("RecordSQLiteLockContention", func(t *testing.T) {
-		RecordSQLiteLockContention(ctx, "query")
-	})
-
-	t.Run("RecordSQLiteRetryExhausted", func(t *testing.T) {
-		RecordSQLiteRetryExhausted(ctx, "query")
-	})
-
-	t.Run("RecordSQLiteThrottledRequest", func(t *testing.T) {
-		RecordSQLiteThrottledRequest(ctx, "query")
-	})
-
-	t.Run("RecordSQLiteRetryEvent", func(t *testing.T) {
-		RecordSQLiteRetryEvent(ctx, "query")
-	})
-
-
 	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
 		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
 	})
@@ -426,14 +384,6 @@ func TestRecordFunctions(t *testing.T) {
 
 	t.Run("RecordLLMNetworkLatency", func(t *testing.T) {
 		RecordLLMNetworkLatency(ctx, "claude-3-5-sonnet", 1.23)
-	})
-
-	t.Run("RecordAgentTokenUsage", func(t *testing.T) {
-		RecordAgentTokenUsage(ctx, "agent-1", "org-1", "developer", "gpt-4", 1000)
-	})
-
-	t.Run("RecordAgentCost", func(t *testing.T) {
-		RecordAgentCost(ctx, "agent-1", "org-1", "developer", "gpt-4", 0.03)
 	})
 }
 
@@ -834,46 +784,4 @@ func TestInitTelemetry_StandaloneOptIn_EnvVar(t *testing.T) {
 		t.Fatal("expected cleanup function, got nil")
 	}
 	cleanup()
-}
-
-
-func TestRecordBubblewrapMetrics(t *testing.T) {
-	// Initialize a dummy context
-	ctx := context.Background()
-
-	// Should not panic even if metrics are nil
-	RecordBubblewrapSpawn(ctx)
-	RecordBubblewrapExecutionLatency(ctx, 1.23)
-	RecordBubblewrapViolation(ctx)
-}
-
-func TestRecordSandboxViolation(t *testing.T) {
-	prometheus.DefaultRegisterer = prometheus.NewRegistry()
-	InitTelemetry()
-
-	ctx := context.Background()
-	// Should not panic
-	RecordSandboxViolation(ctx, "fs_read", "agent-123", "/etc/passwd")
-}
-
-func TestRecordHarnessInitLatency(t *testing.T) {
-	cleanup, _ := InitTelemetry()
-	defer cleanup()
-
-	// Wait for any background initialization.
-	time.Sleep(10 * time.Millisecond)
-
-	RecordHarnessInitLatency(context.Background(), 10.5, "cloud")
-	// If it doesn't panic, we consider it a success.
-	// Unfortunately, reading back values from otel metrics in tests requires an exporter setup.
-	// In this code base, we verify by ensuring no nil dereference happens.
-}
-
-func TestRecordHarnessDbIoLatency(t *testing.T) {
-	cleanup, _ := InitTelemetry()
-	defer cleanup()
-
-	time.Sleep(10 * time.Millisecond)
-
-	RecordHarnessDbIoLatency(context.Background(), 15.2, "standalone")
 }

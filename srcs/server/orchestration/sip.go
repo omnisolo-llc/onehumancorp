@@ -78,14 +78,8 @@ func acquireThrottle(ctx context.Context) error {
 		select {
 		case standaloneThrottle <- struct{}{}:
 			return nil
-		default:
-			telemetry.RecordSQLiteThrottledRequest(ctx, "acquireThrottle")
-			select {
-			case standaloneThrottle <- struct{}{}:
-				return nil
-			case <-ctx.Done():
-				return ctx.Err()
-			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 	return nil
@@ -103,7 +97,6 @@ func releaseThrottle() {
 // withSipRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withSipRetry(ctx context.Context, op func() error) error {
 	var err error
-	backoff := 10 * time.Millisecond
 	for i := 0; i < maxRetries; i++ {
 		err = op()
 		if err == nil {
@@ -119,7 +112,6 @@ func withSipRetry(ctx context.Context, op func() error) error {
 
 		if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
 			telemetry.RecordSQLiteLockContention(ctx, "exec/query")
-			telemetry.RecordSQLiteRetryEvent(ctx, "retry")
 		}
 
 		// Optimization: Avoid long exponential backoff retries when the DB connection is explicitly closed,
@@ -134,18 +126,7 @@ func withSipRetry(ctx context.Context, op func() error) error {
 		}
 
 		slog.Debug("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(backoff):
-			// retry
-		}
-
-		backoff *= 2
-		if backoff > 100 * time.Millisecond {
-			backoff = 100 * time.Millisecond
-		}
+		time.Sleep(retryInterval * time.Duration(1<<i))
 	}
 
 	if err != nil {
@@ -532,11 +513,6 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 	var prevTime time.Time
 	var oldStatus string
 
-	// Telemetry extraction
-	if ac, ok := GetAgentContext(ctx); ok {
-		slog.InfoContext(ctx, "UpsertMission with context", "agent_id", ac.AgentID, "mission_id", missionID)
-	}
-
 	err := withSipRetry(ctx, func() error {
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
@@ -613,14 +589,6 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	// Context extraction
-	if ac, ok := GetAgentContext(ctx); ok {
-		if task.Metadata == nil {
-			task.Metadata = make(map[string]string)
-		}
-		task.Metadata["agent_id"] = ac.AgentID
-		task.Metadata["parent_session_id"] = ac.ParentSessionID
-	}
 	if err := acquireThrottle(ctx); err != nil {
 		return err
 	}
@@ -1087,8 +1055,8 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
 	}
 
-	telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
-	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize) // added for issue 4365
+	telemetry.RecordSIPSyncLatency(ctx, time.Since(start))
+	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)
 
 	// Delete successfully synced records
 	err = withSipRetry(ctx, func() error {
@@ -1147,79 +1115,49 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 			return nil
 		}
 
+		client := &http.Client{Timeout: 10 * time.Second}
 		var idsToDelete []string
-		var mu sync.Mutex
 
-		workerCount := 4
-		coordinator := perf.NewCoordinatorMode(workerCount)
-		tasks := make([]func() error, workerCount)
-
-		batchSize := (len(records) + workerCount - 1) / workerCount
-
-		for w := 0; w < workerCount; w++ {
-			w := w
-			tasks[w] = func() error {
-				client := &http.Client{Timeout: 10 * time.Second}
-				startIdx := w * batchSize
-				endIdx := startIdx + batchSize
-				if endIdx > len(records) {
-					endIdx = len(records)
+		for _, rec := range records {
+			var payloadData map[string]interface{}
+			if err := json.Unmarshal([]byte(rec.payload), &payloadData); err != nil {
+				payloadData = map[string]interface{}{
+					"context": rec.payload,
 				}
-
-				for i := startIdx; i < endIdx; i++ {
-					rec := records[i]
-					var payloadData map[string]interface{}
-					if err := json.Unmarshal([]byte(rec.payload), &payloadData); err != nil {
-						payloadData = map[string]interface{}{
-							"context": rec.payload,
-						}
-					}
-
-					// Unified high-fidelity sanitization
-					sanitizedPayloadIface := SanitizePayloadMap(payloadData)
-					if spm, ok := sanitizedPayloadIface.(map[string]interface{}); ok {
-						payloadData = spm
-					}
-
-					// Redact rag_context for force-local conflict resolution strategy
-					// added for issue 4331: complete stripping of rag_context
-					delete(payloadData, "rag_context")
-
-					// ensure memory_id is set
-					payloadData["memory_id"] = rec.id
-
-					sanitizedPayload, _ := json.Marshal(payloadData)
-
-					req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
-					if err != nil {
-						continue
-					}
-					req.Header.Set("Content-Type", "application/json")
-					// robust conflict resolution prioritising local client
-					req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
-
-					payloadSize := len(sanitizedPayload)
-					start := time.Now()
-					resp, err := client.Do(req)
-					if err == nil {
-						// treat 409 Conflict as success for local parity
-						if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
-							mu.Lock()
-							idsToDelete = append(idsToDelete, rec.id)
-							syncedCount++
-							mu.Unlock()
-							telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
-							telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize) // added for issue 4365
-						}
-						resp.Body.Close()
-					}
-				}
-				return nil
 			}
-		}
 
-		if err := coordinator.ExecuteParallel(ctx, tasks); err != nil {
-			return err
+			// Unified high-fidelity sanitization
+			sanitizedPayloadIface := SanitizePayloadMap(payloadData)
+			if spm, ok := sanitizedPayloadIface.(map[string]interface{}); ok {
+				payloadData = spm
+			}
+
+			// ensure memory_id is set
+			payloadData["memory_id"] = rec.id
+
+			sanitizedPayload, _ := json.Marshal(payloadData)
+
+			req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))
+			if err != nil {
+				continue
+			}
+			req.Header.Set("Content-Type", "application/json")
+			// robust conflict resolution prioritising local client
+			req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+
+			payloadSize := len(sanitizedPayload)
+			start := time.Now()
+			resp, err := client.Do(req)
+			if err == nil {
+				// treat 409 Conflict as success for local parity
+				if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
+					idsToDelete = append(idsToDelete, rec.id)
+					syncedCount++
+					telemetry.RecordSIPSyncLatency(ctx, time.Since(start))
+					telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)
+				}
+				resp.Body.Close()
+			}
 		}
 
 		if len(idsToDelete) > 0 {
@@ -1288,102 +1226,70 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 			return nil
 		}
 
-		var idsToUpdate []string
-		var mu sync.Mutex
+		client := &http.Client{Timeout: 10 * time.Second}
 
-		workerCount := 4
-		coordinator := perf.NewCoordinatorMode(workerCount)
-		tasks := make([]func() error, workerCount)
-
-		batchSize := (len(missions) + workerCount - 1) / workerCount
-
-		for w := 0; w < workerCount; w++ {
-			w := w
-			tasks[w] = func() error {
-				client := &http.Client{Timeout: 10 * time.Second}
-				startIdx := w * batchSize
-				endIdx := startIdx + batchSize
-				if endIdx > len(missions) {
-					endIdx = len(missions)
+		for _, m := range missions {
+			// Parse payload to redact and sanitize
+			var rawData interface{}
+			if err := json.Unmarshal([]byte(m.payload), &rawData); err != nil {
+				slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
+				if syncMissionsErr != nil {
+					syncMissionsErr.Add(ctx, 1)
 				}
-
-				for i := startIdx; i < endIdx; i++ {
-					m := missions[i]
-
-					// Parse payload to redact and sanitize
-					var rawData interface{}
-					if err := json.Unmarshal([]byte(m.payload), &rawData); err != nil {
-						slog.Warn("Failed to unmarshal mission payload for sanitization, skipping sync to prevent leakage", "mission_id", m.id)
-						if syncMissionsErr != nil {
-							syncMissionsErr.Add(ctx, 1)
-						}
-						continue
-					}
-
-					if payloadData, ok := rawData.(map[string]interface{}); ok {
-						// Add ID and Status to payload for synchronization endpoint
-						payloadData["id"] = m.id
-						payloadData["status"] = m.status
-					}
-
-					// Unconditionally apply unified sanitization
-					rawData = SanitizePayloadMap(rawData)
-
-					// Re-marshal sanitized payload
-					sanitizedBytes, err := json.Marshal(rawData)
-					if err != nil {
-						slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
-						if syncMissionsErr != nil {
-							syncMissionsErr.Add(ctx, 1)
-						}
-						continue
-					}
-					m.payload = string(sanitizedBytes)
-
-					req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
-					if err != nil {
-						if syncMissionsErr != nil {
-							syncMissionsErr.Add(ctx, 1)
-						}
-						continue
-					}
-					req.Header.Set("Content-Type", "application/json")
-					req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
-
-					resp, err := client.Do(req)
-					if err == nil {
-						if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
-							mu.Lock()
-							idsToUpdate = append(idsToUpdate, m.id)
-							mu.Unlock()
-						} else if syncMissionsErr != nil {
-							syncMissionsErr.Add(ctx, 1)
-						}
-						resp.Body.Close()
-					} else {
-						if syncMissionsErr != nil {
-							syncMissionsErr.Add(ctx, 1)
-						}
-						// We fail early here if network completely drops, rolling back the transaction
-						return err
-					}
-				}
-				return nil
+				continue
 			}
-		}
 
-		if err := coordinator.ExecuteParallel(ctx, tasks); err != nil {
-			return err
-		}
+			if payloadData, ok := rawData.(map[string]interface{}); ok {
+				// Add ID and Status to payload for synchronization endpoint
+				payloadData["id"] = m.id
+				payloadData["status"] = m.status
+			}
 
-		for _, id := range idsToUpdate {
-			if _, updateErr := tx.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", id); updateErr == nil {
-				syncedCount++
-				if syncMissionsOk != nil {
-					syncMissionsOk.Add(ctx, 1)
+			// Unconditionally apply unified sanitization
+			rawData = SanitizePayloadMap(rawData)
+
+			// Re-marshal sanitized payload
+			sanitizedBytes, err := json.Marshal(rawData)
+			if err != nil {
+				slog.Warn("Failed to marshal sanitized mission payload, skipping sync", "mission_id", m.id)
+				if syncMissionsErr != nil {
+					syncMissionsErr.Add(ctx, 1)
 				}
-			} else if syncMissionsErr != nil {
-				syncMissionsErr.Add(ctx, 1)
+				continue
+			}
+			m.payload = string(sanitizedBytes)
+
+			req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(m.payload))
+			if err != nil {
+				if syncMissionsErr != nil {
+					syncMissionsErr.Add(ctx, 1)
+				}
+				continue
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+
+			resp, err := client.Do(req)
+			if err == nil {
+				if (resp.StatusCode >= 200 && resp.StatusCode < 300) || resp.StatusCode == http.StatusConflict {
+					if _, updateErr := tx.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id); updateErr == nil {
+						syncedCount++
+						if syncMissionsOk != nil {
+							syncMissionsOk.Add(ctx, 1)
+						}
+					} else if syncMissionsErr != nil {
+						syncMissionsErr.Add(ctx, 1)
+					}
+				} else if syncMissionsErr != nil {
+					syncMissionsErr.Add(ctx, 1)
+				}
+				resp.Body.Close()
+			} else {
+				if syncMissionsErr != nil {
+					syncMissionsErr.Add(ctx, 1)
+				}
+				// We fail early here if network completely drops, rolling back the transaction
+				return err
 			}
 		}
 

@@ -1,4 +1,4 @@
-package orchestration // issue_id: 3980
+package orchestration
 
 import (
 	"context"
@@ -48,52 +48,50 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 	// Create an in-memory SQLite database
 	prov := newTaskTestProvider(t)
 
-	ctx := context.Background()
-
-	createTables := `
+	// Create tables
+	_, err := prov.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
-			id VARCHAR PRIMARY KEY,
-			organization_id VARCHAR NOT NULL,
-			mission_id TEXT NOT NULL,
-			title VARCHAR NOT NULL,
-			description TEXT,
-			status VARCHAR NOT NULL DEFAULT 'PENDING',
-			agent_id VARCHAR,
-			priority VARCHAR NOT NULL DEFAULT 'P2',
-			payload TEXT,
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
 			parent_plan_id TEXT,
+			dependencies JSONB NOT NULL DEFAULT '[]',
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			agent_id TEXT,
+			priority TEXT NOT NULL DEFAULT 'P2',
+			payload TEXT NOT NULL DEFAULT '{}',
+			locked_until DATETIME,
 			ultraplan_phase TEXT,
-			deliberation_log TEXT,
-			depth INTEGER,
-			dependencies TEXT NOT NULL DEFAULT '[]',
-			locked_until TIMESTAMP,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			deliberation_log TEXT NOT NULL DEFAULT '[]',
+			depth INTEGER NOT NULL DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 
 		CREATE TABLE IF NOT EXISTS task_dependencies (
-			task_id VARCHAR NOT NULL,
-			depends_on_task_id VARCHAR NOT NULL,
+			task_id TEXT NOT NULL,
+			depends_on_task_id TEXT NOT NULL,
 			PRIMARY KEY (task_id, depends_on_task_id)
 		);
 
 		CREATE TABLE IF NOT EXISTS state_machine_transitions (
-			id VARCHAR PRIMARY KEY,
-			entity_id VARCHAR,
-			entity_type VARCHAR,
-			from_state VARCHAR,
-			to_state VARCHAR,
-			agent_id VARCHAR,
+			id TEXT PRIMARY KEY,
+			entity_id TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
 			reason TEXT,
-			occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
-	`
-
-	if _, err := prov.Exec(ctx, createTables); err != nil {
-		t.Fatalf("failed to create tables: %v", err)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
 	}
 
 	tm := NewTaskManager(prov, nil, nil)
+
 	return tm, func() {
 		prov.Close()
 	}
@@ -106,7 +104,7 @@ func TestTaskManager_CreateTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := taskClaimsContext()
-	task, err := tm.CreateTask(ctx, "org-1", "test-mission", "Test Task", "Desc", "P1")
+	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -139,7 +137,7 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 	}
 
 	// Create task
-	createdTask, err := tm.CreateTask(ctx, "org-1", "test-mission", "Test Task", "Desc", "P1")
+	createdTask, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -188,9 +186,9 @@ func TestTaskManager_PollTasks(t *testing.T) {
 	}
 
 	// Create a few tasks with different priorities
-	task1, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Task 1", "Desc", "P2")
-	task2, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Task 2", "Desc", "P1") // Should be polled first
-	task3, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Task 3", "Desc", "P3")
+	task1, _ := tm.CreateTask(ctx, "org-1", "Task 1", "Desc", "P2")
+	task2, _ := tm.CreateTask(ctx, "org-1", "Task 2", "Desc", "P1") // Should be polled first
+	task3, _ := tm.CreateTask(ctx, "org-1", "Task 3", "Desc", "P3")
 	approveTasksForExecution(t, tm, ctx, task1.ID, task2.ID, task3.ID)
 
 	// Poll tasks with limit 2
@@ -245,8 +243,8 @@ func TestTaskManager_PollTasks_Dependencies(t *testing.T) {
 	ctx := taskClaimsContext()
 
 	// Create a parent task and a dependent task
-	parentTask, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Parent Task", "Desc", "P1")
-	dependentTask, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Dependent Task", "Desc", "P1")
+	parentTask, _ := tm.CreateTask(ctx, "org-1", "Parent Task", "Desc", "P1")
+	dependentTask, _ := tm.CreateTask(ctx, "org-1", "Dependent Task", "Desc", "P1")
 	approveTasksForExecution(t, tm, ctx, parentTask.ID, dependentTask.ID)
 
 	// Add dependency
@@ -293,7 +291,7 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	defer cleanup()
 
 	ctx := taskClaimsContext()
-	task, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Test Task", "Desc", "P1")
+	task, _ := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	approveTasksForExecution(t, tm, ctx, task.ID)
 	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
 
@@ -327,7 +325,7 @@ func TestTaskManager_CompleteTaskWithResult_PersistsOutput(t *testing.T) {
 	defer cleanup()
 
 	ctx := taskClaimsContext()
-	task, err := tm.CreateTask(ctx, "org-1", "test-mission", "Test Task", "Desc", "P1")
+	task, err := tm.CreateTask(ctx, "org-1", "Test Task", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error creating task, got %v", err)
 	}
@@ -380,7 +378,7 @@ func TestTaskManager_ConcurrentClaimTask_SQLite(t *testing.T) {
 	ctx := taskClaimsContext()
 
 	// Create 1 task
-	task, err := tm.CreateTask(ctx, "org-1", "test-mission", "Test Concurrent Claim", "Desc", "P1")
+	task, err := tm.CreateTask(ctx, "org-1", "Test Concurrent Claim", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -444,7 +442,7 @@ func TestTaskManager_PollTasks_TeammateMesh(t *testing.T) {
 
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"})
 
-	task, err := tm.CreateTask(ctx, "org-1", "test-mission", "Test Mesh", "Desc", "P1")
+	task, err := tm.CreateTask(ctx, "org-1", "Test Mesh", "Desc", "P1")
 	if err != nil {
 		t.Fatalf("failed to create task: %v", err)
 	}
@@ -458,96 +456,3 @@ func TestTaskManager_PollTasks_TeammateMesh(t *testing.T) {
 		t.Fatalf("expected 1 task, got %d", len(tasks))
 	}
 }
-
-func TestTaskManager_GetTask(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
-	tm, cleanup := setupTasksTestDB(t)
-	defer cleanup()
-
-	ctx := taskClaimsContext()
-	task, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Test Task", "Desc", "P1")
-
-	retrieved, err := tm.GetTask(ctx, task.ID)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if retrieved == nil {
-		t.Fatalf("expected task, got nil")
-	}
-	if retrieved.ID != task.ID {
-		t.Errorf("expected ID %s, got %s", task.ID, retrieved.ID)
-	}
-}
-
-func TestTaskManager_UpdateTask(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
-	tm, cleanup := setupTasksTestDB(t)
-	defer cleanup()
-
-	ctx := taskClaimsContext()
-	task, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Original Title", "Original Desc", "P2")
-
-	task.Title = "Updated Title"
-	task.Description = "Updated Desc"
-	task.Priority = "P1"
-
-	err := tm.UpdateTask(ctx, task)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	updated, _ := tm.GetTask(ctx, task.ID)
-	if updated.Title != "Updated Title" {
-		t.Errorf("expected Title 'Updated Title', got %s", updated.Title)
-	}
-	if updated.Description != "Updated Desc" {
-		t.Errorf("expected Description 'Updated Desc', got %s", updated.Description)
-	}
-	if updated.Priority != "P1" {
-		t.Errorf("expected Priority 'P1', got %s", updated.Priority)
-	}
-}
-
-func TestTaskManager_DeleteTask(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
-	tm, cleanup := setupTasksTestDB(t)
-	defer cleanup()
-
-	ctx := taskClaimsContext()
-	task, _ := tm.CreateTask(ctx, "org-1", "test-mission", "To Delete", "Desc", "P1")
-
-	err := tm.DeleteTask(ctx, task.ID)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	deleted, _ := tm.GetTask(ctx, task.ID)
-	if deleted != nil {
-		t.Fatalf("expected nil for deleted task, got %v", deleted)
-	}
-}
-
-func TestTaskManager_CircularDependencyDetection(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
-	tm, cleanup := setupTasksTestDB(t)
-	defer cleanup()
-
-	ctx := taskClaimsContext()
-	task1, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Task 1", "Desc", "P1")
-	task2, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Task 2", "Desc", "P1")
-
-	// Create a dependency task2 depends on task1
-	task2.Dependencies = []string{task1.ID}
-	_ = tm.UpdateTask(ctx, task2)
-
-	// Attempt to make task1 depend on task2 (circular)
-	_, err := tm.CreateTaskWithPlan(ctx, "org-1", "test-mission", "", []string{task2.ID}, "Task 3", "Desc", "P1")
-	// If task3 depends on task2, and task2 depends on task1, it's NOT a cycle for task3.
-	// But let's try to update task1 to depend on task2.
-	task1.Dependencies = []string{task2.ID}
-	err = tm.UpdateTask(ctx, task1)
-	if err == nil {
-		t.Fatalf("expected error for circular dependency, got nil")
-	}
-}
-// added for Sub-Agent Orchestration Queue

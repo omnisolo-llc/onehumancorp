@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Shared Task List Schema
 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
 
 -- AutoDream Vector Storage Schema
 CREATE TABLE IF NOT EXISTS autodream_memories (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID REFERENCES shared_tasks_decomposition(id),
     content TEXT NOT NULL,
     embedding vector(1536),

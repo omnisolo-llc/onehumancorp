@@ -23,28 +23,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
     'DESIGNER',
     'SECURITY_ENGINEER',
     'PRODUCT_MANAGER',
-    'AI_NEWS_COLLECTOR',
   ];
-
-
-  String _formatRole(String role) {
-    if (role.isEmpty) return role;
-    return role
-        .replaceAll('_', ' ')
-        .toLowerCase()
-        .split(' ')
-        .map((word) {
-          if (word == 'ai') return 'AI';
-          if (word == 'ceo') return 'CEO';
-          if (word == 'qa') return 'QA';
-          if (word == 'cfo') return 'CFO';
-          if (word == 'seo') return 'SEO';
-          if (word == 'llm') return 'LLM';
-          if (word.isEmpty) return word;
-          return word[0].toUpperCase() + word.substring(1);
-        })
-        .join(' ');
-  }
 
   Future<void> _handleScale() async {
     setState(() {
@@ -126,7 +105,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                         _roles.map((role) {
                           final isSelected = _selectedRole == role;
                           return ChoiceChip(
-                            label: Text(_formatRole(role)),
+                            label: Text(role.replaceAll('_', ' ')),
                             selected: isSelected,
                             onSelected:
                                 _isProvisioning
@@ -175,8 +154,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                                         setState(() => _targetCount = val),
                           ),
                           const Divider(height: 32),
-                          Wrap(
-                            crossAxisAlignment: WrapCrossAlignment.center,
+                          Row(
                             children: [
                               Icon(
                                 Icons.info_outline,
@@ -188,7 +166,7 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                                 'Estimated Cost Impact:',
                                 style: TextStyle(fontSize: 12),
                               ),
-                              const SizedBox(width: 8),
+                              const Spacer(),
                               Text(
                                 '\$${(_targetCount * 0.45).toStringAsFixed(2)} / hr',
                                 style: const TextStyle(
@@ -249,11 +227,11 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                       children: [
                         const Icon(Icons.terminal, size: 18),
                         const SizedBox(width: 8),
-                        const Expanded(child: Text(
+                        const Text(
                           'Provisioning Logs',
                           style: TextStyle(fontWeight: FontWeight.bold),
-                          overflow: TextOverflow.ellipsis,
-                        )),
+                        ),
+                        const Spacer(),
                         if (_isProvisioning)
                           const SizedBox(
                             width: 12,

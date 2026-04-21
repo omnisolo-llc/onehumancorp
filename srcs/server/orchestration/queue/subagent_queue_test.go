@@ -1,14 +1,12 @@
 package queue
 
 import (
-	"github.com/onehumancorp/mono/srcs/server/db"
-
 	"context"
 	"testing"
 )
 
 func TestSQLiteSubAgentTaskQueue(t *testing.T) {
-	provider := db.NewTestProvider(t)
+	provider := newTestProvider(t)
 	ctx := context.Background()
 
 	schema := `

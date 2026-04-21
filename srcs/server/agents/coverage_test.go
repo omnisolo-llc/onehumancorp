@@ -66,7 +66,6 @@ func TestProviders_NotAuthenticatedBeforeAuthenticate(t *testing.T) {
 		&OpenCodeProvider{},
 		&OpenClawProvider{},
 		&IronClawProvider{},
-		&MiniMaxiProvider{},
 	}
 	for _, p := range providers {
 		if p.IsAuthenticated() {
@@ -187,11 +186,10 @@ func TestProviderTypeConstants(t *testing.T) {
 	types := map[ProviderType]string{
 		ProviderTypeClaude:   "claude",
 		ProviderTypeGemini:   "gemini",
-		ProviderTypeOpenCode:   "opencode",
-		ProviderTypeOpenClaw:   "openclaw",
-		ProviderTypeIronClaw:   "ironclaw",
-		ProviderTypeMiniMaxi:   "minimaxi",
-		ProviderTypeBuiltin:    "builtin",
+		ProviderTypeOpenCode: "opencode",
+		ProviderTypeOpenClaw: "openclaw",
+		ProviderTypeIronClaw: "ironclaw",
+		ProviderTypeBuiltin:  "builtin",
 	}
 	for pt, expected := range types {
 		if string(pt) != expected {
@@ -240,31 +238,5 @@ func TestOpenClawProvider_GrowthRoles(t *testing.T) {
 		if !found {
 			t.Errorf("OpenClaw should support role %q", role)
 		}
-	}
-}
-
-// ── MiniMaxi supports all roles ───────────────────────────────────────────────
-
-func TestMiniMaxiProvider_AllRoles(t *testing.T) {
-	p := &MiniMaxiProvider{}
-	roles := p.SupportedRoles()
-	if len(roles) == 0 {
-		t.Fatal("MiniMaxi provider should expose at least one role")
-	}
-}
-
-func TestMiniMaxiProvider_AuthenticateRequiresKey(t *testing.T) {
-	p := &MiniMaxiProvider{}
-	if err := p.Authenticate(Credentials{}); err == nil {
-		t.Fatal("expected error when authenticating without API key")
-	}
-	if err := p.Authenticate(Credentials{APIKey: "sk-test-key"}); err != nil {
-		t.Fatalf("unexpected error with valid API key: %v", err)
-	}
-	if !p.IsAuthenticated() {
-		t.Fatal("expected IsAuthenticated() to be true after Authenticate()")
-	}
-	if p.GetCredentials().APIKey != "sk-test-key" {
-		t.Fatal("expected stored API key to match")
 	}
 }

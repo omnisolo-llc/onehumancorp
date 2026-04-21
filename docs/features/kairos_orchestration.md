@@ -1,14 +1,8 @@
-<style>
-body {
-  backdrop-filter: blur(20px) saturate(200%);
-  background: rgba(255, 255, 255, 0.03);
-  font-family: 'Outfit', 'Inter', sans-serif;
-}
-</style>
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
 
-# KAIROS Orchestration
+# Phase 4: Master Design Doc - KAIROS AI OS Orchestration
 
-**1. KAIROS Shared Task List (Phase 1)**
+## 1. KAIROS Shared Task List (Phase 1)
 *   **Purpose:** The central queue for distributing tasks dynamically among Agents.
 *   **Database Schema:**
     ```sql
@@ -36,7 +30,7 @@ body {
         WorkerAgent->>CentrifugeMesh: Broadcast MeshEvent {topic: 'task.assigned'}
     ```
 
-**2. KAIROS Teammate Mesh (Phase 2)**
+## 2. KAIROS Teammate Mesh (Phase 2)
 *   **Purpose:** Fast, real-time publish/subscribe communication between Agents.
 *   **Protocol (Proto RPCs):**
     ```protobuf
@@ -49,9 +43,11 @@ body {
     rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
     ```
 
-**3. KAIROS AutoDream Pipelines (Phase 3)**
+## 3. KAIROS AutoDream Pipelines (Phase 3)
 *   **Purpose:** Background daemon that converts ephemeral tasks into semantic memory.
 *   **Data Pipeline Flow:**
     1.  `AutoDreamWorker` queries `shared_tasks` where `status = 'COMPLETED'`.
     2.  Invokes `MinimaxClient` LLM to generate `[]float32` embeddings.
     3.  Upserts memory vector into Postgres (`VECTOR(1536)`).
+
+</div>

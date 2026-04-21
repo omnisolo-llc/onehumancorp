@@ -5,42 +5,60 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/onehumancorp/mono/srcs/server/lib/perf"
+	"sync"
 )
 
 // agentMailbox is a per-agent inbox for inter-agent messaging.
 // Mirrors CC-Source's SendMessageTool which routes messages to a task's pendingMessages queue.
-var agentMailbox = &MailboxRegistry{
-	mailbox: perf.NewShardedMailbox(64),
+var agentMailbox = &MailboxRegistry{boxes: make(map[string]*mailbox)}
+
+// mailbox is a thread-safe message queue for one agent.
+type mailbox struct {
+	mu       sync.Mutex
+	messages []string
+}
+
+func (m *mailbox) push(msg string) {
+	m.mu.Lock()
+	m.messages = append(m.messages, msg)
+	m.mu.Unlock()
+}
+
+func (m *mailbox) drain() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := m.messages
+	m.messages = nil
+	return out
 }
 
 // MailboxRegistry holds per-agent mailboxes.
 type MailboxRegistry struct {
-	mailbox *perf.ShardedMailbox
+	mu    sync.RWMutex
+	boxes map[string]*mailbox
 }
 
 // Push appends a message to the named agent's inbox.
 func (r *MailboxRegistry) Push(agentID, msg string) {
-	m := perf.Message{
-		ID:        "msg-" + agentID,
-		Recipient: agentID,
-		Payload:   []byte(msg),
+	r.mu.Lock()
+	b := r.boxes[agentID]
+	if b == nil {
+		b = &mailbox{}
+		r.boxes[agentID] = b
 	}
-	_ = r.mailbox.Send(m)
+	r.mu.Unlock()
+	b.push(msg)
 }
 
 // Drain returns and clears all pending messages for agentID.
 func (r *MailboxRegistry) Drain(agentID string) []string {
-	msgs := r.mailbox.Read(agentID)
-	if len(msgs) == 0 {
+	r.mu.RLock()
+	b := r.boxes[agentID]
+	r.mu.RUnlock()
+	if b == nil {
 		return nil
 	}
-	out := make([]string, len(msgs))
-	for i, m := range msgs {
-		out[i] = string(m.Payload)
-	}
-	return out
+	return b.drain()
 }
 
 // SendMessageTool sends a message to another agent or to stdout.

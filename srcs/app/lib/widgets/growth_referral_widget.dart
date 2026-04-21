@@ -91,7 +91,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       ),
                       const SizedBox(height: 10),
                       FutureBuilder<Map<String, dynamic>>(
-                        future: ref.read(apiServiceProvider)?.getQuota(),
+                        future: ref.read(apiServiceProvider)!.getQuota(),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const CircularProgressIndicator();
@@ -114,7 +114,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       ElevatedButton(
                         onPressed: () async {
                           try {
-                            await ref.read(apiServiceProvider)?.createReferral(
+                            await ref.read(apiServiceProvider)!.createReferral(
                               "anonymous",
                               "xYz8vQ_local_sovereign",
                             );

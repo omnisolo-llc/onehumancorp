@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS shared_tasks (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mission_id TEXT NOT NULL,
     title TEXT NOT NULL,
     description TEXT,
@@ -10,12 +10,12 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_shared_tasks_status ON shared_tasks(status);
+CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
 
 -- The pgvector extension logic must degrade cleanly in SQLite
 
 CREATE TABLE IF NOT EXISTS autodream_memories (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     content TEXT NOT NULL,
     embedding VECTOR(1536),
     source_mission_id TEXT,

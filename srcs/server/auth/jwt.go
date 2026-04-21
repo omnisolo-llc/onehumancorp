@@ -30,7 +30,6 @@ type Claims struct {
 	Email          string   `json:"email"`
 	Roles          []string `json:"roles"`
 	OrganizationID string   `json:"organization_id,omitempty"`
-	SessionID      string   `json:"session_id,omitempty"`
 	IssuedAt       int64    `json:"iat"`
 	NotBefore      int64    `json:"nbf,omitempty"`
 	Expires        int64    `json:"exp"`

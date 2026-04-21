@@ -8,7 +8,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-func BenchmarkMemoryMeshTransport_Broadcast(b *testing.B) {
+func BenchmarkLocalTeammateMesh_Broadcast(b *testing.B) {
 	b.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
 	provider := db.NewTestProvider(b)
 	defer provider.Close()
@@ -32,7 +32,7 @@ func BenchmarkMemoryMeshTransport_Broadcast(b *testing.B) {
 		b.Fatalf("failed to create schema: %v", err)
 	}
 
-	mesh := NewMemoryMeshTransport(provider)
+	mesh := NewLocalTeammateMesh(provider)
 
 	// Subscribe one consumer
 	_, err = mesh.SubscribeTasks(ctx)

@@ -4,10 +4,8 @@ import (
 	"context"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
@@ -71,70 +69,5 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 	close(errChan)
 	for err := range errChan {
 		t.Fatalf("Unexpected error from DelegateMission under load: %v", err)
-	}
-}
-
-func TestSIPDB_DelegateMission_ConcurrencyThrottleTelemetry(t *testing.T) {
-	defer ClearSemaphore()
-	ClearSemaphore()
-
-	t.Setenv("OHC_STANDALONE", "true")
-
-	// Set up telemetry mock
-	var called int32
-	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		if metricType == "sqlite_throttled_request" {
-			atomic.AddInt32(&called, 1)
-		}
-		return nil
-	}
-	defer func() { telemetry.BufferMetricFunc = nil }()
-
-	dbPath := filepath.Join(t.TempDir(), "throttle_telemetry.db")
-	db, err := NewSIPDB(dbPath)
-	if err != nil {
-		t.Fatalf("Failed to create db: %v", err)
-	}
-	defer db.Close()
-
-	msg := Message{
-		ID:      "m1",
-		Content: "Test content",
-		Type:    EventTask,
-	}
-
-	var wg sync.WaitGroup
-	startChan := make(chan struct{})
-
-	concurrency := 3
-	// Hold the lock to force contention
-	acquireThrottle(context.Background())
-	errChan := make(chan error, concurrency)
-
-	for i := 0; i < concurrency; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			<-startChan
-			err := db.DelegateMission(context.Background(), "m"+string(rune(i)), "ROLE", msg)
-			if err != nil {
-				errChan <- err
-			}
-		}(i)
-	}
-
-	close(startChan)
-	// Wait briefly to allow goroutines to hit the throttle and increment the counter
-	time.Sleep(50 * time.Millisecond)
-	releaseThrottle()
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-
-	if atomic.LoadInt32(&called) == 0 {
-		t.Errorf("Expected sqlite_throttled_request to be called, but got %d", called)
 	}
 }

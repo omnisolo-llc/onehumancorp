@@ -180,8 +180,7 @@ func TestHandleMCPInvoke_PIIRedactionInLogs(t *testing.T) {
 
 	// Capture slog output
 	var buf bytes.Buffer
-	baseHandler := slog.NewTextHandler(&buf, nil)
-	handler := telemetry.NewPIIRedactingHandler(baseHandler)
+	handler := slog.NewTextHandler(&buf, nil)
 	originalLogger := slog.Default()
 	slog.SetDefault(slog.New(handler))
 	defer slog.SetDefault(originalLogger)

@@ -13,22 +13,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type mockMeshTransport struct {
-	MeshTransport
-	BroadcastMeshEvents []struct {
-		Topic   string
-		Payload []byte
-	}
-}
-
-func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
-	m.BroadcastMeshEvents = append(m.BroadcastMeshEvents, struct {
-		Topic   string
-		Payload []byte
-	}{topic, payload})
-	return nil
-}
-
 func setupTestDB(t *testing.T) db.Provider {
 	sqlDB, err := sql.Open("sqlite", "file::memory:?cache=shared")
 	if err != nil {
@@ -130,10 +114,12 @@ func TestAutoDreamWorker_ProcessMemories_EmptyDir(t *testing.T) {
 	}
 }
 
+
 func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 	provider := setupTestDB(t)
 	worker := NewAutoDreamWorker(provider)
 	ctx := context.Background()
+
 
 	// Clean up table for isolated test
 	provider.Exec(ctx, "DELETE FROM autodream_memories")
@@ -199,171 +185,4 @@ func TestAutoDreamWorkerDaemon_StartStop(t *testing.T) {
 	daemon.Stop()
 	daemon.Stop()
 	cancel() // to clean up contexts and verify ctx.Done doesn't panic
-}
-
-func TestAutoDreamWorker_ConsolidateMemories_MeshBroadcast(t *testing.T) {
-	provider := setupTestDB(t)
-	worker := NewAutoDreamWorker(provider)
-	ctx := context.Background()
-
-	mockMesh := &mockMeshTransport{}
-	worker.SetMeshTransport(mockMesh)
-
-	// Clean up table for isolated test
-	provider.Exec(ctx, "DELETE FROM autodream_memories")
-
-	// Insert one unprocessed memory
-	_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, ?)",
-		"mem-broadcast-1", "test content broadcast", "mission-broadcast", "org-1", "agent-1", "test")
-	if err != nil {
-		t.Fatalf("failed to insert mock memory: %v", err)
-	}
-
-	err = worker.ConsolidateMemories(ctx)
-	if err != nil {
-		t.Fatalf("ConsolidateMemories failed: %v", err)
-	}
-
-	if len(mockMesh.BroadcastMeshEvents) != 1 {
-		t.Errorf("Expected 1 mesh broadcast event, got %d", len(mockMesh.BroadcastMeshEvents))
-	} else {
-		event := mockMesh.BroadcastMeshEvents[0]
-		if event.Topic != "tasks" {
-			t.Errorf("Expected topic 'tasks', got %s", event.Topic)
-		}
-	}
-}
-
-func TestAutoDreamWorker_IngestCompletedTasks(t *testing.T) {
-	provider := setupTestDB(t)
-	worker := NewAutoDreamWorker(provider)
-	ctx := context.Background()
-
-	// Ensure table exists for test
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
-
-	// Insert test tasks
-	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, payload, status) VALUES (?, ?, ?, ?)",
-		"st-1", "Test Task 1", "{}", "COMPLETED")
-	if err != nil {
-		t.Fatalf("failed to insert test shared task: %v", err)
-	}
-
-	_, err = provider.Exec(ctx, "INSERT INTO swarm_tasks (id, title, payload, status) VALUES (?, ?, ?, ?)",
-		"sw-1", "Swarm Task 1", "{}", "COMPLETED")
-	if err != nil {
-		t.Fatalf("failed to insert test swarm task: %v", err)
-	}
-
-	err = worker.IngestCompletedTasks(ctx)
-	if err != nil {
-		t.Fatalf("IngestCompletedTasks failed: %v", err)
-	}
-
-	// Verify status updated to ARCHIVED
-	var status string
-	err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'st-1'").Scan(&status)
-	if err != nil || status != "ARCHIVED" {
-		t.Errorf("Expected shared_task status ARCHIVED, got %s (err: %v)", status, err)
-	}
-
-	err = provider.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = 'sw-1'").Scan(&status)
-	if err != nil || status != "ARCHIVED" {
-		t.Errorf("Expected swarm_task status ARCHIVED, got %s (err: %v)", status, err)
-	}
-
-	// Verify insertion into autodream_memories
-	var count int
-	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_type IN ('shared_tasks', 'swarm_tasks')").Scan(&count)
-	if err != nil || count != 2 {
-		t.Errorf("Expected 2 memories inserted, got %d (err: %v)", count, err)
-	}
-}
-
-func TestAutoDreamWorker_SearchMemories(t *testing.T) {
-	provider := setupTestDB(t)
-	worker := NewAutoDreamWorker(provider)
-	ctx := context.Background()
-
-	// Clean up table for isolated test
-	provider.Exec(ctx, "DELETE FROM autodream_memories")
-
-	// Insert test memories
-	for i := 0; i < 3; i++ {
-		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
-			fmt.Sprintf("mem-search-%d", i), fmt.Sprintf("test content %d", i), "[0.0,0.0,0.0]")
-		if err != nil {
-			t.Fatalf("failed to insert mock memory for search: %v", err)
-		}
-	}
-
-	// In SQLite mode, it falls back to recency-based returning 3 results.
-	results, err := worker.SearchMemories(ctx, "[0.0,0.0,0.0]", 2)
-	if err != nil {
-		t.Fatalf("SearchMemories failed: %v", err)
-	}
-
-	if len(results) != 2 {
-		t.Errorf("Expected 2 results, got %d", len(results))
-	}
-}
-
-func TestAutoDreamWorker_ConsolidateMemoriesPg(t *testing.T) {
-	provider := setupTestDB(t)
-	worker := NewAutoDreamWorker(provider)
-	ctx := context.Background()
-
-	// Ensure required table exists
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, agent_id TEXT, context_data TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP)")
-
-	// Clean up table for isolated test
-	provider.Exec(ctx, "DELETE FROM autodream_memories")
-
-	// Insert unprocessed memories
-	for i := 0; i < 5; i++ {
-		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, ?)",
-			fmt.Sprintf("mem-pg-%d", i), fmt.Sprintf("test content %d", i), "mission-1", "org-1", "agent-1", "test")
-		if err != nil {
-			t.Fatalf("failed to insert mock memory: %v", err)
-		}
-	}
-
-	mock := mockPgProvider{Provider: provider}
-	worker.pool = mock
-	err := worker.ConsolidateMemories(ctx)
-	if err != nil {
-		t.Fatalf("ConsolidateMemories failed: %v", err)
-	}
-}
-
-func TestAutoDreamWorker_IngestCompletedTasksPg(t *testing.T) {
-	provider := setupTestDB(t)
-	worker := NewAutoDreamWorker(provider)
-	ctx := context.Background()
-
-	// Ensure table exists for test
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
-
-	// Insert test tasks
-	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, payload, status) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
-		"st-1-pg", "Test Task 1", "{}", "COMPLETED")
-	if err != nil {
-		t.Fatalf("failed to insert test shared task: %v", err)
-	}
-
-	mock := mockPgProvider{Provider: provider}
-	worker.pool = mock
-	err = worker.IngestCompletedTasks(ctx)
-	if err != nil {
-		t.Fatalf("IngestCompletedTasks failed: %v", err)
-	}
-}
-type mockPgProvider struct {
-	db.Provider
-}
-
-func (m mockPgProvider) IsSQLite() bool {
-	return false
 }

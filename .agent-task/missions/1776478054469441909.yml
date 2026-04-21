@@ -1,0 +1,8 @@
+type: mission
+metadata:
+  role: Maintainer
+  timestamp: 1776478064
+status: pending
+description: |
+  Implement unified logging.
+  This task was deferred from the initial infrastructure orchestration mission to keep PRs small.
