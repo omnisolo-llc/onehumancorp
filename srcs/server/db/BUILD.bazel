@@ -86,6 +86,7 @@ go_library(
         "migrations/20260424020000_mcp_audit_sync_log_pg.sql",
         "migrations/20260424020000_mcp_audit_sync_log_sqlite.sql",
         "migrations/20260424030000_crdt_deltas.sql",
+        "migrations/20260425000000_autodream_memories.go",
                     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
