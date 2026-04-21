@@ -148,9 +148,7 @@ func (m *CloudStateManager) ClaimTask(ctx context.Context, agentID string) (*Tas
 		return nil, err
 	}
 
-	err = json.Unmarshal([]byte(depsStr), &task.Dependencies)
-	if err != nil {
-		tx.Rollback(ctx)
+	if err := json.Unmarshal([]byte(depsStr), &task.Dependencies); err != nil {
 		return nil, err
 	}
 

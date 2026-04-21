@@ -229,8 +229,8 @@ func TestCloudStateManager_InvalidJSON(t *testing.T) {
 	// ClaimTask should fail due to invalid JSON dependencies
 	_, err := sm.ClaimTask(ctx, "agent")
 	// Actually, wait, ClaimTask only fetches pending tasks and attempts to unmarshal.
-	if err != nil {
-		t.Logf("Expected error for invalid JSON dependencies in ClaimTask: %v", err)
+	if err == nil {
+		t.Fatal("Expected error for invalid JSON dependencies in ClaimTask")
 	}
 
 	// TransitionState should fail due to invalid JSON dependencies when transitioning to EXECUTING

@@ -107,8 +107,7 @@ func (m *StandaloneStateManager) ClaimTask(ctx context.Context, agentID string) 
 		return nil, err
 	}
 
-	err = json.Unmarshal([]byte(depsStr), &task.Dependencies)
-	if err != nil {
+	if err := json.Unmarshal([]byte(depsStr), &task.Dependencies); err != nil {
 		return nil, err
 	}
 
