@@ -146,7 +146,6 @@ flutter_library(
 
 test_suite(
     name = "flutter_unit_tests",
-    tags = ["manual"],
     tests = [
         "//srcs/app/lib/models:all_tests",
         "//srcs/app/lib/screens:all_tests",
@@ -156,7 +155,6 @@ test_suite(
 
 test_suite(
     name = "flutter_coverage_tests",
-    tags = ["manual"],
     tests = [
         "//srcs/app/lib/models:coverage_test",
         "//srcs/app/lib/screens:coverage_test",
@@ -191,7 +189,6 @@ flutter_test(
     name = "cuj_auth_e2e_test",
     srcs = ["test/cuj_auth_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_auth_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -200,7 +197,6 @@ flutter_test(
     name = "cuj_agents_hire_e2e_test",
     srcs = ["test/cuj_agents_hire_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_agents_hire_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -227,7 +223,6 @@ flutter_test(
     name = "cuj_pipelines_e2e_test",
     srcs = ["test/cuj_pipelines_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_pipelines_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -245,7 +240,6 @@ flutter_test(
     name = "cuj_integrations_e2e_test",
     srcs = ["test/cuj_integrations_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_integrations_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -254,7 +248,6 @@ flutter_test(
     name = "cuj_channels_extra_e2e_test",
     srcs = ["test/cuj_channels_extra_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_channels_extra_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -263,7 +256,6 @@ flutter_test(
     name = "cuj_scaling_e2e_test",
     srcs = ["test/cuj_scaling_e2e_test.dart"],
     embed = [":app_lib"],
-    tags = ["manual"],
     test_files = ["test/cuj_scaling_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -426,7 +418,6 @@ pkg_rpm(
     license = "Apache-2.0",
     release = "1",
     summary = "OHC standalone desktop runtime",
-    tags = ["manual"],
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )

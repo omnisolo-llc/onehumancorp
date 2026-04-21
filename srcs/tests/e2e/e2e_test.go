@@ -141,9 +141,13 @@ func TestMain(m *testing.M) {
 	// via newPage() which calls t.Skip() when bCtx is nil.
 	os.Setenv("PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS", "1")
 	playwrightReady := true
-	if installErr := playwright.Install(); installErr != nil {
-		fmt.Fprintf(os.Stderr, "playwright install: %v (browser tests will be skipped)\n", installErr)
-		playwrightReady = false
+	if os.Getenv("PLAYWRIGHT_SKIP_INSTALL") == "" {
+		if installErr := playwright.Install(); installErr != nil {
+			fmt.Fprintf(os.Stderr, "playwright install: %v (browser tests will be skipped)\n", installErr)
+			playwrightReady = false
+		}
+	} else {
+		fmt.Fprintln(os.Stdout, "playwright install skipped via PLAYWRIGHT_SKIP_INSTALL")
 	}
 
 	var err error

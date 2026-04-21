@@ -39,6 +39,14 @@ jobs:
             build --color=yes
             build --show_timestamps
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
       - name: Test
         run: |
             bazelisk test //... \

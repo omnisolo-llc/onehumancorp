@@ -27,7 +27,6 @@ _COMMON_ENV = {
 }
 
 _COMMON_TAGS = [
-    "local",
     "requires-network",
 ]
 
