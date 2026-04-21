@@ -32,7 +32,8 @@ type MeshEvent struct {
 
 
 type SharedTaskListTask struct {
-	ID        string          `json:"id"`
+	ID             string          `json:"id"`
+	OrganizationID string          `json:"organization_id"`
 	EpicID    string          `json:"epic_id"`
 	Title     string          `json:"title"`
 	Status    string          `json:"status"`

@@ -1,7 +1,8 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS shared_task_list_tasks (
-    id UUID PRIMARY KEY ,
+    id UUID PRIMARY KEY,
+    organization_id VARCHAR NOT NULL,
     epic_id VARCHAR,
     title VARCHAR NOT NULL,
     status VARCHAR NOT NULL DEFAULT 'PENDING',

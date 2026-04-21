@@ -15,6 +15,7 @@ func TestSharedTaskListRepo(t *testing.T) {
 	_, err := dbProvider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS shared_task_list_tasks (
 			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
 			epic_id TEXT,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
@@ -43,18 +44,18 @@ func TestSharedTaskListRepo(t *testing.T) {
 	repo := NewSharedTaskListRepo(dbProvider)
 
 	// Test CreateTask
-	task1, err := repo.CreateTask(ctx, "epic-1", "Task 1", nil, nil)
+	task1, err := repo.CreateTask(ctx, "org-1", "epic-1", "Task 1", nil, nil)
 	if err != nil {
 		t.Fatalf("failed to create task 1: %v", err)
 	}
 
-	task2, err := repo.CreateTask(ctx, "epic-1", "Task 2", nil, []string{task1.ID})
+	task2, err := repo.CreateTask(ctx, "org-1", "epic-1", "Task 2", nil, []string{task1.ID})
 	if err != nil {
 		t.Fatalf("failed to create task 2: %v", err)
 	}
 
 	// Test GetNextAvailableTask
-	t1, err := repo.GetNextAvailableTask(ctx, "agent-1")
+	t1, err := repo.GetNextAvailableTask(ctx, "org-1", "agent-1")
 	if err != nil {
 		t.Fatalf("failed to get next task: %v", err)
 	}
@@ -63,7 +64,7 @@ func TestSharedTaskListRepo(t *testing.T) {
 	}
 
 	// Task 2 should be blocked by Task 1
-	t2, err := repo.GetNextAvailableTask(ctx, "agent-1")
+	t2, err := repo.GetNextAvailableTask(ctx, "org-1", "agent-1")
 	if err != nil {
 		t.Fatalf("failed to get next task: %v", err)
 	}
@@ -72,12 +73,12 @@ func TestSharedTaskListRepo(t *testing.T) {
 	}
 
 	// Update Task 1 to COMPLETED
-	if err := repo.UpdateTaskStatus(ctx, task1.ID, "COMPLETED"); err != nil {
+	if err := repo.UpdateTaskStatus(ctx, "org-1", task1.ID, "COMPLETED"); err != nil {
 		t.Fatalf("failed to update task 1 status: %v", err)
 	}
 
 	// Now Task 2 should be available
-	t2, err = repo.GetNextAvailableTask(ctx, "agent-1")
+	t2, err = repo.GetNextAvailableTask(ctx, "org-1", "agent-1")
 	if err != nil {
 		t.Fatalf("failed to get next task: %v", err)
 	}
@@ -95,6 +96,7 @@ func TestSharedTaskListRepo_Postgres(t *testing.T) {
 	_, err := dbProvider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS shared_task_list_tasks (
 			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
 			epic_id TEXT,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
@@ -122,7 +124,7 @@ func TestSharedTaskListRepo_Postgres(t *testing.T) {
 
 	repo := NewSharedTaskListRepo(dbProvider)
 
-	task1, err := repo.CreateTask(ctx, "epic-1", "Task 1", nil, nil)
+	task1, err := repo.CreateTask(ctx, "org-1", "epic-1", "Task 1", nil, nil)
 	if err != nil {
 		t.Fatalf("failed to create task 1: %v", err)
 	}

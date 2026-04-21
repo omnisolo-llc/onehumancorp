@@ -326,6 +326,12 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 	var files []string
 	for _, e := range entries {
 		if !e.IsDir() && strings.HasSuffix(e.Name(), ".sql") {
+			if p.Provider.IsSQLite() && strings.HasSuffix(e.Name(), "_pg.sql") {
+				continue
+			}
+			if !p.Provider.IsSQLite() && strings.HasSuffix(e.Name(), "_sqlite.sql") {
+				continue
+			}
 			files = append(files, e.Name())
 		}
 	}

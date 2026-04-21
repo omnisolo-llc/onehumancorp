@@ -2,6 +2,7 @@ package orchestration
 
 import (
 	"context"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"testing"
     "encoding/json"
     "database/sql"
@@ -50,6 +51,8 @@ func TestClaimTask(t *testing.T) {
     defer provider.Close()
 
 	ctx := context.Background()
+	claims := &auth.Claims{OrganizationID: "org-1"}
+	ctx = context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 
     task := &SharedTaskDecomposition{
         OrganizationID: "org-1",
@@ -118,6 +121,8 @@ func (m *mockPGRow) Scan(dest ...interface{}) error { return sql.ErrNoRows }
 
 func TestClaimTask_PostgresLocking(t *testing.T) {
 	ctx := context.Background()
+	claims := &auth.Claims{OrganizationID: "org-1"}
+	ctx = context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 	provider := &mockPGProvider{}
 
 	_, err := ClaimTask(ctx, provider, "agent-1")

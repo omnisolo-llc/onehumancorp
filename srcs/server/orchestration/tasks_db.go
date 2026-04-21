@@ -5,6 +5,7 @@ import (
     "encoding/json"
     "errors"
     "fmt"
+	"strings"
     "sync"
 
     "github.com/google/uuid"
@@ -79,9 +80,9 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
             SELECT t.id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM json_each(t.dependencies) d
-                JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED'
+                SELECT 1 FROM task_dependencies d
+                JOIN shared_tasks dep ON dep.id = d.depends_on_task_id
+                WHERE d.task_id = t.id AND dep.status != 'COMPLETED'
             )
             LIMIT 1
         `
@@ -91,9 +92,9 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
             SELECT t.id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) d
-                JOIN shared_tasks dep ON dep.id::text = d
-                WHERE dep.status != 'COMPLETED'
+                SELECT 1 FROM task_dependencies d
+                JOIN shared_tasks dep ON dep.id = d.depends_on_task_id
+                WHERE d.task_id = t.id AND dep.status != 'COMPLETED'
             )
             LIMIT 1
             FOR UPDATE SKIP LOCKED
@@ -104,6 +105,9 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
     if err != nil {
         if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
             return nil, nil
+        }
+        if err.Error() == "database is locked" || err.Error() == "SQLITE_BUSY" {
+            return nil, fmt.Errorf("database is locked: %w", err)
         }
         return nil, err
     }
@@ -125,6 +129,11 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
 }
 
 func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, agentID, fromState, toState, reason string) error {
+    claims := auth.ClaimsFromContext(ctx)
+    if claims == nil {
+        return errors.New("unauthorized: missing claims")
+    }
+    orgID := claims.OrganizationID
     tx, err := to.dbProvider.Begin(ctx)
     if err != nil {
         return err
@@ -132,7 +141,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
     defer tx.Rollback(ctx)
 
     var current string
-    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_master WHERE id = $1", taskID).Scan(&current); err != nil {
+    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_master WHERE id = $1 AND organization_id = $2", taskID, orgID).Scan(&current); err != nil {
         return fmt.Errorf("failed to fetch task %s: %w", taskID, err)
     }
 
@@ -140,7 +149,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
         return fmt.Errorf("task %s is in state %s, expected %s", taskID, current, fromState)
     }
 
-    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_master SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
+    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_master SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", toState, taskID, orgID); err != nil {
         return err
     }
 
@@ -156,7 +165,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
         if to.autodream != nil {
             go func() {
                 var payloadText, deliberationLog string
-                err := to.dbProvider.QueryRow(context.Background(), "SELECT COALESCE(payload, '{}'), COALESCE(deliberation_log, '{}') FROM shared_tasks_master WHERE id = $1", taskID).Scan(&payloadText, &deliberationLog)
+                err := to.dbProvider.QueryRow(context.Background(), "SELECT COALESCE(payload, '{}'), COALESCE(deliberation_log, '{}') FROM shared_tasks_master WHERE id = $1 AND organization_id = $2", taskID, orgID).Scan(&payloadText, &deliberationLog)
                 if err != nil {
                     // Log error here in a real scenario
                     return
@@ -188,6 +197,11 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 
 
 func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, error) {
+    claims := auth.ClaimsFromContext(ctx)
+    if claims == nil {
+        return nil, errors.New("unauthorized: missing claims")
+    }
+    orgID := claims.OrganizationID
     tx, err := to.dbProvider.Begin(ctx)
     if err != nil {
         return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -196,17 +210,17 @@ func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, 
 
     query := `
         SELECT id FROM shared_tasks_v2
-        WHERE status = 'PENDING'
+        WHERE status = 'PENDING' AND organization_id = $1
         LIMIT 1
         FOR UPDATE SKIP LOCKED
     `
     var id string
-    err = tx.QueryRow(ctx, query).Scan(&id)
+    err = tx.QueryRow(ctx, query, orgID).Scan(&id)
     if err != nil {
         return nil, err
     }
 
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'IN_PROGRESS' WHERE id = $1", id)
+    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v2 SET status = 'IN_PROGRESS' WHERE id = $1 AND organization_id = $2", id, orgID)
     if err != nil {
         return nil, err
     }
@@ -237,10 +251,9 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
         SELECT id FROM shared_tasks_v4 t
         WHERE t.status = 'PENDING' AND t.organization_id = $1
         AND NOT EXISTS (
-            SELECT 1
-            FROM jsonb_array_elements_text(t.dependencies::jsonb) d
-            JOIN shared_tasks_v4 dep ON dep.id = d
-            WHERE dep.status != 'COMPLETED'
+            SELECT 1 FROM task_dependencies d
+            JOIN shared_tasks_v4 dep ON dep.id = d.depends_on_task_id
+            WHERE d.task_id = t.id AND dep.status != 'COMPLETED'
         )
         LIMIT 1
         FOR UPDATE SKIP LOCKED
@@ -251,10 +264,9 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
             SELECT id FROM shared_tasks_v4 t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1
-                FROM json_each(t.dependencies) d
-                JOIN shared_tasks_v4 dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED'
+                SELECT 1 FROM task_dependencies d
+                JOIN shared_tasks_v4 dep ON dep.id = d.depends_on_task_id
+                WHERE d.task_id = t.id AND dep.status != 'COMPLETED'
             )
             LIMIT 1
         `
@@ -266,10 +278,13 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
         if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
             return nil, nil
         }
+        if err.Error() == "database is locked" || err.Error() == "SQLITE_BUSY" {
+            return nil, fmt.Errorf("database is locked: %w", err)
+        }
         return nil, err
     }
 
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, id)
+    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
     if err != nil {
         return nil, err
     }
@@ -328,6 +343,22 @@ func (to *SharedTaskOrchestrator) CreateTaskV4(ctx context.Context, task *Shared
         task.ParentPlanID,
         depsStr,
     )
+
+    if err != nil {
+        return err
+    }
+
+    if task.Dependencies != nil && *task.Dependencies != "" && *task.Dependencies != "[]" {
+        var depIDs []string
+        if err := json.Unmarshal([]byte(*task.Dependencies), &depIDs); err == nil {
+            for _, depID := range depIDs {
+                _, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, depID)
+                if err != nil {
+                    return err
+                }
+            }
+        }
+    }
 
     if err != nil {
         return err

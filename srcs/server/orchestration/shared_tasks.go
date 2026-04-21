@@ -2,6 +2,8 @@ package orchestration
 
 import (
 	"context"
+	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 	"database/sql"
 	"encoding/json"
 	"time"
@@ -12,6 +14,10 @@ import (
 
 
 func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*SharedTaskDecomposition, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, fmt.Errorf("unauthorized: missing claims")
+	}
 	var task SharedTaskDecomposition
 	var desc, parent sql.NullString
     var agent *string
@@ -27,8 +33,8 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 		}
 		defer tx.Rollback(ctx)
 
-		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' LIMIT 1`
-		err = tx.QueryRow(ctx, query).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
+		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' AND organization_id = $1 LIMIT 1`
+		err = tx.QueryRow(ctx, query, claims.OrganizationID).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, nil
@@ -36,7 +42,7 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 			return nil, err
 		}
 
-		_, err = tx.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, agentID, task.ID)
+		_, err = tx.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = 'ASSIGNED', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3`, agentID, task.ID, claims.OrganizationID)
 		if err != nil {
 			return nil, err
 		}
@@ -115,7 +121,11 @@ func ClaimTask(ctx context.Context, database db.Provider, agentID string) (*Shar
 }
 
 func TransitionTask(ctx context.Context, database db.Provider, taskID, status string) error {
-	_, err := database.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, status, taskID)
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return fmt.Errorf("unauthorized: missing claims")
+	}
+	_, err := database.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3`, status, taskID, claims.OrganizationID)
 	return err
 }
 
