@@ -246,11 +246,15 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, exists := s.byName[tenantKey{orgID, username}]; exists {
-		return nil, errors.New("username already taken")
+	if username != "" {
+		if _, exists := s.byName[tenantKey{orgID, username}]; exists {
+			return nil, errors.New("username already taken")
+		}
 	}
-	if _, exists := s.byEmail[tenantKey{orgID, email}]; exists {
-		return nil, errors.New("email already registered")
+	if email != "" {
+		if _, exists := s.byEmail[tenantKey{orgID, email}]; exists {
+			return nil, errors.New("email already registered")
+		}
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
