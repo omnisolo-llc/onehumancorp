@@ -236,3 +236,14 @@ test_suite(
         ":e2e_misc_test",
     ],
 )
+
+go_test(
+    name = "e2e_cuj_shared_tasks_test",
+    srcs = ["e2e_test.go", "helpers_test.go", "cuj_shared_tasks_test.go", "fake_llm_test.go"],
+    data = ["//srcs/server:ohc"],
+    deps = [
+        "@com_github_playwright_community_playwright_go//:playwright-go",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

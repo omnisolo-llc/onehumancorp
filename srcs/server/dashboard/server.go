@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
+	"github.com/onehumancorp/mono/srcs/server/api/tasks"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -555,6 +556,11 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mcp/tools", server.handleMCPTools)
 	mux.HandleFunc("/api/mcp/tools/register", server.handleMCPRegister)
 	mux.HandleFunc("/api/mcp/tools/invoke", server.handleMCPInvoke)
+
+	if server.dbProvider != nil {
+		queue := tasks.NewTaskQueue(server.dbProvider)
+		tasks.RegisterRoutes(mux, queue)
+	}
 	mux.HandleFunc("/api/dev/seed", auth.RequireRole("admin", server.handleDevSeed))
 	mux.HandleFunc("/api/settings", server.handleSettings)
 	mux.HandleFunc("/api/scheduler", server.handleSchedulerTasks)
