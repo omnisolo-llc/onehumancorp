@@ -9,7 +9,6 @@ class DashboardSnapshot {
   final List<Agent> agents;
   final List<StatusBucket> statuses;
   final DateTime updatedAt;
-  final HybridHealth? hybridHealth;
 
   const DashboardSnapshot({
     required this.organization,
@@ -18,7 +17,6 @@ class DashboardSnapshot {
     required this.agents,
     required this.statuses,
     required this.updatedAt,
-    this.hybridHealth,
   });
 
   factory DashboardSnapshot.fromJson(Map<String, dynamic> json) {
@@ -48,38 +46,6 @@ class DashboardSnapshot {
                 (json['updatedAt'] ?? json['updated_at']) as String,
               )
               : DateTime.now(),
-      hybridHealth: json['hybridHealth'] != null
-          ? HybridHealth.fromJson(json['hybridHealth'] as Map<String, dynamic>)
-          : null,
-    );
-  }
-}
-
-class HybridHealth {
-  final String mode;
-  final String status;
-  final bool meshActive;
-  final bool cloudConnected;
-  final int syncBacklog;
-  final int stuckMissions;
-
-  const HybridHealth({
-    required this.mode,
-    required this.status,
-    required this.meshActive,
-    required this.cloudConnected,
-    required this.syncBacklog,
-    required this.stuckMissions,
-  });
-
-  factory HybridHealth.fromJson(Map<String, dynamic> json) {
-    return HybridHealth(
-      mode: json['mode'] as String? ?? 'unknown',
-      status: json['status'] as String? ?? 'unknown',
-      meshActive: json['mesh_active'] as bool? ?? false,
-      cloudConnected: json['cloud_connected'] as bool? ?? true,
-      syncBacklog: json['sync_backlog'] as int? ?? 0,
-      stuckMissions: json['stuck_missions'] as int? ?? 0,
     );
   }
 }

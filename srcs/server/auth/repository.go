@@ -15,7 +15,7 @@ var ErrUserNotFound = errors.New("user not found")
 type UserRepository interface {
 	// CreateUser persists a new user.  Returns an error if the username or
 	// email is already taken.
-	CreateUser(ctx context.Context, user *User, orgID string) error
+	CreateUser(ctx context.Context, user *User) error
 	// GetByID returns a user by primary key.
 	GetByID(ctx context.Context, id string, orgID string) (*User, error)
 	// GetByUsername returns the user matching the given username.
@@ -27,7 +27,7 @@ type UserRepository interface {
 	// ListUsers returns every registered user.
 	ListUsers(ctx context.Context, orgID string) ([]*User, error)
 	// UpdateUser persists changes to a user record.
-	UpdateUser(ctx context.Context, user *User, orgID string) error
+	UpdateUser(ctx context.Context, user *User) error
 	// DeleteUser removes a user by ID.
 	DeleteUser(ctx context.Context, id string, orgID string) error
 
