@@ -22,6 +22,7 @@ import (
 type AutoDreamWorker struct {
 	pool db.Provider
 	mesh MeshTransport
+	llmClient MinimaxClient
 }
 
 // AutoDreamWorker options
@@ -33,7 +34,7 @@ type AutoDreamWorkerOptions struct {
 
 // NewAutoDreamWorker creates a new AutoDream worker.
 func NewAutoDreamWorker(pool db.Provider) *AutoDreamWorker {
-	w := &AutoDreamWorker{pool: pool}
+	w := &AutoDreamWorker{pool: pool, llmClient: nil}
 	// Note: You can inject rueidis.Client and MinimaxClient into the struct if needed.
 	return w
 }
@@ -1034,4 +1035,10 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 			// We don't delete mission files to keep the history in FS
 		}
 	}
+}
+
+
+// SetLLMClient configures the LLM client to use for embeddings.
+func (w *AutoDreamWorker) SetLLMClient(client MinimaxClient) {
+	w.llmClient = client
 }
