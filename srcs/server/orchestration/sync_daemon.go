@@ -133,7 +133,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	}
 
 	if err := d.sendToCloud(ctx, payloads); err != nil {
-		slog.Error("sync_daemon: failed to send agent_missions to cloud", "error", err)
+		slog.Warn("sync_daemon: failed to send agent_missions to cloud (transient)", "error", err)
 		return false
 	}
 
