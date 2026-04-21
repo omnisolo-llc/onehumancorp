@@ -10,7 +10,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-type SharedTask struct {
+type KairosSharedTask struct {
 	ID             string          `json:"id"`
 	OrganizationID string          `json:"organization_id"`
 	Title          string          `json:"title"`
@@ -25,8 +25,8 @@ type SharedTask struct {
 
 var sqliteClaimMu sync.Mutex
 
-func ClaimSharedTask(ctx context.Context, database db.Provider, organizationID string, agentID string) (*SharedTask, error) {
-	var task SharedTask
+func ClaimSharedTask(ctx context.Context, database db.Provider, organizationID string, agentID string) (*KairosSharedTask, error) {
+	var task KairosSharedTask
 	var desc sql.NullString
 	var agent sql.NullString
 	var depsStr string
@@ -45,7 +45,7 @@ func ClaimSharedTask(ctx context.Context, database db.Provider, organizationID s
 		query := `SELECT id, organization_id, title, description, status, priority, agent_id, dependencies, created_at, updated_at FROM shared_tasks WHERE status = 'PENDING' AND organization_id = $1 LIMIT 1`
 		err = tx.QueryRow(ctx, query, organizationID).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &task.Priority, &agent, &depsStr, &createdAt, &updatedAt)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err == sql.ErrNoRows || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 				return nil, nil
 			}
 			return nil, err

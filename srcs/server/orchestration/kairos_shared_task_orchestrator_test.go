@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/google/uuid"
 )
 
 type mockDBProvider struct {

@@ -1,8 +1,6 @@
 package dashboard
 
 import (
-	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
-	"context"
 	"net/url"
 	"bytes"
 	"crypto/tls"
@@ -184,32 +182,12 @@ func TestHandleMeshMailbox(t *testing.T) {
 	})
 }
 
-
-type mockMeshBroker struct {
-	broadcastCalled bool
-	lastChannel     string
-	lastPayload     []byte
-}
-
-func (m *mockMeshBroker) Broadcast(ctx context.Context, channel string, payload []byte) error {
-	m.broadcastCalled = true
-	m.lastChannel = channel
-	m.lastPayload = payload
-	return nil
-}
-
-func (m *mockMeshBroker) Subscribe(ctx context.Context, channel string, handler func(msg []byte)) (orchmesh.Subscription, error) {
-	return nil, nil
-}
-
 func TestHandleMeshV2Broadcast(t *testing.T) {
 	org := domain.Organization{ID: "org-mesh"}
 	hub := orchestration.NewHub("test-mesh-db", "memory://")
-	mockBroker := &mockMeshBroker{}
 	srv := &Server{
-		org:        org,
-		hub:        hub,
-		MeshBroker: mockBroker,
+		org: org,
+		hub: hub,
 	}
 
 	cn, _ := orchestration.NewCentrifugeNode()
@@ -261,6 +239,8 @@ func TestHandleMeshV2Broadcast(t *testing.T) {
 		req = req.WithContext(ctx)
 
 		w := httptest.NewRecorder()
+
+		mockBroker.broadcastCalled = false
 
 		srv.handleMeshV2Broadcast(w, req)
 
