@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use reqwest::Client;
 
-use crate::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
 use super::LlmClient;
 
 pub struct OllamaClient {

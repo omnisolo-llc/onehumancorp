@@ -60,6 +60,7 @@ go_library(
         "@com_github_centrifugal_centrifuge//:centrifuge",
         "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_metric//:metric",
         "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",
