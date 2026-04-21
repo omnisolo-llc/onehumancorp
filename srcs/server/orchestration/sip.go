@@ -312,6 +312,45 @@ func (s *SIPDB) SyncMemory(ctx context.Context, key string) (string, error) {
 // Returns UpdateMemory(ctx context.Context, key, value string) error.
 // Produces errors: Explicit error handling.
 // Has no side effects.
+
+// BatchUpdateMemory updates multiple memory entries in a single transaction.
+func (s *SIPDB) BatchUpdateMemory(ctx context.Context, updates map[string]string) error {
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return withSipRetry(ctx, func() error {
+		var query strings.Builder
+		query.WriteString("INSERT INTO swarm_memory (key, value, updated_at, organization_id) VALUES ")
+
+		args := make([]interface{}, 0, len(updates)*3)
+		i := 1
+
+		first := true
+		for key, value := range updates {
+			if !first {
+				query.WriteString(", ")
+			}
+			first = false
+			query.WriteString(fmt.Sprintf("($%d, $%d, CURRENT_TIMESTAMP, $%d)", i, i+1, i+2))
+			args = append(args, key, value, s.orgID)
+			i += 3
+		}
+
+		query.WriteString(" ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP")
+
+		_, err := s.db.Exec(ctx, query.String(), args...)
+		if err != nil {
+			return err
+		}
+
+		for key := range updates {
+			s.invalidateCache(ctx, "sip:memory:"+s.orgID+":"+key)
+		}
+		return nil
+	})
+}
+
 func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 	err := withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,

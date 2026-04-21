@@ -1261,3 +1261,33 @@ func TestSIPDB_Caching(t *testing.T) {
 		t.Fatalf("GetCapabilityPlugins cache miss: %v, %v", plugins, err)
 	}
 }
+
+
+func TestSIPDB_BatchUpdateMemory(t *testing.T) {
+	db, err := NewSIPDB(":memory:")
+	if err != nil {
+		t.Fatalf("failed to init SQLite SIPDB: %v", err)
+	}
+
+	ctx := context.Background()
+	updates := map[string]string{
+		"k1": "v1",
+		"k2": "v2",
+		"k3": "v3",
+	}
+
+	err = db.BatchUpdateMemory(ctx, updates)
+	if err != nil {
+		t.Fatalf("BatchUpdateMemory failed: %v", err)
+	}
+
+	for k, v := range updates {
+		val, err := db.SyncMemory(ctx, k)
+		if err != nil {
+			t.Fatalf("SyncMemory failed for %s: %v", k, err)
+		}
+		if val != v {
+			t.Fatalf("expected %s for %s, got %s", v, k, val)
+		}
+	}
+}
