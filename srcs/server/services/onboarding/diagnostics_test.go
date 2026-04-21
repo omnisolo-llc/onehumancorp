@@ -7,7 +7,7 @@ import (
 )
 
 func TestRunDiagnostics(t *testing.T) {
-	// Create temporary directories to simulate the runtime structure
+	// Create temporary directories to simulate the agent-task structure
 	tempDir := t.TempDir()
 	t.Setenv("OHC_RUNTIME_DIR", filepath.Join(tempDir, ".ohc", "runtime"))
 	t.Setenv("OHC_MEMORY_DIR", filepath.Join(tempDir, ".ohc", "runtime", "memory"))

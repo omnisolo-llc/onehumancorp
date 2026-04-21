@@ -5,7 +5,6 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 exports_files([
     "deploy_dev.sh",
     "docker-compose.yml",
-    "docker-compose.e2e.yml",
     "setup_k8s.sh",
 ])
 
@@ -22,7 +21,7 @@ pkg_tar(
 # Serves both the API and the Flutter web UI (static assets).
 oci_image(
     name = "server_image",
-    base = "@distroless_cc",
+    base = "@distroless_static",
     entrypoint = ["/usr/local/bin/ohc"],
     tars = [":backend_pkg"],
 )
@@ -64,7 +63,7 @@ pkg_tar(
 
 oci_image(
     name = "agent_image",
-    base = "@distroless_cc",
+    base = "@distroless_static",
     # The agent container runs the ohc server; the ironclaw binary is available
     # as a sidecar tool inside the container.
     entrypoint = ["/usr/local/bin/ohc"],
@@ -80,7 +79,7 @@ oci_load(
 
 oci_image(
     name = "default_agent_image",
-    base = "@distroless_cc",
+    base = "@distroless_static",
     # Internal default agent runtime: same Bazel-built server image, configured
     # to bootstrap the builtin provider when no external workforce exists.
     entrypoint = ["/usr/local/bin/ohc"],

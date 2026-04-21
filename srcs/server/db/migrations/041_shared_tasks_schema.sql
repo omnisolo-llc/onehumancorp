@@ -1,8 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS shared_tasks (
-    id UUID PRIMARY KEY,
-    mission_id TEXT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
@@ -19,5 +18,5 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
 
 -- +goose Down
 -- +goose StatementBegin
--- DROP TABLE IF EXISTS shared_tasks;
+DROP TABLE IF EXISTS shared_tasks;
 -- +goose StatementEnd

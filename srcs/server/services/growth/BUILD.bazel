@@ -15,7 +15,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "//srcs/server/lib/analytics",
+        "//lib/analytics",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
     ],
@@ -33,6 +33,6 @@ go_test(
     ],
     embed = [":growth"],
     deps = [
-        "//srcs/server/lib/analytics",
+        "//lib/analytics",
     ],
 )

@@ -78,14 +78,8 @@ func acquireThrottle(ctx context.Context) error {
 		select {
 		case standaloneThrottle <- struct{}{}:
 			return nil
-		default:
-			telemetry.RecordSQLiteThrottledRequest(ctx, "acquireThrottle")
-			select {
-			case standaloneThrottle <- struct{}{}:
-				return nil
-			case <-ctx.Done():
-				return ctx.Err()
-			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 	return nil
@@ -103,7 +97,6 @@ func releaseThrottle() {
 // withSipRetry executes a database operation with exponential backoff for transient errors (e.g. database is locked).
 func withSipRetry(ctx context.Context, op func() error) error {
 	var err error
-	backoff := 10 * time.Millisecond
 	for i := 0; i < maxRetries; i++ {
 		err = op()
 		if err == nil {
@@ -119,7 +112,6 @@ func withSipRetry(ctx context.Context, op func() error) error {
 
 		if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
 			telemetry.RecordSQLiteLockContention(ctx, "exec/query")
-			telemetry.RecordSQLiteRetryEvent(ctx, "retry")
 		}
 
 		// Optimization: Avoid long exponential backoff retries when the DB connection is explicitly closed,
@@ -134,18 +126,7 @@ func withSipRetry(ctx context.Context, op func() error) error {
 		}
 
 		slog.Debug("sipdb: operation failed, retrying", "attempt", i+1, "error", err)
-
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(backoff):
-			// retry
-		}
-
-		backoff *= 2
-		if backoff > 100 * time.Millisecond {
-			backoff = 100 * time.Millisecond
-		}
+		time.Sleep(retryInterval * time.Duration(1<<i))
 	}
 
 	if err != nil {
@@ -532,11 +513,6 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 	var prevTime time.Time
 	var oldStatus string
 
-	// Telemetry extraction
-	if ac, ok := GetAgentContext(ctx); ok {
-		slog.InfoContext(ctx, "UpsertMission with context", "agent_id", ac.AgentID, "mission_id", missionID)
-	}
-
 	err := withSipRetry(ctx, func() error {
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
@@ -613,14 +589,6 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, task Message) error {
-	// Context extraction
-	if ac, ok := GetAgentContext(ctx); ok {
-		if task.Metadata == nil {
-			task.Metadata = make(map[string]string)
-		}
-		task.Metadata["agent_id"] = ac.AgentID
-		task.Metadata["parent_session_id"] = ac.ParentSessionID
-	}
 	if err := acquireThrottle(ctx); err != nil {
 		return err
 	}
@@ -1087,8 +1055,8 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 		return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
 	}
 
-	telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
-	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize) // added for issue 4365
+	telemetry.RecordSIPSyncLatency(ctx, time.Since(start))
+	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)
 
 	// Delete successfully synced records
 	err = withSipRetry(ctx, func() error {
@@ -1182,7 +1150,6 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 					}
 
 					// Redact rag_context for force-local conflict resolution strategy
-					// added for issue 4331: complete stripping of rag_context
 					delete(payloadData, "rag_context")
 
 					// ensure memory_id is set
@@ -1208,8 +1175,8 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 							idsToDelete = append(idsToDelete, rec.id)
 							syncedCount++
 							mu.Unlock()
-							telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
-							telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize) // added for issue 4365
+							telemetry.RecordSIPSyncLatency(ctx, time.Since(start))
+							telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)
 						}
 						resp.Body.Close()
 					}

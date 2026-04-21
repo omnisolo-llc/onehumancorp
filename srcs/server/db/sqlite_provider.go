@@ -19,23 +19,6 @@ type SqliteProvider struct {
 	db *sql.DB
 }
 
-func sqliteRowsAffected(res sql.Result) (rows int64, err error) {
-	if res == nil {
-		return 0, nil
-	}
-	defer func() {
-		if recover() != nil {
-			rows = 0
-			err = nil
-		}
-	}()
-	rows, err = res.RowsAffected()
-	if err != nil {
-		return 0, nil
-	}
-	return rows, nil
-}
-
 func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 	return &SqliteProvider{db: db}
 }
@@ -94,7 +77,7 @@ func (p *SqliteProvider) Exec(ctx context.Context, sqlQuery string, arguments ..
 	if err != nil {
 		return 0, err
 	}
-	return sqliteRowsAffected(res)
+	return res.RowsAffected()
 }
 
 func (p *SqliteProvider) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {
@@ -202,23 +185,6 @@ func (p *SqliteProvider) IsSQLite() bool {
 	return true
 }
 
-func (p *SqliteProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) {
-	query := `SELECT content FROM autodream_memories WHERE organization_id = $1 AND content LIKE $2 LIMIT $3`
-	rows, err := p.Query(ctx, query, organizationID, "%"+queryText+"%", limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var results []string
-	for rows.Next() {
-		var content string
-		if err := rows.Scan(&content); err == nil {
-			results = append(results, content)
-		}
-	}
-	return results, nil
-}
-
 func (p *SqliteProvider) Ping(ctx context.Context) error {
 	return p.db.PingContext(ctx)
 }
@@ -269,7 +235,7 @@ func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) 
 	if err != nil {
 		return 0, err
 	}
-	return sqliteRowsAffected(res)
+	return res.RowsAffected()
 }
 
 func (t *SqliteTx) Query(ctx context.Context, sqlQuery string, optionsAndArgs ...any) (Rows, error) {

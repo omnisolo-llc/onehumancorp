@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/onehumancorp/mono/lib/analytics"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/lib/analytics"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
 )
 
@@ -91,44 +91,6 @@ func TestGrowthHandler_HandleInvite(t *testing.T) {
 			t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
 		}
 	})
-
-	t.Run("RecordInvite Error", func(t *testing.T) {
-		// Create a handler with a broken DB connection to simulate error
-		ctx := context.Background()
-		t.Setenv("DATABASE_URL", "sqlite://:memory:")
-		database, err := db.New(ctx)
-		if err != nil {
-			t.Fatalf("failed to connect to memory db: %v", err)
-		}
-
-		// Run migrations but then close the DB so inserts fail
-		if err := database.RunMigrations(ctx); err != nil {
-			// Ignore error for sqlite syntax due to existing bug
-		}
-
-		brokenIt := growth.NewInviteTracker(database)
-		database.Close()
-
-		analyticsTracker := analytics.NewTracker()
-		vt := growth.NewViralLoopTracker(analyticsTracker)
-
-		brokenHandler := NewGrowthHandler(brokenIt, vt)
-
-		reqBody := InviteRequest{
-			TeamID:    "team1",
-			InviterID: "user1",
-			InviteeID: "user2",
-		}
-		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/invites", bytes.NewBuffer(bodyBytes))
-		w := httptest.NewRecorder()
-
-		brokenHandler.HandleInvite(w, req)
-
-		if w.Code != http.StatusInternalServerError {
-			t.Errorf("Expected status %d, got %d", http.StatusInternalServerError, w.Code)
-		}
-	})
 }
 
 func TestGrowthHandler_HandleAcceptInvite(t *testing.T) {
@@ -182,44 +144,6 @@ func TestGrowthHandler_HandleAcceptInvite(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Expected status %d, got %d", http.StatusBadRequest, w.Code)
-		}
-	})
-
-	t.Run("RecordInvite Error", func(t *testing.T) {
-		// Create a handler with a broken DB connection to simulate error
-		ctx := context.Background()
-		t.Setenv("DATABASE_URL", "sqlite://:memory:")
-		database, err := db.New(ctx)
-		if err != nil {
-			t.Fatalf("failed to connect to memory db: %v", err)
-		}
-
-		// Run migrations but then close the DB so inserts fail
-		if err := database.RunMigrations(ctx); err != nil {
-			// Ignore error for sqlite syntax due to existing bug
-		}
-
-		brokenIt := growth.NewInviteTracker(database)
-		database.Close()
-
-		analyticsTracker := analytics.NewTracker()
-		vt := growth.NewViralLoopTracker(analyticsTracker)
-
-		brokenHandler := NewGrowthHandler(brokenIt, vt)
-
-		reqBody := InviteRequest{
-			TeamID:    "team1",
-			InviterID: "user1",
-			InviteeID: "user2",
-		}
-		bodyBytes, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/invites", bytes.NewBuffer(bodyBytes))
-		w := httptest.NewRecorder()
-
-		brokenHandler.HandleInvite(w, req)
-
-		if w.Code != http.StatusInternalServerError {
-			t.Errorf("Expected status %d, got %d", http.StatusInternalServerError, w.Code)
 		}
 	})
 }

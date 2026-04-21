@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../widgets/glass_card.dart';
 
@@ -351,16 +352,6 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   value: 'Delegator',
                   groupValue: _topologyPreset,
                   onChanged: (val) => setState(() => _topologyPreset = val!),
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile(
-                  title: const Text('Show Advanced Settings'),
-                  subtitle: const Text('Reveal visual sub-agent topology and technical fields.'),
-                  value: expertMode,
-                  onChanged: (val) {
-                    final notifier = ref.read(clientSettingsProvider.notifier);
-                    notifier.updateExpertMode(val);
-                  },
                 ),
                 if (expertMode) ...[
                   const SizedBox(height: 16),

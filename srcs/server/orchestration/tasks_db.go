@@ -16,16 +16,12 @@ import (
 
 type SharedTaskDB struct {
     ID              string
+    ParentPlanID    *string
     OrganizationID  string
     Title           string
     Description     *string
     Status          string
-    AssignedAgentID *string
-    Priority        string
-    Payload         *string
-    ParentPlanID    *string
-    Dependencies    *string
-    DeploymentMode  *string
+    AgentID *string
     CreatedAt       string
     UpdatedAt       string
 }
@@ -54,12 +50,24 @@ func (to *SharedTaskOrchestrator) insertTransition(ctx context.Context, tx db.Tx
     return err
 }
 
-func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*Task, error) {
+func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error) {
     claims := auth.ClaimsFromContext(ctx)
     if claims == nil {
         return nil, errors.New("unauthorized: missing claims")
     }
-    orgID := claims.OrganizationID
+
+    if to.dbProvider.IsSQLite() {
+        return to.claimTaskSQLite(ctx, claims.OrganizationID, agentID)
+    }
+    return to.claimTaskPostgres(ctx, claims.OrganizationID, agentID)
+}
+
+func (to *SharedTaskOrchestrator) claimTaskSQLite(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
+    if !to.mu.TryLock() {
+        telemetry.RecordPostgresLockContention(ctx, "claim_task")
+        to.mu.Lock()
+    }
+    defer to.mu.Unlock()
 
     tx, err := to.dbProvider.Begin(ctx)
     if err != nil {
@@ -67,62 +75,122 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
     }
     defer tx.Rollback(ctx)
 
-    var id string
+    query := `
+        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.created_at, st.updated_at
+        FROM shared_tasks_master st
+        WHERE st.status = 'PENDING' AND st.organization_id = $1
+        AND NOT EXISTS (
+            SELECT 1 FROM json_each(st.dependencies) AS dep
+            JOIN shared_tasks_master d ON d.id = dep.value
+            WHERE d.status != 'COMPLETED'
+        )
+        LIMIT 1
+    `
+    row := tx.QueryRow(ctx, query, orgID)
 
-    if to.dbProvider.IsSQLite() {
-        if !to.mu.TryLock() {
-            telemetry.RecordPostgresLockContention(ctx, "claim_task")
-            to.mu.Lock()
-        }
-        defer to.mu.Unlock()
-
-        query := `
-            SELECT t.id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1 FROM json_each(t.dependencies) d
-                JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED'
-            )
-            LIMIT 1
-        `
-        err = tx.QueryRow(ctx, query, orgID).Scan(&id)
-    } else {
-        query := `
-            SELECT t.id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) d
-                JOIN shared_tasks dep ON dep.id::text = d
-                WHERE dep.status != 'COMPLETED'
-            )
-            LIMIT 1
-            FOR UPDATE SKIP LOCKED
-        `
-        err = tx.QueryRow(ctx, query, orgID).Scan(&id)
-    }
-
-    if err != nil {
-        if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+    var task SharedTaskDB
+    if err := row.Scan(
+        &task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
+        &task.Description, &task.Status, &task.AgentID, &task.CreatedAt, &task.UpdatedAt,
+    ); err != nil {
+        if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+            var checkID string
+            checkQuery := `
+                SELECT st.id FROM shared_tasks_master st
+                WHERE st.status = 'PENDING' AND st.organization_id = $1
+                AND NOT EXISTS (
+                    SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
+                    JOIN shared_tasks_master d ON d.id = dep
+                    WHERE d.status != 'COMPLETED'
+                )
+                LIMIT 1
+            `
+            if checkErr := tx.QueryRow(ctx, checkQuery, orgID).Scan(&checkID); checkErr == nil && checkID != "" {
+                telemetry.RecordPostgresLockContention(ctx, "claim_task")
+            }
             return nil, nil
         }
-        return nil, err
+        return nil, fmt.Errorf("failed to query pending task: %w", err)
     }
 
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
-    if err != nil {
-        return nil, err
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_master SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+        return nil, fmt.Errorf("failed to update task status: %w", err)
     }
 
-    if err := to.insertTransition(ctx, tx, id, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
+    if err := to.insertTransition(ctx, tx, task.ID, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
         return nil, fmt.Errorf("failed to insert transition: %w", err)
     }
 
     if err := tx.Commit(ctx); err != nil {
-        return nil, err
+        return nil, fmt.Errorf("failed to commit transaction: %w", err)
     }
 
-    return &Task{TaskID: id, Status: "IN_PROGRESS", AgentID: agentID}, nil
+    task.Status = "IN_PROGRESS"
+    task.AgentID = &agentID
+    return &task, nil
+}
+
+func (to *SharedTaskOrchestrator) claimTaskPostgres(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
+    tx, err := to.dbProvider.Begin(ctx)
+    if err != nil {
+        return nil, fmt.Errorf("failed to begin transaction: %w", err)
+    }
+    defer tx.Rollback(ctx)
+
+    query := `
+        SELECT st.id, st.organization_id, st.parent_plan_id, st.title, st.description, st.status, st.agent_id, st.created_at, st.updated_at
+        FROM shared_tasks_master st
+        WHERE st.status = 'PENDING' AND st.organization_id = $1
+        AND NOT EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
+            JOIN shared_tasks_master d ON d.id = dep
+            WHERE d.status != 'COMPLETED'
+        )
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+    `
+    row := tx.QueryRow(ctx, query, orgID)
+
+    var task SharedTaskDB
+    if err := row.Scan(
+        &task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title,
+        &task.Description, &task.Status, &task.AgentID, &task.CreatedAt, &task.UpdatedAt,
+    ); err != nil {
+        if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+            var checkID string
+            checkQuery := `
+                SELECT st.id FROM shared_tasks_master st
+                WHERE st.status = 'PENDING' AND st.organization_id = $1
+                AND NOT EXISTS (
+                    SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep
+                    JOIN shared_tasks_master d ON d.id = dep
+                    WHERE d.status != 'COMPLETED'
+                )
+                LIMIT 1
+            `
+            if checkErr := tx.QueryRow(ctx, checkQuery, orgID).Scan(&checkID); checkErr == nil && checkID != "" {
+                telemetry.RecordPostgresLockContention(ctx, "claim_task")
+            }
+            return nil, nil
+        }
+        return nil, fmt.Errorf("failed to query pending task: %w", err)
+    }
+
+    if _, err = tx.Exec(ctx, "UPDATE shared_tasks_master SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
+        return nil, fmt.Errorf("failed to update task status: %w", err)
+    }
+
+    if err := to.insertTransition(ctx, tx, task.ID, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
+        return nil, fmt.Errorf("failed to insert transition: %w", err)
+    }
+
+    if err := tx.Commit(ctx); err != nil {
+        return nil, fmt.Errorf("failed to commit transaction: %w", err)
+    }
+
+    task.Status = "IN_PROGRESS"
+    task.AgentID = &agentID
+    return &task, nil
 }
 
 func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, agentID, fromState, toState, reason string) error {
@@ -217,122 +285,4 @@ func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, 
     }
 
     return &Task{TaskID: id, Status: "IN_PROGRESS"}, nil
-}
-
-func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
-    if to.dbProvider.IsSQLite() {
-        if !to.mu.TryLock() {
-            telemetry.RecordPostgresLockContention(ctx, "claim_task_v4")
-            to.mu.Lock()
-        }
-        defer to.mu.Unlock()
-    }
-
-    tx, err := to.dbProvider.Begin(ctx)
-    if err != nil {
-        return nil, err
-    }
-    defer tx.Rollback(ctx)
-
-    query := `
-        SELECT id FROM shared_tasks_v4 t
-        WHERE t.status = 'PENDING' AND t.organization_id = $1
-        AND NOT EXISTS (
-            SELECT 1
-            FROM jsonb_array_elements_text(t.dependencies::jsonb) d
-            JOIN shared_tasks_v4 dep ON dep.id = d
-            WHERE dep.status != 'COMPLETED'
-        )
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-    `
-
-    if to.dbProvider.IsSQLite() {
-        query = `
-            SELECT id FROM shared_tasks_v4 t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1
-                FROM json_each(t.dependencies) d
-                JOIN shared_tasks_v4 dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED'
-            )
-            LIMIT 1
-        `
-    }
-
-    var id string
-    err = tx.QueryRow(ctx, query, orgID).Scan(&id)
-    if err != nil {
-        if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
-            return nil, nil
-        }
-        return nil, err
-    }
-
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, id)
-    if err != nil {
-        return nil, err
-    }
-
-    if err := tx.Commit(ctx); err != nil {
-        return nil, err
-    }
-
-    return &SharedTaskDB{ID: id, Status: "IN_PROGRESS"}, nil
-}
-
-func (to *SharedTaskOrchestrator) CreateTaskV4(ctx context.Context, task *SharedTaskDB) error {
-    if task.ID == "" {
-        task.ID = uuid.New().String()
-    }
-
-    tx, err := to.dbProvider.Begin(ctx)
-    if err != nil {
-        return err
-    }
-    defer tx.Rollback(ctx)
-
-    depsStr := "[]"
-    if task.Dependencies != nil && *task.Dependencies != "" {
-        depsStr = *task.Dependencies
-    }
-
-    query := `
-        INSERT INTO shared_tasks_v4 (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    `
-
-    var priority string
-    if task.Priority != "" {
-        priority = task.Priority
-    } else {
-        priority = "P2"
-    }
-
-    var status string
-    if task.Status != "" {
-        status = task.Status
-    } else {
-        status = "PENDING"
-    }
-
-    _, err = tx.Exec(ctx, query,
-        task.ID,
-        task.OrganizationID,
-        task.Title,
-        task.Description,
-        status,
-        task.AssignedAgentID,
-        priority,
-        task.Payload,
-        task.ParentPlanID,
-        depsStr,
-    )
-
-    if err != nil {
-        return err
-    }
-
-    return tx.Commit(ctx)
 }

@@ -4,7 +4,7 @@ CREATE SCHEMA IF NOT EXISTS ohc_tasks;
 CREATE SCHEMA IF NOT EXISTS ohc_memory;
 
 CREATE TABLE IF NOT EXISTS ohc_tasks.mission_queue (
-    mission_id UUID PRIMARY KEY,
+    mission_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(255) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'QUEUED',
     assigned_agent VARCHAR(100),
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS ohc_tasks.mission_queue (
 );
 
 CREATE TABLE IF NOT EXISTS ohc_memory.autodream_vectors (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     task_id UUID REFERENCES ohc_tasks.mission_queue(mission_id),
     content TEXT NOT NULL,
     embedding vector(1536),
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS ohc_memory.autodream_vectors (
 );
 
 CREATE TABLE IF NOT EXISTS ohc_tasks.sub_agent_queue (
-    id UUID PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     parent_task_id UUID NOT NULL,
     payload JSONB,
     status TEXT NOT NULL DEFAULT 'QUEUED',

@@ -13,7 +13,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
@@ -21,7 +21,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   void dispose() {
-    _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -35,7 +35,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref
           .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+          .login(_emailCtrl.text.trim(), _passwordCtrl.text);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -239,17 +239,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Image.asset(
-                            'assets/logo.png',
-                            height: 80,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.auto_awesome,
-                                size: 64,
-                                color: Theme.of(context).colorScheme.primary,
-                              );
-                            },
-                          ),
+                            package: 'ohc_app',
+                          'assets/logo.png',
+                          height: 80,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              Icons.auto_awesome,
+                              size: 64,
+                              color: Theme.of(context).colorScheme.primary,
+                            );
+                          },
+                        ),
                         const SizedBox(height: 24),
                         const Text(
                           'One Human Corp',
@@ -271,19 +272,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
                         TextFormField(
-                          controller: _usernameCtrl,
-                          keyboardType: TextInputType.text,
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
-                            prefixIcon: const Icon(Icons.person_outline),
+                            labelText: 'Email',
+                            prefixIcon: const Icon(Icons.email_outlined),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           validator:
                               (v) =>
-                                  (v == null || v.trim().isEmpty)
-                                      ? 'Enter your email or username'
+                                  (v == null || !v.contains('@'))
+                                      ? 'Enter a valid email'
                                       : null,
                         ),
                         const SizedBox(height: 16),
@@ -294,7 +295,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             labelText: 'Password',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-                              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
                               icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
                               onPressed: () {
                                 setState(() {

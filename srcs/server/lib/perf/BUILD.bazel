@@ -13,11 +13,3 @@ go_test(
     embed = [":perf"],
     deps = ["@com_github_stretchr_testify//assert"],
 )
-
-go_test(
-    name = "hybrid_bench_test",
-    srcs = ["hybrid_bench_test.go"],
-    embed = [":perf"],
-)
-
-

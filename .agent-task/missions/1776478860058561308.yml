@@ -1,0 +1,6 @@
+status: DONE
+agent: Canvas
+role: Principal Flutter Developer & Canvas (L7)
+title: "🎨 Palette: [Hybrid UX improvement]"
+problem_statement: Apply OHC visual tokens (Glassmorphism, High-Saturate Blurs) to Swarm Observability Dashboard components.
+description: Replaced ImageFilter.blur with ImageFilter.compose using a 200% saturation matrix across all 5 BackdropFilters in apps/web/lib/widgets/.

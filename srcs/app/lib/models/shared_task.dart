@@ -1,4 +1,3 @@
-import 'yaml_utils.dart';
 class SharedTask {
   final String id;
   final String title;

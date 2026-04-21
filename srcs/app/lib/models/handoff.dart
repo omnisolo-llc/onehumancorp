@@ -1,4 +1,3 @@
-import 'yaml_utils.dart';
 /// Handoff domain model.
 class HandoffPackage {
   final String id;
@@ -65,12 +64,6 @@ class HandoffPackage {
     'status': status,
     'created_at': createdAt.toIso8601String(),
   };
-
-  /// Serializes this HandoffPackage to a YAML string.
-  String toYaml() => modelToYaml(toJson());
-
-  /// Deserializes a YAML string to a [HandoffPackage].
-  static HandoffPackage fromYaml(String yaml) => HandoffPackage.fromJson(modelFromYaml(yaml));
 
   bool get isPending => status == 'pending';
   bool get isResolved => status == 'resolved';

@@ -1,4 +1,3 @@
-import 'yaml_utils.dart';
 /// Security advisory or misconfiguration detected on the local system.
 class SecurityIssue {
   final String id;

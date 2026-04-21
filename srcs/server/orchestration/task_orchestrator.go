@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/google/uuid"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -201,7 +200,7 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 	payloadBytes, _ := json.Marshal(jobPayload)
 
 	job := &queue.Job{
-		ID:           uuid.New().String(),
+		ID:           generateID(),
 		ParentTaskID: taskID,
 		AgentRole:    "sub-agent-spawner",
 		Payload:      string(payloadBytes),
@@ -230,7 +229,7 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 
 	id := task.ID
 	if id == "" {
-		id = uuid.New().String()
+		id = generateID()
 		task.ID = id
 	}
 
@@ -620,7 +619,7 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 		}
 
 		b, _ := json.Marshal(emb)
-		memID := uuid.New().String()
+		memID := generateID()
 
 		// Instead of directly inserting, use the worker to handle standard DB inserts for AutoDream.
 		_ = worker.InjectTruth(bgCtx, memID, contextStr, string(b))

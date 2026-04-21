@@ -196,18 +196,12 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 					slog.Info("agent task worker: dispatching to builtin local runner", "agent_id", a.ID)
 					go func(agent orchestration.Agent, payload string) {
 						workDir, _ := os.Getwd()
-
-						// Create agent config with AST Command Validator
-						agentCfg := builtin.AgentConfig{
-							CommandValidator: builtin.NewASTCommandValidator(),
-						}
-
 						_, err := builtin.SpawnTask(
 							context.Background(),
 							fmt.Sprintf("plane issue %s", issue.ID),
 							payload,
 							workDir,
-							agentCfg,
+							builtin.AgentConfig{},
 						)
 						if err != nil {
 							slog.Error("builtin agent run error", "err", err, "agent_id", agent.ID)

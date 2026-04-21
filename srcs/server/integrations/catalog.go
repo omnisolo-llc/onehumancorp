@@ -2,12 +2,7 @@ package integrations
 
 import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
-	"github.com/onehumancorp/mono/srcs/server/integrations/etcd"
-	"github.com/onehumancorp/mono/srcs/server/integrations/libsql"
 	"github.com/onehumancorp/mono/srcs/server/integrations/litefs"
-	"github.com/onehumancorp/mono/srcs/server/integrations/ollama"
-	"github.com/onehumancorp/mono/srcs/server/integrations/powersync"
-	"github.com/onehumancorp/mono/srcs/server/integrations/restic"
 )
 
 // Integration represents a plugin blueprint defining how to instantiate connections.
@@ -32,11 +27,6 @@ var Catalog = []Integration{
 	&PlaneIntegration{},
 	&GitHubIssuesIntegration{},
 	&litefs.LiteFSIntegration{},
-	&libsql.LibSQLIntegration{},
-	&etcd.EtcdIntegration{},
-	&ollama.OllamaIntegration{},
-	&powersync.PowerSyncIntegration{},
-	&restic.ResticIntegration{},
 }
 
 // GetCatalog returns all available integration providers.

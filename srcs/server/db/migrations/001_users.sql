@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_users_username ON users (username);
-CREATE INDEX idx_users_email ON users (email);
-CREATE INDEX idx_users_oidc ON users (oidc_subject) WHERE oidc_subject IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_users_username ON users (username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
+CREATE INDEX IF NOT EXISTS idx_users_oidc ON users (oidc_subject) WHERE oidc_subject IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS roles (
     id          TEXT PRIMARY KEY,

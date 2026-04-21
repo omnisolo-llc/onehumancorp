@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type mockRows struct {
@@ -50,8 +49,6 @@ type mockDBProvider struct {
 	execErr   error
 }
 
-func (m *mockDBProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) { return nil, nil }
-
 func (m *mockDBProvider) IsSQLite() bool {
 	return true
 }
@@ -69,11 +66,10 @@ func (m *mockDBProvider) Query(ctx context.Context, sql string, optionsAndArgs .
 }
 
 func TestMcpSyncProxy_Buffer(t *testing.T) {
-	telemetry.InitTelemetry()
 	mockDB := &mockDBProvider{}
-	proxy := NewMcpSyncProxy(mockDB, "http://dummy", nil)
+	proxy := NewMcpSyncProxy(mockDB, "http://dummy")
 
-	id, err := proxy.Buffer(context.Background(), "session-1", "test-capability", "test-tool", map[string]interface{}{"key": "value"})
+	id, err := proxy.Buffer(context.Background(), "test-tool", map[string]interface{}{"key": "value"})
 	if err != nil {
 		t.Fatalf("Buffer failed: %v", err)
 	}
@@ -86,7 +82,6 @@ func TestMcpSyncProxy_Buffer(t *testing.T) {
 }
 
 func TestMcpSyncProxy_Sync(t *testing.T) {
-	telemetry.InitTelemetry()
 	os.Setenv("SPIFFE_IDENTITY_TOKEN", "fake-token")
 	defer os.Unsetenv("SPIFFE_IDENTITY_TOKEN")
 
@@ -106,7 +101,7 @@ func TestMcpSyncProxy_Sync(t *testing.T) {
 	}
 	mockDB := &mockDBProvider{queryRows: mockRows}
 
-	proxy := NewMcpSyncProxy(mockDB, ts.URL, nil)
+	proxy := NewMcpSyncProxy(mockDB, ts.URL)
 	count, err := proxy.Sync(context.Background())
 	if err != nil {
 		t.Fatalf("Sync failed: %v", err)
@@ -118,18 +113,5 @@ func TestMcpSyncProxy_Sync(t *testing.T) {
 
 	if receivedToken != "Bearer fake-token" {
 		t.Errorf("Expected SPIFFE token to be sent, got %s", receivedToken)
-	}
-}
-
-func TestMcpSyncProxy_Init(t *testing.T) {
-	telemetry.InitTelemetry()
-	mockDB := &mockDBProvider{}
-
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
-	proxy := NewMcpSyncProxy(mockDB, "http://dummy", nil)
-
-	if proxy.mode != "standalone" {
-		t.Errorf("Expected standalone mode, got %s", proxy.mode)
 	}
 }

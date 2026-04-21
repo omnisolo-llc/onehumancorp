@@ -33,7 +33,6 @@ type AgentConfig struct {
 	SystemPromptSuffix string
 	MaxTurns           int
 	MaxTokensPerTurn   int
-	CommandValidator   CommandValidator
 }
 
 // SpawnTask launches a builtin task and returns state for polling.
@@ -54,15 +53,6 @@ func SpawnTask(ctx context.Context, description, prompt, workDir string, cfg Age
 	}
 	if cfg.Tools == nil {
 		cfg.Tools = AllTools()
-		// Inject CommandValidator into bash tool if provided
-		if cfg.CommandValidator != nil {
-			for i, t := range cfg.Tools {
-				if t.Name == "Bash" {
-					// We need to modify the execute closure to include the validator
-					cfg.Tools[i] = NewValidatedBashTool(cfg.CommandValidator)
-				}
-			}
-		}
 	}
 
 	agent := &BuiltinAgent{

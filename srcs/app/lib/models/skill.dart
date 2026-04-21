@@ -1,4 +1,3 @@
-import 'yaml_utils.dart';
 /// Skill / plugin model.
 class Skill {
   final String name;
@@ -47,10 +46,4 @@ class Skill {
     'installed': installed,
     'enabled': enabled,
   };
-
-  /// Serializes this Skill to a YAML string.
-  String toYaml() => modelToYaml(toJson());
-
-  /// Deserializes a YAML string to a [Skill].
-  static Skill fromYaml(String yaml) => Skill.fromJson(modelFromYaml(yaml));
 }

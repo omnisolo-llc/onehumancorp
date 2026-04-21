@@ -26,9 +26,9 @@ func getCryptoKey() []byte {
 	return hash[:]
 }
 
-// EncryptDeterministic encrypts a string using AES-GCM with a deterministic nonce
+// encryptDeterministic encrypts a string using AES-GCM with a deterministic nonce
 // derived from the plaintext. This allows for exact-match database lookups.
-func EncryptDeterministic(plaintext string) string {
+func encryptDeterministic(plaintext string) string {
 	if plaintext == "" {
 		return ""
 	}
@@ -54,7 +54,7 @@ func EncryptDeterministic(plaintext string) string {
 	return base64.StdEncoding.EncodeToString(finalMsg)
 }
 
-func DecryptDeterministic(ciphertextB64 string) string {
+func decryptDeterministic(ciphertextB64 string) string {
 	if ciphertextB64 == "" {
 		return ""
 	}
