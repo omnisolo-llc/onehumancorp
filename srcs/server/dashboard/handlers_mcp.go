@@ -14,7 +14,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
-	"github.com/onehumancorp/mono/srcs/server/lib/integrations/hybridfsmcp"
+	"github.com/onehumancorp/mono/srcs/server/tools/fsmcp"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
@@ -420,23 +420,21 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 			"HybridEscalation": true,
 		}, nil
 	// ── Hybrid File System tool ───────────────────────────────────────────────
-	case "hybridfs-mcp":
+	case "fs-mcp":
 		// NOTE: In a real execution environment, we should check if we are in local or cloud mode
 		// and instantiate the correct provider. For now, we instantiate the local provider
 		// if we're in local mode, or cloud provider otherwise. We don't have direct access
 		// to the global mode here so we fallback to a safe default (cloud).
 
-		var fsProvider hybridfsmcp.FileSystemProvider
-		if s.hub.Storage() != nil && s.hub.Storage().IsLocal() {
-			fsProvider = hybridfsmcp.NewLocalFSProvider("./")
-		} else {
-			fsProvider = hybridfsmcp.NewCloudFSProvider("/tmp/ohc-cloud-fs")
+		fsProvider, err := fsmcp.NewProviderFactory("./")
+		if err != nil {
+			return nil, fmt.Errorf("failed to create fsmcp provider: %w", err)
 		}
 
-		inspector := hybridfsmcp.NewHybridFSMCP(fsProvider, nil)
+		inspector := fsmcp.NewFSMCP(fsProvider)
 		var params map[string]interface{}
 		if err := json.Unmarshal(req.Params, &params); err != nil {
-			return nil, fmt.Errorf("invalid hybridfs-mcp parameters: %w", err)
+			return nil, fmt.Errorf("invalid fs-mcp parameters: %w", err)
 		}
 
 		claims := &auth.Claims{
