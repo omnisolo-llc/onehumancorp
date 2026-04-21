@@ -144,11 +144,18 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 			if tm.hub != nil {
 				// Broadcast that task is now ready
 				go func(taskID string) {
-					tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+					payload := map[string]interface{}{
 						"action":   "READY",
 						"agent_id": "",
 						"status":   "PENDING",
-					})
+					}
+					tm.hub.PublishTaskBroadcast(taskID, payload)
+					if tm.mesh != nil {
+						payloadBytes, err := json.Marshal(payload)
+						if err == nil {
+							_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
+						}
+					}
 				}(id)
 			}
 		}
@@ -256,6 +263,12 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 				"priority":        task.Priority,
 			}
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
+			if tm.mesh != nil {
+				payloadBytes, err := json.Marshal(payload)
+				if err == nil {
+					_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
+				}
+			}
 		}()
 	}
 
@@ -403,6 +416,12 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 				"status":   task.Status,
 			}
 			tm.hub.PublishTaskBroadcast(task.ID, payload)
+			if tm.mesh != nil {
+				payloadBytes, err := json.Marshal(payload)
+				if err == nil {
+					_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
+				}
+			}
 		}()
 	}
 
@@ -451,6 +470,12 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 				"status":   "REVIEW",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
+			if tm.mesh != nil {
+				payloadBytes, err := json.Marshal(payload)
+				if err == nil {
+					_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
+				}
+			}
 		}()
 	}
 
@@ -539,6 +564,12 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				"status":   "COMPLETED",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
+			if tm.mesh != nil {
+				payloadBytes, err := json.Marshal(payload)
+				if err == nil {
+					_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
+				}
+			}
 		}()
 	}
 
@@ -874,6 +905,12 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 					"status":   t.Status,
 				}
 				tm.hub.PublishTaskBroadcast(t.ID, payload)
+				if tm.mesh != nil {
+					payloadBytes, err := json.Marshal(payload)
+					if err == nil {
+						_ = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
+					}
+				}
 			}(task)
 		}
 	}

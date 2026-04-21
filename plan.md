@@ -1,20 +1,7 @@
-1. **Apply `perf.CoordinatorMode` in `SyncContextSync`**:
-   - In `srcs/server/orchestration/sip.go`, find `SyncContextSync`.
-   - After fetching the `records` from `swarm_memory_embeddings`, iterate and transform the payloads. Currently, this iteration is done sequentially: `for _, rec := range records { ... }`.
-   - Update it to use `perf.CoordinatorMode(4)` for parallel payload sanitization and HTTP requests to `remoteEndpoint`.
-   - To make it thread-safe, collect the `idsToDelete` via a mutex or by sending results back to a channel. Note: Since `ExecuteParallel` blocks until all finish, we can process items and aggregate safe state. Wait, HTTP requests inside `ExecuteParallel` might be concurrent and need separate `http.Client`s or reuse the same thread-safe `http.Client`.
-   - Alternatively, batch the records to construct an array of processed payloads, similar to `SyncBufferedMetrics` if it does one large POST. Wait, the existing code in `SyncContextSync` does a POST *per record*: `req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))`.
-   - If it does a POST per record, `ExecuteParallel` will parallelize both sanitization and network requests!
-   - Use `perf.NewCoordinatorMode(4)` to parallelize it. Use a mutex for `idsToDelete` and `syncedCount`.
-
-2. **Apply `perf.CoordinatorMode` in `SyncMissions`**:
-   - In `srcs/server/orchestration/sip.go`, find `SyncMissions`.
-   - Similar to above, it processes `missions` in a loop and sends a POST *per mission*.
-   - Update it to use `perf.CoordinatorMode(4)`. Use a `sync.Mutex` for tracking successful synchronizations (updating `agent_missions` status in the DB transaction might not be safe, wait! The SQLite/PG transaction `tx` is not thread-safe. Wait, `tx.Exec` might not be safe to call concurrently from multiple goroutines on the same transaction).
-   - In `SyncMissions`, `tx.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)` is done per mission. We can collect successfully synced mission IDs in a thread-safe way, and do a single batch update or individual updates *after* `ExecuteParallel` completes.
-   - Wait, `SyncContextSync` collects `idsToDelete` and does a batch delete: `tx.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))`. So `SyncMissions` should collect `idsToUpdate` and do a batch update: `tx.Exec(ctx, fmt.Sprintf("UPDATE agent_missions SET status = 'SYNCED' WHERE id IN (%s)", idList))` after `ExecuteParallel`.
-
-3. **Verify functionality**:
-   - Run `bazelisk test //...` to ensure no tests are broken by these changes.
-
-4. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
+1. **Analyze `srcs/server/orchestration/tasks.go`:** I noticed that there are several places where `tm.hub.PublishTaskBroadcast` is used to broadcast messages, but it does not utilize the `Teammate Mesh APIs` properly (which corresponds to `tm.mesh.BroadcastMeshEvent`).
+2. **Modify `tasks.go`:** Update `tasks.go` to dual-broadcast using `tm.mesh.BroadcastMeshEvent(ctx, "tasks", payloadBytes)` whenever `tm.hub.PublishTaskBroadcast` is called, ensuring that the Teammate Mesh receives all events across shards and nodes. I will create a helper function or modify the existing places to broadcast to `tm.mesh` as well.
+3. **Analyze `srcs/server/orchestration/ultraplan.go`:** I noticed a comment `// Use Publish function or custom logic instead of the hallucinated PublishTaskBroadcast` and similar ones in `ultraplan.go`. These need to be updated to broadcast using `m.hub.Publish` and potentially also the teammate mesh if it is connected to the same hub. (Wait, the issue states: "Implement Realtime Teammate Mesh APIs").
+4. **Update `srcs/server/api/mesh/mesh.go`:** Check if `api/mesh/mesh.go` needs to connect to `orchestration/mesh.go`. Currently, `api/mesh/mesh.go` contains `TeammateMeshService` which uses `rueidis.Client` for Redis Pub/Sub directly, while `orchestration/mesh.go` implements `RedisMeshTransport` using `rueidis`. But `TeammateMeshService` in `api/mesh` handles generic `Intent` strings.
+5. **Update `tasks.go` correctly:** Change the occurrences of `tm.hub.PublishTaskBroadcast` to also include `tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", jsonBytes)` since the `meshTransport` is the true distributed Teammate Mesh.
+6. **Pre-commit checks:** Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+7. **Submit:** Submit the changes with branch `teammate-mesh-apis`.
