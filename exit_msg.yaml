@@ -1,12 +1,12 @@
-issue_title: "[ui] 2026-04-10T08-03-57Z.md"
-issue_priority: "P0"
-issue_category: "feature"
+issue_id: 6568
+issue_title: "[Draft] Scout 🔍 (Resource Scout & Tool Integrator)"
+issue_priority: "P2"
+issue_category: "[integrations]"
 issue_description: |
-  The OHC swarm currently lacks a robust shared task list, realtime Teammate Mesh APIs, and an AutoDream data pipeline architecture. These are essential for true autonomous orchestration in both cloud-native and local-first deployments.
-
-  The architectural scaffolding (SQL migrations and Go interfaces) already exists natively in the repository. A design document was added.
+  The requested component (Scout agent and its tool integration pipeline) is already fully implemented.
 issue_todo_list:
-  - Verified existing SQL migrations (`srcs/server/db/migrations/20260420000000_shared_tasks_schema_pg.sql`, `srcs/server/db/migrations/20260420000000_shared_tasks_schema_sqlite.sql`).
-  - Verified existing Go interfaces (`srcs/server/orchestration/kairos/mesh.go`, `srcs/server/orchestration/mesh/mesh.go`).
-  - Created a comprehensive master design document at `docs/features/kairos/master_design_doc.md`.
-issue_label: "kairos, orchestration, mesh, completed"
+  - Verified `Scout` agent implementation in `srcs/server/lib/integrations/scout/scout.go`.
+  - Verified `ParseAndRegister` function exists to parse OpenAPI specs and register tools.
+  - Verified E2E test `TestScout_ParseAndRegister_E2E` in `srcs/server/lib/integrations/scout/scout_e2e_test.go` exists and passes.
+  - Ensured working tree is clean since the issue is already implemented.
+issue_label: "scout, integrations, completed"
