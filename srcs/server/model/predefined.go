@@ -1,7 +1,7 @@
 package model
 
 import (
-	modelpb "github.com/onehumancorp/mono/srcs/proto/ohc/model"
+	modelpb "github.com/onehumancorp/mono/srcs/proto"
 )
 
 type ProviderConfig struct {

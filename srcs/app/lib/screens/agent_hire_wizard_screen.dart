@@ -355,17 +355,20 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 ),
                 if (expertMode) ...[
                   const SizedBox(height: 16),
-                  Container(
-                    height: 250,
-                    width: double.infinity,
-                    clipBehavior: Clip.hardEdge,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.1),
-                      border: Border.all(color: Colors.white24),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Stack(
-                      children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                      child: Container(
+                        height: 250,
+                        width: double.infinity,
+                        clipBehavior: Clip.hardEdge,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Stack(
+                          children: [
                         // Dynamic Edge
                         CustomPaint(
                           size: const Size(double.infinity, 250),
@@ -445,6 +448,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                       ],
                     ),
                   ),
+                ),
+              ),
                 ],
               ],
             ),
