@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
     id TEXT PRIMARY KEY,
     content TEXT NOT NULL,
     embedding TEXT,
+    task_id TEXT REFERENCES shared_tasks_decomposition(id),
     source_mission_id TEXT,
     organization_id TEXT,
     agent_id TEXT,

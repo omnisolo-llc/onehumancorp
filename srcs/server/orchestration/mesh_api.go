@@ -16,6 +16,7 @@ func NewMeshAPI(mt MeshTransport) *MeshAPI {
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/mesh/broadcast", api.HandleBroadcast)
+
 	mux.HandleFunc("/api/mesh/stream", api.HandleStream)
 	mux.HandleFunc("/api/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/mesh/connect", api.HandleConnect)

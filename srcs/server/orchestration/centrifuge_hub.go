@@ -333,3 +333,32 @@ func (cn *CentrifugeNode) MeshHealthCheck(ctx context.Context) error {
 func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
 }
+
+// HandleV1Broadcast handles POST /api/v1/mesh/broadcast
+func (cn *CentrifugeNode) HandleV1Broadcast(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	taskID, _ := req["task_id"].(string)
+	if taskID == "" {
+		if payload, ok := req["payload"].(map[string]interface{}); ok {
+			taskID, _ = payload["task_id"].(string)
+		}
+	}
+	if taskID == "" {
+		taskID = "unknown"
+	}
+
+	cn.PublishTaskBroadcast(taskID, req)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success"}`))
+}

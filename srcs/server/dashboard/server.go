@@ -647,6 +647,13 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.TeammateMesh.HandlePublish))
 	mux.HandleFunc("/api/mesh/subscribe", auth.RequireRole("system", server.TeammateMesh.HandleSubscribe))
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
+	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", func(w http.ResponseWriter, r *http.Request) {
+		if server.hub != nil && server.hub.CentrifugeNode() != nil {
+			server.hub.CentrifugeNode().HandleV1Broadcast(w, r)
+		} else {
+			http.Error(w, "mesh not available", http.StatusServiceUnavailable)
+		}
+	})))
 	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
