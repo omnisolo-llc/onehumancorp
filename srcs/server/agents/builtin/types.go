@@ -1,6 +1,14 @@
 package builtin
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+)
+
+// LLMClient is the interface for talking to the LLM backend.
+type LLMClient interface {
+	Chat(ctx context.Context, req ChatRequest) (ChatResponse, error)
+}
 
 // Role represents the role of a message sender.
 type Role string

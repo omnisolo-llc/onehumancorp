@@ -1,0 +1,18 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "llm",
+    srcs = glob(["**/*.rs"]),
+    crate_name = "ohc_builtin_agent_llm",
+    edition = "2024",
+    visibility = ["//srcs/server/agents/builtin:__subpackages__"],
+    deps = [
+        "//srcs/server/agents/builtin/src:core",
+        "@crates//:async-trait",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
+    ],
+)
