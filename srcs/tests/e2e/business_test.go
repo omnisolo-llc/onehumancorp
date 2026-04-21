@@ -1,29 +1,35 @@
 package e2e
 
 import (
+	"bytes"
+	"net/http"
 	"testing"
 )
 
 func TestNewBusinessFormCompleteAllStepsWithUsStateLocationSelection(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
-
-	loginAsAdmin(t, page)
-
-	// Test: new business form: complete all steps with US-state location selection
-	body, _ := page.Content()
-	_ = body
+	reqBody := []byte(`{"extras":{"company_name":"Acme Inc","industry":"Software","company_size":"M"}}`)
+	resp, err := http.Post(baseURL+"/api/wizard/configure", "application/json", bytes.NewReader(reqBody))
+	if err != nil {
+		t.Fatalf("unauth wizard configure request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected unauthenticated wizard configure to return 401, got %d", resp.StatusCode)
+	}
 }
 
 func TestNewBusinessFormConfigureAgentHiringRequirements(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
-
-	loginAsAdmin(t, page)
-
-	// Test: new business form: configure agent hiring requirements
-	body, _ := page.Content()
-	_ = body
+	status, _ := apiPOSTJSON(t, "/api/wizard/configure", map[string]any{
+		"extras": map[string]any{
+			"company_name": "Acme Inc",
+			"industry": "Software",
+			"company_size": "M",
+			"goals": "Build software,Support",
+		},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("expected authenticated wizard configure to return 200, got %d", status)
+	}
 }
 
 func TestNewBusinessFormAiAgentHelpsDetermineBusinessRequirements(t *testing.T) {

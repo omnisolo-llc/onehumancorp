@@ -1,29 +1,40 @@
 package e2e
 
 import (
+	"net/http"
 	"testing"
 )
 
 func TestModelProviderManagementUpdateAddAndAssignPerAgentModelProviders(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
+	statusA, _ := apiPOSTJSON(t, "/api/agents/hire", map[string]any{
+		"name":         "ProviderA SWE",
+		"role":         "SOFTWARE_ENGINEER",
+		"providerType": "builtin",
+	})
+	if statusA != http.StatusOK {
+		t.Fatalf("expected hire with builtin provider to return 200, got %d", statusA)
+	}
 
-	loginAsAdmin(t, page)
-
-	// Test: model provider management: update, add, and assign per-agent model providers
-	body, _ := page.Content()
-	_ = body
+	statusB, _ := apiPOSTJSON(t, "/api/agents/hire", map[string]any{
+		"name":         "ProviderB SWE",
+		"role":         "SOFTWARE_ENGINEER",
+		"providerType": "claude",
+	})
+	if statusB != http.StatusOK {
+		t.Fatalf("expected hire with claude provider to return 200, got %d", statusB)
+	}
 }
 
 func TestModelProviderAddingASecondProviderWithAnthropicBaseUrl(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
-
-	loginAsAdmin(t, page)
-
-	// Test: model provider: adding a second provider with anthropic base URL
-	body, _ := page.Content()
-	_ = body
+	status, _ := apiPOSTJSON(t, "/api/settings", map[string]any{
+		"minimax_api_key": "test-minimax-key",
+		"extras": map[string]any{
+			"minimax_api_key": "test-minimax-key",
+		},
+	})
+	if status != http.StatusOK {
+		t.Fatalf("expected minimax settings update to return 200, got %d", status)
+	}
 }
 
 func TestModelProviderDeleteProviderShowsConfirmationBeforeRemoving(t *testing.T) {

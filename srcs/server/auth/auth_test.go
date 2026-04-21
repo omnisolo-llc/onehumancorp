@@ -53,6 +53,14 @@ func TestStore_CreateAndAuthenticate(t *testing.T) {
 		t.Error("id mismatch after authenticate")
 	}
 
+	gotByEmail, err := s.Authenticate("alice@test.com", "hunter2!", "")
+	if err != nil {
+		t.Fatalf("Authenticate by email: %v", err)
+	}
+	if gotByEmail.ID != u.ID {
+		t.Error("id mismatch after email authenticate")
+	}
+
 	if _, err := s.Authenticate("alice", "wrongpass", ""); err == nil {
 		t.Error("expected error for wrong password")
 	}
