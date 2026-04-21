@@ -110,3 +110,67 @@ func TestAutoDreamPipeline_Files(t *testing.T) {
 		t.Errorf("expected test file to be deleted")
 	}
 }
+
+func TestAutoDreamPipeline_UltraPlansAndTasks(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to init db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	ctx := context.Background()
+
+	// Insert mock completed ultra plan
+	_, err = pool.Exec(ctx, "INSERT INTO swarm_ultra_plans (id, mission_id, status, state_machine) VALUES ('p1', 'm1', 'COMPLETED', '{\"goal\": \"test plan\"}')")
+	if err != nil {
+		t.Fatalf("failed to insert mock plan: %v", err)
+	}
+
+	// Insert mock completed shared task
+	_, err = pool.Exec(ctx, "INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status) VALUES ('t1', 'org1', 'test task', 'task description', 'COMPLETED')")
+	if err != nil {
+		t.Fatalf("failed to insert mock task: %v", err)
+	}
+
+	pipeline := NewAutoDreamPipeline(pool.Provider, nil)
+	// We don't strictly need to mock minimaxClient here if we want to use the fallback embedding [0.0, ...]
+	// but let's just run it.
+
+	pipeline.processUltraPlans(ctx)
+	pipeline.processResolvedTasks(ctx)
+
+	// Verify knowledge_embeddings
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM knowledge_embeddings WHERE source_type = 'ultra_plan'").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count plan embeddings: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 plan embedding, got %d", count)
+	}
+
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM knowledge_embeddings WHERE source_type = 'shared_task'").Scan(&count)
+	if err != nil {
+		t.Fatalf("failed to count task embeddings: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 task embedding, got %d", count)
+	}
+
+	// Verify auto_dreamed flags
+	var autoDreamed bool
+	err = pool.QueryRow(ctx, "SELECT auto_dreamed FROM swarm_ultra_plans WHERE id = 'p1'").Scan(&autoDreamed)
+	if err != nil || !autoDreamed {
+		t.Errorf("expected plan p1 to be auto_dreamed, got %v (err: %v)", autoDreamed, err)
+	}
+
+	err = pool.QueryRow(ctx, "SELECT auto_dreamed FROM shared_tasks_decomposition WHERE id = 't1'").Scan(&autoDreamed)
+	if err != nil || !autoDreamed {
+		t.Errorf("expected task t1 to be auto_dreamed, got %v (err: %v)", autoDreamed, err)
+	}
+}

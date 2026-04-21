@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
@@ -66,8 +67,185 @@ func (p *AutoDreamPipeline) Start(ctx context.Context) {
 			p.processBatch(ctx)
 			p.processFiles(ctx)
 			p.resolveConflicts(ctx)
+			p.processUltraPlans(ctx)
+			p.processResolvedTasks(ctx)
 		}
 	}
+}
+
+// processUltraPlans extracts completed UltraPlans and stores them in knowledge_embeddings.
+func (p *AutoDreamPipeline) processUltraPlans(ctx context.Context) {
+	var query string
+	if p.pool.IsSQLite() {
+		query = "SELECT id, state_machine FROM swarm_ultra_plans WHERE status = 'COMPLETED' AND (auto_dreamed = false OR auto_dreamed IS NULL) LIMIT 50"
+	} else {
+		query = "SELECT id, state_machine FROM swarm_ultra_plans WHERE status = 'COMPLETED' AND (auto_dreamed = false OR auto_dreamed IS NULL) LIMIT 50 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := p.pool.Query(ctx, query)
+	if err != nil {
+		if !strings.Contains(err.Error(), "auto_dreamed") {
+			slog.Error("AutoDreamPipeline: failed to query completed plans", "error", err)
+		}
+		return
+	}
+	defer rows.Close()
+
+	type planRec struct {
+		ID           string
+		StateMachine string
+	}
+	var plans []planRec
+	for rows.Next() {
+		var r planRec
+		if err := rows.Scan(&r.ID, &r.StateMachine); err == nil {
+			plans = append(plans, r)
+		}
+	}
+	rows.Close()
+
+	for _, pr := range plans {
+		content := pr.StateMachine
+		embeddingStr := p.generateEmbedding(ctx, content)
+
+		err := func() error {
+			tx, err := p.pool.Begin(ctx)
+			if err != nil {
+				return err
+			}
+			defer tx.Rollback(ctx)
+
+			var insertQuery string
+			id := uuid.New().String()
+			if p.pool.IsSQLite() {
+				insertQuery = "INSERT INTO knowledge_embeddings (id, content, embedding, source_id, source_type) VALUES (?, ?, ?, ?, ?)"
+				_, err = tx.Exec(ctx, insertQuery, id, content, embeddingStr, pr.ID, "ultra_plan")
+			} else {
+				insertQuery = "INSERT INTO knowledge_embeddings (id, content, embedding, source_id, source_type) VALUES ($1, $2, $3::vector, $4, $5)"
+				_, err = tx.Exec(ctx, insertQuery, id, content, embeddingStr, pr.ID, "ultra_plan")
+			}
+
+			if err != nil {
+				return err
+			}
+
+			updateQuery := "UPDATE swarm_ultra_plans SET auto_dreamed = true WHERE id = $1"
+			if p.pool.IsSQLite() {
+				updateQuery = "UPDATE swarm_ultra_plans SET auto_dreamed = true WHERE id = ?"
+			}
+			_, err = tx.Exec(ctx, updateQuery, pr.ID)
+			if err != nil {
+				return err
+			}
+
+			return tx.Commit(ctx)
+		}()
+
+		if err != nil {
+			slog.Error("AutoDreamPipeline: failed to process ultra plan", "id", pr.ID, "error", err)
+		} else {
+			slog.Info("AutoDreamPipeline: processed ultra plan", "id", pr.ID)
+		}
+	}
+}
+
+// processResolvedTasks extracts completed shared tasks and stores them in knowledge_embeddings.
+func (p *AutoDreamPipeline) processResolvedTasks(ctx context.Context) {
+	var query string
+	if p.pool.IsSQLite() {
+		query = "SELECT id, COALESCE(description, title, '') FROM shared_tasks_decomposition WHERE status = 'COMPLETED' AND (auto_dreamed = false OR auto_dreamed IS NULL) LIMIT 50"
+	} else {
+		query = "SELECT id, COALESCE(description, title, '') FROM shared_tasks_decomposition WHERE status = 'COMPLETED' AND (auto_dreamed = false OR auto_dreamed IS NULL) LIMIT 50 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := p.pool.Query(ctx, query)
+	if err != nil {
+		if !strings.Contains(err.Error(), "auto_dreamed") {
+			slog.Error("AutoDreamPipeline: failed to query resolved tasks", "error", err)
+		}
+		return
+	}
+	defer rows.Close()
+
+	type taskRec struct {
+		ID      string
+		Content string
+	}
+	var tasks []taskRec
+	for rows.Next() {
+		var r taskRec
+		if err := rows.Scan(&r.ID, &r.Content); err == nil {
+			tasks = append(tasks, r)
+		}
+	}
+	rows.Close()
+
+	for _, tr := range tasks {
+		embeddingStr := p.generateEmbedding(ctx, tr.Content)
+
+		err := func() error {
+			tx, err := p.pool.Begin(ctx)
+			if err != nil {
+				return err
+			}
+			defer tx.Rollback(ctx)
+
+			var insertQuery string
+			id := uuid.New().String()
+			if p.pool.IsSQLite() {
+				insertQuery = "INSERT INTO knowledge_embeddings (id, content, embedding, source_id, source_type) VALUES (?, ?, ?, ?, ?)"
+				_, err = tx.Exec(ctx, insertQuery, id, tr.Content, embeddingStr, tr.ID, "shared_task")
+			} else {
+				insertQuery = "INSERT INTO knowledge_embeddings (id, content, embedding, source_id, source_type) VALUES ($1, $2, $3::vector, $4, $5)"
+				_, err = tx.Exec(ctx, insertQuery, id, tr.Content, embeddingStr, tr.ID, "shared_task")
+			}
+
+			if err != nil {
+				return err
+			}
+
+			updateQuery := "UPDATE shared_tasks_decomposition SET auto_dreamed = true WHERE id = $1"
+			if p.pool.IsSQLite() {
+				updateQuery = "UPDATE shared_tasks_decomposition SET auto_dreamed = true WHERE id = ?"
+			}
+			_, err = tx.Exec(ctx, updateQuery, tr.ID)
+			if err != nil {
+				return err
+			}
+
+			return tx.Commit(ctx)
+		}()
+
+		if err != nil {
+			slog.Error("AutoDreamPipeline: failed to process shared task", "id", tr.ID, "error", err)
+		} else {
+			slog.Info("AutoDreamPipeline: processed shared task", "id", tr.ID)
+		}
+	}
+}
+
+func (p *AutoDreamPipeline) generateEmbedding(ctx context.Context, content string) string {
+	var embeddingStr string
+	if p.minimaxClient != nil {
+		ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+		embedding, embedErr := p.minimaxClient.GenerateEmbedding(ctxTimeout, content)
+		cancel()
+		if embedErr == nil && len(embedding) > 0 {
+			str := fmt.Sprintf("%v", embedding)
+			str = strings.ReplaceAll(strings.Trim(str, "[]"), " ", ",")
+			embeddingStr = "[" + str + "]"
+		}
+	}
+
+	if embeddingStr == "" {
+		// Fallback vector for tests or missing API keys to allow insertion
+		var vec []string
+		for i := 0; i < 1536; i++ {
+			vec = append(vec, "0.0")
+		}
+		embeddingStr = "[" + strings.Join(vec, ",") + "]"
+	}
+	return embeddingStr
 }
 
 // resolveConflicts finds vector embeddings that are similar but have conflicting contexts,
