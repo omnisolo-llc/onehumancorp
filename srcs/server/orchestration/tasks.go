@@ -147,7 +147,14 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	for rows.Next() {
 		var id, status string
 		if err := rows.Scan(&id, &status); err == nil {
-			if tm.hub != nil {
+			if tm.mesh != nil {
+				_ = tm.mesh.BroadcastTask(ctx, Task{
+					AgentID: "",
+					Action:  "READY",
+					Status:  "PENDING",
+					TaskID:  id,
+				})
+			} else if tm.hub != nil {
 				// Broadcast that task is now ready
 				go func(taskID string) {
 					tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
@@ -250,7 +257,14 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	telemetry.RecordSwarmTaskQueueLength(ctx, 1)
 
 	// Broadcast task creation
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: task.AssignedAgentID,
+			Action:  "CREATE",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":         task.ID,
@@ -401,7 +415,14 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	task.AssignedAgentID = agentID
 
 	// Broadcast task claim
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "CLAIM",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  task.ID,
@@ -449,7 +470,14 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "REVIEW")
 
 	// Broadcast task review
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "REVIEW",
+			Status:  "REVIEW",
+			TaskID:  taskID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  taskID,
@@ -548,7 +576,14 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 
 	// Broadcast task completion
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "COMPLETE",
+			Status:  "COMPLETED",
+			TaskID:  taskID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  taskID,
@@ -883,7 +918,14 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	for _, task := range claimedTasks {
 		// Broadcast task claim
-		if tm.hub != nil {
+		if tm.mesh != nil {
+			_ = tm.mesh.BroadcastTask(ctx, Task{
+				AgentID: agentID,
+				Action:  "CLAIM",
+				Status:  task.Status,
+				TaskID:  task.ID,
+			})
+		} else if tm.hub != nil {
 			go func(t *SharedTask) {
 				payload := map[string]interface{}{
 					"task_id":  t.ID,
@@ -1038,7 +1080,14 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 	}
 
 	// Broadcast update
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: task.AssignedAgentID,
+			Action:  "UPDATE",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  task.ID,
@@ -1102,7 +1151,14 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 	}
 
 	// Broadcast deletion
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: "",
+			Action:  "DELETE",
+			Status:  "",
+			TaskID:  taskID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id": taskID,
