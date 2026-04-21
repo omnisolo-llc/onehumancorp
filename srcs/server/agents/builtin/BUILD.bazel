@@ -1,9 +1,31 @@
+load("@rules_go//go:def.bzl", "go_library")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
+
+# ── Go LLM client library ──────────────────────────────────────────────────────
+# Provides the LLMClient interface, Tool type, and concrete LLM client
+# implementations (Anthropic, OpenAI, Ollama) used by autodream_pipeline,
+# mcp/client_manager, and mcp_config_sync.
+go_library(
+    name = "builtin",
+    srcs = [
+        "llm_anthropic.go",
+        "llm_ollama.go",
+        "llm_openai.go",
+        "tools.go",
+        "types.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/telemetry",
+        "//srcs/server/utils",
+    ],
+)
 
 # Rust sources include pre-generated proto code in src/gen/.
 # No protoc dependency needed in the Bazel build.
