@@ -16,7 +16,13 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	RoleCEO Role = "CEO"
-	// RoleProductManager defines the standard operational responsibilities and system access boundaries for the ProductManager persona.
+		// RoleScout defines the standard operational responsibilities and system access boundaries for the Scout persona.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	RoleScout Role = "SCOUT"
+// RoleProductManager defines the standard operational responsibilities and system access boundaries for the ProductManager persona.
 	// Accepts no parameters.
 	// Returns nothing.
 	// Produces no errors.
@@ -193,6 +199,7 @@ func NewSoftwareCompany(id, name, ceoName string, now time.Time) Organization {
 		{ID: id + "-swe-2", Name: "Software Engineer 2", Role: RoleSoftwareEngineer, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-qa-1", Name: "QA Tester", Role: RoleQATester, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-security-1", Name: "Security Engineer", Role: RoleSecurityEngineer, ManagerID: directorID, IsHuman: false},
+		{ID: id + "-scout-1", Name: "Resource Scout", Role: RoleScout, ManagerID: directorID, IsHuman: false},
 		{ID: id + "-news-1", Name: "AI News Collector", Role: RoleAINewsCollector, ManagerID: directorID, IsHuman: false},
 	}
 
@@ -346,6 +353,20 @@ func defaultSoftwareCompanyRoleProfiles() []RoleProfile {
 				"specification handoff",
 				"codebase state",
 				"test feedback",
+			},
+		},
+		{
+			Role:       RoleScout,
+			BasePrompt: "Scout the web for external resources, APIs, and tools, and seamlessly integrate them into the swarm's capabilities.",
+			Capabilities: []string{
+				"Find external resources",
+				"Parse API schemas",
+				"Register new MCP tools",
+			},
+			ContextInputs: []string{
+				"external API specs",
+				"web scraping results",
+				"tool discovery intent",
 			},
 		},
 		{
