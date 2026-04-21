@@ -61,15 +61,6 @@ const (
 	// Has no side effects.
 	ProviderTypeBuiltin ProviderType = "builtin"
 
-	// ProviderTypeBuiltinRust is the Rust reimplementation of the builtin agent.
-	// It provides the same gRPC interface as ProviderTypeBuiltin but is implemented
-	// in Rust for performance. It is the default AI engine when OHC_AGENT_ENGINE=rust.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	ProviderTypeBuiltinRust ProviderType = "builtin_rust"
-
 	// ProviderTypeScout targets the Scout resource and tool integration agent. Best suited for finding resources and integrating tools.
 	// Accepts no parameters.
 	// Returns nothing.
@@ -625,40 +616,3 @@ func (p *ScoutProvider) GetCredentials() Credentials { return p.load() }
 // Produces no errors.
 // Has no side effects.
 func (p *ScoutProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
-
-// ── BuiltinRust ───────────────────────────────────────────────────────────────
-
-// BuiltinRustProvider implements Provider for the Rust reimplementation of the
-// builtin agent. It requires no external credentials and supports all roles.
-// The Rust agent binary (ohc-builtin-agent) must be on PATH or set via
-// OHC_RUST_AGENT_BINARY. It exposes the same AgentService gRPC interface as
-// the Go builtin agent, so the existing gRPC client can talk to either.
-type BuiltinRustProvider struct{}
-
-// Type returns ProviderTypeBuiltinRust.
-func (p *BuiltinRustProvider) Type() ProviderType { return ProviderTypeBuiltinRust }
-
-// Description returns a human-readable description.
-func (p *BuiltinRustProvider) Description() string {
-return "Built-in Rust agent — high-performance Rust reimplementation of the builtin agent. Same gRPC interface, no external credentials required."
-}
-
-// SupportedRoles returns all roles supported by the Rust agent (same as Go builtin).
-func (p *BuiltinRustProvider) SupportedRoles() []string {
-return []string{
-"CEO", "PRODUCT_MANAGER", "SOFTWARE_ENGINEER", "ENGINEERING_DIRECTOR",
-"QA_TESTER", "SECURITY_ENGINEER", "DESIGNER", "MARKETING_MANAGER",
-"GROWTH_AGENT", "CONTENT_STRATEGIST", "SEO_SPECIALIST", "PAID_MEDIA_MANAGER",
-"ANALYTICS_ENGINEER", "CFO", "BOOKKEEPER", "TAX_SPECIALIST",
-"AUDIT_MANAGER", "PAYROLL_MANAGER", "AI_NEWS_COLLECTOR",
-}
-}
-
-// Authenticate is a no-op — the Rust agent needs no external credentials.
-func (p *BuiltinRustProvider) Authenticate(_ Credentials) error { return nil }
-
-// GetCredentials returns empty credentials.
-func (p *BuiltinRustProvider) GetCredentials() Credentials { return Credentials{} }
-
-// IsAuthenticated returns true — the Rust agent is always available.
-func (p *BuiltinRustProvider) IsAuthenticated() bool { return true }
