@@ -13,6 +13,8 @@ toc:
     path: /docs/technical/api/index.md
   - title: Features & CUJs
     path: /docs/technical/features/index.md
+  - title: KAIROS Orchestration
+    path: /docs/features/kairos_orchestration.md
   - title: Operations
     path: /docs/technical/operations/index.md
   - title: Research
