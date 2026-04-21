@@ -608,6 +608,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
 	mux.HandleFunc("/api/missions/sync", server.handleMissionsSync)
+	mux.HandleFunc("/api/admin/reliability/report", auth.RequireRole("admin", server.handleReliabilityReport))
 	mux.HandleFunc("/api/sync/missions", auth.RequireRole("system", api.HandleHybridSyncMissions(server.hub)))
 	mux.HandleFunc("/api/sync/escalation", auth.RequireRole("system", api.HandleSyncEscalation(server.hub)))
 	mux.HandleFunc("/api/context/sync", auth.RequireRole("system", server.handleContextSync))

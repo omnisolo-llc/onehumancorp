@@ -104,6 +104,8 @@ go_test(
         "lock_chaos_test.go",
         "chaos_thin_client_test.go",
         "sentry_chaos_test.go",
+        "chaos_v2_test.go",
+        "reliability_reporter_test.go",
     ],
     embed = [":orchestration"],
     deps = [

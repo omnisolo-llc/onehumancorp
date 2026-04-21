@@ -23,9 +23,42 @@ func seededScenario(name string, now time.Time) (domain.Organization, *orchestra
 		return seededDigitalMarketing(now)
 	case "accounting":
 		return seededAccounting(now)
+	case "chaos-database-corruption":
+		return seededChaos(now, "database_corruption")
+	case "chaos-slow-disk":
+		return seededChaos(now, "slow_disk")
+	case "high-latency":
+		return seededChaos(now, "latency_spike")
+	case "network-partition":
+		return seededChaos(now, "connection_drop")
 	default:
 		return domain.Organization{}, nil, nil, errors.New("unsupported seed scenario")
 	}
+}
+
+func seededChaos(now time.Time, mode string) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {
+	org, hub, tracker, err := seededLaunchReadiness(now)
+	if err != nil {
+		return org, hub, tracker, err
+	}
+
+	// Inject chaos into the hub's SIPDB if it exists
+	if hub.SIPDB() != nil {
+		var m orchestration.ChaosMode
+		switch mode {
+		case "database_corruption":
+			m = orchestration.ChaosMode(7) // DatabaseCorruption
+		case "slow_disk":
+			m = orchestration.ChaosMode(9) // SlowDisk
+		case "latency_spike":
+			m = orchestration.ChaosMode(1) // LatencySpike
+		case "connection_drop":
+			m = orchestration.ChaosMode(2) // ConnectionDrop
+		}
+		hub.SIPDB().Chaos = orchestration.NewChaosInjector(m, now.UnixNano())
+	}
+
+	return org, hub, tracker, nil
 }
 
 func seededLaunchReadiness(now time.Time) (domain.Organization, *orchestration.Hub, *billing.Tracker, error) {

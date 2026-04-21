@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -49,4 +50,26 @@ func TestHandleScaleStreamOpsCoverage(t *testing.T) {
 			t.Errorf("expected 200, got %d", w.Code)
 		}
 	})
+}
+
+func TestHandleReliabilityReport(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	srv := &Server{
+		org: org,
+		hub: hub,
+	}
+
+	req := httptest.NewRequest("GET", "/api/admin/reliability/report", nil)
+	w := httptest.NewRecorder()
+
+	srv.handleReliabilityReport(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	if !strings.Contains(w.Body.String(), "OHC Chaos Resilience Report") {
+		t.Error("response missing report title")
+	}
 }
