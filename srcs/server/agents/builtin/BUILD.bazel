@@ -60,40 +60,4 @@ RUST_PROC_MACRO_DEPS = [
     "@crates//:async-trait",
 ]
 
-# Main agent library.
-rust_library(
-    name = "ohc_builtin_agent_lib",
-    srcs = [
-        "src/agent.rs",
-        "src/lib.rs",
-        "src/service.rs",
-    ],
-    crate_name = "ohc_builtin_agent",
-    edition = "2024",
-    proc_macro_deps = RUST_PROC_MACRO_DEPS,
-    visibility = ["//visibility:public"],
-    deps = [
-        "//srcs/server/agents/builtin/src:core",
-        "//srcs/server/agents/builtin/src/gen:proto",
-        "//srcs/server/agents/builtin/src/llm",
-        "//srcs/server/agents/builtin/src/tools",
-    ] + RUST_DEPS,
-)
-
-rust_binary(
-    name = "ohc-builtin-agent",
-    srcs = ["src/main.rs"],
-    edition = "2024",
-    proc_macro_deps = RUST_PROC_MACRO_DEPS,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":ohc_builtin_agent_lib",
-        "//srcs/server/agents/builtin/src:core",
-    ] + RUST_DEPS,
-)
-
-rust_test(
-    name = "unit_tests",
-    crate = ":ohc_builtin_agent_lib",
-    edition = "2024",
-)
+# Rust targets moved to src/BUILD.bazel

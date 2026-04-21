@@ -17,7 +17,6 @@ def _proto_go_grpc_library_impl(ctx):
     protoc = ctx.executable._protoc
     gen_go = ctx.executable._gen_go
     gen_go_grpc = ctx.executable._gen_go_grpc
-    gen_gotag = ctx.executable._gen_gotag
 
     out_dir = outs[0].dirname
     # Calculate the relative path from the output directory to the execroot
@@ -31,14 +30,17 @@ def _proto_go_grpc_library_impl(ctx):
     wrapper = ctx.actions.declare_file(ctx.label.name + "_protoc_go_wrapper.sh")
     wrapper_content = "#!/bin/bash\n"
     wrapper_content += "set -e\n"
-    wrapper_content += "{protoc} --plugin=protoc-gen-go={gen_go} --plugin=protoc-gen-go-grpc={gen_go_grpc} --plugin=protoc-gen-gotag={gen_gotag} --go_out={out_dir} --go_opt=paths=source_relative --go-grpc_out={out_dir} --go-grpc_opt=paths=source_relative --gotag_out={out_dir} {proto_path_args} {proto_files}\n".format(
+    wrapper_content += "{protoc} --plugin=protoc-gen-go={gen_go} --plugin=protoc-gen-go-grpc={gen_go_grpc} --go_out={out_dir} --go_opt=paths=source_relative --go-grpc_out={out_dir} --go-grpc_opt=paths=source_relative {proto_path_args} {proto_files}\n".format(
         protoc = protoc.path,
         gen_go = gen_go.path,
         gen_go_grpc = gen_go_grpc.path,
-        gen_gotag = gen_gotag.path,
         out_dir = out_dir,
         proto_path_args = " ".join(proto_path_args),
         proto_files = " ".join(proto_files),
+    )
+    wrapper_content += "if [ -d {out_dir}/{package} ]; then mv {out_dir}/{package}/*.pb.go {out_dir}/; fi\n".format(
+        out_dir = out_dir,
+        package = ctx.label.package,
     )
     ctx.actions.write(
         output = wrapper,
@@ -48,7 +50,7 @@ def _proto_go_grpc_library_impl(ctx):
 
     ctx.actions.run(
         outputs = outs,
-        inputs = ctx.files.protos + [protoc, gen_go, gen_go_grpc, gen_gotag],
+        inputs = ctx.files.protos + [protoc, gen_go, gen_go_grpc],
         executable = wrapper,
         mnemonic = "GoProtocGen",
     )
@@ -69,20 +71,16 @@ proto_go_grpc_library = rule(
             cfg = "exec",
         ),
         "_gen_go": attr.label(
-            default = "@gazelle++go_deps+org_golang_google_protobuf//cmd/protoc-gen-go:protoc-gen-go",
+            default = "@org_golang_google_protobuf//cmd/protoc-gen-go:protoc-gen-go",
             executable = True,
             cfg = "exec",
         ),
         "_gen_go_grpc": attr.label(
-            default = "@gazelle++go_deps+org_golang_google_grpc_cmd_protoc_gen_go_grpc//:protoc-gen-go-grpc",
+            default = "@org_golang_google_grpc_cmd_protoc_gen_go_grpc//:protoc-gen-go-grpc",
             executable = True,
             cfg = "exec",
         ),
-        "_gen_gotag": attr.label(
-            default = "@gazelle++go_deps+com_github_srikrsna_protoc_gen_gotag//:protoc-gen-gotag",
-            executable = True,
-            cfg = "exec",
-        ),
+
     },
 )
 
@@ -94,7 +92,7 @@ def go_proto_library_with_tags(name, protos, importpath, visibility = None):
         importpath = importpath,
     )
 
-    native.go_library(
+    go_library(
         name = name,
         srcs = [":" + name + "_pb_srcs"],
         importpath = importpath,

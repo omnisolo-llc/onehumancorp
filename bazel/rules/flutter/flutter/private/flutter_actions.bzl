@@ -358,11 +358,11 @@ cd "$WORKSPACE_DIR_ABS"
 echo "=== Generating pub_deps.json ==="
 DART_BIN_LOCAL="$FLUTTER_ROOT/bin/cache/dart-sdk/bin/dart"
 PUB_DEPS_ERR="$WORKSPACE_DIR_ABS/pub_deps.stderr.log"
-if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
+if [ -x "$DART_BIN_LOCAL" ] && "$DART_BIN_LOCAL" pub deps --offline --json > pub_deps.json 2> "$PUB_DEPS_ERR"; then
     :
 else
     if [ -f "$PUB_DEPS_ERR" ] && grep -qi "requires the Flutter SDK" "$PUB_DEPS_ERR"; then
-        if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
+        if ! "$FLUTTER_BIN_ABS" --suppress-analytics pub deps --offline --json > pub_deps.json 2>> "$PUB_DEPS_ERR"; then
             cat "$PUB_DEPS_ERR" >&2 || true
             echo "✗ FATAL ERROR: flutter pub deps --json failed" >&2
             exit 1
@@ -518,7 +518,7 @@ echo "=== Dependency preparation complete ==="
     ctx.actions.run_shell(
         inputs = [working_dir, pubspec_file] + dep_pub_cache_files + ([workspace_pubspec] if workspace_pubspec else []) + flutter_toolchain.flutterinfo.tool_files + flutter_toolchain.flutterinfo.sdk_files,
         outputs = [pub_get_output, pub_deps, pub_cache_dir, dart_tool_dir, prepared_workspace],
-        execution_requirements = {"no-cache": "1"},
+        execution_requirements = {"no-cache": "1", "local": "1"},
         command = script_content + """
 
 cd "$ORIGINAL_PWD"
