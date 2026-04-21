@@ -44,6 +44,8 @@ message RunTaskRequest {
   // make available for this specific run.  When absent the agent uses its
   // process-level defaults.
   ToolsetConfig toolset_config = 10;
+  // The OHC department handling the task.
+  string department = 12;
 }
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;

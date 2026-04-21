@@ -1,12 +1,14 @@
 use ohc_builtin_agent::{
     auth::auth_mode_from_env,
-    proto::agent_service::agent_service_server::AgentServiceServer,
-    service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS},
+    proto::agent_service_server::{AgentServiceServer, AgentService},
+    service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
 };
 use std::{env, net::SocketAddr};
 use tonic::transport::Server;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
+use prost::Message;
+use tokio_stream::StreamExt;
 
 fn get_env(key: &str, default: &str) -> String {
     env::var(key).unwrap_or_else(|_| default.to_string())
@@ -51,10 +53,61 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting OHC builtin agent (Rust) at {} (id: {})", address, agent_id);
 
     let addr: SocketAddr = address.parse()?;
-    let svc = AgentServiceImpl::new(agent_id, cfg, auth);
+    let svc = std::sync::Arc::new(AgentServiceImpl::new(agent_id, cfg, auth));
+    let svc_for_redis = svc.clone();
+
+    let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
+    
+    let redis_url_clone = redis_url.clone();
+    tokio::spawn(async move {
+        tracing::info!("Connecting to Redis at {}", redis_url_clone);
+        if let Ok(client) = redis::Client::open(redis_url_clone.clone()) {
+            if let Ok(mut con) = client.get_async_connection().await {
+                let mut pubsub = con.into_pubsub();
+                if pubsub.subscribe("agent_jobs").await.is_ok() {
+                    tracing::info!("Subscribed to Redis channel 'agent_jobs'");
+                    let mut stream = pubsub.on_message();
+                    while let Some(msg) = stream.next().await {
+                        let payload: Vec<u8> = msg.get_payload().unwrap_or_default();
+                        if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
+                            tracing::info!("Received job from Redis: {}", req.task_id);
+                            
+                            let svc = svc_for_redis.clone();
+                            let redis_url_inner = redis_url_clone.clone();
+                            
+                            tokio::spawn(async move {
+                                if let Ok(client) = redis::Client::open(redis_url_inner) {
+                                    if let Ok(mut con) = client.get_async_connection().await {
+                                        match svc.run_task(tonic::Request::new(req)).await {
+                                            Ok(resp) => {
+                                                let mut stream = resp.into_inner();
+                                                while let Some(Ok(evt)) = stream.next().await {
+                                                    let mut buf = Vec::new();
+                                                    if prost::Message::encode(&evt, &mut buf).is_ok() {
+                                                        let _: Result<(), _> = redis::cmd("PUBLISH")
+                                                            .arg("agent_events")
+                                                            .arg(buf)
+                                                            .query_async(&mut con)
+                                                            .await;
+                                                    }
+                                                }
+                                            }
+                                            Err(e) => {
+                                                tracing::error!("Error running task: {}", e);
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    });
 
     Server::builder()
-        .add_service(AgentServiceServer::new(svc))
+        .add_service(AgentServiceServer::new(SharedAgentService(svc)))
         .serve(addr)
         .await?;
 
