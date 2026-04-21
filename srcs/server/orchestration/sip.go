@@ -705,28 +705,35 @@ func (s *SIPDB) PruneBufferedMetrics(ctx context.Context, ageThreshold time.Dura
 }
 
 // PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.
-// It also sanitizes stuck PENDING missions by converting them to FAILED if they are older than the ageThreshold.
+// It also sanitizes stuck PENDING missions by converting them to STUCK after 1h, then FAILED if they are older than the ageThreshold.
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the agent_missions table and updates stuck records.
 func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
 	return withSipRetry(ctx, func() error {
-		thresholdTime := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
+		stuckThreshold := time.Now().Add(-1 * time.Hour).UTC().Format("2006-01-02 15:04:05")
+		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
-		// 1. Mark stagnant PENDING missions as FAILED (sanitizing the queue)
-		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
-		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2", thresholdTime, s.orgID)
+		// 1. Mark stagnant PENDING missions as STUCK after 1 hour to trigger triage visibility
+		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2", stuckThreshold, s.orgID)
 		if err != nil {
 			return err
 		}
 
-		// 2. Remove COMPLETED, or very old FAILED missions
+		// 2. Mark missions as FAILED if they exceed the absolute age threshold
+		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
+		_, err = s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2", failThreshold, s.orgID)
+		if err != nil {
+			return err
+		}
+
+		// 3. Remove COMPLETED, or very old FAILED missions
 		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
 		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", failThreshold, s.orgID)
 		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", thresholdTime, s.orgID)
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", failThreshold, s.orgID)
 		}
 
 		return err

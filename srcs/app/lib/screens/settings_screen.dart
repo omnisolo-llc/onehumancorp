@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
+import 'package:ohc_app/services/api_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -141,6 +142,37 @@ class SettingsScreen extends ConsumerWidget {
                   subtitle: Text(user?.role ?? '—'),
                 ),
                 const Divider(),
+                ListTile(
+                  leading: const Icon(
+                    Icons.sync,
+                    color: Colors.blue,
+                  ),
+                  title: const Text(
+                    'Trigger Hybrid Sync',
+                    style: TextStyle(
+                      color: Colors.blue,
+                    ),
+                  ),
+                  onTap: () async {
+                    try {
+                      final api = ref.read(apiServiceProvider);
+                      if (api != null) {
+                        await api.triggerHybridSync();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Sync successful')),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Sync failed: $e')),
+                        );
+                      }
+                    }
+                  },
+                ),
                 ListTile(
                   leading: Icon(
                     Icons.logout,
