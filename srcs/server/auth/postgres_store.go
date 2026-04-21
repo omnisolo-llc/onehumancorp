@@ -52,14 +52,14 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 }
 
 func (r *PgUserRepository) GetByID(ctx context.Context, id string, orgID string) (*User, error) {
-	if orgID == "" || orgID == "sys" {
+	if orgID == "sys" {
 		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1", id)
 	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2", id, orgID)
 }
 
 func (r *PgUserRepository) GetByUsername(ctx context.Context, username string, orgID string) (*User, error) {
-	if orgID == "" || orgID == "sys" {
+	if orgID == "sys" {
 		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1", username)
 	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2", username, orgID)
@@ -70,7 +70,7 @@ func (r *PgUserRepository) GetByEmail(ctx context.Context, email string, orgID s
 	if r.pool.IsSQLite() {
 		lookupEmail = encryptDeterministic(email)
 	}
-	if orgID == "" || orgID == "sys" {
+	if orgID == "sys" {
 		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1", lookupEmail)
 	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2", lookupEmail, orgID)
@@ -81,7 +81,7 @@ func (r *PgUserRepository) GetByOIDCSubject(ctx context.Context, sub string, org
 	if r.pool.IsSQLite() {
 		lookupSub = encryptDeterministic(sub)
 	}
-	if orgID == "" || orgID == "sys" {
+	if orgID == "sys" {
 		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1", lookupSub)
 	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2", lookupSub, orgID)
@@ -90,7 +90,7 @@ func (r *PgUserRepository) GetByOIDCSubject(ctx context.Context, sub string, org
 func (r *PgUserRepository) ListUsers(ctx context.Context, orgID string) ([]*User, error) {
 	var rows db.Rows
 	var err error
-	if orgID == "" || orgID == "sys" {
+	if orgID == "sys" {
 		rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users ORDER BY created_at")
 	} else {
 		rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at", orgID)
@@ -160,7 +160,7 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 
 func (r *PgUserRepository) DeleteUser(ctx context.Context, id string, orgID string) error {
 	var err error
-	if orgID == "" || orgID == "sys" {
+	if orgID == "sys" {
 		_, err = r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
 	} else {
 		_, err = r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1 AND organization_id = $2", id, orgID)

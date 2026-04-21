@@ -333,6 +333,7 @@ func ValidateOIDCToken(tokenStr string, cfg OIDCConfig) (*Claims, error) {
 	// Parse raw OIDC claims - a superset of our Claims struct
 	var raw struct {
 		Sub               string   `json:"sub"`
+		OrganizationID    string   `json:"organization_id"`
 		Email             string   `json:"email"`
 		PreferredUsername string   `json:"preferred_username"`
 		Roles             []string `json:"roles"`
@@ -394,12 +395,13 @@ func ValidateOIDCToken(tokenStr string, cfg OIDCConfig) (*Claims, error) {
 	}
 
 	return &Claims{
-		Subject:  raw.Sub,
-		Username: raw.PreferredUsername,
-		Email:    raw.Email,
-		Roles:    roles,
-		IssuedAt: raw.Iat,
-		Expires:  raw.Exp,
-		TokenID:  raw.Jti,
+		Subject:        raw.Sub,
+		OrganizationID: raw.OrganizationID,
+		Username:       raw.PreferredUsername,
+		Email:          raw.Email,
+		Roles:          roles,
+		IssuedAt:       raw.Iat,
+		Expires:        raw.Exp,
+		TokenID:        raw.Jti,
 	}, nil
 }

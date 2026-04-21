@@ -4,6 +4,10 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
+	"encoding/hex"
+	"path/filepath"
+	"strings"
 	"crypto/sha256"
 	"encoding/base64"
 	"os"
@@ -16,7 +20,7 @@ func getCryptoKey() []byte {
 	}
 	if key == "" {
 		if os.Getenv("OHC_STANDALONE") == "true" {
-			key = "standalone_ephemeral_key"
+			key = getStandaloneKey()
 		} else {
 			key = "transient_memory_key"
 		}
@@ -86,4 +90,34 @@ func decryptDeterministic(ciphertextB64 string) string {
 	}
 
 	return string(plaintext)
+}
+
+
+
+var cachedStandaloneKey string
+
+func getStandaloneKey() string {
+	if cachedStandaloneKey != "" {
+		return cachedStandaloneKey
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "transient_memory_key"
+	}
+	keyPath := filepath.Join(homeDir, ".openclaw", "ohc_sqlite.key")
+	b, err := os.ReadFile(keyPath)
+	if err == nil && len(b) > 0 {
+		cachedStandaloneKey = strings.TrimSpace(string(b))
+		return cachedStandaloneKey
+	}
+	keyBytes := make([]byte, 32)
+	rand.Read(keyBytes)
+	keyHex := hex.EncodeToString(keyBytes)
+	os.MkdirAll(filepath.Dir(keyPath), 0700)
+	if err := os.WriteFile(keyPath, []byte(keyHex), 0600); err != nil {
+		// Fallback to transient memory if disk write fails to prevent data corruption via rotating keys
+		return "transient_memory_key"
+	}
+	cachedStandaloneKey = keyHex
+	return keyHex
 }
