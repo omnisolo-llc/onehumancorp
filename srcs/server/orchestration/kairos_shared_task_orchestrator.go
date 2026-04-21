@@ -10,7 +10,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-type KairosSharedTask struct {
+type SharedTask struct {
 	ID             string          `json:"id"`
 	OrganizationID string          `json:"organization_id"`
 	Title          string          `json:"title"`
@@ -25,8 +25,8 @@ type KairosSharedTask struct {
 
 var sqliteClaimMu sync.Mutex
 
-func ClaimSharedTask(ctx context.Context, database db.Provider, organizationID string, agentID string) (*KairosSharedTask, error) {
-	var task KairosSharedTask
+func ClaimSharedTask(ctx context.Context, database db.Provider, organizationID string, agentID string) (*SharedTask, error) {
+	var task SharedTask
 	var desc sql.NullString
 	var agent sql.NullString
 	var depsStr string

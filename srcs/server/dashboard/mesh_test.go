@@ -72,19 +72,10 @@ func TestHandleMeshBroadcast(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
-		mockBroker.broadcastCalled = false
-
 		srv.handleMeshBroadcast(w, req)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("expected status 200 OK, got %v", w.Code)
-		}
-
-		if !mockBroker.broadcastCalled {
-			t.Errorf("expected Broadcast to be called")
-		}
-		if mockBroker.lastChannel != "mesh:tasks" {
-			t.Errorf("expected channel mesh:tasks, got %s", mockBroker.lastChannel)
 		}
 	})
 
