@@ -3,33 +3,29 @@ package orchestration
 import (
 	"context"
 	"database/sql"
-	"net/http"
-	"os"
 	"time"
 )
 
 // HybridHealthProbe details the system health across standalone and cloud modes.
 type HybridHealthProbe struct {
-	Mode           string        `json:"mode"`
-	Status         string        `json:"status"`
-	DBPing         time.Duration `json:"db_ping"`
-	SyncBacklog    int           `json:"sync_backlog"`
-	StuckMissions  int           `json:"stuck_missions"`
-	LastSyncTime   time.Time     `json:"last_sync_time"`
-	MeshActive     bool          `json:"mesh_active"`
-	CloudConnected bool          `json:"cloud_connected"`
+	Mode        string        `json:"mode"`
+	Status      string        `json:"status"`
+	DBPing      time.Duration `json:"db_ping"`
+	SyncBacklog   int           `json:"sync_backlog"`
+	StuckMissions int           `json:"stuck_missions"`
+	LastSyncTime  time.Time     `json:"last_sync_time"`
+	MeshActive    bool          `json:"mesh_active"`
 }
 
 // CheckHealth returns a HybridHealthProbe detailing the system health.
 func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 	probe := HybridHealthProbe{
-		Mode:           "standalone",
-		Status:         "healthy",
-		MeshActive:     false,
-		CloudConnected: true, // Default to true for cloud mode
-		SyncBacklog:    0,
-		StuckMissions:  0,
-		LastSyncTime:   time.Time{},
+		Mode:          "standalone",
+		Status:        "healthy",
+		MeshActive:    false,
+		SyncBacklog:   0,
+		StuckMissions: 0,
+		LastSyncTime:  time.Time{},
 	}
 
 	start := time.Now()
@@ -74,25 +70,6 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 		if err != nil {
 			probe.MeshActive = false
 			probe.Status = "degraded"
-		}
-	}
-
-	// Health Guardianship: Implement cloud connectivity check for Standalone mode
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		cloudURL := os.Getenv("OHC_CORE_URL")
-		if cloudURL == "" {
-			cloudURL = "https://core.onehumancorp.com"
-		}
-
-		client := &http.Client{Timeout: 2 * time.Second}
-		resp, err := client.Get(cloudURL + "/health")
-		if err != nil || resp.StatusCode != http.StatusOK {
-			probe.CloudConnected = false
-		} else {
-			probe.CloudConnected = true
-		}
-		if resp != nil && resp.Body != nil {
-			_ = resp.Body.Close()
 		}
 	}
 

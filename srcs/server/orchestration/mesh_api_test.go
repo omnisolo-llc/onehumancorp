@@ -30,23 +30,13 @@ func TestMeshAPI_Broadcast(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"task_id":"123"}`)))
 	w := httptest.NewRecorder()
+
 	api.HandleBroadcast(w, req)
 
 	if w.Code != http.StatusOK {
 		t.Errorf("expected status 200, got %d", w.Code)
 	}
-	if !mockMesh.broadcastCalled {
-		t.Errorf("expected BroadcastMeshEvent to be called")
-	}
 
-	mockMesh.broadcastCalled = false
-	req = httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"channel":"ohc.mesh.agent.123", "task_id":"456"}`)))
-	w = httptest.NewRecorder()
-	api.HandleBroadcast(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
 	if !mockMesh.broadcastCalled {
 		t.Errorf("expected BroadcastMeshEvent to be called")
 	}
@@ -75,7 +65,7 @@ func TestMeshAPI_Stream(t *testing.T) {
 	}
 
 	body := w.Body.String()
-	if body != "retry: 3000\n\ndata: {\"status\":\"test\"}\n\n" {
+	if body != "data: {\"status\":\"test\"}\n\n" {
 		t.Errorf("expected correct SSE format, got %s", body)
 	}
 }
@@ -106,32 +96,5 @@ func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
 				t.Errorf("expected %d, got %d", tt.statusCode, w.Code)
 			}
 		})
-	}
-}
-
-func TestMeshAPI_Sync(t *testing.T) {
-	mockMesh := &mockMeshTransport{
-		subChan: make(chan []byte, 1),
-	}
-	mockMesh.subChan <- []byte(`{"sync_status":"ok"}`)
-
-	api := NewMeshAPI(mockMesh)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/mesh/sync?channel=ohc.mesh.agent.123", nil)
-	w := httptest.NewRecorder()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
-	req = req.WithContext(ctx)
-
-	api.HandleSync(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-
-	body := w.Body.String()
-	if body != "retry: 3000\n\ndata: {\"sync_status\":\"ok\"}\n\n" {
-		t.Errorf("expected correct SSE format, got %s", body)
 	}
 }

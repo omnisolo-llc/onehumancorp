@@ -20,6 +20,12 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
     var payload, dependencies sql.NullString
 
 	var query string
+	tx, err := database.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	if database.IsSQLite() {
 		query = `
 		UPDATE shared_tasks_decomposition
@@ -38,7 +44,7 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 		RETURNING id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
 	    `
 
-		err := database.QueryRow(ctx, query, agentID, organizationID).Scan(
+		err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
 			&task.ID,
 			&task.OrganizationID,
 			&task.Title,
@@ -78,7 +84,7 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 		RETURNING id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
 	    `
 
-		err := database.QueryRow(ctx, query, agentID, organizationID).Scan(
+		err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
 			&task.ID,
 			&task.OrganizationID,
 			&task.Title,
@@ -100,6 +106,10 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 			return nil, err
 		}
 	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
 	if desc.Valid {
         task.Description = &desc.String
     }

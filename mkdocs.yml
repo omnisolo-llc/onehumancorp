@@ -57,7 +57,6 @@ nav:
       - Hybrid Task Scheduler MCP: research/[integrations]_hybrid_task_scheduler_mcp.md
       - Hybrid Circuit Breaker MCP: research/[integrations]_hybrid_circuit_breaker_mcp.md
       - NATS Hybrid Event Mesh: research/[backend]_nats_hybrid_event_mesh.md
-      - Proactive RAG MCP: research/[backend]_scribe_proactive_rag_mcp.md
   - Walkthroughs:
       - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
       - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md

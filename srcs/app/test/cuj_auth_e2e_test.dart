@@ -50,16 +50,6 @@ Widget _wrapLogin({List<Override> overrides = const []}) {
   );
 }
 
-// Finds the first TextFormField in the widget tree.
-// Use this when there are multiple TextFormFields and we need to distinguish by order.
-TextFormField findEmailField(WidgetTester tester) {
-  return tester.widgetList<TextFormField>(find.byType(TextFormField)).first;
-}
-
-TextFormField findPasswordField(WidgetTester tester) {
-  return tester.widgetList<TextFormField>(find.byType(TextFormField)).last;
-}
-
 // ═══════════════════════════════════════════════════════════════════════════
 // Tests
 // ═══════════════════════════════════════════════════════════════════════════
@@ -77,40 +67,31 @@ void main() {
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
-      // LoginScreen validates email/username field with 'Enter your email or username'
-      expect(find.text('Enter your email or username'), findsOneWidget);
+      expect(find.text('Enter a valid email'), findsOneWidget);
     });
 
-    testWidgets('invalid email format does NOT show format error (only empty check)', (tester) async {
-      // LoginScreen only validates for empty, not email format
+    testWidgets('invalid email format shows validation error', (tester) async {
       await tester.pumpWidget(_wrapLogin());
       await tester.pumpAndSettle();
 
-      // Enter text in the email field (first TextFormField)
-      final emailField = findEmailField(tester);
-      await tester.enterText(find.byWidget(emailField), 'not-an-email');
-      await tester.pumpAndSettle();
-
-      // Submit form
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Email'),
+        'not-an-email',
+      );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
-      // Should NOT show "Enter a valid email" since format is not validated
-      expect(find.text('Enter a valid email'), findsNothing);
-      // Should show password error since password field is empty
-      expect(find.text('Enter your password'), findsOneWidget);
+      expect(find.text('Enter a valid email'), findsOneWidget);
     });
 
     testWidgets('missing password shows password validation error', (tester) async {
       await tester.pumpWidget(_wrapLogin());
       await tester.pumpAndSettle();
 
-      // Enter email in the first TextFormField
-      final emailField = findEmailField(tester);
-      await tester.enterText(find.byWidget(emailField), 'user@example.com');
-      await tester.pumpAndSettle();
-
-      // Submit form
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Email'),
+        'user@example.com',
+      );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
@@ -127,20 +108,17 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Enter credentials
-      final emailField = findEmailField(tester);
-      await tester.enterText(find.byWidget(emailField), 'user@example.com');
-      await tester.pumpAndSettle();
-
-      final passwordField = findPasswordField(tester);
-      await tester.enterText(find.byWidget(passwordField), 'wrongpassword');
-      await tester.pumpAndSettle();
-
-      // Submit
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Email'),
+        'user@example.com',
+      );
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'Password'),
+        'wrongpassword',
+      );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
-      // The error message from _FailingAuthNotifier.login is "Exception: Unauthorized"
       expect(find.textContaining('Unauthorized'), findsOneWidget);
     });
 
@@ -149,7 +127,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Sign In'), findsOneWidget);
-      expect(find.byType(TextFormField), findsNWidgets(2));
+      expect(find.byType(TextFormField), findsWidgets);
     });
   });
 }

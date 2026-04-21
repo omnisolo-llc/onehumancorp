@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "db",
+    srcs = ["schema.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/apps/api/db",
+    visibility = ["//visibility:public"],
+)
