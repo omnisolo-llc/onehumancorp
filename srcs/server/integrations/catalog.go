@@ -7,7 +7,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations/litefs"
 	"github.com/onehumancorp/mono/srcs/server/integrations/ollama"
 	"github.com/onehumancorp/mono/srcs/server/integrations/powersync"
-	"github.com/onehumancorp/mono/srcs/server/integrations/restic"
 )
 
 // Integration represents a plugin blueprint defining how to instantiate connections.
@@ -36,7 +35,6 @@ var Catalog = []Integration{
 	&etcd.EtcdIntegration{},
 	&ollama.OllamaIntegration{},
 	&powersync.PowerSyncIntegration{},
-	&restic.ResticIntegration{},
 }
 
 // GetCatalog returns all available integration providers.

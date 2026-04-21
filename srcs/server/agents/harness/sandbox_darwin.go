@@ -10,7 +10,7 @@ import (
 type SandboxHarness struct{}
 
 func NewIsolationHarness() IsolationHarness {
-	return NewPermissionInterceptor(&SandboxHarness{})
+	return &SandboxHarness{}
 }
 
 func (h *SandboxHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {

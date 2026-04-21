@@ -41,12 +41,7 @@ func (s *PgCheckpointSaver) GetCheckpoint(ctx context.Context, threadID string, 
 		return nil, fmt.Errorf("failed to parse created_at: %w", err)
 	}
 
-	decompressedData, err := decompressData(checkpointRaw)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decompress checkpoint data: %w", err)
-	}
-
-	if err := json.Unmarshal(decompressedData, &cp.Data); err != nil {
+	if err := json.Unmarshal(checkpointRaw, &cp.Data); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal checkpoint data: %w", err)
 	}
 
@@ -62,11 +57,6 @@ func (s *PgCheckpointSaver) PutCheckpoint(ctx context.Context, cp *Checkpoint) e
 	checkpointRaw, err := json.Marshal(cp.Data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal checkpoint data: %w", err)
-	}
-
-	checkpointRaw, err = compressData(checkpointRaw)
-	if err != nil {
-		return fmt.Errorf("failed to compress checkpoint data: %w", err)
 	}
 
 	metadataRaw, err := json.Marshal(cp.Metadata)
@@ -120,12 +110,7 @@ func (s *PgCheckpointSaver) ListCheckpoints(ctx context.Context, threadID string
 			return nil, fmt.Errorf("failed to parse created_at: %w", err)
 		}
 
-		decompressedData, err := decompressData(checkpointRaw)
-		if err != nil {
-			return nil, fmt.Errorf("failed to decompress checkpoint data: %w", err)
-		}
-
-		if err := json.Unmarshal(decompressedData, &cp.Data); err != nil {
+		if err := json.Unmarshal(checkpointRaw, &cp.Data); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal checkpoint data: %w", err)
 		}
 

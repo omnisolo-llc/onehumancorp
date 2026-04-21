@@ -103,7 +103,7 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 			if err == nil && len(resp) == 1536 {
 				embedding = resp
 			} else {
-				slog.Debug("AutoDream: failed to embed with Minimax, using empty embedding (transient)", "error", err)
+				slog.Warn("AutoDream: failed to embed with Minimax, using empty embedding", "error", err)
 			}
 		}
 
@@ -396,7 +396,7 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 			if embedErr == nil && len(resp) == 1536 {
 				embedding = resp
 			} else {
-				slog.Debug("AutoDream: failed to embed memory with Minimax, using empty (transient)", "error", embedErr)
+				slog.Warn("AutoDream: failed to embed memory with Minimax, using empty", "error", embedErr)
 			}
 		}
 

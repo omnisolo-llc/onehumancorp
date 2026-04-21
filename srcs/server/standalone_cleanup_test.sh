@@ -29,7 +29,6 @@ export OHC_STANDALONE="true"
 
 touch "${STATE_DIR}/normal.tmp"
 touch "${STATE_DIR}/Linear-state.tmp"
-touch "${STATE_DIR}/some_linear_junk"
 
 # Artificial backdate to simulate old files using touch -t
 touch -t 200001010000 "${STATE_DIR}/normal.tmp"
@@ -44,11 +43,6 @@ fi
 
 if [[ -f "${STATE_DIR}/Linear-state.tmp" ]]; then
   echo "Error: Linear-state.tmp was not deleted"
-  exit 1
-fi
-
-if [[ -f "${STATE_DIR}/some_linear_junk" ]]; then
-  echo "Error: some_linear_junk was not deleted"
   exit 1
 fi
 

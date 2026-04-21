@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"github.com/onehumancorp/mono/srcs/server/utils"
 )
 
 // OllamaClient implements LLMClient for Ollama (local LLM).
@@ -35,13 +33,13 @@ func (c *OllamaClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 
 	var messages []ollamaMessage
 	if req.System != "" {
-		messages = append(messages, ollamaMessage{Role: "system", Content: utils.MinifyJSONString(req.System)})
+		messages = append(messages, ollamaMessage{Role: "system", Content: req.System})
 	}
 
 	for _, m := range req.Messages {
 		messages = append(messages, ollamaMessage{
 			Role:    string(m.Role),
-			Content: utils.MinifyJSONString(m.Content),
+			Content: m.Content,
 		})
 	}
 

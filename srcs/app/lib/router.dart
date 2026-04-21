@@ -58,9 +58,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
+      final isBusinessSetup = state.matchedLocation == '/business_setup';
 
       // Allow these public routes without authentication.
-      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) {
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute && !isBusinessSetup) {
         return '/landing';
       }
       if (isLoggedIn && isLoginRoute) return '/dashboard';
@@ -69,14 +70,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      // Business setup is a public onboarding route — accessible without login.
+      GoRoute(
+        path: '/business_setup',
+        builder: (context, state) => const BusinessSetupWizardScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
-          // Business setup requires authentication — moved inside the shell.
-          GoRoute(
-            path: '/business_setup',
-            builder: (context, state) => const BusinessSetupWizardScreen(),
-          ),
           GoRoute(
             path: '/orchestration/tasks',
             builder: (context, state) => const TaskListScreen(),

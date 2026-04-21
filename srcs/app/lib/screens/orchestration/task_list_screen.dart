@@ -11,37 +11,28 @@ final sharedTasksProvider = FutureProvider<List<SharedTask>>((ref) async {
   return rawTasks.map((t) => SharedTask.fromJson(t)).toList();
 });
 
-class TaskListScreen extends StatelessWidget {
+class TaskListScreen extends ConsumerWidget {
   const TaskListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tasksAsync = ref.watch(sharedTasksProvider);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: const Text('Shared Task List', style: TextStyle(fontFamily: 'Outfit')),
         backgroundColor: Colors.transparent,
       ),
-      body: const TaskListView(),
-    );
-  }
-}
-
-class TaskListView extends ConsumerWidget {
-  const TaskListView({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tasksAsync = ref.watch(sharedTasksProvider);
-
-    return tasksAsync.when(
-      data: (tasks) => ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: tasks.length,
-        itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
+      body: tasksAsync.when(
+        data: (tasks) => ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: tasks.length,
+          itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
+        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
     );
   }
 }
@@ -87,20 +78,6 @@ class _TaskGlassCard extends StatelessWidget {
             Text(
               'Dependencies: ${task.dependencies!.join(', ')}',
               style: const TextStyle(fontFamily: 'Inter', color: Colors.white54, fontSize: 12),
-            ),
-          ],
-          if (task.parentTaskId != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Parent Task: ${task.parentTaskId}',
-              style: const TextStyle(fontFamily: 'Inter', color: Colors.blueGrey, fontSize: 12),
-            ),
-          ],
-          if (task.workflowState != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Workflow State: ${task.workflowState}',
-              style: const TextStyle(fontFamily: 'Inter', color: Colors.white54, fontSize: 12, fontStyle: FontStyle.italic),
             ),
           ],
         ],
