@@ -126,7 +126,7 @@ func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 
 	// Insert unprocessed memories
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 501; i++ {
 		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, ?)",
 			fmt.Sprintf("mem-%d", i), fmt.Sprintf("test content %d", i), "mission-1", "org-1", "agent-1", "test")
 		if err != nil {
@@ -168,8 +168,8 @@ func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 		}
 	}
 
-	if count != 6 {
-		t.Errorf("expected 6 processed memories (1 original + 5 new), got %d", count)
+	if count != 501 {
+		t.Errorf("expected 501 processed memories (1 original + 500 new), got %d", count)
 	}
 }
 

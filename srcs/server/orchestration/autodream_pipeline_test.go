@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"testing"
+	"strconv"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -53,6 +54,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
+
 	// Insert test data
 	_, err = provider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS agent_session_data (
@@ -64,11 +66,13 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
+	for i := 0; i < 501; i++ {
+		_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES (?, 'a1', 'test context', datetime('now', '-2 hours'))", "s"+strconv.Itoa(i))
+		require.NoError(t, err)
+	}
 
 
 
-	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'))")
-	require.NoError(t, err)
 
 	pipeline := NewAutoDreamPipeline(provider)
 
@@ -82,11 +86,11 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 	var count int
 	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_type = 'session_compression'").Scan(&count)
 	require.NoError(t, err)
-	assert.Equal(t, 1, count)
+	assert.Equal(t, 500, count)
 
-	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data WHERE session_id = 's1'").Scan(&count)
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data").Scan(&count)
 	require.NoError(t, err)
-	assert.Equal(t, 0, count)
+	assert.Equal(t, 1, count)
 }
 
 func TestAutoDreamPipeline_StartStop(t *testing.T) {

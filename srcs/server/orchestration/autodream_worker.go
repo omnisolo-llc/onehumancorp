@@ -177,10 +177,10 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 	var err error
 
 	if w.pool.IsSQLite() {
-		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100")
+		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 500")
 	} else {
 		// Postgres lock row for update so no other worker picks it up
-		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 100 FOR UPDATE SKIP LOCKED")
+		rows, err = w.pool.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 500 FOR UPDATE SKIP LOCKED")
 	}
 	if err != nil {
 		return fmt.Errorf("failed to fetch unprocessed memories: %w", err)

@@ -74,9 +74,9 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 	threshold := time.Now().Add(-1 * time.Hour).UTC()
 	var query string
 	if p.db.IsSQLite() {
-		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? LIMIT 50"
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? LIMIT 500"
 	} else {
-		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
+		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 500 FOR UPDATE SKIP LOCKED"
 	}
 
 	rows, err := p.db.Query(ctx, query, threshold)
