@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"
@@ -97,6 +98,9 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		row := q.provider.QueryRow(ctx, query)
 		err := row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt)
 		if errors.Is(err, sql.ErrNoRows) {
+			// In SQLite QueueManager, we lock the mutex so there is no actual skipped locked rows at DB level.
+			// But for metrics parity, we could check if a task exists. Since we just checked and got ErrNoRows
+			// under a global mutex, it means no tasks exist. So there's never lock contention here.
 			return nil, nil
 		} else if err != nil {
 			return nil, err
@@ -152,6 +156,12 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		)
 
 		if errors.Is(err, sql.ErrNoRows) {
+			// Parity Audit: Check if there are any QUEUED tasks that might be locked (simulating contention metrics)
+			var exists bool
+			checkErr := q.provider.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM sub_agent_queue WHERE status = 'QUEUED')").Scan(&exists)
+			if checkErr == nil && exists {
+				telemetry.RecordPostgresLockContention(ctx, "poll_sub_agent_queue")
+			}
 			return nil, nil
 		} else if err != nil {
 			return nil, err

@@ -87,6 +87,13 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 	err = row.Scan(&j.ID, &j.ParentTaskID, &j.AgentRole, &j.Payload, &j.Status, &j.Attempts, &j.MaxAttempts, &runAfterStr, &lockedUntil, &createdAtStr, &updatedAtStr)
 
 	if errors.Is(err, sql.ErrNoRows) {
+		// Parity Audit: Record lock contention if tasks exist but we missed them due to concurrent locking
+		var exists bool
+		checkQuery := fmt.Sprintf(`SELECT EXISTS(SELECT 1 FROM sub_agent_jobs WHERE (status = 'QUEUED' AND run_after <= %s %s) OR (status = 'RUNNING' AND locked_until IS NOT NULL AND locked_until <= %s %s))`, nowPlaceholder, rolesCondition, nowPlaceholder, rolesCondition)
+		checkErr := tx.QueryRow(ctx, checkQuery, args...).Scan(&exists)
+		if checkErr == nil && exists {
+			telemetry.RecordPostgresLockContention(ctx, "poll_sub_agent_queue_sqlite")
+		}
 		return nil, nil // No jobs available
 	} else if err != nil {
 		return nil, err

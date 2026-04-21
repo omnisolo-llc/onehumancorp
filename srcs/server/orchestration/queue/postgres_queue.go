@@ -106,6 +106,13 @@ func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, 
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
+		// Parity Audit: Record lock contention if tasks exist but we missed them due to SKIP LOCKED
+		var exists bool
+		checkQuery := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= $%d %s)", nowIdx, roleFilter)
+		checkErr := q.provider.QueryRow(ctx, checkQuery, args...).Scan(&exists)
+		if checkErr == nil && exists {
+			telemetry.RecordPostgresLockContention(ctx, "poll_sub_agent_queue")
+		}
 		return nil, nil // No jobs available
 	} else if err != nil {
 		return nil, err
