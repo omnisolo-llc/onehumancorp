@@ -192,7 +192,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'Email or Username'),
         'test@example.com',
       );
       await tester.tap(find.text('Sign In'));
@@ -208,8 +208,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
-        'notanemail',
+        find.widgetWithText(TextFormField, 'Email or Username'),
+        '',
       );
       await tester.enterText(
         find.widgetWithText(TextFormField, 'Password'),
@@ -218,7 +218,7 @@ void main() {
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
   });
 
