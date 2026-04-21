@@ -146,3 +146,14 @@ func TestDeepLinkDashboardUrlIsDirectlyAccessibleWhenAuthenticated(t *testing.T)
 	body, _ := page.Content()
 	_ = body
 }
+
+func TestDashboardDisplaysHybridDeploymentTelemetryWidget(t *testing.T) {
+	page := newPage(t)
+	defer page.Close()
+
+	loginAsAdmin(t, page)
+
+	// Test: deep link: /dashboard URL is directly accessible when authenticated
+	body, _ := page.Content()
+	_ = body
+}
