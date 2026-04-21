@@ -234,12 +234,16 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	task.Description = description
 	task.Priority = priority
 
-	for _, dep := range dependencies {
-		_, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, dep)
-		if err != nil {
-			return nil, fmt.Errorf("failed to insert dependency: %w", err)
-		}
-		task.Dependencies = append(task.Dependencies, dep)
+	depsJSON, _ := json.Marshal(dependencies)
+	if dependencies == nil {
+		depsJSON = []byte("[]")
+	}
+	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET dependencies = $1 WHERE id = $2", string(depsJSON), task.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update dependencies: %w", err)
+	}
+	if dependencies != nil {
+		task.Dependencies = dependencies
 	}
 
 	if err := tx.Commit(ctx); err != nil {
