@@ -54,7 +54,7 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 	var currentState string
 	var parentTaskID *string
 	var workflowState *string
-	query := `SELECT status, parent_task_id, workflow_state FROM shared_tasks WHERE id = $1`
+	query := `SELECT status, parent_task_id, workflow_state FROM ohc_tasks WHERE id = $1`
 	if !sm.dbProvider.IsSQLite() {
 		query += ` FOR UPDATE`
 	}
@@ -64,14 +64,14 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 	}
 
 	if event == EventSubTaskCompleted {
-		_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateDone, taskID)
+		_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateDone, taskID)
 		if err != nil {
 			return fmt.Errorf("failed to update subtask state: %w", err)
 		}
 
 		if parentTaskID != nil && *parentTaskID != "" {
 			var parentState string
-			pQuery := `SELECT status FROM shared_tasks WHERE id = $1`
+			pQuery := `SELECT status FROM ohc_tasks WHERE id = $1`
 			if !sm.dbProvider.IsSQLite() {
 				pQuery += ` FOR UPDATE`
 			}
@@ -81,13 +81,13 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 			}
 
 			var incompleteCount int
-			err = tx.QueryRow(ctx, `SELECT count(*) FROM shared_tasks WHERE parent_task_id = $1 AND status != $2`, *parentTaskID, TaskStateDone).Scan(&incompleteCount)
+			err = tx.QueryRow(ctx, `SELECT count(*) FROM ohc_tasks WHERE parent_task_id = $1 AND status != $2`, *parentTaskID, TaskStateDone).Scan(&incompleteCount)
 			if err != nil {
 				return fmt.Errorf("failed to query subtasks: %w", err)
 			}
 
 			if incompleteCount == 0 {
-				_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateDone, *parentTaskID)
+				_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateDone, *parentTaskID)
 				if err != nil {
 					return fmt.Errorf("failed to update parent state: %w", err)
 				}
@@ -95,7 +95,7 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 		}
 
 	} else if event == EventTaskCompleted {
-		_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateDone, taskID)
+		_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateDone, taskID)
 		if err != nil {
 			return fmt.Errorf("failed to update task state to done: %w", err)
 		}
@@ -118,24 +118,24 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 				err = tx.QueryRow(ctx, `
 					SELECT COUNT(*)
 					FROM swarm_task_dependencies td
-					JOIN shared_tasks st ON td.depends_on_task_id = st.id
+					JOIN ohc_tasks st ON td.depends_on_task_id = st.id
 					WHERE td.task_id = $1 AND st.status != $2
 				`, depTaskID, TaskStateDone).Scan(&incompleteCount)
 
 				if err == nil && incompleteCount == 0 {
 					// All dependencies met, transition to READY
-					_, _ = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND status = $3`, TaskStateReady, depTaskID, TaskStateBlocked)
+					_, _ = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND status = $3`, TaskStateReady, depTaskID, TaskStateBlocked)
 				}
 			}
 		}
 	} else if event == EventSubTaskFailed {
-		_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateFailed, taskID)
+		_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateFailed, taskID)
 		if err != nil {
 			return fmt.Errorf("failed to update task state: %w", err)
 		}
 	} else if event == EventDecompositionComplete {
 		workflowStateUpdate := `{"last_event": "DecompositionComplete"}`
-		_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, workflow_state = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`, TaskStateExecuting, workflowStateUpdate, taskID)
+		_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, workflow_state = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`, TaskStateExecuting, workflowStateUpdate, taskID)
 		if err != nil {
 			return fmt.Errorf("failed to update task state: %w", err)
 		}
@@ -161,7 +161,7 @@ func (sm *TaskStateMachine) TransitionState(ctx context.Context, taskID string, 
 	}
 	defer tx.Rollback(ctx)
 
-	_, err = tx.Exec(ctx, `UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, newState, taskID)
+	_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, newState, taskID)
 	if err != nil {
 		return fmt.Errorf("failed to transition state: %w", err)
 	}
@@ -188,7 +188,7 @@ func (sm *TaskStateMachine) CheckDependencies(ctx context.Context, taskID string
 	err = tx.QueryRow(ctx, `
 		SELECT COUNT(*)
 		FROM swarm_task_dependencies td
-		JOIN shared_tasks st ON td.depends_on_task_id = st.id
+		JOIN ohc_tasks st ON td.depends_on_task_id = st.id
 		WHERE td.task_id = $1 AND st.status != $2
 	`, taskID, TaskStateDone).Scan(&incompleteCount)
 	if err != nil {
