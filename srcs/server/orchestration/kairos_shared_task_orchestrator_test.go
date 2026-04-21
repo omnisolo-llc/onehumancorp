@@ -30,7 +30,7 @@ func (m *mockDBProvider) Begin(ctx context.Context) (db.Tx, error) {
 }
 
 func (m *mockDBProvider) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
-	return &mockRow{err: m.err}
+	return &mockTaskRow{err: m.err}
 }
 
 type mockTx struct {
@@ -38,11 +38,11 @@ type mockTx struct {
 }
 
 func (m *mockTx) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
-	return &mockRow{}
+	return &mockTaskRow{}
 }
 
-func (m *mockTx) Exec(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return nil, nil
+func (m *mockTx) Exec(ctx context.Context, query string, args ...interface{}) (int64, error) {
+	return 0, nil
 }
 
 func (m *mockTx) Commit(ctx context.Context) error {
@@ -53,12 +53,15 @@ func (m *mockTx) Rollback(ctx context.Context) error {
 	return nil
 }
 
-type mockRow struct {
+type mockTaskRow struct {
 	err error
 }
 
-func (m *mockRow) Scan(dest ...interface{}) error {
+func (m *mockTaskRow) Scan(dest ...interface{}) error {
 	if m.err != nil {
+		if m.err == sql.ErrNoRows {
+			return sql.ErrNoRows
+		}
 		return m.err
 	}
 

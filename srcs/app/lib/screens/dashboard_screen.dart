@@ -311,8 +311,7 @@ class _ObservabilityWidget extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
+                        Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(10),
@@ -332,15 +331,13 @@ class _ObservabilityWidget extends StatelessWidget {
                                 fontFamily: 'Outfit',
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const Spacer(),
                             _StatusBadge(healthy: healthScore >= 80),
                           ],
                         ),
                         const SizedBox(height: 32),
-                        Wrap(
-                          spacing: 16.0,
-                          runSpacing: 16.0,
-                          alignment: WrapAlignment.spaceAround,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
                           children: [
                             _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
                             _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),

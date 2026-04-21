@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ohc_app/models/dashboard.dart';
-import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
 
 class DiagnosticsScreen extends ConsumerWidget {
@@ -9,12 +7,6 @@ class DiagnosticsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboardAsync = ref.watch(FutureProvider((ref) async {
-      final api = ref.read(apiServiceProvider);
-      if (api == null) return null;
-      return api.getDashboard();
-    }));
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Diagnostics Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
@@ -42,56 +34,6 @@ class DiagnosticsScreen extends ConsumerWidget {
                     const _DiagnosticRow(title: 'Redis Cache', status: 'Connected', icon: Icons.memory),
                     const SizedBox(height: 16),
                     const _DiagnosticRow(title: 'AI Provider APIs', status: 'Connected', icon: Icons.psychology),
-                    const SizedBox(height: 24),
-                    const Divider(color: Colors.white24),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Hybrid Health Status',
-                      style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    dashboardAsync.when(
-                      data: (snapshot) {
-                        if (snapshot == null || snapshot.hybridHealth == null) {
-                          return const Text('Hybrid health data unavailable', style: TextStyle(color: Colors.white70));
-                        }
-                        final health = snapshot.hybridHealth!;
-                        return Column(
-                          children: [
-                            _HybridHealthRow(
-                              label: 'Execution Mode',
-                              value: health.mode.toUpperCase(),
-                              icon: Icons.settings_input_component,
-                            ),
-                            _HybridHealthRow(
-                              label: 'Cloud Connectivity',
-                              value: health.cloudConnected ? 'CONNECTED' : 'DISCONNECTED',
-                              icon: Icons.cloud_sync,
-                              isError: !health.cloudConnected,
-                            ),
-                            _HybridHealthRow(
-                              label: 'Mesh Status',
-                              value: health.meshActive ? 'ACTIVE' : 'INACTIVE',
-                              icon: Icons.hub,
-                              isError: !health.meshActive,
-                            ),
-                            _HybridHealthRow(
-                              label: 'Stuck Missions',
-                              value: health.stuckMissions.toString(),
-                              icon: Icons.bug_report,
-                              isError: health.stuckMissions > 0,
-                            ),
-                            _HybridHealthRow(
-                              label: 'Sync Backlog',
-                              value: health.syncBacklog.toString(),
-                              icon: Icons.sync_problem,
-                            ),
-                          ],
-                        );
-                      },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => Text('Error loading health: $err', style: const TextStyle(color: Colors.redAccent)),
-                    ),
                     const SizedBox(height: 32),
                     ElevatedButton(
                       onPressed: () {},
@@ -106,43 +48,6 @@ class DiagnosticsScreen extends ConsumerWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _HybridHealthRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final bool isError;
-
-  const _HybridHealthRow({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.isError = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: isError ? Colors.redAccent : Colors.white70),
-          const SizedBox(width: 12),
-          Text(label, style: const TextStyle(fontFamily: 'Inter', color: Colors.white70)),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.bold,
-              color: isError ? Colors.redAccent : Theme.of(context).colorScheme.primary,
-            ),
-          ),
-        ],
       ),
     );
   }

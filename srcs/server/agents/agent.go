@@ -1,7 +1,6 @@
 package agents
 
 import (
-	"context"
 	"os"
 	"time"
 )
@@ -90,11 +89,4 @@ func (a *Agent) BaseSystemPrompt() string {
 		prompt += "The directories .ohc/memory/auto/ and .ohc/memory/team/ already exist. Write state to them directly.\n"
 	}
 	return prompt
-}
-
-// Transport abstracts the underlying communication medium for the Universal Agent Harness Transport Bridge.
-type Transport interface {
-	Send(ctx context.Context, message []byte) error
-	Receive(ctx context.Context) ([]byte, error)
-	Close() error
 }
