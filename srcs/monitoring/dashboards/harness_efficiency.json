@@ -1,25 +1,36 @@
 {
-  "title": "Harness Efficiency Dashboard",
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
   "panels": [
     {
-      "title": "Harness Initialization Latency",
+      "title": "Harness Init Latency by Mode",
       "type": "timeseries",
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum(rate(harness_init_latency_bucket[5m])) by (le, deployment_mode))",
-          "legendFormat": "{{deployment_mode}}"
+          "refId": "A"
         }
       ]
     },
     {
-      "title": "Harness Database I/O Latency",
+      "title": "Harness DB I/O Latency by Mode",
       "type": "timeseries",
       "targets": [
         {
           "expr": "histogram_quantile(0.95, sum(rate(harness_db_io_latency_bucket[5m])) by (le, deployment_mode))",
-          "legendFormat": "{{deployment_mode}}"
+          "refId": "A"
         }
       ]
     }
-  ]
+  ],
+  "schemaVersion": 38,
+  "title": "Harness Efficiency",
+  "uid": "harness_efficiency",
+  "version": 1
 }
