@@ -4,6 +4,7 @@ go_library(
     name = "dashboard",
     srcs = [
         "autodream.go",
+        "autodream_search.go",
         "handlers_agent.go",
         "handlers_b2b.go",
         "handlers_chat.go",
@@ -21,6 +22,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/dashboard",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/autodream",
         "//srcs/server/db",
         "//srcs/server/api/mesh_legacy:mesh",
         "@com_github_redis_go_redis_v9//:go-redis",
@@ -50,6 +52,7 @@ go_library(
 go_test(
     name = "dashboard_test",
     srcs = [
+        "autodream_search_test.go",
         "autodream_test.go",
         "handlers_b2b_extra_test.go",
         "handlers_mcp_test.go",
@@ -71,6 +74,7 @@ go_test(
         "//srcs/server/api/mesh",
         "//srcs/server/orchestration/mesh",
         "//srcs/server/services/growth",
+        "//srcs/server/autodream",
         "//srcs/server/auth",
         "//srcs/server/billing",
         "//srcs/server/db",

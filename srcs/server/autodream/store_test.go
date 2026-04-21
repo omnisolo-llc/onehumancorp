@@ -222,7 +222,7 @@ func TestSQLiteVectorStore_E2E(t *testing.T) {
 	ctx := context.Background()
 
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE knowledge_base (
+		CREATE TABLE knowledge_embeddings (
 			id TEXT PRIMARY KEY,
 			content TEXT NOT NULL,
 			metadata TEXT,

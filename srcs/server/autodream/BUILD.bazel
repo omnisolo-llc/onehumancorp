@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "autodream",
     srcs = [
+        "queue.go",
         "store.go",
         "worker.go",
     ],
@@ -16,6 +17,7 @@ go_library(
 go_test(
     name = "autodream_test",
     srcs = [
+        "queue_test.go",
         "store_test.go",
         "worker_test.go",
     ],

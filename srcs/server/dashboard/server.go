@@ -16,6 +16,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
+	"github.com/onehumancorp/mono/srcs/server/autodream"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
 	"github.com/onehumancorp/mono/srcs/server/auth"
@@ -604,6 +605,19 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/v1/stream", auth.RequireRole("system", server.handleStream))
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)
+
+	// Issue 5052 - provide API for cosine similarity searches on past agent architectural decisions
+	if server.dbProvider != nil {
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		var embClient autodream.EmbeddingClient
+		if minimaxKey != "" {
+			embClient = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), server.dbProvider, nil)
+		} else {
+			embClient = orchestration.NewMinimaxClient("")
+		}
+		mux.HandleFunc("/api/v1/autodream/knowledge/search", auth.RequireRole("system", HandleAutoDreamKnowledgeSearch(server.dbProvider, embClient)))
+	}
+
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)

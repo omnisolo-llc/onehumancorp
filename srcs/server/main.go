@@ -299,6 +299,24 @@ func run(now time.Time, listen listenFunc) error {
 	if pool != nil {
 		autodreamWorker = orchestration.NewAutoDreamWorker(pool.Provider)
 
+		// Issue 5052 - initialize the AutoDream cron worker
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		var embClient autodream.EmbeddingClient
+		if minimaxKey != "" {
+			embClient = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), pool.Provider, nil)
+		} else {
+			embClient = orchestration.NewMinimaxClient("")
+		}
+		var store autodream.VectorStore
+		if pool.IsSQLite() {
+			store = autodream.NewSQLiteVectorStore(pool.Provider)
+		} else {
+			store = autodream.NewPGVectorStore(pool.Provider)
+		}
+		queue := autodream.NewDBTraceQueue(pool.Provider)
+		autodreamIngester := autodream.NewAutoDreamWorker(store, embClient, queue)
+		autodreamIngester.Start(ctx, 1*time.Minute)
+
 		// Setup Semantic Distillation Worker
 		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
 

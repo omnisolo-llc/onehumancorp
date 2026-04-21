@@ -43,7 +43,7 @@ func (s *PGVectorStore) Store(ctx context.Context, id string, vector []float32, 
 	}
 
 	query := `
-		INSERT INTO knowledge_base (id, content, metadata, embedding)
+		INSERT INTO knowledge_embeddings (id, content, metadata, embedding)
 		VALUES ($1, $2, $3, $4::vector)
 		ON CONFLICT (id) DO UPDATE SET
 			content = EXCLUDED.content,
@@ -62,7 +62,7 @@ func (s *PGVectorStore) Search(ctx context.Context, vector []float32, limit int)
 
 	query := `
 		SELECT id, content, metadata, embedding::text
-		FROM knowledge_base
+		FROM knowledge_embeddings
 		ORDER BY embedding <-> $1::vector
 		LIMIT $2
 	`
@@ -115,7 +115,7 @@ func (s *SQLiteVectorStore) Store(ctx context.Context, id string, vector []float
 	}
 
 	query := `
-		INSERT INTO knowledge_base (id, content, metadata, embedding)
+		INSERT INTO knowledge_embeddings (id, content, metadata, embedding)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT(id) DO UPDATE SET
 			content=excluded.content,
@@ -151,7 +151,7 @@ func (s *SQLiteVectorStore) Search(ctx context.Context, vector []float32, limit 
 	// Fallback implementation: naive in-memory dot-product / cosine similarity
 	query := `
 		SELECT id, content, metadata, embedding
-		FROM knowledge_base
+		FROM knowledge_embeddings
 	`
 	rows, err := s.db.Query(ctx, query)
 	if err != nil {
