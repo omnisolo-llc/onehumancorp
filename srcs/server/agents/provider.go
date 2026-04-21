@@ -54,6 +54,13 @@ const (
 	// Has no side effects.
 	ProviderTypeIronClaw ProviderType = "ironclaw"
 
+	// ProviderTypeScout targets the Scout agent. Best suited for finding and integrating external tools and APIs.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeScout ProviderType = "scout"
+
 	// ProviderTypeBuiltin is the platform's own lightweight agent implementation. Suitable for any role when no external provider is required.
 	// Accepts no parameters.
 	// Returns nothing.
@@ -437,6 +444,69 @@ func (p *IronClawProvider) GetCredentials() Credentials { return p.load() }
 // Has no side effects.
 func (p *IronClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
+// ── Scout ─────────────────────────────────────────────────────────────────────
+
+// ScoutProvider implements Provider for the Scout agent.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type ScoutProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) Type() ProviderType { return ProviderTypeScout }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) Description() string {
+	return "Scout — resource scout and tool integrator agent dedicated to finding and safely registering new external APIs"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) SupportedRoles() []string {
+	return []string{"SCOUT", "INTEGRATION_ENGINEER"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *ScoutProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *ScoutProvider) Authenticate(creds Credentials) error {
+	// Built-in scout might not need an API key but requires one to be authenticated
+	// For now, accept without validation or just store it. We'll require any non-empty credential.
+	if creds.APIKey == "" && creds.OAuthToken == "" {
+		return errors.New("scout provider requires authentication")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
 // ── Builtin ───────────────────────────────────────────────────────────────────
 
 // BuiltinProvider implements Provider for the platform's own builtin agent. It requires no
@@ -480,7 +550,7 @@ func (p *BuiltinProvider) SupportedRoles() []string {
 		"QA_TESTER", "SECURITY_ENGINEER", "DESIGNER", "MARKETING_MANAGER",
 		"GROWTH_AGENT", "CONTENT_STRATEGIST", "SEO_SPECIALIST", "PAID_MEDIA_MANAGER",
 		"ANALYTICS_ENGINEER", "CFO", "BOOKKEEPER", "TAX_SPECIALIST",
-		"AUDIT_MANAGER", "PAYROLL_MANAGER", "AI_NEWS_COLLECTOR",
+		"AUDIT_MANAGER", "PAYROLL_MANAGER", "AI_NEWS_COLLECTOR", "SCOUT",
 	}
 }
 

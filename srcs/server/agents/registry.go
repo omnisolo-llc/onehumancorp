@@ -36,6 +36,7 @@ func DefaultRegistry() *Registry {
 	r.Register(&OpenCodeProvider{})
 	r.Register(&OpenClawProvider{})
 	r.Register(&IronClawProvider{})
+	r.Register(&ScoutProvider{})
 	r.Register(&BuiltinProvider{})
 	return r
 }
@@ -88,6 +89,7 @@ func (r *Registry) All() []Provider {
 		ProviderTypeOpenCode,
 		ProviderTypeOpenClaw,
 		ProviderTypeIronClaw,
+		ProviderTypeScout,
 		ProviderTypeBuiltin,
 	}
 	seen := map[ProviderType]bool{}
