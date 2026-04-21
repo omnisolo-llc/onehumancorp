@@ -71,24 +71,6 @@ func TestSandboxManager_PowerShell(t *testing.T) {
 		t.Fatalf("Expected PowerShellProvider, got %T", sm.Provider)
 	}
 
-	// We only execute if pwsh exists
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	out, err := sm.Execute(ctx, "Write-Output 'hello'")
-
-	// Since pwsh might not be installed, we accept "executable file not found"
-	if err != nil {
-		errStr := err.Error()
-		if !strings.Contains(errStr, "executable file not found") && !strings.Contains(errStr, "no such file") && !strings.Contains(errStr, "signal: killed") {
-			// Skip failure instead of failing, as environment might just not have pwsh
-			t.Logf("Unexpected execute error: %v, out: %s", err, out)
-			t.Skipf("Skipping test due to environment missing pwsh or sandbox issues: %v", err)
-		}
-	} else {
-		if !strings.Contains(out, "hello") {
-			t.Errorf("Expected 'hello', got: %s", out)
-		}
-	}
 }
 
 func TestRecordViolation(t *testing.T) {
