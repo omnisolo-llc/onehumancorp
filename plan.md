@@ -1,20 +1,26 @@
-1. **Apply `perf.CoordinatorMode` in `SyncContextSync`**:
-   - In `srcs/server/orchestration/sip.go`, find `SyncContextSync`.
-   - After fetching the `records` from `swarm_memory_embeddings`, iterate and transform the payloads. Currently, this iteration is done sequentially: `for _, rec := range records { ... }`.
-   - Update it to use `perf.CoordinatorMode(4)` for parallel payload sanitization and HTTP requests to `remoteEndpoint`.
-   - To make it thread-safe, collect the `idsToDelete` via a mutex or by sending results back to a channel. Note: Since `ExecuteParallel` blocks until all finish, we can process items and aggregate safe state. Wait, HTTP requests inside `ExecuteParallel` might be concurrent and need separate `http.Client`s or reuse the same thread-safe `http.Client`.
-   - Alternatively, batch the records to construct an array of processed payloads, similar to `SyncBufferedMetrics` if it does one large POST. Wait, the existing code in `SyncContextSync` does a POST *per record*: `req, err := http.NewRequestWithContext(ctx, "POST", remoteEndpoint, strings.NewReader(string(sanitizedPayload)))`.
-   - If it does a POST per record, `ExecuteParallel` will parallelize both sanitization and network requests!
-   - Use `perf.NewCoordinatorMode(4)` to parallelize it. Use a mutex for `idsToDelete` and `syncedCount`.
+1. **Fix duplicate functions in `srcs/server/orchestration/sip.go`**
+   - The file contains both `PruneBufferedMetrics` and `PruneTelemetryBuffer` which do exactly the same thing. I will use a Python script via `run_in_bash_session` to remove `PruneTelemetryBuffer` from `srcs/server/orchestration/sip.go` and replace its usage in `srcs/server/main.go` and tests with `PruneBufferedMetrics`.
+   - Dedicated verification step: I will run `git diff srcs/server/orchestration/sip.go srcs/server/main.go` to confirm the removal and replacement are correct.
 
-2. **Apply `perf.CoordinatorMode` in `SyncMissions`**:
-   - In `srcs/server/orchestration/sip.go`, find `SyncMissions`.
-   - Similar to above, it processes `missions` in a loop and sends a POST *per mission*.
-   - Update it to use `perf.CoordinatorMode(4)`. Use a `sync.Mutex` for tracking successful synchronizations (updating `agent_missions` status in the DB transaction might not be safe, wait! The SQLite/PG transaction `tx` is not thread-safe. Wait, `tx.Exec` might not be safe to call concurrently from multiple goroutines on the same transaction).
-   - In `SyncMissions`, `tx.Exec(ctx, "UPDATE agent_missions SET status = 'SYNCED' WHERE id = $1", m.id)` is done per mission. We can collect successfully synced mission IDs in a thread-safe way, and do a single batch update or individual updates *after* `ExecuteParallel` completes.
-   - Wait, `SyncContextSync` collects `idsToDelete` and does a batch delete: `tx.Exec(ctx, fmt.Sprintf("DELETE FROM swarm_memory_embeddings WHERE memory_id IN (%s)", idList))`. So `SyncMissions` should collect `idsToUpdate` and do a batch update: `tx.Exec(ctx, fmt.Sprintf("UPDATE agent_missions SET status = 'SYNCED' WHERE id IN (%s)", idList))` after `ExecuteParallel`.
+2. **Fix health check stuck mission count**
+   - The method `CheckHealth` in `srcs/server/orchestration/health.go` currently considers `FAILED` missions as `STUCK`. It does `SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'`. `FAILED` missions are expected terminal states and shouldn't continuously degrade the dashboard's health status.
+   - I will use a Python script via `run_in_bash_session` to change the query in `srcs/server/orchestration/health.go` to only count `'STUCK'` missions (e.g. `SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK'`).
+   - Dedicated verification step: I will run `git diff srcs/server/orchestration/health.go` to verify the query change.
 
-3. **Verify functionality**:
-   - Run `bazelisk test //...` to ensure no tests are broken by these changes.
+3. **Fix stagnant mission sanitization**
+   - In `srcs/server/orchestration/sip.go`, `PruneStaleMissions` updates `status = 'FAILED'` but it leaves them. However, since we fixed the health check to ignore `FAILED` this fixes the noisy health degradation. But wait, `PruneStaleMissions` is only called with `7*24*time.Hour` threshold in `main.go`, meaning a mission might be stuck for 7 days before being marked as `FAILED`.
+   - The instructions state: "Sanitize and prioritize the `agent_missions` queue, ensuring no 'stuck' missions persist in either mode."
+   - I will use a Python script via `run_in_bash_session` to update `srcs/server/main.go` to invoke a dedicated cleanup logic for STUCK missions or update the `PruneStaleMissions` threshold to actively prune STUCK ones much faster (e.g., mark PENDING/STUCK missions older than 1 hour as FAILED). Or better, I will modify `main.go`'s periodic ticker to explicitly call `PruneStaleMissions(ctx, 1*time.Hour)` for stuck/pending timeout, and another for full deletion. Actually, just adding `sipdb.SanitizeStuckMissions(ctx, 1*time.Hour)` could be a cleaner approach, or updating `PruneStaleMissions` to handle STUCK/BURSTING/PENDING missions differently from COMPLETED ones.
+   - Let's update `srcs/server/orchestration/sip.go` to have `SanitizeStuckMissions(ctx context.Context, timeout time.Duration)` which updates `STUCK` and `PENDING` missions older than `timeout` to `FAILED`. Then call this in `main.go` every hour.
+   - Dedicated verification step: I will run `git diff srcs/server/orchestration/sip.go srcs/server/main.go` to confirm the logic.
 
-4. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
+4. **Run Tests**
+   - Execute `./bazelisk test //srcs/server/...` to ensure there are no compilation errors or failed tests.
+
+5. **Pre-commit checks**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+6. **Submit PR**
+   - Use the `submit` tool to create the PR.
+   - Title: `🧹 Maintainer: [Hygiene] Fix stuck mission sanitization and resolve duplicate methods`
+   - Description: Ensure STUCK missions are correctly swept up, health check only considers STUCK (not FAILED) as degraded, and fix duplicate `PruneTelemetryBuffer` method definitions.
