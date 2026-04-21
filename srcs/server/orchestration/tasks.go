@@ -37,7 +37,7 @@ type SharedTask struct { // issue_id: 3980
 	Title           string     `json:"title"`
 	Description     string     `json:"description,omitempty"`
 	AssignedAgentID string     `json:"assigned_agent_id,omitempty"`
-	Status          string     `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED
+	Status          string     `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED, PROPOSAL_PENDING, DELIBERATING, REVISION_REQUIRED, APPROVED
 	Priority        string     `json:"priority"`
 	Payload         string     `json:"payload"`
 	LockedUntil     *time.Time `json:"locked_until,omitempty"`
