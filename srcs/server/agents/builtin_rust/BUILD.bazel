@@ -7,8 +7,6 @@ exports_files([
 
 # Rust sources include pre-generated proto code in src/gen/.
 # No protoc dependency needed in the Bazel build.
-RUST_SRCS = glob(["src/**/*.rs"])
-
 RUST_DEPS = [
     "@crates//:base64",
     "@crates//:chrono",
@@ -40,23 +38,36 @@ RUST_PROC_MACRO_DEPS = [
     "@crates//:async-trait",
 ]
 
+# Main agent library.
 rust_library(
     name = "ohc_builtin_agent_lib",
-    srcs = RUST_SRCS,
+    srcs = [
+        "src/agent.rs",
+        "src/lib.rs",
+        "src/service.rs",
+    ],
     crate_name = "ohc_builtin_agent",
     edition = "2021",
-    deps = RUST_DEPS,
     proc_macro_deps = RUST_PROC_MACRO_DEPS,
     visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/agents/builtin_rust/src:core",
+        "//srcs/server/agents/builtin_rust/src/gen:proto",
+        "//srcs/server/agents/builtin_rust/src/llm",
+        "//srcs/server/agents/builtin_rust/src/tools",
+    ] + RUST_DEPS,
 )
 
 rust_binary(
     name = "ohc-builtin-agent",
     srcs = ["src/main.rs"],
     edition = "2021",
-    deps = [":ohc_builtin_agent_lib"] + RUST_DEPS,
     proc_macro_deps = RUST_PROC_MACRO_DEPS,
     visibility = ["//visibility:public"],
+    deps = [
+        ":ohc_builtin_agent_lib",
+        "//srcs/server/agents/builtin_rust/src:core",
+    ] + RUST_DEPS,
 )
 
 rust_test(
