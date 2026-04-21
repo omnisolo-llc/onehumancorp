@@ -34,6 +34,7 @@ var (
 	BubblewrapExecutionLatency metric.Float64Histogram
 	HarnessInitLatency         metric.Float64Histogram
 	HarnessDbIoLatency         metric.Float64Histogram
+	TasksEscalatedTotal        metric.Int64Counter
 	BubblewrapViolationTotal   metric.Int64Counter
 	meter                      metric.Meter
 	requestCounter             metric.Int64Counter
@@ -846,6 +847,14 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_bubblewrap_execution_latency_seconds",
 		metric.WithDescription("Latency of Bubblewrap execution in seconds"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TasksEscalatedTotal, err = m.Int64Counter(
+		"tasks_escalated_total",
+		metric.WithDescription("Total number of tasks escalated to the cloud swarm"),
 	)
 	if err != nil {
 		errs = append(errs, err)
