@@ -19,11 +19,11 @@ func TestStateMachine_Concurrent(t *testing.T) {
 
 	ctx := context.Background()
 	tx, _ := provider.Begin(ctx)
-	tx.Exec(ctx, `CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, parent_task_id TEXT, status TEXT, workflow_state TEXT, updated_at TIMESTAMP)`)
-	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('parent', 'org1', 'title1', 'EXECUTING')`)
-	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub1', 'org1', 'title1', 'parent', 'EXECUTING')`)
-	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub2', 'org1', 'title1', 'parent', 'EXECUTING')`)
-	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub3', 'org1', 'title1', 'parent', 'EXECUTING')`)
+	tx.Exec(ctx, `CREATE TABLE ohc_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, parent_task_id TEXT, status TEXT, workflow_state TEXT, updated_at TIMESTAMP)`)
+	tx.Exec(ctx, `INSERT INTO ohc_tasks (id, organization_id, title, status) VALUES ('parent', 'org1', 'title1', 'EXECUTING')`)
+	tx.Exec(ctx, `INSERT INTO ohc_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub1', 'org1', 'title1', 'parent', 'EXECUTING')`)
+	tx.Exec(ctx, `INSERT INTO ohc_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub2', 'org1', 'title1', 'parent', 'EXECUTING')`)
+	tx.Exec(ctx, `INSERT INTO ohc_tasks (id, organization_id, title, parent_task_id, status) VALUES ('sub3', 'org1', 'title1', 'parent', 'EXECUTING')`)
 	tx.Commit(ctx)
 
 	sm := NewTaskStateMachine(provider, nil)
@@ -43,7 +43,7 @@ func TestStateMachine_Concurrent(t *testing.T) {
 
 	tx, _ = provider.Begin(ctx)
 	var parentStatus string
-	tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'parent'").Scan(&parentStatus)
+	tx.QueryRow(ctx, "SELECT status FROM ohc_tasks WHERE id = 'parent'").Scan(&parentStatus)
 	tx.Rollback(ctx)
 
 	assert.Equal(t, TaskStateDone, parentStatus)
@@ -59,12 +59,12 @@ func TestStateMachine_TransitionAndDependencies(t *testing.T) {
 
 	// Initialize tables needed for tests
 	tx, _ := provider.Begin(ctx)
-	tx.Exec(ctx, `CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, status TEXT, updated_at TIMESTAMP)`)
+	tx.Exec(ctx, `CREATE TABLE ohc_tasks (id TEXT PRIMARY KEY, organization_id TEXT, title TEXT, status TEXT, updated_at TIMESTAMP)`)
 	tx.Exec(ctx, `CREATE TABLE swarm_task_dependencies (task_id TEXT, depends_on_task_id TEXT, PRIMARY KEY(task_id, depends_on_task_id))`)
 
 	// Insert tasks and dependency
-	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('taskA', 'org1', 'Task A', 'PENDING')`)
-	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('taskB', 'org1', 'Task B', 'BLOCKED')`)
+	tx.Exec(ctx, `INSERT INTO ohc_tasks (id, organization_id, title, status) VALUES ('taskA', 'org1', 'Task A', 'PENDING')`)
+	tx.Exec(ctx, `INSERT INTO ohc_tasks (id, organization_id, title, status) VALUES ('taskB', 'org1', 'Task B', 'BLOCKED')`)
 	tx.Exec(ctx, `INSERT INTO swarm_task_dependencies (task_id, depends_on_task_id) VALUES ('taskB', 'taskA')`)
 	tx.Commit(ctx)
 
@@ -82,7 +82,7 @@ func TestStateMachine_TransitionAndDependencies(t *testing.T) {
 	// Verify taskA is DONE
 	tx, _ = provider.Begin(ctx)
 	var taskAStatus string
-	tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'taskA'").Scan(&taskAStatus)
+	tx.QueryRow(ctx, "SELECT status FROM ohc_tasks WHERE id = 'taskA'").Scan(&taskAStatus)
 	assert.Equal(t, TaskStateDone, taskAStatus)
 	tx.Rollback(ctx)
 
@@ -94,7 +94,7 @@ func TestStateMachine_TransitionAndDependencies(t *testing.T) {
 	// Verify taskB is READY
 	tx, _ = provider.Begin(ctx)
 	var taskBStatus string
-	tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'taskB'").Scan(&taskBStatus)
+	tx.QueryRow(ctx, "SELECT status FROM ohc_tasks WHERE id = 'taskB'").Scan(&taskBStatus)
 	assert.Equal(t, TaskStateReady, taskBStatus)
 	tx.Rollback(ctx)
 }

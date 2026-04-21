@@ -117,6 +117,18 @@ message MeshEvent {
   int64 timestamp = 4;
 }
 
+message TeammateMeshEvent {
+  string agent_id = 1;
+  string action = 2;
+  string status = 3;
+  bytes payload = 4;
+}
+
+message PublishTeammateMeshEventRequest {
+  string channel = 1;
+  TeammateMeshEvent event = 2;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
@@ -128,6 +140,8 @@ service HubService {
   rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
   rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
   rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
+  rpc PublishTeammateMeshEvent(PublishTeammateMeshEventRequest) returns (PublishMessageResponse);
+  rpc StreamTeammateMesh(EventStreamRequest) returns (stream TeammateMeshEvent);
 }
 
 message WizardField {

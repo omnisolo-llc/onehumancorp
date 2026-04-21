@@ -89,13 +89,14 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Dynamic Scaling')),
-      body: Row(
-        children: [
-          // Scaling Controls
-          Expanded(
-            flex: 2,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 600;
+          final children = [
+            // Scaling Controls
+            Expanded(
+              flex: isNarrow ? 0 : 2,
+              child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -146,8 +147,11 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                       padding: const EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Wrap(
+                            spacing: 16.0,
+                            runSpacing: 16.0,
+                            alignment: WrapAlignment.spaceBetween,
+                            crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               const Text(
                                 'Target Count',
@@ -234,10 +238,10 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
             ),
           ),
 
-          // Scaling Logs (Sidebar)
-          VerticalDivider(width: 1, color: colors.outlineVariant),
-          Expanded(
-            flex: 1,
+            // Scaling Logs (Sidebar)
+            if (isNarrow) const Divider(height: 1) else VerticalDivider(width: 1, color: colors.outlineVariant),
+            Expanded(
+              flex: isNarrow ? 0 : 1,
             child: Container(
               color: colors.surfaceContainerLowest,
               child: Column(
@@ -295,8 +299,10 @@ class _ScalingScreenState extends ConsumerState<ScalingScreen> {
                 ],
               ),
             ),
-          ),
-        ],
+            ),
+          ];
+          return isNarrow ? ListView(children: children) : Row(children: children);
+        },
       ),
     );
   }
@@ -312,6 +318,7 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
           width: 24,

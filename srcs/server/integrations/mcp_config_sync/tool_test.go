@@ -200,3 +200,80 @@ func TestConfigTool_SyncConfigToCloud_ExecError(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to sync config to cloud")
 }
+
+func TestConfigTool_GetConfig_Standalone_ReadError(t *testing.T) {
+	os.Setenv("OHC_HYBRID_MODE", "standalone")
+	defer os.Unsetenv("OHC_HYBRID_MODE")
+
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	err := os.Mkdir(configPath, 0755)
+	require.NoError(t, err)
+
+	os.Setenv("OHC_CONFIG_PATH", configPath)
+	defer os.Unsetenv("OHC_CONFIG_PATH")
+
+	tool := NewConfigTool(nil)
+	_, err = tool.GetConfig(context.Background(), "my_key")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to read config file")
+}
+
+
+func TestConfigTool_GetConfigTool(t *testing.T) {
+	os.Setenv("OHC_HYBRID_MODE", "standalone")
+	defer os.Unsetenv("OHC_HYBRID_MODE")
+
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.yaml")
+	err := os.WriteFile(configPath, []byte(`my_key: local_value`), 0644)
+	require.NoError(t, err)
+
+	os.Setenv("OHC_CONFIG_PATH", configPath)
+	defer os.Unsetenv("OHC_CONFIG_PATH")
+
+	tool := NewConfigTool(nil)
+	mcpTool := tool.GetConfigTool()
+
+	// test invalid JSON
+	_, err = mcpTool.Execute(context.Background(), []byte(`invalid`))
+	require.Error(t, err)
+
+	// test missing key
+	_, err = mcpTool.Execute(context.Background(), []byte(`{}`))
+	require.Error(t, err)
+
+	// test success
+	res, err := mcpTool.Execute(context.Background(), []byte(`{"key":"my_key"}`))
+	require.NoError(t, err)
+	assert.Equal(t, "local_value", res)
+
+    // test execution error (key not found)
+    _, err = mcpTool.Execute(context.Background(), []byte(`{"key":"other_key"}`))
+	require.Error(t, err)
+}
+
+func TestConfigTool_SyncConfigToCloudTool(t *testing.T) {
+	provider := &mockProvider{}
+	tool := NewConfigTool(provider)
+	mcpTool := tool.SyncConfigToCloudTool()
+
+	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+
+	// test invalid JSON
+	_, err := mcpTool.Execute(ctx, []byte(`invalid`))
+	require.Error(t, err)
+
+	// test missing fields
+	_, err = mcpTool.Execute(ctx, []byte(`{"tenant_id":"org1"}`))
+	require.Error(t, err)
+
+	// test success
+	res, err := mcpTool.Execute(ctx, []byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`))
+	require.NoError(t, err)
+	assert.Equal(t, "Successfully synced config to cloud", res)
+
+    // test execution error (no auth)
+    _, err = mcpTool.Execute(context.Background(), []byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`))
+	require.Error(t, err)
+}
