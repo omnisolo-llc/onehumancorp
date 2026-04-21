@@ -13,14 +13,13 @@
 //   OHC_AGENT_AUTH_DISABLED    "true" to disable auth (dev/test only)
 //   OHC_AGENT_TOKEN            pre-shared token for token-based auth
 
+pub use ohc_builtin_agent_core::*;
+
 pub mod agent;
-pub mod auth;
-pub mod budget;
-pub mod caveman;
-pub mod llm;
-pub mod memory;
-pub mod proto;
-pub mod pubsub;
 pub mod service;
-pub mod tools;
-pub mod types;
+pub mod departments;
+pub mod guardrails;
+
+pub use ohc_builtin_agent_llm as llm;
+pub use ohc_builtin_agent_tools as tools;
+pub use proto;

@@ -9,7 +9,7 @@ use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
 use crate::memory::{inject_memories_into_prompt, MemoryEntry, MemoryStore};
-use crate::proto::agent_service::{
+use crate::proto::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
 };
@@ -18,6 +18,8 @@ use ohc_builtin_agent_tools::{
     SharedTodos,
 };
 use chrono::Utc;
+use crate::departments::{Department, get_department_config};
+use std::str::FromStr;
 use tokio::sync::RwLock;
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
@@ -146,7 +148,7 @@ impl AgentServiceImpl {
         }
     }
 
-    fn build_run_config(&self, req: &RunTaskRequest) -> AgentRunConfig {
+    fn build_run_config(&self, req: &RunTaskRequest, department: &str) -> AgentRunConfig {
         let model = if req.model.is_empty() {
             self.cfg.model.clone()
         } else {
@@ -154,7 +156,16 @@ impl AgentServiceImpl {
         };
 
         let system = if req.system_prompt.is_empty() {
-            inject_memories_into_prompt(&self.memory, &self.cfg.system_prompt)
+            let base_prompt = if !department.is_empty() {
+                if let Ok(dep) = Department::from_str(department) {
+                    get_department_config(dep).system_prompt
+                } else {
+                    &self.cfg.system_prompt
+                }
+            } else {
+                &self.cfg.system_prompt
+            };
+            inject_memories_into_prompt(&self.memory, base_prompt)
         } else {
             inject_memories_into_prompt(&self.memory, &req.system_prompt)
         };
@@ -202,14 +213,28 @@ impl AgentService for AgentServiceImpl {
 
         let task_req = req.into_inner();
         let llm = self.resolve_llm(&task_req.llm_provider, &task_req.model, &task_req.llm_endpoint);
-        let run_cfg = self.build_run_config(&task_req);
+        let run_cfg = self.build_run_config(&task_req, &task_req.department);
         let task = task_req.task.clone();
         let memory = self.memory.clone();
 
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-        let tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
+        
+        let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
+        let tools = if !task_req.department.is_empty() {
+            if let Ok(dep) = Department::from_str(&task_req.department) {
+                let dep_cfg = get_department_config(dep);
+                all_tools.into_iter()
+                    .filter(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()))
+                    .collect()
+            } else {
+                all_tools
+            }
+        } else {
+            all_tools
+        };
+        
         let agent = Arc::new(Agent::new(llm, tools));
 
         let (tx, rx) = mpsc::channel::<Result<RunTaskEvent, Status>>(64);
@@ -338,7 +363,7 @@ impl AgentService for AgentServiceImpl {
         }
 
         // Remote dispatch: forward to sub-agent gRPC server.
-        use crate::proto::agent_service::{
+        use crate::proto::{
             agent_service_client::AgentServiceClient, RunTaskRequest,
         };
 
@@ -389,5 +414,30 @@ impl AgentService for AgentServiceImpl {
             result: final_result,
             error: final_error,
         }))
+    }
+}
+
+pub struct SharedAgentService(pub std::sync::Arc<AgentServiceImpl>);
+
+#[tonic::async_trait]
+impl AgentService for SharedAgentService {
+    type RunTaskStream = <AgentServiceImpl as AgentService>::RunTaskStream;
+
+    async fn run_task(
+        &self,
+        req: tonic::Request<RunTaskRequest>,
+    ) -> Result<tonic::Response<Self::RunTaskStream>, tonic::Status> {
+        self.0.run_task(req).await
+    }
+
+    async fn ping(&self, req: tonic::Request<PingRequest>) -> Result<tonic::Response<PingResponse>, tonic::Status> {
+        self.0.ping(req).await
+    }
+
+    async fn dispatch_to_sub_agent(
+        &self,
+        req: tonic::Request<SubAgentRequest>,
+    ) -> Result<tonic::Response<SubAgentResponse>, tonic::Status> {
+        self.0.dispatch_to_sub_agent(req).await
     }
 }
