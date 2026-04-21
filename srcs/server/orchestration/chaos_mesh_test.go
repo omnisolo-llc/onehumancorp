@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"github.com/onehumancorp/mono/lib/resilience/chaos"
 	"time"
 )
 
@@ -284,5 +286,90 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 		}
 		wg.Wait()
 		t.Log("Postgres Parity PruneStaleMissions completed without panic")
+	})
+}
+
+// TestSIPDB_Chaos_SyncLagParity verifies that sync lag chaos engineering
+// works correctly across both standalone and cloud modes.
+func TestSIPDB_Chaos_SyncLagParity(t *testing.T) {
+	// 1. Standalone
+	t.Run("Standalone", func(t *testing.T) {
+		t.Setenv("OHC_MULTITENANT", "false")
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "parity_chaos_synclag.db")
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SQLite SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		errs := make(chan error, 5)
+
+		for i := 0; i < 5; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+
+				// Inject SyncLag Chaos
+				inj := chaos.NewInjector(chaos.SyncLag, int64(idx))
+				if err := inj.Inject(ctx); err != nil {
+					errs <- fmt.Errorf("sync lag failed: %v", err)
+					return
+				}
+
+				dbInstance.UpsertMission(ctx, fmt.Sprintf("mission-%d", idx), "PENDING", `{"cuj":"stress"}`, false)
+			}(i)
+		}
+		wg.Wait()
+		close(errs)
+
+		for err := range errs {
+			t.Errorf("Error during sync lag injection: %v", err)
+		}
+		t.Log("SQLite Parity SyncLag completed without panic")
+	})
+
+	// 2. Cloud
+	t.Run("PostgresMock", func(t *testing.T) {
+		t.Setenv("OHC_MULTITENANT", "true")
+		tmpDir := t.TempDir()
+		dbPath := filepath.Join(tmpDir, "parity_chaos_synclag_pg.db")
+		dbInstance, err := NewSIPDB(dbPath)
+		if err != nil {
+			t.Fatalf("Failed to create SIPDB: %v", err)
+		}
+		defer dbInstance.Close()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		var wg sync.WaitGroup
+		errs := make(chan error, 5)
+		for i := 0; i < 5; i++ {
+			wg.Add(1)
+			go func(idx int) {
+				defer wg.Done()
+
+				// Inject SyncLag Chaos
+				inj := chaos.NewInjector(chaos.SyncLag, int64(idx))
+				if err := inj.Inject(ctx); err != nil {
+					errs <- fmt.Errorf("sync lag failed: %v", err)
+					return
+				}
+
+				dbInstance.UpsertMission(ctx, fmt.Sprintf("mission-%d", idx), "PENDING", `{"cuj":"stress"}`, false)
+			}(i)
+		}
+		wg.Wait()
+		close(errs)
+
+		for err := range errs {
+			t.Errorf("Error during sync lag injection: %v", err)
+		}
+		t.Log("Postgres Parity SyncLag completed without panic")
 	})
 }

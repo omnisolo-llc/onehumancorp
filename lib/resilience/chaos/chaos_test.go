@@ -186,6 +186,8 @@ func TestAllModeStrings(t *testing.T) {
 		ResourceExhaustion: "resource_exhaustion",
 		CorruptAgentLock:   "corrupt_agent_lock",
 		CorruptMailbox:     "corrupt_mailbox",
+		SyncLag:            "sync_lag",
+		NetworkPartition:   "network_partition",
 	}
 
 	for mode, expected := range modes {
@@ -222,5 +224,37 @@ func TestContextCancellation_LatencySpike(t *testing.T) {
 	err := inj.Inject(ctx)
 	if err == nil {
 		t.Fatal("expected context error, got nil")
+	}
+}
+
+func TestSyncLag(t *testing.T) {
+	inj := NewInjector(SyncLag, 1)
+
+	start := time.Now()
+	err := inj.Inject(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	duration := time.Since(start)
+	if duration < 100*time.Millisecond {
+		t.Fatalf("expected delay > 100ms, got %v", duration)
+	}
+}
+
+func TestNetworkPartition(t *testing.T) {
+	inj := NewInjector(NetworkPartition, 1)
+	partitioned := false
+	for i := 0; i < 100; i++ {
+		err := inj.Inject(context.Background())
+		if err != nil {
+			if e, ok := err.(*ChaosError); ok && e.Message == "chaos: simulated network partition" {
+				partitioned = true
+				break
+			}
+		}
+	}
+	if !partitioned {
+		t.Fatal("expected a network partition error to occur within 100 attempts")
 	}
 }
