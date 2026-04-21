@@ -213,12 +213,12 @@ func TestRustAgent_RunTask_NoLLM(t *testing.T) {
 			break
 		}
 		t.Logf("event: type=%v", evt.Type)
-		if evt.Type == int32(agentservicepb.EventType_RUN_STARTED) {
+		if evt.Type == agentservicepb.EventType_RUN_STARTED {
 			sawRunStarted = true
 		}
 		// TASK_ERROR or TASK_COMPLETE terminate the stream.
-		if evt.Type == int32(agentservicepb.EventType_TASK_ERROR) ||
-			evt.Type == int32(agentservicepb.EventType_TASK_COMPLETE) {
+		if evt.Type == agentservicepb.EventType_TASK_ERROR ||
+			evt.Type == agentservicepb.EventType_TASK_COMPLETE {
 			break
 		}
 	}
