@@ -29,8 +29,8 @@ register_toolchains("@rust_toolchains//:all")
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
 crate.from_cargo(
     name = "crates",
-    cargo_lockfile = "//srcs/server/agents/builtin_rust:Cargo.lock",
-    manifests = ["//srcs/server/agents/builtin_rust:Cargo.toml"],
+    cargo_lockfile = "//srcs/server/agents/builtin:Cargo.lock",
+    manifests = ["//srcs/server/agents/builtin:Cargo.toml"],
 )
 use_repo(crate, "crates")
 
