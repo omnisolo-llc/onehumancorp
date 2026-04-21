@@ -80,6 +80,20 @@ class _TaskGlassCard extends StatelessWidget {
               style: const TextStyle(fontFamily: 'Inter', color: Colors.white54, fontSize: 12),
             ),
           ],
+          if (task.parentTaskId != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Parent Task: ${task.parentTaskId}',
+              style: const TextStyle(fontFamily: 'Inter', color: Colors.blueGrey, fontSize: 12),
+            ),
+          ],
+          if (task.workflowState != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Workflow State: ${task.workflowState}',
+              style: const TextStyle(fontFamily: 'Inter', color: Colors.white54, fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
         ],
       ),
     );
