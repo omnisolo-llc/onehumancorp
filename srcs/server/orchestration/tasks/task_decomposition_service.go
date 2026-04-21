@@ -95,48 +95,63 @@ func (s *TaskDecompositionService) Claim(ctx context.Context, organizationID str
 		// SQLite emulation for SKIP LOCKED - find one, then update it
 		// Need EXCLUSIVE transaction to avoid race conditions. Actually, db.Provider Begin starts a standard Tx.
 		// However, we can use the mutex approach if needed, or stick to this. SQLite standalone has lower concurrency.
-		query = `SELECT id, organization_id, title, description, status, assigned_agent_id,
-			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
-		FROM shared_tasks_decomposition
-		WHERE status = 'PENDING' AND organization_id = $1 ORDER BY priority ASC, created_at ASC LIMIT 1`
+		query = `
+		UPDATE shared_tasks_decomposition
+		SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT t.id
+			FROM shared_tasks_decomposition t
+			WHERE t.status = 'PENDING' AND t.organization_id = $2
+			AND NOT EXISTS (
+				SELECT 1 FROM json_each(t.dependencies) as dep
+				JOIN shared_tasks_decomposition d ON d.id = dep.value
+				WHERE d.status != 'COMPLETED'
+			)
+			ORDER BY t.priority ASC, t.created_at ASC
+			LIMIT 1
+		)
+		RETURNING id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+		`
 
-		err = tx.QueryRow(ctx, query, organizationID).Scan(
+		err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID,
 			&task.Priority, &task.Payload, &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err == sql.ErrNoRows || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 				return nil, nil
 			}
-			return nil, err
-		}
-
-		updateQuery := `UPDATE shared_tasks_decomposition SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
-		if err != nil {
 			return nil, err
 		}
 	} else {
 		// PostgreSQL with FOR UPDATE SKIP LOCKED
-		query = `SELECT id, organization_id, title, description, status, assigned_agent_id,
-			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
-		FROM shared_tasks_decomposition
-		WHERE status = 'PENDING' AND organization_id = $1 ORDER BY priority ASC, created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1`
+		query = `
+		UPDATE shared_tasks_decomposition
+		SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT t.id
+			FROM shared_tasks_decomposition t
+			WHERE t.status = 'PENDING' AND t.organization_id = $2
+			AND NOT EXISTS (
+				SELECT 1 FROM jsonb_array_elements_text(t.dependencies) as dep_id
+				JOIN shared_tasks_decomposition d ON d.id::text = dep_id
+				WHERE d.status != 'COMPLETED'
+			)
+			ORDER BY t.priority ASC, t.created_at ASC
+			FOR UPDATE SKIP LOCKED
+			LIMIT 1
+		)
+		RETURNING id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+		`
 
-		err = tx.QueryRow(ctx, query, organizationID).Scan(
+		err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID,
 			&task.Priority, &task.Payload, &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err == sql.ErrNoRows || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 				return nil, nil
 			}
-			return nil, err
-		}
-
-		updateQuery := `UPDATE shared_tasks_decomposition SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
-		if err != nil {
 			return nil, err
 		}
 	}

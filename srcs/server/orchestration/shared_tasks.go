@@ -20,49 +20,71 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
     var payload, dependencies sql.NullString
 
 	var query string
-	if database.IsSQLite() {
-		tx, err := database.Begin(ctx)
-		if err != nil {
-			return nil, err
-		}
-		defer tx.Rollback(ctx)
+	tx, err := database.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
 
-		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' AND organization_id = $1 LIMIT 1`
-		err = tx.QueryRow(ctx, query, organizationID).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
+	if database.IsSQLite() {
+		query = `
+		UPDATE shared_tasks_decomposition
+		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT t.id FROM shared_tasks_decomposition t
+			WHERE t.status = 'PENDING' AND t.organization_id = $2
+			AND NOT EXISTS (
+				SELECT 1 FROM json_each(t.dependencies) as dep
+				JOIN shared_tasks_decomposition d ON d.id = dep.value
+				WHERE d.status != 'COMPLETED'
+			)
+			ORDER BY t.priority ASC, t.created_at ASC
+			LIMIT 1
+		)
+		RETURNING id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+	    `
+
+		err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
+			&task.ID,
+			&task.OrganizationID,
+			&task.Title,
+			&desc,
+			&task.Status,
+			&agent,
+			&task.Priority,
+			&payload,
+			&parent,
+			&dependencies,
+			&locked,
+			&createdAt,
+			&updatedAt,
+		)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err == sql.ErrNoRows || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 				return nil, nil
 			}
 			return nil, err
 		}
-
-		_, err = tx.Exec(ctx, `UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, agentID, task.ID)
-		if err != nil {
-			return nil, err
-		}
-		err = tx.Commit(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-        // update memory struct
-        agent = &agentID
-        task.Status = "IN_PROGRESS"
-
 	} else {
 		query = `
 		UPDATE shared_tasks_decomposition
 		SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = (
-			SELECT id FROM shared_tasks_decomposition
-			WHERE status = 'PENDING' AND organization_id = $2
+			SELECT t.id FROM shared_tasks_decomposition t
+			WHERE t.status = 'PENDING' AND t.organization_id = $2
+			AND NOT EXISTS (
+				SELECT 1 FROM jsonb_array_elements_text(t.dependencies) as dep_id
+				JOIN shared_tasks_decomposition d ON d.id::text = dep_id
+				WHERE d.status != 'COMPLETED'
+			)
+			ORDER BY t.priority ASC, t.created_at ASC
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
 		RETURNING id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
 	    `
 
-		err := database.QueryRow(ctx, query, agentID, organizationID).Scan(
+		err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
 			&task.ID,
 			&task.OrganizationID,
 			&task.Title,
@@ -84,6 +106,10 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 			return nil, err
 		}
 	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
 	if desc.Valid {
         task.Description = &desc.String
     }

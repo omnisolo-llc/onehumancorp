@@ -296,33 +296,6 @@ func TestClaim_PG_QueryError(t *testing.T) {
 	}
 }
 
-func TestClaim_PG_UpdateError(t *testing.T) {
-	expectedErr := errors.New("update error")
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					*dest[0].(*string) = "test-id"
-					return nil
-				},
-			}
-		},
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			return 0, expectedErr
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return false },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
 
 func TestClaim_SQLite_Success(t *testing.T) {
 	mockTx := &MockTx{
@@ -401,33 +374,6 @@ func TestClaim_SQLite_QueryError(t *testing.T) {
 	}
 }
 
-func TestClaim_SQLite_UpdateError(t *testing.T) {
-	expectedErr := errors.New("update error")
-	mockTx := &MockTx{
-		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
-			return &MockRow{
-				ScanFunc: func(dest ...any) error {
-					*dest[0].(*string) = "test-id"
-					return nil
-				},
-			}
-		},
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			return 0, expectedErr
-		},
-	}
-	mockProvider := &MockProvider{
-		IsSQLiteFunc: func() bool { return true },
-		BeginFunc: func(ctx context.Context) (db.Tx, error) {
-			return mockTx, nil
-		},
-	}
-	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
-	if err != expectedErr {
-		t.Errorf("expected error %v, got %v", expectedErr, err)
-	}
-}
 
 func TestClaim_BeginError(t *testing.T) {
 	expectedErr := errors.New("begin error")

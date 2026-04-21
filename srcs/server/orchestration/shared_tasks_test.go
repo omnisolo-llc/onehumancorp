@@ -107,6 +107,11 @@ type mockPGProvider struct {
 	lastQuery string
 }
 
+func (m *mockPGProvider) Begin(ctx context.Context) (db.Tx, error) {
+	return &mockTx{provider: m, ctx: ctx}, nil
+}
+
+
 func (m *mockPGProvider) IsSQLite() bool { return false }
 func (m *mockPGProvider) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
 	m.lastQuery = query
@@ -115,6 +120,21 @@ func (m *mockPGProvider) QueryRow(ctx context.Context, query string, args ...int
 
 type mockPGRow struct{}
 func (m *mockPGRow) Scan(dest ...interface{}) error { return sql.ErrNoRows }
+
+type mockTx struct {
+	db.Tx
+	provider *mockPGProvider
+	ctx      context.Context
+}
+
+func (m *mockTx) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
+	m.provider.lastQuery = query
+	return &mockPGRow{}
+}
+
+func (m *mockTx) Commit(ctx context.Context) error { return nil }
+func (m *mockTx) Rollback(ctx context.Context) error { return nil }
+
 
 func TestClaimTask_PostgresLocking(t *testing.T) {
 	ctx := context.Background()

@@ -96,24 +96,31 @@ func (m *StandaloneStateManager) ClaimTask(ctx context.Context, agentID string) 
 
 	var task Task
 	var depsStr string
-	err = tx.QueryRow(ctx, `
-		SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
-		FROM swarm_tasks
-		WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-		LIMIT 1
-	`).Scan(&task.ID, &task.MissionID, &task.ParentPlanID, &depsStr, &task.Title, &task.Status, &task.AssignedAgentID)
+	lockedUntil := time.Now().Add(5 * time.Minute)
+	query := `
+		UPDATE swarm_tasks
+		SET assigned_agent_id = $1, locked_until = $2
+		WHERE id = (
+			SELECT t.id
+			FROM swarm_tasks t
+			WHERE t.status = 'PENDING' AND (t.locked_until IS NULL OR t.locked_until < CURRENT_TIMESTAMP)
+			AND NOT EXISTS (
+				SELECT 1 FROM json_each(t.dependencies) as dep
+				JOIN swarm_tasks d ON d.id = dep.value
+				WHERE d.status != 'COMPLETED'
+			)
+			ORDER BY t.created_at ASC
+			LIMIT 1
+		)
+		RETURNING id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
+	`
+	err = tx.QueryRow(ctx, query, agentID, lockedUntil).Scan(&task.ID, &task.MissionID, &task.ParentPlanID, &depsStr, &task.Title, &task.Status, &task.AssignedAgentID)
 
 	if err != nil {
 		return nil, err
 	}
 
 	_ = json.Unmarshal([]byte(depsStr), &task.Dependencies)
-
-	lockedUntil := time.Now().Add(5 * time.Minute)
-	_, err = tx.Exec(ctx, "UPDATE swarm_tasks SET assigned_agent_id = $1, locked_until = $2 WHERE id = $3", agentID, lockedUntil, task.ID)
-	if err != nil {
-		return nil, err
-	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err

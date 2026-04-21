@@ -128,34 +128,54 @@ func (m *CloudStateManager) ClaimTask(ctx context.Context, agentID string) (*Tas
 	// Fetch a pending task using SKIP LOCKED
 	var task Task
 	var depsStr string
-	query := `
-		SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
-		FROM swarm_tasks
-		WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-		LIMIT 1 FOR UPDATE SKIP LOCKED
-	`
+	var query string
+	lockedUntil := time.Now().Add(5 * time.Minute)
+
 	if m.dbProvider.IsSQLite() {
 		query = `
-			SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
-			FROM swarm_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
-			LIMIT 1
+			UPDATE swarm_tasks
+			SET assigned_agent_id = $1, locked_until = $2
+			WHERE id = (
+				SELECT t.id
+				FROM swarm_tasks t
+				WHERE t.status = 'PENDING' AND (t.locked_until IS NULL OR t.locked_until < CURRENT_TIMESTAMP)
+				AND NOT EXISTS (
+					SELECT 1 FROM json_each(t.dependencies) as dep
+					JOIN swarm_tasks d ON d.id = dep.value
+					WHERE d.status != 'COMPLETED'
+				)
+				ORDER BY t.created_at ASC
+				LIMIT 1
+			)
+			RETURNING id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
+		`
+	} else {
+		query = `
+			UPDATE swarm_tasks
+			SET assigned_agent_id = $1, locked_until = $2
+			WHERE id = (
+				SELECT t.id
+				FROM swarm_tasks t
+				WHERE t.status = 'PENDING' AND (t.locked_until IS NULL OR t.locked_until < CURRENT_TIMESTAMP)
+				AND NOT EXISTS (
+					SELECT 1 FROM jsonb_array_elements_text(t.dependencies) as dep_id
+					JOIN swarm_tasks d ON d.id::text = dep_id
+					WHERE d.status != 'COMPLETED'
+				)
+				ORDER BY t.created_at ASC
+				FOR UPDATE SKIP LOCKED
+				LIMIT 1
+			)
+			RETURNING id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
 		`
 	}
-	err = tx.QueryRow(ctx, query).Scan(&task.ID, &task.MissionID, &task.ParentPlanID, &depsStr, &task.Title, &task.Status, &task.AssignedAgentID)
+	err = tx.QueryRow(ctx, query, agentID, lockedUntil).Scan(&task.ID, &task.MissionID, &task.ParentPlanID, &depsStr, &task.Title, &task.Status, &task.AssignedAgentID)
 
 	if err != nil {
 		return nil, err
 	}
 
 	_ = json.Unmarshal([]byte(depsStr), &task.Dependencies)
-
-	// Mark as locked
-	lockedUntil := time.Now().Add(5 * time.Minute)
-	_, err = tx.Exec(ctx, "UPDATE swarm_tasks SET assigned_agent_id = $1, locked_until = $2 WHERE id = $3", agentID, lockedUntil, task.ID)
-	if err != nil {
-		return nil, err
-	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
