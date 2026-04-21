@@ -136,7 +136,7 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 		SELECT st.id, st.status
 		FROM shared_tasks st
 		WHERE st.status = 'PENDING'
-		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 	`
 	rows, err := tm.db.Query(ctx, query)
 	if err != nil {
@@ -318,7 +318,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1
 		`
@@ -329,7 +329,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1 FOR UPDATE SKIP LOCKED
 		`
@@ -648,7 +648,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 			SELECT st.id, st.organization_id, st.mission_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
@@ -659,7 +659,7 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 			SELECT st.id, st.organization_id, st.mission_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
@@ -723,7 +723,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT $2
 		`
@@ -790,7 +790,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				SELECT st.id
 				FROM shared_tasks st
 				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 				ORDER BY st.priority ASC, st.created_at ASC
 				LIMIT $2 FOR UPDATE SKIP LOCKED
 		`
