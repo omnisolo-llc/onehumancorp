@@ -350,8 +350,7 @@ func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, action, status strin
 
     // Also dispatch to internal transport fallback memory if active
     if cn.meshTransport != nil {
-        payloadBytes, _ := json.Marshal(payload)
-        _ = cn.meshTransport.PublishTeammateMeshEvent(context.Background(), "teammate_mesh", agentID, action, status, payloadBytes)
+        _ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "teammate_mesh", data)
     }
 
     // Publish to the Centrifuge redis pubsub backend
