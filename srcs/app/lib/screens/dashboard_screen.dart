@@ -10,6 +10,7 @@ import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
+import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
@@ -174,6 +175,11 @@ class _DashboardContent extends StatelessWidget {
         const SwarmObservabilityWidget(),
         const SizedBox(height: 16),
         const HybridObservabilityWidget(),
+        const SizedBox(height: 16),
+        Container(
+          key: const ValueKey('hybrid_telemetry'),
+          child: const HybridTelemetryWidget(),
+        ),
         const SizedBox(height: 16),
         SizedBox(
           height: 350,
