@@ -1,18 +1,10 @@
-// Package agentgrpc implements the gRPC AgentService for the builtin agent
-// using google.golang.org/adk for agent orchestration.
+// Package agentgrpc provides the gRPC client for connecting to the builtin
+// agent service (the standalone Rust ohc-builtin-agent binary).
 //
 // Architecture:
 //
-//	gRPC stream ──► AgentServiceServer
-//	                  │
-//	                  ├─► adk runner.Runner
-//	                  │     └─► llmagent.New (adk loop)
-//	                  │           ├─► adkModelAdapter  ──► Anthropic / OpenAI / Ollama
-//	                  │           └─► tool.Toolset(s)
-//	                  │                 ├─► builtin functiontool wrappers  (Bash, Grep…)
-//	                  │                 └─► mcptoolset.New  (one per MCPServerConfig)
-//	                  │
-//	                  └─► DispatchToSubAgent
-//	                        ├─ in-process goroutine + channel (no sub_agent_address)
-//	                        └─ remote gRPC dial               (sub_agent_address set)
+//	Go server ──► agentgrpc.Client ──► gRPC stream ──► Rust ohc-builtin-agent
+//
+// The Client connects to the Rust agent binary running at OHC_AGENT_ADDRESS
+// (default: 127.0.0.1:50051) and dispatches tasks via the AgentService proto.
 package agentgrpc
