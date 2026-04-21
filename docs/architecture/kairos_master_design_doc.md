@@ -52,4 +52,17 @@ graph TD
     class A1,A2,M,T,AD,V premium;
 ```
 
+### Aesthetic Core
+This architectural consolidation fully conforms to the **Visual Excellence Mandate**. Any downstream UI interpreting this architecture MUST apply:
+
+```html
+<style>
+body {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+</style>
+```
+
 </div>
