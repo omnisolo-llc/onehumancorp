@@ -9,6 +9,7 @@ import (
 	"time"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
@@ -81,7 +82,11 @@ func TestPublishViaGRPC(t *testing.T) {
 	defer hub.Close()
 	hub.RegisterAgent(Agent{ID: "a1", Name: "A1", Role: "PM", OrganizationID: "org-1"})
 	hub.RegisterAgent(Agent{ID: "a2", Name: "A2", Role: "SWE", OrganizationID: "org-1"})
-	srv := NewHubServiceServer(hub, nil)
+
+	// Create mock mesh transport for testing mesh events
+	provider := db.NewTestProvider(t)
+	mockMesh := NewMemoryMeshTransport(provider)
+	srv := NewHubServiceServer(hub, mockMesh)
 
 	req := pb.PublishMessageRequest_builder{
 		Message: pb.Message_builder{
@@ -105,6 +110,27 @@ func TestPublishViaGRPC(t *testing.T) {
 	inbox := hub.Inbox("a2")
 	if len(inbox) != 1 || inbox[0].Content != "Do it" {
 		t.Errorf("message not published to inbox correctly: %+v", inbox)
+	}
+
+	// Test mesh event publishing
+	meshReq := pb.PublishMessageRequest_builder{
+		Message: pb.Message_builder{
+			Id:             proto.String("msg-2"),
+			FromAgent:      proto.String("a1"),
+			ToAgent:        proto.String("a2"),
+			Type:           proto.String("mesh_event"),
+			Content:        proto.String("test-event-data"),
+			MeetingId:      proto.String("test-topic"),
+			OccurredAtUnix: proto.Int64(time.Now().Unix()),
+		}.Build(),
+	}.Build()
+
+	res, err = srv.PublishMeshEvent(context.Background(), meshReq)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !res.GetSuccess() {
+		t.Errorf("expected success to be true")
 	}
 }
 

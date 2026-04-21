@@ -221,4 +221,22 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 			t.Fatal("timeout waiting for mesh event")
 		}
 	})
+
+	t.Run("PublishSubscribe", func(t *testing.T) {
+		subCtx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		sub, err := mt.Subscribe(subCtx, "events")
+		require.NoError(t, err)
+
+		err = mt.Publish("events", []byte("data"))
+		require.NoError(t, err)
+
+		select {
+		case payload := <-sub:
+			assert.Equal(t, []byte("data"), payload)
+		case <-time.After(1 * time.Second):
+			t.Fatal("timeout waiting for publish event")
+		}
+	})
 }

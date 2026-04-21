@@ -1426,8 +1426,24 @@ func (s *HubServiceServer) Publish(ctx context.Context, req *pb.PublishMessageRe
 		MeetingID:  msgReq.GetMeetingId(),
 		OccurredAt: time.Unix(msgReq.GetOccurredAtUnix(), 0),
 	}
+
 	if err := s.hub.Publish(msg); err != nil {
 		return nil, status.Errorf(codes.Internal, "publish failed: %v", err)
+	}
+	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
+}
+
+func (s *HubServiceServer) PublishMeshEvent(ctx context.Context, req *pb.PublishMessageRequest) (*pb.PublishMessageResponse, error) {
+	if s.mesh == nil {
+		return nil, status.Errorf(codes.Internal, "mesh transport not available")
+	}
+
+	msgReq := req.GetMessage()
+	topic := msgReq.GetMeetingId() // Use MeetingID as the topic
+	payload := []byte(msgReq.GetContent())
+
+	if err := s.mesh.Publish(topic, payload); err != nil {
+		return nil, status.Errorf(codes.Internal, "mesh publish failed: %v", err)
 	}
 	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
 }

@@ -287,6 +287,32 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 	return ch, nil
 }
 
+func (rm *RedisMeshTransport) Publish(topic string, data []byte) error {
+	ctx := context.Background()
+	cmd := rm.client.B().Publish().Channel("mesh:topics:" + topic).Message(string(data)).Build()
+	return meshWithRetry(ctx, 3, func() error {
+		return rm.client.Do(ctx, cmd).Error()
+	})
+}
+
+func (rm *RedisMeshTransport) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
+	ch := make(chan []byte, 100)
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:topics:"+topic).Build(), func(msg rueidis.PubSubMessage) {
+			select {
+			case ch <- []byte(msg.Message):
+			default:
+				slog.Warn("RedisMeshTransport.Subscribe channel full, dropping message")
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisMeshTransport.Subscribe error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
 func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
@@ -512,6 +538,8 @@ type MeshTransport interface {
 	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
 	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
 	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
+	Publish(topic string, data []byte) error
+	Subscribe(ctx context.Context, topic string) (<-chan []byte, error)
 }
 
 const numShards = 16
@@ -668,6 +696,14 @@ func (lm *MemoryMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task,
 	}()
 
 	return ch, nil
+}
+
+func (lm *MemoryMeshTransport) Publish(topic string, data []byte) error {
+	return lm.BroadcastMeshEvent(context.Background(), "topics:"+topic, data)
+}
+
+func (lm *MemoryMeshTransport) Subscribe(ctx context.Context, topic string) (<-chan []byte, error) {
+	return lm.SubscribeMeshEvents(ctx, "topics:"+topic)
 }
 
 func (lm *MemoryMeshTransport) run(shardIdx int) {
