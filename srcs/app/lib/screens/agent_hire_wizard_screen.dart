@@ -54,15 +54,12 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
       if (api == null) return;
 
       final providers = await api.listAgentProviders();
-      final rolesSet = <String>{};
-      for (final p in providers) {
-        rolesSet.addAll(p.supportedRoles);
-      }
+      final roles = await api.listOrganizationRoles();
 
       if (mounted) {
         setState(() {
           _providers = providers;
-          _roles = rolesSet.toList()..sort();
+          _roles = roles;
           if (_providers.isNotEmpty) {
             _selectedProvider = _providers.first.type;
           }
@@ -220,12 +217,12 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 1 — Select Agent Role',
+                  'Step 1 — Select Agent Role (independent of agent type)',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Choose the primary capability profile for this new agent.',
+                  'Choose the role first; type/provider is selected separately in the next step.',
                 ),
                 const SizedBox(height: 24),
                 Wrap(
@@ -260,7 +257,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 2 — Choose AI Provider',
+                  'Step 2 — Choose Agent Type / Provider',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),

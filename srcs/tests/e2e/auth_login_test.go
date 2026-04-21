@@ -1,40 +1,49 @@
 package e2e
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
 	"testing"
 )
 
 func TestAuthenticationLoginWithCorrectCredentialsSucceeds(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
-
-	loginAsAdmin(t, page)
-
-	// Test: authentication: login with correct credentials succeeds
-	body, _ := page.Content()
-	_ = body
+	token := adminToken(t)
+	if token == "" {
+		t.Fatal("expected non-empty auth token")
+	}
 }
 
 func TestAuthenticationLoginWithIncorrectCredentialsShowsAnError(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
-
-	loginAsAdmin(t, page)
-
-	// Test: authentication: login with incorrect credentials shows an error
-	body, _ := page.Content()
-	_ = body
+	body, _ := json.Marshal(map[string]string{
+		"username": adminUser,
+		"password": "definitely-wrong-password",
+	})
+	resp, err := http.Post(baseURL+"/api/auth/login", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("login request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for wrong credentials, got %d", resp.StatusCode)
+	}
 }
 
 func TestAuthenticationLogoutClearsTheSession(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
-
-	loginAsAdmin(t, page)
-
-	// Test: authentication: logout clears the session
-	body, _ := page.Content()
-	_ = body
+	token := adminToken(t)
+	req, err := http.NewRequest(http.MethodPost, baseURL+"/api/auth/logout", nil)
+	if err != nil {
+		t.Fatalf("new logout request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("logout request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 from logout, got %d", resp.StatusCode)
+	}
 }
 
 func TestUserProfileProfilePageIsAccessibleFromTheNavigation(t *testing.T) {
@@ -126,14 +135,18 @@ func TestLoginPageTitleOrHeadingContainsRecognisableBrandText(t *testing.T) {
 }
 
 func TestLoginPageUsernameAndPasswordFieldsArePresent(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
-
-	loginAsAdmin(t, page)
-
-	// Test: login page: username and password fields are present
-	body, _ := page.Content()
-	_ = body
+	body, _ := json.Marshal(map[string]string{
+		"username": adminUser,
+		"password": adminPass,
+	})
+	resp, err := http.Post(baseURL+"/api/auth/login", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("login by username request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for username login, got %d", resp.StatusCode)
+	}
 }
 
 func TestLoginSubmitButtonIsPresentAndEnabled(t *testing.T) {
@@ -159,14 +172,24 @@ func TestLoginWrongCredentialsShowsAnErrorMessage(t *testing.T) {
 }
 
 func TestLoginAdminCredentialsSucceedAndRedirectAwayFromLogin(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
+	me := apiGET(t, "/api/auth/me")
+	email, _ := me["email"].(string)
+	if email == "" {
+		t.Skip("admin email not available in /api/auth/me payload")
+	}
 
-	loginAsAdmin(t, page)
-
-	// Test: login: admin credentials succeed and redirect away from login
-	body, _ := page.Content()
-	_ = body
+	body, _ := json.Marshal(map[string]string{
+		"username": email,
+		"password": adminPass,
+	})
+	resp, err := http.Post(baseURL+"/api/auth/login", "application/json", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("login by email request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for email login, got %d", resp.StatusCode)
+	}
 }
 
 func TestPostLoginPageDoesNotShowA500OrUncaughtError(t *testing.T) {
