@@ -73,23 +73,6 @@ class ApiService {
         .toList();
   }
 
-  Future<List<String>> listOrganizationRoles() async {
-    final res = await _client.get(
-      Uri.parse('$baseUrl/api/org'),
-      headers: _headers,
-    );
-    _checkStatus(res);
-    final org = jsonDecode(res.body) as Map<String, dynamic>;
-    final profiles = (org['roleProfiles'] as List<dynamic>? ?? const []);
-    return profiles
-        .map((entry) => entry as Map<String, dynamic>)
-        .map((entry) => (entry['role'] ?? '').toString())
-        .where((role) => role.isNotEmpty)
-        .toSet()
-        .toList()
-      ..sort();
-  }
-
   Future<void> fireAgent(String agentId) async {
     final res = await _client.post(
       Uri.parse('$baseUrl/api/agents/fire'),

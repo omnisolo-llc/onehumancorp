@@ -315,9 +315,6 @@ func (s *Store) Authenticate(username, password string, orgID string) (*User, er
 	if s.repo != nil {
 		u, err := s.repo.GetByUsername(context.Background(), username, orgID)
 		if err != nil {
-			u, err = s.repo.GetByEmail(context.Background(), username, orgID)
-		}
-		if err != nil {
 			return nil, errors.New("invalid credentials")
 		}
 		if !u.Active {
@@ -331,14 +328,8 @@ func (s *Store) Authenticate(username, password string, orgID string) (*User, er
 
 	s.mu.RLock()
 	u, ok := s.byName[tenantKey{orgID, username}]
-	if !ok {
-		u, ok = s.byEmail[tenantKey{orgID, username}]
-	}
 	if !ok && (orgID == "sys" || orgID == "") {
 		u, ok = s.byName[tenantKey{"", username}]
-		if !ok {
-			u, ok = s.byEmail[tenantKey{"", username}]
-		}
 	}
 	if ok && orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
 		ok = false

@@ -267,11 +267,6 @@ const _presetProviders = [
     'models': ['claude-opus-4-5', 'claude-sonnet-4-5', 'claude-haiku-4-5'],
   },
   {
-    'name': 'MiniMax (Anthropic API)',
-    'base_url': 'https://api.minimaxi.com/anthropic/v1',
-    'models': ['MiniMax-M1-80k', 'MiniMax-Text-01'],
-  },
-  {
     'name': 'Ollama (local)',
     'base_url': 'http://localhost:11434/v1',
     'models': ['llama3', 'mistral', 'phi3'],
