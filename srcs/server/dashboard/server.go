@@ -25,7 +25,6 @@ import (
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
 	"github.com/redis/go-redis/v9"
-	"github.com/redis/rueidis"
 
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -42,7 +41,8 @@ import (
 // Has no side effects.
 type Server struct {
 	mu           sync.RWMutex
-	MeshBroker   orchmesh.MeshBroker
+	V2Mesh       orchmesh.TeammateMesh
+	V2MeshHandler *orchmesh.HTTPHandler
 	TeammateMesh *meshapi.TeammateMesh
 	org          domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
@@ -462,7 +462,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		authHandlers:          auth.NewHandlers(store),
 		agentProviderRegistry: agents.DefaultRegistry(),
 		dynamicMCPTools:       append([]MCPTool(nil), defaultMcpTools...),
-		MeshBroker:            nil, // initialized below
 		rateLimitStates:       make(map[string]*RateLimitState),
 		staticDir:             os.Getenv("FRONTEND_STATIC_DIR"),
 		serveUI:               shouldServeUI(),
@@ -488,25 +487,26 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	}
 
 	if mode == "cloud" {
-		client, err := rueidis.NewClient(rueidis.ClientOption{
-			InitAddress: []string{os.Getenv("REDIS_URL")},
-		})
+		opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
 		if err == nil {
-			server.MeshBroker = orchmesh.NewRedisMeshBroker(client)
+			server.V2Mesh = orchmesh.NewRedisMesh(redis.NewClient(opt))
 		} else {
-			server.MeshBroker = orchmesh.NewLocalMeshBroker()
+			server.V2Mesh = orchmesh.NewLocalMesh()
 		}
 
 		// Initialize the new TeammateMesh for Cloud mode
-		opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+		// We already declared opt and err above
 		if err == nil {
 			server.TeammateMesh = meshapi.NewTeammateMesh(redis.NewClient(opt))
 		} else {
 			server.TeammateMesh = meshapi.NewTeammateMesh(nil)
 		}
 	} else {
-		server.MeshBroker = orchmesh.NewLocalMeshBroker()
+		server.V2Mesh = orchmesh.NewLocalMesh()
 		server.TeammateMesh = meshapi.NewTeammateMesh(nil)
+	}
+	if server.V2Mesh != nil {
+		server.V2MeshHandler = orchmesh.NewHTTPHandler(server.V2Mesh)
 	}
 	server.bootstrapInternalDefaultAgent()
 	// Load initial settings.
@@ -647,7 +647,10 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.TeammateMesh.HandlePublish))
 	mux.HandleFunc("/api/mesh/subscribe", auth.RequireRole("system", server.TeammateMesh.HandleSubscribe))
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
-	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
+	if server.V2MeshHandler != nil {
+		mux.Handle("/api/mesh/v2/broadcast", auth.RequireRole("system", server.V2MeshHandler.HandleBroadcast))
+		mux.Handle("/api/mesh/v2/subscribe", auth.RequireRole("system", server.V2MeshHandler.HandleSubscribe))
+	}
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
@@ -982,12 +985,12 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var broker orchmesh.MeshBroker
-	broker = s.MeshBroker
+	var broker orchmesh.TeammateMesh
+	broker = s.V2Mesh
 	if broker == nil {
-		broker = orchmesh.NewLocalMeshBroker()
+		broker = orchmesh.NewLocalMesh()
 	}
-	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
+	err = broker.Publish(r.Context(), req.Channel, payloadBytes)
 
 	_ = s.hub.Publish(orchestration.Message{
 		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -2048,14 +2051,14 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var broker orchmesh.MeshBroker
-	if mode == "cloud" && s.MeshBroker != nil {
-		broker = s.MeshBroker
+	var broker orchmesh.TeammateMesh
+	if mode == "cloud" && s.V2Mesh != nil {
+		broker = s.V2Mesh
 	} else {
-		broker = s.MeshBroker // Already initialized to LocalMeshBroker
+		broker = s.V2Mesh // Already initialized to LocalMesh
 	}
 
-	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
+	err = broker.Publish(r.Context(), req.Channel, payloadBytes)
 
 	// Legacy publish for fallback/other agent systems expecting it via hub until fully migrated
 	_ = s.hub.Publish(orchestration.Message{

@@ -251,3 +251,75 @@ func TestRedisMesh_Presence(t *testing.T) {
 		t.Errorf("Did not find expected agents in active agents list")
 	}
 }
+
+func TestLocalMesh_Latency(t *testing.T) {
+	mesh := NewLocalMesh()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	msgReceived := make(chan time.Time, 1)
+
+	sub, err := mesh.Subscribe(ctx, "latency-topic", func(msg []byte) {
+		msgReceived <- time.Now()
+		wg.Done()
+	})
+	if err != nil {
+		t.Fatalf("Failed to subscribe: %v", err)
+	}
+
+	start := time.Now()
+	err = mesh.Publish(ctx, "latency-topic", []byte("latency-check"))
+	if err != nil {
+		t.Fatalf("Failed to publish: %v", err)
+	}
+
+	wg.Wait()
+	end := <-msgReceived
+
+	latency := end.Sub(start)
+	if latency > 10*time.Millisecond {
+		t.Errorf("Latency exceeded 10ms for LocalMesh: %v", latency)
+	}
+
+	sub.Close()
+}
+
+func TestRedisMesh_Latency(t *testing.T) {
+	mr, mesh := setupRedis(t)
+	defer mr.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	msgReceived := make(chan time.Time, 1)
+
+	sub, err := mesh.Subscribe(ctx, "latency-topic", func(msg []byte) {
+		msgReceived <- time.Now()
+		wg.Done()
+	})
+	if err != nil {
+		t.Fatalf("Failed to subscribe: %v", err)
+	}
+
+	start := time.Now()
+	err = mesh.Publish(ctx, "latency-topic", []byte("latency-check"))
+	if err != nil {
+		t.Fatalf("Failed to publish: %v", err)
+	}
+
+	wg.Wait()
+	end := <-msgReceived
+
+	latency := end.Sub(start)
+	if latency > 50*time.Millisecond { // More relaxed for redis locally
+		t.Errorf("Latency exceeded 50ms for RedisMesh: %v", latency)
+	}
+
+	sub.Close()
+}

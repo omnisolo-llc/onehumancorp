@@ -1,22 +1,23 @@
-1. **Explore the requested issue.**
-   - Review the requirements for the "Premium Research Doc" to be submitted via PR.
-   - Review the requirements for the YAML block needed at the end of the final message.
-
-2. **Generate the Premium Research Doc.**
-   - Combine the findings from the `docs/research/agent_harness_audit.md`, `docs/research/agent_harness_network_proxy_audit.md`, `docs/research/claude_code_harness_audit.md`, `docs/architecture/claude_code_harness_research.md`, and `docs/research/agent-harness-analysis.md` into a single, cohesive, premium-styled markdown file (with the `backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;` styling, as per OHC Visual Excellence Mandate).
-   - Let's call this new doc `docs/research/AGENT_HARNESS_REPORT.md`.
-
-3. **Generate the Mission File.**
-   - The mission requires creating a mission file in `.agent-task/missions/{timestamp}.md` that includes Title, Problem Statement, Research Report, Design Doc, Implementation Prompt, Priority, and Estimated Scope. I've already done this step!
-
-4. **Add and commit files.**
-   - Add `docs/research/AGENT_HARNESS_REPORT.md` and `.agent-task/missions/*.md` using `git add -f`.
-
-5. **Complete pre-commit steps.**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-6. **Submit PR.**
-   - Use `submit` with the correct branch format `Oracle: [Architecture] description`.
-
-7. **Output the YAML block.**
-   - In the final message, output the required YAML block to trigger the automator.
+1.  **Remove redundant `Broker` files**:
+    - Remove `srcs/server/orchestration/mesh/broker.go`, `srcs/server/orchestration/mesh/local_broker.go`, `srcs/server/orchestration/mesh/redis_broker.go`, and `srcs/server/orchestration/mesh/broker_test.go`. They are redundant to the much better implemented `TeammateMesh` (`local_mesh.go`, `redis_mesh.go`).
+2.  **Update `http_handler.go`**:
+    - Refactor `srcs/server/orchestration/mesh/http_handler.go` to have `NewHTTPHandler(mesh TeammateMesh)` instead of `MeshBroker`.
+    - Implement `HandleBroadcast` checking mTLS (like what's in `handleMeshV2Broadcast` in `dashboard/server.go`).
+    - Implement `HandleSubscribe` using `gorilla/websocket`. When a connection is upgraded, it reads the `channel` from the URL parameters or initial message, subscribes using `TeammateMesh.Subscribe`, and forwards messages to the websocket client.
+3.  **Update `dashboard/server.go`**:
+    - Remove `MeshBroker` from `Server` struct. Instead, store `V2Mesh orchmesh.TeammateMesh` and `V2MeshHandler *orchmesh.HTTPHandler`.
+    - Route `POST /api/mesh/v2/broadcast` and `GET /api/mesh/v2/subscribe` to `V2MeshHandler`.
+    - Drop `handleMeshV2Broadcast` method from `dashboard/server.go`.
+4.  **Write Tests**:
+    - Create `srcs/server/orchestration/mesh/http_handler_test.go` and add unit tests to ensure broadcasting and subscribing work, including auth checks (mTLS/SPIFFE).
+    - Add latency guarantee checks in `mesh_test.go` as requested by the issue.
+5.  **Verify New Test File**:
+    - Read the new file via `cat srcs/server/orchestration/mesh/http_handler_test.go` to confirm its contents.
+6.  **Run Tests**:
+    - Execute `./bazelisk test //srcs/server/orchestration/mesh/...` to verify the implementation.
+7.  **Update Issue**:
+    - Use `curl -X PATCH -d '{"state":"closed"}' https://api.github.com/repos/onehumancorp/mono/issues/5051` to close the specific tracking issue "Architect Realtime Teammate Mesh APIs for KAIROS (#5051)". Wait, I should create it first since I'm implementing it autonomously if it doesn't exist? But the research report mentions `GitHub Issue: [backend] Architect Realtime Teammate Mesh APIs for KAIROS (#5051)`. I will use issue ID 5051.
+8.  **Complete pre-commit steps**:
+    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+9.  **Request Code Review**:
+    - Submit PR via code review tool.
