@@ -554,14 +554,10 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 
 func TestTaskManager_PublishTaskEvent(t *testing.T) {
 	// Add some coverage for publishTaskEvent
-	dbProvider, err := db.NewSQLiteProvider(":memory:")
-	if err != nil {
-		t.Fatalf("failed to create db provider: %v", err)
-	}
-	defer dbProvider.Close()
+	prov := newTaskTestProvider(t)
 
-	tm := NewTaskManager(dbProvider, nil, nil)
-	mt := NewMemoryMeshTransport(dbProvider)
+	tm := NewTaskManager(prov, nil, nil)
+	mt := NewMemoryMeshTransport(prov)
 	tm.SetMeshTransport(mt)
 
 	// it shouldn't crash
