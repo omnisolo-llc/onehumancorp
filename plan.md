@@ -1,7 +1,50 @@
-1. Add `Task` and `TaskDependency` models: Provide the explicit string contents and the exact python script commands to append `Task` and `TaskDependency` structs into `srcs/server/orchestration/models.go` as described. Verify the added contents with `cat`.
-2. Create Database Migrations: Create a SQL migration script `srcs/server/db/migrations/060_shared_task_list.sql` using a heredoc block for PostgreSQL and SQLite to create `shared_task_list_tasks` and `shared_task_list_dependencies` tables. Verify with `cat`.
-3. Implement Repository Layer: Create `srcs/server/orchestration/shared_task_list_repo.go` with functions to `CreateTask`, `UpdateTaskStatus`, and `GetNextAvailableTask` handling SQLite and Postgres specific logic. The string contents are injected with a bash heredoc and then verified with `cat`.
-4. Write Unit Tests: Write a test file `srcs/server/orchestration/shared_task_list_repo_test.go` checking all functions utilizing the DB provider. Update `srcs/server/orchestration/BUILD.bazel` to include both the new `shared_task_list_repo.go` and `shared_task_list_repo_test.go` and verify the file was updated via `cat`. Run `bazelisk test //srcs/server/orchestration/...` to verify test passes locally.
-5. Repository Tests: Run `bazelisk build //...` and `bazelisk test //...` to ensure all rules are unbroken.
-6. Pre-commit Checks: Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-7. Submit PR: Submit the PR and include `issue_id: 5841`.
+1. **Understand the problem**:
+   - The issue asks to "Implement health-check probes for hybrid-mode switching".
+   - Telemetry for local-to-cloud mission sync must be added.
+   - Probes must correctly categorize "Cloud Inframode" vs "Local Workmode" health.
+
+2. **Analysis of existing code**:
+   - `srcs/server/dashboard/server.go` contains `handleHybridHealthCheck` which checks `isStandalone`.
+   - Wait, `mode` is currently "standalone" or "cloud" or "local".
+   - Wait, the issue says: "Ensure probes correctly categorize 'Cloud Inframode' vs 'Local Workmode' health."
+   - So we should probably update the `mode` return values.
+   - For standalone (i.e. `isStandalone == true`), the mode should be "Local Workmode".
+   - For cloud (i.e. `!isStandalone`), the mode should be "Cloud Inframode".
+
+   - Let's check `handleHybridHealthCheck` again:
+     ```go
+		mode := "Local Workmode"
+		isStandalone := true
+		if os.Getenv("DATABASE_URL") != "" {
+			mode = "Cloud Inframode"
+			isStandalone = false
+		}
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			isStandalone = true
+			mode = "Local Workmode"
+		}
+     ```
+
+   - Additionally, the issue mentions: "Add telemetry for local-to-cloud mission sync."
+     - Let's look at `telemetry.go`. I should add a telemetry call in `handleHybridHealthCheck` to record that the probe was accessed, or maybe it means telemetry for "local-to-cloud mission sync" in general?
+     - Actually, "health-check probes ... specifically for hybrid-mode switching and local-to-cloud mission sync".
+     - We already have `RecordSyncEscalation`, `RecordSyncLatency`, `RecordSyncPayloadSize` etc.
+     - Is there a telemetry call for `HybridHealthCheck`?
+     - Let's create `RecordHybridHealthCheck(ctx context.Context, mode string, status string)` in `telemetry.go` and call it from `handleHybridHealthCheck`.
+
+   - Wait, `telemetry.go` has `AgentExecutionTracesTotal` etc.
+     - Let's create `HybridHealthCheckTotal` in `telemetry.go`.
+     - In `Init()`:
+       ```go
+       HybridHealthCheckTotal, _ = meter.Int64Counter("ohc_hybrid_health_check_total",
+           metric.WithDescription("Total number of hybrid health checks"),
+       )
+       ```
+     - Wait, let's just create a simple wrapper or look at how other telemetry works.
+
+3. **Plan**:
+   - Edit `srcs/server/dashboard/server.go`: Update `mode` string to "Cloud Inframode" and "Local Workmode" in `handleHybridHealthCheck`.
+   - Also emit telemetry for this probe (e.g. `telemetry.RecordHybridHealthCheck(ctx, mode, status)`).
+   - Edit `srcs/server/telemetry/telemetry.go`: Add `RecordHybridHealthCheck` and `HybridHealthCheckTotal`.
+   - Update tests `TestHandleHybridHealthCheck_Standalone` and `TestHandleHybridHealthCheck_Cloud` in `srcs/server/dashboard/server_onboarding_test.go` to assert "Local Workmode" and "Cloud Inframode".
+   - Wait, are there other places? Let's check.

@@ -24,6 +24,9 @@ var (
 	IdentityVerificationSuccessTotal metric.Int64Counter
 	IdentityVerificationFailureTotal metric.Int64Counter
 	SyncConflictsResolvedTotal       metric.Int64Counter
+	HybridHealthCheckTotal     metric.Int64Counter
+	MissionSyncBacklog         metric.Int64Histogram
+	MissionSyncStuck           metric.Int64Histogram
 	OmniContextBytesRouted           metric.Int64Counter
 	RagEscalationCount               metric.Int64Counter
 
@@ -291,6 +294,24 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	var err error
+			MissionSyncBacklog, err = m.Int64Histogram("ohc_mission_sync_backlog",
+		metric.WithDescription("Pending local-to-cloud mission syncs"),
+	)
+	if err != nil {
+		return err
+	}
+	MissionSyncStuck, err = m.Int64Histogram("ohc_mission_sync_stuck",
+		metric.WithDescription("Stuck local-to-cloud mission syncs"),
+	)
+	if err != nil {
+		return err
+	}
+	HybridHealthCheckTotal, err = m.Int64Counter("ohc_hybrid_health_check_total",
+		metric.WithDescription("Total number of hybrid health checks"),
+	)
+	if err != nil {
+		return err
+	}
 	AutoDreamRecordsSyncedTotal, err = m.Int64Counter("autodream_records_synced_total",
 		metric.WithDescription("Total number of autodream records successfully synced"),
 	)
@@ -1996,3 +2017,28 @@ func RecordBubblewrapViolation(ctx context.Context) {
 	}
 }
 // added for tracking
+
+// RecordHybridHealthCheck increments the global counter for hybrid health checks.
+func RecordHybridHealthCheck(ctx context.Context, mode string, status string) {
+	if HybridHealthCheckTotal == nil {
+		return
+	}
+	HybridHealthCheckTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("mode", mode),
+		attribute.String("status", status),
+	))
+}
+
+// RecordMissionSyncTelemetry logs the current state of local-to-cloud mission sync.
+func RecordMissionSyncTelemetry(ctx context.Context, mode string, backlog int, stuck int) {
+	if MissionSyncBacklog != nil {
+		MissionSyncBacklog.Record(ctx, int64(backlog), metric.WithAttributes(
+			attribute.String("mode", mode),
+		))
+	}
+	if MissionSyncStuck != nil {
+		MissionSyncStuck.Record(ctx, int64(stuck), metric.WithAttributes(
+			attribute.String("mode", mode),
+		))
+	}
+}

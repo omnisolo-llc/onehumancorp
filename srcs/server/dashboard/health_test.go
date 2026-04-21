@@ -78,7 +78,13 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 		t.Errorf("Expected status to be healthy or ok, got %s", resp["status"])
 	}
 
+
+	if resp["mode"] != "Local Workmode" {
+		t.Errorf("Expected mode Local Workmode, got %v", resp["mode"])
+	}
+
 	checklist, ok := resp["checklist"].([]interface{})
+
 	if !ok {
 		t.Fatalf("Expected checklist in response, got %v", resp)
 	}

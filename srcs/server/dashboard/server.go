@@ -484,7 +484,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		mode = "standalone"
+		mode = "Local Workmode"
 	}
 
 	if mode == "cloud" {
@@ -771,15 +771,15 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	mode := "local"
+	mode := "Local Workmode"
 	isStandalone := true
 	if os.Getenv("DATABASE_URL") != "" {
-		mode = "cloud"
+		mode = "Cloud Inframode"
 		isStandalone = false
 	}
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		isStandalone = true
-		mode = "standalone"
+		mode = "Local Workmode"
 	}
 
 	var checklist []map[string]interface{}
@@ -827,6 +827,7 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		"checklist": checklist,
 	}
 
+		telemetry.RecordHybridHealthCheck(ctx, mode, status)
 	writeJSON(w, resp)
 }
 
@@ -927,7 +928,7 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { // added for ohc_mesh_broadcast_total metric instrumentation
 	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		mode = "standalone"
+		mode = "Local Workmode"
 	}
 	telemetry.RecordMeshBroadcast(r.Context(), mode)
 
@@ -2008,7 +2009,7 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) { // added
 func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		mode = "standalone"
+		mode = "Local Workmode"
 	}
 	telemetry.RecordMeshBroadcast(r.Context(), mode)
 

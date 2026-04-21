@@ -28,8 +28,8 @@ func TestHandleHybridHealthCheck_Standalone(t *testing.T) {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 
-	if resp["mode"] != "standalone" {
-		t.Errorf("Expected mode standalone, got %v", resp["mode"])
+	if resp["mode"] != "Local Workmode" {
+		t.Errorf("Expected mode Local Workmode, got %v", resp["mode"])
 	}
 
 	checklist := resp["checklist"].([]interface{})
@@ -70,8 +70,8 @@ func TestHandleHybridHealthCheck_Cloud(t *testing.T) {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 
-	if resp["mode"] != "cloud" {
-		t.Errorf("Expected mode cloud, got %v", resp["mode"])
+	if resp["mode"] != "Cloud Inframode" {
+		t.Errorf("Expected mode Cloud Inframode, got %v", resp["mode"])
 	}
 
 	checklist := resp["checklist"].([]interface{})
