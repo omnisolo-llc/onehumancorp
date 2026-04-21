@@ -26,8 +26,7 @@ func startAuthTestServer(t *testing.T, authCfg agentgrpc.AuthConfig) (*grpc.Clie
 		grpc.ChainUnaryInterceptor(authCfg.UnaryInterceptor()),
 		grpc.ChainStreamInterceptor(authCfg.StreamInterceptor()),
 	)
-	svc := agentgrpc.NewAgentServiceServer("auth-test", agentgrpc.AgentConfig{}, nil)
-	agentservicepb.RegisterAgentServiceServer(srv, svc)
+	agentservicepb.RegisterAgentServiceServer(srv, &agentservicepb.UnimplementedAgentServiceServer{})
 
 	go func() { _ = srv.Serve(lis) }()
 

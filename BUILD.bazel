@@ -26,6 +26,7 @@ exports_files([
 
 # gazelle:exclude srcs/proto
 # gazelle:resolve go github.com/onehumancorp/mono/srcs/proto //srcs/proto:hub_go_proto
+# gazelle:resolve go github.com/onehumancorp/mono/srcs/proto/agentservice //srcs/proto/agentservice
 gazelle(name = "gazelle")
 
 config_setting(
