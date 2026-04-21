@@ -106,6 +106,7 @@ go_test(
     srcs = [
         "database_test.go",
         "provider_test.go",
+        "swarm_tasks_migration_test.go",
     ],
     embed = [":db"],
     deps = ["@org_modernc_sqlite//:sqlite"],
