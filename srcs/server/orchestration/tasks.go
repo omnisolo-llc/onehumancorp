@@ -2,9 +2,7 @@ package orchestration
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,14 +16,22 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
+// generateID returns a new random UUID string, used throughout the orchestration package.
+func generateID() string {
+	return uuid.New().String()
+}
+
 // SharedTask represents a shared task distributed across agents.
-type SharedTask struct {
+// SharedTask struct represents a task
+type SharedTask struct { // issue_id: 3980
 	ID              string     `json:"id"`
 	OrganizationID  string     `json:"organization_id"`
+	MissionID       string     `json:"mission_id"`
 	ParentPlanID    string     `json:"parent_plan_id"`
 	Dependencies    []string   `json:"dependencies"`
 	Title           string     `json:"title"`
@@ -130,7 +136,7 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 		SELECT st.id, st.status
 		FROM shared_tasks st
 		WHERE st.status = 'PENDING'
-		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+		AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 	`
 	rows, err := tm.db.Query(ctx, query)
 	if err != nil {
@@ -141,7 +147,14 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	for rows.Next() {
 		var id, status string
 		if err := rows.Scan(&id, &status); err == nil {
-			if tm.hub != nil {
+			if tm.mesh != nil {
+				_ = tm.mesh.BroadcastTask(ctx, Task{
+					AgentID: "",
+					Action:  "READY",
+					Status:  "PENDING",
+					TaskID:  id,
+				})
+			} else if tm.hub != nil {
 				// Broadcast that task is now ready
 				go func(taskID string) {
 					tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
@@ -166,19 +179,20 @@ func (tm *TaskManager) SetMeshTransport(mt MeshTransport) {
 
 // CreateTask creates a new shared task.
 // CreateTask creates a new pending task.
-func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, title, description, priority string) (*SharedTask, error) {
-	return tm.CreateTaskWithPlan(ctx, organizationID, "", nil, title, description, priority)
+func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, missionID, title, description, priority string) (*SharedTask, error) {
+	return tm.CreateTaskWithPlan(ctx, organizationID, missionID, "", nil, title, description, priority)
 }
 
 // CreateTaskWithPlan creates a new pending task with plan association.
-func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
-	// When creating a new task, we don't have its ID yet to check for a cycle
-	// The real risk of circular dependencies is when updating dependencies.
-	// But we can verify that the new task doesn't add a dependency on itself, which is trivially true here.
+func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, missionID string, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
+	id := uuid.New().String()
+
+	// Verify dependencies don't form a cycle.
+	if err := tm.CheckCircularDependency(ctx, id, dependencies); err != nil {
+		return nil, err
+	}
 
 	var task SharedTask
-
-	id := generateID()
 
 	payloadMap := map[string]interface{}{
 		"description": description,
@@ -204,20 +218,20 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
-			RETURNING id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	}
 
-	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID).Scan(
-		&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
+	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID, missionID).Scan(
+		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
 	)
 
 	if err != nil {
@@ -227,12 +241,16 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	task.Description = description
 	task.Priority = priority
 
-	for _, dep := range dependencies {
-		_, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, dep)
-		if err != nil {
-			return nil, fmt.Errorf("failed to insert dependency: %w", err)
-		}
-		task.Dependencies = append(task.Dependencies, dep)
+	depsJSON, _ := json.Marshal(dependencies)
+	if dependencies == nil {
+		depsJSON = []byte("[]")
+	}
+	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET dependencies = $1 WHERE id = $2", string(depsJSON), task.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update dependencies: %w", err)
+	}
+	if dependencies != nil {
+		task.Dependencies = dependencies
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -243,7 +261,14 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	telemetry.RecordSwarmTaskQueueLength(ctx, 1)
 
 	// Broadcast task creation
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: task.AssignedAgentID,
+			Action:  "CREATE",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":         task.ID,
@@ -328,7 +353,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1
 		`
@@ -339,7 +364,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT 1 FOR UPDATE SKIP LOCKED
 		`
@@ -415,7 +440,14 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	task.AssignedAgentID = agentID
 
 	// Broadcast task claim
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "CLAIM",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  task.ID,
@@ -482,7 +514,14 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "REVIEW")
 
 	// Broadcast task review
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "REVIEW",
+			Status:  "REVIEW",
+			TaskID:  taskID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  taskID,
@@ -565,12 +604,30 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				logLine = "Task " + taskID + " completed successfully."
 			}
 			logs := []string{logLine}
+
+			// Enqueue task for AutoDream consolidation
+			query := "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES ($1, $2, $3, $4, $5, 'task_completion')"
+			if tm.db.IsSQLite() {
+				query = "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, 'task_completion')"
+			}
+			_, err := tm.db.Exec(context.Background(), query, uuid.New().String(), logLine, taskID, claims.OrganizationID, agentID)
+			if err != nil {
+				// Ignore error for now to match background task semantics
+			}
+
 			_ = tm.autodream.Consolidate(context.Background(), taskID, logs)
 		}()
 	}
 
 	// Broadcast task completion
-	if tm.hub != nil {
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: agentID,
+			Action:  "COMPLETE",
+			Status:  "COMPLETED",
+			TaskID:  taskID,
+		})
+	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
 				"task_id":  taskID,
@@ -663,10 +720,10 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 
 	if tm.db.IsSQLite() {
 		query = `
-			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, st.mission_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
@@ -674,10 +731,10 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		}
 	} else {
 		query = `
-			SELECT st.id, st.organization_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
+			SELECT st.id, st.organization_id, st.mission_id, COALESCE(st.parent_plan_id, ''), st.title, st.payload, st.status, st.priority, st.locked_until, st.created_at, st.updated_at
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 		`
 		if limit > 0 {
@@ -741,7 +798,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 			SELECT st.id
 			FROM shared_tasks st
 			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+			AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT $2
 		`
@@ -777,13 +834,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 			// Fetch updated task data
 			readQuery := `
-				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+				SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
 				FROM shared_tasks
 				WHERE id = $1
 			`
 			task := &SharedTask{}
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 			)
 
 			if errQuery != nil {
@@ -808,7 +865,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				SELECT st.id
 				FROM shared_tasks st
 				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+				AND (SELECT COUNT(*) FROM task_dependencies td INNER JOIN shared_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED' AND d.status != 'DONE') = 0
 				ORDER BY st.priority ASC, st.created_at ASC
 				LIMIT $2 FOR UPDATE SKIP LOCKED
 		`
@@ -841,13 +898,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 			// Fetch updated task data
 			readQuery := `
-				SELECT id, organization_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
+				SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, locked_until, created_at, updated_at
 				FROM shared_tasks
 				WHERE id = $1
 			`
 			task := &SharedTask{}
 			errQuery := tx.QueryRow(ctx, readQuery, id).Scan(
-				&task.ID, &task.OrganizationID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+				&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 			)
 
 			if errQuery != nil {
@@ -905,7 +962,14 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	for _, task := range claimedTasks {
 		// Broadcast task claim
-		if tm.hub != nil {
+		if tm.mesh != nil {
+			_ = tm.mesh.BroadcastTask(ctx, Task{
+				AgentID: agentID,
+				Action:  "CLAIM",
+				Status:  task.Status,
+				TaskID:  task.ID,
+			})
+		} else if tm.hub != nil {
 			go func(t *SharedTask) {
 				payload := map[string]interface{}{
 					"task_id":  t.ID,
@@ -928,7 +992,7 @@ func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentR
 		return err
 	}
 	job := &queue.Job{
-		ID:           generateID(),
+		ID:           uuid.New().String(),
 		ParentTaskID: parentTaskID,
 		AgentRole:    agentRole,
 		Payload:      string(payloadBytes),
@@ -937,11 +1001,218 @@ func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentR
 	return tm.taskQueue.Enqueue(ctx, job)
 }
 
-// generateID generates a pseudo-uuid for SQLite compatibility.
-func generateID() string {
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b[0:4]) + "-" + hex.EncodeToString(b[4:6]) + "-" + hex.EncodeToString(b[6:8]) + "-" + hex.EncodeToString(b[8:10]) + "-" + hex.EncodeToString(b[10:])
+// GetTask retrieves a task and its dependencies.
+func (tm *TaskManager) GetTask(ctx context.Context, taskID string) (*SharedTask, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized: missing claims")
+	}
+
+	query := `
+		SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at
+		FROM shared_tasks
+		WHERE id = $1 AND organization_id = $2
+	`
+	task := &SharedTask{}
+	err := tm.db.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
+		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.AssignedAgentID, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get task: %w", err)
+	}
+
+	// Fetch dependencies
+	depQuery := `SELECT depends_on_task_id FROM task_dependencies WHERE task_id = $1`
+	rows, err := tm.db.Query(ctx, depQuery, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get dependencies: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var depID string
+		if err := rows.Scan(&depID); err == nil {
+			task.Dependencies = append(task.Dependencies, depID)
+		}
+	}
+
+	// Reconstruct Description from JSON payload
+	var payloadMap map[string]interface{}
+	if err := json.Unmarshal([]byte(task.Payload), &payloadMap); err == nil {
+		if desc, ok := payloadMap["description"].(string); ok {
+			task.Description = desc
+		}
+	}
+
+	return task, nil
+}
+
+// UpdateTask updates an existing task.
+func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return errors.New("unauthorized: missing claims")
+	}
+
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
+	}
+
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Verify existence and ownership
+	var existingOrgID string
+	err = tx.QueryRow(ctx, "SELECT organization_id FROM shared_tasks WHERE id = $1", task.ID).Scan(&existingOrgID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("task not found")
+		}
+		return fmt.Errorf("failed to verify task: %w", err)
+	}
+
+	if existingOrgID != claims.OrganizationID {
+		return errors.New("unauthorized: task does not belong to your organization")
+	}
+
+	// Check circular dependency if dependencies changed
+	if err := tm.CheckCircularDependency(ctx, task.ID, task.Dependencies); err != nil {
+		return err
+	}
+
+	// Update payload with new description
+	payloadMap := map[string]interface{}{}
+	if task.Payload != "" {
+		_ = json.Unmarshal([]byte(task.Payload), &payloadMap)
+	}
+	payloadMap["description"] = task.Description
+	payloadBytes, _ := json.Marshal(payloadMap)
+	task.Payload = string(payloadBytes)
+
+	query := `
+		UPDATE shared_tasks
+		SET title = $1, status = $2, priority = $3, agent_id = $4, payload = $5, locked_until = $6, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $7
+	`
+	_, err = tx.Exec(ctx, query, task.Title, task.Status, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)
+	if err != nil {
+		return fmt.Errorf("failed to update task: %w", err)
+	}
+
+	// Update dependencies
+	_, err = tx.Exec(ctx, "DELETE FROM task_dependencies WHERE task_id = $1", task.ID)
+	if err != nil {
+		return fmt.Errorf("failed to clear dependencies: %w", err)
+	}
+
+	for _, dep := range task.Dependencies {
+		_, err = tx.Exec(ctx, "INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2)", task.ID, dep)
+		if err != nil {
+			return fmt.Errorf("failed to update dependency: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Broadcast update
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: task.AssignedAgentID,
+			Action:  "UPDATE",
+			Status:  task.Status,
+			TaskID:  task.ID,
+		})
+	} else if tm.hub != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id":  task.ID,
+				"action":   "UPDATE",
+				"agent_id": task.AssignedAgentID,
+				"status":   task.Status,
+			}
+			tm.hub.PublishTaskBroadcast(task.ID, payload)
+		}()
+	}
+
+	return nil
+}
+
+// DeleteTask removes a task and its dependencies.
+func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return errors.New("unauthorized: missing claims")
+	}
+
+	if tm.db.IsSQLite() {
+		tm.mu.Lock()
+		defer tm.mu.Unlock()
+	}
+
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Verify existence and ownership
+	var existingOrgID string
+	err = tx.QueryRow(ctx, "SELECT organization_id FROM shared_tasks WHERE id = $1", taskID).Scan(&existingOrgID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil // Already deleted or doesn't exist
+		}
+		return fmt.Errorf("failed to verify task: %w", err)
+	}
+
+	if existingOrgID != claims.OrganizationID {
+		return errors.New("unauthorized: task does not belong to your organization")
+	}
+
+	// Cascading delete is handled by database if foreign keys are configured,
+	// but let's be explicit for compatibility.
+	_, err = tx.Exec(ctx, "DELETE FROM task_dependencies WHERE task_id = $1 OR depends_on_task_id = $1", taskID)
+	if err != nil {
+		return fmt.Errorf("failed to delete task dependencies: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, "DELETE FROM shared_tasks WHERE id = $1", taskID)
+	if err != nil {
+		return fmt.Errorf("failed to delete task: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// Broadcast deletion
+	if tm.mesh != nil {
+		_ = tm.mesh.BroadcastTask(ctx, Task{
+			AgentID: "",
+			Action:  "DELETE",
+			Status:  "",
+			TaskID:  taskID,
+		})
+	} else if tm.hub != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"task_id": taskID,
+				"action":  "DELETE",
+			}
+			tm.hub.PublishTaskBroadcast(taskID, payload)
+		}()
+	}
+
+	return nil
 }
 
 // CheckCircularDependency ensures that the dependencies do not create a cycle.
@@ -983,3 +1254,4 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 
 	return nil
 }
+// added for Sub-Agent Orchestration Queue

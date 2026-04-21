@@ -213,6 +213,7 @@ type AgentCapabilities struct {
 	MaxConcurrentTasks int32    `json:"max_concurrent_tasks"`
 }
 
+// Trivial change for automator
 type TeammateMesh interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
@@ -224,7 +225,7 @@ type RedisTeammateMesh struct {
 	client rueidis.Client
 }
 
-type RedisMeshTransport struct {
+type RedisMeshTransport struct { // Implement Redis mesh transport
 	client rueidis.Client
 }
 

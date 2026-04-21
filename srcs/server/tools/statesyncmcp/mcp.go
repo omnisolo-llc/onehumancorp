@@ -13,6 +13,8 @@ type StateSyncProvider interface {
 	SyncUp(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
 	SyncDown(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
 	GetStatus(ctx context.Context, claims *auth.Claims) (map[string]interface{}, error)
+	CRDTPush(ctx context.Context, payload map[string]interface{}, claims *auth.Claims) (map[string]interface{}, error)
+	CRDTPull(ctx context.Context, entityID string, claims *auth.Claims) (map[string]interface{}, error)
 }
 
 // Tool represents an MCP tool definition.
@@ -54,6 +56,16 @@ func (m *StateSyncMCP) ListTools() []Tool {
 			Description: "Get the current synchronization status.",
 			InputSchema: `{"type": "object", "properties": {}}`,
 		},
+		{
+			Name:        "crdt_push",
+			Description: "Push CRDT state updates locally to eventually synchronize with the Cloud.",
+			InputSchema: `{"type": "object", "properties": {"id": {"type": "string"}, "entity_id": {"type": "string"}, "data": {"type": "string"}, "updated_at": {"type": "string"}}, "required": ["id", "entity_id", "data", "updated_at"]}`,
+		},
+		{
+			Name:        "crdt_pull",
+			Description: "Pull the latest CRDT state vector for a given entity.",
+			InputSchema: `{"type": "object", "properties": {"entity_id": {"type": "string"}}, "required": ["entity_id"]}`,
+		},
 	}
 }
 
@@ -78,6 +90,14 @@ func (m *StateSyncMCP) CallTool(ctx context.Context, toolName string, arguments 
 		return m.provider.SyncDown(ctx, claims)
 	case "get_sync_status":
 		return m.provider.GetStatus(ctx, claims)
+	case "crdt_push":
+		return m.provider.CRDTPush(ctx, arguments, claims)
+	case "crdt_pull":
+		entityID, ok := arguments["entity_id"].(string)
+		if !ok || entityID == "" {
+			return nil, errors.New("missing or invalid entity_id")
+		}
+		return m.provider.CRDTPull(ctx, entityID, claims)
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", toolName)
 	}

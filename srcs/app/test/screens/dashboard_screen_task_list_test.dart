@@ -40,16 +40,16 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
 
-    // Since TaskListScreen is in a scroll view, we might need to scroll
+    // Since TaskListView is in a scroll view, we might need to scroll
     final listFinder = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
-      find.byType(TaskListScreen),
+      find.byType(TaskListView),
       500.0,
       scrollable: listFinder,
       maxScrolls: 50,
     );
 
-    expect(find.byType(TaskListScreen), findsOneWidget);
+    expect(find.byType(TaskListView), findsOneWidget);
 
     // reset view properties
     addTearDown(tester.view.resetPhysicalSize);

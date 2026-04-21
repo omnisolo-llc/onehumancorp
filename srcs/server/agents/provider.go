@@ -60,6 +60,13 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	ProviderTypeBuiltin ProviderType = "builtin"
+
+	// ProviderTypeScout targets the Scout resource and tool integration agent. Best suited for finding resources and integrating tools.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeScout ProviderType = "scout"
 )
 
 // Credentials holds the authentication material for an external agent provider. Providers may use an API key, an OAuth bearer token, or both alongside any additional provider-specific configuration entries.
@@ -96,7 +103,8 @@ type Provider interface {
 
 	// SupportedRoles lists the domain Role constants this provider is
 	// optimised for.  The list is informational; the platform does not
-	// prevent other roles from using the provider.
+	// prevent other roles from using the provider.  Agent type and role
+	// are independent: any provider type may be assigned to any role.
 	SupportedRoles() []string
 
 	// Authenticate validates and stores the supplied credentials.
@@ -437,8 +445,54 @@ func (p *IronClawProvider) GetCredentials() Credentials { return p.load() }
 // Has no side effects.
 func (p *IronClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
-// ── Builtin ───────────────────────────────────────────────────────────────────
+// ── MiniMaxi ──────────────────────────────────────────────────────────────────
 
+// ProviderTypeMiniMaxi targets the MiniMaxi (minimaxi.com) API, which exposes an
+// Anthropic-compatible endpoint at https://api.minimaxi.chat/v1.  Any role that
+// works with the Anthropic Claude provider can be run on MiniMaxi instead.
+const ProviderTypeMiniMaxi ProviderType = "minimaxi"
+
+// MiniMaxiProvider implements Provider for the MiniMaxi (minimaxi.com) cloud API.
+// It uses the Anthropic-compatible text API at https://api.minimaxi.chat/v1 so the
+// same tooling that drives the Claude provider can target MiniMaxi models instead.
+type MiniMaxiProvider struct{ baseProvider }
+
+// Type returns ProviderTypeMiniMaxi.
+func (p *MiniMaxiProvider) Type() ProviderType { return ProviderTypeMiniMaxi }
+
+// Description returns a short description of MiniMaxi.
+func (p *MiniMaxiProvider) Description() string {
+	return "MiniMaxi — cloud AI API with Anthropic-compatible endpoint (api.minimaxi.chat/v1). Can be used for any role (SWE, legal, sales, etc.)."
+}
+
+// SupportedRoles returns the full set of known roles because MiniMaxi can serve any domain.
+func (p *MiniMaxiProvider) SupportedRoles() []string {
+	return []string{
+		"CEO", "PRODUCT_MANAGER", "SOFTWARE_ENGINEER", "ENGINEERING_DIRECTOR",
+		"QA_TESTER", "SECURITY_ENGINEER", "DESIGNER", "MARKETING_MANAGER",
+		"GROWTH_AGENT", "CONTENT_STRATEGIST", "SEO_SPECIALIST", "PAID_MEDIA_MANAGER",
+		"ANALYTICS_ENGINEER", "CFO", "BOOKKEEPER", "TAX_SPECIALIST",
+		"AUDIT_MANAGER", "PAYROLL_MANAGER", "AI_NEWS_COLLECTOR",
+	}
+}
+
+// Authenticate validates and stores MiniMaxi API credentials.
+// An API key starting with "sk-" is required.
+func (p *MiniMaxiProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" {
+		return errors.New("minimaxi provider requires an API key")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials returns the stored credentials.
+func (p *MiniMaxiProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated reports whether a MiniMaxi API key has been stored.
+func (p *MiniMaxiProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// ── Builtin ───────────────────────────────────────────────────────────────────
 // BuiltinProvider implements Provider for the platform's own builtin agent. It requires no
 // external credentials and is always considered authenticated.  When selected, the
 // platform runs the full builtin agent loop (srcs/server/agents/builtin) which supports
@@ -504,3 +558,61 @@ func (p *BuiltinProvider) GetCredentials() Credentials { return Credentials{} }
 // Produces no errors.
 // Has no side effects.
 func (p *BuiltinProvider) IsAuthenticated() bool { return true }
+
+// ── Scout ─────────────────────────────────────────────────────────────────────
+
+// ScoutProvider implements Provider for the Scout resource and tool integration agent.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type ScoutProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) Type() ProviderType { return ProviderTypeScout }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) Description() string {
+	return "Scout — agent dedicated to finding external resources and integrating them into OHC capabilities"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) SupportedRoles() []string {
+	return []string{"RESOURCE_SCOUT", "TOOL_INTEGRATOR"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *ScoutProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *ScoutProvider) Authenticate(creds Credentials) error {
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }

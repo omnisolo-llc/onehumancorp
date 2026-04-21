@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -22,6 +24,95 @@ var (
 	migrationsFS embed.FS
 )
 
+func splitSQLStatements(sqlText string) []string {
+	var (
+		statements      []string
+		current         strings.Builder
+		inSingleQuote   bool
+		inDoubleQuote   bool
+		inLineComment   bool
+		inBlockComment  bool
+	)
+
+	for i := 0; i < len(sqlText); i++ {
+		ch := sqlText[i]
+		next := byte(0)
+		if i+1 < len(sqlText) {
+			next = sqlText[i+1]
+		}
+
+		if inLineComment {
+			current.WriteByte(ch)
+			if ch == '\n' {
+				inLineComment = false
+			}
+			continue
+		}
+
+		if inBlockComment {
+			current.WriteByte(ch)
+			if ch == '*' && next == '/' {
+				current.WriteByte(next)
+				i++
+				inBlockComment = false
+			}
+			continue
+		}
+
+		if !inSingleQuote && !inDoubleQuote {
+			if ch == '-' && next == '-' {
+				current.WriteByte(ch)
+				current.WriteByte(next)
+				i++
+				inLineComment = true
+				continue
+			}
+			if ch == '/' && next == '*' {
+				current.WriteByte(ch)
+				current.WriteByte(next)
+				i++
+				inBlockComment = true
+				continue
+			}
+		}
+
+		if ch == '\'' && !inDoubleQuote {
+			current.WriteByte(ch)
+			if inSingleQuote && next == '\'' {
+				current.WriteByte(next)
+				i++
+				continue
+			}
+			inSingleQuote = !inSingleQuote
+			continue
+		}
+
+		if ch == '"' && !inSingleQuote {
+			inDoubleQuote = !inDoubleQuote
+			current.WriteByte(ch)
+			continue
+		}
+
+		if ch == ';' && !inSingleQuote && !inDoubleQuote {
+			stmt := strings.TrimSpace(current.String())
+			if stmt != "" {
+				statements = append(statements, stmt)
+			}
+			current.Reset()
+			continue
+		}
+
+		current.WriteByte(ch)
+	}
+
+	stmt := strings.TrimSpace(current.String())
+	if stmt != "" {
+		statements = append(statements, stmt)
+	}
+
+	return statements
+}
+
 // DB wraps a Provider with migration support.
 type DB struct {
 	Provider
@@ -36,15 +127,23 @@ func New(ctx context.Context) (*DB, error) {
 	if dsn == "" || strings.HasPrefix(dsn, "sqlite://") {
 		var dbPath string
 		if dsn == "" {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return nil, fmt.Errorf("db: find home dir: %w", err)
+			if os.Getenv("CI") == "true" || strings.HasSuffix(os.Args[0], ".test") {
+				// Use unique path or memory for tests to prevent concurrent E2E test collisions
+				tmpDir := os.TempDir()
+				b := make([]byte, 8)
+				rand.Read(b)
+				dbPath = filepath.Join(tmpDir, fmt.Sprintf("ohc_state_%x.db", b))
+			} else {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					return nil, fmt.Errorf("db: find home dir: %w", err)
+				}
+				openclawDir := filepath.Join(homeDir, ".openclaw")
+				if err := os.MkdirAll(openclawDir, 0700); err != nil {
+					return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
+				}
+				dbPath = filepath.Join(openclawDir, "ohc_state.db")
 			}
-			openclawDir := filepath.Join(homeDir, ".openclaw")
-			if err := os.MkdirAll(openclawDir, 0700); err != nil {
-				return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
-			}
-			dbPath = filepath.Join(openclawDir, "ohc_state.db")
 		} else {
 			dbPath = strings.TrimPrefix(dsn, "sqlite://")
 		}
@@ -101,7 +200,33 @@ func New(ctx context.Context) (*DB, error) {
 		if key == "" {
 			// Zero Secrets: Generate a cryptographically secure local storage key on first run and store in environment or require user to provide it.
 			// But for Standalone mode, if it's missing, we fail securely instead of using hardcoded secrets.
-			if os.Getenv("OHC_STANDALONE") == "true" {
+			if os.Getenv("OHC_STANDALONE") == "true" && os.Getenv("CI") != "true" && !strings.Contains(os.Args[0], "test") {
+				keyDir := filepath.Dir(strings.TrimPrefix(dbPath, "file:"))
+				if keyDir == "" || keyDir == "." {
+					homeDir, err := os.UserHomeDir()
+					if err == nil {
+						keyDir = filepath.Join(homeDir, ".openclaw")
+					} else {
+						keyDir = os.TempDir()
+					}
+				}
+				if err := os.MkdirAll(keyDir, 0700); err == nil {
+					keyFile := filepath.Join(keyDir, ".ohc_key")
+					if keyData, err := os.ReadFile(keyFile); err == nil {
+						key = string(keyData)
+					} else {
+						newKey := make([]byte, 32)
+						if _, err := rand.Read(newKey); err == nil {
+							key = hex.EncodeToString(newKey)
+							_ = os.WriteFile(keyFile, []byte(key), 0600)
+						} else {
+							key = "standalone_ephemeral_key" // fallback if random fails, though rare
+						}
+					}
+				} else {
+					key = "standalone_ephemeral_key" // fallback if mkdir fails
+				}
+			} else if os.Getenv("OHC_STANDALONE") == "true" {
 				// We cannot fail yet as it breaks tests without environment variables.
 				// For tests, use a transient key.
 				key = "standalone_ephemeral_key"
@@ -235,6 +360,13 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 
 		sqlStr := string(sqlBytes)
 
+		// Strip the goose Down section – this runner only applies UP migrations.
+		// Some migration files use goose-style markers; executing the Down section
+		// would undo the migration immediately after applying it.
+		if idx := regexp.MustCompile(`(?im)^--\s*\+goose\s+Down`).FindStringIndex(sqlStr); idx != nil {
+			sqlStr = sqlStr[:idx[0]]
+		}
+
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		if p.Provider.IsSQLite() {
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.
@@ -277,6 +409,19 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// Remove constraint drops for SQLite since it's unsupported
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+DROP\s+CONSTRAINT\s+IF\s+EXISTS\s+\w+;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ADD\s+CONSTRAINT\s+\w+\s+CHECK\s*\([^;]+;`).ReplaceAllString(sqlStr, "")
+
+			// SQLite does not support ADD COLUMN IF NOT EXISTS – strip the IF NOT EXISTS qualifier.
+			sqlStr = regexp.MustCompile(`(?i)\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b`).ReplaceAllString(sqlStr, "ADD COLUMN")
+			// SQLite does not support DROP COLUMN IF EXISTS – strip the IF EXISTS qualifier.
+			sqlStr = regexp.MustCompile(`(?i)\bDROP\s+COLUMN\s+IF\s+EXISTS\b`).ReplaceAllString(sqlStr, "DROP COLUMN")
+		} else {
+			// Postgres mode: normalise any SQLite-specific types that leaked into
+			// migration files so that migrations are portable in both directions.
+			sqlStr = strings.ReplaceAll(sqlStr, "INTEGER PRIMARY KEY AUTOINCREMENT", "BIGSERIAL PRIMARY KEY")
+			// DATETIME is a SQLite type; Postgres uses TIMESTAMP.
+			sqlStr = regexp.MustCompile(`(?i)\bDATETIME\b`).ReplaceAllString(sqlStr, "TIMESTAMP")
+			// BLOB is a SQLite type; Postgres uses BYTEA.
+			sqlStr = regexp.MustCompile(`(?i)\bBLOB\b`).ReplaceAllString(sqlStr, "BYTEA")
 		}
 
 		tx, err := p.Begin(ctx)
@@ -284,9 +429,33 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			return fmt.Errorf("db: begin tx for %s: %w", f, err)
 		}
 
-		if _, err := tx.Exec(ctx, sqlStr); err != nil {
-			_ = tx.Rollback(ctx)
-			return fmt.Errorf("db: exec migration %s: %w", f, err)
+		if p.Provider.IsSQLite() {
+			// Execute statements individually for SQLite so that idempotent
+			// patterns (e.g. ADD COLUMN where the column already exists) can be
+			// silently skipped rather than aborting the whole migration.
+			stmts := splitSQLStatements(sqlStr)
+			for _, stmt := range stmts {
+				stmt = strings.TrimSpace(stmt)
+				if stmt == "" {
+					continue
+				}
+				if _, stmtErr := tx.Exec(ctx, stmt); stmtErr != nil {
+					errMsg := stmtErr.Error()
+					// Tolerate "duplicate column name" so that ADD COLUMN
+					// statements in later migrations don't fail when the column
+					// was already added by an earlier migration.
+					if strings.Contains(errMsg, "duplicate column name") {
+						continue
+					}
+					_ = tx.Rollback(ctx)
+					return fmt.Errorf("db: exec migration %s: %w", f, stmtErr)
+				}
+			}
+		} else {
+			if _, err := tx.Exec(ctx, sqlStr); err != nil {
+				_ = tx.Rollback(ctx)
+				return fmt.Errorf("db: exec migration %s: %w", f, err)
+			}
 		}
 
 		_, err = tx.Exec(ctx, "INSERT INTO schema_migrations (filename) VALUES ($1)", f)

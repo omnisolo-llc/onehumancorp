@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -9,6 +10,7 @@ import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
+import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
@@ -174,6 +176,11 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const HybridObservabilityWidget(),
         const SizedBox(height: 16),
+        Container(
+          key: const ValueKey('hybrid_telemetry'),
+          child: const HybridTelemetryWidget(),
+        ),
+        const SizedBox(height: 16),
         SizedBox(
           height: 350,
           child: ClipRRect(
@@ -181,9 +188,9 @@ class _DashboardContent extends StatelessWidget {
             child: BackdropFilter(
               filter: ImageFilter.compose(
                 outer: const ColorFilter.matrix(<double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
+                  1.787, -0.715, -0.072, 0, 0,
+                  -0.213, 1.285, -0.072, 0, 0,
+                  -0.213, -0.715, 1.928, 0, 0,
                   0, 0, 0, 1, 0,
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
@@ -194,11 +201,30 @@ class _DashboardContent extends StatelessWidget {
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
-                child: const TaskListScreen(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                      child: Text(
+                        'Proactive Task Stream',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontFamily: 'Outfit',
+                        ),
+                      ),
+                    ),
+                    const Expanded(child: TaskListView()),
+                  ],
+                ),
               ),
             ),
           ),
         ),
+        const SizedBox(height: 16),
+        const GrowthReferralWidget(),
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),

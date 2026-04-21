@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS autodream_memories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     task_id UUID REFERENCES shared_tasks_decomposition(id),
     content TEXT NOT NULL,
     embedding vector(1536),

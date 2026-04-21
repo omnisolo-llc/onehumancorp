@@ -1,0 +1,33 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "services",
+    srcs = [
+        "mesh.go",
+        "queue.go",
+    ],
+    deps = [
+        "@com_github_redis_rueidis//:rueidis",
+
+
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/apps/api/services",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "services_test",
+    srcs = [
+        "mesh_test.go",
+        "queue_test.go",
+    ],
+    embed = [":services"],
+    deps = [
+        "//srcs/apps/api/db",
+        "@com_github_alicebob_miniredis_v2//:miniredis",
+        "@com_github_redis_rueidis//:rueidis",
+
+
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)

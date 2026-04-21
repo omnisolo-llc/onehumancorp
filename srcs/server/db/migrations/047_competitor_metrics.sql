@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS competitor_metrics (
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_competitor_metrics_org_name ON competitor_metrics(organization_id, competitor_name);
+CREATE INDEX idx_competitor_metrics_org_name ON competitor_metrics(organization_id, competitor_name);

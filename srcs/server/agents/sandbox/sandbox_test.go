@@ -7,8 +7,9 @@ import (
 	"time"
 )
 
+// added for issue 5417
 func TestSandboxManager_EnvAndDir(t *testing.T) {
-	sm, err := NewSandboxManager()
+	sm, err := NewSandboxManager("test-session-1")
 	if err != nil {
 		t.Fatalf("Failed to create SandboxManager: %v", err)
 	}
@@ -41,7 +42,7 @@ func TestSandboxManager_EnvAndDir(t *testing.T) {
 }
 
 func TestSandboxManager_Shopt(t *testing.T) {
-	sm, err := NewSandboxManager()
+	sm, err := NewSandboxManager("test-session-2")
 	if err != nil {
 		t.Fatalf("Failed to create SandboxManager: %v", err)
 	}

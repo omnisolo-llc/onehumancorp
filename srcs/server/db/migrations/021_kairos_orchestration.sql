@@ -1,6 +1,7 @@
 -- Create shared_tasks if not exists
 CREATE TABLE IF NOT EXISTS shared_tasks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
+    mission_id TEXT NOT NULL,
     organization_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
@@ -21,7 +22,8 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 
 -- AutoDream
 CREATE TABLE IF NOT EXISTS agent_memories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
+    mission_id TEXT NOT NULL,
     organization_id VARCHAR NOT NULL,
     content TEXT NOT NULL,
     embedding vector(1536), -- Assuming OpenAI ada-002 or similar

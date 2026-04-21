@@ -19,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
@@ -197,13 +198,14 @@ type Agent struct {
 // Produces no errors.
 // Has no side effects.
 type Message struct {
-	ID         string    `json:"id"`
-	FromAgent  string    `json:"fromAgent"`
-	ToAgent    string    `json:"toAgent"`
-	Type       string    `json:"type"`
-	Content    string    `json:"content"`
-	MeetingID  string    `json:"meetingId,omitempty"`
-	OccurredAt time.Time `json:"occurredAt"`
+	ID         string            `json:"id"`
+	FromAgent  string            `json:"fromAgent"`
+	ToAgent    string            `json:"toAgent"`
+	Type       string            `json:"type"`
+	Content    string            `json:"content"`
+	MeetingID  string            `json:"meetingId,omitempty"`
+	OccurredAt time.Time         `json:"occurredAt"`
+	Metadata   map[string]string `json:"metadata,omitempty"`
 }
 
 // DelegateTask allows an agent in Delegate Mode to act as a routing proxy.
@@ -1899,12 +1901,14 @@ func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager)
 		}
 
 		// KAIROS Orchestration broadcasts task updates
-		tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
-			"action":   "sync",
-			"status":   payload.Status,
-			"agent_id": "system", // Or something appropriate
-			"payload":  payload.Payload,
-		})
+		if tm.hub != nil {
+			tm.hub.PublishTaskBroadcast(payload.ID, map[string]interface{}{
+				"action":   "sync",
+				"status":   payload.Status,
+				"agent_id": "system", // Or something appropriate
+				"payload":  payload.Payload,
+			})
+		}
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -1922,7 +1926,7 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
 		return
 	}
 
-	task, err := tm.CreateTask(r.Context(), req.MissionID, req.Title, req.Description, req.Priority)
+	task, err := tm.CreateTask(r.Context(), "", req.MissionID, req.Title, req.Description, req.Priority)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -2018,7 +2022,7 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 				filteredDeps = append(filteredDeps, dep)
 			}
 		}
-		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, req.TaskID, filteredDeps, st.Title, st.Description, st.Priority)
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, "", req.TaskID, filteredDeps, st.Title, st.Description, st.Priority)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
 			return
@@ -2027,4 +2031,57 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(createdTasks)
+}
+
+func (h *Hub) ForkAgent(ctx context.Context, parentID string, directive string) (string, error) {
+	// added for ForkAgent context inheritance
+	parent, ok := h.Agent(parentID)
+	if !ok {
+		return "", fmt.Errorf("parent agent not found: %s", parentID)
+	}
+
+	childID := parentID + "-fork-" + uuid.New().String()
+	child := Agent{
+		ID:             childID,
+		Name:           parent.Name + " (Fork)",
+		Role:           parent.Role,
+		OrganizationID: parent.OrganizationID,
+		Status:         StatusIdle,
+		ProviderType:   parent.ProviderType,
+		Region:         parent.Region,
+		IsDefault:      false,
+	}
+	h.RegisterAgent(child)
+
+	var history []Message
+	if h.repo != nil {
+		history, _ = h.repo.PeekMessages(ctx, parentID)
+	} else {
+		h.mu.RLock()
+		inbox := h.inbox[parentID]
+		if len(inbox) > 0 {
+			history = make([]Message, len(inbox))
+			copy(history, inbox)
+		}
+		h.mu.RUnlock()
+	}
+
+	for _, msg := range history {
+		childMsg := msg
+		childMsg.ToAgent = childID
+		childMsg.ID = "msg-" + uuid.New().String()
+		h.Publish(childMsg)
+	}
+
+	directiveMsg := Message{
+		ID:         "msg-" + uuid.New().String(),
+		FromAgent:  "SYSTEM",
+		ToAgent:    childID,
+		Type:       "TaskAssignment",
+		Content:    fmt.Sprintf("<task-notification>\nDirective: %s\n</task-notification>", directive),
+		OccurredAt: time.Now().UTC(),
+	}
+	h.Publish(directiveMsg)
+
+	return childID, nil
 }

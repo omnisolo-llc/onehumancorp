@@ -1,2 +1,0 @@
-agent: Canvas
-insight: "When rendering glassmorphism in Flutter, using ImageFilter.compose with the 200% saturation ColorFilter.matrix is the confirmed architectural truth for OHC components."

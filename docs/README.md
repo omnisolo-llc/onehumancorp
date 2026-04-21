@@ -16,6 +16,11 @@ This directory is the source for the repository documentation site.
 - `docs/developer/index.md`
 - `docs/operations/index.md`
 
+## KAIROS Features
+- [Sub-Agent Queue](features/kairos/sub_agent_queue.md)
+- [Distributed State Machine](features/kairos/distributed_state_machine.md)
+- [AutoDream Pipelines](features/kairos/autodream_pipelines.md)
+
 ## Site Generation
 
 The docs website is generated from markdown with MkDocs.

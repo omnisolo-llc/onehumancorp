@@ -1,21 +1,51 @@
-CREATE TABLE IF NOT EXISTS agent_missions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  problem_statement TEXT,
-  research_report TEXT,
-  design_doc TEXT,
-  implementation_prompt TEXT,
-  priority TEXT,
-  estimated_scope TEXT
+-- +goose Up
+-- Update the SQLite schema to add a status enum including 'BURSTING'.
+-- Since SQLite doesn't support ENUMs directly or ALTER TABLE for CHECK constraints easily,
+-- we implement this via recreating the table with the CHECK constraint.
+
+PRAGMA foreign_keys=off;
+
+BEGIN TRANSACTION;
+
+CREATE TABLE IF NOT EXISTS agent_missions_new (
+    id         TEXT PRIMARY KEY,
+    status     TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'BURSTING')),
+    payload    TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-INSERT INTO agent_missions (title, problem_statement, research_report, design_doc, implementation_prompt, priority, estimated_scope)
-VALUES (
-  '[research] Enhance Agent Harness for OHC using Claude-Class Isolation',
-  'OHC needs to achieve parity with Claude-Class Agent Harnesses in isolation, execution safety, and orchestration coordination.',
-  'Based on an analysis of Claude Code, their harness supports complex subprocess execution, dynamic permissions, temporary git worktrees, and robust error handling. OHCs srcs/server/agents/provider.go currently lacks deep integration of isolated worktrees and robust background tool coordination compared to Claude.',
-  'Implement an isolation abstraction layer supporting worktrees, process sandboxes, and specific telemetry tracking per subagent invocation. Utilize the Teammate Mesh API to sync subagent statuses and errors dynamically.',
-  'Implement the IsolationStrategy interface for Agent Harness. Update Provider to support RunInIsolation(worktree string) logic and pipe output streams directly to Redis Pub/Sub.',
-  'P1',
-  'Medium'
+INSERT INTO agent_missions_new (id, status, payload, created_at)
+SELECT id, status, payload, created_at FROM agent_missions;
+
+DROP TABLE agent_missions;
+ALTER TABLE agent_missions_new RENAME TO agent_missions;
+CREATE INDEX idx_missions_status ON agent_missions (status);
+
+COMMIT;
+
+PRAGMA foreign_keys=on;
+
+-- +goose Down
+PRAGMA foreign_keys=off;
+
+BEGIN TRANSACTION;
+
+CREATE TABLE IF NOT EXISTS agent_missions_old (
+    id         TEXT PRIMARY KEY,
+    status     TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')),
+    payload    TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+UPDATE agent_missions SET status = 'PENDING' WHERE status = 'BURSTING';
+
+INSERT INTO agent_missions_old (id, status, payload, created_at)
+SELECT id, status, payload, created_at FROM agent_missions;
+
+DROP TABLE agent_missions;
+ALTER TABLE agent_missions_old RENAME TO agent_missions;
+CREATE INDEX idx_missions_status ON agent_missions (status);
+
+COMMIT;
+
+PRAGMA foreign_keys=on;

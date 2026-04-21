@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     mission_id TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'DELIBERATING' CHECK (status IN ('DELIBERATING', 'EXECUTING', 'COMPLETED', 'FAILED')),
     state_machine JSONB DEFAULT '{}',
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS swarm_ultra_plans (
 
 
 CREATE TABLE IF NOT EXISTS swarm_dream_epochs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY,
     status TEXT NOT NULL DEFAULT 'STARTED' CHECK (status IN ('STARTED', 'COMPLETED', 'FAILED')),
     cluster_results JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,

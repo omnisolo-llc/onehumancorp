@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE swarm_tasks (
+CREATE TABLE IF NOT EXISTS swarm_tasks (
     id UUID PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
@@ -11,7 +11,7 @@ CREATE TABLE swarm_tasks (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE state_machine_transitions (
+CREATE TABLE IF NOT EXISTS state_machine_transitions (
     id UUID PRIMARY KEY,
     task_id UUID NOT NULL,
     from_state VARCHAR(50),
@@ -21,7 +21,7 @@ CREATE TABLE state_machine_transitions (
     FOREIGN KEY (task_id) REFERENCES swarm_tasks(id) ON DELETE CASCADE
 );
 
-CREATE TABLE task_dependencies (
+CREATE TABLE IF NOT EXISTS task_dependencies (
     task_id UUID NOT NULL,
     depends_on_task_id UUID NOT NULL,
     PRIMARY KEY (task_id, depends_on_task_id),

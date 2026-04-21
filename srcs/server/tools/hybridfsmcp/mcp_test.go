@@ -189,6 +189,17 @@ func TestNewProviderFactory(t *testing.T) {
 		t.Fatalf("expected CloudFSProvider")
 	}
 
+
+	t.Setenv("OHC_MULTITENANT", "true")
+	t.Setenv("OHC_STANDALONE", "true")
+	provider, err = NewProviderFactory("/tmp")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if _, ok := provider.(*LocalFSProvider); !ok {
+		t.Fatalf("expected LocalFSProvider when standalone is true")
+	}
+
 	t.Setenv("OHC_MULTITENANT", "false")
 	provider, err = NewProviderFactory("/tmp")
 	if err != nil {
@@ -199,6 +210,7 @@ func TestNewProviderFactory(t *testing.T) {
 	}
 
 	t.Setenv("OHC_MULTITENANT", "true")
+	t.Setenv("OHC_STANDALONE", "false")
 	t.Setenv("S3_ENDPOINT", "")
 	_, err = NewProviderFactory("/tmp")
 	if err == nil {

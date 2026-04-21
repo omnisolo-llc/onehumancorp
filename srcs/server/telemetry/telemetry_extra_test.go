@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 	"time"
-	"os"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -44,6 +43,8 @@ func TestRecordOtherMetrics(t *testing.T) {
 	RecordSyncEscalation(ctx, 1)
 	RecordSyncLatency(ctx, 1.5)
 	RecordSyncPayloadSize(ctx, 100)
+	RecordSIPSyncLatency(ctx, 100*time.Millisecond)
+	RecordSIPSyncPayloadSize(ctx, 200)
 	RecordSyncDaemonBatchSize(ctx, 50)
 	RecordSwarmTaskTransition(ctx, "mission1", "open", "done")
 	RecordSwarmTaskQueueLength(ctx, 1)
@@ -176,8 +177,8 @@ func TestMinimaxMetricsUninitialized(t *testing.T) {
 
 func TestRecordAgentExecutionTrace(t *testing.T) {
 	// Enable metrics for this test
-	os.Setenv("OHC_TELEMETRY_ENABLED", "true")
-	defer os.Unsetenv("OHC_TELEMETRY_ENABLED")
+	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
+
 
 	InitWithMeter(meter)
 
