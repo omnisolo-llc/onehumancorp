@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/utils"
 )
 
 // AnthropicClient implements LLMClient for Anthropic's Claude API.
@@ -100,7 +101,7 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 		messages = append(messages, anthropicMessage{
 			Role: role,
 			Content: []anthropicContent{
-				{Type: "text", Text: m.Content},
+				{Type: "text", Text: utils.MinifyJSONString(m.Content)},
 			},
 		})
 	}
@@ -118,7 +119,7 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 	if req.System != "" {
 		systemBlocks = append(systemBlocks, anthropicSystem{
 			Type: "text",
-			Text: req.System,
+			Text: utils.MinifyJSONString(req.System),
 			// Prompt Caching: Cache the system prompt
 			CacheControl: &anthropicCacheControl{Type: "ephemeral"},
 		})
