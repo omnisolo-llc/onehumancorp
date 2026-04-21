@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"context"
 	"net/url"
 	"bytes"
 	"crypto/tls"
@@ -182,12 +184,32 @@ func TestHandleMeshMailbox(t *testing.T) {
 	})
 }
 
+
+type mockMeshBroker struct {
+	broadcastCalled bool
+	lastChannel     string
+	lastPayload     []byte
+}
+
+func (m *mockMeshBroker) Broadcast(ctx context.Context, channel string, payload []byte) error {
+	m.broadcastCalled = true
+	m.lastChannel = channel
+	m.lastPayload = payload
+	return nil
+}
+
+func (m *mockMeshBroker) Subscribe(ctx context.Context, channel string, handler func(msg []byte)) (orchmesh.Subscription, error) {
+	return nil, nil
+}
+
 func TestHandleMeshV2Broadcast(t *testing.T) {
 	org := domain.Organization{ID: "org-mesh"}
 	hub := orchestration.NewHub("test-mesh-db", "memory://")
+	mockBroker := &mockMeshBroker{}
 	srv := &Server{
-		org: org,
-		hub: hub,
+		org:        org,
+		hub:        hub,
+		MeshBroker: mockBroker,
 	}
 
 	cn, _ := orchestration.NewCentrifugeNode()
@@ -245,6 +267,13 @@ func TestHandleMeshV2Broadcast(t *testing.T) {
 		if w.Code != http.StatusOK {
 			t.Errorf("expected status 200 OK, got %v", w.Code)
 		}
+
+		if !mockBroker.broadcastCalled {
+			t.Errorf("expected Broadcast to be called")
+		}
+		if mockBroker.lastChannel != "mesh:tasks" {
+			t.Errorf("expected channel mesh:tasks, got %s", mockBroker.lastChannel)
+		}
 	})
 
 	t.Run("ValidBroadcastSwarmEvents", func(t *testing.T) {
@@ -275,10 +304,16 @@ func TestHandleMeshV2Broadcast(t *testing.T) {
 
 		w := httptest.NewRecorder()
 
+		mockBroker.broadcastCalled = false
+
 		srv.handleMeshV2Broadcast(w, req)
 
 		if w.Code != http.StatusOK {
 			t.Errorf("expected status 200 OK, got %v", w.Code)
+		}
+
+		if !mockBroker.broadcastCalled {
+			t.Errorf("expected Broadcast to be called for swarm-events")
 		}
 	})
 }

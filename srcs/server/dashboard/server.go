@@ -2050,13 +2050,6 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var broker orchmesh.MeshBroker
-	if mode == "cloud" && s.MeshBroker != nil {
-		broker = s.MeshBroker
-	} else {
-		broker = s.MeshBroker // Already initialized to LocalMeshBroker
-	}
-
 	if req.Channel == "mesh:tasks" || req.Channel == "mesh:coordination" {
 		agentID, _ := req.Data["agent_id"].(string)
 		action, _ := req.Data["action"].(string)
@@ -2067,7 +2060,13 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
+	if s.MeshBroker != nil {
+		err = s.MeshBroker.Broadcast(r.Context(), req.Channel, payloadBytes)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to broadcast: %v", err), http.StatusInternalServerError)
+			return
+		}
+	}
 
 	// Legacy publish for fallback/other agent systems expecting it via hub until fully migrated
 	_ = s.hub.Publish(orchestration.Message{
