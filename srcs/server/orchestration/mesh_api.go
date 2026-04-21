@@ -33,6 +33,19 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if _, ok := req["agent_id"]; !ok {
+		http.Error(w, "Missing agent_id", http.StatusBadRequest)
+		return
+	}
+	if _, ok := req["action"]; !ok {
+		http.Error(w, "Missing action", http.StatusBadRequest)
+		return
+	}
+	if _, ok := req["status"]; !ok {
+		http.Error(w, "Missing status", http.StatusBadRequest)
+		return
+	}
+
 	payload, err := json.Marshal(req)
 	if err != nil {
 		http.Error(w, "Failed to marshal payload", http.StatusInternalServerError)

@@ -11,21 +11,18 @@ import (
 
 func TestClaimTask_SQLite(t *testing.T) {
     telemetry.InitTelemetry()
-    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
-    if err != nil {
-        t.Fatalf("failed to create sqlite provider: %v", err)
-    }
+    dbProvider := db.NewSqliteProvider("file::memory:?cache=shared")
 
     ctx := context.Background()
 
-    _, err = dbProvider.Exec(ctx, `
-        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+    _, err := dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS swarm_tasks (
             id TEXT PRIMARY KEY,
-            organization_id TEXT NOT NULL,
+            mission_id TEXT NOT NULL,
             title TEXT NOT NULL,
             description TEXT,
             status TEXT NOT NULL DEFAULT 'PENDING',
-            agent_id TEXT,
+            assigned_agent_id TEXT,
             priority TEXT NOT NULL DEFAULT 'P2',
             payload TEXT,
             parent_plan_id TEXT,
@@ -38,14 +35,14 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Fatalf("failed to create shared_tasks: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, `
+    _, err := dbProvider.Exec(ctx, `
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
             id TEXT PRIMARY KEY,
             entity_id TEXT NOT NULL,
             entity_type TEXT NOT NULL,
             from_state TEXT NOT NULL,
             to_state TEXT NOT NULL,
-            agent_id TEXT,
+            assigned_agent_id TEXT,
             reason TEXT,
             occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -54,19 +51,19 @@ func TestClaimTask_SQLite(t *testing.T) {
         t.Fatalf("failed to create state_machine_transitions: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED', '[]')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED', '[]')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '[\"task-1\"]')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '[\"task-1\"]')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
     // Dependency added directly above in JSON format
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING', '[\"task-2\"]')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('task-3', 'org-1', 'Test Task 3', 'PENDING', '[\"task-2\"]')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
@@ -112,21 +109,18 @@ func TestClaimTask_SQLite(t *testing.T) {
 
 func TestClaimTask_Postgres(t *testing.T) {
     telemetry.InitTelemetry()
-    dbProvider, err := db.NewSqliteProvider("file::memory:?cache=shared")
-    if err != nil {
-        t.Fatalf("failed to create sqlite provider: %v", err)
-    }
+    dbProvider := db.NewSqliteProvider("file::memory:?cache=shared")
 
     ctx := context.Background()
 
-    _, err = dbProvider.Exec(ctx, `
-        CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
+    _, err := dbProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS swarm_tasks (
             id TEXT PRIMARY KEY,
-            organization_id TEXT NOT NULL,
+            mission_id TEXT NOT NULL,
             title TEXT NOT NULL,
             description TEXT,
             status TEXT NOT NULL DEFAULT 'PENDING',
-            agent_id TEXT,
+            assigned_agent_id TEXT,
             priority TEXT NOT NULL DEFAULT 'P2',
             payload TEXT,
             parent_plan_id TEXT,
@@ -139,14 +133,14 @@ func TestClaimTask_Postgres(t *testing.T) {
         t.Fatalf("failed to create shared_tasks: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, `
+    _, err := dbProvider.Exec(ctx, `
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
             id TEXT PRIMARY KEY,
             entity_id TEXT NOT NULL,
             entity_type TEXT NOT NULL,
             from_state TEXT NOT NULL,
             to_state TEXT NOT NULL,
-            agent_id TEXT,
+            assigned_agent_id TEXT,
             reason TEXT,
             occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -155,12 +149,12 @@ func TestClaimTask_Postgres(t *testing.T) {
         t.Fatalf("failed to create state_machine_transitions: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED', '[]')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'Test Task 1', 'COMPLETED', '[]')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    _, err = dbProvider.Exec(ctx, "INSERT INTO shared_tasks_v4 (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '[\"task-1\"]')")
+    _, err = dbProvider.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test Task 2', 'PENDING', '[\"task-1\"]')")
     if err != nil {
         t.Fatalf("failed to insert: %v", err)
     }
