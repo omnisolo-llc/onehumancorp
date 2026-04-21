@@ -127,6 +127,18 @@ func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
 
 	ctx := context.Background()
 
+
+	// Forward Generic Tasks from Mesh
+	if ch, err := mt.SubscribeMeshEvents(ctx, "tasks"); err == nil {
+		go func() {
+			for msg := range ch {
+				_, _ = cn.node.Publish("mesh:tasks", msg)
+			}
+		}()
+	} else {
+		slog.Error("[centrifuge] failed to subscribe to mesh events for tasks", "error", err)
+	}
+
 	// Forward Tasks
 	if ch, err := mt.SubscribeTasks(ctx); err == nil {
 		go func() {

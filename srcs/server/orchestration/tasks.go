@@ -63,17 +63,12 @@ type TaskManager struct {
 
 // NewTaskManager creates a new TaskManager.
 func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.MemoryConsolidator) *TaskManager {
-	var broadcast func(string, map[string]interface{})
-	if hub != nil {
-		broadcast = hub.PublishTaskBroadcast
-	}
-
 	tm := &TaskManager{
 		db:           provider,
 		hub:          hub,
-		stateMachine: statemachine.NewStateMachine(provider, broadcast),
 		autodream:    ad,
 	}
+	tm.stateMachine = statemachine.NewStateMachine(provider, tm.publishTaskEvent)
 
 	if envBoolDefault("OHC_MULTITENANT", true) {
 		redisURL := os.Getenv("REDIS_URL")
@@ -150,7 +145,7 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 			if tm.hub != nil {
 				// Broadcast that task is now ready
 				go func(taskID string) {
-					tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
+					tm.publishTaskEvent(taskID, map[string]interface{}{
 						"action":   "READY",
 						"agent_id": "",
 						"status":   "PENDING",
@@ -262,7 +257,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 				"description":     task.Description,
 				"priority":        task.Priority,
 			}
-			tm.hub.PublishTaskBroadcast(task.ID, payload)
+			tm.publishTaskEvent(task.ID, payload)
 		}()
 	}
 
@@ -409,7 +404,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 				"agent_id": agentID,
 				"status":   task.Status,
 			}
-			tm.hub.PublishTaskBroadcast(task.ID, payload)
+			tm.publishTaskEvent(task.ID, payload)
 		}()
 	}
 
@@ -457,7 +452,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 				"agent_id": agentID,
 				"status":   "REVIEW",
 			}
-			tm.hub.PublishTaskBroadcast(taskID, payload)
+			tm.publishTaskEvent(taskID, payload)
 		}()
 	}
 
@@ -556,7 +551,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				"agent_id": agentID,
 				"status":   "COMPLETED",
 			}
-			tm.hub.PublishTaskBroadcast(taskID, payload)
+			tm.publishTaskEvent(taskID, payload)
 		}()
 	}
 
@@ -891,7 +886,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 					"agent_id": agentID,
 					"status":   t.Status,
 				}
-				tm.hub.PublishTaskBroadcast(t.ID, payload)
+				tm.publishTaskEvent(t.ID, payload)
 			}(task)
 		}
 	}
@@ -1046,7 +1041,7 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 				"agent_id": task.AssignedAgentID,
 				"status":   task.Status,
 			}
-			tm.hub.PublishTaskBroadcast(task.ID, payload)
+			tm.publishTaskEvent(task.ID, payload)
 		}()
 	}
 
@@ -1108,7 +1103,7 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 				"task_id": taskID,
 				"action":  "DELETE",
 			}
-			tm.hub.PublishTaskBroadcast(taskID, payload)
+			tm.publishTaskEvent(taskID, payload)
 		}()
 	}
 
@@ -1155,3 +1150,19 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 	return nil
 }
 // added for Sub-Agent Orchestration Queue
+
+func (tm *TaskManager) publishTaskEvent(taskID string, payload map[string]interface{}) {
+	if tm.mesh != nil {
+		data, err := json.Marshal(payload)
+		if err != nil {
+			slog.Error("Failed to marshal task event payload", "taskID", taskID, "error", err)
+			return
+		}
+		err = tm.mesh.BroadcastMeshEvent(context.Background(), "tasks", data)
+		if err != nil {
+			slog.Error("Failed to broadcast task event via mesh", "taskID", taskID, "error", err)
+		}
+	} else if tm.hub != nil {
+		tm.hub.PublishTaskBroadcast(taskID, payload) // fallback for Legacy standalone
+	}
+}

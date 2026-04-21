@@ -245,6 +245,7 @@ func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) erro
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastTask", time.Since(start)) }()
 
+	meshMsgThroughput.Add(ctx, 1)
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "tasks")
 	}
@@ -291,6 +292,7 @@ func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg Mes
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
 
+	meshMsgThroughput.Add(ctx, 1)
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "coordination")
 	}
@@ -337,6 +339,7 @@ func (rm *RedisMeshTransport) AdvertiseCapabilities(ctx context.Context, caps pb
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start)) }()
 
+	meshMsgThroughput.Add(ctx, 1)
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "capabilities")
 	}
@@ -382,6 +385,7 @@ func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic stri
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastMeshEvent", time.Since(start)) }()
 
+	meshMsgThroughput.Add(ctx, 1)
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "events")
 	}
@@ -605,6 +609,7 @@ func (lm *MemoryMeshTransport) BroadcastTask(ctx context.Context, task Task) err
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastTask", time.Since(start)) }()
 
+	meshMsgThroughput.Add(ctx, 1)
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "tasks")
 	}
@@ -687,6 +692,7 @@ func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg Me
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
 
+	meshMsgThroughput.Add(ctx, 1)
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "coordination")
 	}
@@ -754,6 +760,7 @@ func (lm *MemoryMeshTransport) AdvertiseCapabilities(ctx context.Context, caps p
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "AdvertiseCapabilities", time.Since(start)) }()
 
+	meshMsgThroughput.Add(ctx, 1)
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "capabilities")
 	}
@@ -835,6 +842,7 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastMeshEvent", time.Since(start)) }()
 
+	meshMsgThroughput.Add(ctx, 1)
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "events")
 	}

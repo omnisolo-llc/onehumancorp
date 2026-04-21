@@ -550,3 +550,20 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 	}
 }
 // added for Sub-Agent Orchestration Queue
+
+
+func TestTaskManager_PublishTaskEvent(t *testing.T) {
+	// Add some coverage for publishTaskEvent
+	dbProvider, err := db.NewSQLiteProvider(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create db provider: %v", err)
+	}
+	defer dbProvider.Close()
+
+	tm := NewTaskManager(dbProvider, nil, nil)
+	mt := NewMemoryMeshTransport(dbProvider)
+	tm.SetMeshTransport(mt)
+
+	// it shouldn't crash
+	tm.publishTaskEvent("test-task-1", map[string]interface{}{"status": "PENDING"})
+}

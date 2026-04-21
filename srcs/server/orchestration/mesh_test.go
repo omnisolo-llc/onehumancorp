@@ -222,3 +222,37 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 		}
 	})
 }
+
+
+func TestMeshTransport_MeshEventsCoverage(t *testing.T) {
+	// Add some coverage for MeshTransport MeshEvents
+	dbProvider, err := db.NewSQLiteProvider(":memory:")
+	if err != nil {
+		t.Fatalf("failed to create db provider: %v", err)
+	}
+	defer dbProvider.Close()
+
+	mt := NewMemoryMeshTransport(dbProvider)
+
+	ctx := context.Background()
+	topic := "tasks"
+
+	sub, err := mt.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		t.Fatalf("SubscribeMeshEvents failed: %v", err)
+	}
+
+	err = mt.BroadcastMeshEvent(ctx, topic, []byte("test-payload"))
+	if err != nil {
+		t.Fatalf("BroadcastMeshEvent failed: %v", err)
+	}
+
+	select {
+	case msg := <-sub:
+		if string(msg) != "test-payload" {
+			t.Errorf("Expected test-payload, got %s", string(msg))
+		}
+	case <-time.After(1 * time.Second):
+		t.Errorf("Timeout waiting for mesh event")
+	}
+}
