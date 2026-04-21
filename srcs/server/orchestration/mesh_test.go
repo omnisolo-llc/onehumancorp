@@ -222,3 +222,64 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 		}
 	})
 }
+
+func TestMemoryMeshTransport_TeammateMeshEvent(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pool := db.NewTestProvider()
+	defer pool.Close()
+	mt := NewMemoryMeshTransport(pool)
+
+	sub, err := mt.SubscribeTeammateMesh(ctx, "teammate_mesh")
+	require.NoError(t, err)
+
+	payload := []byte(`{"task_id": "test_123"}`)
+	err = mt.PublishTeammateMeshEvent(ctx, "teammate_mesh", "agent_1", "COMPLETED", "success", payload)
+	require.NoError(t, err)
+
+	select {
+	case msg := <-sub:
+		var result map[string]interface{}
+		json.Unmarshal(msg, &result)
+		assert.Equal(t, "agent_1", result["agent_id"])
+		assert.Equal(t, "COMPLETED", result["action"])
+		assert.Equal(t, "success", result["status"])
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for TeammateMeshEvent")
+	}
+}
+
+func TestRedisMeshTransport_TeammateMeshEvent(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("failed to start miniredis: %v", err)
+	}
+	defer mr.Close()
+
+	mt, err := NewRedisMeshTransport(mr.Addr())
+	if err != nil {
+		t.Fatalf("failed to create redis transport: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sub, err := mt.SubscribeTeammateMesh(ctx, "teammate_mesh")
+	require.NoError(t, err)
+
+	payload := []byte(`{"task_id": "test_456"}`)
+	err = mt.PublishTeammateMeshEvent(ctx, "teammate_mesh", "agent_2", "PENDING", "processing", payload)
+	require.NoError(t, err)
+
+	select {
+	case msg := <-sub:
+		var result map[string]interface{}
+		json.Unmarshal(msg, &result)
+		assert.Equal(t, "agent_2", result["agent_id"])
+		assert.Equal(t, "PENDING", result["action"])
+		assert.Equal(t, "processing", result["status"])
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for TeammateMeshEvent")
+	}
+}
