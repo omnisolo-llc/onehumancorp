@@ -20,7 +20,11 @@ func NewPgUserRepository(pool db.Provider) *PgUserRepository {
 	return &PgUserRepository{pool: pool}
 }
 
-func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
+func (r *PgUserRepository) CreateUser(ctx context.Context, user *User, orgID string) error {
+	if orgID != "" && orgID != "sys" {
+		user.OrganizationID = orgID
+	}
+
 	rolesJSON, _ := json.Marshal(user.Roles)
 	var rolesArg any = user.Roles
 	if r.pool.IsSQLite() {
@@ -39,11 +43,15 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User) error {
 
 	// We'll verify uniqueness at application level or let the new constraints handle it.
 	// But let's first check if there's a collision in the same org.
-	existing, _ := r.GetByUsername(ctx, user.Username, user.OrganizationID)
+	checkOrgID := orgID
+	if orgID == "sys" || orgID == "" {
+		checkOrgID = user.OrganizationID
+	}
+	existing, _ := r.GetByUsername(ctx, user.Username, checkOrgID)
 	if existing != nil {
 		return fmt.Errorf("username already taken")
 	}
-	existingEmail, _ := r.GetByEmail(ctx, user.Email, user.OrganizationID)
+	existingEmail, _ := r.GetByEmail(ctx, user.Email, checkOrgID)
 	if existingEmail != nil {
 		return fmt.Errorf("email already registered")
 	}
@@ -138,7 +146,11 @@ func (r *PgUserRepository) ListUsers(ctx context.Context, orgID string) ([]*User
 	return users, nil
 }
 
-func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
+func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User, orgID string) error {
+	if orgID != "" && orgID != "sys" {
+		user.OrganizationID = orgID
+	}
+
 	rolesJSON, _ := json.Marshal(user.Roles)
 	var rolesArg any = user.Roles
 	if r.pool.IsSQLite() {
@@ -155,13 +167,17 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 		}
 	}
 
-	existingEmail, _ := r.GetByEmail(ctx, user.Email, user.OrganizationID)
+	checkOrgID := orgID
+	if orgID == "sys" || orgID == "" {
+		checkOrgID = user.OrganizationID
+	}
+	existingEmail, _ := r.GetByEmail(ctx, user.Email, checkOrgID)
 	if existingEmail != nil && existingEmail.ID != user.ID {
 		return fmt.Errorf("email already registered")
 	}
 
 	var err error
-	if user.OrganizationID == "" || user.OrganizationID == "sys" {
+	if orgID == "" || orgID == "sys" {
 		_, err = r.pool.Exec(ctx, `
 			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
 			organization_id=$7, oidc_subject=$8, updated_at=$9
@@ -174,10 +190,10 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User) error {
 		_, err = r.pool.Exec(ctx, `
 			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
 			organization_id=$7, oidc_subject=$8, updated_at=$9
-			WHERE id=$1 AND organization_id=$7`,
+			WHERE id=$1 AND organization_id=$10`,
 			user.ID, user.Username, email, user.PasswordHash,
 			rolesArg, user.Active, user.OrganizationID,
-			nilIfEmpty(oidcSubject), user.UpdatedAt,
+			nilIfEmpty(oidcSubject), user.UpdatedAt, orgID,
 		)
 	}
 	if err != nil {
