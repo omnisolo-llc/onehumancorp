@@ -7,7 +7,7 @@ import (
 )
 
 func TestBwrapExecutor_Execute(t *testing.T) {
-	executor := NewBwrapExecutor()
+	executor := NewBwrapExecutor("")
 	ctx := context.Background()
 	_, err := executor.Execute(ctx, "echo", "hello")
 	if err != nil {
