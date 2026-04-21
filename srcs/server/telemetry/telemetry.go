@@ -1173,6 +1173,24 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
 
+// RecordTokenBurnRatePredicted24h updates the forecast gauge for a tenant's predicted 24h token burn rate.
+func RecordTokenBurnRatePredicted24h(ctx context.Context, organizationID string, prediction float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"prediction_24h":  prediction,
+		}
+
+		payloadBytes, _ := json.Marshal(payloadMap)
+		_ = BufferMetricFunc(ctx, "token_burn_rate_predicted_24h", string(payloadBytes))
+	}
+	if TokenBurnRatePredicted24h != nil {
+		TokenBurnRatePredicted24h.Record(ctx, prediction, metric.WithAttributes(
+			attribute.String("organization_id", organizationID),
+		))
+	}
+}
+
 // RecordTokenBurnRate updates the forecast gauge for a tenant's token burn rate.
 func RecordTokenBurnRate(ctx context.Context, organizationID string, rate float64) {
 	if BufferMetricFunc != nil {
