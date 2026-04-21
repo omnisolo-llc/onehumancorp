@@ -14,6 +14,7 @@ import (
 func ClaimTask(ctx context.Context, database db.Provider, organizationID string, agentID string) (*SharedTaskDecomposition, error) {
 	var task SharedTaskDecomposition
 	var desc, parent sql.NullString
+    var originOrgID sql.NullString
     var agent *string
 	var locked sql.NullTime
     var createdAt, updatedAt string
@@ -27,8 +28,8 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 		}
 		defer tx.Rollback(ctx)
 
-		query = `SELECT id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' AND organization_id = $1 LIMIT 1`
-		err = tx.QueryRow(ctx, query, organizationID).Scan(&task.ID, &task.OrganizationID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
+		query = `SELECT id, organization_id, origin_organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at FROM shared_tasks_decomposition WHERE status = 'PENDING' AND organization_id = $1 LIMIT 1`
+		err = tx.QueryRow(ctx, query, organizationID).Scan(&task.ID, &task.OrganizationID, &originOrgID, &task.Title, &desc, &task.Status, &agent, &task.Priority, &payload, &parent, &dependencies, &locked, &createdAt, &updatedAt)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				return nil, nil
@@ -59,12 +60,13 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
-		RETURNING id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+		RETURNING id, organization_id, origin_organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
 	    `
 
 		err := database.QueryRow(ctx, query, agentID, organizationID).Scan(
 			&task.ID,
 			&task.OrganizationID,
+			&originOrgID,
 			&task.Title,
 			&desc,
 			&task.Status,
@@ -86,6 +88,9 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 	}
 	if desc.Valid {
         task.Description = &desc.String
+    }
+    if originOrgID.Valid {
+        task.OriginOrganizationID = &originOrgID.String
     }
 	task.AssignedAgentID = agent
     if parent.Valid {
@@ -137,20 +142,21 @@ func CreateTask(ctx context.Context, database db.Provider, task *SharedTaskDecom
     }
 
 	if database.IsSQLite() {
-		query := `INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
-		err := database.QueryRow(ctx, query, task.ID, task.OrganizationID, task.Title, task.Description, task.Status, task.AssignedAgentID, task.Priority, payloadStr, task.ParentPlanID, depStr, task.LockedUntil).Scan(&id)
+		query := `INSERT INTO shared_tasks_decomposition (id, organization_id, origin_organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id`
+		err := database.QueryRow(ctx, query, task.ID, task.OrganizationID, task.OriginOrganizationID, task.Title, task.Description, task.Status, task.AssignedAgentID, task.Priority, payloadStr, task.ParentPlanID, depStr, task.LockedUntil).Scan(&id)
 		if err != nil {
 			return err
 		}
 	} else {
 		query := `
-		INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		INSERT INTO shared_tasks_decomposition (id, organization_id, origin_organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id
 	    `
 		err := database.QueryRow(ctx, query,
             task.ID,
 			task.OrganizationID,
+			task.OriginOrganizationID,
 			task.Title,
 			task.Description,
 			task.Status,

@@ -4,6 +4,7 @@ import TeammateMeshConsole from '../components/orchestration/TeammateMeshConsole
 import SwarmOverview from '../components/orchestration/SwarmOverview';
 import AutoDreamPipelineWidget from '../components/orchestration/AutoDreamPipelineWidget';
 import BusinessSetupWizard from '../components/wizard/BusinessSetupWizard';
+import BridgeStatusWidget from '../components/orchestration/BridgeStatusWidget';
 
 const Dashboard = () => {
   return (
@@ -14,6 +15,7 @@ const Dashboard = () => {
       <SwarmOverview />
       <TaskDAGViewer />
       <TeammateMeshConsole />
+      <BridgeStatusWidget />
     </div>
   );
 };

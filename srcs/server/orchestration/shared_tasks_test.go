@@ -26,6 +26,7 @@ func setupTestDBSharedTasks(t *testing.T) db.Provider {
 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     id VARCHAR PRIMARY KEY,
     organization_id VARCHAR NOT NULL,
+    origin_organization_id VARCHAR,
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING',

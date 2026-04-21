@@ -108,22 +108,11 @@ func (bm *BridgeManager) readLoop(ctx context.Context, remoteOrgID string, conn 
 				// It's a reflection of our own message, drop it to prevent loop
 				continue
 			}
-			// It's a bridged message from elsewhere, we process the payload locally
-			// But to prevent loops when rebroadcasting, we must re-publish it so that it gets processed
-			// by local agents but is recognized by our forwardLoop as not originating here.
-			// Actually, the simplest way is to broadcast the ENVELOPE to the local mesh.
-			// Local agents need to unwrap it, or we broadcast the payload but our forwardLoop tracks seen messages.
-
-			// To keep it simple and fulfill the instruction:
-			// "Handle inbound events from the remote connection by re-broadcasting them to the local mesh."
 			if bm.node != nil && bm.node.meshTransport != nil {
-				// We re-broadcast the raw enveloped message. The forwardLoop will see it,
-				// check the OriginOrgID, and realize it's not local, thus skipping forwarding it back.
 				_ = bm.node.meshTransport.BroadcastMeshEvent(ctx, bm.topic, message)
 			}
 		} else {
 			// It's a raw message that didn't have an envelope.
-			// We wrap it in an envelope pretending it came from remoteOrgID to avoid loops if we re-broadcast.
 			env := BridgeEnvelope{
 				OriginOrgID: remoteOrgID,
 				Payload:     message,
