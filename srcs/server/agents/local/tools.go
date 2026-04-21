@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"github.com/onehumancorp/mono/srcs/server/utils"
+	"github.com/onehumancorp/mono/srcs/server/agents/sandbox"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -93,17 +94,21 @@ func (t *bashTool) Execute(ctx context.Context, workDir string, input map[string
 	execCtx, cancel := context.WithTimeout(ctx, timeoutDur)
 	defer cancel()
 
-	cmd := exec.CommandContext(execCtx, "bash", "-c", command)
-	cmd.Dir = workDir
-	out, err := cmd.CombinedOutput()
+	sm, err := sandbox.NewSandboxManager(fmt.Sprintf("%d", time.Now().UnixNano()))
+	if err != nil {
+		return "", fmt.Errorf("bash: failed to create sandbox: %w", err)
+	}
+	defer sm.Cleanup()
+
+	wrappedCmd := fmt.Sprintf("cd %q && %s", workDir, command)
+	out, err := sm.Execute(execCtx, wrappedCmd)
 	if err != nil {
 		if errors.Is(execCtx.Err(), context.DeadlineExceeded) {
-			return string(out), fmt.Errorf("bash: command timed out after %ds", timeoutSec)
+			return out, fmt.Errorf("bash: command timed out after %ds", timeoutSec)
 		}
-		// Return output along with error so the model can see what happened.
-		return string(out), fmt.Errorf("bash: exit status %w", err)
+		return out, fmt.Errorf("bash: exit status %w", err)
 	}
-	return string(out), nil
+	return out, nil
 }
 
 // ─── FileReadTool ─────────────────────────────────────────────────────────────

@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-// added for issue 5417
 func TestSandboxManager_EnvAndDir(t *testing.T) {
 	sm, err := NewSandboxManager("test-session-1")
 	if err != nil {
@@ -35,7 +34,6 @@ func TestSandboxManager_EnvAndDir(t *testing.T) {
 	}
 
 	actualPwd := strings.TrimSpace(out)
-	// pwd might return path starting with /private on macos, resolve it if necessary or just check suffix
 	if !strings.HasSuffix(actualPwd, expectedTmpdir) && !strings.HasSuffix(expectedTmpdir, actualPwd) {
 		t.Errorf("Expected dir '%s', got '%s'", expectedTmpdir, actualPwd)
 	}
@@ -52,11 +50,45 @@ func TestSandboxManager_Shopt(t *testing.T) {
 	defer cancel()
 
 	out, err := sm.Execute(ctx, "shopt extglob")
-	// usually output is "extglob        	off"
-	if err != nil && !strings.Contains(err.Error(), "exit status 1") { // shopt extglob might return 1 if disabled
-		// ignore status 1, check output
+	if err != nil && !strings.Contains(err.Error(), "exit status 1") {
+		// shopt extglob might return exit status 1 if disabled
 	}
 	if !strings.Contains(out, "off") {
 		t.Errorf("Expected extglob to be off, got: %s", out)
 	}
+}
+
+func TestSandboxManager_PowerShell(t *testing.T) {
+	sm, err := NewSandboxManager("test-session-pwsh")
+	if err != nil {
+		t.Fatalf("Failed to create SandboxManager: %v", err)
+	}
+	defer sm.Cleanup()
+
+	sm.SetProvider(&PowerShellProvider{})
+
+	if _, ok := sm.Provider.(*PowerShellProvider); !ok {
+		t.Fatalf("Expected PowerShellProvider, got %T", sm.Provider)
+	}
+
+	// We only execute if pwsh exists
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := sm.Execute(ctx, "Write-Output 'hello'")
+
+	// Since pwsh might not be installed, we accept "executable file not found"
+	if err != nil {
+		if !strings.Contains(err.Error(), "executable file not found") && !strings.Contains(err.Error(), "no such file") {
+			t.Fatalf("Unexpected execute error: %v, out: %s", err, out)
+		}
+	} else {
+		if !strings.Contains(out, "hello") {
+			t.Errorf("Expected 'hello', got: %s", out)
+		}
+	}
+}
+
+func TestRecordViolation(t *testing.T) {
+	// Simple test to ensure it doesn't panic
+	RecordViolation()
 }
