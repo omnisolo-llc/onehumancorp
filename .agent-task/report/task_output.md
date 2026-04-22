@@ -1,39 +1,71 @@
-# Issue Brief: Implement Telemetry Pipeline Contention Optimization
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 24px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #ffffff; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);">
+
+# Research Report: Cost Efficiency Analysis (Token Forecasting)
+
+**Title:** [Observability] Implement Token Burn Rate Forecasting for Cost Efficiency Analysis
+**Priority:** P1
+**Estimated Scope:** Medium
 
 ## Problem Statement
-The current hybrid mode telemetry architecture generates significant network contention when syncing telemetry buffer events. In Standalone Mode, local SQLite writes perform well, but when transitioning to Cloud-Native operations, the `mcp_sync_worker` aggressively pushes bulk telemetry metrics and OpenTelemetry traces to the central `ohc-sip` cloud database. This process saturates local I/O and creates substantial lock contention in the centralized Redis and Postgres instances (especially around the `ohc_autodream_memories` synchronization). The user needs this solved without altering the platform's core multi-tenant / standalone hybrid capability.
 
-## Research Report
-- **Review of Architecture**: Telemetry events map back to the Swarm's "Shared Task List" operations. Wait times for agent state transitions (via `ohc_kairos_transition_duration_seconds`) spike when the underlying DB transactions in `statemachine.go` and `queue_manager.go` are blocked by telemetry table syncs.
-- **Log Review**: High counts of `context deadline exceeded` in `sync_daemon.go` during peak Swarm operation.
-- **Data Gap**: A detailed breakdown of Cloud vs. Standalone performance reveals that local processing uses simple transactions, whereas the central sync pipeline attempts full table delta synchronization simultaneously across pods.
+OHC operates efficiently, yet tenant-specific AI operating costs can scale unpredictably. While our backend instrumentations (via `ohc_agent_token_usage_total` and `AgentCostEstimateUSD` in `srcs/server/telemetry/telemetry.go`) log exact token usage, we lack a system that dynamically extrapolates this data to forecast future burn rates. For business owners (like Carlos the Freelance Handyman or Priya the Boutique Owner), unpredicted operational spikes due to excessive agent queries can lead to unexpected cost escalations. The Orchestration Hub currently doesn't project these per-tenant API call volumes or storage usages proactively.
+
+Without token forecasting:
+- **Tenants** may inadvertently cause expensive LLM escalation.
+- **Swarm Operators** miss vital anomalously high token consumption metrics per tenant.
+- There is zero visibility into near-future agent ROI efficiency inside Grafana for stakeholders.
 
 ## Design Doc
-### Proposed Solution: Hybrid Telemetry Throttling & Batching
-1. **Adaptive Batching Window**: Introduce an adaptive backoff and chunk size modifier in `srcs/server/telemetry/sync_worker.go`. During high lock contention (detected via `ohc_kairos_transitions_total` error ratios), the worker should shrink payload size and increase `sleep` duration.
-2. **Postgres LWW Handling**: When pushing to PostgreSQL, instead of an unconditional `INSERT/UPDATE`, the sync worker must use CRDT Last-Writer-Wins logic with a conditional update (`WHERE excluded.updated_at > [table].updated_at`) to ensure late arriving standalone telemetry does not overwrite more recent Cloud mode agent states.
-3. **Redis Pub/Sub Coordination**: Use the `Teammate Mesh` to broadcast `TELEMETRY_SYNC_START` and `TELEMETRY_SYNC_STOP` events. This allows agents to pause non-critical background data processing while heavy syncs occur.
+
+### 1. Architecture
+
+We propose the integration of a **Token Burn Rate Forecasting Engine** into the Orchestration Hub. This worker calculates the moving average burn rate using the existing Prometheus metric `ohc_token_usage_total` or `AgentCostEstimateUSD`, providing predictive metrics for the immediate future.
+
+```mermaid
+graph TD;
+    A[Orchestration Hub] -->|Cloud Mode| B(Max Parallelism & Bulk PG Updates);
+    A -->|Standalone Mode| C(Throttled I/O Queue & SQLite Retry Backoff);
+    C -.->|Sync when Online| D[Cloud Observability Metric Buffer];
+    A --> E{Token Burn Rate Engine};
+    E -->|Extrapolate Usage| F[Grafana Forecasting Panel];
+    E -->|Calculate Moving Avg| G(ohc_token_burn_rate_forecast Gauge);
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class A,B,E premium;
+    class C,D,F,G premium;
+```
+
+### 2. Integration Points
+
+1.  **Backend Changes:** Add a new metrics gauge, `ohc_token_burn_rate_forecast` to track the "Predicted moving average of token burn rate per minute per tenant". The Prometheus variable `tokenBurnRateGauge` is already stubbed in `srcs/server/telemetry/telemetry.go`, but it needs an accompanying worker.
+2.  **Dashboard Visualization:** A Text/HTML panel representing "Agent Token Efficiency Forecast" needs to be added to the Grafana dashboards, adhering to OHC styling protocols.
+
+### 3. Data Flow
+
+| Stage | Action |
+|-------|--------|
+| **Data Source** | Agent calls `telemetry.RecordAgentCost` tracking tokens/costs per `tenant_id`. |
+| **Forecaster** | A background routine measures delta usage over time intervals. |
+| **Exporter** | Exposes `ohc_token_burn_rate_forecast` to Prometheus. |
+| **Visualization** | Grafana Dashboard queries moving average. |
 
 ## Implementation Prompt
-- Refactor `srcs/server/telemetry/sync_worker.go` to implement an adaptive batch size algorithm based on previous payload duration and error rates.
-- Update `srcs/server/telemetry/telemetry_bridge.go` to use the `WHERE excluded.updated_at` LWW conditional check when writing to the remote store.
-- Add OpenTelemetry metrics `ohc_telemetry_sync_backoff_duration_seconds` (Histogram) and `ohc_telemetry_batch_size` (Gauge) to track the efficacy of the new throttling mechanism.
-- Ensure the Grafana dashboard (`hybrid-telemetry.json`) is updated to include these new metrics.
 
-## Priority
-P1
+As an Implementer Agent, you will bridge the observability gap for cost-efficiency.
 
-## Estimated Scope
-Medium
+**Objectives:**
+1.  **Develop Forecaster Background Worker:** In `srcs/server/telemetry/forecaster.go`, implement a routine (e.g., `StartTokenBurnForecaster`) that periodically samples raw token metrics, calculates the moving average token usage per tenant, and updates the `tokenBurnRateGauge` and `usdBurnRateGauge` in Prometheus.
+2.  **Update Grafana Dashboards:** Update `deploy/docker/grafana/provisioning/dashboards/token-forecast.json` (and the helm counterpart) to visualize the new `ohc_token_burn_rate_forecast` metric. Include a Premium Glassmorphism styled Text panel for descriptive contexts (similar to other OHC dashboards).
+3.  **Testing:** Add full test coverage in `srcs/server/telemetry/forecaster_test.go` to ensure accurate forecasting logic without regressions.
+
+**Acceptance Criteria:**
+- 100% test coverage in Go for the forecasting module.
+- Successful `bazelisk test //...` across the backend.
+- The new Prometheus metric `ohc_token_burn_rate_forecast` is successfully instrumented and queryable on the backend.
+- The Grafana JSON dashboards successfully visualize token burn forecasts.
 
 ```yaml
-issue_title: "[telemetry] Hybrid Telemetry Synchronization Contention Optimization"
-issue_priority: "P1"
-issue_description: "Implement adaptive batching and LWW conflict resolution in the telemetry sync daemon to prevent database lock contention during standalone-to-cloud handoffs."
-issue_todo_list:
-  - [ ] Implement adaptive backoff in sync_worker.go
-  - [ ] Implement LWW conflict resolution in telemetry_bridge.go
-  - [ ] Add ohc_telemetry_sync_backoff_duration_seconds and ohc_telemetry_batch_size metrics
-  - [ ] Update hybrid-telemetry.json Grafana dashboard
-issue_label: ["observability", "performance", "high-impact"]
+issue_id: OHC-TELEMETRY-004
+title: "Implement Token Burn Rate Forecasting Engine"
 ```
+</div>
