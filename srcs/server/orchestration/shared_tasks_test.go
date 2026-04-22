@@ -129,3 +129,95 @@ func TestClaimTask_PostgresLocking(t *testing.T) {
 		t.Errorf("expected query to contain FOR UPDATE SKIP LOCKED, got: %s", provider.lastQuery)
 	}
 }
+
+func TestClaimTask_DependenciesSQLite(t *testing.T) {
+	provider := setupTestDBSharedTasks(t)
+    defer provider.Close()
+
+	ctx := context.Background()
+
+    // Create a task that is completed (id: task-completed)
+    completedTask := &SharedTaskDecomposition{
+		ID: "task-completed",
+        OrganizationID: "org-1",
+        Title: "Completed Task",
+        Status: "COMPLETED",
+        Priority: "P2",
+        Payload: json.RawMessage("{}"),
+        Dependencies: json.RawMessage("[]"),
+    }
+    err := CreateTask(ctx, provider, completedTask)
+    if err != nil {
+        t.Fatalf("failed to create completed task: %v", err)
+    }
+
+    // Create a task with unmet dependencies (id: task-unmet)
+    unmetTask := &SharedTaskDecomposition{
+		ID: "task-unmet",
+        OrganizationID: "org-1",
+        Title: "Unmet Task",
+        Status: "PENDING",
+        Priority: "P2",
+        Payload: json.RawMessage("{}"),
+        Dependencies: json.RawMessage(`["task-not-exist"]`),
+    }
+    err = CreateTask(ctx, provider, unmetTask)
+    if err != nil {
+        t.Fatalf("failed to create unmet task: %v", err)
+    }
+
+    // Create a task with met dependencies (id: task-met)
+    metTask := &SharedTaskDecomposition{
+		ID: "task-met",
+        OrganizationID: "org-1",
+        Title: "Met Task",
+        Status: "PENDING",
+        Priority: "P2",
+        Payload: json.RawMessage("{}"),
+        Dependencies: json.RawMessage(`["task-completed"]`),
+    }
+    err = CreateTask(ctx, provider, metTask)
+    if err != nil {
+        t.Fatalf("failed to create met task: %v", err)
+    }
+
+	// It should claim "task-met" because "task-unmet" has an unfulfilled dependency
+    claimedTask, err := ClaimTask(ctx, provider, "org-1", "agent-1")
+    if err != nil {
+        t.Fatalf("failed to claim task: %v", err)
+    }
+	if claimedTask == nil {
+		t.Fatalf("expected to claim a task, got nil")
+	}
+
+    if claimedTask.ID != "task-met" {
+        t.Errorf("expected task-met to be claimed, got %v", claimedTask.ID)
+    }
+
+	// Ensure no other tasks can be claimed (since "task-unmet" deps are not fulfilled)
+	claimedTask2, err := ClaimTask(ctx, provider, "org-1", "agent-1")
+    if err != nil {
+        t.Fatalf("failed to claim task 2: %v", err)
+    }
+	if claimedTask2 != nil {
+		t.Fatalf("expected no more tasks to claim, got %v", claimedTask2.ID)
+	}
+}
+
+func TestClaimTask_DependenciesPostgres(t *testing.T) {
+	ctx := context.Background()
+	provider := &mockPGProvider{}
+
+	_, err := ClaimTask(ctx, provider, "org-1", "agent-1")
+	if err != nil {
+		t.Fatalf("expected nil error on sql.ErrNoRows, got %v", err)
+	}
+
+	if !strings.Contains(provider.lastQuery, "jsonb_array_length(std.dependencies) = 0") {
+		t.Errorf("expected query to contain jsonb_array_length check, got: %s", provider.lastQuery)
+	}
+
+	if !strings.Contains(provider.lastQuery, "SELECT COUNT(*)\n\t\t\t\t\tFROM jsonb_array_elements_text(std.dependencies) j\n\t\t\t\t\tJOIN shared_tasks_decomposition d ON j = d.id::text\n\t\t\t\t\tWHERE d.status IN ('COMPLETED', 'SUCCESS')") {
+		t.Errorf("expected query to contain jsonb_array_elements_text check, got: %s", provider.lastQuery)
+	}
+}
