@@ -164,3 +164,20 @@ func TestDecompressBackwardCompatibility(t *testing.T) {
 		t.Errorf("Expected data to be returned as-is on fail. Got %s, want %s", string(decompressed2), string(oldQuotedData))
 	}
 }
+
+func BenchmarkCompressData(b *testing.B) {
+	original := []byte(`{"hello":"world","deep":{"nested":[1,2,3]}, "large_text": "This is a long piece of text to properly test the gzip compression and decompression performance, because otherwise it would be too fast to see any allocations clearly."}`)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = compressData(original)
+	}
+}
+
+func BenchmarkDecompressData(b *testing.B) {
+	original := []byte(`{"hello":"world","deep":{"nested":[1,2,3]}, "large_text": "This is a long piece of text to properly test the gzip compression and decompression performance, because otherwise it would be too fast to see any allocations clearly."}`)
+	compressed, _ := compressData(original)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, _ = decompressData(compressed)
+	}
+}
