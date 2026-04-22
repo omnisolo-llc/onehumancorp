@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
--- tracker comment
 -- +goose StatementEnd
 
 -- +goose Down
