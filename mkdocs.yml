@@ -49,6 +49,13 @@ nav:
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
       - Hybrid SPIFFE Identity MCP: research/[integrations]_hybrid_spiffe_identity_mcp.md
       - features/index.md
+      - Social Media ManyChat: research/[integrations]_social_media_manychat.md
+      - Calendar Cal.com: research/[integrations]_calendar_cal_com.md
+      - Email Resend: research/[integrations]_email_resend.md
+      - Payment MercadoPago: research/[integrations]_payment_mercadopago.md
+      - Shipping Shippo: research/[integrations]_shipping_shippo.md
+      - SMS Twilio: research/[integrations]_sms_twilio.md
+      - Video Zoom: research/[integrations]_video_zoom.md
       - KAIROS Orchestration: features/kairos_orchestration.md
       - KAIROS Sub-Agent Queue: features/kairos/sub_agent_queue.md
       - KAIROS Distributed State Machine: features/kairos/distributed_state_machine.md
@@ -66,7 +73,7 @@ nav:
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
-      - Teammate Mesh Walkthrough: walkthroughs/teammate_mesh_walkthrough.md
+      - Teammate Mesh Walkthrough: technical/walkthroughs/teammate_mesh.md
       - AutoDream CLI Guide: walkthroughs/autodream_cli_interactive_guide.md
       - Virtual Meeting Room Walkthrough: walkthroughs/virtual_meeting_room_walkthrough.md
       - walkthroughs/index.md
