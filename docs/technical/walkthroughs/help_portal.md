@@ -144,4 +144,6 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Agent Harness OS-Level Sandboxing and MCP Integration](agent_harness_os_level_sandboxing_mcp_integration.md)**: Visual guide to the OS-Level execution wrapper and MCP integrations.
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
+
+- **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
 </div>
