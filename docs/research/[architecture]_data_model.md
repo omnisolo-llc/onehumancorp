@@ -1,4 +1,4 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+
 
 # Title: Data Model Architecture
 
@@ -157,5 +157,3 @@ erDiagram
 - Enable PostgreSQL Row-Level Security (RLS) on all tenant-scoped tables to ensure data isolation.
 - Provide a unified query layer that correctly applies the active tenant context for both user-initiated API calls and background AI agent jobs.
 - Include unit/E2E tests verifying that a user from Tenant A cannot access data from Tenant B under any circumstances.
-
-</div>
