@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "auth.go",
         "client.go",
+        "client_burst.go",
         "doc.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/grpc",
