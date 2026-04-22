@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
-	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -314,7 +314,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
 				telemetry.RecordTaskClaimContention(ctx, "redis")
-					return nil, nil // Lock could not be acquired (task is locked)
+				return nil, nil // Lock could not be acquired (task is locked)
 			}
 			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
 		}
@@ -337,16 +337,22 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	var fetchedTaskID string
 	var queryErr error
 	if tm.db.IsSQLite() {
-		// SQLite doesn't support UPDATE ... RETURNING with a LIMIT, so we use explicit two-step select-then-update within the transaction.
-		selectQuery := `
-			SELECT st.id
-			FROM shared_tasks st
-			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
-			ORDER BY st.priority ASC, st.created_at ASC
-			LIMIT 1
+		// SQLite doesn't support UPDATE ... RETURNING with a LIMIT in the outer query, so we use a subquery.
+		// We perform a dummy update to acquire the write lock efficiently and prevent race conditions.
+		updateQuery := `
+			UPDATE shared_tasks
+			SET status = status
+			WHERE id = (
+				SELECT st.id
+				FROM shared_tasks st
+				WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+				AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
+				ORDER BY st.priority ASC, st.created_at ASC
+				LIMIT 1
+			)
+			RETURNING id
 		`
-		queryErr = tx.QueryRow(ctx, selectQuery, taskID, claims.OrganizationID).Scan(&fetchedTaskID)
+		queryErr = tx.QueryRow(ctx, updateQuery, taskID, claims.OrganizationID).Scan(&fetchedTaskID)
 	} else {
 		// PostgreSQL with FOR UPDATE SKIP LOCKED
 		selectQuery := `
@@ -1238,4 +1244,5 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 
 	return nil
 }
+
 // added for Sub-Agent Orchestration Queue
