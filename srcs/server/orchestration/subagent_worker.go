@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/harness"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
@@ -51,21 +52,33 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 			return
 		}
 
-
-
 		go func(job *queue.Job) {
 			startTime := time.Now()
+
+			var allowedDomains []string
+			if job.Payload != "" {
+				allowedDomains = []string{"api.openai.com", "api.anthropic.com", "googleapis.com"}
+			}
+
+			proxy := harness.NewNetworkBridgeProxy(job.ID, allowedDomains)
+			proxyURL, err := proxy.Start()
+			if err == nil {
+				defer proxy.Stop()
+			} else {
+				proxyURL = "http://127.0.0.1:8080"
+			}
 
 			ac := &AgentContext{
 				AgentID:         job.ID,
 				AgentType:       job.AgentRole,
 				ParentSessionID: job.ParentTaskID,
 				Env: map[string]string{
-					"HTTP_PROXY": "http://127.0.0.1:8080",
+					"HTTP_PROXY":  proxyURL,
+					"HTTPS_PROXY": proxyURL,
 				},
 			}
 			agentCtx := WithAgentContext(ctx, ac)
-			err := w.spawner.SpawnIsolated(agentCtx, job)
+			err = w.spawner.SpawnIsolated(agentCtx, job)
 
 			duration := time.Since(startTime).Seconds()
 			telemetry.RecordSubAgentExecutionDuration(ctx, duration)
@@ -77,7 +90,6 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 				_ = w.taskQueue.Complete(ctx, job.ID)
 			}
 		}(job)
-
 
 	}
 }

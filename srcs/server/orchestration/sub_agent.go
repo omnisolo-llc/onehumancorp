@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/harness"
 	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
@@ -40,13 +41,13 @@ type SubAgentSpawner interface {
 
 // DefaultSubAgentSpawner implements SubAgentSpawner.
 type DefaultSubAgentSpawner struct {
-	db       db.Provider
-	tm       *TaskManager
-	hub      *CentrifugeNode // For teammate mesh broadcasts
-	sem      chan struct{} // For concurrency limits in standalone mode
-	wg       sync.WaitGroup
-	ctx      context.Context
-	cancel   context.CancelFunc
+	db     db.Provider
+	tm     *TaskManager
+	hub    *CentrifugeNode // For teammate mesh broadcasts
+	sem    chan struct{}   // For concurrency limits in standalone mode
+	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewDefaultSubAgentSpawner creates a new DefaultSubAgentSpawner.
@@ -115,9 +116,9 @@ func (s *DefaultSubAgentSpawner) executeWithRetry(task *SharedTask) {
 	if err == nil {
 		_ = s.completeTask(task)
 	} else if s.ctx.Err() != nil {
-        // Do not fail the task if the error is due to a context cancellation (graceful shutdown)
-        return
-    } else {
+		// Do not fail the task if the error is due to a context cancellation (graceful shutdown)
+		return
+	} else {
 		_ = s.failTask(task)
 	}
 }
@@ -176,7 +177,22 @@ func (s *DefaultSubAgentSpawner) executeTask(task *SharedTask) error {
 	// Emit heartbeat to database (replaces former .ohc/runtime/status/<taskID>.yml).
 	writeHeartbeat(context.Background(), s.db, task.ID, "IN_PROGRESS", subAgentType, parentTaskID)
 
-	// Simulate real work that might fail
+	if len(task.Payload) > 0 {
+		var payload map[string]interface{}
+		if err := json.Unmarshal([]byte(task.Payload), &payload); err == nil {
+			if cmdStr, ok := payload["command"].(string); ok && cmdStr != "" {
+				executor := harness.NewBwrapExecutor(task.ID)
+				execCtx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
+				defer cancel()
+				_, err := executor.Execute(execCtx, []string{"/bin/bash", "-c", cmdStr})
+				if err != nil {
+					return fmt.Errorf("sandboxed execution failed: %w", err)
+				}
+				return nil
+			}
+		}
+	}
+
 	select {
 	case <-s.ctx.Done():
 		return s.ctx.Err()
