@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/base64"
 	"io"
-	"sync"
 	"time"
 )
 
@@ -27,25 +26,6 @@ type CheckpointSaver interface {
 	ListCheckpoints(ctx context.Context, threadID string) ([]Checkpoint, error)
 }
 
-var (
-	gzipWriterPool = sync.Pool{
-		New: func() interface{} {
-			w, _ := gzip.NewWriterLevel(nil, gzip.BestSpeed)
-			return w
-		},
-	}
-	gzipReaderPool = sync.Pool{
-		New: func() interface{} {
-			return new(gzip.Reader)
-		},
-	}
-	bytesBufferPool = sync.Pool{
-		New: func() interface{} {
-			return new(bytes.Buffer)
-		},
-	}
-)
-
 func decompressData(data []byte) ([]byte, error) {
 	isQuoted := len(data) >= 2 && data[0] == '"' && data[len(data)-1] == '"'
 
@@ -62,10 +42,8 @@ func decompressData(data []byte) ([]byte, error) {
 		return data, nil
 	}
 
-	gzr := gzipReaderPool.Get().(*gzip.Reader)
-	defer gzipReaderPool.Put(gzr)
-
-	if err := gzr.Reset(bytes.NewReader(decoded[:n])); err != nil {
+	gzr, err := gzip.NewReader(bytes.NewReader(decoded[:n]))
+	if err != nil {
 		return data, nil
 	}
 	defer gzr.Close()
@@ -79,14 +57,8 @@ func decompressData(data []byte) ([]byte, error) {
 }
 
 func compressData(data []byte) ([]byte, error) {
-	buf := bytesBufferPool.Get().(*bytes.Buffer)
-	buf.Reset()
-	defer bytesBufferPool.Put(buf)
-
-	gzw := gzipWriterPool.Get().(*gzip.Writer)
-	gzw.Reset(buf)
-	defer gzipWriterPool.Put(gzw)
-
+	var buf bytes.Buffer
+	gzw := gzip.NewWriter(&buf)
 	if _, err := gzw.Write(data); err != nil {
 		return nil, err
 	}
