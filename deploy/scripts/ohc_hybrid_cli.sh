@@ -21,7 +21,7 @@ while true; do
     echo -e "  2) Configure Environment (.env)"
     echo -e "  3) Run Diagnostics"
     echo -e "  4) Launch Quick Start (Standalone)"
-    echo -e "  5) Provision AI Agent"
+    echo -e "  5) Provision AI Agent (Wizard)"
     echo -e "  6) Standalone DB Health Check"
     echo -e "  8) Seed Database with Mock Data"
     echo -e "  0) Exit"

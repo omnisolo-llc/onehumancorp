@@ -20,16 +20,22 @@ if [ -z "$agent_name" ]; then
     exit 1
 fi
 echo -e "\n${BOLD}Available Roles:${RESET}"
-echo -e "  1) Software Engineer"
-echo -e "  2) QA Automation"
-echo -e "  3) SRE/DevOps"
-echo -e "  4) Data Analyst"
-read -p "Select a role [1-4] (default: 1): " role_choice
-agent_role="Software Engineer"
+echo -e "  1) The Manager"
+echo -e "  2) The Promoter"
+echo -e "  3) The Salesperson"
+echo -e "  4) The Ambassador"
+echo -e "  5) The Accountant"
+echo -e "  6) The Protector"
+echo -e "  7) The Advisor"
+read -p "Select a role [1-7] (default: 1): " role_choice
+agent_role="The Manager"
 case $role_choice in
-    2) agent_role="QA Automation" ;;
-    3) agent_role="SRE/DevOps" ;;
-    4) agent_role="Data Analyst" ;;
+    2) agent_role="The Promoter" ;;
+    3) agent_role="The Salesperson" ;;
+    4) agent_role="The Ambassador" ;;
+    5) agent_role="The Accountant" ;;
+    6) agent_role="The Protector" ;;
+    7) agent_role="The Advisor" ;;
 esac
 echo -e "\n${BOLD}Provider Type:${RESET}"
 echo -e "  1) Cloud (OpenAI/Anthropic)"
