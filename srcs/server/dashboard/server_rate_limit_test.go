@@ -13,6 +13,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 func TestHandleMCPInvoke_RateLimiting(t *testing.T) {
@@ -292,6 +293,8 @@ func TestHandleMCPInvoke_MaxRetriesExceeded(t *testing.T) {
 // Does it contain "429"? YES!
 // It falls into the `if err != nil && strings.Contains(err.Error(), "429")` check!
 func TestHandleMCPInvoke_RateLimiting_InvokeErrorAndBackoff(t *testing.T) {
+	cleanup, _ := telemetry.InitTelemetry()
+	defer cleanup()
 	org := domain.Organization{ID: "org-1"}
 	hub := orchestration.NewHub()
 	defer hub.Close()

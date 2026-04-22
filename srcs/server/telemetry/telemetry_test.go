@@ -416,6 +416,10 @@ func TestRecordFunctions(t *testing.T) {
 	})
 
 
+		t.Run("RecordApiRateLimitExceeded", func(t *testing.T) {
+			RecordApiRateLimitExceeded(ctx, "endpoint1")
+		})
+
 	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
 		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
 	})
@@ -463,6 +467,10 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 	}()
 
 	ctx := context.Background()
+
+		t.Run("RecordApiRateLimitExceeded Uninitialized", func(t *testing.T) {
+			RecordApiRateLimitExceeded(ctx, "endpoint1")
+		})
 
 	t.Run("RecordTokenUsage Uninitialized", func(t *testing.T) {
 		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
