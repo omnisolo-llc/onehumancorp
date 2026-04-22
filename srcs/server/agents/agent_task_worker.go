@@ -11,7 +11,7 @@ import (
 	"time"
 
 	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
-	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/builtin/grpc"
+	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/grpc"
 	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
@@ -190,7 +190,6 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				slog.Info("agent task worker: issue marked in_progress, delegating to agent", "agent_id", a.ID)
 
 				// Handle Builtin agent logic: dispatch via gRPC to the builtin Rust agent binary.
-				// Both ProviderTypeBuiltin and ProviderTypeBuiltinRust use the same Rust agent.
 				// The Rust binary must be running and accessible at OHC_AGENT_ADDRESS
 				// (default: 127.0.0.1:50051). It exposes the AgentService gRPC interface.
 				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
@@ -198,18 +197,6 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 					go func(agent orchestration.Agent, payload string) {
 						if err := dispatchToBuiltinAgent(payload, fmt.Sprintf("plane issue %s", issue.ID)); err != nil {
 							slog.Error("builtin agent dispatch error", "err", err, "agent_id", agent.ID)
-						}
-					}(a, string(payload))
-				}
-
-				// Handle BuiltinRust agent logic: dispatch via gRPC to the Rust agent binary.
-				// The Rust binary must be running and accessible at OHC_AGENT_ADDRESS
-				// (default: 127.0.0.1:50051). It exposes the same AgentService gRPC interface.
-				if a.ProviderType == string(ProviderTypeBuiltinRust) {
-					slog.Info("agent task worker: dispatching to builtin Rust agent via gRPC", "agent_id", a.ID)
-					go func(agent orchestration.Agent, payload string) {
-						if err := dispatchToBuiltinAgent(payload, fmt.Sprintf("plane issue %s", issue.ID)); err != nil {
-							slog.Error("builtin Rust agent dispatch error", "err", err, "agent_id", agent.ID)
 						}
 					}(a, string(payload))
 				}
