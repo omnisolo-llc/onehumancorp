@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
+import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
@@ -174,6 +175,8 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const SwarmObservabilityWidget(),
         const SizedBox(height: 16),
+        const SwarmVelocityWidget(),
+        const SizedBox(height: 16),
         const HybridObservabilityWidget(),
         const SizedBox(height: 16),
         Container(
@@ -183,25 +186,9 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         SizedBox(
           height: 350,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(<double>[
-                  1.787, -0.715, -0.072, 0, 0,
-                  -0.213, 1.285, -0.072, 0, 0,
-                  -0.213, -0.715, 1.928, 0, 0,
-                  0, 0, 0, 1, 0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                ),
-                child: Column(
+          child: GlassCard(
+            padding: EdgeInsets.zero,
+            child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
@@ -219,8 +206,6 @@ class _DashboardContent extends StatelessWidget {
                     const Expanded(child: TaskListView()),
                   ],
                 ),
-              ),
-            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -272,32 +257,9 @@ class _ObservabilityWidget extends StatelessWidget {
       label: 'System Observability Panel',
       child: Tooltip(
         message: 'View System Health & Metrics',
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.compose(
-              outer: ColorFilter.matrix(const <double>[
-                1.168, -0.153, -0.015, 0, 0,
-                -0.046, 1.061, -0.015, 0, 0,
-                -0.046, -0.152, 1.198, 0, 0,
-                0, 0, 0, 1, 0,
-              ]),
-              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(255, 255, 255, 0.03),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Material(
+        child: GlassCard(
+            padding: EdgeInsets.zero,
+            child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
@@ -353,9 +315,7 @@ class _ObservabilityWidget extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
           ),
-        ),
       ),
     );
   }

@@ -61,7 +61,26 @@ func (b *PremiumDocBuilder) AddDiagram(mermaidCode string) {
 func (b *PremiumDocBuilder) Render() string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("# %s\n\n", html.EscapeString(b.title)))
+		sb.WriteString("<style>\n")
+	sb.WriteString(".ohc-premium-card {\n")
+	sb.WriteString("    backdrop-filter: blur(20px) saturate(200%);\n")
+	sb.WriteString("    background: rgba(255, 255, 255, 0.03);\n")
+	sb.WriteString("    border: 1px solid rgba(255, 255, 255, 0.1);\n")
+	sb.WriteString("    border-radius: 16px;\n")
+	sb.WriteString("    padding: 24px;\n")
+	sb.WriteString("    font-family: 'Outfit', 'Inter', sans-serif;\n")
+	sb.WriteString("    color: #e0e0e0;\n")
+	sb.WriteString("}\n")
+	sb.WriteString(".ohc-premium-header {\n")
+	sb.WriteString("    font-family: 'Outfit', sans-serif;\n")
+	sb.WriteString("    font-weight: 700;\n")
+	sb.WriteString("    background: linear-gradient(90deg, #ffffff, #a0a0a0);\n")
+	sb.WriteString("    -webkit-background-clip: text;\n")
+	sb.WriteString("    -webkit-text-fill-color: transparent;\n")
+	sb.WriteString("}\n")
+	sb.WriteString("</style>\n")
+	sb.WriteString("<div class=\"ohc-premium-card\">\n")
+	sb.WriteString(fmt.Sprintf("<h1 class=\"ohc-premium-header\">%s</h1>\n\n", html.EscapeString(b.title)))
 	sb.WriteString(fmt.Sprintf("- Author: %s\n", html.EscapeString(b.agentID)))
 	sb.WriteString(fmt.Sprintf("- Date: %s\n", html.EscapeString(b.date)))
 	sb.WriteString(fmt.Sprintf("- Status: %s\n\n", html.EscapeString(b.status)))
@@ -74,6 +93,8 @@ func (b *PremiumDocBuilder) Render() string {
 	if docsGenerated != nil {
 		docsGenerated.Add(nil, 1)
 	}
+
+	sb.WriteString("\n</div>\n")
 
 	return sb.String()
 }

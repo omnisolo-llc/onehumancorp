@@ -508,3 +508,98 @@ func TestTasksDBClaimTask_NoPending(t *testing.T) {
 		t.Fatalf("ClaimTask returned task when none was pending")
 	}
 }
+
+func TestTasksDBClaimTask_DAG(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	ctx := context.Background()
+
+	// Initialize schema for tasks and transitions manually for tests
+	_, err := provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			assigned_agent_id TEXT,
+			dependencies JSON,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (
+			id TEXT PRIMARY KEY,
+			entity_id TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
+			reason TEXT,
+			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create tables: %v", err)
+	}
+
+	tasksDB := NewTasksDB(provider)
+	ctxWithClaims := auth.ContextWithClaims(ctx, &auth.Claims{OrganizationID: "org-123"})
+
+	// Insert Task A (DONE) and Task B (PENDING, depends on A) and Task C (PENDING, depends on D which is PENDING)
+	_, err = provider.Exec(ctx, `
+		INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES
+		('task-a', 'org-123', 'Task A', 'DONE', '[]'),
+		('task-b', 'org-123', 'Task B', 'PENDING', '["task-a"]'),
+		('task-d', 'org-123', 'Task D', 'PENDING', '[]'),
+		('task-c', 'org-123', 'Task C', 'PENDING', '["task-d"]')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert tasks: %v", err)
+	}
+
+	// Claim Task: Should claim B or D, but not C
+	task, err := tasksDB.ClaimTask(ctxWithClaims, "agent-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task == nil {
+		t.Fatalf("expected to claim a task")
+	}
+	if task.TaskID != "task-b" && task.TaskID != "task-d" {
+		t.Errorf("expected to claim task-b or task-d, got %s", task.TaskID)
+	}
+
+	// Transition the claimed task
+	err = tasksDB.TransitionTask(ctxWithClaims, task.TaskID, "agent-1", "IN_PROGRESS", "DONE", "finished")
+	if err != nil {
+		t.Fatalf("failed to transition task: %v", err)
+	}
+
+	// If D was claimed and transitioned to DONE, C should now be claimable.
+	// We'll just try claiming again.
+	task2, err := tasksDB.ClaimTask(ctxWithClaims, "agent-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task2 == nil {
+		t.Fatalf("expected to claim another task")
+	}
+
+	// Transition the second task
+	err = tasksDB.TransitionTask(ctxWithClaims, task2.TaskID, "agent-1", "IN_PROGRESS", "DONE", "finished")
+	if err != nil {
+		t.Fatalf("failed to transition task: %v", err)
+	}
+
+	// Now try to claim C (since D is definitely DONE by now)
+	task3, err := tasksDB.ClaimTask(ctxWithClaims, "agent-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if task3 == nil {
+		t.Fatalf("expected to claim task C")
+	}
+	if task3.TaskID != "task-c" {
+		t.Errorf("expected to claim task-c, got %s", task3.TaskID)
+	}
+}
