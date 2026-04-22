@@ -23,6 +23,7 @@ go_library(
     deps = [
         "//srcs/server/db",
         "//srcs/server/api/mesh_legacy:mesh",
+        "//srcs/server/orchestration/kairos",
         "@com_github_redis_go_redis_v9//:go-redis",
         "//srcs/server/api",
         "@com_github_redis_rueidis//:rueidis",
@@ -64,9 +65,12 @@ go_test(
         "health_test.go",
         "server_test.go",
         "tenant_test.go",
+        "kairos_mesh_e2e_test.go",
     ],
     embed = [":dashboard"],
     deps = [
+        "@com_github_gorilla_websocket//:websocket",
+        "@com_github_stretchr_testify//assert",
         "//srcs/server/api",
         "@com_github_redis_rueidis//:rueidis",
         "//srcs/server/api/mesh",
