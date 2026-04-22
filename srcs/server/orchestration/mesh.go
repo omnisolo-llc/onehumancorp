@@ -523,19 +523,6 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 	return ch, nil
 }
 
-type MeshTransport interface {
-	BroadcastTask(ctx context.Context, task Task) error
-	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
-	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
-	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
-	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
-	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
-	PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error
-	SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error)
-}
-
 const numShards = 16
 
 type MemoryMeshTransport struct {
@@ -1028,4 +1015,20 @@ func (lm *MemoryMeshTransport) SubscribeChannel(ctx context.Context, channel str
 	}()
 
 	return ch, nil
+}
+
+func (rm *RedisMeshTransport) Publish(topic string, data []byte) error {
+	return rm.BroadcastMeshEvent(context.Background(), topic, data)
+}
+
+func (rm *RedisMeshTransport) Subscribe(topic string) (<-chan []byte, error) {
+	return rm.SubscribeMeshEvents(context.Background(), topic)
+}
+
+func (lm *MemoryMeshTransport) Publish(topic string, data []byte) error {
+	return lm.BroadcastMeshEvent(context.Background(), topic, data)
+}
+
+func (lm *MemoryMeshTransport) Subscribe(topic string) (<-chan []byte, error) {
+	return lm.SubscribeMeshEvents(context.Background(), topic)
 }
