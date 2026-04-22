@@ -1168,7 +1168,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) { // added for issue 4365
 	}))
 	defer ts.Close()
 
-	syncedCount, err := db.SyncBufferedMetrics(ctx, ts.URL, 500)
+	syncedCount, err := db.SyncBufferedMetrics(ctx, ts.URL)
 	if err != nil {
 		t.Fatalf("SyncBufferedMetrics failed: %v", err)
 	}
