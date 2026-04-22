@@ -9,23 +9,23 @@ import (
 	"time"
 )
 
-type mockMeshApiTransport struct {
+type mockMeshTransport struct {
 	MeshTransport
 	broadcastCalled bool
 	subChan         chan []byte
 }
 
-func (m *mockMeshApiTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
 	m.broadcastCalled = true
 	return nil
 }
 
-func (m *mockMeshApiTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+func (m *mockMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
 	return m.subChan, nil
 }
 
 func TestMeshAPI_Broadcast(t *testing.T) {
-	mockMesh := &mockMeshApiTransport{}
+	mockMesh := &mockMeshTransport{}
 	api := NewMeshAPI(mockMesh)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"task_id":"123"}`)))
@@ -53,7 +53,7 @@ func TestMeshAPI_Broadcast(t *testing.T) {
 }
 
 func TestMeshAPI_Stream(t *testing.T) {
-	mockMesh := &mockMeshApiTransport{
+	mockMesh := &mockMeshTransport{
 		subChan: make(chan []byte, 1),
 	}
 	mockMesh.subChan <- []byte(`{"status":"test"}`)
@@ -82,7 +82,7 @@ func TestMeshAPI_Stream(t *testing.T) {
 
 
 func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
-	mockMesh := &mockMeshApiTransport{}
+	mockMesh := &mockMeshTransport{}
 	api := NewMeshAPI(mockMesh)
 
 	tests := []struct {
@@ -110,7 +110,7 @@ func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
 }
 
 func TestMeshAPI_Sync(t *testing.T) {
-	mockMesh := &mockMeshApiTransport{
+	mockMesh := &mockMeshTransport{
 		subChan: make(chan []byte, 1),
 	}
 	mockMesh.subChan <- []byte(`{"sync_status":"ok"}`)
