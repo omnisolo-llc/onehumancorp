@@ -1,5 +1,13 @@
 # Release Notes
 
+## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
+### Cloud Scaling Improvements
+- Add PII redaction to HybridContextTool payload.
+- Remove unused dependencies and modernize redis bindings.
+
+### Privacy/Offline Improvements
+- Fix Standalone DB path in CLI.
+
 
 ## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
 ### Cloud Scaling Improvements
