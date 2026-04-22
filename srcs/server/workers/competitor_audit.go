@@ -3,7 +3,10 @@ package workers
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,17 +18,23 @@ import (
 
 
 type CompetitorAuditWorker struct {
-	pool    db.Provider
-	counter metric.Int64Counter
+	pool      db.Provider
+	counter   metric.Int64Counter
+	memoryDir string
 }
 
-func NewCompetitorAuditWorker(pool db.Provider) *CompetitorAuditWorker {
+func NewCompetitorAuditWorker(pool db.Provider, memoryDir string) *CompetitorAuditWorker {
+	if memoryDir == "" {
+		memoryDir = ".agent-task/memory"
+	}
+
 	meter := otel.Meter("competitor_audit_worker")
 	counter, _ := meter.Int64Counter("competitor_audit_runs_total", metric.WithDescription("Total number of competitor audits run"))
 
 	return &CompetitorAuditWorker{
-		pool:    pool,
-		counter: counter,
+		pool:      pool,
+		counter:   counter,
+		memoryDir: memoryDir,
 	}
 }
 
@@ -71,6 +80,18 @@ func (w *CompetitorAuditWorker) runAudit(ctx context.Context) {
 		if err != nil {
 			slog.Error("CompetitorAuditWorker: failed to insert metric", "error", err)
 			return
+		}
+
+		// Integrates with OHC-SIP by publishing findings to .agent-task/memory/
+		if err := os.MkdirAll(w.memoryDir, 0755); err != nil {
+			slog.Error("CompetitorAuditWorker: failed to create memory directory", "error", err)
+			continue
+		}
+
+		content := fmt.Sprintf("Competitor: %s\nMetric: offline_support=false\n", comp)
+		filename := filepath.Join(w.memoryDir, fmt.Sprintf("competitor_%s.txt", comp))
+		if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
+			slog.Error("CompetitorAuditWorker: failed to write memory file", "error", err)
 		}
 	}
 

@@ -1,3 +1,4 @@
+-- migration for competitor metrics
 CREATE TABLE IF NOT EXISTS competitor_metrics (
     id TEXT PRIMARY KEY,
     organization_id TEXT NOT NULL,
