@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+	"github.com/redis/rueidis"
 	"context"
 	"database/sql"
 	"time"
@@ -13,10 +15,11 @@ import (
 // PgProvider implements the Provider interface using pgxpool.
 type PgProvider struct {
 	pool *pgxpool.Pool
+	redisClient rueidis.Client
 }
 
-func NewPgProvider(pool *pgxpool.Pool) *PgProvider {
-	return &PgProvider{pool: pool}
+func NewPgProvider(pool *pgxpool.Pool, redisClient rueidis.Client) *PgProvider {
+	return &PgProvider{pool: pool, redisClient: redisClient}
 }
 
 func (p *PgProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
@@ -236,4 +239,50 @@ func (p *PgProvider) SearchMemories(ctx context.Context, organizationID string, 
 		}
 	}
 	return results, nil
+}
+
+
+func (p *PgProvider) ClaimTask(ctx context.Context, taskID string) error {
+	if p.redisClient != nil {
+		lockKey := "task_lock:" + taskID
+		cmd := p.redisClient.B().Set().Key(lockKey).Value("locked").Nx().ExSeconds(30).Build()
+		err := p.redisClient.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				return fmt.Errorf("task %s is locked by another agent", taskID)
+			}
+			return err
+		}
+		defer func() {
+			delCmd := p.redisClient.B().Del().Key(lockKey).Build()
+			_ = p.redisClient.Do(ctx, delCmd).Error()
+		}()
+	}
+
+	query := `
+		UPDATE tasks
+		SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT id FROM tasks
+			WHERE id = $1 AND status = 'PENDING'
+			FOR UPDATE SKIP LOCKED
+		)
+	`
+	tag, err := p.pool.Exec(ctx, query, taskID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("task %s not found or already claimed", taskID)
+	}
+	return nil
+}
+
+func (p *PgProvider) CreateTask(ctx context.Context, task *TaskRecord) error {
+	query := `
+		INSERT INTO tasks (id, organization_id, parent_plan_id, title, description, status, assigned_agent_id, dependencies)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+	_, err := p.pool.Exec(ctx, query, task.ID, task.OrganizationID, task.ParentTaskID, task.Title, task.Description, task.Status, task.AgentID, task.Dependencies)
+	return err
 }

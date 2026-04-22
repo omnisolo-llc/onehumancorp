@@ -148,3 +148,56 @@ func TestProvider_AcquireTask(t *testing.T) {
 		t.Errorf("Expected nil task, got %v", task3.ID)
 	}
 }
+
+func TestProvider_ClaimTask(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
+
+	dbp, err := New(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to initialize standalone db: %v", err)
+	}
+	defer dbp.Close()
+
+	provider := dbp.Provider
+	ctx := context.Background()
+
+	// Setup SQLite table schema specific to our test
+	schema := `
+	CREATE TABLE IF NOT EXISTS tasks (
+		id TEXT PRIMARY KEY,
+		organization_id TEXT NOT NULL,
+		title TEXT NOT NULL,
+		description TEXT,
+		status TEXT NOT NULL DEFAULT 'PENDING',
+		assigned_agent_id TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	_, err = provider.Exec(ctx, schema)
+	if err != nil {
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+
+	// Insert test data
+	insertQuery := `
+		INSERT INTO tasks (id, organization_id, title, status)
+		VALUES ('task-1', 'org-1', 'Task 1', 'PENDING');
+	`
+	_, err = provider.Exec(ctx, insertQuery)
+	if err != nil {
+		t.Fatalf("Failed to insert test tasks: %v", err)
+	}
+
+	// Claim task
+	err = provider.ClaimTask(ctx, "task-1")
+	if err != nil {
+		t.Fatalf("Failed to claim task: %v", err)
+	}
+
+	// Claim again should fail
+	err = provider.ClaimTask(ctx, "task-1")
+	if err == nil {
+		t.Fatalf("Expected to fail to claim already claimed task")
+	}
+}

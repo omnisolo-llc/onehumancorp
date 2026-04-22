@@ -52,12 +52,19 @@ type Provider interface {
 	IsSQLite() bool
 	AcquireTask(ctx context.Context, organizationID, agentID string) (*TaskRecord, error)
 	SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error)
+	ClaimTask(ctx context.Context, taskID string) error
+	CreateTask(ctx context.Context, task *TaskRecord) error
 }
 
 // TaskRecord represents a task fetched from the queue.
 type TaskRecord struct {
 	ID           string
 	ParentTaskID *string
+	OrganizationID string
+	Title          string
+	Description    *string
+	Dependencies   *string
+
 	AgentID      *string
 	Status       string
 	Payload      *string

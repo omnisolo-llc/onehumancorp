@@ -101,6 +101,7 @@ go_library(
         "//srcs/server/telemetry",
         "@com_github_jackc_pgx_v5//:pgx",
         "@com_github_jackc_pgx_v5//pgxpool",
+        "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_metric//:metric",
@@ -116,5 +117,8 @@ go_test(
         "swarm_tasks_migration_test.go",
     ],
     embed = [":db"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
+    deps = [
+        "@org_modernc_sqlite//:sqlite",
+        "@com_github_redis_rueidis//:rueidis",
+            ],
 )

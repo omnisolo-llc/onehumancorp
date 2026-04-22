@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"context"
 	"database/sql"
 	"regexp"
@@ -295,4 +296,36 @@ func (t *SqliteTx) Commit(ctx context.Context) error {
 
 func (t *SqliteTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback()
+}
+
+func (p *SqliteProvider) ClaimTask(ctx context.Context, taskID string) error {
+	query := `
+		UPDATE tasks
+		SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT id FROM tasks
+			WHERE id = $1 AND status = 'PENDING'
+		)
+	`
+	res, err := p.db.ExecContext(ctx, query, taskID)
+	if err != nil {
+		return err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return fmt.Errorf("task %s not found or already claimed", taskID)
+	}
+	return nil
+}
+
+func (p *SqliteProvider) CreateTask(ctx context.Context, task *TaskRecord) error {
+	query := `
+		INSERT INTO tasks (id, organization_id, parent_plan_id, title, description, status, assigned_agent_id, dependencies)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+	_, err := p.db.ExecContext(ctx, query, task.ID, task.OrganizationID, task.ParentTaskID, task.Title, task.Description, task.Status, task.AgentID, task.Dependencies)
+	return err
 }

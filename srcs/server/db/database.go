@@ -292,7 +292,7 @@ func New(ctx context.Context) (*DB, error) {
 	}
 
 	slog.Info("db: connected to postgres", "dsn", redactDSN(dsn))
-	return &DB{Provider: NewPgProvider(pool)}, nil
+	return &DB{Provider: NewPgProvider(pool, nil)}, nil
 }
 
 // RunMigrations executes all embedded SQL migrations, sorted
