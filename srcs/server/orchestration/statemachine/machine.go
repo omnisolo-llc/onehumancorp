@@ -11,6 +11,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/redis/rueidis"
 )
 
 // State constants
@@ -42,13 +43,15 @@ var ValidTransitions = map[string][]string{
 type StateMachine struct {
 	dbProvider db.Provider
 	broadcast  func(string, map[string]interface{})
+	redisClient rueidis.Client
 }
 
 // NewStateMachine creates a new state machine
-func NewStateMachine(dbProvider db.Provider, broadcast func(string, map[string]interface{})) *StateMachine {
+func NewStateMachine(dbProvider db.Provider, broadcast func(string, map[string]interface{}), redisClient rueidis.Client) *StateMachine {
 	return &StateMachine{
 		dbProvider: dbProvider,
 		broadcast:  broadcast,
+		redisClient: redisClient,
 	}
 }
 
@@ -73,7 +76,25 @@ func IsValidTransition(fromState, toState string) bool {
 // added for KAIROS State Machine Audit Logging & Transition Safety
 func (sm *StateMachine) Transition(ctx context.Context, entityID, entityType, toState, agentID, reason string) error {
 	start := time.Now()
+
+	if sm.redisClient != nil {
+		lockKey := "ohc:lock:state_machine:" + entityID
+		cmd := sm.redisClient.B().Set().Key(lockKey).Value("1").Nx().Ex(30 * time.Second).Build()
+		err := sm.redisClient.Do(ctx, cmd).Error()
+		if err != nil {
+			if rueidis.IsRedisNil(err) {
+				return fmt.Errorf("failed to acquire state machine lock for %s: lock is held", entityID)
+			}
+			return fmt.Errorf("failed to acquire state machine lock: %w", err)
+		}
+		defer func() {
+			delCmd := sm.redisClient.B().Del().Key(lockKey).Build()
+			_ = sm.redisClient.Do(ctx, delCmd).Error()
+		}()
+	}
+
 	tx, err := sm.dbProvider.Begin(ctx)
+
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}

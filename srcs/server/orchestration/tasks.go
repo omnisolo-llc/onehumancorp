@@ -71,7 +71,7 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.Memo
 	tm := &TaskManager{
 		db:           provider,
 		hub:          hub,
-		stateMachine: statemachine.NewStateMachine(provider, broadcast),
+		stateMachine: statemachine.NewStateMachine(provider, broadcast, nil),
 		autodream:    ad,
 	}
 
@@ -87,6 +87,10 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.Memo
 				}
 			}
 		}
+	}
+
+	if tm.redisClient != nil {
+		tm.stateMachine = statemachine.NewStateMachine(provider, broadcast, tm.redisClient)
 	}
 
 	// Fallback to SQLite queue if not using Redis
@@ -1089,12 +1093,17 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 
 	query := `
 		UPDATE shared_tasks
-		SET title = $1, status = $2, priority = $3, agent_id = $4, payload = $5, locked_until = $6, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $7
+		SET title = $1, priority = $2, agent_id = $3, payload = $4, locked_until = $5, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $6
 	`
-	_, err = tx.Exec(ctx, query, task.Title, task.Status, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)
+	_, err = tx.Exec(ctx, query, task.Title, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
+	}
+
+	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, task.ID, "SHARED_TASK", task.Status, task.AssignedAgentID, "Task updated via UpdateTask")
+	if err != nil {
+		return fmt.Errorf("failed to transition state: %w", err)
 	}
 
 	// Update dependencies
@@ -1109,6 +1118,10 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if broadcastFunc != nil {
+		broadcastFunc()
 	}
 
 	// Broadcast update
