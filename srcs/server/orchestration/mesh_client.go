@@ -27,7 +27,10 @@ func TriggerBurst(ctx context.Context, missionID string) error {
 	// 1. Serialize state
 	var payload string
 	err = db.QueryRowContext(ctx, "SELECT payload FROM agent_missions WHERE id = ?", missionID).Scan(&payload)
-	if err != nil && err != sql.ErrNoRows {
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("mission payload not found for id: %s", missionID)
+		}
 		return fmt.Errorf("failed to fetch mission payload: %w", err)
 	}
 

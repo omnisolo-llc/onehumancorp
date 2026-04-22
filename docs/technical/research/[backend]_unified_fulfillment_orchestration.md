@@ -6,9 +6,20 @@
 Handymen like Carlos and food cart operators like Fatima miss orders or lose track of bookings because they lack a unified fulfillment view. Manual quoting and scheduling are time-consuming. OHC currently lacks a backend domain for handling the lifecycle of an "Order" or "Booking".
 
 ## Research Report
-- **Square Online:** Strong for retail/food but less flexible for service-based bookings (Carlos).
+- **Square Online:** Strong for retail/food but less flexible for service-based bookings (Carlos). Users report difficulty managing hybrid service/product businesses ([Source: Reddit r/smallbusiness](https://www.reddit.com/r/smallbusiness/)).
 - **GoDaddy:** Booking system feels "bolted on" and lacks proactive agent automation.
 - **OHC Opportunity:** A unified "Mission" based fulfillment system where every order/booking is a shared task handled by the Operations (Manager) department.
+
+### Fulfillment State Machine
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: Order Received
+    Pending --> Quoted: Sales Agent drafts Quote
+    Quoted --> Accepted: User/Customer Approves
+    Accepted --> InProgress: Operations starts Job
+    InProgress --> Completed: Fulfillment gesture
+    Completed --> [*]
+```
 
 ## Design Doc
 - **Entity Types:** `Order`, `Booking`, `FulfillmentState`, `Quote`.

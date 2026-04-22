@@ -6,10 +6,24 @@
 Non-technical small business owners like Maya (baker) and Priya (boutique owner) struggle with complex product management interfaces in platforms like Shopify. They need a way to manage their "Catalog" entirely from a phone, with AI doing the heavy lifting of writing descriptions, organizing categories, and optimizing images. Current OHC implementation lacks any product/catalog management UI.
 
 ## Research Report
-- **Shopify:** Mobile app is secondary; complex variant management is painful on small screens.
-- **Wix:** AI website builder is strong, but catalog management remains a traditional form-heavy experience.
-- **Durable:** Generates a site but lacks deep inventory/variant management for retail.
+- **Shopify:** Mobile app is secondary; complex variant management is painful on small screens. Many features (like Shopify Magic) are not yet optimized for mobile ([Source](https://help.shopify.com/en/manual/shopify-admin/productivity-tools/shopify-magic)).
+- **Wix:** AI website builder is strong, but catalog management remains a traditional form-heavy experience requiring manual entry ([Source](https://www.wix.com/ai)).
+- **Durable:** Generates a site but lacks deep inventory/variant management for retail ([Source](https://durable.co/)).
 - **OHC Opportunity:** A "Catalog Feed" experience where the user just snaps a photo, and the Marketing (Promoter) department auto-generates the product page, tags, and SEO metadata.
+
+### User Journey Comparison
+```mermaid
+journey
+    title Maya's Photo-to-Live Journey
+    section Capture
+      Snap photo: 5: Maya
+      AI Vision extracts features: 3: Promoter Agent
+    section Refine
+      Draft Review: 4: Maya
+      Auto-SEO/Tags: 2: Promoter Agent
+    section Publish
+      Live on Store: 5: Maya
+```
 
 ## Design Doc
 - **Entity Types:** `Product`, `Category`, `Variant`, `Inventory`.
