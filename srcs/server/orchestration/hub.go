@@ -9,8 +9,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-
-	pb "github.com/onehumancorp/mono/srcs/proto"
 )
 
 // StartTokenBurnForecaster starts a background worker that extrapolates token usage.
@@ -90,19 +88,4 @@ func ProcessForecastTick(ctx context.Context, history map[string][]int64, getAct
 			delete(history, orgID)
 		}
 	}
-}
-
-type MeshTransport interface {
-	BroadcastTask(ctx context.Context, task Task) error
-	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
-	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
-	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
-	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
-	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
-	PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error
-	SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error)
-	Publish(topic string, data []byte) error
-	Subscribe(topic string) (<-chan []byte, error)
 }

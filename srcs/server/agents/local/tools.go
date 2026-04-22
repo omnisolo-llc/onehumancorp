@@ -26,7 +26,6 @@ type Tool interface {
 func DefaultTools() []Tool {
 	return []Tool{
 		&bashTool{},
-		&playwrightTool{daemonURL: getDaemonURL()},
 		&fileReadTool{},
 		&fileWriteTool{},
 		&fileEditTool{},
@@ -629,12 +628,4 @@ func (t *todoTool) Execute(_ context.Context, _ string, input map[string]interfa
 	default:
 		return "Todo list updated.", nil
 	}
-}
-
-func getDaemonURL() string {
-	url := os.Getenv("OHC_HARNESS_DAEMON_URL")
-	if url == "" {
-		return "http://localhost:3000"
-	}
-	return url
 }

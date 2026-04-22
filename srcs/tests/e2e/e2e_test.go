@@ -46,10 +46,10 @@ func freePort() int {
 	// Use a random port to avoid race conditions when multiple test binaries
 	// call freePort() simultaneously.
 	for i := 0; i < 10; i++ {
-		// Pick a random port between 20000 and 60000
-		port := 20000 + (time.Now().Nanosecond() % 40000)
-		l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		// Ask the OS for an available port
+		l, err := net.Listen("tcp", "127.0.0.1:0")
 		if err == nil {
+			port := l.Addr().(*net.TCPAddr).Port
 			l.Close()
 			return port
 		}

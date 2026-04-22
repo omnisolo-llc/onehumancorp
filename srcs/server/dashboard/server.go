@@ -18,7 +18,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
@@ -646,32 +645,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
 
 	// Teammate Mesh APIs
-
-
-
-	var kairosMesh kairos.TeammateMesh
-	kairosMode := "cloud"
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		kairosMode = "standalone"
-	}
-	if kairosMode == "cloud" {
-		opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
-		if err == nil {
-			kairosMesh = kairos.NewTeammateMesh(redis.NewClient(opt))
-		} else {
-			kairosMesh = kairos.NewTeammateMesh(nil)
-		}
-	} else {
-		kairosMesh = kairos.NewTeammateMesh(nil)
-	}
-
-	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh)
-
-	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
-	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
-
-
-
+	mux.HandleFunc("/api/mesh/publish", auth.RequireRole("system", server.TeammateMesh.HandlePublish))
+	mux.HandleFunc("/api/mesh/subscribe", auth.RequireRole("system", server.TeammateMesh.HandleSubscribe))
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))

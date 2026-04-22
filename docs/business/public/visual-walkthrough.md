@@ -2,8 +2,8 @@
 
 # Visual Walkthrough
 
-**Notice:** This document has been consolidated into the comprehensive [Help Portal](../../technical/walkthroughs/help_portal.md).
+**Notice:** This document has been consolidated into the comprehensive [Help Portal](../walkthroughs/help_portal.md).
 
-Please navigate to `docs/technical/walkthroughs/help_portal.md` for the latest interactive visual walkthroughs, architecture flow, and task delegation instructions.
+Please navigate to `docs/walkthroughs/help_portal.md` for the latest interactive visual walkthroughs, architecture flow, and task delegation instructions.
 
 </div>

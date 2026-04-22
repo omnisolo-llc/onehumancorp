@@ -11,15 +11,12 @@ go_library(
         "redis_broker.go",
         "redis_mesh.go",
         "server.go",
-        "mesh_coordinator.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/mesh",
     visibility = ["//visibility:public"],
     deps = [
-        "//srcs/server/db",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_redis_rueidis//:rueidis",
-        "@com_github_google_uuid//:uuid",
     ],
 )
 
@@ -28,15 +25,10 @@ go_test(
     srcs = [
         "broker_test.go",
         "mesh_test.go",
-        "mesh_coordinator_test.go",
     ],
     embed = [":mesh"],
     deps = [
-        "//srcs/server/db",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_alicebob_miniredis_v2//:miniredis",
-        "@com_github_stretchr_testify//assert",
-        "@com_github_stretchr_testify//require",
-        "@org_modernc_sqlite//:sqlite",
     ],
 )
