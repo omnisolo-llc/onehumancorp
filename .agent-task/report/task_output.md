@@ -1,76 +1,62 @@
-# [architecture] Website & Storefront Builder Architecture
+# OHC Principal Product Research Report — April 2025
 
-## Title
-Website & Storefront Builder Architecture 🎨
+## 1. Executive Summary
+OneHumanCorp (OHC) is uniquely positioned to disrupt the small business platform market by treating AI as autonomous **Infrastructure** (Invisible Departments) rather than a **Chatbot** (Sidekick). While incumbents like Shopify and Wix are struggling to retrofit AI into their desktop-first architectures, OHC’s 375px-first, agent-native design directly addresses the core friction points of the non-technical "Solo-Entrepreneur" (Maya, Carlos, Priya, Leo, Fatima).
 
-## Problem Statement
-Small business owners (bakers, handymen, boutique owners, tutors, food cart operators) need a way to create a professional online presence without any technical knowledge. They are often overwhelmed by traditional website builders like Shopify, Wix, or Squarespace because those platforms require understanding concepts like themes, layouts, margins, DNS, and responsive design. The OHC platform must provide a "zero-configuration" storefront builder where AI does the heavy lifting, generating a beautiful, mobile-first website that works seamlessly on any device.
+Our research identified three critical capability gaps that, if closed, will cement OHC’s market dominance: **Mobile-First Storefront Editing**, **Unified Fulfillment Orchestration**, and the **AI 'Protector' Legal Suite**.
 
-## Research Report
-- **Goal**: Design a drag-and-drop website builder architecture that empowers non-technical users to launch an online storefront in under 10 minutes.
-- **Competitive Analysis**:
-  - **Shopify**: Highly customizable but steep learning curve. Requires significant setup for themes and plugins.
-  - **Wix/Squarespace**: Flexible drag-and-drop, but overwhelming array of choices. Can easily lead to "broken" designs on mobile if the user is not careful.
-  - **GoDaddy**: Simpler, but rigid templates that look dated.
-- **OHC's Approach**:
-  - **Constraint-Based Design**: Limit choices to ensure aesthetic excellence by default. Users select content blocks (hero, product grid, testimonials), not individual UI elements.
-  - **Mobile-First**: The builder interface itself must be fully functional on a 375px mobile screen. All generated sites are optimized for mobile first.
-  - **AI-Assisted**: AI generates initial copy, selects placeholder images, and suggests color palettes based on the business type.
+---
 
-## Design Doc
+## 2. Competitive Landscape Matrix
 
-### 1. Architecture Components
+| Feature | OHC Advantage | Shopify | Wix | GoDaddy Airo |
+|---|---|---|---|---|
+| **Primary AI Model** | Invisible Departments (Agents) | Sidekick (Chatbot) | ADI (Template Gen) | Airo (Branding) |
+| **Mobile Management** | Native 375px Workflow | Managing only (Setup on Web) | Limited Editor | Basic |
+| **Onboarding Time** | < 10 Minutes | 60+ Minutes | 30-40 Minutes | 20 Minutes |
+| **UX Aesthetic** | Glassmorphic Premium | Generic Templates | High-friction Editor | Shallow |
+| **Vertical Reach** | Product + Service + Food | Retail First | Mixed (Complex) | Shallow |
 
-- **Block System**: The atomic unit of the builder is a "Block" (e.g., `HeroBlock`, `ProductGridBlock`, `ContactFormBlock`, `BookingCalendarBlock`). Blocks have predefined schemas for their content (JSONB).
-- **Page Model**: A page is an ordered list of Blocks.
-- **Theme Engine**: Applies global design tokens (colors, typography, spacing) uniformly across all blocks.
-- **Publishing Pipeline**: Compiles the JSON representation into a static PWA or server-side rendered application, deployed to a CDN.
-- **Automated SEO Engine**: SEO is handled invisibly. When a site is published, the Marketing AI agent auto-generates meta titles, descriptions, and structured data (JSON-LD) based on the block content and business type. A dynamic `sitemap.xml` and `robots.txt` are automatically generated and updated with every publish.
-- **Custom Domains & SSL Provisioning**: Custom domains are configured automatically without manual DNS records when purchased through OHC. For external domains, users are guided via a simple 2-step setup. SSL certificates are provisioned and renewed automatically via Let's Encrypt (or a managed provider like Cloudflare) at the edge CDN level, guaranteeing HTTPS by default.
+---
 
-### 2. Architecture Diagram
+## 3. Top 10 SMB Pain Points (Research Synthesis)
 
-```mermaid
-sequenceDiagram
-    participant User as Business Owner (Mobile)
-    participant UI as OHC Builder UI
-    participant API as OHC API
-    participant AI as Marketing Agent
-    participant DB as OHC-SIP DB
-    participant CDN as CDN / Storage
+1.  **Setup Paralysis:** Existing platforms ask too many technical questions up front. (OHC solves via AI Wizard).
+2.  **Desktop-Dependency:** Management apps are often "lite" versions of the website. (OHC solves via 375px-first design).
+3.  **Manual Lead Response:** Missing Instagram/WhatsApp DMs while busy. (OHC solves via Customer Success Agent).
+4.  **Inventory Fragmentation:** Tracking physical stock vs. booking slots. (OHC solves via Unified Fulfillment).
+5.  **Legal Dread:** Cost and confusion of TOS/Privacy policies. (OHC solves via Protector Agent).
+6.  **"Cheap" Branding:** Non-designers produce poor-looking sites. (OHC solves via Glassmorphism by default).
+7.  **Payment Complexity:** Setting up Stripe/Connect is intimidating. (OHC solves via guided AI integration).
+8.  **Marketing Burnout:** Social media consistency is impossible for one person. (OHC solves via Marketing Agent).
+9.  **Data Blindness:** Not knowing *why* sales dropped or which item is trending. (OHC solves via Advisor Agent).
+10. **High Fees:** Shopify/Wix pricing is prohibitive for home-based startups. (OHC solves via genuinely useful Free Tier).
 
-    User->>UI: Select "Add Hero Block"
-    UI->>API: Request Block Generation
-    API->>AI: Generate copy & suggest image for Bakery
-    AI-->>API: Content (Title, Subtitle, Image URL)
-    API-->>UI: Render Preview
-    User->>UI: Tap "Publish"
-    UI->>API: Publish Site Command
-    API->>AI: Generate SEO metadata & JSON-LD
-    AI-->>API: SEO Payload
-    API->>DB: Save Page State & SEO (JSONB)
-    API->>CDN: Provision SSL (if custom domain)
-    API->>CDN: Build & Deploy Static Assets
-    CDN-->>API: Deployment Complete
-    API-->>UI: Site Live URL
-```
+---
 
-### 3. UX Flows
+## 4. OHC AI Differentiation Manifesto
 
-- **Onboarding Flow**:
-  1. User enters business name and type.
-  2. AI generates a full 3-page site (Home, Catalog/Services, About) in 10 seconds.
-  3. User reviews on mobile and can tap any text or image to edit.
-- **Editing Flow (Mobile)**:
-  1. User taps "Edit Section".
-  2. A bottom sheet appears with simple toggles (e.g., "Show Button", "Change Image").
-  3. No free-form dragging; sections snap into place to prevent layout breakage.
+We do not build chatbots. We build **Invisible Departments**.
 
-## Implementation Prompt
-"Implement the core backend API for the Website & Storefront Builder in `srcs/server/builder/`. Define the database models for `Site`, `Page`, and `Block` using PostgreSQL JSONB columns for flexible block content storage. Ensure tenant isolation with RLS. Create a REST API for the mobile app to fetch, create, update, and reorder blocks on a page. The API must validate block payloads against strict schemas to ensure data integrity. Finally, implement the `PublishSite` endpoint that triggers a background job to compile the site configuration, generate SEO metadata automatically via the AI Marketing agent, and trigger SSL provisioning for any linked custom domains."
+1.  **Agency over Assistance:** Our agents don't wait for a prompt; they monitor events (orders, DMs, stock) and act or draft for review.
+2.  **Domain-Specific Context:** A "Marketing Agent" understands the difference between a "Crumbl-style cookie" (Maya) and a "Pipe repair" (Carlos).
+3.  **Visual-First Reasoning:** Our agents "see" the storefront and "feel" the brand aesthetic through Glassmorphic tokens.
+4.  **Zero-Jargon Interface:** Every AI insight is delivered in plain language (e.g., "Your vegan cakes are trending on Tuesday—try a 10% promo").
+5.  **Autonomous Coordination:** The "Finance Agent" automatically alerts the "Marketing Agent" when budget is low or ROI is high.
 
-## Priority
-P0
+---
 
-## Estimated Scope
-Large
+## 5. Strategic Roadmap & New Issue Briefs
+
+The following high-priority research briefs have been established in `docs/technical/research/`:
+
+1.  **[frontend] Mobile-First Storefront & Product Catalog Editor (P0):** Enables 60-second product publishing with variants from a phone camera.
+2.  **[backend] Unified Order Fulfillment & Delivery Orchestration (P0):** Combines retail, services, and food into a single "Today's Work" mobile feed.
+3.  **[ai] 'Protector' Legal & Compliance Suite (P1):** Jargon-free, AI-guided legal protection for the micro-business owner.
+
+---
+
+## 6. Conclusion
+The "Maya" persona is our beachhead. By making her home bakery look like a premium global brand and handling her DMs, orders, and taxes invisibly, we win the trust of the millions of "Everyday People" currently underserved by the Shopify ecosystem.
+
+**Next Steps:** Implement the "Today's Work" fulfillment feed to solve the immediate operational chaos for Maya and Carlos.
