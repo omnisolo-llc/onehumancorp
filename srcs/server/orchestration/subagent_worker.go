@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/harness"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
@@ -56,16 +57,28 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 		go func(job *queue.Job) {
 			startTime := time.Now()
 
+			// Create a dynamic proxy for the agent
+			proxy := harness.NewNetworkProxy([]string{"example.com", "api.github.com", "google.com"}, job.ID, nil)
+			err := proxy.Start()
+			if err != nil {
+				telemetry.RecordSubAgentFailure(ctx)
+				_ = w.taskQueue.Fail(ctx, job.ID, "failed to start network proxy: "+err.Error())
+				return
+			}
+			defer proxy.Stop()
+			proxyAddress := "http://" + proxy.Address
+
 			ac := &AgentContext{
 				AgentID:         job.ID,
 				AgentType:       job.AgentRole,
 				ParentSessionID: job.ParentTaskID,
 				Env: map[string]string{
-					"HTTP_PROXY": "http://127.0.0.1:8080",
+					"HTTP_PROXY":  proxyAddress,
+					"HTTPS_PROXY": proxyAddress,
 				},
 			}
 			agentCtx := WithAgentContext(ctx, ac)
-			err := w.spawner.SpawnIsolated(agentCtx, job)
+			err = w.spawner.SpawnIsolated(agentCtx, job)
 
 			duration := time.Since(startTime).Seconds()
 			telemetry.RecordSubAgentExecutionDuration(ctx, duration)
