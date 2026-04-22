@@ -87,10 +87,9 @@ var (
 	SyncFailedCount        metric.Int64Counter
 	SyncEscalationsCount   metric.Int64Counter
 	SyncLatency            metric.Float64Histogram
-	SyncPayloadSize              metric.Int64Histogram
-	RateLimitExceededCount       metric.Int64Counter
-	syncDaemonBatchSize          metric.Int64Histogram
-	LocalToCloudMissionSyncCount metric.Int64Counter
+	SyncPayloadSize        metric.Int64Histogram
+	RateLimitExceededCount metric.Int64Counter
+	syncDaemonBatchSize    metric.Int64Histogram
 
 	sqliteLockContentionCounter   metric.Int64Counter
 	sqliteRetryExhaustedCounter   metric.Int64Counter
@@ -449,14 +448,6 @@ func InitWithMeter(m mockableMeter) error {
 	SyncEscalationsCount, err = m.Int64Counter(
 		"ohc_sync_escalations_count",
 		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	LocalToCloudMissionSyncCount, err = m.Int64Counter(
-		"ohc_local_to_cloud_mission_sync_count",
-		metric.WithDescription("Total number of local-to-cloud mission syncs"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1601,25 +1592,6 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 		return
 	}
 	SyncEscalationsCount.Add(ctx, count)
-}
-
-// RecordLocalToCloudMissionSync records a local-to-cloud mission synchronization.
-func RecordLocalToCloudMissionSync(ctx context.Context, missionID string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"missionID": missionID,
-		}
-		// In Standalone Mode, BufferMetricFunc unmarshals the JSON payload into a map[string]interface{},
-		// then calls RedactInterfacePII centrally. We use RedactInterfacePII here so the AST linter
-		// TestBufferMetricFuncRedactionLinter passes because it statically checks for its presence.
-		payloadMap["missionID"] = RedactInterfacePII(missionID)
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "local_to_cloud_mission_sync_count", string(payloadBytes))
-	}
-	if LocalToCloudMissionSyncCount == nil {
-		return
-	}
-	LocalToCloudMissionSyncCount.Add(ctx, 1)
 }
 
 // RecordSyncLatency records the latency of the sync process.

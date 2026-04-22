@@ -71,25 +71,27 @@ class _VectorMemoryVisualizerWidgetState extends State<VectorMemoryVisualizerWid
                 child: AnimatedBuilder(
                   animation: _pulseAnimation,
                   builder: (context, child) {
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Background layer (large, slow moving)
-                        Transform.translate(
-                          offset: Offset(0, -10 + (_pulseAnimation.value * 20)),
-                          child: _buildVectorGrid(context, 12, 0.2, Colors.purpleAccent, 8.0),
-                        ),
-                        // Middle layer (medium speed)
-                        Transform.translate(
-                          offset: Offset(-5 + (_pulseAnimation.value * 10), 5 - (_pulseAnimation.value * 10)),
-                          child: _buildVectorGrid(context, 8, 0.4, Colors.blueAccent, 6.0),
-                        ),
-                        // Foreground layer (fast moving, bright)
-                        Transform.translate(
-                          offset: Offset(10 - (_pulseAnimation.value * 20), 10 - (_pulseAnimation.value * 20)),
-                          child: _buildVectorGrid(context, 5, 0.8, Colors.cyanAccent, 4.0),
-                        ),
-                      ],
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: List.generate(5, (index) {
+                        // Create a cascading effect
+                        final opacity = (_pulseAnimation.value + (index * 0.1)) % 1.0;
+                        return Container(
+                          width: 16,
+                          height: 16 + (opacity * 24),
+                          decoration: BoxDecoration(
+                            color: Colors.cyanAccent.withOpacity(0.5 + (opacity * 0.5)),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.cyanAccent.withOpacity(opacity * 0.8),
+                                blurRadius: 10 * opacity,
+                                spreadRadius: 2 * opacity,
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                     );
                   },
                 ),
@@ -107,32 +109,6 @@ class _VectorMemoryVisualizerWidgetState extends State<VectorMemoryVisualizerWid
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildVectorGrid(BuildContext context, int count, double baseOpacity, Color color, double baseSize) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      alignment: WrapAlignment.center,
-      children: List.generate(count, (index) {
-        final opacity = (baseOpacity + ((index % 3) * 0.1)).clamp(0.0, 1.0);
-        return Container(
-          width: baseSize + (index % 4),
-          height: baseSize + (index % 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(opacity),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(opacity * 0.8),
-                blurRadius: 5 * opacity,
-                spreadRadius: 2 * opacity,
-              ),
-            ],
-          ),
-        );
-      }),
     );
   }
 }
