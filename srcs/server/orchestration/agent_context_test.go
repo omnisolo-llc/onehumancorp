@@ -52,3 +52,47 @@ func TestAgentContext_NotFound(t *testing.T) {
 		t.Errorf("expected GetAgentContext to return false for empty context")
 	}
 }
+
+func TestSubagentContext(t *testing.T) {
+	ctx := context.Background()
+
+	sc := &SubagentContext{
+		AgentContext: AgentContext{
+			AgentID:         "sub-1",
+			AgentType:       "subagent",
+			ParentSessionID: "parent-A",
+		},
+		Priority: 10,
+	}
+
+	ctx = WithSubagentContext(ctx, sc)
+	retrieved, ok := GetSubagentContext(ctx)
+	if !ok {
+		t.Fatalf("expected GetSubagentContext to return true")
+	}
+	if retrieved.AgentID != "sub-1" || retrieved.Priority != 10 {
+		t.Errorf("retrieved incorrect subagent context")
+	}
+}
+
+func TestTeammateAgentContext(t *testing.T) {
+	ctx := context.Background()
+
+	tc := &TeammateAgentContext{
+		AgentContext: AgentContext{
+			AgentID:         "team-1",
+			AgentType:       "teammate",
+			ParentSessionID: "parent-B",
+		},
+		TeamID: "team-alpha",
+	}
+
+	ctx = WithTeammateAgentContext(ctx, tc)
+	retrieved, ok := GetTeammateAgentContext(ctx)
+	if !ok {
+		t.Fatalf("expected GetTeammateAgentContext to return true")
+	}
+	if retrieved.AgentID != "team-1" || retrieved.TeamID != "team-alpha" {
+		t.Errorf("retrieved incorrect teammate agent context")
+	}
+}

@@ -66,7 +66,14 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 					"HTTPS_PROXY": "http://127.0.0.1:8080",
 				},
 			}
+
+			sc := &SubagentContext{
+				AgentContext: *ac,
+				Priority:     job.Priority,
+			}
+
 			agentCtx := WithAgentContext(ctx, ac)
+			agentCtx = WithSubagentContext(agentCtx, sc)
 			err := w.spawner.SpawnIsolated(agentCtx, job)
 
 			duration := time.Since(startTime).Seconds()
