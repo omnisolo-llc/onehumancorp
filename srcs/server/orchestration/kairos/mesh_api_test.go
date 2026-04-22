@@ -3,8 +3,11 @@ package kairos
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +29,20 @@ func (m *mockTeammateMesh) Publish(ctx context.Context, channel string, message 
 	return nil
 }
 
+func createMockTLSRequest(method, urlStr string, body []byte, hasCert bool) *http.Request {
+	req := httptest.NewRequest(method, urlStr, bytes.NewBuffer(body))
+	if hasCert {
+		req.TLS = &tls.ConnectionState{
+			PeerCertificates: []*x509.Certificate{{
+				URIs: []*url.URL{{Scheme: "spiffe"}},
+			}},
+		}
+	} else {
+		req.TLS = nil
+	}
+	return req
+}
+
 func TestMeshAPI_HandlePublish(t *testing.T) {
 	mockMesh := &mockTeammateMesh{}
 	api := NewMeshAPI(mockMesh)
@@ -35,16 +52,18 @@ func TestMeshAPI_HandlePublish(t *testing.T) {
 		method     string
 		body       string
 		statusCode int
+		hasCert    bool
 	}{
-		{"Method Not Allowed", http.MethodGet, "", http.StatusMethodNotAllowed},
-		{"Invalid JSON", http.MethodPost, "{invalid}", http.StatusBadRequest},
-		{"Missing Channel", http.MethodPost, `{"message":{"key":"value"}}`, http.StatusBadRequest},
-		{"Success", http.MethodPost, `{"channel":"test_channel","message":{"key":"value"}}`, http.StatusOK},
+		{"Method Not Allowed", http.MethodGet, "", http.StatusMethodNotAllowed, true},
+		{"Missing Cert", http.MethodPost, `{"channel":"test_channel","message":{"key":"value"}}`, http.StatusForbidden, false},
+		{"Invalid JSON", http.MethodPost, "{invalid}", http.StatusBadRequest, true},
+		{"Missing Channel", http.MethodPost, `{"message":{"key":"value"}}`, http.StatusBadRequest, true},
+		{"Success", http.MethodPost, `{"channel":"test_channel","message":{"key":"value"}}`, http.StatusOK, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(tt.method, "/api/kairos/mesh/publish", bytes.NewBuffer([]byte(tt.body)))
+			req := createMockTLSRequest(tt.method, "/api/kairos/mesh/publish", []byte(tt.body), tt.hasCert)
 			w := httptest.NewRecorder()
 			api.HandlePublish(w, req)
 			if w.Code != tt.statusCode {
@@ -103,7 +122,7 @@ func TestMeshAPI_HandleSubscribe_Success(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/kairos/mesh/subscribe?channel=test_channel"
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/kairos/mesh/subscribe?channel=test_sub_channel"
 
 	dialer := websocket.Dialer{}
 	ws, _, err := dialer.Dial(wsURL, nil)

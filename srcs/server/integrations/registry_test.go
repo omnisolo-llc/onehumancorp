@@ -244,6 +244,10 @@ func TestIntegrationsByCategoryUnknown(t *testing.T) {
 // ── Connect / Disconnect ──────────────────────────────────────────────────────
 
 func TestConnectUpdatesStatus(t *testing.T) {
+	originalLookup := LookupIPFunc
+	LookupIPFunc = func(host string) ([]net.IP, error) { return []net.IP{net.ParseIP("8.8.8.8")}, nil }
+	defer func() { LookupIPFunc = originalLookup }()
+
 	r := NewRegistry()
 
 	updated, err := r.Connect("slack", "https://hooks.slack.com/services/test")
