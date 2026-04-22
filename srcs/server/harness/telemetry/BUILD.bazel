@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "telemetry",
+    srcs = ["store.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/harness/telemetry",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/auth",
+        "//srcs/server/db",
+        "@com_github_google_uuid//:uuid",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "telemetry_test",
+    srcs = ["store_test.go"],
+    embed = [":telemetry"],
+    deps = [
+        "//srcs/server/auth",
+        "//srcs/server/db",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_sdk_metric//:metric",
+        "@io_opentelemetry_go_otel_sdk_metric//metricdata",
+    ],
+)
