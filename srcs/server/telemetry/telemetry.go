@@ -34,6 +34,7 @@ var (
 	BubblewrapExecutionLatency metric.Float64Histogram
 	HarnessInitLatency         metric.Float64Histogram
 	HarnessDbIoLatency         metric.Float64Histogram
+	HarnessExecutionLatency    metric.Float64Histogram
 	TasksEscalatedTotal        metric.Int64Counter
 	BubblewrapViolationTotal   metric.Int64Counter
 	meter                      metric.Meter
@@ -903,6 +904,15 @@ func InitWithMeter(m mockableMeter) error {
 	HarnessDbIoLatency, err = m.Float64Histogram(
 		"harness_db_io_latency",
 		metric.WithDescription("Latency of harness database I/O"),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	HarnessExecutionLatency, err = m.Float64Histogram(
+		"harness_execution_latency",
+		metric.WithDescription("Latency of harness execution"),
 		metric.WithUnit("ms"),
 	)
 	if err != nil {
@@ -2143,6 +2153,15 @@ func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string)
 func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string) {
 	if HarnessDbIoLatency != nil {
 		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+// RecordHarnessExecutionLatency records the latency of harness execution.
+func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode string) {
+	if HarnessExecutionLatency != nil {
+		HarnessExecutionLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
 		))
 	}
