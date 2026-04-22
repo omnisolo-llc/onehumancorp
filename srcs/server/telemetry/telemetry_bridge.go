@@ -50,7 +50,7 @@ func initBridgeMetrics() {
 
 func RecordBridgeMessageSent(ctx context.Context) {
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{})
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{}))
 		_ = BufferMetricFunc(ctx, "bridge_message_sent", string(payloadBytes))
 	}
 	if bridgeMessagesSentTotal != nil {
@@ -60,7 +60,7 @@ func RecordBridgeMessageSent(ctx context.Context) {
 
 func RecordBridgeMessageReceived(ctx context.Context) {
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{})
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{}))
 		_ = BufferMetricFunc(ctx, "bridge_message_received", string(payloadBytes))
 	}
 	if bridgeMessagesReceivedTotal != nil {
@@ -70,7 +70,7 @@ func RecordBridgeMessageReceived(ctx context.Context) {
 
 func RecordBridgeStatus(ctx context.Context, active int64) {
 	if BufferMetricFunc != nil {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{"active": active})
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(map[string]interface{}{"active": active}))
 		_ = BufferMetricFunc(ctx, "bridge_status", string(payloadBytes))
 	}
 	if bridgeStatusGauge != nil {

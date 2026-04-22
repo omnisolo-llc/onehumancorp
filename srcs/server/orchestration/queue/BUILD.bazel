@@ -13,6 +13,7 @@ go_library(
         "redis_job_queue.go",
         "inmem_job_queue.go",
         "worker_pool.go",
+        "kairos_queue.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/queue",
     visibility = ["//visibility:public"],
@@ -25,6 +26,7 @@ go_library(
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_metric//:metric",
+        "@com_github_google_uuid//:uuid",
     ],
 )
 
@@ -35,6 +37,7 @@ go_test(
         "queue_test.go",
         "worker_test.go",
         "job_queue_test.go",
+        "kairos_queue_test.go",
     ],
     embed = [":queue"],
     deps = [
@@ -44,5 +47,7 @@ go_test(
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_metric//:metric",
         "@org_modernc_sqlite//:sqlite",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

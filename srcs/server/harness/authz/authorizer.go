@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/db/models"
+
 	"encoding/json"
 )
 

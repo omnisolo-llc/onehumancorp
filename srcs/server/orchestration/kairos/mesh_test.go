@@ -1,6 +1,7 @@
 package kairos
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -11,11 +12,12 @@ import (
 
 func TestMemoryMesh_PublishSubscribe(t *testing.T) {
 	mesh := NewMemoryMesh()
-	ch, err := mesh.Subscribe("test_channel")
+	ctx := context.Background()
+	ch, err := mesh.Subscribe(ctx, "test_channel")
 	assert.NoError(t, err)
 
 	msg := []byte("hello world")
-	err = mesh.Publish("test_channel", msg)
+	err = mesh.Publish(ctx, "test_channel", msg)
 	assert.NoError(t, err)
 
 	select {
@@ -38,14 +40,15 @@ func TestRedisMesh_PublishSubscribe(t *testing.T) {
 	})
 
 	mesh := NewRedisMesh(client)
-	ch, err := mesh.Subscribe("test_channel")
+	ctx := context.Background()
+	ch, err := mesh.Subscribe(ctx, "test_channel")
 	assert.NoError(t, err)
 
 	// Wait a bit for the subscription to be established
 	time.Sleep(100 * time.Millisecond)
 
 	msg := []byte("hello world")
-	err = mesh.Publish("test_channel", msg)
+	err = mesh.Publish(ctx, "test_channel", msg)
 	assert.NoError(t, err)
 
 	select {
@@ -73,15 +76,16 @@ func TestNewTeammateMesh(t *testing.T) {
 
 func TestLocalTeammateMesh_PublishSubscribe(t *testing.T) {
 	mesh := NewLocalTeammateMesh()
+	ctx := context.Background()
 
-	taskCh, err := mesh.SubscribeTasks()
+	taskCh, err := mesh.SubscribeTasks(ctx)
 	assert.NoError(t, err)
 
-	coordCh, err := mesh.SubscribeCoordination()
+	coordCh, err := mesh.SubscribeCoordination(ctx)
 	assert.NoError(t, err)
 
 	taskMsg := []byte("task message")
-	err = mesh.PublishTask(taskMsg)
+	err = mesh.PublishTask(ctx, taskMsg)
 	assert.NoError(t, err)
 
 	select {
@@ -92,7 +96,7 @@ func TestLocalTeammateMesh_PublishSubscribe(t *testing.T) {
 	}
 
 	coordMsg := []byte("coordination message")
-	err = mesh.PublishCoordination(coordMsg)
+	err = mesh.PublishCoordination(ctx, coordMsg)
 	assert.NoError(t, err)
 
 	select {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 )
 
@@ -103,6 +104,52 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
 	return Result{
 		Stdout:   stdout.String(),
 		Stderr:   stderr.String(),
+		ExitCode: exitCode,
+	}, nil
+}
+
+// ExecuteStream runs the command with a specific policy, streaming standard I/O.
+func (r *BwrapRunner) ExecuteStream(ctx context.Context, command string, policy *Policy, stdin io.Reader, stdout, stderr io.Writer) (Result, error) {
+	if err := r.validator.Validate(ctx, command); err != nil {
+		return Result{}, fmt.Errorf("command validation failed: %w", err)
+	}
+
+	bwrapArgs := r.GetBwrapArgs(command, policy)
+	cmd := exec.CommandContext(ctx, "bwrap", bwrapArgs...)
+
+	var outBuf, errBuf bytes.Buffer
+	if stdout != nil {
+		cmd.Stdout = io.MultiWriter(stdout, &outBuf)
+	} else {
+		cmd.Stdout = &outBuf
+	}
+
+	if stderr != nil {
+		cmd.Stderr = io.MultiWriter(stderr, &errBuf)
+	} else {
+		cmd.Stderr = &errBuf
+	}
+
+	if stdin != nil {
+		cmd.Stdin = stdin
+	}
+
+	err := cmd.Run()
+	exitCode := 0
+	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			exitCode = exitError.ExitCode()
+            if exitCode == 1 && bytes.Contains(errBuf.Bytes(), []byte("bwrap:")) {
+                violationCount.Add(ctx, 1)
+            }
+		} else {
+			return Result{}, fmt.Errorf("failed to run bwrap: %w", err)
+		}
+	}
+
+	return Result{
+		Stdout:   outBuf.String(),
+		Stderr:   errBuf.String(),
 		ExitCode: exitCode,
 	}, nil
 }
