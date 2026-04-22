@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // EmbeddingClient interface for dependency injection and testing
@@ -292,6 +293,7 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		}
 	}
 
+	telemetry.RecordAutoDreamConsolidation(ctx, "autodream_pipeline")
 	slog.Info("AutoDreamPipeline: completed sweep", "processed", len(matches))
 }
 

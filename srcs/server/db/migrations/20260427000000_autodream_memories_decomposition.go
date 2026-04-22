@@ -39,7 +39,9 @@ func upAutodreamMemoriesDecomposition20260427000000(ctx context.Context, tx *sql
 			embedding VECTOR(1536),
 			source_type TEXT NOT NULL DEFAULT 'auto_dream',
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-		)`
+		);
+		CREATE INDEX IF NOT EXISTS idx_autodream_memories_embedding ON autodream_memories USING hnsw (embedding vector_cosine_ops);
+		`
 		_, err = tx.ExecContext(ctx, query)
 		return err
 	}
@@ -53,7 +55,9 @@ func upAutodreamMemoriesDecomposition20260427000000(ctx context.Context, tx *sql
 		embedding TEXT,
 		source_type TEXT NOT NULL DEFAULT 'auto_dream',
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-	)`
+	);
+	CREATE INDEX IF NOT EXISTS idx_autodream_memories_created_at ON autodream_memories (created_at);
+	`
 	_, err = tx.ExecContext(ctx, query)
 	return err
 }
