@@ -1,61 +1,51 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.03); color: #fff;">
 
 # Teammate Mesh Walkthrough
 
-Welcome to the Teammate Mesh visual guide! This document explains how agents inside the One Human Corp (OHC) Hybrid Architecture communicate seamlessly via the Pub/Sub workflow.
+Welcome to the Teammate Mesh interactive walkthrough. The Teammate Mesh is the real-time communication spine of the One Human Corp (OHC) Hybrid Architecture, allowing agents to collaborate, deliberate, and execute tasks autonomously.
 
-## 1. Overview
+## 1. Mesh Transport Overview
 
-The Teammate Mesh handles inter-agent communication, enabling agents to subscribe, filter, and process mesh events natively across both Cloud-Native and Standalone modes. It relies heavily on the `MeshTransport` interface, event filtering with `SubscribeMeshEventsWithFilter`, and real-time synchronization through the `CentrifugeNode`.
+The mesh relies on the `MeshTransport` interface, utilizing Redis Pub/Sub in Cloud-Native mode or a lightweight local bus in Standalone Desktop mode.
 
-## 2. Pub/Sub Workflow Architecture
+### Event Publishing and Subscribing
 
-Here is the high-level architecture of the Teammate Mesh Pub/Sub workflow:
+Agents use the `CentrifugeNode` to subscribe to relevant channels. To optimize bandwidth and reduce unmarshaling overhead, agents can use `SubscribeMeshEventsWithFilter` to apply a `MeshFilter` directly at the transport layer.
 
 ```mermaid
 sequenceDiagram
-    participant AgentA as Agent A (Publisher)
-    participant Centrifuge as CentrifugeNode
-    participant Mesh as MeshTransport
-    participant AgentB as Agent B (Subscriber)
+    participant AgentA as Agent A (Implementer)
+    participant Mesh as Teammate Mesh (Redis/Local)
+    participant AgentB as Agent B (Scribe)
 
-    AgentB->>Mesh: 1. SubscribeMeshEventsWithFilter(filterCriteria)
-    Mesh->>Centrifuge: 2. Register Subscription Channel
-    Centrifuge-->>Mesh: Channel Ready
-    Mesh-->>AgentB: Subscription Confirmed
-
-    AgentA->>Mesh: 3. Publish Event (e.g., Task Updated)
-    Mesh->>Centrifuge: 4. Route Event to Channel
-    Centrifuge->>Mesh: 5. Broadcast Event
-    Mesh->>Mesh: 6. Apply Filter Criteria
-    Mesh->>AgentB: 7. Deliver Filtered Event
+    AgentA->>Mesh: 1. Subscribe (Filter: Topic="docs")
+    AgentB->>Mesh: 2. Broadcast (Topic="code", Payload=...)
+    Mesh--xAgentA: 3. Ignored by Filter
+    AgentB->>Mesh: 4. Broadcast (Topic="docs", Payload=...)
+    Mesh-->>AgentA: 5. Event Delivered
+    AgentA->>AgentA: 6. Process Event Payload
 ```
 
-### Components
+## 2. Advanced Mesh Filtering
 
-- **`MeshTransport`**: The core interface defining the contract for all mesh communications. It abstracts away the underlying Pub/Sub implementation (Redis for Cloud, in-memory for Standalone).
-- **`CentrifugeNode`**: The real-time messaging engine. It manages channels, client connections, and distributes messages to active subscribers with extremely low latency.
-- **`SubscribeMeshEventsWithFilter`**: The specific method agents use to subscribe to topics of interest, allowing them to provide a filter function to only receive relevant events.
+By leveraging `MeshFilter`, you ensure that your agent only wakes up to process events strictly relevant to its mission profile.
 
-## 3. Event Filtering in Action
-
-Agents often don't need to process every single event on the mesh. `SubscribeMeshEventsWithFilter` enables highly efficient targeted message delivery:
-
-```mermaid
-graph TD
-    Incoming[Incoming Mesh Event] --> FilterCheck{Filter Match?}
-    FilterCheck -->|Yes| Process[Process Event]
-    FilterCheck -->|No| Discard[Discard Event]
-
-    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
-    class Incoming,FilterCheck,Process,Discard premium;
+```go
+// Example Go pseudocode for agent mesh initialization
+err := meshTransport.SubscribeMeshEventsWithFilter(
+    ctx,
+    "mesh:global",
+    &MyMissionFilter{Role: "SCRIBE"},
+    func(event *MeshEvent) {
+        log.Println("Received relevant documentation event!")
+    },
+)
 ```
 
-This ensures agents remain performant and focused on their specific tasks without being overwhelmed by unrelated system noise.
+## 3. Best Practices
 
-## 4. Next Steps
-
-- Explore the [API Playbook](../api/playbook.md) for concrete payload structures.
-- Return to the [Help Portal](help_portal.md) to discover other hybrid architecture concepts.
+- **Non-blocking Callbacks:** When processing events inside subscription callbacks (especially during database cursor iteration), wrap long-running operations in goroutines to prevent blocking the transport layer.
+- **Graceful Degradation:** Always assume the mesh might fallback to the SQLite-backed Standalone Mode. Avoid relying entirely on Redis-specific commands unless checking lock ownership via Lua scripts.
+- **PII Scrubbing:** If broadcasting payloads containing sensitive data, pass the content through `telemetry.RedactPII(str)` before broadcasting.
 
 </div>
