@@ -9,7 +9,6 @@ go_library(
         "manager.go",
         "registry.go",
         "daemon_harness.go",
-        "daemon_harness.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/harness",
     visibility = ["//visibility:public"],
@@ -19,6 +18,7 @@ go_library(
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
         "//srcs/server/harness/authz",
+
     ],
 )
 
@@ -29,7 +29,6 @@ go_test(
         "interceptor_test.go",
         "bwrap_runner_test.go",
         "manager_test.go",
-        "daemon_harness_test.go",
         "daemon_harness_test.go",
     ],
     embed = [":harness"],
