@@ -59,14 +59,14 @@ func TestAutoDreamPipeline_ProcessCompletedTasks(t *testing.T) {
 	// Insert test data
 	_, err = pool.Exec(ctx, `
 		INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status)
-		VALUES ('task-1', 'org-1', 'Test Task', 'Test Description', 'COMPLETED')
+		VALUES ('task-1', 'org-1', 'Test Task', 'Test Description', 'DONE')
 	`)
 	assert.NoError(t, err)
 
 	// Task 2 with no description but should fallback to title
 	_, err = pool.Exec(ctx, `
 		INSERT INTO shared_tasks_decomposition (id, organization_id, title, status)
-		VALUES ('task-2', 'org-1', 'Title Only Task', 'COMPLETED')
+		VALUES ('task-2', 'org-1', 'Title Only Task', 'DONE')
 	`)
 	assert.NoError(t, err)
 
@@ -122,7 +122,7 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_EmbeddingErrorFallback(t *testi
 
 	_, err = pool.Exec(ctx, `
 		INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status)
-		VALUES ('task-3', 'org-1', 'Test Task', 'Test Description', 'COMPLETED')
+		VALUES ('task-3', 'org-1', 'Test Task', 'Test Description', 'DONE')
 	`)
 	assert.NoError(t, err)
 
@@ -136,4 +136,98 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_EmbeddingErrorFallback(t *testi
 	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE task_id = 'task-3'").Scan(&count)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
+}
+
+func TestAutoDreamPipeline_ProcessCompletedTasks_QueryError(t *testing.T) {
+	mockDB := &mockPGProvider{
+		queryErr: errors.New("query error"),
+	}
+	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{})
+	err := pipeline.ProcessCompletedTasks(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestAutoDreamPipeline_ProcessCompletedTasks_ScanError(t *testing.T) {
+	mockDB := &mockPGProvider{
+		rows: &mockRows{
+			maxNext: 1,
+			scanErr: errors.New("scan error"),
+		},
+	}
+	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{})
+	err := pipeline.ProcessCompletedTasks(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error but scan errors should be skipped, got %v", err)
+	}
+}
+
+func TestAutoDreamPipeline_ProcessCompletedTasks_RowError(t *testing.T) {
+	mockDB := &mockPGProvider{
+		rows: &mockRows{
+			maxNext: 0,
+			errErr:  errors.New("row error"),
+		},
+	}
+	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{})
+	err := pipeline.ProcessCompletedTasks(context.Background())
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestAutoDreamPipeline_ProcessCompletedTasks_EmbeddingError(t *testing.T) {
+	mockDB := &mockPGProvider{
+		rows: &mockRows{
+			maxNext: 1,
+			scanData: []interface{}{
+				"test-id",
+				"org-id",
+				"content",
+			},
+		},
+	}
+	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{err: errors.New("embedding error")})
+	err := pipeline.ProcessCompletedTasks(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error but skipped embedding error, got %v", err)
+	}
+}
+
+func TestAutoDreamPipeline_ProcessCompletedTasks_InsertError(t *testing.T) {
+	mockDB := &mockPGProvider{
+		rows: &mockRows{
+			maxNext: 1,
+			scanData: []interface{}{
+				"test-id",
+				"org-id",
+				"content",
+			},
+		},
+		execErr: errors.New("insert error"),
+	}
+	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{})
+	err := pipeline.ProcessCompletedTasks(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error but logged insert error, got %v", err)
+	}
+}
+
+func TestAutoDreamPipeline_ProcessCompletedTasks_EmptyContent(t *testing.T) {
+	mockDB := &mockPGProvider{
+		rows: &mockRows{
+			maxNext: 1,
+			scanData: []interface{}{
+				"test-id",
+				"org-id",
+				"", // empty content
+			},
+		},
+	}
+	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{})
+	err := pipeline.ProcessCompletedTasks(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 }
