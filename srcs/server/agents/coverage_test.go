@@ -1,6 +1,7 @@
 package agents
 
 import (
+	"context"
 	"sync"
 	"testing"
 )
@@ -116,6 +117,8 @@ type stubProvider struct {
 
 func (s *stubProvider) Type() ProviderType               { return s.pt }
 func (s *stubProvider) Description() string              { return "stub" }
+
+func (s *stubProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error { return nil }
 func (s *stubProvider) SupportedRoles() []string         { return []string{"STUB"} }
 func (s *stubProvider) Authenticate(_ Credentials) error { return nil }
 func (s *stubProvider) GetCredentials() Credentials      { return Credentials{} }
