@@ -30,6 +30,10 @@ func (h *SandboxHarness) Execute(ctx context.Context, execCtx ExecutionContext) 
 	args := []string{"-p", profile}
 	args = append(args, execCtx.Command...)
 
+
 	cmd := exec.CommandContext(ctx, "sandbox-exec", args...)
+	if execCtx.NetworkProxy != "" {
+		cmd.Env = append(cmd.Environ(), "HTTP_PROXY="+execCtx.NetworkProxy, "HTTPS_PROXY="+execCtx.NetworkProxy)
+	}
 	return cmd.CombinedOutput()
 }

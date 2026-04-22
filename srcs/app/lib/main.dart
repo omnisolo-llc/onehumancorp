@@ -25,7 +25,8 @@ class OhcApp extends ConsumerWidget {
           brightness: Brightness.light,
         ),
         useMaterial3: true,
-        fontFamily: 'Inter',
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter'],
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -33,7 +34,8 @@ class OhcApp extends ConsumerWidget {
           brightness: Brightness.dark,
         ),
         useMaterial3: true,
-        fontFamily: 'Inter',
+        fontFamily: 'Outfit',
+        fontFamilyFallback: const ['Inter'],
       ),
       themeMode: ThemeMode.system,
       routerConfig: router,
