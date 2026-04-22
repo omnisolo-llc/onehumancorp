@@ -5,15 +5,16 @@ actions:
     #   memory: 16GB
     #   disk: 50GB
     triggers:
-      # push:
-      #   branches:
-      #     - "main"
-      # pull_request:
-      #   branches:
-      #     - "*"
+      push:
+        branches:
+          - "main"
+      pull_request:
+        branches:
+          - "*"
     steps:
       - run: |
           bazel test //... \
+            --config=buildbuddy-official \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800

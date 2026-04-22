@@ -59,13 +59,14 @@ nav:
       - NATS Hybrid Event Mesh: research/[backend]_nats_hybrid_event_mesh.md
       - Proactive RAG MCP: research/[backend]_scribe_proactive_rag_mcp.md
   - Walkthroughs:
+      - KAIROS Orchestrator CLI Walkthrough: technical/walkthroughs/kairos_orchestrator_cli.md
       - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
       - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
       - Agent Harness Visual Walkthrough: walkthroughs/agent_harness_walkthrough.md
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
-      - Teammate Mesh Walkthrough: walkthroughs/teammate_mesh_walkthrough.md
+      - Teammate Mesh Walkthrough: technical/walkthroughs/teammate_mesh.md
       - AutoDream CLI Guide: walkthroughs/autodream_cli_interactive_guide.md
       - Virtual Meeting Room Walkthrough: walkthroughs/virtual_meeting_room_walkthrough.md
       - walkthroughs/index.md

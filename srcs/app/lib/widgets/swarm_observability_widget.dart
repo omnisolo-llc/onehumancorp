@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
+import 'package:ohc_app/widgets/pulse_animation.dart';
 
 // Simulate Teammate Mesh messages from Redis/WebSockets
 class MeshMessage {
@@ -266,14 +267,8 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
                 ]),
                 inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
               ),
-              child: Container(
+              child: _buildPulsingContainer(
                 margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -317,5 +312,29 @@ class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleT
         ),
       ),
     );
+  }
+
+
+  Widget _buildPulsingContainer({required EdgeInsets margin, required Widget child}) {
+    final action = widget.message.action.toLowerCase();
+    final isPriority = action.contains('priority') || action.contains('urgent') || action.contains('critical') || action.contains('error');
+
+    final container = Container(
+      margin: margin,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color.fromRGBO(255, 255, 255, 0.03),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isPriority ? Colors.redAccent.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.1),
+        ),
+      ),
+      child: child,
+    );
+
+    if (isPriority) {
+      return PulseAnimation(child: container);
+    }
+    return container;
   }
 }

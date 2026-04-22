@@ -44,6 +44,23 @@ go_test(
     tags = _COMMON_TAGS,
 )
 
+go_test(
+    name = "e2e_hybrid_sync_test",
+    srcs = _SHARED_SRCS + [
+        "hybrid_sync_e2e_test.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS + [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)
+
 # ── Agent CUJs ────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_agents_test",
@@ -227,6 +244,7 @@ test_suite(
         ":e2e_budget_test",
         ":e2e_business_test",
         ":e2e_settings_test",
+        ":e2e_hybrid_sync_test",
         ":e2e_wizard_test",
         ":e2e_model_provider_test",
         ":e2e_admin_test",
