@@ -205,7 +205,7 @@ class _MessageBubble extends StatelessWidget {
                   context,
                 ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
               ),
-            Text(message.body),
+            SelectableText(message.body),
           ],
         ),
       ),
