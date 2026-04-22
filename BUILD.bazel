@@ -1,6 +1,7 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -236,4 +237,29 @@ test_suite(
 alias(
     name = "hello-world",
     actual = "//srcs/examples/hello-world-agent:hello-world",
+)
+
+go_library(
+    name = "mono_lib",
+    srcs = [
+        "test.go",
+        "test_db_close.go",
+        "test_sdk.go",
+        "test_sdk2.go",
+        "test_sdk3.go",
+        "test_sdk4.go",
+    ],
+    importpath = "github.com/onehumancorp/mono",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/services/growth",
+        "@com_github_modelcontextprotocol_go_sdk//mcp",
+    ],
+)
+
+go_binary(
+    name = "mono",
+    embed = [":mono_lib"],
+    visibility = ["//visibility:public"],
 )

@@ -2,12 +2,14 @@ package local
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+	"github.com/onehumancorp/mono/srcs/server/tools/registry"
 )
 
 const (
@@ -38,6 +40,9 @@ type AgentConfig struct {
 	// Tools is the list of tools available to the agent.  If nil, DefaultTools() is used.
 	Tools []Tool
 
+	// ToolRegistry is the new UnifiedToolRegistry.
+	ToolRegistry *registry.UnifiedToolRegistry
+
 	// SystemPrompt overrides the default system prompt.
 	SystemPrompt string
 
@@ -65,6 +70,9 @@ func NewAgent(state *TaskState, cfg AgentConfig) *Agent {
 	}
 	if cfg.Tools == nil {
 		cfg.Tools = DefaultTools()
+	}
+	if cfg.ToolRegistry == nil {
+		cfg.ToolRegistry = DefaultToolRegistry(".")
 	}
 	if cfg.SystemPrompt == "" {
 		cfg.SystemPrompt = systemPrompt
@@ -106,6 +114,19 @@ func (a *Agent) Run(ctx context.Context) {
 	toolDefs := make([]ToolDefinition, len(a.cfg.Tools))
 	for i, t := range a.cfg.Tools {
 		toolDefs[i] = t.Definition()
+	}
+
+	// Add tools from UnifiedToolRegistry
+	if a.cfg.ToolRegistry != nil {
+		for _, manifest := range a.cfg.ToolRegistry.ListTools() {
+			var inputSchema map[string]interface{}
+			_ = json.Unmarshal(manifest.InputSchema, &inputSchema)
+			toolDefs = append(toolDefs, ToolDefinition{
+				Name: manifest.Name,
+				Description: manifest.Description,
+				InputSchema: inputSchema,
+			})
+		}
 	}
 
 	// Build the initial conversation.
@@ -229,12 +250,31 @@ func (a *Agent) loop(ctx context.Context, messages []ConversationMessage, toolDe
 
 // executeTool finds and runs the named tool.
 func (a *Agent) executeTool(ctx context.Context, tu ToolUseRequest) (string, error) {
+	workDir := a.state.WorkDir
+	if workDir == "" {
+		workDir = "."
+	}
+
+	// Try the new UnifiedToolRegistry first
+	if a.cfg.ToolRegistry != nil {
+		if _, exists := a.cfg.ToolRegistry.GetTool(tu.Name); exists {
+			inputBytes, err := json.Marshal(tu.Input)
+			if err != nil {
+				return "", fmt.Errorf("failed to marshal tool input: %w", err)
+			}
+
+			resultBytes, err := a.cfg.ToolRegistry.Execute(ctx, tu.Name, inputBytes)
+			if err != nil {
+				return "", err
+			}
+
+			return string(resultBytes), nil
+		}
+	}
+
+	// Fallback to legacy tools
 	for _, t := range a.cfg.Tools {
 		if t.Definition().Name == tu.Name {
-			workDir := a.state.WorkDir
-			if workDir == "" {
-				workDir = "."
-			}
 			return t.Execute(ctx, workDir, tu.Input)
 		}
 	}

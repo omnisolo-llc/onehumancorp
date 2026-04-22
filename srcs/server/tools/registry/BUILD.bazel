@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "registry",
+    srcs = ["registry.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/tools/registry",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_santhosh_tekuri_jsonschema_v5//:jsonschema",
+    ],
+)
+
+go_test(
+    name = "registry_test",
+    srcs = [
+        "e2e_test.go",
+        "registry_test.go",
+    ],
+    embed = [":registry"],
+)

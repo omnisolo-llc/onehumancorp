@@ -4,8 +4,11 @@ go_library(
     name = "local",
     srcs = [
         "agent.go",
+        "bash_tool.go",
         "cached_llm.go",
+        "file_read_tool.go",
         "llm.go",
+        "registry_integration.go",
         "output.go",
         "runner.go",
         "task.go",
@@ -16,6 +19,7 @@ go_library(
     deps = [
         "//srcs/server/db",
         "//srcs/server/telemetry",
+        "//srcs/server/tools/registry",
         "//srcs/server/utils",
         "@com_github_google_uuid//:uuid",
         "@com_github_redis_rueidis//:rueidis",

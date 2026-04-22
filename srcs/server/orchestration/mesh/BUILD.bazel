@@ -28,7 +28,7 @@ go_test(
     ],
     embed = [":mesh"],
     deps = [
-        "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_alicebob_miniredis_v2//:miniredis",
+        "@com_github_redis_go_redis_v9//:go-redis",
     ],
 )

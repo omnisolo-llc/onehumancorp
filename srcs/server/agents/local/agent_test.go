@@ -397,3 +397,84 @@ func TestSpawnTask_UniqueIDs(t *testing.T) {
 		ids[s.ID] = true
 	}
 }
+
+
+func TestAgentToolUse_UnifiedToolRegistry_BashAndFileRead(t *testing.T) {
+	ctx := context.Background()
+	tmpDir := t.TempDir()
+	outFile := tmpDir + "/hello_utr.txt"
+
+	llm := &fakeLLM{turns: []local.AssistantMessage{
+		// Turn 1: request bash tool use via UTR
+		{
+			Text: "I'll create a file with bash.",
+			ToolUses: []local.ToolUseRequest{
+				{
+					ID:   "tu1",
+					Name: "bash",
+					Input: map[string]interface{}{
+						"command": fmt.Sprintf("echo hello_from_utr > %s", outFile),
+					},
+				},
+			},
+			StopReason:   "tool_use",
+			InputTokens:  200,
+			OutputTokens: 40,
+		},
+		// Turn 2: read the file via UTR
+		{
+			Text: "Now I'll read it.",
+			ToolUses: []local.ToolUseRequest{
+				{
+					ID:   "tu2",
+					Name: "file_read",
+					Input: map[string]interface{}{
+						"path": outFile,
+					},
+				},
+			},
+			StopReason:   "tool_use",
+			InputTokens:  300,
+			OutputTokens: 40,
+		},
+		// Turn 3: final summary
+		{
+			Text:         "Done.",
+			StopReason:   "stop",
+			InputTokens:  400,
+			OutputTokens: 20,
+		},
+	}}
+
+	// Initialize the default registry which has bash and file_read
+	utr := local.DefaultToolRegistry(tmpDir)
+
+	cfg := local.AgentConfig{
+		LLM:          llm,
+		ToolRegistry: utr,
+		// We can empty the old Tools slice to ensure it only uses UTR
+		Tools:        []local.Tool{},
+	}
+
+	state, err := local.SpawnTask(ctx, "utr_test", "do it", tmpDir, cfg)
+	if err != nil {
+		t.Fatalf("spawn: %v", err)
+	}
+
+	// wait for completion
+	for i := 0; i < 50; i++ {
+		if state.Status().IsTerminal() {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if state.Status() != local.TaskStatusCompleted {
+		t.Fatalf("expected completed, got %s. error: %v", state.Status(), state.Err())
+	}
+
+	res := state.Result()
+	if res != "Done." {
+		t.Errorf("expected Done., got %q", res)
+	}
+}
