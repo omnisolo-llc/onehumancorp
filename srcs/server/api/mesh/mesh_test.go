@@ -142,7 +142,7 @@ func TestMeshHandlerBroadcastEvent(t *testing.T) {
     service := NewMemoryMeshService()
     handler := NewMeshHandler(service)
 
-    body := `{"agent_id": "worker-1", "channel": "orchestration.tasks", "action": "TaskTransition", "status": "success", "payload": {}}`
+    body := `{"agent_id": "worker-1", "channel": "orchestration.tasks", "event_type": "TaskTransition", "data": {"status": "success"}}`
     req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBufferString(body))
 
     // Add auth claims to context
@@ -215,5 +215,54 @@ func TestMeshHandlerSubscribe(t *testing.T) {
 
 	if string(msg) != "hello subscribe" {
 		t.Errorf("expected 'hello subscribe', got '%s'", string(msg))
+	}
+}
+
+func TestMeshHandler_Broadcast_LegacyPayload(t *testing.T) {
+	svc := NewMemoryMeshService()
+	handler := NewMeshHandler(svc)
+
+	payload := `{"intent": "test-legacy-intent"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBufferString(payload))
+	req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"}))
+	w := httptest.NewRecorder()
+
+	handler.Broadcast(w, req)
+
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestMeshHandler_Broadcast_ValidSIPPayload(t *testing.T) {
+	svc := NewMemoryMeshService()
+	handler := NewMeshHandler(svc)
+
+	payload := `{"agent_id": "agent-1", "channel": "ch-1", "event_type": "event-1", "data": {"key": "value"}}`
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBufferString(payload))
+	req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"}))
+	w := httptest.NewRecorder()
+
+	handler.Broadcast(w, req)
+
+	if w.Result().StatusCode != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestMeshHandler_Broadcast_InvalidSIPPayload(t *testing.T) {
+	svc := NewMemoryMeshService()
+	handler := NewMeshHandler(svc)
+
+	// Missing agent_id
+	payload := `{"channel": "ch-1", "event_type": "event-1", "data": {"key": "value"}}`
+	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBufferString(payload))
+	req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1"}))
+	w := httptest.NewRecorder()
+
+	handler.Broadcast(w, req)
+
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status 400, got %d", w.Result().StatusCode)
 	}
 }
