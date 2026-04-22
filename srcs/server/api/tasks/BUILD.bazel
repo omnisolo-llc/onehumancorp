@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "tasks",
+    srcs = ["tasks.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/api/tasks",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/db/models",
+    ],
+)
+
+go_test(
+    name = "tasks_test",
+    srcs = ["tasks_test.go"],
+    embed = [":tasks"],
+    deps = [
+        "//srcs/server/db",
+        "//srcs/server/db/models",
+    ],
+)
