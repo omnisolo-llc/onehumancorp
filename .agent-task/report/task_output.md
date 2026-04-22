@@ -18,3 +18,12 @@ Introduce an equivalent to `AsyncLocalStorage` in the Go backend (`srcs/server/`
     *   Ensure all logging (`slog`) and metrics automatically extract the `AgentId` and `ParentSessionId` from the active context.
 *   **Visual Representation**:
     *   A new Flutter UI widget displaying active Agent IDs tracked by the tracing layer, styled using OHC Glassmorphism (20px blur, Outfit font).
+
+```mermaid
+graph TD
+    UI[Flutter Dashboard] -->|Invoke Agent| Dispatcher[KAIROS Dispatcher]
+    Dispatcher -->|Inject Context| G1[Goroutine: Subagent A]
+    Dispatcher -->|Inject Context| G2[Goroutine: Subagent B]
+    G1 -.->|Read Context| Logger[Telemetry Logger]
+    G2 -.->|Read Context| Logger
+```
