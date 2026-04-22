@@ -46,6 +46,17 @@ class _GoRouterAuthNotifier extends ChangeNotifier {
 
 final routerProvider = Provider<GoRouter>((ref) {
 
+  String? safeRedirectTarget(String? location) {
+    if (location == null || location.isEmpty) return null;
+
+    final uri = Uri.tryParse(location);
+    if (uri == null || uri.hasScheme || uri.hasAuthority) return null;
+
+    final target = uri.toString();
+    if (!target.startsWith('/') || target.startsWith('/login')) return null;
+    return target;
+  }
+
   return GoRouter(
     initialLocation: '/landing',
     refreshListenable: _GoRouterAuthNotifier(ref),
@@ -58,12 +69,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
+      final redirectTarget = safeRedirectTarget(state.uri.queryParameters['redirect']);
 
       // Allow these public routes without authentication.
       if (!isLoggedIn && !isLoginRoute && !isLandingRoute) {
-        return '/landing';
+        final encodedTarget = Uri.encodeComponent(state.uri.toString());
+        return '/login?redirect=$encodedTarget';
       }
-      if (isLoggedIn && isLoginRoute) return '/dashboard';
+      if (isLoggedIn && isLoginRoute) return redirectTarget ?? '/dashboard';
       return null;
     },
     routes: [
