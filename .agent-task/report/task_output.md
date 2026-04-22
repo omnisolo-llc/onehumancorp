@@ -1,76 +1,59 @@
-# [architecture] Website & Storefront Builder Architecture
-
-## Title
-Website & Storefront Builder Architecture 🎨
+# Title: Consolidate and Optimize Agent Harness Telemetry across Cloud and Standalone Deployments
 
 ## Problem Statement
-Small business owners (bakers, handymen, boutique owners, tutors, food cart operators) need a way to create a professional online presence without any technical knowledge. They are often overwhelmed by traditional website builders like Shopify, Wix, or Squarespace because those platforms require understanding concepts like themes, layouts, margins, DNS, and responsive design. The OHC platform must provide a "zero-configuration" storefront builder where AI does the heavy lifting, generating a beautiful, mobile-first website that works seamlessly on any device.
+Swarm operators and administrators currently face difficulties in diagnosing throughput and error rate discrepancies between Cloud-native (multi-tenant K8s) and Standalone (local) deployments of the OHC platform. While we have basic metrics like `harness_init_latency`, `harness_db_io_latency`, and `task_claim_contention` tagged with `deployment_mode`, there is a lack of cohesive observability that ties these metrics directly to agent efficiency, job queue depth, and per-tenant cost bottlenecks. From the perspective of a swarm operator, it is challenging to identify when a specific tenant in Cloud mode is consuming disproportionate AI resources compared to Standalone mode, or when database I/O latency is causing agent job queue backlogs.
 
 ## Research Report
-- **Goal**: Design a drag-and-drop website builder architecture that empowers non-technical users to launch an online storefront in under 10 minutes.
-- **Competitive Analysis**:
-  - **Shopify**: Highly customizable but steep learning curve. Requires significant setup for themes and plugins.
-  - **Wix/Squarespace**: Flexible drag-and-drop, but overwhelming array of choices. Can easily lead to "broken" designs on mobile if the user is not careful.
-  - **GoDaddy**: Simpler, but rigid templates that look dated.
-- **OHC's Approach**:
-  - **Constraint-Based Design**: Limit choices to ensure aesthetic excellence by default. Users select content blocks (hero, product grid, testimonials), not individual UI elements.
-  - **Mobile-First**: The builder interface itself must be fully functional on a 375px mobile screen. All generated sites are optimized for mobile first.
-  - **AI-Assisted**: AI generates initial copy, selects placeholder images, and suggests color palettes based on the business type.
+### Telemetry Review and Gap Analysis
+1. **Existing Telemetry**:
+   - The platform utilizes OpenTelemetry and Prometheus for backend metrics, with a Grafana dashboard named "Harness Efficiency" (`monitoring/dashboards/harness_efficiency.json`) that visualizes `harness_init_latency` and `harness_db_io_latency` P95 percentiles by `deployment_mode`.
+   - Various metrics exist in `srcs/server/telemetry/metrics.go`, such as `RecordTaskClaimContention`, `RecordAgentExecutionTrace`, `RecordSubAgentQueueDelay`, and `RecordHarnessExecutionLatency`.
+2. **Identified Discrepancies**:
+   - **Throughput & Error Rates**: Cloud mode (multi-tenant K8s) handles higher concurrency but shows increased `task_claim_contention` compared to Standalone mode, likely due to PostgreSQL `SKIP LOCKED` behavior under load across many tenants.
+   - **Bottlenecks**: `harness_db_io_latency` is a primary bottleneck in Cloud mode due to remote database network hops, whereas Standalone mode is bottlenecked by `harness_execution_latency` bounded by local compute.
+   - **Visibility Gaps**: There are no unified dashboards that correlate `sub_agent_queue_delay` with `task_claim_contention` and `deployment_mode`. Additionally, per-tenant cost metering (AI token usage per agent department) is tracked but not effectively visualized alongside deployment-level performance metrics.
+
+### Cost Efficiency Analysis
+- Per-tenant resource usage analysis indicates that the lack of clear visualization for AI token consumption versus queue delay leads to inefficient resource allocation. Some tenants may monopolize the queue in Cloud mode without triggering immediate alerts.
 
 ## Design Doc
+### High-Level Architecture
+- **Metrics Aggregation**: Enhance the existing `telemetry.go` layer to automatically inject `tenant_id` (where applicable) and `deployment_mode` into all critical agent queue and execution metrics.
+- **Unified Grafana Dashboards**: Create a new set of Grafana dashboards ("Swarm Health" and "Tenant Cost Efficiency") that combine:
+  - Queue depth and delay (`sub_agent_queue_delay`).
+  - Database contention (`task_claim_contention`).
+  - AI Execution latency (`harness_execution_latency`).
+- **Alerting Integration**: Configure Prometheus Alertmanager rules for sustained high `task_claim_contention` or abnormal `sub_agent_queue_delay` specific to Cloud vs Standalone modes.
 
-### 1. Architecture Components
+### UI / UX Flow (Operator Dashboard)
+- **Mobile UX Flow (375px first)**:
+  - **Screen 1**: High-level Swarm Health Overview. Large status indicators for Cloud vs Standalone health.
+  - **Screen 2**: Drill-down into "Bottlenecks" showing bar charts of `task_claim_contention` and queue delays.
+  - **Screen 3**: "Tenant Insights" listing top 5 tenants by AI usage/cost, sorted by resource consumption.
+- **Desktop Flow**: Side-by-side comparative views of Cloud vs Standalone metrics, with interactive timelines for tracing queue delays back to specific agent departments.
 
-- **Block System**: The atomic unit of the builder is a "Block" (e.g., `HeroBlock`, `ProductGridBlock`, `ContactFormBlock`, `BookingCalendarBlock`). Blocks have predefined schemas for their content (JSONB).
-- **Page Model**: A page is an ordered list of Blocks.
-- **Theme Engine**: Applies global design tokens (colors, typography, spacing) uniformly across all blocks.
-- **Publishing Pipeline**: Compiles the JSON representation into a static PWA or server-side rendered application, deployed to a CDN.
-- **Automated SEO Engine**: SEO is handled invisibly. When a site is published, the Marketing AI agent auto-generates meta titles, descriptions, and structured data (JSON-LD) based on the block content and business type. A dynamic `sitemap.xml` and `robots.txt` are automatically generated and updated with every publish.
-- **Custom Domains & SSL Provisioning**: Custom domains are configured automatically without manual DNS records when purchased through OHC. For external domains, users are guided via a simple 2-step setup. SSL certificates are provisioned and renewed automatically via Let's Encrypt (or a managed provider like Cloudflare) at the edge CDN level, guaranteeing HTTPS by default.
-
-### 2. Architecture Diagram
-
-```mermaid
-sequenceDiagram
-    participant User as Business Owner (Mobile)
-    participant UI as OHC Builder UI
-    participant API as OHC API
-    participant AI as Marketing Agent
-    participant DB as OHC-SIP DB
-    participant CDN as CDN / Storage
-
-    User->>UI: Select "Add Hero Block"
-    UI->>API: Request Block Generation
-    API->>AI: Generate copy & suggest image for Bakery
-    AI-->>API: Content (Title, Subtitle, Image URL)
-    API-->>UI: Render Preview
-    User->>UI: Tap "Publish"
-    UI->>API: Publish Site Command
-    API->>AI: Generate SEO metadata & JSON-LD
-    AI-->>API: SEO Payload
-    API->>DB: Save Page State & SEO (JSONB)
-    API->>CDN: Provision SSL (if custom domain)
-    API->>CDN: Build & Deploy Static Assets
-    CDN-->>API: Deployment Complete
-    API-->>UI: Site Live URL
-```
-
-### 3. UX Flows
-
-- **Onboarding Flow**:
-  1. User enters business name and type.
-  2. AI generates a full 3-page site (Home, Catalog/Services, About) in 10 seconds.
-  3. User reviews on mobile and can tap any text or image to edit.
-- **Editing Flow (Mobile)**:
-  1. User taps "Edit Section".
-  2. A bottom sheet appears with simple toggles (e.g., "Show Button", "Change Image").
-  3. No free-form dragging; sections snap into place to prevent layout breakage.
+### AI Agent Integration Points
+- **Business Advisory Agent**: Expose a summarized version of these metrics to the Business Advisory agent so it can notify the business owner if their specific tasks are delayed due to system load, translating technical queue depths into plain-language updates (e.g., "Your marketing tasks are taking a bit longer than usual today").
 
 ## Implementation Prompt
-"Implement the core backend API for the Website & Storefront Builder in `srcs/server/builder/`. Define the database models for `Site`, `Page`, and `Block` using PostgreSQL JSONB columns for flexible block content storage. Ensure tenant isolation with RLS. Create a REST API for the mobile app to fetch, create, update, and reorder blocks on a page. The API must validate block payloads against strict schemas to ensure data integrity. Finally, implement the `PublishSite` endpoint that triggers a background job to compile the site configuration, generate SEO metadata automatically via the AI Marketing agent, and trigger SSL provisioning for any linked custom domains."
+**User-Facing Outcome**:
+Swarm operators will have a comprehensive, single-pane-of-glass dashboard to monitor, compare, and alert on the efficiency of the Agent Harness across Cloud and Standalone modes. They will be able to instantly identify if database I/O, task contention, or AI execution latency is the current bottleneck, and pinpoint anomalous tenant usage.
+
+**Critical User Journey (CUJ)**:
+1. Operator navigates to the "Swarm Health" dashboard in Grafana (or integrated internal tool).
+2. Operator views a comparative breakdown of Cloud vs Standalone latency and queue depth.
+3. Operator notices a spike in `task_claim_contention` in Cloud mode.
+4. Operator clicks on the metric to drill down and identifies that 3 specific tenants are generating 80% of the queue load.
+5. Operator adjusts rate limits or queue priorities for those tenants.
+
+**Acceptance Criteria**:
+- `deployment_mode` and `tenant_id` are consistently applied as tags to `sub_agent_queue_delay`, `task_claim_contention`, and AI execution metrics.
+- A new "Swarm Health" Grafana dashboard is added to the `monitoring/dashboards` directory, capturing the CUJ.
+- Prometheus alerts are defined for high queue delay and contention thresholds.
+- The `Business Advisory` agent system prompt/tools are updated to query basic queue status for user-facing explanations.
 
 ## Priority
-P0
+P1
 
 ## Estimated Scope
-Large
+Medium
