@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+
+
+
+
+
+
+
 type mockMeshTransportAPI struct {
 	MeshTransport
 	broadcastCalled bool
@@ -25,7 +32,10 @@ func (m *mockMeshTransportAPI) SubscribeMeshEvents(ctx context.Context, topic st
 }
 
 func TestMeshAPI_Broadcast(t *testing.T) {
+
+
 	mockMesh := &mockMeshTransportAPI{}
+
 	api := NewMeshAPI(mockMesh)
 
 	tests := []struct {
@@ -180,7 +190,10 @@ func TestMeshAPI_Stream(t *testing.T) {
 
 
 func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
+
+
 	mockMesh := &mockMeshTransportAPI{}
+
 	api := NewMeshAPI(mockMesh)
 
 	tests := []struct {

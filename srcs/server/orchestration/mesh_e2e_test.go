@@ -48,7 +48,7 @@ func TestMeshAPI_E2E(t *testing.T) {
 	server := httptest.NewServer(mux)
 	defer server.Close()
 
-	channel := "ohc.mesh.agent.e2e_test"
+	channel := "mesh:tasks"
 	syncReq, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL+"/api/mesh/sync?channel="+channel, nil)
 	if err != nil {
 		t.Fatalf("Failed to create sync request: %v", err)
@@ -88,9 +88,12 @@ func TestMeshAPI_E2E(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	payload := map[string]interface{}{
-		"channel": channel,
-		"action":  "TEST_ACTION",
-		"status":  "COMPLETED",
+		"agent_id": "spiffe://e2e_test",
+		"channel": "mesh:tasks",
+		"event_type": "TEST_ACTION",
+		"data": map[string]interface{}{
+			"status": "COMPLETED",
+		},
 	}
 	body, _ := json.Marshal(payload)
 	broadcastReq, err := http.NewRequestWithContext(ctx, http.MethodPost, server.URL+"/api/mesh/broadcast", bytes.NewBuffer(body))
