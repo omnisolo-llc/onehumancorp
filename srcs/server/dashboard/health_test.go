@@ -86,4 +86,29 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 	if len(checklist) != 2 {
 		t.Errorf("Expected 2 items in checklist, got %d", len(checklist))
 	}
+
+	foundDB := false
+	foundStandalone := false
+	for _, itemInterface := range checklist {
+		item, ok := itemInterface.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if item["id"] == "sqlite_db" {
+			foundDB = true
+			if item["description"] != "Local Workmode data storage" {
+				t.Errorf("Expected description 'Local Workmode data storage', got %v", item["description"])
+			}
+		}
+		if item["id"] == "sqlite_standalone" {
+			foundStandalone = true
+			if item["description"] != "Local Workmode Active" {
+				t.Errorf("Expected description 'Local Workmode Active', got %v", item["description"])
+			}
+		}
+	}
+
+	if !foundDB || !foundStandalone {
+		t.Errorf("Expected to find sqlite_db and sqlite_standalone in checklist, got %v", checklist)
+	}
 }
