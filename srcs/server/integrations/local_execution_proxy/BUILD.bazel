@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "local_execution_proxy",
+    srcs = ["proxy.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/local_execution_proxy",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/proto:agent_service_go_proto",
+        "//srcs/proto:hub_go_proto",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "local_execution_proxy_test",
+    srcs = ["proxy_test.go"],
+    embed = [":local_execution_proxy"],
+    deps = [
+        "//srcs/proto:agent_service_go_proto",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials/insecure",
+    ],
+)

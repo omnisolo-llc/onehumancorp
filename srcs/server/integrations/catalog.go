@@ -8,6 +8,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations/ollama"
 	"github.com/onehumancorp/mono/srcs/server/integrations/powersync"
 	"github.com/onehumancorp/mono/srcs/server/integrations/restic"
+	"github.com/onehumancorp/mono/srcs/server/integrations/local_execution_proxy"
 )
 
 // Integration represents a plugin blueprint defining how to instantiate connections.
@@ -37,6 +38,7 @@ var Catalog = []Integration{
 	&ollama.OllamaIntegration{},
 	&powersync.PowerSyncIntegration{},
 	&restic.ResticIntegration{},
+	&local_execution_proxy.LocalStatefulExecutionProxyIntegration{},
 }
 
 // GetCatalog returns all available integration providers.
