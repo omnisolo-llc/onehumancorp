@@ -1,0 +1,31 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "sandbox",
+    srcs = [
+        "manager.go",
+        "permissions.go",
+        "wrapper.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/harness/sandbox",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/harness",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "sandbox_test",
+    srcs = [
+        "manager_test.go",
+        "permissions_test.go",
+    ],
+    embed = [":sandbox"],
+    deps = [
+        "//srcs/server/harness",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
