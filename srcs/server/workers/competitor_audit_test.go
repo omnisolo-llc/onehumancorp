@@ -93,10 +93,10 @@ func TestCompetitorAuditWorker(t *testing.T) {
 		assert.NoError(t, err)
 		names = append(names, name)
 	}
-	assert.ElementsMatch(t, []string{"Claude Code", "OpenClaw", "Replit Agent"}, names)
+	assert.ElementsMatch(t, []string{"AI coding assistant", "OpenClaw", "Replit Agent"}, names)
 
 	// 5. Verify file creation
-	for _, comp := range []string{"Claude Code", "OpenClaw", "Replit Agent"} {
+	for _, comp := range []string{"AI coding assistant", "OpenClaw", "Replit Agent"} {
 		filename := filepath.Join(memoryDir, "competitor_"+comp+".txt")
 		_, err := os.Stat(filename)
 		assert.NoError(t, err, "File should exist: "+filename)
@@ -104,7 +104,11 @@ func TestCompetitorAuditWorker(t *testing.T) {
 		content, err := os.ReadFile(filename)
 		assert.NoError(t, err)
 		assert.Contains(t, string(content), "Competitor: "+comp)
-		assert.Contains(t, string(content), "Metric: offline_support=false")
+		if comp == "AI coding assistant" {
+			assert.Contains(t, string(content), "Metric: offline_support=true")
+		} else {
+			assert.Contains(t, string(content), "Metric: offline_support=false")
+		}
 	}
 }
 

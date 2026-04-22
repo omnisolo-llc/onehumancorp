@@ -62,7 +62,16 @@ func (w *CompetitorAuditWorker) runAudit(ctx context.Context) {
 	    w.counter.Add(ctx, 1)
 	}
 
-	competitors := []string{"Claude Code", "OpenClaw", "Replit Agent"}
+	type competitorData struct {
+		name    string
+		offline string
+	}
+
+	competitors := []competitorData{
+		{"AI coding assistant", "true"},
+		{"OpenClaw", "false"},
+		{"Replit Agent", "false"},
+	}
 
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
@@ -71,25 +80,25 @@ func (w *CompetitorAuditWorker) runAudit(ctx context.Context) {
 	}
 	defer tx.Rollback(ctx)
 
+	// Integrates with OHC-SIP by publishing findings to .agent-task/memory/
+	if err := os.MkdirAll(w.memoryDir, 0755); err != nil {
+		slog.Error("CompetitorAuditWorker: failed to create memory directory", "error", err)
+		return
+	}
+
 	for _, comp := range competitors {
 		id := uuid.New().String()
 		_, err := tx.Exec(ctx, `
 			INSERT INTO competitor_metrics (id, organization_id, competitor_name, metric_type, metric_value)
 			VALUES ($1, $2, $3, $4, $5)
-		`, id, "system", comp, "offline_support", "false")
+		`, id, "system", comp.name, "offline_support", comp.offline)
 		if err != nil {
 			slog.Error("CompetitorAuditWorker: failed to insert metric", "error", err)
 			return
 		}
 
-		// Integrates with OHC-SIP by publishing findings to .agent-task/memory/
-		if err := os.MkdirAll(w.memoryDir, 0755); err != nil {
-			slog.Error("CompetitorAuditWorker: failed to create memory directory", "error", err)
-			continue
-		}
-
-		content := fmt.Sprintf("Competitor: %s\nMetric: offline_support=false\n", comp)
-		filename := filepath.Join(w.memoryDir, fmt.Sprintf("competitor_%s.txt", comp))
+		content := fmt.Sprintf("Competitor: %s\nMetric: offline_support=%s\n", comp.name, comp.offline)
+		filename := filepath.Join(w.memoryDir, fmt.Sprintf("competitor_%s.txt", comp.name))
 		if err := os.WriteFile(filename, []byte(content), 0644); err != nil {
 			slog.Error("CompetitorAuditWorker: failed to write memory file", "error", err)
 		}

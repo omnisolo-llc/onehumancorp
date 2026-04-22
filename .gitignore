@@ -92,7 +92,6 @@ node_modules/
 *.tar.gz
 Chart.lock
 /.claude-code
-/.claude
 
 # Rust build artifacts
 /target/
