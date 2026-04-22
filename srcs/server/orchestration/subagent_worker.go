@@ -46,7 +46,7 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 			return
 		}
 
-		job, err := w.taskQueue.Dequeue(ctx, []string{})
+		job, err := w.taskQueue.Acquire(ctx, []string{})
 		if err != nil || job == nil {
 			return
 		}
