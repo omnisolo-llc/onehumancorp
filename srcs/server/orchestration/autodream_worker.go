@@ -37,7 +37,7 @@ type MemoryFile struct {
 	Content          string `yaml:"content"`
 }
 
-// ProcessMemories ingests pending memory YAML files into the autodream_memories table.
+// ProcessMemories ingests pending memory YAML files into the consolidated_memory table.
 //
 // When OHC_MEMORY_DIR is set the worker reads YAML files from that directory
 // (migration path: legacy agents wrote memory files there).  If the env var is
@@ -146,9 +146,9 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 		}
 
 		if w.pool.IsSQLite() {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO consolidated_memory (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
 		} else {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO consolidated_memory (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
 		}
 		// Default organization_id to "system" as auth contexts are missing in background workers
 		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "background-pipeline"}
@@ -171,7 +171,7 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	return nil
 }
 
-// IngestCompletedTasks fetches COMPLETED tasks from shared_tasks and swarm_tasks, embeds them, and stores them in autodream_memories.
+// IngestCompletedTasks fetches COMPLETED tasks from shared_tasks and swarm_tasks, embeds them, and stores them in consolidated_memory.
 func (w *AutoDreamWorker) IngestCompletedTasks(ctx context.Context) error {
 	minimaxKey := os.Getenv("MINIMAX_API_KEY")
 	var client MinimaxClient
@@ -250,9 +250,9 @@ func (w *AutoDreamWorker) ingestTasksFromTable(ctx context.Context, tableName st
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, processed_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+			insertQuery = `INSERT INTO consolidated_memory (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, processed_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
 		} else {
-			insertQuery = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, processed_at, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+			insertQuery = `INSERT INTO consolidated_memory (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, processed_at, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
 		}
 
 		_, err = tx.Exec(ctx, insertQuery, memID, contentToEmbed, embStr, e.id, "system", "auto-dream-worker", tableName)
@@ -275,12 +275,12 @@ func (w *AutoDreamWorker) ingestTasksFromTable(ctx context.Context, tableName st
 	return nil
 }
 
-// SearchMemories queries the autodream_memories vector database.
+// SearchMemories queries the consolidated_memory vector database.
 func (w *AutoDreamWorker) SearchMemories(ctx context.Context, embedding string, limit int) ([]TruthSearchResult, error) {
 	if w.pool.IsSQLite() {
 		query := `
 			SELECT id, content, 0 as distance
-			FROM autodream_memories
+			FROM consolidated_memory
 			ORDER BY created_at DESC
 			LIMIT $1
 		`
@@ -303,7 +303,7 @@ func (w *AutoDreamWorker) SearchMemories(ctx context.Context, embedding string, 
 
 	query := `
 		SELECT id, content, embedding <=> $1::vector as distance
-		FROM autodream_memories
+		FROM consolidated_memory
 		ORDER BY distance ASC
 		LIMIT $2
 	`
@@ -350,10 +350,10 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 	var rows db.Rows
 
 	if w.pool.IsSQLite() {
-		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 500")
+		rows, err = tx.Query(ctx, "SELECT id, content FROM consolidated_memory WHERE processed_at IS NULL LIMIT 500")
 	} else {
 		// Postgres lock row for update so no other worker picks it up
-		rows, err = tx.Query(ctx, "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT 500 FOR UPDATE SKIP LOCKED")
+		rows, err = tx.Query(ctx, "SELECT id, content FROM consolidated_memory WHERE processed_at IS NULL LIMIT 500 FOR UPDATE SKIP LOCKED")
 	}
 	if err != nil {
 		return fmt.Errorf("failed to fetch unprocessed memories: %w", err)
@@ -410,9 +410,9 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 
 		var query string
 		if w.pool.IsSQLite() {
-			query = "UPDATE autodream_memories SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id"
+			query = "UPDATE consolidated_memory SET embedding = $1, processed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id"
 		} else {
-			query = "UPDATE autodream_memories SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id"
+			query = "UPDATE consolidated_memory SET embedding = $1::vector, processed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id"
 		}
 
 		var retId string

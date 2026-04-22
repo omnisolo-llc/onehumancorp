@@ -144,14 +144,14 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 		t.Fatalf("failed to create agent_session_data: %v", err)
 	}
 	_, err = pool.Provider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS autodream_memories (
+		CREATE TABLE IF NOT EXISTS consolidated_memory (
 			id TEXT PRIMARY KEY,
 			content TEXT NOT NULL,
 			source_mission_id TEXT
 		)
 	`)
 	if err != nil {
-		t.Fatalf("failed to create autodream_memories: %v", err)
+		t.Fatalf("failed to create consolidated_memory: %v", err)
 	}
 
 	_, err = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess-1', 'agent-1', 'test context')")
@@ -173,7 +173,7 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 	}
 
 	// Verify the memory was inserted
-	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id = 'sess-1'").Scan(&count)
+	err = pool.Provider.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_mission_id = 'sess-1'").Scan(&count)
 	if err != nil {
 		t.Fatalf("failed to query count: %v", err)
 	}
@@ -281,7 +281,7 @@ func TestAutoDreamWorker_CompletedTasksIngestion(t *testing.T) {
 			payload TEXT,
 			status VARCHAR NOT NULL DEFAULT 'PENDING'
 		);
-		CREATE TABLE IF NOT EXISTS autodream_memories (
+		CREATE TABLE IF NOT EXISTS consolidated_memory (
 			id TEXT PRIMARY KEY,
 			content TEXT NOT NULL,
 			embedding TEXT,
@@ -320,9 +320,9 @@ func TestAutoDreamWorker_CompletedTasksIngestion(t *testing.T) {
 
 	// Verify memory was inserted
 	var count int
-	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE source_mission_id = 'task-comp-1'").Scan(&count)
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_mission_id = 'task-comp-1'").Scan(&count)
 	if err != nil {
-		t.Fatalf("failed to query autodream_memories: %v", err)
+		t.Fatalf("failed to query consolidated_memory: %v", err)
 	}
 	if count != 1 {
 		t.Errorf("expected 1 memory inserted, got %d", count)
@@ -380,7 +380,7 @@ func TestAutoDreamWorker_IngestMemoriesFile(t *testing.T) {
 	// Create already processed file by inserting into DB first
 	processedFile := filepath.Join(dir, "processed.yml")
 	os.WriteFile(processedFile, []byte("agent_session_data: processed\ncontent: processed content\n"), 0o644)
-	_, _ = pool.Provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, source_mission_id) VALUES ('1', 'content', 'mem-processed.yml')")
+	_, _ = pool.Provider.Exec(ctx, "INSERT INTO consolidated_memory (id, content, source_mission_id, organization_id, source_type, agent_id) VALUES ('1', 'content', 'mem-processed.yml', 'system', 'session_compression', 'autodream_worker')")
 
 	// Create invalid yaml file
 	invalidYamlFile := filepath.Join(dir, "invalid.yml")

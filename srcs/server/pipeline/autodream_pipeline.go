@@ -147,7 +147,7 @@ func (p *AutoDreamPipeline) resolveConflicts(ctx context.Context) {
 			}
 			defer tx.Rollback(ctx)
 
-			_, _ = tx.Exec(ctx, "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) SELECT $1, organization_id, agent_id, $2, embedding, source_type FROM consolidated_memory WHERE id = $3", resolvedID, resolvedContext, c.ID1)
+			_, _ = tx.Exec(ctx, "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, task_id, source_mission_id, processed_at) SELECT $1, organization_id, agent_id, $2, embedding, source_type, task_id, source_mission_id, processed_at FROM consolidated_memory WHERE id = $3", resolvedID, resolvedContext, c.ID1)
 			_, _ = tx.Exec(ctx, "DELETE FROM consolidated_memory WHERE id IN ($1, $2)", c.ID1, c.ID2)
 			_, _ = tx.Exec(ctx, "UPDATE memory_conflicts SET resolution_status = 'RESOLVED', resolved_memory_id = $1 WHERE conflict_id = $2", resolvedID, conflictID)
 

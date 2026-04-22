@@ -117,13 +117,13 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 
 		memID := uuid.New().String()
 
-		// Insert into autodream_memories
-		insertQuery := `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding)
-		               VALUES ($1, $2, $3, $4, $5)`
+		// Insert into consolidated_memory
+		insertQuery := `INSERT INTO consolidated_memory (id, organization_id, task_id, content, embedding, source_type, agent_id)
+		               VALUES ($1, $2, $3, $4, $5, 'task_completion', 'kairos_autodream')`
 		_, err := w.pool.Exec(ctx, insertQuery, memID, t.OrganizationID, t.ID, summary, embStr)
 		if err != nil {
-			insertQueryPg := `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding)
-			               VALUES ($1, $2, $3, $4, $5::vector)`
+			insertQueryPg := `INSERT INTO consolidated_memory (id, organization_id, task_id, content, embedding, source_type, agent_id)
+			               VALUES ($1, $2, $3, $4, $5::vector, 'task_completion', 'kairos_autodream')`
 			_, errPg := w.pool.Exec(ctx, insertQueryPg, memID, t.OrganizationID, t.ID, summary, embStr)
 			if errPg != nil {
 				slog.Error("AutoDreamWorker: failed to insert memory", "task_id", t.ID, "error", errPg)

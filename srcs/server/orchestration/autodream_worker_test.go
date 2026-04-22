@@ -37,7 +37,7 @@ func setupTestDB(t *testing.T) db.Provider {
 	provider := db.NewSqliteProvider(sqlDB)
 
 	// Create required tables
-	query := `CREATE TABLE IF NOT EXISTS autodream_memories (
+	query := `CREATE TABLE IF NOT EXISTS consolidated_memory (
 		id TEXT PRIMARY KEY,
 		content TEXT NOT NULL,
 		embedding TEXT,
@@ -50,7 +50,7 @@ func setupTestDB(t *testing.T) db.Provider {
 	);`
 	_, err = provider.Exec(context.Background(), query)
 	if err != nil {
-		t.Fatalf("failed to create autodream_memories table: %v", err)
+		t.Fatalf("failed to create consolidated_memory table: %v", err)
 	}
 
 	return provider
@@ -97,7 +97,7 @@ func TestAutoDreamWorker_ProcessMemories(t *testing.T) {
 	}
 
 	// Verify insertion
-	rows, err := provider.Query(ctx, "SELECT count(*) FROM autodream_memories")
+	rows, err := provider.Query(ctx, "SELECT count(*) FROM consolidated_memory")
 	if err != nil {
 		t.Fatalf("failed to query memories: %v", err)
 	}
@@ -136,12 +136,12 @@ func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 	ctx := context.Background()
 
 	// Clean up table for isolated test
-	provider.Exec(ctx, "DELETE FROM autodream_memories")
+	provider.Exec(ctx, "DELETE FROM consolidated_memory")
 
 	// Insert unprocessed memories
 
 	for i := 0; i < 5; i++ {
-		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, ?)",
+		_, err := provider.Exec(ctx, "INSERT INTO consolidated_memory (id, content, source_mission_id, organization_id, agent_id, source_type, task_id) VALUES (?, ?, ?, ?, ?, ?, NULL)",
 			fmt.Sprintf("mem-%d", i), fmt.Sprintf("test content %d", i), "mission-1", "org-1", "agent-1", "test")
 		if err != nil {
 			t.Fatalf("failed to insert mock memory: %v", err)
@@ -149,7 +149,7 @@ func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 	}
 
 	// Insert one processed memory
-	_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, processed_at, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)",
+	_, err := provider.Exec(ctx, "INSERT INTO consolidated_memory (id, content, processed_at, source_mission_id, organization_id, agent_id, source_type, task_id) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, NULL)",
 		"mem-processed", "processed content", "mission-1", "org-1", "agent-1", "test")
 	if err != nil {
 		t.Fatalf("failed to insert processed mock memory: %v", err)
@@ -169,7 +169,7 @@ func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
 	// No, SQLite with ":memory:" is per connection, but `db.NewSqliteProvider` might share it if they run in same process depending on open logic.
 	// Let's make it more resilient by querying specifically for our test org.
 
-	rows, err := provider.Query(ctx, "SELECT count(*) FROM autodream_memories WHERE processed_at IS NOT NULL AND source_mission_id = 'mission-1'")
+	rows, err := provider.Query(ctx, "SELECT count(*) FROM consolidated_memory WHERE processed_at IS NOT NULL AND source_mission_id = 'mission-1'")
 	if err != nil {
 		t.Fatalf("failed to query memories: %v", err)
 	}
@@ -210,10 +210,10 @@ func TestAutoDreamWorker_ConsolidateMemories_MeshBroadcast(t *testing.T) {
 	worker.SetMeshTransport(mockMesh)
 
 	// Clean up table for isolated test
-	provider.Exec(ctx, "DELETE FROM autodream_memories")
+	provider.Exec(ctx, "DELETE FROM consolidated_memory")
 
 	// Insert one unprocessed memory
-	_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, ?)",
+	_, err := provider.Exec(ctx, "INSERT INTO consolidated_memory (id, content, source_mission_id, organization_id, agent_id, source_type, task_id) VALUES (?, ?, ?, ?, ?, ?, NULL)",
 		"mem-broadcast-1", "test content broadcast", "mission-broadcast", "org-1", "agent-1", "test")
 	if err != nil {
 		t.Fatalf("failed to insert mock memory: %v", err)
@@ -273,9 +273,9 @@ func TestAutoDreamWorker_IngestCompletedTasks(t *testing.T) {
 		t.Errorf("Expected swarm_task status ARCHIVED, got %s (err: %v)", status, err)
 	}
 
-	// Verify insertion into autodream_memories
+	// Verify insertion into consolidated_memory
 	var count int
-	err = provider.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_type IN ('shared_tasks', 'swarm_tasks')").Scan(&count)
+	err = provider.QueryRow(ctx, "SELECT count(*) FROM consolidated_memory WHERE source_type IN ('shared_tasks', 'swarm_tasks')").Scan(&count)
 	if err != nil || count != 2 {
 		t.Errorf("Expected 2 memories inserted, got %d (err: %v)", count, err)
 	}
@@ -287,11 +287,11 @@ func TestAutoDreamWorker_SearchMemories(t *testing.T) {
 	ctx := context.Background()
 
 	// Clean up table for isolated test
-	provider.Exec(ctx, "DELETE FROM autodream_memories")
+	provider.Exec(ctx, "DELETE FROM consolidated_memory")
 
 	// Insert test memories
 	for i := 0; i < 3; i++ {
-		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
+		_, err := provider.Exec(ctx, "INSERT INTO consolidated_memory (id, content, embedding, created_at, organization_id, source_type, agent_id) VALUES (?, ?, ?, CURRENT_TIMESTAMP, 'org', 'source', 'agent')",
 			fmt.Sprintf("mem-search-%d", i), fmt.Sprintf("test content %d", i), "[0.0,0.0,0.0]")
 		if err != nil {
 			t.Fatalf("failed to insert mock memory for search: %v", err)
@@ -318,11 +318,11 @@ func TestAutoDreamWorker_ConsolidateMemoriesPg(t *testing.T) {
 	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, agent_id TEXT, context_data TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP)")
 
 	// Clean up table for isolated test
-	provider.Exec(ctx, "DELETE FROM autodream_memories")
+	provider.Exec(ctx, "DELETE FROM consolidated_memory")
 
 	// Insert unprocessed memories
 	for i := 0; i < 5; i++ {
-		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, ?)",
+		_, err := provider.Exec(ctx, "INSERT INTO consolidated_memory (id, content, source_mission_id, organization_id, agent_id, source_type, task_id) VALUES (?, ?, ?, ?, ?, ?, NULL)",
 			fmt.Sprintf("mem-pg-%d", i), fmt.Sprintf("test content %d", i), "mission-1", "org-1", "agent-1", "test")
 		if err != nil {
 			t.Fatalf("failed to insert mock memory: %v", err)

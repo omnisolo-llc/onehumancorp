@@ -60,7 +60,7 @@ func (w *AutoDreamWorker) Start(ctx context.Context) {
 	go w.runCompletedTasksIngestionPipeline(ctx)
 }
 
-// runCompletedTasksIngestionPipeline processes COMPLETED tasks into autodream_memories.
+// runCompletedTasksIngestionPipeline processes COMPLETED tasks into consolidated_memory.
 func (w *AutoDreamWorker) runCompletedTasksIngestionPipeline(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
@@ -75,7 +75,7 @@ func (w *AutoDreamWorker) runCompletedTasksIngestionPipeline(ctx context.Context
 	}
 }
 
-// ingestCompletedTasks queries shared_tasks for COMPLETED status and adds them to autodream_memories
+// ingestCompletedTasks queries shared_tasks for COMPLETED status and adds them to consolidated_memory
 func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
@@ -145,10 +145,10 @@ func (w *AutoDreamWorker) ingestCompletedTasks(ctx context.Context) {
 		var insertQuery string
 		memID := uuid.New().String()
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES (?, ?, ?, ?, 'system', 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO consolidated_memory (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES (?, ?, ?, ?, 'system', 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
 			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
 		} else {
-			insertQuery = "INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, 'system', 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
+			insertQuery = "INSERT INTO consolidated_memory (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, 'system', 'autodream_worker', 'task_completion', CURRENT_TIMESTAMP)"
 			_, err = tx.Exec(ctx, insertQuery, memID, content, embeddingStr, task.ID)
 		}
 
@@ -192,7 +192,7 @@ func (w *AutoDreamWorker) runSessionCompressionPipeline(ctx context.Context) {
 	}
 }
 
-// compressSessionData reads agent_session_data and inserts it into autodream_memories.
+// compressSessionData reads agent_session_data and inserts it into consolidated_memory.
 func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 	tx, err := w.pool.Begin(ctx)
 	if err != nil {
@@ -253,13 +253,13 @@ func (w *AutoDreamWorker) compressSessionData(ctx context.Context) {
 		var insertQuery string
 		if w.pool.IsSQLite() {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, content, source_mission_id)
-				VALUES (?, ?, ?)
+				INSERT INTO consolidated_memory (id, content, source_mission_id, organization_id, source_type, agent_id)
+				VALUES (?, ?, ?, 'system', 'session_compression', 'autodream_worker')
 			`
 		} else {
 			insertQuery = `
-				INSERT INTO autodream_memories (id, content, source_mission_id)
-				VALUES ($1, $2, $3)
+				INSERT INTO consolidated_memory (id, content, source_mission_id, organization_id, source_type, agent_id)
+				VALUES ($1, $2, $3, 'system', 'session_compression', 'autodream_worker')
 			`
 		}
 		memID := "ad-" + rec.ID
@@ -304,7 +304,7 @@ func (w *AutoDreamWorker) runMemoryIngestionPipeline(ctx context.Context) {
 	}
 }
 
-// compressSessionContexts periodically compresses context from agent_session_data into autodream_memories.
+// compressSessionContexts periodically compresses context from agent_session_data into consolidated_memory.
 func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 	mode := kairos.GetMode()
 	start := time.Now()
@@ -393,11 +393,11 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 		}
 
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type, agent_id) VALUES (?, 'system', ?, ?, 'autodream', 'autodream_worker')"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = target.Exec(ctx, insertQuery, id, summary, embedPtr)
 		} else {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type, agent_id) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream', 'autodream_worker')"
 			_, err = target.Exec(ctx, insertQuery, summary, embedPtr)
 		}
 		if err != nil {
@@ -462,9 +462,9 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		var check int
 		var checkQuery string
 		if w.pool.IsSQLite() {
-			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = ? LIMIT 1"
+			checkQuery = "SELECT 1 FROM consolidated_memory WHERE source_mission_id = ? LIMIT 1"
 		} else {
-			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = $1 LIMIT 1"
+			checkQuery = "SELECT 1 FROM consolidated_memory WHERE source_mission_id = $1 LIMIT 1"
 		}
 		if err := w.pool.QueryRow(ctx, checkQuery, memoryID).Scan(&check); err == nil {
 			// Already exists, delete file and skip
@@ -492,11 +492,11 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type, agent_id) VALUES (?, 'system', ?, ?, 'autodream', 'autodream_worker')"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
 			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr)
 		} else {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type, agent_id) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream', 'autodream_worker')"
 			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr)
 		}
 
@@ -827,7 +827,7 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		return fmt.Errorf("failed to create epoch: %w", err)
 	}
 
-	// 2. Fetch context from agent_session_data and shared_tasks, and compress it into autodream_memories/swarm_truth_embeddings/agent_memories
+	// 2. Fetch context from agent_session_data and shared_tasks, and compress it into consolidated_memory/swarm_truth_embeddings/agent_memories
 	var rows db.Rows
 	var errQuery error
 	if w.pool.IsSQLite() {
@@ -1001,7 +1001,7 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 
 		// Check if it already exists to prevent duplication
 		var count int
-		err = tx.QueryRow(ctx, "SELECT count(*) FROM autodream_memories WHERE source_mission_id = $1 AND source_type = 'mission-artifact'", missionID).Scan(&count)
+		err = tx.QueryRow(ctx, "SELECT count(*) FROM consolidated_memory WHERE source_mission_id = $1 AND source_type = 'mission-artifact'", missionID).Scan(&count)
 		if err == nil && count > 0 {
 			tx.Rollback(ctx)
 			continue
@@ -1016,9 +1016,9 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 		var args []interface{}
 
 		if w.pool.IsSQLite() {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO consolidated_memory (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
 		} else {
-			query = `INSERT INTO autodream_memories (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
+			query = `INSERT INTO consolidated_memory (id, content, embedding, source_mission_id, organization_id, agent_id, source_type, created_at) VALUES ($1, $2, $3::vector, $4, $5, $6, $7, CURRENT_TIMESTAMP)`
 		}
 		args = []interface{}{memID, contentToEmbed, embStr, missionID, "system", "auto-dream-worker", "mission-artifact"}
 
