@@ -1,11 +1,9 @@
 package terminal
 
-
 import (
 	"context"
 
 	"github.com/onehumancorp/mono/srcs/server/agents/harness"
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 type Executor struct {
@@ -32,17 +30,7 @@ func (e *Executor) ExecuteCommand(ctx context.Context, cmd string) ([]byte, erro
 		return nil, err
 	}
 
-
-	// Get AgentContext to retrieve the proxy configuration
-	var networkProxy string
-	if ac, ok := orchestration.GetAgentContext(ctx); ok {
-		if proxy, exists := ac.Env["HTTP_PROXY"]; exists {
-			networkProxy = proxy
-		}
-	}
-
 	return e.harness.Execute(ctx, harness.ExecutionContext{
 		Command: []string{"/bin/sh", "-c", cmd},
-		NetworkProxy: networkProxy,
 	})
 }
