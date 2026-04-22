@@ -172,6 +172,17 @@ func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
 	} else {
 		slog.Error("[centrifuge] failed to subscribe to capabilities from mesh transport", "error", err)
 	}
+
+	// Forward Teammate Mesh Events
+	if ch, err := mt.SubscribeTeammateMesh(ctx, "teammate_mesh"); err == nil {
+		go func() {
+			for eventData := range ch {
+				_, _ = cn.node.Publish("teammate_mesh", eventData)
+			}
+		}()
+	} else {
+		slog.Error("[centrifuge] failed to subscribe to teammate mesh from mesh transport", "error", err)
+	}
 }
 
 // Handler returns an http.Handler that serves the Centrifuge WebSocket endpoint.
