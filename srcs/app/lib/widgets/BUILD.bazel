@@ -51,3 +51,8 @@ alias(
     name = "sub_agent_queue_widget",
     actual = ":widgets_lib",
 )
+
+alias(
+    name = "sync_escalator_widget",
+    actual = ":widgets_lib",
+)
