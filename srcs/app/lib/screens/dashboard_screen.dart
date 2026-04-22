@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -35,7 +36,8 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
-      body: snapshot.when(
+            floatingActionButton: const AiHelpChatWidget(),
+body: snapshot.when(
         loading:
             () => Center(
               child: CircularProgressIndicator(
