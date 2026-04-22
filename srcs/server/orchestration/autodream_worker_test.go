@@ -360,10 +360,75 @@ func TestAutoDreamWorker_IngestCompletedTasksPg(t *testing.T) {
 		t.Fatalf("IngestCompletedTasks failed: %v", err)
 	}
 }
+
 type mockPgProvider struct {
 	db.Provider
 }
 
 func (m mockPgProvider) IsSQLite() bool {
 	return false
+}
+
+func TestAutoDreamWorker_ProcessAgentTaskMemories(t *testing.T) {
+	provider := setupTestDB(t)
+
+	// Create consolidated_memory table for test
+	query := `CREATE TABLE IF NOT EXISTS consolidated_memory (
+		id TEXT PRIMARY KEY,
+		tenant_id TEXT NOT NULL,
+		agent_id TEXT,
+		content TEXT NOT NULL,
+		embedding TEXT,
+		source_type TEXT NOT NULL,
+		created_at TEXT DEFAULT CURRENT_TIMESTAMP
+	);`
+	_, err := provider.Exec(context.Background(), query)
+	if err != nil {
+		t.Fatalf("failed to create consolidated_memory table: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(provider)
+
+	testDir := ".agent-task/memory"
+	if err := os.MkdirAll(testDir, 0o755); err != nil {
+		t.Fatalf("failed to create test dir: %v", err)
+	}
+	defer os.RemoveAll(".agent-task")
+
+	memFile := MemoryFile{
+		TenantID: "tenant-1",
+		AgentSessionData: "mock agent task session data",
+		Content:          "mock agent task content",
+	}
+	data, _ := yaml.Marshal(&memFile)
+	os.WriteFile(filepath.Join(testDir, "test_agent_memory.yml"), data, 0o644)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = worker.ProcessAgentTaskMemories(ctx)
+	if err != nil {
+		t.Fatalf("ProcessAgentTaskMemories failed: %v", err)
+	}
+
+	rows, err := provider.Query(ctx, "SELECT count(*), tenant_id FROM consolidated_memory GROUP BY tenant_id")
+	if err != nil {
+		t.Fatalf("failed to query consolidated_memory: %v", err)
+	}
+	defer rows.Close()
+
+	var count int
+	var tenant string
+	if rows.Next() {
+		if err := rows.Scan(&count, &tenant); err != nil {
+			t.Fatalf("failed to scan count: %v", err)
+		}
+	}
+
+	if count != 1 {
+		t.Errorf("expected 1 memory inserted, got %d", count)
+	}
+	if tenant != "tenant-1" {
+		t.Errorf("expected tenant-1, got %s", tenant)
+	}
 }

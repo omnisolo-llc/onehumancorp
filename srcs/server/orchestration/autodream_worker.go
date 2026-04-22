@@ -33,6 +33,7 @@ func formatFloat32SliceForVector(embedding []float32) string {
 
 // MemoryFile represents the structure of agent memory YAML files.
 type MemoryFile struct {
+	TenantID         string `yaml:"tenant_id"`
 	AgentSessionData string `yaml:"agent_session_data"`
 	Content          string `yaml:"content"`
 }
@@ -324,6 +325,104 @@ func (w *AutoDreamWorker) SearchMemories(ctx context.Context, embedding string, 
 	return results, nil
 }
 
+// ProcessAgentTaskMemories ingests pending memory YAML files from .agent-task/memory into the consolidated_memory table.
+func (w *AutoDreamWorker) ProcessAgentTaskMemories(ctx context.Context) error {
+	matches, err := filepath.Glob(".agent-task/memory/*.yml")
+	if err != nil {
+		return fmt.Errorf("failed to glob agent task memory files: %w", err)
+	}
+	if len(matches) == 0 {
+		return nil // No files to process
+	}
+
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+	var client MinimaxClient
+	if minimaxKey != "" {
+		client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
+	}
+
+	for _, file := range matches {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			slog.Error("AutoDream: failed to read agent task memory file", "file", file, "error", err)
+			continue
+		}
+
+		var memFile MemoryFile
+		if err := yaml.Unmarshal(data, &memFile); err != nil {
+			slog.Error("AutoDream: failed to unmarshal agent task memory file", "file", file, "error", err)
+			os.Remove(file)
+			continue
+		}
+
+		contentToEmbed := memFile.AgentSessionData
+		if contentToEmbed == "" {
+			contentToEmbed = memFile.Content
+		}
+		if contentToEmbed == "" {
+			os.Remove(file) // Clean up empty files so they aren't re-processed
+			continue
+		}
+
+		memID := strings.TrimSuffix(filepath.Base(file), ".yml")
+
+		// Embed via Minimax if available, otherwise use a dummy embedding
+		embedding := make([]float32, 1536)
+		if client != nil {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+			resp, err := client.GenerateEmbedding(ctxTimeout, contentToEmbed)
+			cancel()
+			if err == nil && len(resp) == 1536 {
+				embedding = resp
+			} else {
+				slog.Debug("AutoDream: failed to embed with Minimax, using empty embedding (transient)", "error", err)
+			}
+		}
+
+		var embStr string
+		if w.pool.IsSQLite() {
+			embBytes, _ := json.Marshal(embedding)
+			embStr = string(embBytes)
+		} else {
+			embStr = formatFloat32SliceForVector(embedding)
+		}
+
+		tx, err := w.pool.Begin(ctx)
+		if err != nil {
+			slog.Error("AutoDream: failed to begin tx", "error", err)
+			continue
+		}
+
+		var query string
+		if w.pool.IsSQLite() {
+			query = `INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`
+		} else {
+			query = `INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at) VALUES ($1, $2, $3, $4, $5::vector, $6, CURRENT_TIMESTAMP)`
+		}
+		tenantID := memFile.TenantID
+		if tenantID == "" {
+			tenantID = "system" // fallback if not present
+		}
+		args := []interface{}{memID, tenantID, "auto-dream-worker", contentToEmbed, embStr, "agent_task_memory"}
+
+		_, err = tx.Exec(ctx, query, args...)
+		if err != nil {
+			slog.Error("AutoDream: failed to insert into consolidated_memory", "error", err)
+			tx.Rollback(ctx)
+			continue
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			slog.Error("AutoDream: failed to commit tx", "error", err)
+		} else {
+			slog.Info("AutoDream: processed agent task memory file", "file", file)
+			os.Remove(file)
+		}
+	}
+
+	return nil
+}
+
 // AutoDreamWorkerDaemon runs ProcessMemories periodically.
 type AutoDreamWorkerDaemon struct {
 	worker   *AutoDreamWorker
@@ -457,6 +556,9 @@ func (d *AutoDreamWorkerDaemon) Start(ctx context.Context) {
 		case <-d.done:
 			return
 		case <-ticker.C:
+			if err := d.worker.ProcessAgentTaskMemories(ctx); err != nil {
+				slog.Error("AutoDreamWorkerDaemon: failed to process agent task memories", "error", err)
+			}
 			if err := d.worker.ProcessMemories(ctx); err != nil {
 				slog.Error("AutoDreamWorkerDaemon: failed to process memories", "error", err)
 			}
