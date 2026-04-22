@@ -98,6 +98,12 @@ func TestCreate_WithID(t *testing.T) {
 			if args[0] != "test-id" {
 				t.Errorf("expected ID 'test-id', got %v", args[0])
 			}
+			if args[3] != "[]" {
+				t.Errorf("expected dependencies '[]', got %v", args[3])
+			}
+			if args[5] != "PENDING" {
+				t.Errorf("expected status 'PENDING', got %v", args[5])
+			}
 			return 1, nil
 		},
 	}
@@ -204,18 +210,126 @@ func TestGet_Error(t *testing.T) {
 }
 
 func TestUpdateState_Success(t *testing.T) {
-	mockProvider := &MockProvider{
-		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
-			if args[0] != "DONE" {
-				t.Errorf("expected status 'DONE', got %v", args[0])
+	mockTx := &MockTx{
+		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
+			return &MockRow{
+				ScanFunc: func(dest ...any) error {
+					*dest[0].(*string) = "PENDING"
+					return nil
+				},
 			}
+		},
+		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
 			return 1, nil
 		},
 	}
+	mockProvider := &MockProvider{
+		BeginFunc: func(ctx context.Context) (db.Tx, error) {
+			return mockTx, nil
+		},
+	}
 	svc := NewTaskDecompositionService(mockProvider)
-	err := svc.UpdateState(context.Background(), "test-id", "DONE")
+	agentID := "agent-1"
+	reason := "done"
+	err := svc.UpdateState(context.Background(), "test-id", "COMPLETED", &agentID, &reason)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestUpdateState_BeginError(t *testing.T) {
+	expectedErr := errors.New("begin error")
+	mockProvider := &MockProvider{
+		BeginFunc: func(ctx context.Context) (db.Tx, error) {
+			return nil, expectedErr
+		},
+	}
+	svc := NewTaskDecompositionService(mockProvider)
+	err := svc.UpdateState(context.Background(), "test-id", "COMPLETED", nil, nil)
+	if err != expectedErr {
+		t.Errorf("expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestUpdateState_QueryRowError(t *testing.T) {
+	expectedErr := errors.New("query error")
+	mockTx := &MockTx{
+		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
+			return &MockRow{
+				ScanFunc: func(dest ...any) error {
+					return expectedErr
+				},
+			}
+		},
+	}
+	mockProvider := &MockProvider{
+		BeginFunc: func(ctx context.Context) (db.Tx, error) {
+			return mockTx, nil
+		},
+	}
+	svc := NewTaskDecompositionService(mockProvider)
+	err := svc.UpdateState(context.Background(), "test-id", "COMPLETED", nil, nil)
+	if err != expectedErr {
+		t.Errorf("expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestUpdateState_ExecError(t *testing.T) {
+	expectedErr := errors.New("exec error")
+	mockTx := &MockTx{
+		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
+			return &MockRow{
+				ScanFunc: func(dest ...any) error {
+					*dest[0].(*string) = "PENDING"
+					return nil
+				},
+			}
+		},
+		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
+			return 0, expectedErr
+		},
+	}
+	mockProvider := &MockProvider{
+		BeginFunc: func(ctx context.Context) (db.Tx, error) {
+			return mockTx, nil
+		},
+	}
+	svc := NewTaskDecompositionService(mockProvider)
+	err := svc.UpdateState(context.Background(), "test-id", "COMPLETED", nil, nil)
+	if err != expectedErr {
+		t.Errorf("expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestUpdateState_TransitionExecError(t *testing.T) {
+	expectedErr := errors.New("exec transition error")
+	execCount := 0
+	mockTx := &MockTx{
+		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
+			return &MockRow{
+				ScanFunc: func(dest ...any) error {
+					*dest[0].(*string) = "PENDING"
+					return nil
+				},
+			}
+		},
+		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
+			if execCount == 1 {
+				return 0, expectedErr
+			}
+			execCount++
+			return 1, nil
+		},
+	}
+	mockProvider := &MockProvider{
+		BeginFunc: func(ctx context.Context) (db.Tx, error) {
+			return mockTx, nil
+		},
+	}
+	svc := NewTaskDecompositionService(mockProvider)
+	err := svc.UpdateState(context.Background(), "test-id", "COMPLETED", nil, nil)
+	if err != expectedErr {
+		t.Errorf("expected error %v, got %v", expectedErr, err)
 	}
 }
 
@@ -237,7 +351,7 @@ func TestClaim_PG_Success(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	task, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -263,7 +377,7 @@ func TestClaim_PG_NoRows(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	task, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -290,7 +404,7 @@ func TestClaim_PG_QueryError(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	_, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != expectedErr {
 		t.Errorf("expected error %v, got %v", expectedErr, err)
 	}
@@ -318,7 +432,40 @@ func TestClaim_PG_UpdateError(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	_, err := svc.Claim(context.Background(), "mission-1", "agent-1")
+	if err != expectedErr {
+		t.Errorf("expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestClaim_PG_TransitionError(t *testing.T) {
+	expectedErr := errors.New("transition error")
+	execCount := 0
+	mockTx := &MockTx{
+		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
+			return &MockRow{
+				ScanFunc: func(dest ...any) error {
+					*dest[0].(*string) = "test-id"
+					return nil
+				},
+			}
+		},
+		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
+			if execCount == 1 {
+				return 0, expectedErr
+			}
+			execCount++
+			return 1, nil
+		},
+	}
+	mockProvider := &MockProvider{
+		IsSQLiteFunc: func() bool { return false },
+		BeginFunc: func(ctx context.Context) (db.Tx, error) {
+			return mockTx, nil
+		},
+	}
+	svc := NewTaskDecompositionService(mockProvider)
+	_, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != expectedErr {
 		t.Errorf("expected error %v, got %v", expectedErr, err)
 	}
@@ -342,7 +489,7 @@ func TestClaim_SQLite_Success(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	task, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -368,7 +515,7 @@ func TestClaim_SQLite_NoRows(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	task, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	task, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -395,7 +542,7 @@ func TestClaim_SQLite_QueryError(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	_, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != expectedErr {
 		t.Errorf("expected error %v, got %v", expectedErr, err)
 	}
@@ -423,7 +570,7 @@ func TestClaim_SQLite_UpdateError(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	_, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != expectedErr {
 		t.Errorf("expected error %v, got %v", expectedErr, err)
 	}
@@ -437,7 +584,7 @@ func TestClaim_BeginError(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	_, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != expectedErr {
 		t.Errorf("expected error %v, got %v", expectedErr, err)
 	}
@@ -464,7 +611,7 @@ func TestClaim_CommitError(t *testing.T) {
 		},
 	}
 	svc := NewTaskDecompositionService(mockProvider)
-	_, err := svc.Claim(context.Background(), "org-1", "agent-1")
+	_, err := svc.Claim(context.Background(), "mission-1", "agent-1")
 	if err != expectedErr {
 		t.Errorf("expected error %v, got %v", expectedErr, err)
 	}
