@@ -40,6 +40,20 @@ func setupTestDB(t *testing.T) db.Provider {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+		CREATE TABLE shared_tasks_decomposition (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			title TEXT NOT NULL,
+			description TEXT,
+			payload TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			priority INTEGER DEFAULT 0,
+			agent_id TEXT,
+			locked_until DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
 		CREATE TABLE state_machine_transitions (
 			id TEXT PRIMARY KEY,
 			entity_id TEXT NOT NULL,
@@ -75,6 +89,14 @@ func TestStateMachine_Transition(t *testing.T) {
 	tx.Commit(ctx)
 	if err != nil {
 		t.Fatalf("Failed to insert task: %v", err)
+	}
+
+	ultraplanTaskID := generateID()
+	tx, _ = dbProvider.Begin(ctx)
+	_, err = tx.Exec(ctx, `INSERT INTO shared_tasks_decomposition (id, organization_id, title, payload, status) VALUES ($1, 'org1', 'UltraPlan Task', '{}', 'PENDING')`, ultraplanTaskID)
+	tx.Commit(ctx)
+	if err != nil {
+		t.Fatalf("Failed to insert ultraplan task: %v", err)
 	}
 
 	sm := NewStateMachine(dbProvider, nil) // Passing nil Hub for tests
@@ -125,6 +147,26 @@ func TestStateMachine_Transition(t *testing.T) {
 	err = sm.Transition(ctx, taskID, "SHARED_TASK", StateInProgress, "agent1", "Noop")
 	if err != nil {
 		t.Errorf("Expected no-op to succeed, got: %v", err)
+	}
+
+	// 6. Test UltraPlan Valid Transition: PENDING -> IN_PROGRESS
+	err = sm.Transition(ctx, ultraplanTaskID, "ULTRAPLAN_DELIBERATION", StateInProgress, "agent2", "Starting ultraplan")
+	if err != nil {
+		t.Errorf("Expected ultraplan transition to succeed, got: %v", err)
+	}
+
+	var upStatus string
+	tx, _ = dbProvider.Begin(ctx)
+	err = tx.QueryRow(ctx, "SELECT status FROM shared_tasks_decomposition WHERE id = $1", ultraplanTaskID).Scan(&upStatus)
+	tx.Commit(ctx)
+	if err != nil || upStatus != StateInProgress {
+		t.Errorf("Expected ultraplan status IN_PROGRESS, got: %s (err: %v)", upStatus, err)
+	}
+
+	// 7. Test UltraPlan Entity Not Found
+	err = sm.Transition(ctx, "nonexistent-up", "ULTRAPLAN_DELIBERATION", StateInProgress, "agent2", "Should fail")
+	if err == nil {
+		t.Errorf("Expected ultraplan entity not found error")
 	}
 }
 
