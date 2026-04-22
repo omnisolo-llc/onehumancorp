@@ -277,17 +277,17 @@ func TestClaimTaskDag(t *testing.T) {
     }
 }
 
-// mockPGProviderTasks wraps a db.Provider to simulate Postgres
-type mockPGProviderTasks struct {
+// mockPGProvider wraps a db.Provider to simulate Postgres
+type mockPGProvider struct {
 	db.Provider
 }
 
-func (m *mockPGProviderTasks) IsSQLite() bool {
+func (m *mockPGProvider) IsSQLite() bool {
 	return false
 }
 
 // Intercept queries with FOR UPDATE SKIP LOCKED
-func (m *mockPGProviderTasks) Begin(ctx context.Context) (db.Tx, error) {
+func (m *mockPGProvider) Begin(ctx context.Context) (db.Tx, error) {
 	tx, err := m.Provider.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -398,7 +398,7 @@ func TestTasksDBClaimTask_Postgres(t *testing.T) {
 	provider := db.NewTestProvider(t)
 
 	// Wrap provider to simulate Postgres
-	pgProvider := &mockPGProviderTasks{Provider: provider}
+	pgProvider := &mockPGProvider{Provider: provider}
 
 	// Create table
 	_, err := pgProvider.Exec(ctx, `
