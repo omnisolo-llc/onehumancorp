@@ -1660,10 +1660,16 @@ func NewMinimaxClient(apiKey string) MinimaxClient {
 		}
 	})
 
-	return &minimaxClientImpl{
+	client := &minimaxClientImpl{
 		APIKey: apiKey,
 		cb:     globalCircuitBreaker,
 	}
+
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		return NewResilientProvider(client, nil)
+	}
+
+	return client
 }
 
 var bufferPool = sync.Pool{
