@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "ast_validator.go",
         "bwrap_runner.go",
+        "macos_sandbox.go",
         "manager.go",
         "registry.go",
     ],
@@ -23,6 +24,7 @@ go_test(
     srcs = [
         "ast_validator_test.go",
         "bwrap_runner_test.go",
+        "macos_sandbox_test.go",
         "manager_test.go",
     ],
     embed = [":harness"],
