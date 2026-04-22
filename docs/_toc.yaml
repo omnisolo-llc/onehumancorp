@@ -39,6 +39,7 @@ toc:
     path: /docs/research/[integrations]_sms_twilio.md
   - title: Video Zoom
     path: /docs/research/[integrations]_video_zoom.md
+    path: /docs/technical/research/[backend]_scribe_proactive_rag_mcp.md
   - title: Reports
     path: /docs/technical/reports/index.md
   - title: Walkthroughs
