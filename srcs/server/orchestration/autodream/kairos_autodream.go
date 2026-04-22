@@ -43,7 +43,7 @@ func (w *KairosAutoDreamWorker) processCompletedTasks(ctx context.Context) error
 	}
 	defer tx.Rollback(ctx)
 
-	query := "SELECT id, title, payload FROM shared_tasks WHERE status = 'DONE' LIMIT 50"
+	query := "SELECT id, title, payload FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 50"
 
 	if !w.db.IsSQLite() {
 		query += " FOR UPDATE SKIP LOCKED"

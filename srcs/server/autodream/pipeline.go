@@ -32,7 +32,7 @@ func (p *AutoDreamPipeline) ProcessCompletedTasks(ctx context.Context) error {
 	query := `
 		SELECT id, organization_id, COALESCE(description, title, '') AS content
 		FROM shared_tasks_decomposition
-		WHERE status = 'DONE'
+		WHERE status = 'COMPLETED'
 		  AND id NOT IN (SELECT task_id FROM autodream_memories WHERE task_id IS NOT NULL)
 		LIMIT 100
 	`
