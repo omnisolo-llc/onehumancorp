@@ -113,10 +113,84 @@ func TestAuditTool_CallTool_MissingArgs(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing or invalid arguments")
 }
 
+func TestAuditTool_CallTool_MissingTimestamp(t *testing.T) {
+	tool := NewAuditTool(nil)
+
+	args := map[string]interface{}{
+		"tenant_id": "org1",
+		"agent_id":  "agent1",
+		"action":    "test_action",
+		"resource":  "test_resource",
+		"status":    "success",
+		"metadata":  "{}",
+	}
+
+	_, err := tool.CallTool(context.Background(), "sync_audit_logs_to_cloud", args)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "missing or invalid arguments")
+}
+
 func TestAuditTool_CallTool_UnknownTool(t *testing.T) {
 	tool := NewAuditTool(nil)
 
 	_, err := tool.CallTool(context.Background(), "unknown_tool", map[string]interface{}{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown tool: unknown_tool")
+}
+
+func TestAuditTool_CallTool_ExecError(t *testing.T) {
+	provider := &mockProvider{execErr: os.ErrPermission}
+	tool := NewAuditTool(provider)
+
+	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+	args := map[string]interface{}{
+		"tenant_id": "org1",
+		"agent_id":  "agent1",
+		"action":    "test_action",
+		"resource":  "test_resource",
+		"status":    "success",
+		"metadata":  "{}",
+		"timestamp": float64(time.Now().Unix()),
+	}
+
+	_, err := tool.CallTool(ctx, "sync_audit_logs_to_cloud", args)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to sync audit logs to cloud")
+}
+
+func TestAuditTool_CallTool_TimestampTypes(t *testing.T) {
+	provider := &mockProvider{}
+	tool := NewAuditTool(provider)
+
+	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+
+	// Test with int
+	argsInt := map[string]interface{}{
+		"tenant_id": "org1",
+		"agent_id":  "agent1",
+		"action":    "test_action",
+		"resource":  "test_resource",
+		"status":    "success",
+		"metadata":  "{}",
+		"timestamp": int(1234567890),
+	}
+
+	res, err := tool.CallTool(ctx, "sync_audit_logs_to_cloud", argsInt)
+	require.NoError(t, err)
+	require.NotNil(t, res)
+
+	// Test with int64
+	argsInt64 := map[string]interface{}{
+		"tenant_id": "org1",
+		"agent_id":  "agent1",
+		"action":    "test_action",
+		"resource":  "test_resource",
+		"status":    "success",
+		"metadata":  "{}",
+		"timestamp": int64(1234567890),
+	}
+
+	res, err = tool.CallTool(ctx, "sync_audit_logs_to_cloud", argsInt64)
+	require.NoError(t, err)
+	require.NotNil(t, res)
 }
