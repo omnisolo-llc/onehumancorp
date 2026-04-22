@@ -79,7 +79,7 @@ class _AgentTaskProgressWidgetState extends State<AgentTaskProgressWidget> with 
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
+              SelectableText(
                 widget.taskName,
                 style: const TextStyle(
                   color: Colors.white,

@@ -27,25 +27,33 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.18.0
+        uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-release-${{ hashFiles('**/BUILD', '**/BUILD.bazel', '**/*.bzl', 'WORKSPACE', 'MODULE.bazel', '.bazelrc') }}
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: true
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+          bazelrc: |
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+            build --config=buildbuddy-official
+            test --config=buildbuddy-official
+            build --build_metadata=ROLE=CI
+            test --build_metadata=ROLE=CI
+            build --color=yes
+            build --show_timestamps
 
       - name: Build ironclaw archives (all platforms)
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
         run: |
           bazelisk build \
             //release:ironclaw-x86_64-unknown-linux-gnu \
             //release:ironclaw-aarch64-unknown-linux-gnu \
             //release:ironclaw-x86_64-apple-darwin \
             //release:ironclaw-aarch64-apple-darwin \
-            //release:ironclaw-x86_64-pc-windows-msvc \
-            --disk_cache="$BAZEL_DISK_CACHE" \
-            --repository_cache="$BAZEL_REPOSITORY_CACHE" \
-            --remote_header=x-buildbuddy-api-key=$BUILDBUDDY_API_KEY
+            //release:ironclaw-x86_64-pc-windows-msvc
 
       - name: Collect archives and generate checksums
         run: |
@@ -322,12 +330,12 @@ jobs:
           external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
-            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
-            # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
+            # test --config=buildbuddy
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+            build --config=buildbuddy-official
+            test --config=buildbuddy-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
