@@ -2,57 +2,41 @@ package workers
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/stretchr/testify/assert"
-	_ "modernc.org/sqlite"
 )
 
-func TestAutoDreamWorker_ProcessCompletedTasks(t *testing.T) {
-	provider := setupTestDB(t)
+type mockAutoDreamLLMClient struct{}
 
-	_, err := provider.Exec(context.Background(), `
-	CREATE TABLE IF NOT EXISTS tasks (
-		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
-		payload TEXT,
-		status TEXT NOT NULL DEFAULT 'PENDING',
-		auto_dreamed BOOLEAN DEFAULT false
-	)`)
+func (m *mockAutoDreamLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) {
+	emb := make([]float32, 1536)
+	emb[0] = 0.5
+	return emb, nil
+}
+
+func TestAutoDreamWorker_ConsolidateMemories(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	defer provider.Close()
+
+	client := &mockAutoDreamLLMClient{}
+	worker := NewAutoDreamWorker(provider, client)
+
+	// Create test memory directory
+	tmpDir := ".agent-task/memory"
+	os.MkdirAll(tmpDir, 0755)
+	defer os.RemoveAll(".agent-task")
+
+	err := os.WriteFile(filepath.Join(tmpDir, "test.yml"), []byte("test content"), 0644)
 	assert.NoError(t, err)
 
-	_, err = provider.Exec(context.Background(), `
-	CREATE TABLE IF NOT EXISTS agent_memories (
-		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
-		task_id TEXT,
-		raw_content TEXT,
-		summary_embedding TEXT,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	)`)
-	assert.NoError(t, err)
-
-	_, err = provider.Exec(context.Background(), `
-	INSERT INTO tasks (id, organization_id, payload, status, auto_dreamed)
-	VALUES ('task-1', 'org-1', 'Test Payload', 'DONE', false)
-	`)
-	assert.NoError(t, err)
-
-	worker := NewAutoDreamWorker(provider)
-	worker.ProcessCompletedTasks(context.Background())
+	worker.ConsolidateMemories(context.Background())
 
 	var count int
-	err = provider.QueryRow(context.Background(), "SELECT COUNT(*) FROM agent_memories WHERE task_id = 'task-1'").Scan(&count)
+	err = provider.QueryRow(context.Background(), "SELECT COUNT(*) FROM consolidated_memory").Scan(&count)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, count)
-
-	var autoDreamed bool
-	err = provider.QueryRow(context.Background(), "SELECT auto_dreamed FROM tasks WHERE id = 'task-1'").Scan(&autoDreamed)
-	assert.NoError(t, err)
-	assert.True(t, autoDreamed)
-
-	var content string
-	err = provider.QueryRow(context.Background(), "SELECT raw_content FROM agent_memories WHERE task_id = 'task-1'").Scan(&content)
-	assert.NoError(t, err)
-	assert.Equal(t, "Summary of task: Test Payload", content)
 }

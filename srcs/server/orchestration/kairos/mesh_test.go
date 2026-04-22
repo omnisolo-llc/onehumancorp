@@ -75,7 +75,7 @@ func TestNewTeammateMesh(t *testing.T) {
 }
 
 func TestLocalTeammateMesh_PublishSubscribe(t *testing.T) {
-	mesh := NewLocalTeammateMesh()
+	mesh := NewLocalTeammateMesh(nil)
 	ctx := context.Background()
 
 	taskCh, err := mesh.SubscribeTasks(ctx)

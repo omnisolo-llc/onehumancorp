@@ -7,6 +7,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type Subscription interface {
+	Close() error
+}
+
 type TeammateMesh interface {
 	Publish(ctx context.Context, channel string, message []byte) error
 	Subscribe(ctx context.Context, channel string) (<-chan []byte, error)
@@ -27,13 +31,10 @@ func NewMemoryMesh() *MemoryMesh {
 func (m *MemoryMesh) Publish(ctx context.Context, channel string, message []byte) error {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-
-	subs := m.channels[channel]
-	for _, sub := range subs {
+	for _, ch := range m.channels[channel] {
 		select {
-		case sub <- message:
+		case ch <- message:
 		default:
-			// Non-blocking send
 		}
 	}
 	return nil
@@ -42,7 +43,6 @@ func (m *MemoryMesh) Publish(ctx context.Context, channel string, message []byte
 func (m *MemoryMesh) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-
 	ch := make(chan []byte, 100)
 	m.channels[channel] = append(m.channels[channel], ch)
 
@@ -51,19 +51,18 @@ func (m *MemoryMesh) Subscribe(ctx context.Context, channel string) (<-chan []by
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		subs := m.channels[channel]
-		for i, s := range subs {
-			if s == ch {
+		for i, sub := range subs {
+			if sub == ch {
 				m.channels[channel] = append(subs[:i], subs[i+1:]...)
+				close(ch)
 				break
 			}
 		}
-		close(ch)
 	}()
 
 	return ch, nil
 }
 
-// RedisMesh implements TeammateMesh using Redis Pub/Sub.
 type RedisMesh struct {
 	client *redis.Client
 }
@@ -74,55 +73,67 @@ func NewRedisMesh(client *redis.Client) *RedisMesh {
 	}
 }
 
-func (r *RedisMesh) Publish(ctx context.Context, channel string, message []byte) error {
-	return r.client.Publish(ctx, channel, message).Err()
+func (m *RedisMesh) Publish(ctx context.Context, channel string, message []byte) error {
+	return m.client.Publish(ctx, channel, message).Err()
 }
 
-func (r *RedisMesh) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
-	pubsub := r.client.Subscribe(ctx, channel)
-	ch := make(chan []byte, 100)
+func (m *RedisMesh) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
+	pubsub := m.client.Subscribe(ctx, channel)
+
+	_, err := pubsub.Receive(ctx)
+	if err != nil {
+		pubsub.Close()
+		return nil, err
+	}
+
+	subCtx, cancel := context.WithCancel(ctx)
+	ch := pubsub.Channel()
+
+	outCh := make(chan []byte, 100)
 
 	go func() {
-		defer close(ch)
+		defer close(outCh)
 		defer pubsub.Close()
-
-		msgCh := pubsub.Channel()
 		for {
 			select {
-			case <-ctx.Done():
-				return
-			case msg, ok := <-msgCh:
+			case msg, ok := <-ch:
 				if !ok {
 					return
 				}
-				select {
-				case ch <- []byte(msg.Payload):
-				case <-ctx.Done():
-					return
-				}
+				outCh <- []byte(msg.Payload)
+			case <-subCtx.Done():
+				return
 			}
 		}
 	}()
-		return ch, nil
+
+	go func() {
+		<-ctx.Done()
+		cancel()
+	}()
+
+	return outCh, nil
+}
+
+func NewTeammateMesh(client *redis.Client) TeammateMesh {
+	if client != nil {
+		return NewRedisMesh(client)
+	}
+	return NewMemoryMesh()
 }
 
 // LocalTeammateMesh implements TeammateMesh and provides explicit channels for mesh:tasks and mesh:coordination.
+// Per problem statement: Implement LocalTeammateMesh using Redis Pub/Sub channels mesh:tasks and mesh:coordination.
 type LocalTeammateMesh struct {
-	mesh *MemoryMesh
+	TeammateMesh
 }
 
-func NewLocalTeammateMesh() *LocalTeammateMesh {
+// We change NewLocalTeammateMesh to accept an optional *redis.Client
+// so we can initialize a RedisMesh if provided, otherwise MemoryMesh
+func NewLocalTeammateMesh(client *redis.Client) *LocalTeammateMesh {
 	return &LocalTeammateMesh{
-		mesh: NewMemoryMesh(),
+		TeammateMesh: NewTeammateMesh(client),
 	}
-}
-
-func (l *LocalTeammateMesh) Publish(ctx context.Context, channel string, message []byte) error {
-	return l.mesh.Publish(ctx, channel, message)
-}
-
-func (l *LocalTeammateMesh) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
-	return l.mesh.Subscribe(ctx, channel)
 }
 
 func (l *LocalTeammateMesh) PublishTask(ctx context.Context, message []byte) error {
@@ -139,11 +150,4 @@ func (l *LocalTeammateMesh) PublishCoordination(ctx context.Context, message []b
 
 func (l *LocalTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan []byte, error) {
 	return l.Subscribe(ctx, "mesh:coordination")
-}
-
-func NewTeammateMesh(redisClient *redis.Client) TeammateMesh {
-	if redisClient != nil {
-		return NewRedisMesh(redisClient)
-	}
-	return NewMemoryMesh()
 }
