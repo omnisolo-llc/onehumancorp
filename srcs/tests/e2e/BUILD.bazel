@@ -52,7 +52,7 @@ go_test(
     data = _COMMON_DATA,
     deps = _COMMON_DEPS + [
         "@com_github_stretchr_testify//assert",
-        "@com_github_stretchr_testify//require",
+
     ],
     env = _COMMON_ENV,
     size = "large",
@@ -82,7 +82,7 @@ go_test(
     srcs = _SHARED_SRCS + ["dashboard_test.go", "growth_referral_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
+    deps = _COMMON_DEPS + ["@com_github_stretchr_testify//require"],
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",

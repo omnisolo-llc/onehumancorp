@@ -8,8 +8,6 @@ import (
 	"sync"
 )
 
-// LocalSecretProvider implements SecretProvider for standalone desktop mode.
-// It uses an in-memory map to mock a local secret store for local development and offline usage.
 type LocalSecretProvider struct {
 	// mock local store
 	store map[string]string

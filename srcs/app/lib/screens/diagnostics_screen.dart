@@ -90,7 +90,7 @@ class DiagnosticsScreen extends ConsumerWidget {
                         );
                       },
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => SelectableText('Error loading health: $err', style: const TextStyle(color: Colors.redAccent)),
+                      error: (err, stack) => Text('Error loading health: $err', style: const TextStyle(color: Colors.redAccent)),
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton(

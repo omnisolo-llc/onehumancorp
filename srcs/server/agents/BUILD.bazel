@@ -7,7 +7,6 @@ go_library(
         "agent_task_worker.go",
         "autodream.go",
         "inprocess_transport.go",
-        "local_provider.go",
         "memory.go",
         "provider.go",
         "redis_transport.go",
@@ -38,7 +37,6 @@ go_test(
         "memory_test.go",
         "provider_test.go",
         "redis_transport_test.go",
-        "resilient_provider_test.go",
     ],
     embed = [":agents"],
     deps = [
