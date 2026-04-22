@@ -82,7 +82,7 @@ class _AgentMeshMessageTileState extends State<AgentMeshMessageTile> with Single
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
+                SelectableText(
                   widget.message,
                   style: const TextStyle(
                     color: Colors.white,
