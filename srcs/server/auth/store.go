@@ -328,10 +328,7 @@ func (s *Store) Authenticate(username, password string, orgID string) (*User, er
 
 	s.mu.RLock()
 	u, ok := s.byName[tenantKey{orgID, username}]
-	if !ok && (orgID == "sys" || orgID == "") {
-		u, ok = s.byName[tenantKey{"", username}]
-	}
-	if ok && orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
+	if ok && u.OrganizationID != orgID {
 		ok = false
 	}
 	s.mu.RUnlock()
@@ -364,7 +361,7 @@ func (s *Store) GetUser(id string, orgID string) (*User, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	u, ok := s.users[id]
-	if ok && orgID != "" && orgID != "sys" && u.OrganizationID != orgID {
+	if ok && u.OrganizationID != orgID {
 		return nil, false
 	}
 	return u, ok
@@ -389,7 +386,7 @@ func (s *Store) ListUsers(orgID string) []*User {
 	defer s.mu.RUnlock()
 	out := make([]*User, 0)
 	for _, u := range s.users {
-		if orgID == "" || orgID == "sys" || u.OrganizationID == orgID {
+		if u.OrganizationID == orgID {
 			out = append(out, u)
 		}
 	}
@@ -431,7 +428,7 @@ func (s *Store) UpdateUser(id string, emailPtr *string, roles []string, activePt
 	defer s.mu.Unlock()
 
 	u, ok := s.users[id]
-	if !ok || (orgID != "" && orgID != "sys" && u.OrganizationID != orgID) {
+	if !ok || u.OrganizationID != orgID {
 		return nil, errors.New("user not found")
 	}
 	if emailPtr != nil && *emailPtr != u.Email {
@@ -472,7 +469,7 @@ func (s *Store) DeleteUser(id string, orgID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	u, ok := s.users[id]
-	if !ok || (orgID != "" && orgID != "sys" && u.OrganizationID != orgID) {
+	if !ok || u.OrganizationID != orgID {
 		return errors.New("user not found")
 	}
 	delete(s.users, id)
