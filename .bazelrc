@@ -67,7 +67,7 @@ common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
 common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
 common:buildbuddy-official --remote_upload_local_results
 common:buildbuddy-official --remote_timeout=10m
-common:buildbuddy-official --remote_cache_compression
+# common:buildbuddy-official --remote_cache_compression
 common:buildbuddy-official --remote_local_fallback
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
 # Prevents CacheNotFoundException from failing repository rule fetches.
@@ -77,7 +77,7 @@ common:buildbuddy-official --jobs=200
 # modify any BuildBuddy state; safe to keep in version control).
 common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
 
-# ── BuildBuddy self-hosted (cubectl.com) ──────────────────────────────────────
+# ── BuildBuddy self-hosted ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
 # Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
 # buildbuddy-official which relies on the global sandboxed,local fallback chain.
@@ -88,7 +88,7 @@ common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc
 # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_local_fallback
 common:buildbuddy --remote_upload_local_results
-common:buildbuddy --remote_cache_compression
+# common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
 common:buildbuddy --experimental_remote_downloader_local_fallback
 common:buildbuddy --jobs=200
