@@ -8,7 +8,7 @@ go_library(
         "client_burst.go",
         "doc.go",
     ],
-    importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin/grpc",
+    importpath = "github.com/onehumancorp/mono/srcs/server/agents/grpc",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/proto/agentservice",
