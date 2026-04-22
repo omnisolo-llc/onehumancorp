@@ -3,17 +3,17 @@ package orchestration
 import (
 	"context"
 	"database/sql"
-	"testing"
-	"path/filepath"
-	"net"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
-	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/builtin/grpc"
-	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
-	"google.golang.org/grpc"
 	_ "github.com/mattn/go-sqlite3"
+	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
+	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/grpc"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"google.golang.org/grpc"
+	"net"
+	"path/filepath"
+	"testing"
 )
 
-type MockMeshClient struct {}
+type MockMeshClient struct{}
 
 func (m *MockMeshClient) Publish(ctx context.Context, topic string, payload []byte) error {
 	return nil

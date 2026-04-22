@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/builtin/grpc"
 	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
+	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"

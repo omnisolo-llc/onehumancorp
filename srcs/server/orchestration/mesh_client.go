@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
-	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/builtin/grpc"
 	_ "github.com/mattn/go-sqlite3"
+	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/grpc"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 )
 
 type MeshClient interface {
