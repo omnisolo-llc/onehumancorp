@@ -48,7 +48,7 @@ We do not build chatbots. We build **Invisible Departments**.
 
 ## 5. Strategic Roadmap & New Issue Briefs
 
-The following high-priority research briefs have been established in `docs/technical/research/`:
+The following high-priority research briefs have been established in this directory:
 
 1.  **[frontend] Mobile-First Storefront & Product Catalog Editor (P0):** Enables 60-second product publishing with variants from a phone camera.
 2.  **[backend] Unified Order Fulfillment & Delivery Orchestration (P0):** Combines retail, services, and food into a single "Today's Work" mobile feed.
