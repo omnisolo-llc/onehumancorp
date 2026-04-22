@@ -110,4 +110,27 @@ func TestStandaloneStateManager(t *testing.T) {
 	if status != "COMPLETED" {
 		t.Fatalf("Expected COMPLETED, got %s", status)
 	}
+
+	// Test DAG Claiming Logic
+	tx, _ = provider.Begin(ctx)
+	_, err = tx.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status) VALUES ('s_task_uncompleted', 'm1', 'Uncompleted', 'PENDING')")
+	if err != nil { t.Fatal(err) }
+
+	depsBlocked, _ := json.Marshal([]string{"s_task_uncompleted"})
+	_, err = tx.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('s_task_blocked', 'm1', 'Blocked', 'PENDING', $1)", string(depsBlocked))
+	if err != nil { t.Fatal(err) }
+
+	depsFree, _ := json.Marshal([]string{"parent_task"}) // already completed
+	_, err = tx.Exec(ctx, "INSERT INTO swarm_tasks (id, mission_id, title, status, dependencies) VALUES ('s_task_free', 'm1', 'Free', 'PENDING', $1)", string(depsFree))
+	if err != nil { t.Fatal(err) }
+	tx.Commit(ctx)
+
+	// We've already claimed task1. 'task2' and 's_task_free' are free.
+	// Claiming a task should only return free tasks, not blocked ones.
+	for i := 0; i < 3; i++ {
+		taskClaim, _ := sm.ClaimTask(ctx, "agent2")
+		if taskClaim != nil && taskClaim.ID == "s_task_blocked" {
+			t.Fatalf("ClaimTask illegally claimed a blocked task!")
+		}
+	}
 }

@@ -97,9 +97,14 @@ func (m *StandaloneStateManager) ClaimTask(ctx context.Context, agentID string) 
 	var task Task
 	var depsStr string
 	err = tx.QueryRow(ctx, `
-		SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
-		FROM swarm_tasks
-		WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+		SELECT t.id, t.mission_id, t.parent_plan_id, t.dependencies, t.title, t.status, t.assigned_agent_id
+		FROM swarm_tasks t
+		WHERE t.status = 'PENDING' AND (t.locked_until IS NULL OR t.locked_until < CURRENT_TIMESTAMP)
+		AND NOT EXISTS (
+			SELECT 1 FROM json_each(t.dependencies) d
+			JOIN swarm_tasks dep ON dep.id = d.value
+			WHERE dep.status != 'COMPLETED' AND dep.status != 'DONE'
+		)
 		LIMIT 1
 	`).Scan(&task.ID, &task.MissionID, &task.ParentPlanID, &depsStr, &task.Title, &task.Status, &task.AssignedAgentID)
 

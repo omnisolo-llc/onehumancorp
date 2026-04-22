@@ -129,16 +129,26 @@ func (m *CloudStateManager) ClaimTask(ctx context.Context, agentID string) (*Tas
 	var task Task
 	var depsStr string
 	query := `
-		SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
-		FROM swarm_tasks
-		WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+		SELECT t.id, t.mission_id, t.parent_plan_id, t.dependencies, t.title, t.status, t.assigned_agent_id
+		FROM swarm_tasks t
+		WHERE t.status = 'PENDING' AND (t.locked_until IS NULL OR t.locked_until < CURRENT_TIMESTAMP)
+		AND NOT EXISTS (
+			SELECT 1 FROM jsonb_array_elements_text(COALESCE(t.dependencies, '[]'::jsonb)) d
+			JOIN swarm_tasks dep ON dep.id::text = d
+			WHERE dep.status != 'COMPLETED' AND dep.status != 'DONE'
+		)
 		LIMIT 1 FOR UPDATE SKIP LOCKED
 	`
 	if m.dbProvider.IsSQLite() {
 		query = `
-			SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
-			FROM swarm_tasks
-			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			SELECT t.id, t.mission_id, t.parent_plan_id, t.dependencies, t.title, t.status, t.assigned_agent_id
+			FROM swarm_tasks t
+			WHERE t.status = 'PENDING' AND (t.locked_until IS NULL OR t.locked_until < CURRENT_TIMESTAMP)
+			AND NOT EXISTS (
+				SELECT 1 FROM json_each(t.dependencies) d
+				JOIN swarm_tasks dep ON dep.id = d.value
+				WHERE dep.status != 'COMPLETED' AND dep.status != 'DONE'
+			)
 			LIMIT 1
 		`
 	}
