@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
+import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
@@ -173,6 +174,8 @@ class _DashboardContent extends StatelessWidget {
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
         const SwarmObservabilityWidget(),
+        const SizedBox(height: 16),
+        const SwarmVelocityWidget(),
         const SizedBox(height: 16),
         const HybridObservabilityWidget(),
         const SizedBox(height: 16),
