@@ -6,8 +6,7 @@ This section groups API-facing playbooks and reference material.
 
 ## Primary References
 
-- `docs/api/playbook.md`
-- `docs/api/kairos_api_playbook.md`
+- `docs/technical/api/playbook.md`
 - `docs/api/kairos_orchestration_api.md`
 - `docs/api/hybrid_mcp_api.md`
 
