@@ -14,6 +14,7 @@ _SHARED_SRCS = [
 
 _COMMON_DEPS = [
     "@com_github_playwright_community_playwright_go//:playwright-go",
+    "@com_github_stretchr_testify//require",
 ]
 
 _COMMON_DATA = [
@@ -62,7 +63,7 @@ go_test(
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_dashboard_test",
-    srcs = _SHARED_SRCS + ["dashboard_test.go"],
+    srcs = _SHARED_SRCS + ["dashboard_test.go", "growth_referral_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
     deps = _COMMON_DEPS,

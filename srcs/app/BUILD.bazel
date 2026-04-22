@@ -144,9 +144,18 @@ flutter_library(
 
 # (Individual tests are now in lib/*/BUILD.bazel)
 
+flutter_test(
+    name = "growth_referral_widget_test",
+    srcs = ["test/growth_referral_widget_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/growth_referral_widget_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
 test_suite(
     name = "flutter_unit_tests",
     tests = [
+        ":growth_referral_widget_test",
         "//srcs/app/lib/models:all_tests",
         "//srcs/app/lib/screens:all_tests",
         "//srcs/app/lib/services:all_tests",
