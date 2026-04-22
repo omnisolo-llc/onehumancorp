@@ -108,7 +108,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[OHC Walkthrough: Custom Agent Creation](custom_agent_creation_walkthrough.md)**
 - **[KAIROS Shared Task List: Visual Walkthrough](shared_task_list_visual_walkthrough.md)**
 - **[KAIROS Orchestration: Visual Walkthrough](kairos_orchestration.md)**
-- **[Interactive CLI Guide for AutoDream](autodream_cli_guide.md)**
+- **[Interactive CLI Guide for AutoDream](../../walkthroughs/autodream_cli_interactive_guide.md)**
 - **[KAIROS Orchestration CLI Walkthrough](kairos_cli.md)**
 - **[Elastic Swarm Bursting: Visual Walkthrough](elastic_swarm_bursting.md)**
 - **[Hybrid Troubleshooting Guide](hybrid_troubleshooting.md)**
