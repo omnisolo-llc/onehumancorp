@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
+import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
@@ -40,7 +41,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
         error:
             (e, _) => Center(
-              child: Text(
+              child: SelectableText(
                 'Error: $e',
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
@@ -103,6 +104,72 @@ class DashboardScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 48),
 
+<<<<<<< Updated upstream
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _SectionTitle('Overview'),
+            OutlinedButton.icon(
+              onPressed: () => context.go('/wizards/billing'),
+              icon: const Icon(Icons.credit_card),
+              label: const Text('Billing & Credits'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _StatCard(
+              label: 'Active Agents',
+              value: data.agents.where((a) => a.isRunning).length.toString(),
+              icon: Icons.smart_toy,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            _StatCard(
+              label: 'Dashboard Updates',
+              value: data.statuses.length.toString(),
+              icon: Icons.pending_actions,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+            _StatCard(
+              label: 'Open Meetings',
+              value: data.meetings.length.toString(),
+              icon: Icons.video_call,
+              color: Theme.of(context).colorScheme.tertiary,
+            ),
+            _StatCard(
+              label: 'Total Org Members',
+              value: data.organization.members.length.toString(),
+              icon: Icons.people,
+              color: Theme.of(context).colorScheme.primaryContainer,
+              iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        _SectionTitle('System Observability'),
+        const SizedBox(height: 16),
+        _ObservabilityWidget(data: data),
+        const SizedBox(height: 16),
+        const SwarmObservabilityWidget(),
+        const SizedBox(height: 16),
+        const SwarmVelocityWidget(),
+        const SizedBox(height: 16),
+        const HybridObservabilityWidget(),
+        const SizedBox(height: 16),
+        Container(
+          key: const ValueKey('hybrid_telemetry'),
+          child: const HybridTelemetryWidget(),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 350,
+          child: GlassCard(
+            padding: EdgeInsets.zero,
+            child: Column(
+=======
                 const _SectionTitle('Key Metrics'),
                 const SizedBox(height: 24),
                 Wrap(
@@ -131,6 +198,7 @@ class DashboardScreen extends ConsumerWidget {
                 const _SectionTitle('Agent Orchestration'),
                 const SizedBox(height: 24),
                 Row(
+>>>>>>> Stashed changes
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
@@ -158,6 +226,113 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+<<<<<<< Updated upstream
+          ),
+        ),
+        const SizedBox(height: 16),
+        const GrowthReferralWidget(),
+        const SizedBox(height: 16),
+        SubAgentQueueWidget(statuses: data.statuses),
+        const SizedBox(height: 32),
+        _SectionTitle('Company Structure'),
+        const SizedBox(height: 8),
+        Text(
+          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontFamily: 'Inter',
+              ),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: roleList.map((role) {
+            final count = data.agents.where((a) => a.role == role).length;
+            return _RoleScaleCard(
+              role: role,
+              count: count,
+              ref: ref,
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _ObservabilityWidget extends StatelessWidget {
+  final DashboardSnapshot data;
+
+  const _ObservabilityWidget({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
+    final activeMissions = data.statuses.length; // Approximate from statuses
+    final totalAgents = data.agents.length;
+    final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
+
+    return Semantics(
+      label: 'System Observability Panel',
+      child: Tooltip(
+        message: 'View System Health & Metrics',
+        child: GlassCard(
+            padding: EdgeInsets.zero,
+            child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    // Tap interaction for delight
+                  },
+                  borderRadius: BorderRadius.circular(24),
+                  splashColor: colors.primary.withValues(alpha: 0.1),
+                  highlightColor: colors.primary.withValues(alpha: 0.05),
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: colors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.monitor_heart, color: colors.primary, size: 28),
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              'Full-Spectrum Telemetry',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: colors.onSurface,
+                                fontFamily: 'Outfit',
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            _StatusBadge(healthy: healthScore >= 80),
+                          ],
+                        ),
+                        const SizedBox(height: 32),
+                        Wrap(
+                          spacing: 16.0,
+                          runSpacing: 16.0,
+                          alignment: WrapAlignment.spaceAround,
+                          children: [
+                            _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
+                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
+                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
+                          ],
+                        ),
+                      ],
+=======
 
                 const SizedBox(height: 48),
                 Row(
@@ -170,9 +345,14 @@ class DashboardScreen extends ConsumerWidget {
                       },
                       icon: const Icon(Icons.arrow_forward),
                       label: const Text('View All', style: TextStyle(fontFamily: 'Inter')),
+>>>>>>> Stashed changes
                     ),
                   ],
                 ),
+<<<<<<< Updated upstream
+              ),
+          ),
+=======
                 const SizedBox(height: 24),
                 Wrap(
                   spacing: 24,
@@ -190,6 +370,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
           );
         },
+>>>>>>> Stashed changes
       ),
     );
   }

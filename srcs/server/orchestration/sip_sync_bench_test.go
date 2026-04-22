@@ -36,7 +36,7 @@ func BenchmarkSIPDB_SyncBufferedMetrics(b *testing.B) {
 		}
 		b.StartTimer()
 
-		_, err := db.SyncBufferedMetrics(ctx, ts.URL)
+		_, err := db.SyncBufferedMetrics(ctx, ts.URL, 500)
 		if err != nil {
 			b.Fatalf("SyncBufferedMetrics failed: %v", err)
 		}
