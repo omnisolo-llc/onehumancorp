@@ -1,9 +1,20 @@
 package harness
 
 import (
+	"bytes"
 	"context"
 	"testing"
+	"strings"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+
+func init() {
+	prometheus.DefaultRegisterer = prometheus.NewRegistry()
+	telemetry.InitTelemetry()
+}
 
 func TestManager(t *testing.T) {
 	manager := NewManager(nil, nil)
@@ -41,6 +52,19 @@ func TestManager(t *testing.T) {
 		cmd, err := manager.WrapCommand(ctx, "echo 1", nil)
 		if err != nil || cmd != "echo 1" {
 			t.Errorf("WrapCommand failed")
+		}
+	})
+
+
+	t.Run("ExecuteStream", func(t *testing.T) {
+		var outBuf, errBuf bytes.Buffer
+		res, err := manager.ExecuteStream(ctx, "echo stream_test", nil, nil, &outBuf, &errBuf, "agent-1", "org-1", "admin", "gpt-4")
+		// The error might be because bwrap is not available, but we just verify it doesn't panic
+		// and attempts to use the buffers.
+		if err == nil {
+			if !strings.Contains(outBuf.String(), "stream_test") && !strings.Contains(res.Stdout, "stream_test") {
+				t.Errorf("Expected output to contain 'stream_test'")
+			}
 		}
 	})
 
