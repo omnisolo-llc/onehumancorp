@@ -329,7 +329,7 @@ func TestAutoDreamWorker_ConsolidateMemoriesPg(t *testing.T) {
 		}
 	}
 
-	mock := mockPgProvider{Provider: provider}
+	mock := mockPgProviderWorker{Provider: provider}
 	worker.pool = mock
 	err := worker.ConsolidateMemories(ctx)
 	if err != nil {
@@ -353,17 +353,17 @@ func TestAutoDreamWorker_IngestCompletedTasksPg(t *testing.T) {
 		t.Fatalf("failed to insert test shared task: %v", err)
 	}
 
-	mock := mockPgProvider{Provider: provider}
+	mock := mockPgProviderWorker{Provider: provider}
 	worker.pool = mock
 	err = worker.IngestCompletedTasks(ctx)
 	if err != nil {
 		t.Fatalf("IngestCompletedTasks failed: %v", err)
 	}
 }
-type mockPgProvider struct {
+type mockPgProviderWorker struct {
 	db.Provider
 }
 
-func (m mockPgProvider) IsSQLite() bool {
+func (m mockPgProviderWorker) IsSQLite() bool {
 	return false
 }

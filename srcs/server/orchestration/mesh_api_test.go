@@ -9,51 +9,149 @@ import (
 	"time"
 )
 
-type mockMeshTransport struct {
+type mockMeshTransportAPI struct {
 	MeshTransport
 	broadcastCalled bool
 	subChan         chan []byte
 }
 
-func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
+func (m *mockMeshTransportAPI) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
 	m.broadcastCalled = true
 	return nil
 }
 
-func (m *mockMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+func (m *mockMeshTransportAPI) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
 	return m.subChan, nil
 }
 
 func TestMeshAPI_Broadcast(t *testing.T) {
-	mockMesh := &mockMeshTransport{}
+	mockMesh := &mockMeshTransportAPI{}
 	api := NewMeshAPI(mockMesh)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"task_id":"123"}`)))
-	w := httptest.NewRecorder()
-	api.HandleBroadcast(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
+	tests := []struct {
+		name           string
+		payload        string
+		expectedStatus int
+	}{
+		{
+			name:           "Valid Payload",
+			payload:        `{"agent_id":"spiffe://agent1", "channel":"mesh:tasks", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Missing AgentID",
+			payload:        `{"channel":"mesh:tasks", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid AgentID",
+			payload:        `{"agent_id":"agent1", "channel":"mesh:tasks", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing Channel",
+			payload:        `{"agent_id":"spiffe://agent1", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid Channel",
+			payload:        `{"agent_id":"spiffe://agent1", "channel":"mesh:invalid", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing EventType",
+			payload:        `{"agent_id":"spiffe://agent1", "channel":"mesh:tasks", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid JSON",
+			payload:        `{invalid}`,
+			expectedStatus: http.StatusBadRequest,
+		},
 	}
-	if !mockMesh.broadcastCalled {
-		t.Errorf("expected BroadcastMeshEvent to be called")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockMesh.broadcastCalled = false
+			req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(tt.payload)))
+			w := httptest.NewRecorder()
+			api.HandleBroadcast(w, req)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
+			}
+			if tt.expectedStatus == http.StatusOK && !mockMesh.broadcastCalled {
+				t.Errorf("expected BroadcastMeshEvent to be called")
+			}
+		})
+	}
+}
+
+func TestMeshAPI_Publish(t *testing.T) {
+	mockMesh := &mockMeshTransportAPI{}
+	api := NewMeshAPI(mockMesh)
+
+	tests := []struct {
+		name           string
+		payload        string
+		expectedStatus int
+	}{
+		{
+			name:           "Valid Payload",
+			payload:        `{"agent_id":"spiffe://agent1", "channel":"mesh:tasks", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Missing AgentID",
+			payload:        `{"channel":"mesh:tasks", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid AgentID",
+			payload:        `{"agent_id":"agent1", "channel":"mesh:tasks", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing Channel",
+			payload:        `{"agent_id":"spiffe://agent1", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid Channel",
+			payload:        `{"agent_id":"spiffe://agent1", "channel":"mesh:invalid", "event_type":"test", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing EventType",
+			payload:        `{"agent_id":"spiffe://agent1", "channel":"mesh:tasks", "data":{}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid JSON",
+			payload:        `{invalid}`,
+			expectedStatus: http.StatusBadRequest,
+		},
 	}
 
-	mockMesh.broadcastCalled = false
-	req = httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"channel":"ohc.mesh.agent.123", "task_id":"456"}`)))
-	w = httptest.NewRecorder()
-	api.HandleBroadcast(w, req)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockMesh.broadcastCalled = false
+			req := httptest.NewRequest(http.MethodPost, "/api/mesh/publish", bytes.NewBuffer([]byte(tt.payload)))
+			w := httptest.NewRecorder()
+			api.HandlePublish(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-	if !mockMesh.broadcastCalled {
-		t.Errorf("expected BroadcastMeshEvent to be called")
+			if w.Code != tt.expectedStatus {
+				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
+			}
+			if tt.expectedStatus == http.StatusOK && !mockMesh.broadcastCalled {
+				t.Errorf("expected BroadcastMeshEvent to be called")
+			}
+		})
 	}
 }
 
 func TestMeshAPI_Stream(t *testing.T) {
-	mockMesh := &mockMeshTransport{
+	mockMesh := &mockMeshTransportAPI{
 		subChan: make(chan []byte, 1),
 	}
 	mockMesh.subChan <- []byte(`{"status":"test"}`)
@@ -82,7 +180,7 @@ func TestMeshAPI_Stream(t *testing.T) {
 
 
 func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
-	mockMesh := &mockMeshTransport{}
+	mockMesh := &mockMeshTransportAPI{}
 	api := NewMeshAPI(mockMesh)
 
 	tests := []struct {
@@ -110,7 +208,7 @@ func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
 }
 
 func TestMeshAPI_Sync(t *testing.T) {
-	mockMesh := &mockMeshTransport{
+	mockMesh := &mockMeshTransportAPI{
 		subChan: make(chan []byte, 1),
 	}
 	mockMesh.subChan <- []byte(`{"sync_status":"ok"}`)

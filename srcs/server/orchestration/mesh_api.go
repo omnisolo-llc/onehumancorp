@@ -5,12 +5,20 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	pb "github.com/onehumancorp/mono/srcs/proto"
 )
 
+
+
+type SIPPayload struct {
+	AgentID   string          `json:"agent_id"`
+	Channel   string          `json:"channel"`
+	EventType string          `json:"event_type"`
+	Data      json.RawMessage `json:"data"`
+}
 
 type MeshAPI struct {
 	meshTransport MeshTransport
@@ -44,9 +52,24 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req map[string]interface{}
+	var req SIPPayload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.AgentID == "" || !strings.HasPrefix(req.AgentID, "spiffe://") {
+		http.Error(w, "Invalid or missing agent_id", http.StatusBadRequest)
+		return
+	}
+
+	if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" && req.Channel != "mesh:presence" {
+		http.Error(w, "Invalid or missing channel", http.StatusBadRequest)
+		return
+	}
+
+	if req.EventType == "" {
+		http.Error(w, "Missing event_type", http.StatusBadRequest)
 		return
 	}
 
@@ -56,12 +79,7 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	channelName := "tasks"
-	if ch, ok := req["channel"].(string); ok && ch != "" {
-		channelName = ch
-	}
-
-	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), channelName, payload); err != nil {
+	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), req.Channel, payload); err != nil {
 		http.Error(w, "Failed to broadcast", http.StatusInternalServerError)
 		return
 	}
@@ -139,19 +157,34 @@ func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var event pb.MeshEvent
-	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+	var req SIPPayload
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	payload, err := json.Marshal(event)
+	if req.AgentID == "" || !strings.HasPrefix(req.AgentID, "spiffe://") {
+		http.Error(w, "Invalid or missing agent_id", http.StatusBadRequest)
+		return
+	}
+
+	if req.Channel != "mesh:tasks" && req.Channel != "mesh:coordination" && req.Channel != "mesh:presence" {
+		http.Error(w, "Invalid or missing channel", http.StatusBadRequest)
+		return
+	}
+
+	if req.EventType == "" {
+		http.Error(w, "Missing event_type", http.StatusBadRequest)
+		return
+	}
+
+	payload, err := json.Marshal(req)
 	if err != nil {
 		http.Error(w, "Failed to marshal payload", http.StatusInternalServerError)
 		return
 	}
 
-	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", payload); err != nil {
+	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), req.Channel, payload); err != nil {
 		http.Error(w, "Failed to publish", http.StatusInternalServerError)
 		return
 	}
