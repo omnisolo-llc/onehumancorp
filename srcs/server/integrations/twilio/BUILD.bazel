@@ -1,14 +1,14 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
-    name = "whatsapp",
+    name = "twilio",
     srcs = ["client.go"],
-    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/whatsapp",
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/twilio",
     visibility = ["//visibility:public"],
 )
 
 go_test(
-    name = "whatsapp_test",
+    name = "twilio_test",
     srcs = ["client_test.go"],
-    embed = [":whatsapp"],
+    embed = [":twilio"],
 )
