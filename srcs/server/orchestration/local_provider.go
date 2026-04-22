@@ -1,4 +1,4 @@
-package agents
+package orchestration
 
 import (
 	"bytes"
@@ -6,9 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -19,7 +19,7 @@ var fallbackClient = &http.Client{
 	Timeout: 10 * time.Second,
 }
 
-// LocalLLMProvider implements orchestration.MinimaxClient but uses a local endpoint.
+// LocalLLMProvider implements MinimaxClient but uses a local endpoint.
 type LocalLLMProvider struct {
 	endpoint      string
 	embedEndpoint string
@@ -121,13 +121,13 @@ func (l *LocalLLMProvider) GenerateEmbedding(ctx context.Context, text string) (
 	return result.Embedding, nil
 }
 
-// ResilientProvider wraps a primary orchestration.MinimaxClient and falls back to LocalLLMProvider on network errors.
+// ResilientProvider wraps a primary MinimaxClient and falls back to LocalLLMProvider on network errors.
 type ResilientProvider struct {
-	primary  orchestration.MinimaxClient
-	fallback orchestration.MinimaxClient
+	primary  MinimaxClient
+	fallback MinimaxClient
 }
 
-func NewResilientProvider(primary orchestration.MinimaxClient, fallback orchestration.MinimaxClient) *ResilientProvider {
+func NewResilientProvider(primary MinimaxClient, fallback MinimaxClient) *ResilientProvider {
 	if fallback == nil {
 		fallback = NewLocalLLMProvider()
 	}
@@ -162,6 +162,8 @@ func (r *ResilientProvider) Reason(ctx context.Context, prompt string) (string, 
 		if fallbackErr != nil {
 			return "", fmt.Errorf("primary failed: %v, fallback failed: %v", err, fallbackErr)
 		}
+		slog.Warn("Cloud Unreachable. Switched to Local Intelligence.")
+		telemetry.RecordAgentApiCall(ctx, "system", "fallback", "local_llm_used")
 		return fallbackResp, nil
 	}
 	return resp, err
@@ -174,6 +176,8 @@ func (r *ResilientProvider) GenerateEmbedding(ctx context.Context, text string) 
 		if fallbackErr != nil {
 			return nil, fmt.Errorf("primary failed: %v, fallback failed: %v", err, fallbackErr)
 		}
+		slog.Warn("Cloud Unreachable. Switched to Local Intelligence.")
+		telemetry.RecordAgentApiCall(ctx, "system", "fallback", "local_llm_used")
 		return fallbackEmb, nil
 	}
 	return emb, err
