@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:ohc_app/widgets/vector_memory_visualizer.dart';
+import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:flutter/material.dart';
@@ -89,6 +90,8 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
                   const Text('AutoDream Pipelines', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   const Text('Vector Memory Observability', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  const SwarmVelocityWidget(),
                   const SizedBox(height: 16),
                   const VectorMemoryVisualizerWidget(),
                   const SizedBox(height: 24),
