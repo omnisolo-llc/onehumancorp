@@ -341,7 +341,7 @@ func run(now time.Time, listen listenFunc) error {
 		autodreamNewWorker := workers.NewAutoDreamWorker(pool.Provider)
 		go autodreamNewWorker.Start(ctx)
 
-		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider)
+		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider, "")
 		go competitorAuditWorker.Start(ctx)
 
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
