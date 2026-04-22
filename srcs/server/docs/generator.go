@@ -108,27 +108,3 @@ func NewArchitectureDocTemplate(title, agentID, summary, diagram, dataSchema, ui
 	b.AddSection("Aesthetic / UI Considerations", uiDetails)
 	return b.Render()
 }
-
-func NewDatabaseSchemaDocTemplate(title, agentID, summary, dataSchema string) string {
-	b := NewPremiumDocBuilder()
-	b.SetHeader(title, agentID, "DRAFT")
-	b.AddSection("Executive Summary", summary)
-	b.AddSection("Database Schema", dataSchema)
-	return b.Render()
-}
-
-func NewAPIContractDocTemplate(title, agentID, summary, apiContract string) string {
-	b := NewPremiumDocBuilder()
-	b.SetHeader(title, agentID, "DRAFT")
-	b.AddSection("Executive Summary", summary)
-	b.AddSection("API Contracts", apiContract)
-	return b.Render()
-}
-
-func NewSequenceDiagramDocTemplate(title, agentID, summary, diagram string) string {
-	b := NewPremiumDocBuilder()
-	b.SetHeader(title, agentID, "DRAFT")
-	b.AddSection("Executive Summary", summary)
-	b.AddDiagram(diagram)
-	return b.Render()
-}
