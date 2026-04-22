@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // BwrapRunner executes commands inside a bubblewrap sandbox.
@@ -71,6 +74,11 @@ func (r *BwrapRunner) Execute(ctx context.Context, command string) (Result, erro
 
 // ExecuteWithPolicy runs the command with a specific policy.
 func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, policy *Policy) (Result, error) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordHarnessExecutionDuration(ctx, time.Since(start).Seconds())
+	}()
+
 	if err := r.validator.Validate(ctx, command); err != nil {
 		return Result{}, fmt.Errorf("command validation failed: %w", err)
 	}
@@ -82,6 +90,7 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
+	telemetry.RecordHarnessToolInvocation(ctx, "bwrap")
 	err := cmd.Run()
 	exitCode := 0
 	if err != nil {
@@ -93,7 +102,7 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
             // We'll treat exit code 1 as a potential setup violation since we can't easily distinguish
             // unless we parse stderr.
             if exitCode == 1 && bytes.Contains(stderr.Bytes(), []byte("bwrap:")) {
-                violationCount.Add(ctx, 1)
+                telemetry.RecordHarnessViolation(ctx, "bwrap_setup_failure")
             }
 		} else {
             // Infrastructure error launching bwrap process
@@ -110,6 +119,11 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
 
 // ExecuteStream runs the command with a specific policy, streaming standard I/O.
 func (r *BwrapRunner) ExecuteStream(ctx context.Context, command string, policy *Policy, stdin io.Reader, stdout, stderr io.Writer) (Result, error) {
+	start := time.Now()
+	defer func() {
+		telemetry.RecordHarnessExecutionDuration(ctx, time.Since(start).Seconds())
+	}()
+
 	if err := r.validator.Validate(ctx, command); err != nil {
 		return Result{}, fmt.Errorf("command validation failed: %w", err)
 	}
@@ -134,13 +148,14 @@ func (r *BwrapRunner) ExecuteStream(ctx context.Context, command string, policy 
 		cmd.Stdin = stdin
 	}
 
+	telemetry.RecordHarnessToolInvocation(ctx, "bwrap")
 	err := cmd.Run()
 	exitCode := 0
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
             if exitCode == 1 && bytes.Contains(errBuf.Bytes(), []byte("bwrap:")) {
-                violationCount.Add(ctx, 1)
+                telemetry.RecordHarnessViolation(ctx, "bwrap_setup_failure")
             }
 		} else {
 			return Result{}, fmt.Errorf("failed to run bwrap: %w", err)

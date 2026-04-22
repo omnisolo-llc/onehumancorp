@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // MacOsSandboxRunner executes commands inside a macOS sandbox-exec sandbox.
@@ -88,7 +90,7 @@ func (r *MacOsSandboxRunner) ExecuteWithPolicy(ctx context.Context, command stri
 			// sandbox-exec uses exit code 71 (EX_OSERR) for profile syntax errors.
 			// We track profile compilation failures as sandbox violations for metrics.
 			if exitCode == 71 {
-				violationCount.Add(ctx, 1)
+				telemetry.RecordHarnessViolation(ctx, "macos_sandbox_setup_failure")
 			}
 		} else {
 			return Result{}, fmt.Errorf("failed to run sandbox-exec: %w", err)

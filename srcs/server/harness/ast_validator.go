@@ -7,23 +7,8 @@ import (
 
 	sitter "github.com/smacker/go-tree-sitter"
 	"github.com/smacker/go-tree-sitter/bash"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
-
-var (
-	meter          = otel.Meter("ohc_agent_harness")
-	violationCount metric.Int64Counter
-)
-
-func init() {
-	var err error
-	violationCount, err = meter.Int64Counter("ohc_sandbox_violation_total",
-		metric.WithDescription("Total number of sandbox violations prevented by AST validation or bwrap policies"))
-	if err != nil {
-		panic(err)
-	}
-}
 
 // ASTValidator validates bash commands using tree-sitter.
 type ASTValidator struct {
@@ -51,7 +36,7 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 	}
 
 	if err := v.walkAndValidate(tree.RootNode(), command); err != nil {
-		violationCount.Add(ctx, 1)
+		telemetry.RecordHarnessViolation(ctx, "ast_validation_failure")
 		return err
 	}
 
