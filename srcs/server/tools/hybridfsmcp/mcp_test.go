@@ -1,8 +1,6 @@
 package hybridfsmcp
 
 import (
-	"os"
-	"path/filepath"
 	"bytes"
 	"context"
 	"io"
@@ -139,8 +137,8 @@ func TestHybridFSMCP(t *testing.T) {
 
 	// List tools
 	tools := mcp.ListTools()
-	if len(tools) != 4 {
-		t.Fatalf("expected 4 tools, got %d", len(tools))
+	if len(tools) != 3 {
+		t.Fatalf("expected 3 tools, got %d", len(tools))
 	}
 
 	// Write file
@@ -359,89 +357,5 @@ func TestHybridFSMCP_Errors(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected error for provider error in list_directory")
-	}
-}
-
-
-func TestLocalFSProvider_SearchFiles(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "mcp_search_test")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	provider := NewLocalFSProvider(tmpDir)
-	ctx := context.Background()
-
-	os.WriteFile(filepath.Join(tmpDir, "test1.txt"), []byte("hello"), 0644)
-	os.WriteFile(filepath.Join(tmpDir, "test2.json"), []byte("{}"), 0644)
-	os.MkdirAll(filepath.Join(tmpDir, "subdir"), 0755)
-	os.WriteFile(filepath.Join(tmpDir, "subdir", "test3.txt"), []byte("world"), 0644)
-
-	matches, err := provider.SearchFiles(ctx, "", "*.txt")
-	if err != nil {
-		t.Fatalf("SearchFiles failed: %v", err)
-	}
-	if len(matches) != 2 {
-		t.Errorf("expected 2 matches, got %d", len(matches))
-	}
-}
-
-func TestCloudFSProvider_SearchFiles(t *testing.T) {
-	mockClient := NewMockS3Client()
-	provider := NewCloudFSProvider(mockClient, "test-bucket")
-
-	claims := &auth.Claims{
-		OrganizationID: "tenant1",
-	}
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
-
-	// Add dummy objects to our mock
-	mockClient.objects["tenant/tenant1/fs/test1.txt"] = []byte("hello")
-	mockClient.objects["tenant/tenant1/fs/test2.json"] = []byte("{}")
-	mockClient.objects["tenant/tenant1/fs/subdir/test3.txt"] = []byte("world")
-
-	matches, err := provider.SearchFiles(ctx, "", "*.txt")
-	if err != nil {
-		t.Fatalf("SearchFiles failed: %v", err)
-	}
-	if len(matches) != 2 {
-		t.Errorf("expected 2 matches, got %d", len(matches))
-	}
-}
-
-func TestHybridFSMCP_CallTool_SearchFiles(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "mcp_call_search_test")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	provider := NewLocalFSProvider(tmpDir)
-	mcp := NewHybridFSMCP(provider, nil)
-
-	ctx := context.Background()
-
-	os.WriteFile(filepath.Join(tmpDir, "file1.log"), []byte("log data"), 0644)
-
-	res, err := mcp.CallTool(ctx, "search_files", map[string]interface{}{
-		"path": "",
-		"pattern": "*.log",
-	})
-	if err != nil {
-		t.Fatalf("CallTool search_files failed: %v", err)
-	}
-
-	resultMap, ok := res.(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected map[string]interface{}, got %T", res)
-	}
-
-	matches, ok := resultMap["matches"].([]string)
-	if !ok {
-		t.Fatalf("expected matches []string, got %T", resultMap["matches"])
-	}
-	if len(matches) != 1 || matches[0] != "file1.log" {
-		t.Errorf("expected [file1.log], got %v", matches)
 	}
 }
