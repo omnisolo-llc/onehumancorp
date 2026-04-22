@@ -148,7 +148,7 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.blue,
                   ),
                   title: const Text(
-                    'Trigger Hybrid Sync',
+                    'Sync offline changes to cloud',
                     style: TextStyle(
                       color: Colors.blue,
                     ),
@@ -160,14 +160,14 @@ class SettingsScreen extends ConsumerWidget {
                         await api.triggerHybridSync();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Sync successful')),
+                            const SnackBar(content: Text('Your offline changes are now synced to the cloud!')),
                           );
                         }
                       }
                     } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Sync failed: $e')),
+                          SnackBar(content: Text("We couldn't sync your data right now. Please check your internet connection and try again.")),
                         );
                       }
                     }

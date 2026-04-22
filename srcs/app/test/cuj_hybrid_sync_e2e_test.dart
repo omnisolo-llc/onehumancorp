@@ -151,7 +151,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Ensure button exists
-      final syncBtn = find.text('Trigger Hybrid Sync');
+      final syncBtn = find.text('Sync offline changes to cloud');
       expect(syncBtn, findsOneWidget);
 
       // Tap button
@@ -159,7 +159,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Check for success text or snackbar (implementation specific)
-      expect(find.textContaining('Sync successful'), findsOneWidget);
+      expect(find.textContaining('Your offline changes are now synced to the cloud!'), findsOneWidget);
     });
   });
 }

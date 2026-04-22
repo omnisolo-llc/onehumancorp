@@ -18,73 +18,85 @@ class HybridObservabilityWidget extends ConsumerWidget {
         final activeAgents = data.agents.where((a) => a.isRunning).length;
         final totalTasks = data.statuses.fold<int>(0, (sum, item) => sum + item.count);
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.compose(
-              outer: const ColorFilter.matrix(<double>[
-                1.168, -0.153, -0.015, 0, 0,
-                -0.046, 1.061, -0.015, 0, 0,
-                -0.046, -0.152, 1.198, 0, 0,
-                0, 0, 0, 1, 0,
-              ]),
-              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.1),
-                  width: 1,
-                ),
+        return Container(
+          decoration: BoxDecoration(
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, 0.3),
+                blurRadius: 32,
+                offset: Offset(0, 8),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'Hybrid Swarm Observability',
-                    style: TextStyle(
-                      fontFamily: 'Outfit',
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+            ],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: BackdropFilter(
+              filter: ImageFilter.compose(
+                outer: const ColorFilter.matrix(<double>[
+                  1.787, -0.715, -0.072, 0, 0,
+                  -0.213, 1.285, -0.072, 0, 0,
+                  -0.213, -0.715, 1.928, 0, 0,
+                  0, 0, 0, 1, 0,
+                ]),
+                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Hybrid Swarm Observability',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Active Agents',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 16,
-                          color: Colors.white.withOpacity(0.7),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          AgentStatusIndicator(isActive: activeAgents > 0),
-                          const SizedBox(width: 8),
-                          Text(
-                            activeAgents.toString(),
-                            style: const TextStyle(
-                              fontFamily: 'Outfit',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Active Agents',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            color: Colors.white.withOpacity(0.7),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  _MetricRow(label: 'Total Tasks', value: totalTasks.toString()),
-                  const _MetricRow(label: 'Avg Hybrid Latency', value: '45ms'),
-                ],
+                        ),
+                        Row(
+                          children: [
+                            AgentStatusIndicator(isActive: activeAgents > 0),
+                            const SizedBox(width: 8),
+                            Text(
+                              activeAgents.toString(),
+                              style: const TextStyle(
+                                fontFamily: 'Outfit',
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    _MetricRow(label: 'Total Tasks', value: totalTasks.toString()),
+                    const _MetricRow(label: 'Avg Hybrid Latency', value: '45ms'),
+                  ],
+                ),
               ),
             ),
           ),
