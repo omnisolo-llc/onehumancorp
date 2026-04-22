@@ -28,7 +28,7 @@ func TestMcpSyncWorker_SyncOnce(t *testing.T) {
 
 	// Create table if not exists (sqlite memory db might need it for testing)
 	_, err = provider.DB().Exec(`
-		CREATE TABLE IF NOT EXISTS telemetry_buffer (
+		CREATE TABLE IF NOT EXISTS mcp_telemetry_buffer (
 			id TEXT PRIMARY KEY,
 			metric_name TEXT NOT NULL,
 			value REAL NOT NULL,
@@ -44,7 +44,7 @@ func TestMcpSyncWorker_SyncOnce(t *testing.T) {
 	// Insert test data
 	id1 := uuid.New().String()
 	_, err = provider.DB().Exec(`
-		INSERT INTO telemetry_buffer (id, metric_name, value, labels_json, timestamp, sync_status)
+		INSERT INTO mcp_telemetry_buffer (id, metric_name, value, labels_json, timestamp, sync_status)
 		VALUES (?, ?, ?, ?, ?, 'pending')
 	`, id1, "test_metric_1", 42.0, "{}", time.Now())
 	if err != nil {
@@ -58,7 +58,7 @@ func TestMcpSyncWorker_SyncOnce(t *testing.T) {
 
 	// Verify sync status
 	var status string
-	err = provider.DB().QueryRow("SELECT sync_status FROM telemetry_buffer WHERE id = ?", id1).Scan(&status)
+	err = provider.DB().QueryRow("SELECT sync_status FROM mcp_telemetry_buffer WHERE id = ?", id1).Scan(&status)
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)
 	}

@@ -1112,7 +1112,11 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Synced metrics from standalone OHC instances are recorded on the cloud with the 'standalone' label
+	// to avoid polluting native cloud metrics while maintaining full hybrid observability.
+	modeAttr := attribute.String("deployment_mode", "standalone")
 	ctx := r.Context()
+
 	for _, p := range payloads {
 		var data map[string]interface{}
 		if err := json.Unmarshal([]byte(p.Payload), &data); err != nil {
@@ -1130,6 +1134,23 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 				count = int64(c)
 			}
 			telemetry.RecordTokenUsage(ctx, agentID, role, model, tokenType, count)
+		case "agent_token_usage":
+			agentID, _ := data["agent_id"].(string)
+			orgID, _ := data["organization_id"].(string)
+			role, _ := data["role"].(string)
+			model, _ := data["model"].(string)
+			var count int64
+			if c, ok := data["count"].(float64); ok {
+				count = int64(c)
+			}
+			telemetry.RecordAgentTokenUsage(ctx, agentID, orgID, role, model, count)
+		case "agent_cost":
+			agentID, _ := data["agent_id"].(string)
+			orgID, _ := data["organization_id"].(string)
+			role, _ := data["role"].(string)
+			model, _ := data["model"].(string)
+			cost, _ := data["cost"].(float64)
+			telemetry.RecordAgentCost(ctx, agentID, orgID, role, model, cost)
 		case "agent_api_call":
 			agentID, _ := data["agent_id"].(string)
 			role, _ := data["role"].(string)
@@ -1149,11 +1170,51 @@ func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
 		case "swarm_task_completed":
 			missionID, _ := data["mission_id"].(string)
 			telemetry.RecordSwarmTaskCompleted(ctx, missionID)
+		case "cache_hit":
+			op, _ := data["operation"].(string)
+			ct, _ := data["cache_type"].(string)
+			telemetry.RecordCacheHit(ctx, op, ct)
+		case "cache_miss":
+			op, _ := data["operation"].(string)
+			ct, _ := data["cache_type"].(string)
+			telemetry.RecordCacheMiss(ctx, op, ct)
+		case "tokens_saved":
+			op, _ := data["operation"].(string)
+			ct, _ := data["cache_type"].(string)
+			var count int64
+			if c, ok := data["estimated_tokens"].(float64); ok {
+				count = int64(c)
+			}
+			telemetry.RecordTokensSaved(ctx, op, ct, count)
+		case "sqlite_lock_contention":
+			op, _ := data["operation"].(string)
+			telemetry.RecordSQLiteLockContention(ctx, op)
+		case "task_queue_length":
+			var amount int64
+			if a, ok := data["amount"].(float64); ok {
+				amount = int64(a)
+			}
+			telemetry.RecordTaskQueueLength(ctx, amount)
+		case "sub_agent_queue_length":
+			var delta int
+			if d, ok := data["delta"].(float64); ok {
+				delta = int(d)
+			}
+			telemetry.RecordQueueLength(ctx, delta)
 		default:
+			// Fallback: If we don't have a specific recorder, we use the raw BufferMetricFunc if available.
 			if telemetry.BufferMetricFunc != nil {
 				_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
+			} else {
+				// Record as a generic synced metric to OTel for visibility
+				slog.DebugContext(ctx, "received unknown standalone metric type", "type", p.MetricType)
 			}
 		}
+	}
+
+	// Record telemetry sync event with the deployment_mode label
+	if telemetry.SyncCompletedCount != nil {
+		telemetry.SyncCompletedCount.Add(ctx, int64(len(payloads)), metric.WithAttributes(modeAttr))
 	}
 
 	w.WriteHeader(http.StatusOK)

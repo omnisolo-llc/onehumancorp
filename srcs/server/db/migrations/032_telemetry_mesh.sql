@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS telemetry_buffer (
+CREATE TABLE IF NOT EXISTS mcp_telemetry_buffer (
     id TEXT PRIMARY KEY,
     metric_name TEXT NOT NULL,
     value REAL NOT NULL,

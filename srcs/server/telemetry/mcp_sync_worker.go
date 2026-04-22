@@ -47,9 +47,9 @@ func (w *McpSyncWorker) Start(ctx context.Context) {
 
 func (w *McpSyncWorker) syncOnce(ctx context.Context) {
 	// 1. Fetch pending metrics from SQLite buffer
-	rows, err := w.provider.DB().QueryContext(ctx, "SELECT id, metric_name, value FROM telemetry_buffer WHERE sync_status = 'pending' LIMIT 100")
+	rows, err := w.provider.DB().QueryContext(ctx, "SELECT id, metric_name, value FROM mcp_telemetry_buffer WHERE sync_status = 'pending' LIMIT 100")
 	if err != nil {
-		log.Printf("McpSyncWorker failed to query telemetry_buffer: %v", err)
+		log.Printf("McpSyncWorker failed to query mcp_telemetry_buffer: %v", err)
 		return
 	}
 	defer rows.Close()
@@ -78,7 +78,7 @@ func (w *McpSyncWorker) syncOnce(ctx context.Context) {
 
 	// 2. Mark as synced
 	for _, id := range pendingIDs {
-		_, err := w.provider.DB().ExecContext(ctx, "UPDATE telemetry_buffer SET sync_status = 'synced' WHERE id = ?", id)
+		_, err := w.provider.DB().ExecContext(ctx, "UPDATE mcp_telemetry_buffer SET sync_status = 'synced' WHERE id = ?", id)
 		if err != nil {
 			log.Printf("McpSyncWorker failed to update status for ID %s: %v", id, err)
 		}

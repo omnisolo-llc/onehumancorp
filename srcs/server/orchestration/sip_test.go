@@ -344,7 +344,7 @@ func TestSIPDB_PruneTelemetryBuffer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = db.PruneTelemetryBuffer(ctx, 24*time.Hour)
+	err = db.PruneBufferedMetrics(ctx, 24*time.Hour)
 	if err != nil {
 		t.Fatalf("Failed to prune telemetry buffer: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestSIPDB_PruneTelemetryBuffer_DBError(t *testing.T) {
 	}
 	db.Close()
 
-	err = db.PruneTelemetryBuffer(context.Background(), 24*time.Hour)
+	err = db.PruneBufferedMetrics(context.Background(), 24*time.Hour)
 	if err == nil {
 		t.Fatal("Expected error when pruning on closed DB")
 	}
@@ -1175,7 +1175,7 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) { // added for issue 4365
 		t.Fatalf("Expected 2 synced records, got %d", syncedCount)
 	}
 
-	expectedBody := `[{"agent_id":"a1","count":10,"metric_type":"token_usage","role":"r1"},{"agent_id":"a2","api":"fetch","metric_type":"agent_api_call"}]`
+	expectedBody := `[{"metric_type":"token_usage","payload":"{\"agent_id\":\"a1\",\"count\":10,\"role\":\"r1\"}"},{"metric_type":"agent_api_call","payload":"{\"agent_id\":\"a2\",\"api\":\"fetch\"}"}]`
 	if string(reqBody) != expectedBody {
 		t.Fatalf("Expected payload %s, got %s", expectedBody, string(reqBody))
 	}
