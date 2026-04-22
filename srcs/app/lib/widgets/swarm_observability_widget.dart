@@ -1,39 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ohc_app/services/centrifuge_service.dart';
-
-// Simulate Teammate Mesh messages from Redis/WebSockets
-class MeshMessage {
-  final String agentName;
-  final String action;
-  final DateTime timestamp;
-
-  MeshMessage(this.agentName, this.action, this.timestamp);
-}
-
-final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
-  final centrifuge = ref.watch(centrifugeServiceProvider);
-  if (centrifuge == null) {
-    return const Stream.empty();
-  }
-
-  return centrifuge.subscribeRaw('mesh:tasks').map((data) {
-    final Map<String, dynamic> json = data as Map<String, dynamic>;
-
-    // Extract agent name and action from the payload
-    // The payload format from Hub.PublishTaskBroadcast must be parsed precisely via `agent_id`, `action`, and `status`.
-    final agentName = json['agent_id'] as String? ?? 'System';
-    final action = json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
-
-    return MeshMessage(
-      agentName,
-      action,
-      DateTime.now(),
-    );
-  });
-});
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 
 class SwarmObservabilityWidget extends ConsumerStatefulWidget {
   const SwarmObservabilityWidget({super.key});
@@ -43,30 +14,8 @@ class SwarmObservabilityWidget extends ConsumerStatefulWidget {
 }
 
 class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWidget> {
-  final List<MeshMessage> _messages = [];
-  final ScrollController _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    ref.listen<AsyncValue<MeshMessage>>(meshStreamProvider, (previous, next) {
-      if (next.hasValue && next.value != null) {
-        setState(() {
-          _messages.insert(0, next.value!);
-          if (_messages.length > 50) {
-            _messages.removeLast();
-          }
-        });
-      }
-    });
-
     return Semantics(
       label: 'Swarm Observability Dashboard',
       child: ClipRRect(
@@ -82,11 +31,11 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
             inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
           ),
           child: Container(
-            height: 350,
+            height: 450,
             decoration: BoxDecoration(
               color: const Color.fromRGBO(255, 255, 255, 0.03),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
             ),
             child: Padding(
               padding: const EdgeInsets.all(24.0),
@@ -98,48 +47,44 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: colors.primary.withValues(alpha: 0.2),
+                          color: Colors.blueAccent.withOpacity(0.2),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.wifi_tethering, color: colors.primary, size: 24),
+                        child: const Icon(Icons.hub, color: Colors.blueAccent, size: 24),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Teammate Mesh Live Feed',
-                        style: TextStyle(
+                      Text(
+                        'KAIROS Swarm Dashboard',
+                        style: GoogleFonts.outfit(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          fontFamily: 'Outfit',
                           color: Colors.white,
                         ),
                       ),
-                      const Spacer(),
-                      _PulsingStatusIndicator(),
                     ],
                   ),
                   const SizedBox(height: 16),
                   Expanded(
-                    child: _messages.isEmpty
-                        ? Center(
-                            child: Text(
-                              'Listening for swarm activity...',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                fontFamily: 'Inter',
-                              ),
-                            ),
-                          )
-                        : ListView.builder(
-                            controller: _scrollController,
-                            itemCount: _messages.length,
-                            itemBuilder: (context, index) {
-                              final msg = _messages[index];
-                              return _AnimatedMessageItem(
-                                key: ValueKey(msg.timestamp.millisecondsSinceEpoch),
-                                message: msg,
-                              );
-                            },
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: Column(
+                            children: const [
+                              Expanded(child: TaskDAGView()),
+                              SizedBox(height: 16),
+                              Expanded(child: MemoryCloud()),
+                            ],
                           ),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          flex: 1,
+                          child: MeshLiveFeed(),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -151,170 +96,238 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
   }
 }
 
-class _PulsingStatusIndicator extends StatefulWidget {
-  @override
-  State<_PulsingStatusIndicator> createState() => _PulsingStatusIndicatorState();
-}
-
-class _PulsingStatusIndicatorState extends State<_PulsingStatusIndicator> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacityAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
-    _opacityAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class TaskDAGView extends StatelessWidget {
+  const TaskDAGView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FadeTransition(
-          opacity: _opacityAnimation,
-          child: Container(
-            width: 10,
-            height: 10,
-            decoration: const BoxDecoration(
-              color: Colors.greenAccent,
-              shape: BoxShape.circle,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'TaskDAGView',
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white70,
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        const Text(
-          'Live',
-          style: TextStyle(
-            color: Colors.greenAccent,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Inter',
+          const SizedBox(height: 8),
+          Expanded(
+            child: Center(
+              child: Text(
+                'shared_tasks_decomposition',
+                style: GoogleFonts.inter(
+                  color: Colors.white54,
+                ),
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _AnimatedMessageItem extends StatefulWidget {
-  final MeshMessage message;
-
-  const _AnimatedMessageItem({super.key, required this.message});
+class MemoryCloud extends StatelessWidget {
+  const MemoryCloud({super.key});
 
   @override
-  State<_AnimatedMessageItem> createState() => _AnimatedMessageItemState();
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'MemoryCloud',
+            style: GoogleFonts.outfit(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white70,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Center(
+              child: Text(
+                'AutoDream Vector Visualization',
+                style: GoogleFonts.inter(
+                  color: Colors.white54,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _AnimatedMessageItemState extends State<_AnimatedMessageItem> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _slideAnimation;
-  late Animation<double> _fadeAnimation;
+class MeshLiveFeed extends StatefulWidget {
+  const MeshLiveFeed({super.key});
 
-  late Animation<double> _scaleAnimation;
+  @override
+  State<MeshLiveFeed> createState() => _MeshLiveFeedState();
+}
+
+class _MeshLiveFeedState extends State<MeshLiveFeed> {
+  final List<String> _events = [];
+  bool _isLocalOnly = false;
+  http.Client? _client;
+  StreamSubscription? _subscription;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutExpo));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
-    _controller.forward();
+    _connectSSE();
+  }
+
+  void _connectSSE() async {
+    _client = http.Client();
+    try {
+      final request = http.Request('GET', Uri.parse('/api/mesh/stream'));
+      final response = await _client!.send(request);
+
+      if (response.statusCode == 200) {
+        _subscription = response.stream
+            .transform(utf8.decoder)
+            .transform(const LineSplitter())
+            .listen((line) {
+          if (line.startsWith('data: ')) {
+            final data = line.substring(6);
+            setState(() {
+              _events.insert(0, data);
+              if (_events.length > 50) _events.removeLast();
+            });
+          }
+        }, onError: (e) {
+          _handleError();
+        }, onDone: () {
+          _handleError();
+        });
+      } else {
+        _handleError();
+      }
+    } catch (e) {
+      _handleError();
+    }
+  }
+
+  void _handleError() {
+    if (mounted) {
+      setState(() {
+        _isLocalOnly = true;
+      });
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _subscription?.cancel();
+    _client?.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final timeStr =
-        '${widget.message.timestamp.hour.toString().padLeft(2, '0')}:${widget.message.timestamp.minute.toString().padLeft(2, '0')}:${widget.message.timestamp.second.toString().padLeft(2, '0')}';
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(<double>[
-                  1.168, -0.153, -0.015, 0, 0,
-                  -0.046, 1.061, -0.015, 0, 0,
-                  -0.046, -0.152, 1.198, 0, 0,
-                  0, 0, 0, 1, 0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'MeshLiveFeed',
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white70,
                 ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+              if (_isLocalOnly)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Local Only',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              else
+                Row(
                   children: [
-                    Text(
-                      timeStr,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.4),
-                        fontSize: 12,
-                        fontFamily: 'monospace',
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.greenAccent,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.message.agentName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Outfit',
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.message.action,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.8),
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ],
+                    const SizedBox(width: 4),
+                    Text(
+                      'Live',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.greenAccent,
                       ),
                     ),
                   ],
                 ),
-              ),
-            ),
+            ],
           ),
-        ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: _events.isEmpty
+                ? Center(
+                    child: Text(
+                      _isLocalOnly ? 'No cloud metrics available' : 'Waiting for events...',
+                      style: GoogleFonts.inter(
+                        color: Colors.white54,
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: _events.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          _events[index],
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 14,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
