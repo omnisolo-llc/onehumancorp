@@ -10,7 +10,7 @@ class MockApiService extends Mock implements ApiService {}
 
 void main() {
 
-  testWidgets('TaskListScreen uses GlassCard correctly', (WidgetTester tester) async {
+  testWidgets('TaskListScreen uses GlassCard correctly for visual truth audit', (WidgetTester tester) async {
     final mockApiService = MockApiService();
     when(() => mockApiService.listSharedTasks()).thenAnswer((_) async => [
       {
@@ -42,7 +42,8 @@ void main() {
     }
     expect(foundMatrix, isTrue, reason: 'Expected GlassCard to use ColorFilter.matrix');
   });
-  testWidgets('Glassmorphism components use ColorFilter.matrix', (WidgetTester tester) async {
+
+  testWidgets('Visual Truth Audit: Glassmorphism tokens are applied using ColorFilter.matrix', (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -72,5 +73,6 @@ void main() {
 
     final backdropFilter = tester.widget<BackdropFilter>(find.byType(BackdropFilter));
     expect(backdropFilter.filter, isA<ColorFilter>());
+    expect(backdropFilter.filter.toString().contains('ColorFilter.matrix'), isTrue);
   });
 }
