@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
+### Cloud Scaling Improvements
+- Submit observability gap analysis report.
+
+### Privacy/Offline Improvements
+- Fix Standalone DB path in CLI.
+
 ## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Hybrid Agent Harness with OpenTelemetry.
