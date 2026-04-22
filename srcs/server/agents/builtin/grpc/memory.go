@@ -15,13 +15,18 @@ package agentgrpc
 //     by service.go.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/agents/memdir"
 )
 
 const (
@@ -53,10 +58,62 @@ func newMemoryStore(capacity int) *MemoryStore {
 	if capacity <= 0 {
 		capacity = memoryRingSize
 	}
-	return &MemoryStore{
+	s := &MemoryStore{
 		entries: make([]MemoryEntry, 0, capacity),
 		cap:     capacity,
 	}
+	// In Standalone mode, load existing memories from disk.
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		s.LoadFromDisk()
+	}
+	return s
+}
+
+// LoadFromDisk populates the MemoryStore from the local MemDir.
+func (s *MemoryStore) LoadFromDisk() {
+	cwd, _ := os.Getwd()
+	baseDir := filepath.Join(cwd, ".ohc", "memory")
+	s.loadFromNamespaces(baseDir, []string{"auto", "team"})
+}
+
+func (s *MemoryStore) loadFromNamespaces(baseDir string, namespaces []string) {
+	var allEntries []MemoryEntry
+
+	for _, ns := range namespaces {
+		dir := filepath.Join(baseDir, ns)
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+
+		for _, e := range entries {
+			if !e.IsDir() && strings.HasSuffix(e.Name(), ".json") {
+				path := filepath.Join(dir, e.Name())
+				data, err := os.ReadFile(path)
+				if err != nil {
+					continue
+				}
+				var entry MemoryEntry
+				if err := json.Unmarshal(data, &entry); err == nil {
+					allEntries = append(allEntries, entry)
+				}
+			}
+		}
+	}
+
+	// Sort all collected entries by CompletedAt time (oldest first for the ring buffer).
+	sort.Slice(allEntries, func(i, j int) bool {
+		return allEntries[i].CompletedAt.Before(allEntries[j].CompletedAt)
+	})
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Keep only the last 'cap' entries.
+	if len(allEntries) > s.cap {
+		allEntries = allEntries[len(allEntries)-s.cap:]
+	}
+	s.entries = allEntries
 }
 
 // defaultMemoryStore is the process-level store.
@@ -75,6 +132,26 @@ func (s *MemoryStore) Write(e MemoryEntry) {
 	}
 	s.entries = append(s.entries, e)
 	s.mu.Unlock()
+
+	// Persist to Local Memory Directory (MemDir) in Standalone Mode.
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		go func() {
+			cwd, _ := os.Getwd()
+			baseDir := filepath.Join(cwd, ".ohc", "memory")
+			fb := memdir.NewFileBasedMemory(baseDir)
+			data, err := json.MarshalIndent(e, "", "  ")
+			if err != nil {
+				slog.Warn("memory: failed to marshal for MemDir", "err", err)
+				return
+			}
+			// Use "auto" namespace for automatic memory persistence.
+			namespace := "auto"
+			key := fmt.Sprintf("%s.json", sanitizeID(e.TaskID))
+			if err := fb.Write(context.Background(), namespace, key, data); err != nil {
+				slog.Warn("memory: failed to write to MemDir", "err", err)
+			}
+		}()
+	}
 
 	// Optionally publish to Redis/Valkey for cross-agent sharing.
 	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
@@ -154,4 +231,3 @@ func sanitizeID(id string) string {
 	}
 	return sb.String()
 }
-

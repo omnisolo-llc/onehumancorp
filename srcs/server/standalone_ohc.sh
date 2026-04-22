@@ -161,6 +161,9 @@ start_daemon() {
     return 0
   fi
 
+  # Provision local memory directories for Standalone Mode fallback
+  mkdir -p .ohc/memory/auto/ .ohc/memory/team/
+
   rm -f "${PID_FILE}" "${LOG_FILE}"
   cleanup_tmp_files
   touch "${LOG_FILE}" "${PID_FILE}"
