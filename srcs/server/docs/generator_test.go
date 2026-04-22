@@ -31,6 +31,12 @@ func TestPremiumDocBuilder(t *testing.T) {
 	if !strings.Contains(rendered, "graph TD;\n    A--&gt;B;") {
 		t.Errorf("Rendered document does not contain diagram code")
 	}
+	if !strings.Contains(rendered, "<div class=\"ohc-premium-card\">") {
+		t.Errorf("Rendered document missing premium card wrapper")
+	}
+	if !strings.Contains(rendered, "backdrop-filter: blur(20px)") {
+		t.Errorf("Rendered document missing premium css properties")
+	}
 }
 
 func TestNewArchitectureDocTemplate(t *testing.T) {
@@ -69,7 +75,5 @@ func TestXSSPrevention(t *testing.T) {
 	if strings.Contains(rendered, "<script>") {
 		t.Errorf("Rendered document is vulnerable to XSS: %s", rendered)
 	}
-	if strings.Contains(rendered, "<div") {
-		t.Errorf("Rendered document should be markdown-only: %s", rendered)
-	}
+
 }
