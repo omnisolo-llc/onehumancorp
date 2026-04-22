@@ -37,14 +37,14 @@ func TestSqliteQueue_EnqueueDequeue(t *testing.T) {
 	assert.NotEmpty(t, id)
 
 	// Test Dequeue
-	task, err := q.Dequeue(ctx)
+	task, err := q.Acquire(ctx)
 	require.NoError(t, err)
 	require.NotNil(t, task)
 	assert.Equal(t, id, task.ID)
 	assert.Equal(t, "work", task.Payload["job"])
 
 	// Empty Queue
-	task2, err := q.Dequeue(ctx)
+	task2, err := q.Acquire(ctx)
 	require.NoError(t, err)
 	assert.Nil(t, task2)
 
