@@ -2,22 +2,49 @@ package dashboard
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/onehumancorp/mono/srcs/server/billing"
+	"github.com/onehumancorp/mono/srcs/server/domain"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func TestKairosMesh_E2E_PublishSubscribe(t *testing.T) {
-	_, server, token := newTestServer(t)
+	org := domain.NewSoftwareCompany("org-1", "Acme Software", "Casey CEO", time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC))
+	hub := orchestration.NewHub()
+	defer hub.Close()
+	tracker := billing.NewTracker(billing.DefaultCatalog)
+
+	baseHandler := NewServer(org, hub, tracker)
+
+	wrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.TLS = &tls.ConnectionState{
+			PeerCertificates: []*x509.Certificate{{
+				URIs: []*url.URL{{Scheme: "spiffe"}},
+			}},
+		}
+		baseHandler.ServeHTTP(w, r)
+	})
+
+	server := httptest.NewServer(wrapper)
 	defer server.Close()
+
+	token := loginForTest(t, server.URL)
 
 	// 1. Establish WebSocket Subscription
 	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/api/kairos/mesh/subscribe?channel=e2e_test"
-	dialer := websocket.Dialer{}
+	dialer := websocket.Dialer{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+token)
 
