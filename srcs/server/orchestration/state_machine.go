@@ -3,7 +3,10 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
+
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/redis/rueidis"
@@ -26,7 +29,7 @@ const (
 )
 
 type TaskStateMachine struct {
-	dbProvider db.Provider
+	dbProvider    db.Provider
 	mutexProvider MutexProvider
 }
 
@@ -54,16 +57,20 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 	var currentState string
 	var parentTaskID *string
 	var workflowState *string
-	query := `SELECT status, parent_task_id, workflow_state FROM ohc_tasks WHERE id = $1`
+	var updatedAt time.Time
+	query := `SELECT status, parent_task_id, workflow_state, updated_at FROM ohc_tasks WHERE id = $1`
 	if !sm.dbProvider.IsSQLite() {
 		query += ` FOR UPDATE`
 	}
-	err = tx.QueryRow(ctx, query, taskID).Scan(&currentState, &parentTaskID, &workflowState)
+	err = tx.QueryRow(ctx, query, taskID).Scan(&currentState, &parentTaskID, &workflowState, &updatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to find task: %w", err)
 	}
 
+	var nextState string
+
 	if event == EventSubTaskCompleted {
+		nextState = TaskStateDone
 		_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateDone, taskID)
 		if err != nil {
 			return fmt.Errorf("failed to update subtask state: %w", err)
@@ -95,6 +102,7 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 		}
 
 	} else if event == EventTaskCompleted {
+		nextState = TaskStateDone
 		_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateDone, taskID)
 		if err != nil {
 			return fmt.Errorf("failed to update task state to done: %w", err)
@@ -129,11 +137,13 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 			}
 		}
 	} else if event == EventSubTaskFailed {
+		nextState = TaskStateFailed
 		_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, TaskStateFailed, taskID)
 		if err != nil {
 			return fmt.Errorf("failed to update task state: %w", err)
 		}
 	} else if event == EventDecompositionComplete {
+		nextState = TaskStateExecuting
 		workflowStateUpdate := `{"last_event": "DecompositionComplete"}`
 		_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, workflow_state = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3`, TaskStateExecuting, workflowStateUpdate, taskID)
 		if err != nil {
@@ -141,9 +151,13 @@ func (sm *TaskStateMachine) ProcessEvent(ctx context.Context, taskID string, eve
 		}
 	}
 
-	return tx.Commit(ctx)
+	err = tx.Commit(ctx)
+	if err == nil && nextState != "" && nextState != currentState && !updatedAt.IsZero() {
+		transition := strings.ToLower(currentState) + "_to_" + strings.ToLower(nextState)
+		telemetry.RecordAgentTransitionLatency(ctx, transition, time.Since(updatedAt).Seconds())
+	}
+	return err
 }
-
 
 // TransitionState changes the state of a task and checks dependencies.
 func (sm *TaskStateMachine) TransitionState(ctx context.Context, taskID string, newState string) error {
@@ -161,11 +175,23 @@ func (sm *TaskStateMachine) TransitionState(ctx context.Context, taskID string, 
 	}
 	defer tx.Rollback(ctx)
 
+	var currentState string
+	var updatedAt time.Time
+	err = tx.QueryRow(ctx, `SELECT status, updated_at FROM ohc_tasks WHERE id = $1`, taskID).Scan(&currentState, &updatedAt)
+	if err != nil && err.Error() != "sql: no rows in result set" {
+		return fmt.Errorf("failed to get current state: %w", err)
+	}
+
 	_, err = tx.Exec(ctx, `UPDATE ohc_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, newState, taskID)
 	if err != nil {
 		return fmt.Errorf("failed to transition state: %w", err)
 	}
-	return tx.Commit(ctx)
+	err = tx.Commit(ctx)
+	if err == nil && currentState != "" && currentState != newState && !updatedAt.IsZero() {
+		transition := strings.ToLower(currentState) + "_to_" + strings.ToLower(newState)
+		telemetry.RecordAgentTransitionLatency(ctx, transition, time.Since(updatedAt).Seconds())
+	}
+	return err
 }
 
 // CheckDependencies verifies if all prerequisites are met for a task.
