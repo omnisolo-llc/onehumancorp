@@ -1,15 +1,25 @@
-# KAIROS Orchestration: Unified Architecture
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;">
 
-This document serves as the final premium design doc synthesizing the OHC Hybrid AI OS Orchestration layer.
+# Master Design Doc: KAIROS AI OS Orchestration (Phase 4)
 
-## The KAIROS Triad
+## Problem Statement
+We need a final, premium Design Doc detailing how OHC will implement the AI OS features: Shared Task List, Teammate Mesh, and AutoDream pipelines.
+
+## Research Report
+The core architecture consists of three pillars:
+1. **Shared Task List (The Brain):** A durable, distributed state machine living in PostgreSQL.
+2. **Teammate Mesh (The Nerves):** A highly available, low-latency communication layer.
+3. **AutoDream (The Memory):** The long-term persistence layer.
+
+## Design Doc
+### The KAIROS Triad
 The absolute autonomy of the OHC Swarm rests on three pillars:
 
 1. **Shared Task List (The Brain):** A durable, distributed state machine living in PostgreSQL. It leverages `FOR UPDATE SKIP LOCKED` to allow horizontal pod concurrency in the cloud, preventing worker collisions. It degrades to SQLite transactions for standalone desktop use.
-2. **Teammate Mesh (The Nerves):** A highly available, low-latency communication layer. Using Redis Pub/Sub (`rueidis`), agents broadcast state changes, advertise capabilities, and stream events.
+2. **Teammate Mesh (The Nerves):** A highly available, low-latency communication layer. Using `CentrifugeNode` and Redis Pub/Sub (`rueidis`), agents broadcast state changes, advertise capabilities, and stream events.
 3. **AutoDream (The Memory):** The long-term persistence layer. Ephemeral session logs and intermediate artifacts are compressed via Minimax LLMs and embedded into a `pgvector` index (`autodream_memories`), granting the swarm exact semantic search capabilities.
 
-## Architecture Visualization
+### Architecture Visualization
 
 ```mermaid
 graph TD
@@ -18,8 +28,8 @@ graph TD
         A2[Worker Agent 2]
     end
 
-    subgraph Teammate Mesh
-        M[Mesh Hub Redis/Local]
+    subgraph Teammate Mesh (Redis/Centrifugo)
+        M[Mesh Hub]
     end
 
     subgraph KAIROS Orchestrator
@@ -42,15 +52,17 @@ graph TD
     class A1,A2,M,T,AD,V premium;
 ```
 
-## Aesthetic Core
+### Aesthetic Core
 This architectural consolidation fully conforms to the **Visual Excellence Mandate**. Any downstream UI interpreting this architecture MUST apply:
-`backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif;`
 
-# Problem Statement
-The OHC platform needs a unified architectural vision documented to consolidate the KAIROS features.
+```html
+<style>
+body {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+</style>
+```
 
-# Research Report
-All architectural phases have been successfully planned and synthesized in this master design doc.
-
-# Implementation Prompt
-No implementation required for this master doc.
+</div>
