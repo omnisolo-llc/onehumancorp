@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
-	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -71,7 +71,7 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.Memo
 	tm := &TaskManager{
 		db:           provider,
 		hub:          hub,
-		stateMachine: statemachine.NewStateMachine(provider, broadcast),
+		stateMachine: statemachine.NewStateMachine(provider, broadcast, nil),
 		autodream:    ad,
 	}
 
@@ -87,6 +87,10 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.Memo
 				}
 			}
 		}
+	}
+
+	if tm.redisClient != nil {
+		tm.stateMachine = statemachine.NewStateMachine(provider, broadcast, tm.redisClient)
 	}
 
 	// Fallback to SQLite queue if not using Redis
@@ -314,7 +318,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		if err != nil {
 			if rueidis.IsRedisNil(err) {
 				telemetry.RecordTaskClaimContention(ctx, "redis")
-					return nil, nil // Lock could not be acquired (task is locked)
+				return nil, nil // Lock could not be acquired (task is locked)
 			}
 			return nil, fmt.Errorf("failed to acquire distributed lock: %w", err)
 		}
@@ -337,16 +341,22 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	var fetchedTaskID string
 	var queryErr error
 	if tm.db.IsSQLite() {
-		// SQLite doesn't support UPDATE ... RETURNING with a LIMIT, so we use explicit two-step select-then-update within the transaction.
-		selectQuery := `
-			SELECT st.id
-			FROM shared_tasks st
-			WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
-			AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
-			ORDER BY st.priority ASC, st.created_at ASC
-			LIMIT 1
+		// SQLite doesn't support UPDATE ... RETURNING with a LIMIT in the outer query, so we use a subquery.
+		// We perform a dummy update to acquire the write lock efficiently and prevent race conditions.
+		updateQuery := `
+			UPDATE shared_tasks
+			SET status = status
+			WHERE id = (
+				SELECT st.id
+				FROM shared_tasks st
+				WHERE st.id = $1 AND st.organization_id = $2 AND st.status = 'PENDING' AND (st.ultraplan_phase IS NULL OR st.ultraplan_phase = '' OR st.ultraplan_phase = 'APPROVED') AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+				AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
+				ORDER BY st.priority ASC, st.created_at ASC
+				LIMIT 1
+			)
+			RETURNING id
 		`
-		queryErr = tx.QueryRow(ctx, selectQuery, taskID, claims.OrganizationID).Scan(&fetchedTaskID)
+		queryErr = tx.QueryRow(ctx, updateQuery, taskID, claims.OrganizationID).Scan(&fetchedTaskID)
 	} else {
 		// PostgreSQL with FOR UPDATE SKIP LOCKED
 		selectQuery := `
@@ -551,6 +561,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 	defer tx.Rollback(ctx)
 
+	_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = NULL WHERE id = $1", taskID)
 	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
@@ -772,7 +783,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		selectQuery := `
 			SELECT st.id
 			FROM shared_tasks st
-			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			WHERE st.organization_id = $1 AND (st.status = 'PENDING' OR (st.status = 'IN_PROGRESS' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)))
 			AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT $2
@@ -801,6 +812,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		}
 
 		for _, id := range taskIDs {
+			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
 			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
@@ -839,7 +851,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		selectQuery := `
 				SELECT st.id
 				FROM shared_tasks st
-				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+				WHERE st.organization_id = $1 AND (st.status = 'PENDING' OR (st.status = 'IN_PROGRESS' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)))
 				AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies::jsonb) AS d_id JOIN shared_tasks d ON d.id::text = d_id WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 				ORDER BY st.priority ASC, st.created_at ASC
 				LIMIT $2 FOR UPDATE SKIP LOCKED
@@ -865,6 +877,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		rows.Close()
 
 		for _, id := range taskIDs {
+			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
 			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
@@ -1083,12 +1096,17 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 
 	query := `
 		UPDATE shared_tasks
-		SET title = $1, status = $2, priority = $3, agent_id = $4, payload = $5, locked_until = $6, updated_at = CURRENT_TIMESTAMP
-		WHERE id = $7
+		SET title = $1, priority = $2, agent_id = $3, payload = $4, locked_until = $5, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $6
 	`
-	_, err = tx.Exec(ctx, query, task.Title, task.Status, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)
+	_, err = tx.Exec(ctx, query, task.Title, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)
 	if err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
+	}
+
+	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, task.ID, "SHARED_TASK", task.Status, task.AssignedAgentID, "Task updated via UpdateTask")
+	if err != nil {
+		return fmt.Errorf("failed to transition state: %w", err)
 	}
 
 	// Update dependencies
@@ -1103,6 +1121,10 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if broadcastFunc != nil {
+		broadcastFunc()
 	}
 
 	// Broadcast update
@@ -1238,4 +1260,5 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 
 	return nil
 }
+
 // added for Sub-Agent Orchestration Queue
