@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/lib/perf"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -43,14 +43,14 @@ var (
 // Produces no errors.
 // Has no side effects.
 type SIPDB struct {
-	db              db.Provider
-	orgID           string
-	ContextRoot     string
-	cachedGrounding string
-	groundingOnce   *sync.Once
-	cachedGroundErr error
-	redisClient     rueidis.Client
-	localCache      sync.Map
+	db               db.Provider
+	orgID            string
+	ContextRoot      string
+	cachedGrounding  string
+	groundingOnce    *sync.Once
+	cachedGroundErr  error
+	redisClient      rueidis.Client
+	localCache       sync.Map
 	cacheExpirations sync.Map
 }
 
@@ -143,7 +143,7 @@ func withSipRetry(ctx context.Context, op func() error) error {
 		}
 
 		backoff *= 2
-		if backoff > 100 * time.Millisecond {
+		if backoff > 100*time.Millisecond {
 			backoff = 100 * time.Millisecond
 		}
 	}
@@ -716,16 +716,30 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		// 1. Mark stagnant PENDING missions as STUCK after 1 hour to trigger triage visibility
-		_, err := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2", stuckThreshold, s.orgID)
-		if err != nil {
-			return err
+		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
+		if err == nil {
+			for rows.Next() {
+				var id, prevStatus string
+				var prevTime time.Time
+				if rows.Scan(&id, &prevStatus, &prevTime) == nil && !prevTime.IsZero() {
+					telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(prevStatus)+"_to_stuck", time.Since(prevTime).Seconds())
+				}
+			}
+			rows.Close()
 		}
 
 		// 2. Mark missions as FAILED if they exceed the absolute age threshold
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
-		_, err = s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2", failThreshold, s.orgID)
-		if err != nil {
-			return err
+		rowsFail, errFail := s.db.Query(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", failThreshold, s.orgID)
+		if errFail == nil {
+			for rowsFail.Next() {
+				var id, prevStatus string
+				var prevTime time.Time
+				if rowsFail.Scan(&id, &prevStatus, &prevTime) == nil && !prevTime.IsZero() {
+					telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(prevStatus)+"_to_failed", time.Since(prevTime).Seconds())
+				}
+			}
+			rowsFail.Close()
 		}
 
 		// 3. Remove COMPLETED, or very old FAILED missions
@@ -1095,7 +1109,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 	}
 
 	telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
-	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize) // added for issue 4365
+	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)   // added for issue 4365
 
 	// Delete successfully synced records
 	err = withSipRetry(ctx, func() error {
@@ -1216,7 +1230,7 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 							syncedCount++
 							mu.Unlock()
 							telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
-							telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize) // added for issue 4365
+							telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)   // added for issue 4365
 						}
 						resp.Body.Close()
 					}
