@@ -1,3 +1,7 @@
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Business Setup Onboarding Overhaul for streamlined multi-tenant SaaS scaling.
+- Privacy/Offline (Standalone): Enhances Day One onboarding user privacy and local setup capabilities.
+
 # Release Notes
 
 

@@ -1,3 +1,10 @@
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Business Setup Onboarding Overhaul for streamlined multi-tenant SaaS scaling.
+
+### Privacy/Offline Improvements
+- Enhances Day One onboarding user privacy and local setup capabilities.
+
 # OHC Hybrid Agentic OS - Changelog
 
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
