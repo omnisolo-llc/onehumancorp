@@ -24,7 +24,7 @@ func NewBwrapRunner(validator *ASTValidator) *BwrapRunner {
 
 // GetBwrapArgs generates the bwrap arguments for a given command.
 // We extract this to make it testable.
-func (r *BwrapRunner) GetBwrapArgs(command string, policy *Policy) []string {
+func (r *BwrapRunner) GetBwrapArgs(command string, policy *Policy, socketPath string) []string {
 	args := []string{
 		"--unshare-pid",
 		"--unshare-uts",
@@ -57,7 +57,12 @@ func (r *BwrapRunner) GetBwrapArgs(command string, policy *Policy) []string {
 	}
 
 	// Using socat Unix Socket proxy to strictly control network egress
-	args = append(args, "--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock")
+	if socketPath != "" {
+		args = append(args, "--bind", socketPath, socketPath)
+	} else {
+		// Fallback for backwards compatibility if not provided
+		args = append(args, "--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock")
+	}
 	args = append(args, "--", "bash", "-c", command)
 
 	return args
@@ -65,16 +70,16 @@ func (r *BwrapRunner) GetBwrapArgs(command string, policy *Policy) []string {
 
 // Execute runs the command in a bwrap sandbox after AST validation.
 func (r *BwrapRunner) Execute(ctx context.Context, command string) (Result, error) {
-	return r.ExecuteWithPolicy(ctx, command, nil)
+	return r.ExecuteWithPolicy(ctx, command, nil, "")
 }
 
 // ExecuteWithPolicy runs the command with a specific policy.
-func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, policy *Policy) (Result, error) {
+func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, policy *Policy, socketPath string) (Result, error) {
 	if err := r.validator.Validate(ctx, command); err != nil {
 		return Result{}, fmt.Errorf("command validation failed: %w", err)
 	}
 
-	bwrapArgs := r.GetBwrapArgs(command, policy)
+	bwrapArgs := r.GetBwrapArgs(command, policy, socketPath)
 	cmd := exec.CommandContext(ctx, "bwrap", bwrapArgs...)
 
 	var stdout, stderr bytes.Buffer
@@ -86,16 +91,16 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
-            // When bwrap policy fails or bwrap itself fails to set up the sandbox
-            // we should count that as a violation. If it's just bash failing, we shouldn't.
-            // Bwrap often exits with 1 if it fails to set up, or passes through the exit code.
-            // We'll treat exit code 1 as a potential setup violation since we can't easily distinguish
-            // unless we parse stderr.
-            if exitCode == 1 && bytes.Contains(stderr.Bytes(), []byte("bwrap:")) {
-                violationCount.Add(ctx, 1)
-            }
+			// When bwrap policy fails or bwrap itself fails to set up the sandbox
+			// we should count that as a violation. If it's just bash failing, we shouldn't.
+			// Bwrap often exits with 1 if it fails to set up, or passes through the exit code.
+			// We'll treat exit code 1 as a potential setup violation since we can't easily distinguish
+			// unless we parse stderr.
+			if exitCode == 1 && bytes.Contains(stderr.Bytes(), []byte("bwrap:")) {
+				violationCount.Add(ctx, 1)
+			}
 		} else {
-            // Infrastructure error launching bwrap process
+			// Infrastructure error launching bwrap process
 			return Result{}, fmt.Errorf("failed to run bwrap: %w", err)
 		}
 	}

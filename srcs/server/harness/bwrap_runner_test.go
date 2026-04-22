@@ -10,7 +10,7 @@ import (
 func TestBwrapRunnerArguments(t *testing.T) {
 	runner := NewBwrapRunner(nil)
 	command := `echo "hello world"`
-	args := runner.GetBwrapArgs(command, nil)
+	args := runner.GetBwrapArgs(command, nil, "")
 
 	expectedArgs := []string{
 		"--unshare-pid",
@@ -36,11 +36,11 @@ func TestBwrapRunnerArgumentsWithPolicy(t *testing.T) {
 	runner := NewBwrapRunner(nil)
 	command := `echo "hello world"`
 	policy := &Policy{
-		AllowNetwork: true,
-		AllowedPaths: []string{"/home/user"},
+		AllowNetwork:  true,
+		AllowedPaths:  []string{"/home/user"},
 		ReadOnlyPaths: []string{"/etc/config"},
 	}
-	args := runner.GetBwrapArgs(command, policy)
+	args := runner.GetBwrapArgs(command, policy, "")
 
 	// Note: We don't check for --unshare-net
 	expectedArgs := []string{

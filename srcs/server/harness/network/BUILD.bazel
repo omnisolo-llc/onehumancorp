@@ -1,0 +1,17 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "network",
+    srcs = [
+        "bridge.go",
+        "proxy.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/harness/network",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "network_test",
+    srcs = ["bridge_test.go"],
+    embed = [":network"],
+)
