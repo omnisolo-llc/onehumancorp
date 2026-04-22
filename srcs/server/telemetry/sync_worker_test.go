@@ -11,7 +11,7 @@ func TestStartSyncDaemon(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	syncCount := 0
-	syncFunc := func(c context.Context, endpoint string) (int, error) {
+	syncFunc := func(c context.Context, endpoint string, batchSize int) (int, error) {
 		syncCount++
 		if syncCount == 1 {
 			return 500, nil // First call simulates a full batch
@@ -41,7 +41,7 @@ func TestStartSyncDaemon_ContextCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	syncCount := 0
-	syncFunc := func(c context.Context, endpoint string) (int, error) {
+	syncFunc := func(c context.Context, endpoint string, batchSize int) (int, error) {
 		syncCount++
 		return 10, nil
 	}
