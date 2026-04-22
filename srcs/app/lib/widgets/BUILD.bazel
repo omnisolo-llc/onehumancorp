@@ -1,4 +1,4 @@
-load("@rules_flutter//flutter:defs.bzl", "flutter_library")
+load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
 
 package(default_visibility = ["//srcs/app:__subpackages__"])
 
@@ -55,4 +55,22 @@ alias(
 alias(
     name = "sync_escalator_widget",
     actual = ":widgets_lib",
+)
+
+WIDGET_TESTS = glob(["*_test.dart"])
+
+[
+    flutter_test(
+        name = file.replace(".dart", ""),
+        srcs = [file],
+        embed = [":widgets_lib"],
+        test_files = [file],
+    )
+    for file in WIDGET_TESTS
+]
+
+test_suite(
+    name = "all_tests",
+    tags = ["manual"],
+    tests = [":" + file.replace(".dart", "") for file in WIDGET_TESTS],
 )

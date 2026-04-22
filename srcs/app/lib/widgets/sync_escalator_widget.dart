@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
-class SyncEscalatorWidget extends StatefulWidget {
+class SyncEscalatorWidget extends StatelessWidget {
   final bool isCloudEscalated;
 
   const SyncEscalatorWidget({
@@ -9,11 +9,6 @@ class SyncEscalatorWidget extends StatefulWidget {
     this.isCloudEscalated = false,
   }) : super(key: key);
 
-  @override
-  State<SyncEscalatorWidget> createState() => _SyncEscalatorWidgetState();
-}
-
-class _SyncEscalatorWidgetState extends State<SyncEscalatorWidget> {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
@@ -56,7 +51,7 @@ class _SyncEscalatorWidgetState extends State<SyncEscalatorWidget> {
               ),
               const SizedBox(height: 16),
               Text(
-                widget.isCloudEscalated
+                isCloudEscalated
                     ? 'Workload escalated to cloud swarm for massively parallel computation.'
                     : 'Running privately and locally via SQLite.',
                 style: const TextStyle(
@@ -73,9 +68,9 @@ class _SyncEscalatorWidgetState extends State<SyncEscalatorWidget> {
   }
 
   Widget _buildStatusBadge() {
-    final color = widget.isCloudEscalated ? Colors.blueAccent : Colors.greenAccent;
-    final text = widget.isCloudEscalated ? 'CLOUD SWARM' : 'LOCAL ONLY';
-    final icon = widget.isCloudEscalated ? Icons.cloud_queue : Icons.lock_outline;
+    final color = isCloudEscalated ? Colors.blueAccent : Colors.greenAccent;
+    final text = isCloudEscalated ? 'CLOUD SWARM' : 'LOCAL ONLY';
+    final icon = isCloudEscalated ? Icons.cloud_queue : Icons.lock_outline;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
