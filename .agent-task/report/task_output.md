@@ -1,39 +1,57 @@
-# Issue Brief: Implement Telemetry Pipeline Contention Optimization
+# OHC Architecture Research Report: Closing Strategic Feature Gaps
 
-## Problem Statement
-The current hybrid mode telemetry architecture generates significant network contention when syncing telemetry buffer events. In Standalone Mode, local SQLite writes perform well, but when transitioning to Cloud-Native operations, the `mcp_sync_worker` aggressively pushes bulk telemetry metrics and OpenTelemetry traces to the central `ohc-sip` cloud database. This process saturates local I/O and creates substantial lock contention in the centralized Redis and Postgres instances (especially around the `ohc_autodream_memories` synchronization). The user needs this solved without altering the platform's core multi-tenant / standalone hybrid capability.
+## Executive Summary
+This research report identifies and designs three critical architectural additions to the OneHumanCorp (OHC) platform to achieve parity with competitors (Shopify, Wix) while doubling down on the "AI-as-Infrastructure" and "Mobile-First" mandates.
 
-## Research Report
-- **Review of Architecture**: Telemetry events map back to the Swarm's "Shared Task List" operations. Wait times for agent state transitions (via `ohc_kairos_transition_duration_seconds`) spike when the underlying DB transactions in `statemachine.go` and `queue_manager.go` are blocked by telemetry table syncs.
-- **Log Review**: High counts of `context deadline exceeded` in `sync_daemon.go` during peak Swarm operation.
-- **Data Gap**: A detailed breakdown of Cloud vs. Standalone performance reveals that local processing uses simple transactions, whereas the central sync pipeline attempts full table delta synchronization simultaneously across pods.
+The identified gaps — **Storefront Editing**, **Unified Fulfillment**, and **Legal Compliance** — are the primary blockers for the target personas (Maya, Carlos, Priya, Fatima).
 
-## Design Doc
-### Proposed Solution: Hybrid Telemetry Throttling & Batching
-1. **Adaptive Batching Window**: Introduce an adaptive backoff and chunk size modifier in `srcs/server/telemetry/sync_worker.go`. During high lock contention (detected via `ohc_kairos_transitions_total` error ratios), the worker should shrink payload size and increase `sleep` duration.
-2. **Postgres LWW Handling**: When pushing to PostgreSQL, instead of an unconditional `INSERT/UPDATE`, the sync worker must use CRDT Last-Writer-Wins logic with a conditional update (`WHERE excluded.updated_at > [table].updated_at`) to ensure late arriving standalone telemetry does not overwrite more recent Cloud mode agent states.
-3. **Redis Pub/Sub Coordination**: Use the `Teammate Mesh` to broadcast `TELEMETRY_SYNC_START` and `TELEMETRY_SYNC_STOP` events. This allows agents to pause non-critical background data processing while heavy syncs occur.
+---
 
-## Implementation Prompt
-- Refactor `srcs/server/telemetry/sync_worker.go` to implement an adaptive batch size algorithm based on previous payload duration and error rates.
-- Update `srcs/server/telemetry/telemetry_bridge.go` to use the `WHERE excluded.updated_at` LWW conditional check when writing to the remote store.
-- Add OpenTelemetry metrics `ohc_telemetry_sync_backoff_duration_seconds` (Histogram) and `ohc_telemetry_batch_size` (Gauge) to track the efficacy of the new throttling mechanism.
-- Ensure the Grafana dashboard (`hybrid-telemetry.json`) is updated to include these new metrics.
+## 1. [Frontend] Mobile-First Storefront & Catalog Editor
+**File:** `docs/technical/research/[frontend]_mobile_first_storefront_editor.md`
 
-## Priority
-P1
+### Research Findings
+Current e-commerce editors are desktop-centric and rely on complex grid systems. OHC's advantage is an **AI-Assisted Conversation** that designs the storefront invisibly.
 
-## Estimated Scope
-Medium
+### Key Architecture
+- **Marketing AI Agent**: Uses Vision LLMs to extract product details from photos and auto-suggest layouts.
+- **Glassmorphic Preview**: Real-time rendering of premium UI tokens (20px blur, 200% saturation) for immediate user feedback.
 
-```yaml
-issue_title: "[telemetry] Hybrid Telemetry Synchronization Contention Optimization"
-issue_priority: "P1"
-issue_description: "Implement adaptive batching and LWW conflict resolution in the telemetry sync daemon to prevent database lock contention during standalone-to-cloud handoffs."
-issue_todo_list:
-  - [ ] Implement adaptive backoff in sync_worker.go
-  - [ ] Implement LWW conflict resolution in telemetry_bridge.go
-  - [ ] Add ohc_telemetry_sync_backoff_duration_seconds and ohc_telemetry_batch_size metrics
-  - [ ] Update hybrid-telemetry.json Grafana dashboard
-issue_label: ["observability", "performance", "high-impact"]
-```
+---
+
+## 2. [Backend] Unified Order Fulfillment & Operations Orchestration
+**File:** `docs/technical/research/[backend]_unified_fulfillment_orchestration.md`
+
+### Research Findings
+Persona needs are modal-specific (Food vs. Service vs. Physical). A unified state machine is required to orchestrate these different lifecycles reliably.
+
+### Key Architecture
+- **Unified State Machine**: A robust gRPC-driven engine that handles `PLACED -> PROCESSING -> FULFILLED` across all modalities.
+- **Operations Department ("The Manager")**: An AI agent that monitors for "stuck" orders and proactively triages delays.
+
+---
+
+## 3. [AI] Protector: Legal & Compliance Suite
+**File:** `docs/technical/research/[ai]_protector_legal_compliance_suite.md`
+
+### Research Findings
+Legal jargon is a major friction point for first-time founders. Automating policy generation based on business context (industry/location) removes this barrier.
+
+### Key Architecture
+- **Legal & Compliance Department ("The Protector")**: An AI agent that interviews the owner and generates tailored Terms, Privacy, and Refund policies.
+- **Risk Scanner**: Proactive monitoring of product descriptions for high-risk or non-compliant claims.
+
+---
+
+## Proposed Next Steps
+1. **P0: Implement Storefront Editor Prototype**: Focus on the Maya (Baker) CUJ to prove the 10-minute "Idea -> Live" promise.
+2. **P1: Operations Service Scaffolding**: Implement the base state machine and `order_history` audit logs.
+3. **P2: Protector Interview Flow**: Integrate the Legal & Compliance interview into the `SetupWizardScreen`.
+
+---
+
+## Verification Summary
+- [x] Research briefs created for all three identified gaps.
+- [x] Mermaid diagrams included for architectural clarity.
+- [x] Persona-specific journeys mapped to design decisions.
+- [x] Bazel build stability verified.
