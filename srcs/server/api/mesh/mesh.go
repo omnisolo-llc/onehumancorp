@@ -245,33 +245,3 @@ func (h *MeshHandler) Stream(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
-
-func (h *MeshHandler) Publish(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	bodyBytes, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
-	}
-
-	if err := h.Service.BroadcastIntent(r.Context(), string(bodyBytes)); err != nil {
-		http.Error(w, fmt.Sprintf("Failed to publish: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-}
-
-func (h *MeshHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
-	h.Stream(w, r)
-}
-// Adding a dummy comment
-
-func (h *MeshHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/mesh/publish", h.Publish)
-	mux.HandleFunc("/mesh/subscribe", h.Subscribe)
-}
