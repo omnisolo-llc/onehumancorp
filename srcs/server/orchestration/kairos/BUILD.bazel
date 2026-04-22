@@ -4,6 +4,7 @@ go_library(
     name = "kairos",
     srcs = [
         "kairos_shared_task.go",
+        "mutex_provider.go",
         "mesh.go",
         "mesh_api.go",
         "metrics.go",
@@ -12,9 +13,10 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
-        "@com_github_gorilla_websocket//:websocket",
+                "@com_github_gorilla_websocket//:websocket",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_google_uuid//:uuid",
     ],
 )
 
