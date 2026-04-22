@@ -810,17 +810,17 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 	var checklist []map[string]interface{}
 	if isStandalone {
 		checklist = append(checklist, map[string]interface{}{
-			"id": "sqlite_db", "label": "SQLite Database", "status": "ok", "description": "Local standalone data storage",
+			"id": "sqlite_db", "label": "SQLite Database", "status": "ok", "description": "Local Workmode data storage",
 		})
 		checklist = append(checklist, map[string]interface{}{
-			"id": "sqlite_standalone", "label": "SQLite Standalone Enabled", "status": "ok", "description": "Standalone Desktop Mode Active",
+			"id": "sqlite_standalone", "label": "SQLite Standalone Enabled", "status": "ok", "description": "Local Workmode Active",
 		})
 	} else {
 		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_db", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud-Native data storage",
+			"id": "postgres_db", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud Inframode data storage",
 		})
 		checklist = append(checklist, map[string]interface{}{
-			"id": "redis_cache", "label": "Redis Available", "status": "ok", "description": "Cloud-Native distributed cache",
+			"id": "redis_cache", "label": "Redis Available", "status": "ok", "description": "Cloud Inframode distributed cache",
 		})
 	}
 
