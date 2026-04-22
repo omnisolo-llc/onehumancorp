@@ -9,7 +9,6 @@ import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
-  final bool obscurePassword;
   final int step;
   final String companyName;
   final String industry;
@@ -34,7 +33,6 @@ class BusinessSetupState {
     this.adminPassword = '',
     this.isLoading = false,
     this.errorMessage,
-    this.obscurePassword = true,
   });
 
   BusinessSetupState copyWith({
@@ -49,7 +47,6 @@ class BusinessSetupState {
     String? adminPassword,
     bool? isLoading,
     String? errorMessage,
-    bool? obscurePassword,
   }) {
     return BusinessSetupState(
       step: step ?? this.step,
@@ -63,7 +60,6 @@ class BusinessSetupState {
       adminPassword: adminPassword ?? this.adminPassword,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
-      obscurePassword: obscurePassword ?? this.obscurePassword,
     );
   }
 }
@@ -100,7 +96,6 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminName(String name) => state = state.copyWith(adminName: name);
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
-  void toggleObscurePassword() => state = state.copyWith(obscurePassword: !state.obscurePassword);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authStateProvider).valueOrNull;
@@ -153,11 +148,18 @@ final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSe
   return BusinessSetupNotifier();
 });
 
-class BusinessSetupWizardScreen extends ConsumerWidget {
+class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
   const BusinessSetupWizardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BusinessSetupWizardScreen> createState() => _BusinessSetupWizardScreenState();
+}
+
+class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
+  bool _obscurePassword = true;
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(businessSetupProvider);
     final notifier = ref.read(businessSetupProvider.notifier);
     final clientSettings = ref.watch(clientSettingsProvider).valueOrNull;
@@ -284,16 +286,18 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                             ),
                             const SizedBox(height: 16),
                             TextField(
-                              obscureText: state.obscurePassword,
+                              obscureText: _obscurePassword,
                               onChanged: notifier.updateAdminPassword,
                               style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
                               decoration: InputDecoration(
                                 labelText: 'Admin Password',
                                 labelStyle: const TextStyle(color: Colors.white70),
                                 suffixIcon: IconButton(
-                                  icon: Icon(state.obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+                                  icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
                                   onPressed: () {
-                                    notifier.toggleObscurePassword();
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
                                   },
                                 ),
                               ),
