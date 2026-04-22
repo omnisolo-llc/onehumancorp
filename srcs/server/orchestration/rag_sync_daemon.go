@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type RagSyncDaemon struct {
@@ -75,14 +76,16 @@ func (d *RagSyncDaemon) ProcessSync(ctx context.Context) {
 	}
 	defer tx.Rollback(ctx)
 
-	query := "SELECT memory_id, context FROM swarm_memory_embeddings LIMIT 500"
+	query := "SELECT memory_id, context FROM swarm_memory_embeddings WHERE sync_status = 'pending' OR sync_status IS NULL LIMIT 500"
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
+		telemetry.RecordRAGSyncError(ctx, err.Error())
 		return
 	}
 	defer rows.Close()
 
 	var records []RagSyncRecord
+	var ids []string
 	for rows.Next() {
 		var id, contextData string
 		if err := rows.Scan(&id, &contextData); err == nil {
@@ -91,6 +94,7 @@ func (d *RagSyncDaemon) ProcessSync(ctx context.Context) {
 				Context: contextData,
 				Status:  "pending",
 			})
+			ids = append(ids, id)
 		}
 	}
 
@@ -101,12 +105,14 @@ func (d *RagSyncDaemon) ProcessSync(ctx context.Context) {
 	payload := map[string]interface{}{"records": records}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
+		telemetry.RecordRAGSyncError(ctx, err.Error())
 		return
 	}
 
 	syncEndpoint := fmt.Sprintf("%s/api/mcp/rag/sync", d.cloudAPIURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
+		telemetry.RecordRAGSyncError(ctx, err.Error())
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -117,12 +123,38 @@ func (d *RagSyncDaemon) ProcessSync(ctx context.Context) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
+		telemetry.RecordRAGSyncError(ctx, err.Error())
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		// Treat as synced, we could delete or mark them if needed
+		if len(ids) > 0 {
+			placeholders := ""
+			args := make([]interface{}, len(ids))
+			for i, id := range ids {
+				if i > 0 {
+					placeholders += ","
+				}
+				placeholders += "?"
+				args[i] = id
+			}
+			updateQuery := fmt.Sprintf("UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_at = CURRENT_TIMESTAMP WHERE memory_id IN (%s)", placeholders)
+			_, err := tx.Exec(ctx, updateQuery, args...)
+			if err != nil {
+				slog.Error("rag_sync_daemon: failed to update sync_status", "error", err)
+				telemetry.RecordRAGSyncError(ctx, err.Error())
+				return
+			}
+		}
+		if err := tx.Commit(ctx); err != nil {
+			slog.Error("rag_sync_daemon: failed to commit transaction", "error", err)
+			telemetry.RecordRAGSyncError(ctx, err.Error())
+			return
+		}
+		telemetry.RecordRAGRecordsSynced(ctx, int64(len(records)))
 		slog.Debug("rag_sync_daemon: successfully synced records")
+	} else {
+		telemetry.RecordRAGSyncError(ctx, fmt.Sprintf("unexpected status code: %d", resp.StatusCode))
 	}
 }
