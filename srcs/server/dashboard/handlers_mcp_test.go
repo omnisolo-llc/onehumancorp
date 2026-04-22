@@ -11,7 +11,10 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
-)
+
+	"encoding/json"
+	"bytes"
+	"context")
 
 func TestHandleMCPInvokeCoverage(t *testing.T) {
 	org := domain.NewSoftwareCompany("test-org", "Test", "CEO", time.Now())
@@ -404,4 +407,97 @@ func TestHandleHybridSyncMissions(t *testing.T) {
 			t.Errorf("expected 'synced_count\":0', got %s", w.Body.String())
 		}
 	})
+}
+
+
+func TestHandleSyncRAG_ConflictResolution(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test Org", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	defer hub.Close()
+
+	// Create mock SIPDB
+	db, err := orchestration.NewSIPDB("file::memory:?cache=shared")
+	if err != nil {
+		t.Fatalf("failed to init sipdb: %v", err)
+	}
+	hub.SetSIPDB(db)
+
+	srv := &Server{org: org, hub: hub}
+
+	payload := map[string]interface{}{
+		"memory_id":        "ctx-conflict-1",
+		"context":          "some data",
+		"source_plugin":    "test-plugin",
+		"vector_embedding": []float64{0.1, 0.2},
+	}
+	body, _ := json.Marshal(payload)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/orchestration/sync/rag", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
+	rr := httptest.NewRecorder()
+
+	srv.handleSyncRAG(rr, req)
+
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("expected 409 Conflict, got %d", rr.Code)
+	}
+
+	// Verify memory was still stored correctly despite the conflict header
+	memories, err := db.GetEpisodicMemoriesByPlugin(context.Background(), "test-plugin")
+	if err != nil || len(memories) == 0 {
+		t.Fatalf("memory not found in sipdb")
+	}
+	if memories[0].MemoryID != "ctx-conflict-1" {
+		t.Errorf("expected memory ID ctx-conflict-1, got %v", memories[0].MemoryID)
+	}
+}
+
+func TestHandleSyncRAG_Success(t *testing.T) {
+	org := domain.NewSoftwareCompany("test-org", "Test Org", "CEO", time.Now())
+	hub := orchestration.NewHub()
+	defer hub.Close()
+
+	// Create mock SIPDB
+	db, err := orchestration.NewSIPDB("file::memory:?cache=shared")
+	if err != nil {
+		t.Fatalf("failed to init sipdb: %v", err)
+	}
+	hub.SetSIPDB(db)
+
+	srv := &Server{org: org, hub: hub}
+
+	payload := map[string]interface{}{
+		"memory_id":     "ctx-success-1",
+		"context":       "normal context",
+		"source_plugin": "test-plugin-success",
+	}
+	body, _ := json.Marshal(payload)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/orchestration/sync/rag", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+
+	srv.handleSyncRAG(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected 200 OK, got %d", rr.Code)
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp["status"] != "success" {
+		t.Errorf("expected status success, got %v", resp["status"])
+	}
+
+	// Verify it was stored
+	memories, err := db.GetEpisodicMemoriesByPlugin(context.Background(), "test-plugin-success")
+	if err != nil || len(memories) == 0 {
+		t.Fatalf("memory not found in sipdb")
+	}
+	if memories[0].MemoryID != "ctx-success-1" {
+		t.Errorf("expected memory ID ctx-success-1, got %v", memories[0].MemoryID)
+	}
 }
