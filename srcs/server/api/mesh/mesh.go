@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"io"
-		"github.com/gorilla/websocket"
 	"net/http"
+	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -22,12 +24,11 @@ var (
 	subscribeCount, _ = meter.Int64Counter("mesh.subscribe.count")
 )
 
-
 type MeshEvent struct {
-	AgentID string `json:"agent_id"`
-	Channel string `json:"channel"`
-	Action  string `json:"action"`
-	Status  string `json:"status"`
+	AgentID string                 `json:"agent_id"`
+	Channel string                 `json:"channel"`
+	Action  string                 `json:"action"`
+	Status  string                 `json:"status"`
 	Payload map[string]interface{} `json:"payload"`
 }
 
@@ -146,6 +147,20 @@ func (s *MemoryMeshService) Subscribe(ctx context.Context) (<-chan string, error
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			return true // Allow cross-origin for standalone mode
+		}
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		return u.Host == r.Host
+	},
 }
 
 type MeshHandler struct {

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"os"
 
 	"github.com/gorilla/websocket"
 )
@@ -77,7 +79,22 @@ func (api *MeshAPI) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Use standard upgrader check (default allows same-origin)
-	defaultUpgrader := websocket.Upgrader{}
+	defaultUpgrader := websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			if os.Getenv("OHC_STANDALONE") == "true" {
+				return true // Allow cross-origin for standalone mode
+			}
+			origin := r.Header.Get("Origin")
+			if origin == "" {
+				return true
+			}
+			u, err := url.Parse(origin)
+			if err != nil {
+				return false
+			}
+			return u.Host == r.Host
+		},
+	}
 
 	conn, err := defaultUpgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -113,8 +130,8 @@ func (api *MeshAPI) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			// Connection was closed by client, or read error
 			return
 		case <-r.Context().Done():
-		    // Connection was dropped at HTTP level
-		    return
+			// Connection was dropped at HTTP level
+			return
 		case msg, ok := <-sub:
 			if !ok {
 				return

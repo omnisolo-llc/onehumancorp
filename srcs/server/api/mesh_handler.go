@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"os"
 
 	"github.com/gorilla/websocket"
 	"github.com/onehumancorp/mono/srcs/server/mesh"
@@ -15,7 +17,18 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow cross-origin for the mesh UI/thin client
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			return true // Allow cross-origin for standalone mode
+		}
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		return u.Host == r.Host
 	},
 }
 
@@ -45,7 +58,7 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 	// For legacy support we can broadcast the raw payload to a default channel if not specified
 	// Alternatively, try to decode standard event format
 	var payload struct {
-		Channel string `json:"channel"`
+		Channel string          `json:"channel"`
 		Data    json.RawMessage `json:"data"` // Changed to json.RawMessage
 	}
 

@@ -10,7 +10,7 @@ cleanup_tmp_files() {
       find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
 
       # Prune legacy Linear artifacts if they leak into the standalone environment
-      find "${STATE_DIR}" -name "*linear*" -type f -delete 2>/dev/null || true
+      find "${STATE_DIR}" -iname "*linear*" -type f -delete 2>/dev/null || true
     fi
   fi
 }
@@ -210,9 +210,14 @@ stop_daemon() {
     sleep 0.25
   done
 
-  echo "warning: ohc did not stop gracefully"
-  # We do NOT remove the PID file if the process did not stop, preventing it from being orphaned and becoming a runaway.
-  return 1
+  echo "warning: ohc did not stop gracefully, forcing kill..."
+  kill -9 "${pid}" 2>/dev/null || true
+  pkill -9 -P "${pid}" 2>/dev/null || true
+
+  rm -f "${PID_FILE}" "${LOG_FILE}"
+  cleanup_tmp_files
+  echo "ohc forcefully stopped"
+  return 0
 }
 
 SCRIPT_DIR="$(resolve_script_dir)"

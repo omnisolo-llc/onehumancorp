@@ -9,6 +9,8 @@ import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"os"
 
 	"sync"
 	"time"
@@ -37,7 +39,18 @@ type MeshMessage struct {
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all for now
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			return true // Allow cross-origin for standalone mode
+		}
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			return true
+		}
+		u, err := url.Parse(origin)
+		if err != nil {
+			return false
+		}
+		return u.Host == r.Host
 	},
 }
 
