@@ -9,7 +9,34 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/push"
 	"go.opentelemetry.io/otel/metric"
+
+"database/sql"
+	"fmt"
+	"regexp"
+	"time"
 )
+
+var validTableName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
+// UpdateRemoteStoreWithLWW updates a remote Postgres store using LWW (Last-Writer-Wins) conflict resolution.
+// It uses an upsert query condition: WHERE excluded.updated_at > [table].updated_at
+func UpdateRemoteStoreWithLWW(ctx context.Context, db *sql.DB, tableName string, id string, payload string, updatedAt time.Time) error {
+	if !validTableName.MatchString(tableName) {
+		return fmt.Errorf("invalid table name: %s", tableName)
+	}
+
+	query := fmt.Sprintf(`
+		INSERT INTO "%s" (id, payload, updated_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (id) DO UPDATE
+		SET payload = excluded.payload, updated_at = excluded.updated_at
+		WHERE excluded.updated_at > "%s".updated_at
+	`, tableName, tableName)
+
+	_, err := db.ExecContext(ctx, query, id, payload, updatedAt)
+	return err
+}
+
 
 var (
 	bridgeMessagesSentTotal     metric.Int64Counter
