@@ -96,7 +96,7 @@ Chart.lock
 
 # Rust build artifacts
 /target/
-/.agent-task
+# /.agent-task
 site/
 
 # Android/Flutter local properties (auto-generated, machine-specific)
