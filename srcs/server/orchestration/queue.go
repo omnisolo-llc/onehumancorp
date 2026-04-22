@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
 
@@ -63,8 +64,16 @@ func (q *RedisTaskQueue) Enqueue(ctx context.Context, queueName string, payload 
 	cmd := q.client.B().Rpush().Key(queueName).Element(string(jobBytes)).Build()
 	err = q.client.Do(ctx, cmd).Error()
 	if err != nil {
+		if telemetry.BufferMetricFunc != nil {
+			_ = telemetry.BufferMetricFunc(ctx, "task.failed", "redis_enqueue_error")
+		}
 		return "", fmt.Errorf("failed to enqueue to redis: %w", err)
 	}
+
+	if telemetry.BufferMetricFunc != nil {
+		_ = telemetry.BufferMetricFunc(ctx, "task.enqueued", id)
+	}
+
 	return id, nil
 }
 
@@ -88,8 +97,16 @@ func (q *RedisTaskQueue) EnqueueDelayed(ctx context.Context, queueName string, p
 	cmd := q.client.B().Zadd().Key(delayedKey).ScoreMember().ScoreMember(float64(executeAt), string(jobBytes)).Build()
 	err = q.client.Do(ctx, cmd).Error()
 	if err != nil {
+		if telemetry.BufferMetricFunc != nil {
+			_ = telemetry.BufferMetricFunc(ctx, "task.failed", "redis_enqueue_delayed_error")
+		}
 		return "", fmt.Errorf("failed to enqueue delayed to redis: %w", err)
 	}
+
+	if telemetry.BufferMetricFunc != nil {
+		_ = telemetry.BufferMetricFunc(ctx, "task.enqueued", id)
+	}
+
 	return id, nil
 }
 
@@ -143,6 +160,9 @@ func (q *RedisTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTas
 
 func (q *RedisTaskQueue) Complete(ctx context.Context, queueName, taskID string) error {
 	// In a simple list-based queue, pop removes it, so completion is a no-op unless tracking active jobs.
+	if telemetry.BufferMetricFunc != nil {
+		_ = telemetry.BufferMetricFunc(ctx, "task.completed", taskID)
+	}
 	return nil
 }
 
@@ -197,7 +217,14 @@ func (q *SQLiteTaskQueue) EnqueueDelayed(ctx context.Context, queueName string, 
 	}
 
 	if err != nil {
+		if telemetry.BufferMetricFunc != nil {
+			_ = telemetry.BufferMetricFunc(ctx, "task.failed", "sqlite_enqueue_error")
+		}
 		return "", err
+	}
+
+	if telemetry.BufferMetricFunc != nil {
+		_ = telemetry.BufferMetricFunc(ctx, "task.enqueued", id)
 	}
 
 	return id, nil
@@ -257,6 +284,11 @@ func (q *SQLiteTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTa
 
 func (q *SQLiteTaskQueue) Complete(ctx context.Context, queueName, taskID string) error {
 	_, err := q.db.Exec(ctx, "DELETE FROM local_queue_jobs WHERE id = $1", taskID)
+	if err == nil && telemetry.BufferMetricFunc != nil {
+		_ = telemetry.BufferMetricFunc(ctx, "task.completed", taskID)
+	} else if err != nil && telemetry.BufferMetricFunc != nil {
+		_ = telemetry.BufferMetricFunc(ctx, "task.failed", "sqlite_complete_error")
+	}
 	return err
 }
 

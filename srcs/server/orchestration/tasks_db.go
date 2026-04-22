@@ -249,16 +249,33 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
 
     if to.dbProvider.IsSQLite() {
         query = `
-            SELECT id FROM shared_tasks_v4 t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1
-                FROM json_each(t.dependencies) d
-                JOIN shared_tasks_v4 dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED'
+            UPDATE shared_tasks_v4
+            SET status = 'IN_PROGRESS', agent_id = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = (
+                SELECT id FROM shared_tasks_v4 t
+                WHERE t.status = 'PENDING' AND t.organization_id = $2
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM json_each(t.dependencies) d
+                    JOIN shared_tasks_v4 dep ON dep.id = d.value
+                    WHERE dep.status != 'COMPLETED'
+                )
+                LIMIT 1
             )
-            LIMIT 1
+            RETURNING id
         `
+        var id string
+        err = tx.QueryRow(ctx, query, agentID, orgID).Scan(&id)
+        if err != nil {
+            if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+                return nil, nil
+            }
+            return nil, err
+        }
+        if err := tx.Commit(ctx); err != nil {
+            return nil, err
+        }
+        return &SharedTaskDB{ID: id, Status: "IN_PROGRESS"}, nil
     }
 
     var id string
@@ -380,16 +397,21 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 		defer to.mu.Unlock()
 
 		query := `
-            SELECT t.id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1 FROM json_each(t.dependencies) d
-                JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'DONE' AND dep.status != 'COMPLETED'
-            )
-            LIMIT 1
+            UPDATE shared_tasks
+            SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = (
+                SELECT t.id FROM shared_tasks t
+                WHERE t.status = 'PENDING' AND t.organization_id = $2
+                AND NOT EXISTS (
+                    SELECT 1 FROM json_each(t.dependencies) d
+                    JOIN shared_tasks dep ON dep.id = d.value
+                    WHERE dep.status != 'DONE' AND dep.status != 'COMPLETED'
+                )
+                LIMIT 1
+            ) AND organization_id = $2
+            RETURNING id
         `
-		err = tx.QueryRow(ctx, query, orgID).Scan(&id)
+		err = tx.QueryRow(ctx, query, agentID, orgID).Scan(&id)
 	} else {
 		query := `
             SELECT t.id FROM shared_tasks t
@@ -412,9 +434,11 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 		return nil, err
 	}
 
-	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
-	if err != nil {
-		return nil, err
+	if !to.dbProvider.IsSQLite() {
+		_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := to.insertTransition(ctx, tx, id, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {

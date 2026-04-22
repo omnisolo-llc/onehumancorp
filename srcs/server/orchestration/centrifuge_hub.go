@@ -135,6 +135,7 @@ func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
 					"agent_id": task.AgentID,
 					"action":   task.Action,
 					"status":   task.Status,
+						"task_id":  task.TaskID,
 				}
 				cn.PublishTaskBroadcast(task.TaskID, payload)
 			}
@@ -272,14 +273,6 @@ func (cn *CentrifugeNode) PublishPresenceBroadcast(agentID string, status string
 }
 
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
-	if cn.meshTransport != nil {
-		data, err := json.Marshal(payload)
-		if err == nil {
-			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", data)
-		}
-	}
-	channel := "mesh:tasks"
-
 	// Ensure we map payload correctly to the required UI keys:
 	// 'agent_id', 'action', 'status', and 'task_id'
 	// It is crucial they are at the root level, not nested.
@@ -305,6 +298,14 @@ func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string
 		msg["status"] = ""
 	}
 
+	if cn.meshTransport != nil {
+		data, err := json.Marshal(msg)
+		if err == nil {
+			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", data)
+		}
+	}
+
+	channel := "mesh:tasks"
 	data, err := json.Marshal(msg)
 	if err != nil {
 		slog.Error("[centrifuge] marshal task broadcast", "error", err)

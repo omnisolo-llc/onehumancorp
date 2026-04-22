@@ -141,27 +141,21 @@ func (to *DefaultTaskOrchestrator) pollAndDelegateTasks() {
 	var query string
 
 	if to.db.IsSQLite() {
-		selectQuery := `
-			SELECT id, organization_id FROM shared_tasks
-				WHERE status = 'PENDING' AND (priority = 'DELEGATED' OR json_extract(payload, '$.sub_agent_type') IS NOT NULL)
-			ORDER BY created_at ASC
-			LIMIT 1
-		`
-		err = tx.QueryRow(to.workerCtx, selectQuery).Scan(&taskID, &orgID)
-		if err != nil {
-			return // typically sql.ErrNoRows
-		}
-
 		updateQuery := `
 			UPDATE shared_tasks
 			SET status = 'IN_PROGRESS', agent_id = 'sub-agent-spawner', updated_at = CURRENT_TIMESTAMP
-			WHERE id = $1 AND status = 'PENDING'
+				WHERE id = (
+					SELECT id FROM shared_tasks
+					WHERE status = 'PENDING' AND (priority = 'DELEGATED' OR json_extract(payload, '$.sub_agent_type') IS NOT NULL)
+					ORDER BY created_at ASC
+					LIMIT 1
+				)
+				RETURNING id, organization_id
 		`
-		_, err = tx.Exec(to.workerCtx, updateQuery, taskID)
+			err = tx.QueryRow(to.workerCtx, updateQuery).Scan(&taskID, &orgID)
 		if err != nil {
-			return
+				return // typically sql.ErrNoRows
 		}
-
 	} else {
 		// Postgres mode: use FOR UPDATE SKIP LOCKED
 		query = `
@@ -326,38 +320,20 @@ func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID
 	if to.db.IsSQLite() {
 		// In SQLite, use UPDATE RETURNING if supported, or SELECT then UPDATE.
 		// However, UPDATE ... RETURNING with LIMIT is not supported in SQLite.
-		// Instead, we use a two-step SELECT then UPDATE approach.
-		// We should only select tasks where their dependencies are completed,
-		// or they have no dependencies. Wait, if it's READY, doesn't it mean dependencies are completed?
-		// In `EnqueueTask`, if `dependsOn` is empty, it sets status to 'READY'.
-		// If `dependsOn` is not empty, it sets status to 'PENDING'.
-		// In `CompleteTask`, it checks if all dependencies are completed and if so sets status to 'READY'.
-		// Actually, to be safe, we can enforce DAG dependencies here as well just in case.
-		// But let's check `EnqueueTask`.
-		selectQuery := `
-			SELECT st.id FROM swarm_tasks st
-			WHERE st.status = 'READY'
-			AND (SELECT COUNT(*) FROM swarm_task_dependencies td INNER JOIN swarm_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
-			ORDER BY json_extract(st.payload, '$.priority') ASC, st.created_at ASC
-			LIMIT 1
-		`
-		var taskID string
-		err = tx.QueryRow(ctx, selectQuery).Scan(&taskID)
-		if err != nil {
-			tx.Rollback(ctx)
-			if errors.Is(err, sql.ErrNoRows) {
-				return nil, nil // Queue is empty
-			}
-			return nil, fmt.Errorf("failed to scan task ID in SQLite: %w", err)
-		}
-
+			// Instead, we use an atomic UPDATE with a subquery that does RETURNING.
 		updateQuery := `
 			UPDATE swarm_tasks
 			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
-			WHERE id = $2 AND status = 'READY'
+				WHERE id = (
+					SELECT st.id FROM swarm_tasks st
+					WHERE st.status = 'READY'
+					AND (SELECT COUNT(*) FROM swarm_task_dependencies td INNER JOIN swarm_tasks d ON td.depends_on_task_id = d.id WHERE td.task_id = st.id AND d.status != 'COMPLETED') = 0
+					ORDER BY json_extract(st.payload, '$.priority') ASC, st.created_at ASC
+					LIMIT 1
+				)
 			RETURNING id, mission_id, COALESCE(parent_plan_id, ''), title, status, payload, created_at, updated_at
 		`
-		err = tx.QueryRow(ctx, updateQuery, agentID, taskID).Scan(
+			err = tx.QueryRow(ctx, updateQuery, agentID).Scan(
 			&task.ID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Status, &task.Payload, &task.CreatedAt, &task.UpdatedAt,
 		)
 	} else {
@@ -681,12 +657,16 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskSQLite(ctx context.Cont
 	defer tx.Rollback(ctx)
 
 	query := `
-		SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
-		FROM shared_tasks_decomposition
-		WHERE status = 'PENDING'
-		LIMIT 1
+			UPDATE shared_tasks_decomposition
+			SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = (
+				SELECT id FROM shared_tasks_decomposition
+				WHERE status = 'PENDING'
+				LIMIT 1
+			)
+			RETURNING id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
 	`
-	row := tx.QueryRow(ctx, query)
+		row := tx.QueryRow(ctx, query, agentID)
 
 	var task SharedTaskDecompositionDB
 	var payloadStr, dependenciesStr string
@@ -714,16 +694,10 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskSQLite(ctx context.Cont
     task.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAtStr)
     task.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAtStr)
 
-	if _, err = tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
-		return nil, fmt.Errorf("failed to update task status: %w", err)
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	task.Status = "IN_PROGRESS"
-	task.AssignedAgentID = &agentID
 	return &task, nil
 }
 

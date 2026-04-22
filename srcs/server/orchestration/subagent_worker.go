@@ -12,6 +12,7 @@ type SubAgentWorker struct {
 	taskQueue queue.TaskQueue
 	spawner   SubAgentSpawner
 	stopChan  chan struct{}
+	semaphore chan struct{} // added for capacity-managed concurrency limit
 }
 
 func NewSubAgentWorker(taskQueue queue.TaskQueue, spawner SubAgentSpawner) *SubAgentWorker {
@@ -19,6 +20,7 @@ func NewSubAgentWorker(taskQueue queue.TaskQueue, spawner SubAgentSpawner) *SubA
 		taskQueue: taskQueue,
 		spawner:   spawner,
 		stopChan:  make(chan struct{}),
+		semaphore: make(chan struct{}, 100), // allow up to 100 concurrent workers
 	}
 }
 
@@ -51,9 +53,11 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 			return
 		}
 
-
+		// acquire concurrency token
+		w.semaphore <- struct{}{}
 
 		go func(job *queue.Job) {
+			defer func() { <-w.semaphore }() // release concurrency token
 			startTime := time.Now()
 
 			ac := &AgentContext{
