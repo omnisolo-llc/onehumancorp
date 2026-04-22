@@ -2,6 +2,23 @@
 
 # OHC Feature Gap Matrix (2025)
 
+### Competitive Landscape Heatmap
+```mermaid
+quadrantChart
+    title OHC vs Incumbents (2025)
+    x-axis Low Autonomy --> High Autonomy
+    y-axis High Complexity --> Radical Simplicity
+    quadrant-1 Strategic Dominance (OHC)
+    quadrant-2 Simple but Shallow (Durable)
+    quadrant-3 Legacy Form-Heavy (Shopify/Wix)
+    quadrant-4 Complex Power-User (Webflow)
+    "Shopify": [0.3, 0.4]
+    "Wix": [0.4, 0.5]
+    "Durable": [0.6, 0.8]
+    "Squarespace": [0.2, 0.6]
+    "OHC": [0.9, 0.9]
+```
+
 | Feature | Shopify | Wix | Durable | OHC (Current) | OHC Advantage |
 |---|---|---|---|---|---|
 | **Setup Time** | 30-60 min | 20-40 min | 30 sec | **< 10 min** | AI-first onboarding. |

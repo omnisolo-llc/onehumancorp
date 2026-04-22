@@ -142,22 +142,3 @@ func (c *Client) DispatchToSubAgent(ctx context.Context, req *agentservicepb.Sub
 	}
 	return resp, nil
 }
-
-// TransmitMissionPayload transmits the agent_missions payload to the cloud API.
-func (c *Client) TransmitMissionPayload(ctx context.Context, payload []byte) error {
-	req := &agentservicepb.RunTaskRequest{
-		TaskId: "burst",
-		Task:   string(payload),
-		Model:  "cloud-burst-model",
-	}
-
-	err := c.RunTask(ctx, req, func(evt *agentservicepb.RunTaskEvent) {
-		// Callback: Results are streamed back to the local client
-		_ = evt
-	})
-	if err != nil {
-		return fmt.Errorf("grpc transmission failed: %w", err)
-	}
-
-	return nil
-}

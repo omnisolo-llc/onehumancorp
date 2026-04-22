@@ -3,7 +3,25 @@
 # OHC AI Differentiation Manifesto
 
 ## Strategy
-OHC does not build "AI Assistants." We build **Invisible Departments.** While competitors like Shopify and Wix focus on chat-based sidekicks, OHC treats AI as autonomous infrastructure that proactive manages the business.
+OHC does not build "AI Assistants." We build **Invisible Departments.** While competitors like Shopify and Wix focus on chat-based sidekicks, OHC treats AI as autonomous infrastructure that proactively manages the business.
+
+### Autonomous Infrastructure Model
+```mermaid
+graph TD
+    subgraph Legacy_Model [Reactive Sidekick]
+        U1[User] -->|Asks Question| S1[Chatbot]
+        S1 -->|Drafts Text| U1
+        U1 -->|Manually Executes| B1[Business Task]
+    end
+
+    subgraph OHC_Model [Invisible Departments]
+        E1[Business Event] --> D1[Operations Dept]
+        D1 -->|Auto-Schedules| T1[Task Queue]
+        D1 -->|Signals| M1[Marketing Dept]
+        M1 -->|Drafts Asset| U2[User]
+        U2 -->|One-Tap Approval| P1[Live Store]
+    end
+```
 
 ## Top 5 Leapfrog Automations
 
