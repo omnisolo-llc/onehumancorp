@@ -64,10 +64,10 @@ func TestQueueManagerLoop(t *testing.T) {
 		return nil
 	}
 
-	go qm.StartPolling(ctx, "worker-1", 10*time.Millisecond, handler)
+	go qm.StartAcquiring(ctx, "worker-1", 10*time.Millisecond, handler)
 
 	time.Sleep(100 * time.Millisecond)
-	cancel() // stop polling
+	cancel() // stop acquiring
 	time.Sleep(50 * time.Millisecond)
 
 	if len(processedJobs) != 2 {

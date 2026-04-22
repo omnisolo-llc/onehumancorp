@@ -8,8 +8,8 @@ import (
 
 type SubAgentJobHandler func(ctx context.Context, job *SubAgentJob) error
 
-// StartPolling starts a polling loop that fetches jobs from the queue and dispatches them to the provided handler.
-func (q *QueueManager) StartPolling(ctx context.Context, workerID string, interval time.Duration, handler SubAgentJobHandler) {
+// StartAcquiring starts a acquiring loop that fetches jobs from the queue and dispatches them to the provided handler.
+func (q *QueueManager) StartAcquiring(ctx context.Context, workerID string, interval time.Duration, handler SubAgentJobHandler) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -18,11 +18,11 @@ func (q *QueueManager) StartPolling(ctx context.Context, workerID string, interv
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			// Continuously poll until queue is empty
+			// Continuously acquire until queue is empty
 			for {
-				job, err := q.Poll(ctx, workerID)
+				job, err := q.Acquire(ctx, workerID)
 				if err != nil {
-					slog.Error("Failed to poll queue manager", "error", err, "worker_id", workerID)
+					slog.Error("Failed to acquire queue manager", "error", err, "worker_id", workerID)
 					break
 				}
 

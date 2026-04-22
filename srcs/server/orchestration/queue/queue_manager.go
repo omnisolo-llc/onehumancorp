@@ -20,7 +20,7 @@ var (
 	// Instrumented for issue_id: 4240
 	meter            = otel.Meter("github.com/onehumancorp/mono/srcs/server/orchestration/queue")
 	enqueueCounter, _ = meter.Int64Counter("queue_manager.enqueue.count")
-	pollCounter, _    = meter.Int64Counter("queue_manager.poll.count")
+	acquireCounter, _    = meter.Int64Counter("queue_manager.acquire.count")
 )
 
 type SubAgentJob struct {
@@ -76,8 +76,8 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 	return err
 }
 
-func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob, error) {
-	pollCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("worker_id", workerID)))
+func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJob, error) {
+	acquireCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("worker_id", workerID)))
 
 	if q.provider.IsSQLite() {
 		q.mu.Lock()

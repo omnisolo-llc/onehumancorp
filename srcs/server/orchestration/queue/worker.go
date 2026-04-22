@@ -25,7 +25,7 @@ func NewWorker(q TaskQueue, roles []string, handler JobHandler) *Worker {
 	}
 }
 
-// Start begins the worker loop, polling the queue for jobs.
+// Start begins the worker loop, acquiring the queue for jobs.
 // It blocks until the context is canceled.
 func (w *Worker) Start(ctx context.Context) {
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -36,9 +36,9 @@ func (w *Worker) Start(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			job, err := w.queue.Dequeue(ctx, w.roles)
+			job, err := w.queue.Acquire(ctx, w.roles)
 			if err != nil {
-				slog.Error("Worker failed to dequeue job", "error", err)
+				slog.Error("Worker failed to acquire job", "error", err)
 				continue
 			}
 

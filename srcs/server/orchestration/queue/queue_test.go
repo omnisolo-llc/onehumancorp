@@ -53,9 +53,9 @@ func TestSQLiteTaskQueue(t *testing.T) {
 		t.Fatalf("Enqueue failed: %v", err)
 	}
 
-	dequeued, err := q.Dequeue(ctx, []string{"tester"})
+	dequeued, err := q.Acquire(ctx, []string{"tester"})
 	if err != nil {
-		t.Fatalf("Dequeue failed: %v", err)
+		t.Fatalf("Acquire failed: %v", err)
 	}
 	if dequeued == nil {
 		t.Fatal("Expected to dequeue job, got nil")
@@ -91,7 +91,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 		MaxAttempts:  3,
 	}
 	q.Enqueue(ctx, job2)
-	q.Dequeue(ctx, []string{"tester"})
+	q.Acquire(ctx, []string{"tester"})
 
 	if err := q.Fail(ctx, "test-job-2", "some error"); err != nil {
 		t.Fatalf("Fail failed: %v", err)
@@ -145,27 +145,27 @@ func TestQueueManager(t *testing.T) {
 		t.Fatalf("failed to enqueue: %v", err)
 	}
 
-	polledJob, err := qm.Poll(ctx, "worker-1")
+	acquiredJob, err := qm.Acquire(ctx, "worker-1")
 	if err != nil {
-		t.Fatalf("failed to poll: %v", err)
+		t.Fatalf("failed to acquire: %v", err)
 	}
-	if polledJob == nil {
+	if acquiredJob == nil {
 		t.Fatalf("expected job, got nil")
 	}
 
-	if polledJob.ID != "job-1" {
-		t.Errorf("expected job ID job-1, got %s", polledJob.ID)
+	if acquiredJob.ID != "job-1" {
+		t.Errorf("expected job ID job-1, got %s", acquiredJob.ID)
 	}
-	if polledJob.Status != "RUNNING" {
-		t.Errorf("expected status RUNNING, got %s", polledJob.Status)
+	if acquiredJob.Status != "RUNNING" {
+		t.Errorf("expected status RUNNING, got %s", acquiredJob.Status)
 	}
 
-	polledJob2, err := qm.Poll(ctx, "worker-2")
+	acquiredJob2, err := qm.Acquire(ctx, "worker-2")
 	if err != nil {
-		t.Fatalf("failed to poll second time: %v", err)
+		t.Fatalf("failed to acquire second time: %v", err)
 	}
-	if polledJob2 != nil {
-		t.Fatalf("expected nil job, got %v", polledJob2)
+	if acquiredJob2 != nil {
+		t.Fatalf("expected nil job, got %v", acquiredJob2)
 	}
 }
 
@@ -219,9 +219,9 @@ func TestQueueManager_Postgres(t *testing.T) {
 		t.Fatalf("expected error on enqueue invalid json")
 	}
 
-	polledJob, err := qm.Poll(ctx, "worker-1")
+	acquiredJob, err := qm.Acquire(ctx, "worker-1")
 	if err == nil {
-		t.Fatalf("expected error because sqlite doesn't support SKIP LOCKED, got %v", polledJob)
+		t.Fatalf("expected error because sqlite doesn't support SKIP LOCKED, got %v", acquiredJob)
 	}
 }
 
@@ -248,23 +248,23 @@ func (m *mockRow) Scan(dest ...any) error {
 	return nil
 }
 
-type mockPostgresProviderPoll struct {
+type mockPostgresProviderAcquire struct {
 	db.Provider
 	err error
 	scanFunc func(dest ...any) error
 }
 
-func (m *mockPostgresProviderPoll) IsSQLite() bool {
+func (m *mockPostgresProviderAcquire) IsSQLite() bool {
 	return false
 }
 
-func (m *mockPostgresProviderPoll) QueryRow(ctx context.Context, query string, args ...any) db.Row {
+func (m *mockPostgresProviderAcquire) QueryRow(ctx context.Context, query string, args ...any) db.Row {
 	return &mockRow{err: m.err, scanFunc: m.scanFunc}
 }
 
-func TestQueueManager_Postgres_Poll_Success(t *testing.T) {
+func TestQueueManager_Postgres_Acquire_Success(t *testing.T) {
 	provider := db.NewTestProvider(t)
-	mockProvider := &mockPostgresProviderPoll{
+	mockProvider := &mockPostgresProviderAcquire{
 		Provider: provider,
 		scanFunc: func(dest ...any) error {
 			*dest[0].(*string) = "pg-id"
@@ -282,21 +282,21 @@ func TestQueueManager_Postgres_Poll_Success(t *testing.T) {
 	qm := NewQueueManager(mockProvider)
 	ctx := context.Background()
 
-	polledJob, err := qm.Poll(ctx, "worker-1")
+	acquiredJob, err := qm.Acquire(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
 	}
-	if polledJob == nil {
+	if acquiredJob == nil {
 		t.Fatalf("expected job, got nil")
 	}
-	if polledJob.ID != "pg-id" {
-		t.Fatalf("expected pg-id, got %v", polledJob.ID)
+	if acquiredJob.ID != "pg-id" {
+		t.Fatalf("expected pg-id, got %v", acquiredJob.ID)
 	}
 }
 
-func TestQueueManager_Postgres_Poll_NoRows(t *testing.T) {
+func TestQueueManager_Postgres_Acquire_NoRows(t *testing.T) {
 	provider := db.NewTestProvider(t)
-	mockProvider := &mockPostgresProviderPoll{
+	mockProvider := &mockPostgresProviderAcquire{
 		Provider: provider,
 		err: sql.ErrNoRows,
 	}
@@ -304,11 +304,11 @@ func TestQueueManager_Postgres_Poll_NoRows(t *testing.T) {
 	qm := NewQueueManager(mockProvider)
 	ctx := context.Background()
 
-	polledJob, err := qm.Poll(ctx, "worker-1")
+	acquiredJob, err := qm.Acquire(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("expected nil err, got %v", err)
 	}
-	if polledJob != nil {
-		t.Fatalf("expected nil job, got %v", polledJob)
+	if acquiredJob != nil {
+		t.Fatalf("expected nil job, got %v", acquiredJob)
 	}
 }
