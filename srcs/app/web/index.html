@@ -31,8 +31,46 @@
 
   <title>ohc_app</title>
   <link rel="manifest" href="manifest.json">
+
+  <style>
+    body {
+      backdrop-filter: blur(20px) saturate(200%);
+      background: rgba(255, 255, 255, 0.03);
+      font-family: 'Outfit', 'Inter', sans-serif;
+    }
+    #update-banner {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #2563eb;
+      color: white;
+      padding: 16px;
+      text-align: center;
+      font-family: 'Inter', sans-serif;
+      z-index: 99999;
+      display: none;
+    }
+    #update-banner button {
+      background: white;
+      color: #2563eb;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: 16px;
+    }
+    #update-banner button:hover {
+      background: #f0f0f0;
+    }
+  </style>
 </head>
 <body>
+  <div id="update-banner">
+    A new version is available! <button onclick="location.reload()">Reload Now</button>
+  </div>
+
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
@@ -42,5 +80,26 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              document.getElementById('update-banner').style.display = 'block';
+            }
+          });
+        });
+      });
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+          refreshing = true;
+          document.getElementById('update-banner').style.display = 'block';
+        }
+      });
+    }
+  </script>
 </body>
 </html>
