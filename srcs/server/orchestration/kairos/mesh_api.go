@@ -33,6 +33,17 @@ func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Enforce mTLS checks
+	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+	cert := r.TLS.PeerCertificates[0]
+	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
+		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
+		return
+	}
+
 	var req PublishRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
