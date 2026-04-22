@@ -19,7 +19,7 @@ var (
 func init() {
 	var err error
 	violationCount, err = meter.Int64Counter("ohc_sandbox_violation_total",
-		metric.WithDescription("Total number of sandbox violations prevented by AST validation or bwrap policies"))
+		metric.WithDescription("Total count of sandbox violations prevented by AST validation or bwrap policies"))
 	if err != nil {
 		panic(err)
 	}
@@ -83,6 +83,9 @@ func (v *ASTValidator) walkAndValidate(node *sitter.Node, command string) error 
 		}
 		if cmdName == "sudo" {
 			return fmt.Errorf("sudo is not allowed")
+		}
+		if cmdName == "eval" || cmdName == "exec" {
+			return fmt.Errorf("eval/exec commands are blocked to prevent sandbox escapes")
 		}
 	}
 
