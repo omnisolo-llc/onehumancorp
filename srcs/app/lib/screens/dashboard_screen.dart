@@ -13,6 +13,7 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/active_agent_trace_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -44,7 +45,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
         error:
             (e, _) => Center(
-              child: SelectableText(
+              child: Text(
                 'Error: $e',
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
@@ -210,6 +211,8 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
+        const SizedBox(height: 16),
+        ActiveAgentTraceWidget(activeAgents: data.agents),
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),

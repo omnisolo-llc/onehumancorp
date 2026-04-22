@@ -36,6 +36,7 @@ nav:
       - KAIROS Features Design: architecture/kairos_hybrid_os_architecture.md
       - KAIROS Master Design: architecture/kairos_master_design_doc.md
       - Hybrid PubSub MCP: research/[integrations]_hybrid_pubsub_mcp.md
+      - Business Journey Architecture: research/[architecture]_business_journey.md
   - Developer:
       - developer/index.md
   - UI:
