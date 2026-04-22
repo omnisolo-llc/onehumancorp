@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"database/sql"
+	"sync"
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -27,6 +28,7 @@ type TaskDecomposition struct {
 
 type TaskDecompositionService struct {
 	provider db.Provider
+	mu       sync.Mutex
 }
 
 func NewTaskDecompositionService(provider db.Provider) *TaskDecompositionService {
@@ -92,15 +94,20 @@ func (s *TaskDecompositionService) Claim(ctx context.Context, organizationID str
 	var query string
 
 	if s.provider.IsSQLite() {
-		// SQLite emulation for SKIP LOCKED - find one, then update it
-		// Need EXCLUSIVE transaction to avoid race conditions. Actually, db.Provider Begin starts a standard Tx.
-		// However, we can use the mutex approach if needed, or stick to this. SQLite standalone has lower concurrency.
-		query = `SELECT id, organization_id, title, description, status, assigned_agent_id,
-			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
-		FROM shared_tasks_decomposition
-		WHERE status = 'PENDING' AND organization_id = $1 ORDER BY priority ASC, created_at ASC LIMIT 1`
+		s.mu.Lock()
+		defer s.mu.Unlock()
 
-		err = tx.QueryRow(ctx, query, organizationID).Scan(
+		// For Standalone SQLite mode, use a single UPDATE ... RETURNING query instead of a two-step select-then-update approach to handle locking efficiently and prevent race conditions
+		query = `UPDATE shared_tasks_decomposition
+		SET status = 'CLAIMED', assigned_agent_id = $2, updated_at = CURRENT_TIMESTAMP
+		WHERE id = (
+			SELECT id FROM shared_tasks_decomposition
+			WHERE status = 'PENDING' AND organization_id = $1
+			ORDER BY priority ASC, created_at ASC LIMIT 1
+		) RETURNING id, organization_id, title, description, status, assigned_agent_id,
+			priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at`
+
+		err = tx.QueryRow(ctx, query, organizationID, agentID).Scan(
 			&task.ID, &task.OrganizationID, &task.Title, &task.Description, &task.Status, &task.AssignedAgentID,
 			&task.Priority, &task.Payload, &task.ParentPlanID, &task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 		)
@@ -108,12 +115,6 @@ func (s *TaskDecompositionService) Claim(ctx context.Context, organizationID str
 			if err == sql.ErrNoRows {
 				return nil, nil
 			}
-			return nil, err
-		}
-
-		updateQuery := `UPDATE shared_tasks_decomposition SET status = 'CLAIMED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-		_, err = tx.Exec(ctx, updateQuery, agentID, task.ID)
-		if err != nil {
 			return nil, err
 		}
 	} else {
