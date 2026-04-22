@@ -10,6 +10,7 @@ go_library(
         "runner.go",
         "task.go",
         "tools.go",
+        "playwright_tool.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/local",
     visibility = ["//visibility:public"],
@@ -26,10 +27,9 @@ go_test(
     name = "local_test",
     srcs = [
         "agent_test.go",
+        "playwright_tool_test.go",
         "cached_llm_test.go",
     ],
-    deps = [
-        ":local",
-        "//srcs/server/db",
-    ],
+    embed = [":local"],
+    deps = ["//srcs/server/db"],
 )
