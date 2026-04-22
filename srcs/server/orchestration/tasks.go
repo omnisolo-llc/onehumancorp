@@ -551,6 +551,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 	defer tx.Rollback(ctx)
 
+	_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = NULL WHERE id = $1", taskID)
 	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
@@ -772,7 +773,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		selectQuery := `
 			SELECT st.id
 			FROM shared_tasks st
-			WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+			WHERE st.organization_id = $1 AND (st.status = 'PENDING' OR (st.status = 'IN_PROGRESS' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)))
 			AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS d_id JOIN shared_tasks d ON d.id = d_id.value WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 			ORDER BY st.priority ASC, st.created_at ASC
 			LIMIT $2
@@ -801,6 +802,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		}
 
 		for _, id := range taskIDs {
+			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
 			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
@@ -839,7 +841,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		selectQuery := `
 				SELECT st.id
 				FROM shared_tasks st
-				WHERE st.organization_id = $1 AND st.status = 'PENDING' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)
+				WHERE st.organization_id = $1 AND (st.status = 'PENDING' OR (st.status = 'IN_PROGRESS' AND (st.locked_until IS NULL OR st.locked_until < CURRENT_TIMESTAMP)))
 				AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies::jsonb) AS d_id JOIN shared_tasks d ON d.id::text = d_id WHERE d.status != 'COMPLETED' AND d.status != 'DONE')
 				ORDER BY st.priority ASC, st.created_at ASC
 				LIMIT $2 FOR UPDATE SKIP LOCKED
@@ -865,6 +867,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 		rows.Close()
 
 		for _, id := range taskIDs {
+			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
 			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)

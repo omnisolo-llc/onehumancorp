@@ -34,6 +34,7 @@ var (
 	BubblewrapExecutionLatency metric.Float64Histogram
 	HarnessInitLatency         metric.Float64Histogram
 	HarnessDbIoLatency         metric.Float64Histogram
+	HarnessExecutionLatency    metric.Float64Histogram
 	TasksEscalatedTotal        metric.Int64Counter
 	BubblewrapViolationTotal   metric.Int64Counter
 	meter                      metric.Meter
@@ -81,6 +82,10 @@ var (
 	ToolAutoCorrectionTotal            metric.Int64Counter
 	DeliberationPhaseDuration          metric.Float64Histogram
 	TaskProcessingLatency              metric.Float64Histogram
+
+	TelemetrySyncBackoffDuration       metric.Float64Histogram
+	TelemetryBatchSizeGauge            metric.Int64Gauge
+
 	AgentTransitionLatency             metric.Float64Histogram
 
 	SyncCompletedCount     metric.Int64Counter
@@ -312,6 +317,7 @@ type mockableMeter interface {
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
+	Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error)
 }
 
 // InitWithMeter functionality.
@@ -486,6 +492,23 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
+
+	TelemetrySyncBackoffDuration, err = m.Float64Histogram(
+		"ohc_telemetry_sync_backoff_duration_seconds",
+		metric.WithDescription("Duration of backoff during telemetry sync"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TelemetryBatchSizeGauge, err = m.Int64Gauge(
+		"ohc_telemetry_batch_size",
+		metric.WithDescription("Current batch size for telemetry sync"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
@@ -872,6 +895,15 @@ func InitWithMeter(m mockableMeter) error {
 	HarnessDbIoLatency, err = m.Float64Histogram(
 		"harness_db_io_latency",
 		metric.WithDescription("Latency of harness database I/O"),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	HarnessExecutionLatency, err = m.Float64Histogram(
+		"harness_execution_latency",
+		metric.WithDescription("Latency of harness execution"),
 		metric.WithUnit("ms"),
 	)
 	if err != nil {
@@ -2098,6 +2130,15 @@ func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string)
 	}
 }
 
+// RecordHarnessExecutionLatency records the latency of harness execution.
+func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode string) {
+	if HarnessExecutionLatency != nil {
+		HarnessExecutionLatency.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
 var CapabilityViolationTotal metric.Int64Counter
 
 func initCapabilityMetrics(m metric.Meter) error {
@@ -2117,4 +2158,21 @@ func RecordCapabilityViolation(ctx context.Context, sessionID, capability string
 			attribute.String("capability", capability),
 		))
 	}
+}
+
+
+// RecordTelemetrySyncBackoff records the backoff duration for telemetry sync.
+func RecordTelemetrySyncBackoff(ctx context.Context, duration float64) {
+	if TelemetrySyncBackoffDuration == nil {
+		return
+	}
+	TelemetrySyncBackoffDuration.Record(ctx, duration)
+}
+
+// RecordTelemetryBatchSize records the current batch size for telemetry sync.
+func RecordTelemetryBatchSize(ctx context.Context, size int64) {
+	if TelemetryBatchSizeGauge == nil {
+		return
+	}
+	TelemetryBatchSizeGauge.Record(ctx, size)
 }
