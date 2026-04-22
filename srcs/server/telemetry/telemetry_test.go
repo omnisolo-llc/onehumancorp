@@ -891,3 +891,12 @@ func TestRecordHarnessDbIoLatency(t *testing.T) {
 
 	RecordHarnessDbIoLatency(context.Background(), 15.2, "standalone")
 }
+
+func TestRecordHarnessExecutionLatency(t *testing.T) {
+	cleanup, _ := InitTelemetry()
+	defer cleanup()
+
+	time.Sleep(10 * time.Millisecond)
+
+	RecordHarnessExecutionLatency(context.Background(), 120.5, "standalone")
+}

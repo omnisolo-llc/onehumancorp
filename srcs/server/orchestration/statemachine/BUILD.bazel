@@ -9,6 +9,7 @@ go_library(
         "//srcs/server/db",
         "//srcs/server/orchestration/kairos",
         "@com_github_prometheus_client_golang//prometheus",
+        "@com_github_redis_rueidis//:rueidis",
     ],
 )
 
