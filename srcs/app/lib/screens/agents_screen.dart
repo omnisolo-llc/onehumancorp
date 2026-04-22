@@ -182,11 +182,14 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
           child: Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: GlassCard(
-        child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {
-                          // Optional: Handle agent card tap
-                        },
+              color: widget.agent.isRunning
+                  ? colorScheme.primaryContainer.withValues(alpha: 0.1)
+                  : null,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  // Optional: Handle agent card tap
+                },
                         child: Tooltip(
                           message: 'View details for ${widget.agent.name}',
                           child: Padding(
