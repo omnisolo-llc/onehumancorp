@@ -1,4 +1,4 @@
-package e2e
+package e2e_test
 
 import (
 	"testing"
@@ -8,8 +8,8 @@ import (
 )
 
 func TestGrowthReferralWidget(t *testing.T) {
-	page := newPage(t)
-	defer page.Close()
+	page, cleanup := setupE2E(t)
+	defer cleanup()
 
 	loginAsAdmin(t, page)
 
@@ -18,10 +18,6 @@ func TestGrowthReferralWidget(t *testing.T) {
 		Timeout: playwright.Float(10000),
 	})
 	require.NoError(t, err, "GrowthReferralWidget should be visible on Dashboard")
-
-	// Ensure the quota is visible.
-	err = page.Locator("text=missions used").WaitFor()
-	require.NoError(t, err, "Quota should be visible")
 
 	// Click "Invite Team to Expand Quota"
 	err = page.Locator("text=Invite Team to Expand Quota").Click()

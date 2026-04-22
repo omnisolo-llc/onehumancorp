@@ -14,7 +14,6 @@ _SHARED_SRCS = [
 
 _COMMON_DEPS = [
     "@com_github_playwright_community_playwright_go//:playwright-go",
-    "@com_github_stretchr_testify//require",
 ]
 
 _COMMON_DATA = [
