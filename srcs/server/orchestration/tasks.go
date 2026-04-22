@@ -581,7 +581,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		broadcast()
 	}
 
-	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
+	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "DONE")
 
 	if tm.autodream != nil {
 		go func() {
@@ -610,7 +610,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		_ = tm.mesh.BroadcastTask(ctx, Task{
 			AgentID: agentID,
 			Action:  "COMPLETE",
-			Status:  "COMPLETED",
+			Status:  "DONE",
 			TaskID:  taskID,
 		})
 	} else if tm.hub != nil {
@@ -619,7 +619,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				"task_id":  taskID,
 				"action":   "COMPLETE",
 				"agent_id": agentID,
-				"status":   "COMPLETED",
+				"status":   "DONE",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
