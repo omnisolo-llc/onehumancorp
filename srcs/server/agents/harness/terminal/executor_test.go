@@ -37,7 +37,7 @@ func TestExecutor_Success(t *testing.T) {
 
 	out, err := exec.ExecuteCommand(context.Background(), "echo 'test'")
 
-		if err != nil {
+	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			t.Skipf("Skipping success test because bwrap/sandbox-exec is not installed: %v", err)
 			return
@@ -77,10 +77,8 @@ func TestExecutor_WithProxy(t *testing.T) {
 	}
 	ctx = orchestration.WithAgentContext(ctx, ac)
 
-	// Since we mock or test locally, just execute a harmless command.
-	// This ensures the HTTP_PROXY extraction branch gets covered.
 	out, err := exec.ExecuteCommand(ctx, "echo test")
-		if err != nil {
+	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			t.Skipf("Skipping success test because bwrap/sandbox-exec is not installed: %v", err)
 			return
@@ -99,7 +97,7 @@ func TestExecutorWithValidator(t *testing.T) {
 	exec := NewExecutorWithValidator(realHarness, v)
 
 	out, err := exec.ExecuteCommand(context.Background(), "echo test")
-		if err != nil {
+	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			t.Skipf("Skipping success test because bwrap/sandbox-exec is not installed: %v", err)
 			return

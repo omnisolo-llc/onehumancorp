@@ -86,20 +86,14 @@ func TestCommandValidator_ReadOnly_EdgeCases(t *testing.T) {
 		cmd     string
 		wantErr error
 	}{
-		// Process Substitution in ReadOnly
 		{"cat <(ls)", ErrProcessSubstitution},
-		// Unsafe bundled short flags
 		{"ls -lZ", ErrUnsafeFlag},
-		// Safe bundled short flags
 		{"ls -la", nil},
-		// Invalid long flags
 		{"ls --invalid", ErrUnsafeFlag},
-		// Flags with equal signs, safe and unsafe
 		{"grep --color=auto", nil},
 		{"find -name=*.txt", ErrUnsafeFlag},
 		{"grep --invalid=value", ErrUnsafeFlag},
-		// Tool not in allowlist
-		{"some_tool -x", nil}, // if it's not in the map, no extra flag validation happens, returns nil
+		{"some_tool -x", nil},
 	}
 
 	for _, tt := range tests {
