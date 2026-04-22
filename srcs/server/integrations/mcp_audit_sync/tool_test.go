@@ -130,7 +130,6 @@ func TestAuditTool_CallTool_MissingTimestamp(t *testing.T) {
 	assert.Contains(t, err.Error(), "missing or invalid arguments")
 }
 
-
 func TestAuditTool_CallTool_UnknownTool(t *testing.T) {
 	tool := NewAuditTool(nil)
 
