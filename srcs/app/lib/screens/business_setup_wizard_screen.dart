@@ -144,7 +144,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     state = state.copyWith(isLoading: false);
 
     if (context.mounted) {
-      GoRouter.of(context).go('/dashboard');
+      context.go('/dashboard');
     }
   }
 }

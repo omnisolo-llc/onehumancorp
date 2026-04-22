@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
+- Scaling (Cloud): Submit observability gap analysis report.
+- Privacy/Offline (Standalone): Fix Standalone DB path in CLI.
+
 ## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Hybrid Agent Harness with OpenTelemetry.
