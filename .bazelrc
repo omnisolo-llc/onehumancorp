@@ -2,15 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-build --config=buildbuddy-official
-test --config=buildbuddy-official
-
-# ── Disk cache (L1 in front of remote cache) ──────────────────────────────────
-# Caches action outputs locally to avoid re-downloading on subsequent runs.
-# Particularly helpful for the large Flutter pub-cache tree artifacts.
-# Limited to 5 GB to prevent disk exhaustion on CI runners.
-build --disk_cache=/tmp/bazel-disk-cache
-build --experimental_disk_cache_gc_max_size=5G
+build --config=buildbuddy
+test --config=buildbuddy
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
