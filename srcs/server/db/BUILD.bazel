@@ -12,6 +12,8 @@ go_library(
         "test_provider.go",
     ],
     embedsrcs = [
+        "migrations/20260428000000_kairos_orchestration_pg.sql",
+        "migrations/20260428000000_kairos_orchestration_sqlite.sql",
         "migrations/001_users.sql",
         "migrations/002_billing.sql",
         "migrations/003_scheduler.sql",

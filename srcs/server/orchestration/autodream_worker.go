@@ -466,6 +466,9 @@ func (d *AutoDreamWorkerDaemon) Start(ctx context.Context) {
 			if err := d.worker.ConsolidateMemories(ctx); err != nil {
 				slog.Error("AutoDreamWorkerDaemon: failed to consolidate memories", "error", err)
 			}
+			if err := d.worker.ProcessYAMLMemories(ctx); err != nil {
+				slog.Error("AutoDreamWorkerDaemon: failed to process YAML memories", "error", err)
+			}
 		}
 	}
 }
@@ -474,4 +477,79 @@ func (d *AutoDreamWorkerDaemon) Stop() {
 	d.stopOnce.Do(func() {
 		close(d.done)
 	})
+}
+
+// ProcessYAMLMemories reads .agent-task/memory/*.yml, generates embeddings, and stores them in agent_memories.
+func (w *AutoDreamWorker) ProcessYAMLMemories(ctx context.Context) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "ProcessYAMLMemories", time.Since(start)) }()
+
+	matches, err := filepath.Glob(".agent-task/memory/*.yml")
+	if err != nil {
+		return err
+	}
+
+	if len(matches) == 0 {
+		return nil
+	}
+
+	minimaxKey := os.Getenv("MINIMAX_API_KEY")
+	var client MinimaxClient
+	if minimaxKey != "" {
+		client = NewCachedMinimaxClient(NewMinimaxClient(minimaxKey), w.pool, nil)
+	}
+
+	for _, file := range matches {
+		contentBytes, err := os.ReadFile(file)
+		if err != nil {
+			slog.Error("AutoDream: failed to read YAML file", "file", file, "error", err)
+			continue
+		}
+		contentToEmbed := string(contentBytes)
+
+		embedding := make([]float32, 1536)
+		if client != nil {
+			ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+			resp, embedErr := client.GenerateEmbedding(ctxTimeout, contentToEmbed)
+			cancel()
+			if embedErr == nil && len(resp) == 1536 {
+				embedding = resp
+			} else {
+				slog.Warn("AutoDream: failed to embed YAML memory", "error", embedErr)
+			}
+		}
+
+		memID := uuid.New().String()
+		var embStr string
+		if w.pool.IsSQLite() {
+			embBytes, _ := json.Marshal(embedding)
+			embStr = string(embBytes)
+		} else {
+			embStr = formatFloat32SliceForVector(embedding)
+		}
+
+		tx, err := w.pool.Begin(ctx)
+		if err != nil {
+			continue
+		}
+
+		var query string
+		if w.pool.IsSQLite() {
+			query = `INSERT INTO agent_memories (id, organization_id, content, embedding, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)`
+		} else {
+			query = `INSERT INTO agent_memories (id, organization_id, content, embedding, created_at) VALUES ($1, $2, $3, $4::vector, CURRENT_TIMESTAMP)`
+		}
+
+		_, err = tx.Exec(ctx, query, memID, "system", contentToEmbed, embStr)
+		if err != nil {
+			tx.Rollback(ctx)
+			slog.Error("AutoDream: failed to insert YAML memory", "error", err)
+			continue
+		}
+
+		if err := tx.Commit(ctx); err == nil {
+			os.Remove(file)
+		}
+	}
+	return nil
 }

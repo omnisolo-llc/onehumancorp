@@ -1,27 +1,27 @@
 package orchestration
 
-
 import (
 	"context"
 	"encoding/json"
 	"net/http"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 )
-
 
 type MeshAPI struct {
 	meshTransport MeshTransport
+	authStore     auth.Store
 }
 
-func NewMeshAPI(mt MeshTransport) *MeshAPI {
-	return &MeshAPI{meshTransport: mt}
+func NewMeshAPI(mt MeshTransport, authStore auth.Store) *MeshAPI {
+	return &MeshAPI{meshTransport: mt, authStore: authStore}
 }
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/mesh/broadcast", api.HandleBroadcast)
+	mux.Handle("/api/mesh/broadcast", auth.Middleware(&api.authStore)(http.HandlerFunc(api.HandleBroadcast)))
 	mux.HandleFunc("/api/v1/mesh/broadcast", api.HandleMeshV1Broadcast)
 	mux.HandleFunc("/api/mesh/stream", api.HandleStream)
 	mux.HandleFunc("/api/mesh/sync", api.HandleSync)
@@ -61,7 +61,22 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		channelName = ch
 	}
 
-	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), channelName, payload); err != nil {
+	var finalPayload []byte
+	if channelName == "tasks" {
+		msgMap := map[string]interface{}{
+			"agent_id": "",
+			"action":   "",
+			"status":   "",
+		}
+		for k, v := range req {
+			msgMap[k] = v
+		}
+		finalPayload, _ = json.Marshal(msgMap)
+	} else {
+		finalPayload = payload
+	}
+
+	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), channelName, finalPayload); err != nil {
 		http.Error(w, "Failed to broadcast", http.StatusInternalServerError)
 		return
 	}
@@ -163,7 +178,6 @@ func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
 func (api *MeshAPI) HandleConnect(w http.ResponseWriter, r *http.Request) {
 	api.HandleStream(w, r)
 }
-
 
 func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()

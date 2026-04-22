@@ -1,2 +1,7 @@
-1. **Report Status:** The issue asked to implement Standalone Metric Buffering and Cloud Sync. However, analyzing `srcs/server/telemetry/sync_daemon.go`, `srcs/server/dashboard/server.go`, `srcs/server/telemetry/buffer_pii_test.go`, and `srcs/server/orchestration/sip.go`, the feature is already fully implemented. `telemetry_buffer` is the SQLite table correctly used by `SyncDaemon`, the endpoint `POST /api/telemetry/sync` is implemented and active in `server.go`, and PII redaction happens in `telemetry.BufferMetricFunc`. All tests pass perfectly.
-2. As per the exploration rules, if a component is fully implemented, do not create a PR if there is no code change. I will create a final response with the required issue_id block.
+1. **Verify Code Execution:** Run tests to verify the task completion since all required features are added and tests passed.
+
+2. **Pre-commit Steps:**
+  - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+3. **Output the YAML block containing issue_id**:
+  - Use `submit` to commit code with branch `orchestration-kairos` and title `feat(orchestration): introduce KAIROS shared tasks and AutoDream worker` and description. Output `issue_id: 4021`.

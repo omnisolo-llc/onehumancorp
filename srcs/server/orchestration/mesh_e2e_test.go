@@ -41,7 +41,7 @@ func TestMeshAPI_E2E(t *testing.T) {
 
 
 	meshTransport := NewMemoryMeshTransport(provider)
-	api := NewMeshAPI(meshTransport)
+	api := NewMeshAPI(meshTransport, nil)
 	mux := http.NewServeMux()
 	api.RegisterRoutes(mux)
 
