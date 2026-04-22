@@ -25,11 +25,6 @@ graph LR
 *   **Calendly:** Great for Carlos's bookings, but doesn't handle the "Inventory" or "Shipping" if he wants to sell a repair kit.
 *   **ShipStation:** Overkill for Maya. She just needs to know "Deliver to 123 Main St at 2 PM."
 
-### User Pain Points
-1.  **Notification Fatigue:** Owners miss orders because notifications are buried in email.
-2.  **Manual Follow-ups:** "Is my order ready?" "Where are you?" — these DMs eat up 2-3 hours of Maya's day.
-3.  **Fragmented Views:** Having a calendar for appointments and a list for product orders is confusing.
-
 ## Design Doc (High-Level)
 ### Entity Types
 *   **FulfillmentUnit**: A unified object representing an Order, a Booking, or a Pickup.

@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Implement robust HTTP API GZIP Compression, Add research brief for AutoDream queue observability, Implement AI Agent Department backend framework, Fix Omni-Context Grounding file name and header prefix.
+- Privacy/Offline (Standalone): Fix Redis async connection deprecation warnings in builtin agent.
+
 
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 - Scaling (Cloud): Submit observability gap analysis report.

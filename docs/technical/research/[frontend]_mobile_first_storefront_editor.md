@@ -25,11 +25,6 @@ pie title "Setup Friction (Lower is Better)"
 *   **Durable/Hocoos:** Can generate a site quickly, but the "editing" experience post-generation lacks the depth needed for a real retail business (inventory sync, variant-specific pricing).
 *   **Instagram DMs:** Where Maya currently lives. Zero structure, no inventory tracking, manual payment links.
 
-### User Pain Points
-1.  **"Desktop-Required" Editors:** 70% of SMB owners in our target personas primarily use their phones. Forcing them to a laptop to add a "Vegan" option to a cake is a failure.
-2.  **Variant Complexity:** Managing S/M/L or Red/Blue usually requires a table-based UI which breaks on 375px.
-3.  **Aesthetic Gap:** Simple mobile builders often look "cheap." Users want the "Premium" OHC Glassmorphism look without hiring a designer.
-
 ## Design Doc (High-Level)
 ### Entity Types
 *   `Product`: Core item with title, description (AI-generated), and base price.

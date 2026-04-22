@@ -25,11 +25,6 @@ bar-chart
 *   **Shopify/Wix Generators:** Very basic. They provide a template but don't "know" your business.
 *   **The "Ignore it" Method:** 60% of our target personas have NO terms of service or written contracts, leaving them vulnerable to chargebacks and liability.
 
-### User Pain Points
-1.  **Jargon Dread:** "Indemnification," "Severability" — these words alienate Maya and her customers.
-2.  **Liability Gaps:** Fatima needs a "Halal certification" and "Allergy warning" disclaimer that a generic generator misses.
-3.  **Contract Friction:** Carlos needs a way to get a "Work Order" signed on a phone screen without a 10-page PDF.
-
 ## Design Doc (High-Level)
 ### Entity Types
 *   **PolicyArtifact**: Privacy Policy, Terms of Service, Refund Policy.

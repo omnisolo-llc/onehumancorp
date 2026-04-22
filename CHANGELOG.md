@@ -1,4 +1,14 @@
 # OHC Hybrid Agentic OS - Changelog
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement robust HTTP API GZIP Compression (#7075)
+- Add research brief for AutoDream queue observability (#7073)
+- feat: implement AI Agent Department backend framework (#7072)
+- Fix Omni-Context Grounding file name and header prefix (#7069)
+
+### Privacy/Offline Improvements
+- Fix Redis async connection deprecation warnings in builtin agent (#7068)
+
 
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 ### Cloud Scaling Improvements
