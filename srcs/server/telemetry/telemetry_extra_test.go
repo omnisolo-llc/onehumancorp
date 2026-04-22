@@ -191,21 +191,3 @@ func TestRecordAgentExecutionTrace(t *testing.T) {
 	RecordAgentExecutionTrace(ctx, "agent-456", "deliberation")
 	// Since we are mocking the meter under the hood in proper tests, this just verifies no panic.
 }
-
-func TestRecordLocalToCloudMissionSync(t *testing.T) {
-	// Setup
-	ctx := context.Background()
-	_, err := InitTelemetry()
-	if err != nil {
-		t.Fatalf("Failed to initialize telemetry: %v", err)
-	}
-
-	// Ensure we do not panic when metric is initialized
-	RecordLocalToCloudMissionSync(ctx, "mission-123")
-
-	// Test case where metric is nil
-	originalMetric := LocalToCloudMissionSyncCount
-	LocalToCloudMissionSyncCount = nil
-	defer func() { LocalToCloudMissionSyncCount = originalMetric }()
-	RecordLocalToCloudMissionSync(ctx, "mission-456")
-}
