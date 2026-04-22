@@ -885,42 +885,6 @@
       },
       "transparent": true,
       "id": 25
-    },
-    {
-      "id": 26,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 24
-      },
-      "type": "timeseries",
-      "title": "Telemetry Batch Size",
-      "targets": [
-        {
-          "expr": "ohc_telemetry_batch_size",
-          "legendFormat": "Batch Size",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 27,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 24
-      },
-      "type": "timeseries",
-      "title": "Telemetry Sync Backoff Duration",
-      "targets": [
-        {
-          "expr": "rate(ohc_telemetry_sync_backoff_duration_seconds_sum[1m]) / rate(ohc_telemetry_sync_backoff_duration_seconds_count[1m])",
-          "legendFormat": "Avg Backoff Duration",
-          "refId": "A"
-        }
-      ]
     }
   ],
   "refresh": "",

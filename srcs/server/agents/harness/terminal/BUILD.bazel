@@ -1,15 +1,11 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
 
-
 go_library(
     name = "terminal",
     srcs = ["executor.go", "validator.go"],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/harness/terminal",
     visibility = ["//visibility:public"],
-    deps = [
-        "//srcs/server/agents/harness",
-        "//srcs/server/orchestration",
-    ],
+    deps = ["//srcs/server/agents/harness"],
 )
 
 go_test(

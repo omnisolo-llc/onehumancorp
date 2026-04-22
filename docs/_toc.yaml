@@ -29,8 +29,6 @@ toc:
     path: /docs/technical/reports/index.md
   - title: Walkthroughs
     path: /docs/technical/walkthroughs/index.md
-  - title: KAIROS Orchestrator CLI Walkthrough
-    path: /docs/technical/walkthroughs/kairos_orchestrator_cli.md
   - title: Templates
     path: /docs/technical/templates/index.md
   - title: MCP Protocol
@@ -44,7 +42,7 @@ toc:
   - title: Roadmap
     path: /docs/business/roadmap.md
   - title: Vision
-    path: /docs/vision/market_strategy.md
+    path: /docs/business/vision/index.md
   - title: Cost Blueprint
     path: /docs/business/cost-blueprint.md
   - title: Growth Strategy

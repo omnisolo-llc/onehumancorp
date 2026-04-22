@@ -407,9 +407,13 @@ func TestClaim_SQLite_UpdateError(t *testing.T) {
 		QueryRowFunc: func(ctx context.Context, sqlQuery string, args ...any) db.Row {
 			return &MockRow{
 				ScanFunc: func(dest ...any) error {
-					return expectedErr
+					*dest[0].(*string) = "test-id"
+					return nil
 				},
 			}
+		},
+		ExecFunc: func(ctx context.Context, sqlQuery string, args ...any) (int64, error) {
+			return 0, expectedErr
 		},
 	}
 	mockProvider := &MockProvider{

@@ -911,7 +911,6 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 		return fmt.Errorf("failed to update epoch status: %w", err)
 	}
 
-	telemetry.RecordAutoDreamConsolidation(ctx, "autodream_epoch")
 	slog.Info("AutoDream: Finished ConsolidateEpoch successfully", "epoch", epochID)
 	return nil
 }

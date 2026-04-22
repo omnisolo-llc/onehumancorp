@@ -348,15 +348,6 @@ func NewTasksDB(dbProvider db.Provider) *TasksDB {
 	}
 }
 
-func (to *TasksDB) insertTransition(ctx context.Context, tx db.Tx, taskID, from, toState, agentID, reason string) error {
-	id := uuid.New().String()
-	_, err := tx.Exec(ctx, `
-        INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason, occurred_at)
-        VALUES ($1, $2, 'task', $3, $4, $5, $6, CURRENT_TIMESTAMP)
-    `, id, taskID, from, toState, agentID, reason)
-	return err
-}
-
 func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error) {
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
@@ -382,11 +373,6 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 		query := `
             SELECT t.id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1 FROM json_each(t.dependencies) d
-                JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'DONE' AND dep.status != 'COMPLETED'
-            )
             LIMIT 1
         `
 		err = tx.QueryRow(ctx, query, orgID).Scan(&id)
@@ -394,11 +380,6 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 		query := `
             SELECT t.id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(COALESCE(t.dependencies, '[]'::jsonb)) d
-                JOIN shared_tasks dep ON dep.id = d
-                WHERE dep.status != 'DONE' AND dep.status != 'COMPLETED'
-            )
             LIMIT 1
             FOR UPDATE SKIP LOCKED
         `
@@ -412,45 +393,14 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 		return nil, err
 	}
 
-	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
+	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := to.insertTransition(ctx, tx, id, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
-		return nil, fmt.Errorf("failed to insert transition: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
 
-	return &Task{TaskID: id, Status: "IN_PROGRESS", AgentID: agentID}, nil
-}
-
-func (to *TasksDB) TransitionTask(ctx context.Context, taskID, agentID, fromState, toState, reason string) error {
-	tx, err := to.dbProvider.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-
-	var current string
-	if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", taskID).Scan(&current); err != nil {
-		return fmt.Errorf("failed to fetch task %s: %w", taskID, err)
-	}
-
-	if current != fromState {
-		return fmt.Errorf("task %s is in state %s, expected %s", taskID, current, fromState)
-	}
-
-	if _, err := tx.Exec(ctx, "UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
-		return err
-	}
-
-	if err := to.insertTransition(ctx, tx, taskID, fromState, toState, agentID, reason); err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
+	return &Task{TaskID: id, Status: "ASSIGNED", AgentID: agentID}, nil
 }

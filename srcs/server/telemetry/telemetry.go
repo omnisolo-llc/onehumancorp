@@ -34,7 +34,6 @@ var (
 	BubblewrapExecutionLatency metric.Float64Histogram
 	HarnessInitLatency         metric.Float64Histogram
 	HarnessDbIoLatency         metric.Float64Histogram
-	HarnessExecutionLatency    metric.Float64Histogram
 	TasksEscalatedTotal        metric.Int64Counter
 	BubblewrapViolationTotal   metric.Int64Counter
 	meter                      metric.Meter
@@ -82,20 +81,15 @@ var (
 	ToolAutoCorrectionTotal            metric.Int64Counter
 	DeliberationPhaseDuration          metric.Float64Histogram
 	TaskProcessingLatency              metric.Float64Histogram
-
-	TelemetrySyncBackoffDuration       metric.Float64Histogram
-	TelemetryBatchSizeGauge            metric.Int64Gauge
-
 	AgentTransitionLatency             metric.Float64Histogram
 
 	SyncCompletedCount     metric.Int64Counter
 	SyncFailedCount        metric.Int64Counter
 	SyncEscalationsCount   metric.Int64Counter
 	SyncLatency            metric.Float64Histogram
-	SyncPayloadSize              metric.Int64Histogram
-	RateLimitExceededCount       metric.Int64Counter
-	syncDaemonBatchSize          metric.Int64Histogram
-	LocalToCloudMissionSyncCount metric.Int64Counter
+	SyncPayloadSize        metric.Int64Histogram
+	RateLimitExceededCount metric.Int64Counter
+	syncDaemonBatchSize    metric.Int64Histogram
 
 	sqliteLockContentionCounter   metric.Int64Counter
 	sqliteRetryExhaustedCounter   metric.Int64Counter
@@ -318,7 +312,6 @@ type mockableMeter interface {
 	Float64Histogram(name string, options ...metric.Float64HistogramOption) (metric.Float64Histogram, error)
 	Float64Gauge(name string, options ...metric.Float64GaugeOption) (metric.Float64Gauge, error)
 	Int64Histogram(name string, options ...metric.Int64HistogramOption) (metric.Int64Histogram, error)
-	Int64Gauge(name string, options ...metric.Int64GaugeOption) (metric.Int64Gauge, error)
 }
 
 // InitWithMeter functionality.
@@ -460,14 +453,6 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
-	LocalToCloudMissionSyncCount, err = m.Int64Counter(
-		"ohc_local_to_cloud_mission_sync_count",
-		metric.WithDescription("Total number of local-to-cloud mission syncs"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
 	SyncLatency, err = m.Float64Histogram(
 		"ohc_sync_latency_ms",
 		metric.WithDescription("Latency of mission synchronization in milliseconds"),
@@ -501,23 +486,6 @@ func InitWithMeter(m mockableMeter) error {
 	if err != nil {
 		errs = append(errs, err)
 	}
-
-	TelemetrySyncBackoffDuration, err = m.Float64Histogram(
-		"ohc_telemetry_sync_backoff_duration_seconds",
-		metric.WithDescription("Duration of backoff during telemetry sync"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	TelemetryBatchSizeGauge, err = m.Int64Gauge(
-		"ohc_telemetry_batch_size",
-		metric.WithDescription("Current batch size for telemetry sync"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
 
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
@@ -909,15 +877,6 @@ func InitWithMeter(m mockableMeter) error {
 	HarnessDbIoLatency, err = m.Float64Histogram(
 		"harness_db_io_latency",
 		metric.WithDescription("Latency of harness database I/O"),
-		metric.WithUnit("ms"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
-	HarnessExecutionLatency, err = m.Float64Histogram(
-		"harness_execution_latency",
-		metric.WithDescription("Latency of harness execution"),
 		metric.WithUnit("ms"),
 	)
 	if err != nil {
@@ -1640,25 +1599,6 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 	SyncEscalationsCount.Add(ctx, count)
 }
 
-// RecordLocalToCloudMissionSync records a local-to-cloud mission synchronization.
-func RecordLocalToCloudMissionSync(ctx context.Context, missionID string) {
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"missionID": missionID,
-		}
-		// In Standalone Mode, BufferMetricFunc unmarshals the JSON payload into a map[string]interface{},
-		// then calls RedactInterfacePII centrally. We use RedactInterfacePII here so the AST linter
-		// TestBufferMetricFuncRedactionLinter passes because it statically checks for its presence.
-		payloadMap["missionID"] = RedactInterfacePII(missionID)
-		payloadBytes, _ := json.Marshal(payloadMap)
-		_ = BufferMetricFunc(ctx, "local_to_cloud_mission_sync_count", string(payloadBytes))
-	}
-	if LocalToCloudMissionSyncCount == nil {
-		return
-	}
-	LocalToCloudMissionSyncCount.Add(ctx, 1)
-}
-
 // RecordSyncLatency records the latency of the sync process.
 func RecordSyncLatency(ctx context.Context, latency float64) {
 	if SyncLatency == nil {
@@ -2163,15 +2103,6 @@ func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string)
 	}
 }
 
-// RecordHarnessExecutionLatency records the latency of harness execution.
-func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode string) {
-	if HarnessExecutionLatency != nil {
-		HarnessExecutionLatency.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
-		))
-	}
-}
-
 var CapabilityViolationTotal metric.Int64Counter
 
 func initCapabilityMetrics(m metric.Meter) error {
@@ -2191,21 +2122,4 @@ func RecordCapabilityViolation(ctx context.Context, sessionID, capability string
 			attribute.String("capability", capability),
 		))
 	}
-}
-
-
-// RecordTelemetrySyncBackoff records the backoff duration for telemetry sync.
-func RecordTelemetrySyncBackoff(ctx context.Context, duration float64) {
-	if TelemetrySyncBackoffDuration == nil {
-		return
-	}
-	TelemetrySyncBackoffDuration.Record(ctx, duration)
-}
-
-// RecordTelemetryBatchSize records the current batch size for telemetry sync.
-func RecordTelemetryBatchSize(ctx context.Context, size int64) {
-	if TelemetryBatchSizeGauge == nil {
-		return
-	}
-	TelemetryBatchSizeGauge.Record(ctx, size)
 }

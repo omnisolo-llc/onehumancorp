@@ -5,20 +5,19 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations/etcd"
 	"github.com/onehumancorp/mono/srcs/server/integrations/libsql"
 	"github.com/onehumancorp/mono/srcs/server/integrations/litefs"
-	"github.com/onehumancorp/mono/srcs/server/integrations/obsidian"
 	"github.com/onehumancorp/mono/srcs/server/integrations/ollama"
 	"github.com/onehumancorp/mono/srcs/server/integrations/powersync"
 	"github.com/onehumancorp/mono/srcs/server/integrations/restic"
 )
 
-// IntegrationProvider represents a plugin blueprint defining how to instantiate connections.
-type IntegrationProvider interface {
+// Integration represents a plugin blueprint defining how to instantiate connections.
+type Integration interface {
 	Metadata() *pb.IntegrationMetadata
 	WizardSteps() []*pb.WizardStep
 }
 
 // Catalog holds the global static list of all supported integration providers.
-var Catalog = []IntegrationProvider{
+var Catalog = []Integration{
 	&SlackIntegration{},
 	&DiscordIntegration{},
 	&GoogleChatIntegration{},
@@ -38,10 +37,9 @@ var Catalog = []IntegrationProvider{
 	&ollama.OllamaIntegration{},
 	&powersync.PowerSyncIntegration{},
 	&restic.ResticIntegration{},
-	&obsidian.ObsidianIntegration{},
 }
 
 // GetCatalog returns all available integration providers.
-func GetCatalog() []IntegrationProvider {
+func GetCatalog() []Integration {
 	return Catalog
 }
