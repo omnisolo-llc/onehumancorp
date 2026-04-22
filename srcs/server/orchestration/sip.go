@@ -991,7 +991,10 @@ func (s *SIPDB) PruneTelemetryBuffer(ctx context.Context, ageThreshold time.Dura
 }
 
 // SyncBufferedMetrics aggregates and syncs buffered telemetry metrics with the OHC-SIP Cloud DB.
-func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) (int, error) {
+func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string, batchSize int) (int, error) {
+	if batchSize == 0 {
+		batchSize = 500
+	}
 	var records []struct {
 		id         int64
 		metricType string
@@ -1000,7 +1003,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string) 
 
 	err := withSipRetry(ctx, func() error {
 		records = nil
-		query := "SELECT id, metric_type, payload FROM telemetry_buffer WHERE organization_id = $1 ORDER BY id ASC LIMIT 500"
+		query := fmt.Sprintf("SELECT id, metric_type, payload FROM telemetry_buffer WHERE organization_id = $1 ORDER BY id ASC LIMIT %d", batchSize)
 		if !s.db.IsSQLite() {
 			query += " FOR UPDATE SKIP LOCKED"
 		}
