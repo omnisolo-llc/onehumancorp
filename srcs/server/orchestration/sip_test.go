@@ -12,7 +12,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-)
+
+	"encoding/json")
 
 // ClearSemaphore clears the throttle semaphore to prevent test deadlocks.
 func ClearSemaphore() {
@@ -1259,5 +1260,66 @@ func TestSIPDB_Caching(t *testing.T) {
 	plugins, err = sip.GetCapabilityPlugins(ctx, "ACTIVE")
 	if err != nil || len(plugins) != 1 {
 		t.Fatalf("GetCapabilityPlugins cache miss: %v, %v", plugins, err)
+	}
+}
+
+
+func TestSIPDB_SyncContextSync(t *testing.T) {
+	dbPath := "file::memory:?cache=shared"
+	sip, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("failed to open sipdb: %v", err)
+	}
+	defer sip.Close()
+	ctx := context.Background()
+
+	// Seed data
+	mem := EpisodicMemory{
+		MemoryID:        "mem-sync-1",
+		Context:         `{"rag_context": "secret", "other": "public"}`,
+		VectorEmbedding: []byte("[0.1, 0.2]"),
+		SourcePlugin:    "test-plugin",
+		CreatedAt:       time.Now().UTC(),
+	}
+	if err := sip.StoreEpisodicMemory(ctx, mem); err != nil {
+		t.Fatalf("StoreEpisodicMemory failed: %v", err)
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-OHC-Conflict-Resolution") != "force-local" {
+			t.Errorf("missing conflict resolution header")
+		}
+		var payload map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode payload: %v", err)
+		}
+		if _, ok := payload["rag_context"]; ok {
+			t.Errorf("expected rag_context to be stripped, but it was present")
+		}
+		if payload["other"] != "public" {
+			t.Errorf("expected other to be public, got %v", payload["other"])
+		}
+		if payload["memory_id"] != "mem-sync-1" {
+			t.Errorf("expected memory_id mem-sync-1, got %v", payload["memory_id"])
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	synced, err := sip.SyncContextSync(ctx, ts.URL)
+	if err != nil {
+		t.Fatalf("SyncContextSync failed: %v", err)
+	}
+	if synced != 1 {
+		t.Fatalf("expected 1 synced record, got %d", synced)
+	}
+
+	// Verify it was deleted
+	mems, err := sip.GetEpisodicMemoriesByPlugin(ctx, "test-plugin")
+	if err != nil {
+		t.Fatalf("GetEpisodicMemoriesByPlugin failed: %v", err)
+	}
+	if len(mems) != 0 {
+		t.Errorf("expected memory to be deleted after sync, found %d", len(mems))
 	}
 }
