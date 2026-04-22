@@ -287,6 +287,38 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 	return ch, nil
 }
 
+func (rm *RedisMeshTransport) PublishMessage(ctx context.Context, channel string, msg Message) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	topic := "mesh:messages:" + channel
+	cmd := rm.client.B().Publish().Channel(topic).Message(string(data)).Build()
+	return rm.client.Do(ctx, cmd).Error()
+}
+
+func (rm *RedisMeshTransport) SubscribeMessages(ctx context.Context, channel string) (<-chan Message, error) {
+	topic := "mesh:messages:" + channel
+	ch := make(chan Message)
+
+	go func() {
+		defer close(ch)
+		err := rm.client.Receive(context.Background(), rm.client.B().Subscribe().Channel(topic).Build(), func(msg rueidis.PubSubMessage) {
+			var m Message
+			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
+				select {
+				case ch <- m:
+				case <-ctx.Done():
+				}
+			}
+		})
+		if err != nil {
+			// Log error if needed
+		}
+	}()
+	return ch, nil
+}
+
 func (rm *RedisMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {
 	msg := map[string]interface{}{
 		"agent_id": agentID,
@@ -677,6 +709,46 @@ func (lm *MemoryMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task,
 	}()
 
 	return ch, nil
+}
+
+func (lm *MemoryMeshTransport) PublishMessage(ctx context.Context, channel string, msg Message) error {
+	data, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return lm.Publish(channel, data)
+}
+
+func (lm *MemoryMeshTransport) SubscribeMessages(ctx context.Context, channel string) (<-chan Message, error) {
+	rawCh, err := lm.Subscribe(channel)
+	if err != nil {
+		return nil, err
+	}
+
+	msgCh := make(chan Message)
+	go func() {
+		defer close(msgCh)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data, ok := <-rawCh:
+				if !ok {
+					return
+				}
+				var m Message
+				if err := json.Unmarshal(data, &m); err == nil {
+					select {
+					case msgCh <- m:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	return msgCh, nil
 }
 
 func (lm *MemoryMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {

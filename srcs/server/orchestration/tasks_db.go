@@ -275,11 +275,76 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
         return nil, err
     }
 
+    if err := to.insertTransition(ctx, tx, id, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
+        return nil, fmt.Errorf("failed to insert transition: %w", err)
+    }
+
     if err := tx.Commit(ctx); err != nil {
         return nil, err
     }
 
     return &SharedTaskDB{ID: id, Status: "IN_PROGRESS"}, nil
+}
+
+func (to *SharedTaskOrchestrator) TransitionTaskV4(ctx context.Context, taskID, agentID, fromState, toState, reason string) error {
+    tx, err := to.dbProvider.Begin(ctx)
+    if err != nil {
+        return err
+    }
+    defer tx.Rollback(ctx)
+
+    var current string
+    if err := tx.QueryRow(ctx, "SELECT status FROM shared_tasks_v4 WHERE id = $1", taskID).Scan(&current); err != nil {
+        return fmt.Errorf("failed to fetch task %s: %w", taskID, err)
+    }
+
+    if current != fromState {
+        return fmt.Errorf("task %s is in state %s, expected %s", taskID, current, fromState)
+    }
+
+    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_v4 SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
+        return err
+    }
+
+    if err := to.insertTransition(ctx, tx, taskID, fromState, toState, agentID, reason); err != nil {
+        return err
+    }
+
+    if err := tx.Commit(ctx); err != nil {
+        return err
+    }
+
+    if toState == "COMPLETED" {
+        if to.autodream != nil {
+            go func() {
+                var payloadText string
+                err := to.dbProvider.QueryRow(context.Background(), "SELECT COALESCE(payload, '{}') FROM shared_tasks_v4 WHERE id = $1", taskID).Scan(&payloadText)
+                if err != nil {
+                    return
+                }
+
+                logs := []string{"Task " + taskID + " completed successfully.", "Payload: " + payloadText}
+                _ = to.autodream.Consolidate(context.Background(), taskID, logs)
+            }()
+        }
+
+        if to.mesh != nil {
+            go func() {
+                payload := map[string]interface{}{
+                    "task_id":  taskID,
+                    "action":   "COMPLETE",
+                    "agent_id": agentID,
+                    "status":   "COMPLETED",
+                }
+                payloadBytes, err := json.Marshal(payload)
+                if err == nil {
+                    _ = to.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
+                }
+            }()
+        }
+    }
+
+    return nil
 }
 
 func (to *SharedTaskOrchestrator) CreateTaskV4(ctx context.Context, task *SharedTaskDB) error {

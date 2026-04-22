@@ -103,6 +103,8 @@ type MeshTransport interface {
 	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
 	PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error
 	SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error)
+	PublishMessage(ctx context.Context, channel string, msg Message) error
+	SubscribeMessages(ctx context.Context, channel string) (<-chan Message, error)
 	Publish(topic string, data []byte) error
 	Subscribe(topic string) (<-chan []byte, error)
 }
