@@ -14,7 +14,7 @@ actions:
     steps:
       - run: |
           bazel test //... \
-            --config=buildbuddy \
+            --config=buildbuddy-official \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800
