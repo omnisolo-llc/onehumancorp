@@ -1,3 +1,4 @@
+import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -202,29 +203,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.compose(
-              outer: ColorFilter.matrix(const <double>[
-                1.787, -0.715, -0.072, 0, 0,
-                -0.213, 1.285, -0.072, 0, 0,
-                -0.213, -0.715, 1.928, 0, 0,
-                0, 0, 0, 1, 0,
-              ]),
-              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                  width: 1.5,
-                ),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
+        child: GlassCard(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.6),
+          child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
@@ -309,8 +290,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   ),
                 ],
               ),
-            ),
-          ),
         ),
       ),
     ).then((_) {

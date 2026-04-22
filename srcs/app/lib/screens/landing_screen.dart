@@ -266,19 +266,9 @@ class _DownloadButton extends ConsumerWidget { // Tracking intent metrics
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.compose(
-            outer: ColorFilter.matrix(const <double>[
-              1.787, -0.715, -0.072, 0, 0,
-              -0.213, 1.285, -0.072, 0, 0,
-              -0.213, -0.715, 1.928, 0, 0,
-              0, 0, 0, 1, 0,
-            ]),
-            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-          ),
-          child: TextButton.icon(
+      child: GlassCard(
+        padding: EdgeInsets.zero,
+        child: TextButton.icon(
             onPressed: () async {
               try {
                 await ref.read(apiServiceProvider)!.trackDownload(os, '1.0.0');
@@ -307,8 +297,8 @@ class _DownloadButton extends ConsumerWidget { // Tracking intent metrics
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
-            ),
-          ),
+
+      ),
         ),
       ),
     );
