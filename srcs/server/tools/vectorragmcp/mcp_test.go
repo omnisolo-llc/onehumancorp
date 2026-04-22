@@ -22,10 +22,13 @@ func (m *mockProvider) Close() {}
 func (m *mockProvider) Ping(ctx context.Context) error { return nil }
 func (m *mockProvider) IsSQLite() bool { return m.isSQLite }
 func (m *mockProvider) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) { return nil, nil }
+func (m *mockProvider) CreateTask(ctx context.Context, task *db.TaskRecord) error { return nil }
+
 func (m *mockProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) {
     m.queries = append(m.queries, queryText)
     return m.results, nil
 }
+func (m *mockProvider) ClaimTask(ctx context.Context, taskID string) error { return nil }
 
 func TestVectorRAGMCP_CallTool(t *testing.T) {
 	provider := &mockProvider{
