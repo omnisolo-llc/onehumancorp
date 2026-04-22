@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"strings"
 )
 
 // BwrapRunner executes commands inside a bubblewrap sandbox.
@@ -59,6 +61,17 @@ func (r *BwrapRunner) GetBwrapArgs(command string, policy *Policy) []string {
 
 	// Using socat Unix Socket proxy to strictly control network egress
 	args = append(args, "--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock")
+
+	// Provide SPIFFE identity to the sandbox by mounting the Workload API socket
+	if spiffeSocket := os.Getenv("SPIFFE_ENDPOINT_SOCKET"); spiffeSocket != "" {
+		// e.g. unix:///var/run/spire/sockets/agent.sock
+		socketPath := strings.TrimPrefix(spiffeSocket, "unix://")
+		if socketPath != "" {
+			args = append(args, "--bind", socketPath, socketPath)
+			args = append(args, "--setenv", "SPIFFE_ENDPOINT_SOCKET", spiffeSocket)
+		}
+	}
+
 	args = append(args, "--", "bash", "-c", command)
 
 	return args
@@ -93,6 +106,7 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
             // We'll treat exit code 1 as a potential setup violation since we can't easily distinguish
             // unless we parse stderr.
             if exitCode == 1 && bytes.Contains(stderr.Bytes(), []byte("bwrap:")) {
+                // Increment violation count metric
                 violationCount.Add(ctx, 1)
             }
 		} else {
@@ -140,6 +154,7 @@ func (r *BwrapRunner) ExecuteStream(ctx context.Context, command string, policy 
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
             if exitCode == 1 && bytes.Contains(errBuf.Bytes(), []byte("bwrap:")) {
+                // Increment violation count metric
                 violationCount.Add(ctx, 1)
             }
 		} else {
