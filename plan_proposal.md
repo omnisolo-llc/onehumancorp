@@ -1,7 +1,6 @@
-1. **Implement `IsolationStrategy` interface**: Use a file editing tool (like `replace_with_git_merge_diff`) to add `IsolationStrategy` interface to `srcs/server/agents/provider.go`. The interface will have a single method `RunInIsolation(worktree string) error`.
-2. **Update `Provider` interface**: Use a file editing tool to embed the `IsolationStrategy` interface in the `Provider` interface in `srcs/server/agents/provider.go`.
-3. **Implement `RunInIsolation`**: Use a file editing tool to add `RunInIsolation(worktree string) error` to all the structs implementing `Provider` (or just to `baseProvider` and `BuiltinProvider`) in `srcs/server/agents/provider.go`. The implementation will pipe output streams directly to Redis Pub/Sub, for example: `fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)` and return `nil`.
-4. **Verify code changes**: Run `cat srcs/server/agents/provider.go` to ensure all edits were applied correctly.
-5. **Run tests**: Execute `bazelisk test //srcs/server/agents/...` to ensure all tests pass.
-6. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-7. **Submit the code**: Use the `submit` tool to commit the code, and then output a final message with a YAML block containing `issue_id: 4871`.
+1. **Analyze the user request:** The user wants to design the Multi-Tenant SaaS Tier Architecture for the "OneHumanCorp" platform. As the "Principal Product Architect & KAIROS Orchestrator", the goal is to create a detailed GitHub issue containing a Title, Problem Statement, Research Report, Design Doc, Implementation Prompt, Priority, and Estimated Scope, then save this exclusively to `.agent-task/report/task_output.md`.
+2. **Review requirements:** The tier system should consist of Free ($0), Starter ($9/mo), Pro ($29/mo), and Business ($79/mo) plans. It needs to define user-facing limits, how upgrades are presented, and what happens when a limit is reached, without prescribing API layer enforcement.
+3. **Format:** The output must be saved to `.agent-task/report/task_output.md` with the required sections as per the AI OS prompt format.
+4. **Draft the content:** I will draft the architecture document.
+5. **Verify and save:** I will save the file to `.agent-task/report/task_output.md`.
+6. **Pre-commit and submit:** Follow the pre-commit instructions, git add the report with `-f`, request code review (ignoring no-code-change rejections if applicable), and submit.
