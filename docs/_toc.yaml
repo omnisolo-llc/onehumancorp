@@ -7,8 +7,6 @@ toc:
     path: /docs/technical/architecture/index.md
   - title: System Design
     path: /docs/technical/architecture/system-design.md
-  - title: Business Journey Architecture
-    path: /docs/research/[architecture]_business_journey.md
   - title: RAG Synthesis
     path: /docs/architecture/rag_synthesis.md
   - title: Developer Guide
