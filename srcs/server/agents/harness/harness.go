@@ -6,6 +6,7 @@ type ExecutionContext struct {
 	Command      []string
 	AllowedPaths []string
 	NetworkProxy string
+	AllowedDomains []string
 }
 
 type IsolationHarness interface {

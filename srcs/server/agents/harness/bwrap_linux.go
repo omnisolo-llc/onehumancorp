@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/agents/harness/network"
+	"fmt"
 )
 
 type BwrapHarness struct{}
@@ -20,6 +22,16 @@ func NewIsolationHarness() IsolationHarness {
 func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {
 	telemetry.RecordBubblewrapSpawn(ctx)
 	start := time.Now()
+
+	if len(execCtx.AllowedDomains) > 0 {
+		socketPath := fmt.Sprintf("/tmp/ohc-proxy-%d.sock", time.Now().UnixNano())
+		proxy := network.NewNetworkBridgeProxy(socketPath, execCtx.AllowedDomains)
+		if err := proxy.Start(); err != nil {
+			return nil, fmt.Errorf("failed to start network bridge proxy: %w", err)
+		}
+		defer proxy.Stop()
+		execCtx.NetworkProxy = "unix://" + socketPath
+	}
 
 	args := []string{
 		"--unshare-net",
@@ -36,14 +48,49 @@ func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([
 		args = append(args, "--bind", path, path)
 	}
 
-	// Append the actual command to execute
-	args = append(args, "--")
-	args = append(args, execCtx.Command...)
+	if strings.HasPrefix(execCtx.NetworkProxy, "unix://") {
+		socketPath := strings.TrimPrefix(execCtx.NetworkProxy, "unix://")
+		args = append(args, "--bind", socketPath, socketPath)
+		// We override the command to spawn a background socat in the container
+		// Then it executes the user command. We use bash to orchestrate this.
+		// Use "$@" to preserve exact arguments securely.
+		bashCmd := fmt.Sprintf("socat TCP-LISTEN:3128,fork UNIX-CONNECT:%s & sleep 0.1; exec \"$@\"", socketPath)
+		args = append(args, "--")
+		args = append(args, "bash", "-c", bashCmd, "--")
+		args = append(args, execCtx.Command...)
+	} else {
+		// Append the actual command to execute
+		args = append(args, "--")
+		args = append(args, execCtx.Command...)
+	}
 
 
 	cmd := exec.CommandContext(ctx, "bwrap", args...)
+
+	// Start with default environment
+	cmd.Env = cmd.Environ()
+	// Add standard PATH explicitly
+	hasPath := false
+	for _, env := range cmd.Env {
+		if strings.HasPrefix(env, "PATH=") {
+			hasPath = true
+			break
+		}
+	}
+	if !hasPath {
+		cmd.Env = append(cmd.Env, "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+	}
+
 	if execCtx.NetworkProxy != "" {
-		cmd.Env = append(cmd.Environ(), "HTTP_PROXY="+execCtx.NetworkProxy, "HTTPS_PROXY="+execCtx.NetworkProxy)
+		proxyStr := execCtx.NetworkProxy
+		if strings.HasPrefix(execCtx.NetworkProxy, "unix://") {
+			proxyStr = "http://127.0.0.1:3128"
+		}
+		cmd.Env = append(cmd.Env,
+			"HTTP_PROXY="+proxyStr,
+			"HTTPS_PROXY="+proxyStr,
+			"ALL_PROXY="+proxyStr,
+		)
 	}
 	out, err := cmd.CombinedOutput()
 

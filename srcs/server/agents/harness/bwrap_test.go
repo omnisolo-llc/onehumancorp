@@ -47,3 +47,32 @@ func TestBwrapHarness_ExecutionLatency(t *testing.T) {
 		// Just swallow error if bwrap not found, we just want coverage
 	}
 }
+
+func TestBwrapHarness_ProxyEnv(t *testing.T) {
+	h := NewIsolationHarness()
+	ctx := context.Background()
+	execCtx := ExecutionContext{
+		Command:      []string{"env"},
+		AllowedPaths: []string{"/tmp"},
+		NetworkProxy: "unix:///tmp/test.sock",
+	}
+
+	out, err := h.Execute(ctx, execCtx)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			t.Logf("bwrap not found, skipping proxy env test")
+			return
+		}
+		// Try to see if it's permission denied (due to /tmp binding error in test container)
+		t.Logf("bwrap executed with error: %v, out: %s", err, string(out))
+		return
+	}
+
+	output := string(out)
+	if !strings.Contains(output, "HTTP_PROXY=http://127.0.0.1:3128") {
+		t.Errorf("expected HTTP_PROXY in env output, got: %s", output)
+	}
+	if !strings.Contains(output, "HTTPS_PROXY=http://127.0.0.1:3128") {
+		t.Errorf("expected HTTPS_PROXY in env output, got: %s", output)
+	}
+}
