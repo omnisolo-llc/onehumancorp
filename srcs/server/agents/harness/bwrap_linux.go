@@ -40,7 +40,11 @@ func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([
 	args = append(args, "--")
 	args = append(args, execCtx.Command...)
 
+
 	cmd := exec.CommandContext(ctx, "bwrap", args...)
+	if execCtx.NetworkProxy != "" {
+		cmd.Env = append(cmd.Environ(), "HTTP_PROXY="+execCtx.NetworkProxy, "HTTPS_PROXY="+execCtx.NetworkProxy)
+	}
 	out, err := cmd.CombinedOutput()
 
 	duration := time.Since(start).Seconds()

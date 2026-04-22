@@ -101,6 +101,10 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 			}
 			cfg.Extras[k] = v
 		}
+		// Update organization name if company_name is provided
+		if companyName, ok := req.Extras["company_name"]; ok {
+			s.org.Name = companyName
+		}
 	}
 	if len(req.AiProviders) > 0 {
 		cfg.AiProviders = req.AiProviders

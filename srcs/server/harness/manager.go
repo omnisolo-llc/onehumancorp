@@ -3,7 +3,8 @@ package harness
 import (
 	"context"
 	"io"
-
+	"os"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
@@ -97,8 +98,17 @@ func (m *Manager) ExecuteWithPolicy(ctx context.Context, command string, policy 
 		return Result{}, err
 	}
 
+	start := time.Now()
 	// 2. Execute via runner (which performs its own AST validation)
-	return m.runner.ExecuteWithPolicy(ctx, wrapped, policy)
+	res, err := m.runner.ExecuteWithPolicy(ctx, wrapped, policy)
+
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+	telemetry.RecordHarnessExecutionLatency(ctx, float64(time.Since(start).Milliseconds()), mode)
+
+	return res, err
 }
 
 // ExecuteStream runs a command within a sandboxed environment and bridges streaming I/O.
@@ -117,9 +127,17 @@ func (m *Manager) ExecuteStream(ctx context.Context, command string, policy *Pol
 	cost := float64(len(command)) * 0.0001
 	telemetry.RecordAgentCost(ctx, agentID, orgID, role, model, cost)
 
+	start := time.Now()
 	// 2. Execute via runner with streaming I/O (assuming runner has an equivalent streaming method)
 	// Currently bridging to standard ExecuteWithPolicy, but modifying writer if implemented fully
 	// Wait, we need to add ExecuteStream to runner too. For now we use the existing method.
 	res, err := m.runner.ExecuteStream(ctx, wrapped, policy, stdin, stdout, stderr)
+
+	mode := "cloud"
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		mode = "standalone"
+	}
+	telemetry.RecordHarnessExecutionLatency(ctx, float64(time.Since(start).Milliseconds()), mode)
+
 	return res, err
 }

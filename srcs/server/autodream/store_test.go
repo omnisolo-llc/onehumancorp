@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -55,8 +56,10 @@ func (m *mockRows) Scan(dest ...any) error {
 	return nil
 }
 
-func (m *mockRows) Close() {}
+func (m *mockRows) Close()     {}
 func (m *mockRows) Err() error { return m.errErr }
+
+func (m *mockPGProvider) IsSQLite() bool { return false }
 
 func (m *mockPGProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	m.execArgs = arguments
@@ -307,7 +310,7 @@ func TestSQLiteVectorStore_Search_RowsErr(t *testing.T) {
 	mockDB := &mockPGProvider{
 		rows: &mockRows{
 			maxNext: 0,
-			errErr: errors.New("rows err"),
+			errErr:  errors.New("rows err"),
 		},
 	}
 	store := NewSQLiteVectorStore(mockDB)
@@ -343,5 +346,83 @@ func TestCosineSimilarity(t *testing.T) {
 	b = []float32{1}
 	if cosineSimilarity(a, b) != 0 {
 		t.Errorf("expected 0 due to length mismatch")
+	}
+}
+
+func TestPGVectorStore_Store_InvalidMetadata(t *testing.T) {
+	store := NewPGVectorStore(&mockPGProvider{})
+	err := store.Store(context.Background(), "id", []float32{1.0}, map[string]any{"invalid": make(chan int)}, "content")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestPGVectorStore_Store_InvalidEmbedding(t *testing.T) {
+	store := NewPGVectorStore(&mockPGProvider{})
+	err := store.Store(context.Background(), "id", []float32{float32(math.NaN())}, map[string]any{}, "content")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestPGVectorStore_Search_InvalidEmbedding(t *testing.T) {
+	store := NewPGVectorStore(&mockPGProvider{})
+	_, err := store.Search(context.Background(), []float32{float32(math.NaN())}, 5)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestSQLiteVectorStore_Store_InvalidMetadata(t *testing.T) {
+	store := NewSQLiteVectorStore(&mockPGProvider{})
+	err := store.Store(context.Background(), "id", []float32{1.0}, map[string]any{"invalid": make(chan int)}, "content")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestSQLiteVectorStore_Store_InvalidEmbedding(t *testing.T) {
+	store := NewSQLiteVectorStore(&mockPGProvider{})
+	err := store.Store(context.Background(), "id", []float32{float32(math.NaN())}, map[string]any{}, "content")
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestSQLiteVectorStore_Search_UnmarshalMetaError(t *testing.T) {
+	mockDB := &mockPGProvider{
+		rows: &mockRows{
+			maxNext: 1,
+			scanData: []interface{}{
+				"test-id",
+				"test content",
+				`invalid json`,
+				`[0.1,0.2]`,
+			},
+		},
+	}
+	store := NewSQLiteVectorStore(mockDB)
+	_, err := store.Search(context.Background(), []float32{0.1, 0.2}, 5)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
+
+func TestSQLiteVectorStore_Search_UnmarshalEmbError(t *testing.T) {
+	mockDB := &mockPGProvider{
+		rows: &mockRows{
+			maxNext: 1,
+			scanData: []interface{}{
+				"test-id",
+				"test content",
+				`{"key":"value"}`,
+				`invalid json`,
+			},
+		},
+	}
+	store := NewSQLiteVectorStore(mockDB)
+	_, err := store.Search(context.Background(), []float32{0.1, 0.2}, 5)
+	if err == nil {
+		t.Fatalf("expected error, got nil")
 	}
 }
