@@ -1,96 +1,122 @@
 package hub
 
 import (
-    "context"
-    "time"
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
 
-    "github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type ragSyncService struct {
-    provider db.Provider
+	provider db.Provider
 }
 
 func NewRAGSyncService(provider db.Provider) RAGSyncService {
-    return &ragSyncService{provider: provider}
+	return &ragSyncService{provider: provider}
 }
 
 func (s *ragSyncService) FetchPendingSyncs(ctx context.Context, limit int) ([]RAGSyncRecord, error) {
-    query := `SELECT memory_id, context, sync_status FROM swarm_memory_embeddings WHERE sync_status = 'pending' LIMIT $1`
-    rows, err := s.provider.Query(ctx, query, limit)
-    if err != nil {
-        telemetry.RecordRAGSyncError(ctx, err.Error())
-        return nil, err
-    }
-    defer rows.Close()
+	query := `SELECT memory_id, context, vector_embedding, sync_status, last_sync_at FROM swarm_memory_embeddings WHERE sync_status = 'pending' LIMIT $1`
+	rows, err := s.provider.Query(ctx, query, limit)
+	if err != nil {
+		telemetry.RecordRAGSyncError(ctx, err.Error())
+		return nil, err
+	}
+	defer rows.Close()
 
-    var records []RAGSyncRecord
-    for rows.Next() {
-        var r RAGSyncRecord
-        if err := rows.Scan(&r.ID, &r.Context, &r.SyncStatus); err != nil {
-            telemetry.RecordRAGSyncError(ctx, err.Error())
-            return nil, err
-        }
-        records = append(records, r)
-    }
-    if err := rows.Err(); err != nil {
-        telemetry.RecordRAGSyncError(ctx, err.Error())
-        return records, err
-    }
-    return records, nil
+	var records []RAGSyncRecord
+	for rows.Next() {
+		var r RAGSyncRecord
+		var vectorBytes []byte
+		if err := rows.Scan(&r.ID, &r.Context, &vectorBytes, &r.SyncStatus, &r.LastSyncAt); err != nil {
+			telemetry.RecordRAGSyncError(ctx, err.Error())
+			return nil, err
+		}
+		if len(vectorBytes) > 0 {
+			_ = json.Unmarshal(vectorBytes, &r.Vector)
+		}
+		records = append(records, r)
+	}
+	if err := rows.Err(); err != nil {
+		telemetry.RecordRAGSyncError(ctx, err.Error())
+		return records, err
+	}
+	return records, nil
 }
 
 func (s *ragSyncService) MarkSynced(ctx context.Context, ids []string) error {
-    if len(ids) == 0 {
-        return nil
-    }
-    // simplified batch update using individual statements since simple ids might not support IN with slices natively in the wrapper.
-    var successCount int64
-    for _, id := range ids {
-        _, err := s.provider.Exec(ctx, "UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_at = $1 WHERE memory_id = $2", time.Now(), id)
-        if err != nil {
-            telemetry.RecordRAGSyncError(ctx, err.Error())
-            return err
-        }
-        successCount++
-    }
-    if successCount > 0 {
-        telemetry.RecordRAGRecordsSynced(ctx, successCount)
-    }
-    return nil
+	if len(ids) == 0 {
+		return nil
+	}
+
+	// Use batch update with IN clause for efficiency
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids)+1)
+	args[0] = time.Now()
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+2)
+		args[i+1] = id
+	}
+
+	query := fmt.Sprintf("UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_at = $1 WHERE memory_id IN (%s)", strings.Join(placeholders, ","))
+	_, err := s.provider.Exec(ctx, query, args...)
+	if err != nil {
+		telemetry.RecordRAGSyncError(ctx, err.Error())
+		return err
+	}
+
+	telemetry.RecordRAGRecordsSynced(ctx, int64(len(ids)))
+	return nil
 }
 
 func (s *ragSyncService) ProcessIncomingSync(ctx context.Context, records []RAGSyncRecord) error {
-    var successCount int64
-    for _, r := range records {
-        // simplified upsert logic. Upsert context using basic statements.
-        // in reality this would be an INSERT ON CONFLICT DO UPDATE
-        // assuming Postgres/SQLite
-        var count int
-        row := s.provider.QueryRow(ctx, "SELECT COUNT(*) FROM swarm_memory_embeddings WHERE memory_id = $1", r.ID)
-        if err := row.Scan(&count); err != nil {
-            telemetry.RecordRAGSyncError(ctx, err.Error())
-            return err
-        }
+	var successCount int64
+	for _, r := range records {
+		vectorBytes, _ := json.Marshal(r.Vector)
 
-        if count > 0 {
-            _, err := s.provider.Exec(ctx, "UPDATE swarm_memory_embeddings SET context = $1, sync_status = $2, last_sync_at = $3 WHERE memory_id = $4", r.Context, r.SyncStatus, r.LastSyncAt, r.ID)
-            if err != nil {
-                telemetry.RecordRAGSyncError(ctx, err.Error())
-                return err
-            }
-        } else {
-            _, err := s.provider.Exec(ctx, "INSERT INTO swarm_memory_embeddings (memory_id, context, sync_status, last_sync_at) VALUES ($1, $2, $3, $4)", r.ID, r.Context, r.SyncStatus, r.LastSyncAt)
-            if err != nil {
-                telemetry.RecordRAGSyncError(ctx, err.Error())
-                return err
-            }
-        }
-        successCount++
-    }
-    if successCount > 0 {
-        telemetry.RecordRAGRecordsSynced(ctx, successCount)
-    }
-    return nil
+		var query string
+		var args []interface{}
+
+		if s.provider.IsSQLite() {
+			// SQLite UPSERT
+			query = `
+				INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, sync_status, last_sync_at)
+				VALUES ($1, $2, $3, $4, $5)
+				ON CONFLICT(memory_id) DO UPDATE SET
+					context = excluded.context,
+					vector_embedding = excluded.vector_embedding,
+					sync_status = excluded.sync_status,
+					last_sync_at = excluded.last_sync_at
+			`
+			args = []interface{}{r.ID, r.Context, vectorBytes, r.SyncStatus, r.LastSyncAt}
+		} else {
+			// Postgres UPSERT
+			query = `
+				INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, sync_status, last_sync_at)
+				VALUES ($1, $2, $3, $4, $5)
+				ON CONFLICT(memory_id) DO UPDATE SET
+					context = EXCLUDED.context,
+					vector_embedding = EXCLUDED.vector_embedding,
+					sync_status = EXCLUDED.sync_status,
+					last_sync_at = EXCLUDED.last_sync_at
+			`
+			args = []interface{}{r.ID, r.Context, vectorBytes, string(r.SyncStatus), r.LastSyncAt}
+		}
+
+		_, err := s.provider.Exec(ctx, query, args...)
+		if err != nil {
+			telemetry.RecordRAGSyncError(ctx, err.Error())
+			return err
+		}
+		successCount++
+	}
+
+	if successCount > 0 {
+		telemetry.RecordRAGRecordsSynced(ctx, successCount)
+	}
+	return nil
 }
