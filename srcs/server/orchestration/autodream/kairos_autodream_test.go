@@ -76,7 +76,7 @@ func TestKairosAutoDreamWorker_RunConsolidation(t *testing.T) {
 
 	// insert mock task
 	_, err := provider.Exec(context.Background(), `
-		INSERT INTO shared_tasks (id, title, status, payload) VALUES ('task-1', 'Task 1', 'COMPLETED', '{}')
+		INSERT INTO shared_tasks (id, title, status, payload) VALUES ('task-1', 'Task 1', 'DONE', '{}')
 	`)
 	require.NoError(t, err)
 

@@ -44,7 +44,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
         error:
             (e, _) => Center(
-              child: SelectableText(
+              child: Text(
                 'Error: $e',
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
