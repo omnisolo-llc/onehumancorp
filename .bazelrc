@@ -109,7 +109,7 @@ build:local --spawn_strategy=sandboxed,local
 # For local development/testing: loads .env and runs tests without remote execution.
 # Usage: bazel test --config=local //path/to:target
 # Or use the wrapper: ./scripts/bazel-test-local.sh //path/to:target
-test:local --config=local
+#test:local --config=local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────

@@ -78,3 +78,39 @@ func TestCommandValidator_ReadOnly(t *testing.T) {
 		})
 	}
 }
+
+func TestCommandValidator_ReadOnly_EdgeCases(t *testing.T) {
+	validator := NewDefaultCommandValidator()
+
+	tests := []struct {
+		cmd     string
+		wantErr error
+	}{
+		// Process Substitution in ReadOnly
+		{"cat <(ls)", ErrProcessSubstitution},
+		// Unsafe bundled short flags
+		{"ls -lZ", ErrUnsafeFlag},
+		// Safe bundled short flags
+		{"ls -la", nil},
+		// Invalid long flags
+		{"ls --invalid", ErrUnsafeFlag},
+		// Flags with equal signs, safe and unsafe
+		{"grep --color=auto", nil},
+		{"find -name=*.txt", ErrUnsafeFlag},
+		{"grep --invalid=value", ErrUnsafeFlag},
+		// Tool not in allowlist
+		{"some_tool -x", nil}, // if it's not in the map, no extra flag validation happens, returns nil
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.cmd, func(t *testing.T) {
+			err := validator.ValidateReadOnly(tt.cmd)
+			if tt.wantErr != nil && err != tt.wantErr {
+				t.Errorf("ValidateReadOnly(%q) error = %v, wantErr %v", tt.cmd, err, tt.wantErr)
+			}
+			if tt.wantErr == nil && err != nil {
+				t.Errorf("ValidateReadOnly(%q) error = %v, wantErr %v", tt.cmd, err, tt.wantErr)
+			}
+		})
+	}
+}

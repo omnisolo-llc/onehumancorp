@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/agents/harness"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 func TestExecutor_E2E_ShadowAccess(t *testing.T) {
@@ -36,11 +37,12 @@ func TestExecutor_Success(t *testing.T) {
 
 	out, err := exec.ExecuteCommand(context.Background(), "echo 'test'")
 
-	if err != nil {
+		if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			t.Skipf("Skipping success test because bwrap/sandbox-exec is not installed: %v", err)
 			return
 		}
+		t.Fatalf("unexpected error: %v", err)
 	}
 
 	if err == nil && !strings.Contains(string(out), "test") {
@@ -60,5 +62,51 @@ func TestExecutor_ValidationFailure(t *testing.T) {
 
 	if err != ErrDangerousZSHBuiltin {
 		t.Fatalf("expected ErrDangerousZSHBuiltin, got: %v", err)
+	}
+}
+
+func TestExecutor_WithProxy(t *testing.T) {
+	realHarness := harness.NewIsolationHarness()
+	exec := NewExecutor(realHarness)
+
+	ctx := context.Background()
+	ac := &orchestration.AgentContext{
+		Env: map[string]string{
+			"HTTP_PROXY": "http://proxy.local:8080",
+		},
+	}
+	ctx = orchestration.WithAgentContext(ctx, ac)
+
+	// Since we mock or test locally, just execute a harmless command.
+	// This ensures the HTTP_PROXY extraction branch gets covered.
+	out, err := exec.ExecuteCommand(ctx, "echo test")
+		if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			t.Skipf("Skipping success test because bwrap/sandbox-exec is not installed: %v", err)
+			return
+		}
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if err == nil && !strings.Contains(string(out), "test") {
+		t.Fatalf("expected output to contain 'test', got: %s", string(out))
+	}
+}
+
+func TestExecutorWithValidator(t *testing.T) {
+	realHarness := harness.NewIsolationHarness()
+	v := NewDefaultCommandValidator()
+	exec := NewExecutorWithValidator(realHarness, v)
+
+	out, err := exec.ExecuteCommand(context.Background(), "echo test")
+		if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			t.Skipf("Skipping success test because bwrap/sandbox-exec is not installed: %v", err)
+			return
+		}
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if err == nil && !strings.Contains(string(out), "test") {
+		t.Fatalf("expected output to contain 'test', got: %s", string(out))
 	}
 }
