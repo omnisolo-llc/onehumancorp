@@ -59,14 +59,14 @@ func TestAutoDreamPipeline_ProcessCompletedTasks(t *testing.T) {
 	// Insert test data
 	_, err = pool.Exec(ctx, `
 		INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status)
-		VALUES ('task-1', 'org-1', 'Test Task', 'Test Description', 'COMPLETED')
+		VALUES ('task-1', 'org-1', 'Test Task', 'Test Description', 'DONE')
 	`)
 	assert.NoError(t, err)
 
 	// Task 2 with no description but should fallback to title
 	_, err = pool.Exec(ctx, `
 		INSERT INTO shared_tasks_decomposition (id, organization_id, title, status)
-		VALUES ('task-2', 'org-1', 'Title Only Task', 'COMPLETED')
+		VALUES ('task-2', 'org-1', 'Title Only Task', 'DONE')
 	`)
 	assert.NoError(t, err)
 
@@ -122,7 +122,7 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_EmbeddingErrorFallback(t *testi
 
 	_, err = pool.Exec(ctx, `
 		INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status)
-		VALUES ('task-3', 'org-1', 'Test Task', 'Test Description', 'COMPLETED')
+		VALUES ('task-3', 'org-1', 'Test Task', 'Test Description', 'DONE')
 	`)
 	assert.NoError(t, err)
 

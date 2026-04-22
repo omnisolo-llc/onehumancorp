@@ -192,9 +192,9 @@ void main() {
           overrides: [apiServiceProvider.overrideWithValue(api)],
         ),
       );
-      // await tester.pumpAndSettle(const Duration(seconds: 2));
-await tester.pumpWidget(Container());
-      // expect(find.text('3'), findsOneWidget);
+      await tester.pumpAndSettle();
+
+      expect(find.text('3'), findsOneWidget);
     });
   });
 

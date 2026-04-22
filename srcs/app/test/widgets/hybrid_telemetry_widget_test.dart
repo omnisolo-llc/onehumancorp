@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/models/dashboard.dart';
+import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -14,13 +15,16 @@ void main() {
     final mockApi = MockApiService();
 
     when(() => mockApi.getDashboard()).thenAnswer(
-      (_) async => const DashboardSnapshot(
-        totalTasks: 10,
-        runningTasks: 2,
-        pendingTasks: 8,
-        completedTasks: 0,
-        agentCount: 5,
-        budgetBurnRate: 0.0,
+      (_) async => DashboardSnapshot(
+        organization: Organization(id: '1', name: 'Test Org', domain: 'test.com', members: [], roleProfiles: []),
+        meetings: [],
+        costs: CostSummary(totalCostUSD: 0.0, totalTokens: 0, agents: []),
+        agents: [],
+        statuses: [
+          StatusBucket(status: 'pending', count: 8),
+          StatusBucket(status: 'running', count: 2),
+        ],
+        updatedAt: DateTime.now(),
       ),
     );
 

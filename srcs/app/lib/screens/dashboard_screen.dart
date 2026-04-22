@@ -1,6 +1,11 @@
-import 'dart:ui';
+import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import 'package:ohc_app/widgets/glass_card.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
@@ -8,9 +13,7 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
-import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
-import 'package:ohc_app/widgets/glass_card.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -41,70 +44,87 @@ class DashboardScreen extends ConsumerWidget {
             ),
         error:
             (e, _) => Center(
-              child: SelectableText(
+              child: Text(
                 'Error: $e',
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
             ),
-        data: (data) {
-          final isStandalone =
-              data.hybridHealth != null &&
-              data.hybridHealth!.mode == 'standalone';
+        data: (data) => _DashboardContent(data: data, ref: ref),
+      ),
+    );
+  }
+}
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header section
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+class _DashboardContent extends StatelessWidget {
+  final DashboardSnapshot data;
+  final WidgetRef ref;
+
+  const _DashboardContent({required this.data, required this.ref});
+
+  @override
+  Widget build(BuildContext context) {
+    // Collect all unique roles
+    final Set<String> allRoles = {};
+    for (final profile in data.organization.roleProfiles) {
+      if (profile.role.isNotEmpty && profile.role != 'CEO') {
+        allRoles.add(profile.role);
+      }
+    }
+    for (final member in data.organization.members) {
+      if (member.role.isNotEmpty && !member.isHuman) {
+        allRoles.add(member.role);
+      }
+    }
+    for (final agent in data.agents) {
+      if (agent.role.isNotEmpty) {
+        allRoles.add(agent.role);
+      }
+    }
+
+    final roleList = allRoles.toList()..sort();
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        // --- UPGRADE BANNER ---
+        Container(
+          margin: const EdgeInsets.only(bottom: 24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => context.go('/wizards/upgrade'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
                   children: [
+                    Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Business Overview',
-                            style: TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Outfit',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Welcome back to ${data.organization.name}',
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
+                          Text("What's new ✨", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
+                          const Text("OHC v2.4 is available. Upgrade now for 2x faster orchestration.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
                         ],
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 48),
-                const _SectionTitle('Hybrid Observability'),
-                const SizedBox(height: 24),
-                const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: HybridTelemetryWidget(),
-                    ),
-                    SizedBox(width: 24),
-                    Expanded(
-                      flex: 3,
-                      child: SwarmObservabilityWidget(),
+                    FilledButton(
+                      onPressed: () => context.go('/wizards/upgrade'),
+                      child: const Text('Upgrade in 1 click'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 48),
+              ),
+            ),
+          ),
+        ),
 
-<<<<<<< Updated upstream
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -169,64 +189,23 @@ class DashboardScreen extends ConsumerWidget {
           child: GlassCard(
             padding: EdgeInsets.zero,
             child: Column(
-=======
-                const _SectionTitle('Key Metrics'),
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 24,
-                  runSpacing: 24,
-                  children: [
-                    _StatCard(
-                      label: 'Total Cost',
-                      value: '\$${data.costs.totalCostUSD.toStringAsFixed(2)}',
-                      icon: Icons.attach_money,
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      iconColor: Theme.of(context).colorScheme.primary,
-                    ),
-                    _StatCard(
-                      label: 'Tokens Used',
-                      value: '${data.costs.totalTokens}',
-                      icon: Icons.data_usage,
-                      color: Theme.of(context).colorScheme.secondaryContainer,
-                      iconColor: Theme.of(context).colorScheme.secondary,
-                    ),
-                    const GrowthReferralWidget(),
-                  ],
-                ),
-                const SizedBox(height: 48),
-
-                const _SectionTitle('Agent Orchestration'),
-                const SizedBox(height: 24),
-                Row(
->>>>>>> Stashed changes
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: const SizedBox(
-                          height: 500, // Fixed height for task list in dashboard
-                          child: TaskListScreen(),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                      child: Text(
+                        'Proactive Task Stream',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontFamily: 'Outfit',
                         ),
                       ),
                     ),
-                    const SizedBox(width: 24),
-                    Expanded(
-                      flex: 2,
-                      child: Column(
-                        children: [
-                          if (isStandalone) ...[
-                            const HybridObservabilityWidget(),
-                            const SizedBox(height: 24),
-                          ],
-                          SubAgentQueueWidget(statuses: data.statuses),
-                        ],
-                      ),
-                    ),
+                    const Expanded(child: TaskListView()),
                   ],
                 ),
-<<<<<<< Updated upstream
           ),
         ),
         const SizedBox(height: 16),
@@ -332,68 +311,115 @@ class _ObservabilityWidget extends StatelessWidget {
                           ],
                         ),
                       ],
-=======
-
-                const SizedBox(height: 48),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const _SectionTitle('Active Agents'),
-                    TextButton.icon(
-                      onPressed: () {
-                        // TODO: Implement navigation to detailed agents view
-                      },
-                      icon: const Icon(Icons.arrow_forward),
-                      label: const Text('View All', style: TextStyle(fontFamily: 'Inter')),
->>>>>>> Stashed changes
                     ),
-                  ],
+                  ),
                 ),
-<<<<<<< Updated upstream
               ),
           ),
-=======
-                const SizedBox(height: 24),
-                Wrap(
-                  spacing: 24,
-                  runSpacing: 24,
-                  children:
-                      data.agents.map((agent) {
-                        return _AgentCard(
-                          ref: ref,
-                          role: agent.role,
-                          count: 1, // Will update when count added to model
-                        );
-                      }).toList(),
-                ),
-              ],
-            ),
-          );
-        },
->>>>>>> Stashed changes
       ),
     );
   }
 }
 
-class _AgentCard extends StatefulWidget {
-  final WidgetRef ref;
+class _StatusBadge extends StatelessWidget {
+  final bool healthy;
+  const _StatusBadge({required this.healthy});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final color = healthy ? Colors.green : colors.error;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            healthy ? 'System Nominal' : 'Degraded',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: color,
+              fontFamily: 'Inter',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  final IconData icon;
+  final Color? iconColor;
+
+  const _Metric({required this.label, required this.value, required this.color, required this.icon, this.iconColor});
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveIconColor = iconColor ?? color;
+    return Column(
+      children: [
+        Icon(icon, color: effectiveIconColor, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: color,
+            fontFamily: 'Inter',
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RoleScaleCard extends StatefulWidget {
   final String role;
   final int count;
+  final WidgetRef ref;
 
-  const _AgentCard({
-    required this.ref,
+  const _RoleScaleCard({
     required this.role,
     required this.count,
+    required this.ref,
   });
 
   @override
-  State<_AgentCard> createState() => _AgentCardState();
+  State<_RoleScaleCard> createState() => _RoleScaleCardState();
 }
 
-class _AgentCardState extends State<_AgentCard> {
+class _RoleScaleCardState extends State<_RoleScaleCard> {
   bool _isScaling = false;
-  // ignore: unused_field
   bool _isHovered = false;
 
   Future<void> _scaleTo(int newCount) async {
@@ -503,7 +529,7 @@ class _AgentCardState extends State<_AgentCard> {
                                         fontFamily: 'Inter',
                                       ),
                                     ),
-                          ),
+                            ),
                           ),
                           Semantics(
                             button: true,
@@ -567,7 +593,6 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
-  // ignore: unused_field
   bool _isHovered = false;
 
   @override
@@ -584,6 +609,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
+    // Optional delay for staggered entrance animation if needed
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) {
         _controller.forward();
@@ -600,6 +626,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
   @override
   Widget build(BuildContext context) {
     final effectiveIconColor = widget.iconColor ?? widget.color;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Semantics(
       label: '${widget.label}: ${widget.value}',

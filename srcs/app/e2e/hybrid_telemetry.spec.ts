@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { loginAsAdmin } from './helpers_test.go'; // Placeholder import per instructions to use loginAsAdmin
 
 test.describe('Hybrid Mode Telemetry Gap Analysis', () => {
   test('User can view Hybrid Deployment Telemetry on the dashboard', async ({ page }) => {
