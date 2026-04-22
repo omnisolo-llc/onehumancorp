@@ -27,6 +27,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/memory"
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/pipeline"
 	"github.com/onehumancorp/mono/srcs/server/scheduler"
 	"github.com/onehumancorp/mono/srcs/server/settings"
@@ -180,13 +181,13 @@ func newDemoSystem(now time.Time, hub *orchestration.Hub, tracker *billing.Track
 // Returns (http.Handler, *orchestration.Hub).
 // Produces no errors.
 // Has no side effects.
-func newDemoHandler(now time.Time, hub *orchestration.Hub, tracker *billing.Tracker, authStore *auth.Store) http.Handler {
+func newDemoHandler(now time.Time, hub *orchestration.Hub, tracker *billing.Tracker, subAgentQueue queue.SubAgentTaskQueue, authStore *auth.Store) http.Handler {
 	org := newDemoSystem(now, hub, tracker)
 	if authStore == nil {
 		authStore = auth.NewStore()
 	}
 
-	return dashboard.NewServer(org, hub, tracker, authStore)
+	return dashboard.NewServer(org, hub, tracker, subAgentQueue, authStore)
 }
 
 // Runs the API server.
@@ -293,6 +294,36 @@ func run(now time.Time, listen listenFunc) error {
 		if opts, err := rueidis.ParseURL(redisURL); err == nil {
 			redisClient, _ = rueidis.NewClient(opts)
 		}
+	}
+
+		// Setup Sub-Agent Task Queue
+	var subAgentQueue queue.SubAgentTaskQueue
+	if redisClient != nil && os.Getenv("OHC_STANDALONE") != "true" {
+		subAgentQueue = queue.NewRedisSubAgentTaskQueue(redisClient, "ohc:subagent:tasks", queue.QueueOptions{MaxRetries: 3, RateLimitRate: 10, DLQName: "dlq"})
+	} else if pool != nil {
+		subAgentQueue = queue.NewSQLiteSubAgentTaskQueue(pool.Provider, queue.QueueOptions{MaxRetries: 3, RateLimitRate: 10, DLQName: "dlq"})
+
+		// Fallback background process for Standalone mode
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					if subAgentQueue != nil {
+						payload, err := subAgentQueue.Process(ctx, "")
+						if err == nil && payload != nil {
+							slog.Info("Standalone fallback processing job", "job_id", payload.JobID)
+							_ = subAgentQueue.Complete(ctx, payload.JobID, payload.QueueName)
+						} else {
+							time.Sleep(100 * time.Millisecond)
+						}
+					} else {
+						time.Sleep(1 * time.Second)
+					}
+				}
+			}
+		}()
 	}
 
 	var autodreamWorker *orchestration.AutoDreamWorker
@@ -477,7 +508,7 @@ func run(now time.Time, listen listenFunc) error {
 			if globalCentrifugeNode != nil {
 				tenantHub.SetCentrifugeNode(globalCentrifugeNode)
 			}
-			return dashboard.NewServer(org, tenantHub, tenantTracker, authStore)
+			return dashboard.NewServer(org, tenantHub, tenantTracker, subAgentQueue, authStore)
 		}
 
 		registry, multiTenantHandler := dashboard.NewMultiTenantServerWithRegistry(authStore, factory)
@@ -486,7 +517,7 @@ func run(now time.Time, listen listenFunc) error {
 		handler = multiTenantHandler
 		slog.Info("using multi-tenant dashboard server", "bootstrap_org", bootstrapOrg.ID, "headless", headless)
 	} else {
-		handler = newDemoHandler(now, hub, tracker, authStore)
+		handler = newDemoHandler(now, hub, tracker, subAgentQueue, authStore)
 		slog.Info("using single-tenant dashboard server", "headless", headless)
 	}
 

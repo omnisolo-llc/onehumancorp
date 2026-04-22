@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "queue",
+    srcs = ["handler.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/api/queue",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/server/orchestration/queue",
+    ],
+)
+
+go_test(
+    name = "queue_test",
+    srcs = ["handler_test.go"],
+    embed = [":queue"],
+    deps = [
+        "//srcs/server/orchestration/queue",
+    ],
+)

@@ -40,7 +40,7 @@ func newTestRegistry() *TenantRegistry {
 		hub := orchestration.NewHub()
 		defer hub.Close()
 		tracker := billing.NewTracker(billing.DefaultCatalog)
-		return NewServer(org, hub, tracker, sharedAuthStore)
+		return NewServer(org, hub, tracker, nil, sharedAuthStore)
 	}
 	reg := NewTenantRegistry(sharedAuthStore, factory)
 

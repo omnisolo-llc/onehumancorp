@@ -46,8 +46,16 @@ type SubAgentTaskQueuePayload struct {
 	Data      SubAgentTaskData `json:"data"`
 }
 
+type QueueOptions struct {
+	MaxRetries    int
+	RateLimitRate int // tasks per second
+	DLQName       string
+}
+
 type SubAgentTaskQueue interface {
 	Enqueue(ctx context.Context, payload *SubAgentTaskQueuePayload) error
 	Process(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error)
+	Complete(ctx context.Context, jobID string, queueName string) error
+	Fail(ctx context.Context, jobID string, queueName string, reason string) error
 }
 // added for Sub-Agent Orchestration Queue - issue_id 4240

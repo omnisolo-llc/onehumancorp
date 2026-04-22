@@ -57,7 +57,7 @@ func NewTenantRegistry(authStore *auth.Store, factory TenantFactory) *TenantRegi
 		factory = func(org domain.Organization) http.Handler {
 			hub := orchestration.NewHub()
 			tracker := billing.NewTracker(billing.DefaultCatalog)
-			return NewServer(org, hub, tracker, authStore)
+			return NewServer(org, hub, tracker, nil, authStore)
 		}
 	}
 	return &TenantRegistry{

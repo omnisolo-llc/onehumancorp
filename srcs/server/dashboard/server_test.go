@@ -79,7 +79,7 @@ func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
 	}
 
 	app := &Server{org: org, hub: hub, tracker: tracker, integReg: integrations.NewRegistry()}
-	server := httptest.NewServer(NewServer(org, hub, tracker))
+	server := httptest.NewServer(NewServer(org, hub, tracker, nil))
 	token := loginForTest(t, server.URL)
 	return app, server, token
 }
@@ -90,7 +90,7 @@ func TestNewServerBootstrapsInternalDefaultAgentWhenHubEmpty(t *testing.T) {
 	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
-	NewServer(org, hub, tracker)
+	NewServer(org, hub, tracker, nil)
 
 	agents := hub.Agents()
 	if len(agents) != 1 {
@@ -124,7 +124,7 @@ func TestNewServerBootstrapsInternalDefaultAgentFromEnv(t *testing.T) {
 	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
-	NewServer(org, hub, tracker)
+	NewServer(org, hub, tracker, nil)
 
 	agents := hub.Agents()
 	if len(agents) != 1 {
@@ -149,7 +149,7 @@ func TestNewServerDoesNotBootstrapInternalDefaultAgentWhenAgentsExist(t *testing
 	hub.RegisterAgent(orchestration.Agent{ID: "existing-1", Name: "Existing", Role: "CEO", OrganizationID: org.ID})
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
-	NewServer(org, hub, tracker)
+	NewServer(org, hub, tracker, nil)
 
 	agents := hub.Agents()
 	if len(agents) != 1 {
@@ -168,7 +168,7 @@ func TestNewServerHeadlessDisablesFrontendRoutes(t *testing.T) {
 	defer hub.Close()
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 
-	server := httptest.NewServer(NewServer(org, hub, tracker))
+	server := httptest.NewServer(NewServer(org, hub, tracker, nil))
 	defer server.Close()
 
 	resp, err := http.Get(server.URL + "/")

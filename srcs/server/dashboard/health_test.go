@@ -47,7 +47,7 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 	hub.SetSIPDB(realSipDB)
 	tracker := billing.NewTracker(billing.DefaultCatalog)
 	org := domain.Organization{ID: "test-org"}
-	handler := NewServer(org, hub, tracker)
+	handler := NewServer(org, hub, tracker, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/health/hybrid", nil)
 

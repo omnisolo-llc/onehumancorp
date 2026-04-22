@@ -23,6 +23,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
+	apiQueue "github.com/onehumancorp/mono/srcs/server/api/queue"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
@@ -61,6 +63,7 @@ type Server struct {
 	pipelines             []Pipeline
 	authStore             *auth.Store
 	authHandlers          *auth.Handlers
+	SubAgentQueue         queue.SubAgentTaskQueue
 	dbProvider            db.Provider
 	settings              settings.AppSettings
 	agentProviderRegistry *agents.Registry
@@ -430,7 +433,7 @@ func shouldServeUI() bool {
 // Returns http.Handler.
 // Produces no errors.
 // Has no side effects.
-func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing.Tracker, authStore ...*auth.Store) http.Handler {
+func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing.Tracker, subAgentQueue queue.SubAgentTaskQueue, authStore ...*auth.Store) http.Handler {
 	var store *auth.Store
 	if len(authStore) > 0 && authStore[0] != nil {
 		store = authStore[0]
@@ -460,6 +463,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		pipelines:             []Pipeline{},
 		authStore:             store,
 		authHandlers:          auth.NewHandlers(store),
+		SubAgentQueue:         subAgentQueue,
 		agentProviderRegistry: agents.DefaultRegistry(),
 		dynamicMCPTools:       append([]MCPTool(nil), defaultMcpTools...),
 		MeshBroker:            nil, // initialized below
@@ -579,6 +583,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/marketplace", server.handleMarketplace)
 	// Phase 4 – Real-time Analytics
 	mux.HandleFunc("/api/analytics", server.handleAnalytics)
+	mux.HandleFunc("/api/queue/spawn", apiQueue.HandleSpawn(func() queue.SubAgentTaskQueue { return server.SubAgentQueue }))
 	// Phase 2 – External Integrations (chat, git, issues)
 	mux.HandleFunc("/api/integrations", server.handleIntegrations)
 	mux.HandleFunc("/api/integrations/connect", server.handleIntegrationConnect)
