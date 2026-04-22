@@ -283,3 +283,68 @@ func TestRedisMeshTransport_TeammateMeshEvent(t *testing.T) {
 		t.Fatal("Timeout waiting for TeammateMeshEvent")
 	}
 }
+
+func TestMeshTransport_Messages(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	pool := db.NewTestProvider(t)
+	defer pool.Close()
+	mt := NewMemoryMeshTransport(pool)
+
+	sub, err := mt.SubscribeMessage(ctx, "test_topic")
+	require.NoError(t, err)
+
+	msg := Message{
+		ID:        "msg-123",
+		FromAgent: "agent-a",
+		ToAgent:   "agent-b",
+		Type:      "TEST",
+		Content:   "hello",
+	}
+
+	err = mt.BroadcastMessage(ctx, "test_topic", msg)
+	require.NoError(t, err)
+
+	select {
+	case received := <-sub:
+		assert.Equal(t, "msg-123", received.ID)
+		assert.Equal(t, "hello", received.Content)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for message")
+	}
+}
+
+func TestRedisMeshTransport_Messages(t *testing.T) {
+	mr, err := miniredis.Run()
+	require.NoError(t, err)
+	defer mr.Close()
+
+	mt, err := NewRedisMeshTransport(mr.Addr())
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sub, err := mt.SubscribeMessage(ctx, "test_topic_redis")
+	require.NoError(t, err)
+
+	msg := Message{
+		ID:        "msg-456",
+		FromAgent: "agent-c",
+		ToAgent:   "agent-d",
+		Type:      "TEST",
+		Content:   "redis hello",
+	}
+
+	err = mt.BroadcastMessage(ctx, "test_topic_redis", msg)
+	require.NoError(t, err)
+
+	select {
+	case received := <-sub:
+		assert.Equal(t, "msg-456", received.ID)
+		assert.Equal(t, "redis hello", received.Content)
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for redis message")
+	}
+}
