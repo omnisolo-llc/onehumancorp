@@ -55,7 +55,7 @@ func TestAutoDreamWorker(t *testing.T) {
 	taskID := uuid.New().String()
 	_, err = provider.Exec(ctx, `
 		INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, payload, auto_dreamed)
-		VALUES ($1, 'test-org', 'Test Task', 'COMPLETED', '{"key": "value"}', false)
+		VALUES ($1, 'test-org', 'Test Task', 'DONE', '{"key": "value"}', false)
 	`, taskID)
 	if err != nil {
 		t.Fatalf("failed to insert test task: %v", err)
