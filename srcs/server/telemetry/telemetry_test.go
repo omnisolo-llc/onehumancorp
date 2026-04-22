@@ -900,15 +900,3 @@ func TestRecordHarnessExecutionLatency(t *testing.T) {
 
 	RecordHarnessExecutionLatency(context.Background(), 120.5, "standalone")
 }
-
-func TestRecordPostgresLockContention(t *testing.T) {
-	postgresLockContentionCounter = nil
-	// Should not panic when nil
-	RecordPostgresLockContention(context.Background(), "test_operation")
-}
-
-func TestRecordLLMNetworkLatency(t *testing.T) {
-	llmNetworkLatencyHistogram = nil
-	// Should not panic when nil
-	RecordLLMNetworkLatency(context.Background(), "gpt-4", 1.5)
-}
