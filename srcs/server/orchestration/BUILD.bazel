@@ -104,6 +104,7 @@ go_test(
         "reliability_chaos_test.go",
         "sanitizer_test.go",
         "sync_daemon_test.go",
+        "rag_sync_daemon_test.go",
         "telemetry_minimax_client_test.go",
         "shared_tasks_test.go",
         "tasks_test.go",
