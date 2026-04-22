@@ -74,7 +74,7 @@ func (p *AutoDreamPipeline) Stop() {
 func (p *AutoDreamPipeline) process(ctx context.Context) {
 	slog.Info("AutoDreamPipeline: starting memory consolidation sweep")
 
-	// 1. Extraction: Poll recent agent_session_data
+	// 1. Extraction: Poll recent agent_session_data AND completed tasks from state_machine_transitions
 	threshold := time.Now().Add(-1 * time.Hour).UTC()
 	var query string
 	if p.db.IsSQLite() {
@@ -86,55 +86,160 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 	rows, err := p.db.Query(ctx, query, threshold)
 	if err != nil {
 		slog.Error("AutoDreamPipeline: failed to fetch stale sessions", "error", err)
-		return
-	}
-
-	type Session struct {
-		ID          string
-		AgentID     string
-		ContextData string
-	}
-
-	var sessions []Session
-	for rows.Next() {
-		var s Session
-		if err := rows.Scan(&s.ID, &s.AgentID, &s.ContextData); err == nil {
-			sessions = append(sessions, s)
+	} else {
+		type Session struct {
+			ID          string
+			AgentID     string
+			ContextData string
 		}
-	}
-	rows.Close()
 
-	if len(sessions) > 0 {
-		for _, s := range sessions {
-			summary := s.ContextData
-			var embeddingStr string
-			if p.client != nil {
-				ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
-				embedding, embedErr := p.client.GenerateEmbedding(ctxTimeout, summary)
-				cancel()
-				if embedErr == nil && len(embedding) > 0 {
-					if bytes, err := json.Marshal(embedding); err == nil {
-						embeddingStr = string(bytes)
+		var sessions []Session
+		for rows.Next() {
+			var s Session
+			if err := rows.Scan(&s.ID, &s.AgentID, &s.ContextData); err == nil {
+				sessions = append(sessions, s)
+			}
+		}
+		rows.Close()
+
+		if len(sessions) > 0 {
+			for _, s := range sessions {
+				summary := s.ContextData
+				var embeddingStr string
+				if p.client != nil {
+					ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+					embedding, embedErr := p.client.GenerateEmbedding(ctxTimeout, summary)
+					cancel()
+					if embedErr == nil && len(embedding) > 0 {
+						if bytes, err := json.Marshal(embedding); err == nil {
+							embeddingStr = string(bytes)
+						}
 					}
 				}
-			}
 
-			if embeddingStr == "" {
-				var vec []string
-				for i := 0; i < 1536; i++ {
-					vec = append(vec, "0.0")
+				if embeddingStr == "" {
+					var vec []string
+					for i := 0; i < 1536; i++ {
+						vec = append(vec, "0.0")
+					}
+					embeddingStr = "[" + strings.Join(vec, ",") + "]"
 				}
-				embeddingStr = "[" + strings.Join(vec, ",") + "]"
-			}
 
-			err = func() error {
-				tx, err := p.db.Begin(ctx)
+				err = func() error {
+					tx, err := p.db.Begin(ctx)
+					if err != nil {
+						return err
+					}
+					defer tx.Rollback(ctx)
+
+					var insertQuery string
+					if p.db.IsSQLite() {
+						insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, ?, 'session_compression')"
+						_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
+						if err == nil {
+							_, err = tx.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES (?, ?, ?, ?)", uuid.New().String(), "Session Compression: "+s.ID, summary, embeddingStr)
+						}
+					} else {
+						insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, 'system', $2, $3, $4::vector, 'session_compression')"
+						_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
+						if err == nil {
+							_, err = tx.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES ($1, $2, $3, $4::vector)", uuid.New().String(), "Session Compression: "+s.ID, summary, embeddingStr)
+						}
+					}
+
+					if err != nil {
+						return err
+					}
+
+					var delQuery string
+					if p.db.IsSQLite() {
+						delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+					} else {
+						delQuery = "DELETE FROM agent_session_data WHERE session_id = $1"
+					}
+					_, err = tx.Exec(ctx, delQuery, s.ID)
+					if err != nil {
+						return err
+					}
+
+					return tx.Commit(ctx)
+				}()
 				if err != nil {
-					return err
+					slog.Error("AutoDreamPipeline: failed to consolidate DB memory", "error", err)
 				}
-				defer tx.Rollback(ctx)
+			}
+		}
+	}
 
+	// 2. Poll state_machine_transitions for COMPLETED tasks
+	var smQuery string
+	if p.db.IsSQLite() {
+		smQuery = `
+			SELECT sm.entity_id, t.payload
+			FROM state_machine_transitions sm
+			JOIN shared_tasks_v4 t ON sm.entity_id = t.id
+			WHERE sm.to_state = 'COMPLETED' AND sm.occurred_at > ?
+			AND NOT EXISTS (
+				SELECT 1 FROM autodream_memories am WHERE am.task_id = sm.entity_id
+			)
+			LIMIT 50
+		`
+	} else {
+		smQuery = `
+			SELECT sm.entity_id, t.payload
+			FROM state_machine_transitions sm
+			JOIN shared_tasks_v4 t ON sm.entity_id = t.id
+			WHERE sm.to_state = 'COMPLETED' AND sm.occurred_at > $1
+			AND NOT EXISTS (
+				SELECT 1 FROM autodream_memories am WHERE am.task_id = sm.entity_id
+			)
+			LIMIT 50
+		`
+	}
+
+	smRows, err := p.db.Query(ctx, smQuery, threshold)
+	if err != nil {
+		slog.Error("AutoDreamPipeline: failed to fetch completed tasks", "error", err)
+	} else {
+		type CompletedTask struct {
+			EntityID string
+			Payload  string
+		}
+		var tasks []CompletedTask
+		for smRows.Next() {
+			var t CompletedTask
+			if err := smRows.Scan(&t.EntityID, &t.Payload); err == nil {
+				tasks = append(tasks, t)
+			}
+		}
+		smRows.Close()
+
+		if len(tasks) > 0 {
+			for _, t := range tasks {
+				summary := "Completed task " + t.EntityID + " payload: " + t.Payload
+				var embeddingStr string
+				if p.client != nil {
+					ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+					embedding, embedErr := p.client.GenerateEmbedding(ctxTimeout, summary)
+					cancel()
+					if embedErr == nil && len(embedding) > 0 {
+						if bytes, err := json.Marshal(embedding); err == nil {
+							embeddingStr = string(bytes)
+						}
+					}
+				}
+
+				if embeddingStr == "" {
+					var vec []string
+					for i := 0; i < 1536; i++ {
+						vec = append(vec, "0.0")
+					}
+					embeddingStr = "[" + strings.Join(vec, ",") + "]"
+				}
+
+				var memID = uuid.New().String()
 				var insertQuery string
+				var insertArgs []interface{}
 				if p.db.IsSQLite() {
 					insertQuery = "INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, source_mission_id) VALUES (?, 'system', ?, ?, ?, 'session_compression', ?)"
 					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr, s.ID)
@@ -149,25 +254,11 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 					}
 				}
 
-				if err != nil {
-					return err
-				}
-
-				var delQuery string
-				if p.db.IsSQLite() {
-					delQuery = "DELETE FROM agent_session_data WHERE session_id = ?"
+				if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
+					slog.Warn("AutoDreamPipeline: failed to insert completed task memory", "id", memID, "error", err)
 				} else {
-					delQuery = "DELETE FROM agent_session_data WHERE session_id = $1"
+					slog.Debug("AutoDreamPipeline: consolidated completed task", "id", t.EntityID)
 				}
-				_, err = tx.Exec(ctx, delQuery, s.ID)
-				if err != nil {
-					return err
-				}
-
-				return tx.Commit(ctx)
-			}()
-			if err != nil {
-				slog.Error("AutoDreamPipeline: failed to consolidate DB memory", "error", err)
 			}
 		}
 	}
