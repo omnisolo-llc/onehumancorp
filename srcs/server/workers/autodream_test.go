@@ -34,7 +34,7 @@ func TestAutoDreamWorker_ProcessCompletedTasks(t *testing.T) {
 
 	_, err = provider.Exec(context.Background(), `
 	INSERT INTO tasks (id, organization_id, payload, status, auto_dreamed)
-	VALUES ('task-1', 'org-1', 'Test Payload', 'DONE', false)
+	VALUES ('task-1', 'org-1', 'Test Payload', 'COMPLETED', false)
 	`)
 	assert.NoError(t, err)
 
