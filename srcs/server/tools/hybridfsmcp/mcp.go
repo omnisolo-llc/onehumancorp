@@ -24,6 +24,7 @@ type FileSystemProvider interface {
 	ReadFile(ctx context.Context, path string) ([]byte, error)
 	WriteFile(ctx context.Context, path string, data []byte) error
 	ListDir(ctx context.Context, path string) ([]string, error)
+	SearchFiles(ctx context.Context, path string, pattern string) ([]string, error)
 }
 
 // LocalFSProvider implements FileSystemProvider for the local disk.
@@ -82,6 +83,42 @@ func (p *LocalFSProvider) ListDir(ctx context.Context, path string) ([]string, e
 		names = append(names, entry.Name())
 	}
 	return names, nil
+}
+
+
+func (p *LocalFSProvider) SearchFiles(ctx context.Context, path string, pattern string) ([]string, error) {
+	fullPath, err := p.sanitizePath(path)
+	if err != nil {
+		return nil, err
+	}
+	var matches []string
+	err = filepath.WalkDir(fullPath, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		match, err := filepath.Match(pattern, filepath.Base(p))
+		if err != nil {
+			return err
+		}
+		if match {
+			rel, err := filepath.Rel(fullPath, p)
+			if err != nil {
+				return err
+			}
+			matches = append(matches, rel)
+		}
+		return nil
+	})
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return matches, nil
 }
 
 // S3ClientInterface abstracts S3 methods used by CloudFSProvider to enable testing.
@@ -198,6 +235,45 @@ func (p *CloudFSProvider) ListDir(ctx context.Context, path string) ([]string, e
 	return entries, nil
 }
 
+
+func (p *CloudFSProvider) SearchFiles(ctx context.Context, path string, pattern string) ([]string, error) {
+	s3Key, err := p.sanitizePath(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix := s3Key
+	if prefix != "" && !strings.HasSuffix(prefix, "/") {
+		prefix += "/"
+	}
+
+	opts := minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+	}
+
+	var matches []string
+	objectCh := p.client.ListObjects(ctx, p.bucketName, opts)
+	for object := range objectCh {
+		if object.Err != nil {
+			return nil, object.Err
+		}
+
+		name := strings.TrimPrefix(object.Key, prefix)
+		if name != "" {
+			match, err := filepath.Match(pattern, filepath.Base(name))
+			if err != nil {
+				return nil, err
+			}
+			if match {
+				matches = append(matches, name)
+			}
+		}
+	}
+
+	return matches, nil
+}
+
 // HybridFSMCP implements the MCP interface for filesystem operations.
 type HybridFSMCP struct {
 	provider FileSystemProvider
@@ -236,6 +312,11 @@ func (m *HybridFSMCP) ListTools() []Tool {
 			Name:        "list_directory",
 			Description: "Lists the contents of a directory.",
 			InputSchema: json.RawMessage(`{"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}`),
+		},
+		{
+			Name:        "search_files",
+			Description: "Searches for files matching a pattern.",
+			InputSchema: json.RawMessage(`{"type": "object", "properties": {"path": {"type": "string"}, "pattern": {"type": "string"}}, "required": ["path", "pattern"]}`),
 		},
 	}
 }
@@ -306,6 +387,28 @@ func (m *HybridFSMCP) CallTool(ctx context.Context, toolName string, arguments m
 			m.proxy.Buffer(ctx, sessionID, "read", toolName, arguments)
 		}
 		return map[string]interface{}{"entries": entries}, nil
+	case "search_files":
+		path, ok := arguments["path"].(string)
+		if !ok {
+			return nil, errors.New("missing or invalid 'path' argument")
+		}
+		pattern, ok := arguments["pattern"].(string)
+		if !ok {
+			return nil, errors.New("missing or invalid 'pattern' argument")
+		}
+		if m.proxy != nil {
+			if err := m.proxy.GetAuthorizer().Authorize(ctx, sessionID, "read", toolName); err != nil {
+				return nil, err
+			}
+		}
+		matches, err := m.provider.SearchFiles(ctx, path, pattern)
+		if err != nil {
+			return nil, err
+		}
+		if m.proxy != nil {
+			m.proxy.Buffer(ctx, sessionID, "read", toolName, arguments)
+		}
+		return map[string]interface{}{"matches": matches}, nil
 	default:
 		return nil, fmt.Errorf("unknown tool: %s", toolName)
 	}
