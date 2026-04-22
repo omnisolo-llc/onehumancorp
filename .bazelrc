@@ -1,0 +1,120 @@
+# Bazel configuration for MCP Any
+
+# ── Default: use BuildBuddy official for all builds and tests ─────────────────
+# Provides remote cache, remote execution, and build event streaming.
+build --config=buildbuddy-official
+test --config=buildbuddy-official
+
+# ── Download strategy ─────────────────────────────────────────────────────────
+# Download all outputs so that local test wrappers and generated scripts are
+# available.  Flutter test runners require the pub-cache and workspace trees
+# to be materialised on the local host since test execution uses processwrapper-sandbox.
+build --remote_download_toplevel
+
+# ── CGO / SQLite ──────────────────────────────────────────────────────────────
+build --action_env=CGO_ENABLED=1
+
+# ── Sandboxing ────────────────────────────────────────────────────────────────
+build --spawn_strategy=remote,sandboxed,local
+build --incompatible_strict_action_env
+build --announce_rc
+
+# ── Remote execution resilience ───────────────────────────────────────────────
+# Automatically rewind and retry actions when their remote inputs are lost
+# (e.g. due to remote-cache eviction). Stabilised in Bazel 9.1.0.
+build --rewind_lost_inputs
+
+# ── Test defaults ─────────────────────────────────────────────────────────────
+# Show test output only on failure
+test --test_output=errors
+test --build_tests_only
+test --test_timeout=300,600,900,1800
+# Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
+# Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
+test --local_test_jobs=4
+# Allow up to 200 parallel remote build actions during tests.
+test --jobs=200
+
+# ── Stream test output for debugging (use --config=verbose) ───────────────────
+test:verbose --test_output=streamed
+
+# ── Test environment pass-through ─────────────────────────────────────────────
+test --test_env=GEMINI_API_KEY
+test --test_env=MINIMAX_API_KEY
+test --test_env=MCP_BUNDLE_DIR
+test --test_env=CI
+test --test_env=HOME
+test --test_env=MCPANY_DEBUG
+test --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS
+test --test_env=PATH
+
+# ── Action environment ────────────────────────────────────────────────────────
+build --action_env=GEMINI_API_KEY
+build --action_env=MINIMAX_API_KEY
+build --action_env=MCP_BUNDLE_DIR
+build --action_env=CI
+
+# ── BuildBuddy official (default) ─────────────────────────────────────────────
+# Remote cache + executor at onehumancorp.buildbuddy.io with BES streaming.
+common:buildbuddy --bes_timeout=600s
+build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
+build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
+# Upload BES data asynchronously so the build/test result is available sooner.
+build:buildbuddy-official --bes_upload_mode=fully_async
+build:buildbuddy-official --verbose_failures
+common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
+# common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
+# Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
+common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
+common:buildbuddy-official --remote_upload_local_results
+common:buildbuddy-official --remote_timeout=10m
+# common:buildbuddy-official --remote_cache_compression
+common:buildbuddy-official --remote_local_fallback
+# Fall back to direct download when BuildBuddy CAS doesn't have the blob.
+# Prevents CacheNotFoundException from failing repository rule fetches.
+common:buildbuddy-official --experimental_remote_downloader_local_fallback
+common:buildbuddy-official --jobs=200
+# Default read-only API key (public, read-only – cannot push artifacts or
+# modify any BuildBuddy state; safe to keep in version control).
+common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
+
+# ── BuildBuddy self-hosted ──────────────────────────────────────
+# Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
+# Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
+# buildbuddy-official which relies on the global sandboxed,local fallback chain.
+common:buildbuddy --bes_timeout=600s
+common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
+common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_local_fallback
+common:buildbuddy --remote_upload_local_results
+# common:buildbuddy --remote_cache_compression
+# Fall back to direct download when BuildBuddy CAS doesn't have the blob.
+common:buildbuddy --experimental_remote_downloader_local_fallback
+common:buildbuddy --jobs=200
+# Read only Bazel cache
+common:buildbuddy --remote_header=x-buildbuddy-api-key=h2FUJLgaH6D2RL7T3PAV
+common:buildbuddy --remote_timeout=10m
+build:buildbuddy --verbose_failures
+build:buildbuddy --bes_upload_mode=fully_async
+
+# ── Local: disable remote cache/execution ─────────────────────────────────────
+build:local --remote_cache=
+build:local --remote_executor=
+build:local --spawn_strategy=sandboxed,local
+
+# ── Local test: run tests locally and load .env ───────────────────────────────
+# For local development/testing: loads .env and runs tests without remote execution.
+# Usage: bazel test --config=local //path/to:target
+# Or use the wrapper: ./scripts/bazel-test-local.sh //path/to:target
+test:local --config=local
+test:local --test_output=streamed
+
+# ── Platform configs ───────────────────────────────────────────────────────────
+build:linux --platforms=@platforms//os:linux
+build:android --platforms=@platforms//os:android
+build:ios --platforms=@platforms//os:ios
+build:macos --platforms=@platforms//os:macos
+build:windows --platforms=@platforms//os:windows
