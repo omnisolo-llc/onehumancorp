@@ -16,6 +16,17 @@ This directory is the source for the repository documentation site.
 - `docs/developer/index.md`
 - `docs/operations/index.md`
 
+## Hybrid Agentic OS Architecture
+
+OneHumanCorp (OHC) utilizes a powerful **Hybrid Agentic OS Architecture** designed to seamlessly bridge cloud reliability with edge autonomy.
+
+- **Cloud-Native Mode**: Powered by Kubernetes, PostgreSQL, and Redis for highly available multi-tenant environments.
+- **Standalone Desktop Mode**: Zero-infrastructure fallback leveraging SQLite for local state management.
+- **Teammate Mesh**: Peer-to-peer event synchronization connecting multiple agents across edge devices.
+- **AutoDream Pipelines**: Asynchronous data consolidation bridging edge SQLite telemetry back to Cloud vector stores.
+
+For a comprehensive guide, see the [Hybrid Architecture Documentation](features/hybrid-architecture.md).
+
 ## KAIROS Features
 - [Sub-Agent Queue](features/kairos/sub_agent_queue.md)
 - [Distributed State Machine](features/kairos/distributed_state_machine.md)
