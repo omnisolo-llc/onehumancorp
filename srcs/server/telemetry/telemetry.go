@@ -47,6 +47,9 @@ var (
 	tokenUsageCounter                  metric.Int64Counter
 	AgentTokenUsageTotal               metric.Int64Counter
 	AgentCostEstimateUSD               metric.Float64Counter
+	StorageCostEstimateUSD             metric.Float64Counter
+	EmailCostEstimateUSD               metric.Float64Counter
+	ApiCallCostEstimateUSD             metric.Float64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -537,6 +540,30 @@ func InitWithMeter(m mockableMeter) error {
 	AgentCostEstimateUSD, err = m.Float64Counter(
 		"ohc_agent_cost_estimate_usd",
 		metric.WithDescription("Cumulative estimated USD cost of agent LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	StorageCostEstimateUSD, err = m.Float64Counter(
+		"ohc_storage_cost_estimate_usd",
+		metric.WithDescription("Cumulative estimated USD cost of storage operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	EmailCostEstimateUSD, err = m.Float64Counter(
+		"ohc_email_cost_estimate_usd",
+		metric.WithDescription("Cumulative estimated USD cost of email sends"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	ApiCallCostEstimateUSD, err = m.Float64Counter(
+		"ohc_api_call_cost_estimate_usd",
+		metric.WithDescription("Cumulative estimated USD cost of outbound API calls"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -2452,4 +2479,65 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	TelemetryBatchSizeGauge.Record(ctx, size)
+}
+
+
+// RecordStorageCost records the estimated USD cost of storage operations.
+func RecordStorageCost(ctx context.Context, organizationID string, cost float64) {
+	if StorageCostEstimateUSD == nil {
+		return
+	}
+	StorageCostEstimateUSD.Add(ctx, cost, metric.WithAttributes(
+		attribute.String("organization_id", organizationID),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"cost":            cost,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "storage_cost", string(payloadBytes))
+	}
+}
+
+// RecordEmailCost records the estimated USD cost of email sends.
+func RecordEmailCost(ctx context.Context, organizationID string, cost float64) {
+	if EmailCostEstimateUSD == nil {
+		return
+	}
+	EmailCostEstimateUSD.Add(ctx, cost, metric.WithAttributes(
+		attribute.String("organization_id", organizationID),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"cost":            cost,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "email_cost", string(payloadBytes))
+	}
+}
+
+// RecordApiCallCost records the estimated USD cost of outbound API calls.
+func RecordApiCallCost(ctx context.Context, organizationID string, cost float64) {
+	if ApiCallCostEstimateUSD == nil {
+		return
+	}
+	ApiCallCostEstimateUSD.Add(ctx, cost, metric.WithAttributes(
+		attribute.String("organization_id", organizationID),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"organization_id": organizationID,
+			"cost":            cost,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "api_call_cost", string(payloadBytes))
+	}
 }
