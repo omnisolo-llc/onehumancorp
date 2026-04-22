@@ -18,6 +18,26 @@ var publicPaths = []string{
 	"/api/auth/login",
 	"/api/auth/powersync/jwks",
 	"/api/v1/scale/stream", // Manually authenticated inside handler for SSE query token bypass
+	"/landing",
+	"/login",
+}
+
+var publicAssetPrefixes = []string{
+	"/app",
+	"/assets/",
+	"/canvaskit/",
+	"/icons/",
+}
+
+var publicAssetPaths = []string{
+	"/",
+	"/favicon.png",
+	"/flutter.js",
+	"/flutter_bootstrap.js",
+	"/flutter_service_worker.js",
+	"/main.dart.js",
+	"/manifest.json",
+	"/version.json",
 }
 
 // Middleware returns an HTTP middleware that enforces JWT authentication. Requests to public paths pass through unauthenticated. All other requests must carry a valid Bearer token in the Authorization header or an "ohc_token" cookie.
@@ -99,9 +119,15 @@ func isPublic(path string) bool {
 			return true
 		}
 	}
-	// Static assets
-	if strings.HasPrefix(path, "/app") || path == "/" {
-		return true
+	for _, prefix := range publicAssetPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	for _, publicPath := range publicAssetPaths {
+		if path == publicPath {
+			return true
+		}
 	}
 	return false
 }
