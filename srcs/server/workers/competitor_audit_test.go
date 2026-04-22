@@ -117,6 +117,7 @@ func TestCompetitorAuditWorker_Start(t *testing.T) {
 	assert.NoError(t, err)
 	pool := db.NewSqliteProvider(dbConn)
 	worker := NewCompetitorAuditWorker(pool, t.TempDir())
+	worker.Interval = 10 * time.Millisecond
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -154,6 +155,7 @@ func TestCompetitorAuditWorker_StartLoop(t *testing.T) {
 
 	pool := db.NewSqliteProvider(dbConn)
 	worker := NewCompetitorAuditWorker(pool, t.TempDir())
+	worker.Interval = 10 * time.Millisecond
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -187,4 +189,40 @@ func TestCompetitorAuditWorker_Errors(t *testing.T) {
 		worker := NewCompetitorAuditWorker(m, t.TempDir())
 		worker.runAudit(ctx) // Should fail commit and return, logs error
 	})
+
+	t.Run("MkdirError", func(t *testing.T) {
+		m := &mockProvider{}
+        // Create a file where it expects a directory to trigger MkdirAll error
+        fileDir := t.TempDir()
+        filePath := filepath.Join(fileDir, "invalid_dir")
+        os.WriteFile(filePath, []byte("test"), 0644)
+
+		worker := NewCompetitorAuditWorker(m, filePath)
+		worker.runAudit(ctx)
+	})
+
+	t.Run("WriteFileError", func(t *testing.T) {
+		m := &mockProvider{}
+
+		memoryDir := t.TempDir()
+		// Pre-create a directory with the file's intended name to trigger WriteFile error
+		err := os.Mkdir(filepath.Join(memoryDir, "competitor_OpenClaw.txt"), 0755)
+		assert.NoError(t, err)
+
+		worker := NewCompetitorAuditWorker(m, memoryDir)
+		worker.runAudit(ctx)
+	})
+
+}
+
+func TestCompetitorAuditWorker_DefaultDir(t *testing.T) {
+	dbConn, err := sql.Open("sqlite", ":memory:")
+	assert.NoError(t, err)
+	pool := db.NewSqliteProvider(dbConn)
+
+	// Create a worker with empty memoryDir
+	worker := NewCompetitorAuditWorker(pool, "")
+
+	// Check if it defaults to ".agent-task/memory"
+	assert.Equal(t, ".agent-task/memory", worker.memoryDir)
 }

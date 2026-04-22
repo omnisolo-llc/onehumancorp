@@ -21,6 +21,7 @@ type CompetitorAuditWorker struct {
 	pool      db.Provider
 	counter   metric.Int64Counter
 	memoryDir string
+	Interval  time.Duration
 }
 
 func NewCompetitorAuditWorker(pool db.Provider, memoryDir string) *CompetitorAuditWorker {
@@ -35,6 +36,7 @@ func NewCompetitorAuditWorker(pool db.Provider, memoryDir string) *CompetitorAud
 		pool:      pool,
 		counter:   counter,
 		memoryDir: memoryDir,
+		Interval:  1 * time.Hour,
 	}
 }
 
@@ -42,7 +44,7 @@ func NewCompetitorAuditWorker(pool db.Provider, memoryDir string) *CompetitorAud
 func (w *CompetitorAuditWorker) Start(ctx context.Context) {
     w.runAudit(ctx) // Run immediately on start
 
-	ticker := time.NewTicker(1 * time.Hour)
+	ticker := time.NewTicker(w.Interval)
 	defer ticker.Stop()
 
 	for {
