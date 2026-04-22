@@ -47,6 +47,10 @@ func NewSqliteProvider(db *sql.DB) *SqliteProvider {
 func convertBindVars(query string) string {
 	query = strings.ReplaceAll(query, "FOR UPDATE SKIP LOCKED", "")
 	query = strings.ReplaceAll(query, "::vector", "")
+	query = strings.ReplaceAll(query, "ALTER TABLE mcp_async_tasks ENABLE ROW LEVEL SECURITY;", "")
+	query = strings.ReplaceAll(query, "ALTER TABLE mcp_async_tasks ENABLE ROW LEVEL SECURITY", "")
+
+
 
 	var result strings.Builder
 	result.Grow(len(query))

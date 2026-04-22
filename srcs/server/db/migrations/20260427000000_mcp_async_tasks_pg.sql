@@ -1,0 +1,13 @@
+-- +goose Up
+CREATE TABLE IF NOT EXISTS mcp_async_tasks (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    agent_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    payload TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+ALTER TABLE mcp_async_tasks ENABLE ROW LEVEL SECURITY;
+
+-- +goose Down
+DROP TABLE IF EXISTS mcp_async_tasks;
