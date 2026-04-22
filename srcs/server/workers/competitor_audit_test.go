@@ -3,11 +3,9 @@ package workers
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
+	"errors"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/stretchr/testify/assert"
@@ -71,11 +69,8 @@ func TestCompetitorAuditWorker(t *testing.T) {
 
 	pool := db.NewSqliteProvider(dbConn)
 
-	// Setup cleanup for memory directory
-	memoryDir := t.TempDir()
-
 	// 2. Instantiate the worker
-	worker := NewCompetitorAuditWorker(pool, memoryDir)
+	worker := NewCompetitorAuditWorker(pool)
 
 	// 3. Run audit manually
 	ctx := context.Background()
@@ -93,30 +88,14 @@ func TestCompetitorAuditWorker(t *testing.T) {
 		assert.NoError(t, err)
 		names = append(names, name)
 	}
-	assert.ElementsMatch(t, []string{"AI coding assistant", "OpenClaw", "Replit Agent"}, names)
-
-	// 5. Verify file creation
-	for _, comp := range []string{"AI coding assistant", "OpenClaw", "Replit Agent"} {
-		filename := filepath.Join(memoryDir, "competitor_"+comp+".txt")
-		_, err := os.Stat(filename)
-		assert.NoError(t, err, "File should exist: "+filename)
-
-		content, err := os.ReadFile(filename)
-		assert.NoError(t, err)
-		assert.Contains(t, string(content), "Competitor: "+comp)
-		if comp == "AI coding assistant" {
-			assert.Contains(t, string(content), "Metric: offline_support=true")
-		} else {
-			assert.Contains(t, string(content), "Metric: offline_support=false")
-		}
-	}
+	assert.ElementsMatch(t, []string{"Claude Code", "OpenClaw", "Replit Agent"}, names)
 }
 
 func TestCompetitorAuditWorker_Start(t *testing.T) {
 	dbConn, err := sql.Open("sqlite", ":memory:")
 	assert.NoError(t, err)
 	pool := db.NewSqliteProvider(dbConn)
-	worker := NewCompetitorAuditWorker(pool, t.TempDir())
+	worker := NewCompetitorAuditWorker(pool)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -153,7 +132,7 @@ func TestCompetitorAuditWorker_StartLoop(t *testing.T) {
     assert.NoError(t, err)
 
 	pool := db.NewSqliteProvider(dbConn)
-	worker := NewCompetitorAuditWorker(pool, t.TempDir())
+	worker := NewCompetitorAuditWorker(pool)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -172,19 +151,19 @@ func TestCompetitorAuditWorker_Errors(t *testing.T) {
 
 	t.Run("BeginError", func(t *testing.T) {
 		m := &mockProvider{beginErr: errors.New("begin error")}
-		worker := NewCompetitorAuditWorker(m, t.TempDir())
+		worker := NewCompetitorAuditWorker(m)
 		worker.runAudit(ctx) // Should return early, logs error
 	})
 
 	t.Run("ExecError", func(t *testing.T) {
 		m := &mockProvider{execErr: errors.New("exec error")}
-		worker := NewCompetitorAuditWorker(m, t.TempDir())
+		worker := NewCompetitorAuditWorker(m)
 		worker.runAudit(ctx) // Should rollback and return, logs error
 	})
 
 	t.Run("CommitError", func(t *testing.T) {
 		m := &mockProvider{commitErr: errors.New("commit error")}
-		worker := NewCompetitorAuditWorker(m, t.TempDir())
+		worker := NewCompetitorAuditWorker(m)
 		worker.runAudit(ctx) // Should fail commit and return, logs error
 	})
 }
