@@ -723,7 +723,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
 
-	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
+	return telemetry.Middleware(utils.GzipMiddleware(auth.Middleware(store)(mux)))
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching
