@@ -508,3 +508,159 @@ func TestTasksDBClaimTask_NoPending(t *testing.T) {
 		t.Fatalf("ClaimTask returned task when none was pending")
 	}
 }
+
+func TestSharedTaskOrchestrator_ClaimTask(t *testing.T) {
+	_ = t.TempDir()
+	ctx := context.Background()
+	provider := db.NewTestProvider(t)
+
+	// Create table
+	_, err := provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			assigned_agent_id TEXT,
+			dependencies JSONB,
+			created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+
+	_, err = provider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            entity_id TEXT,
+            entity_type TEXT,
+            from_state TEXT,
+            to_state TEXT,
+            agent_id TEXT,
+            reason TEXT,
+            occurred_at TIMESTAMPTZ
+        )
+    `)
+	if err != nil {
+		t.Fatalf("Failed to create transitions table: %v", err)
+	}
+
+	_, err = provider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'Task 1', 'PENDING', '[]')")
+	if err != nil {
+		t.Fatalf("Failed to insert task: %v", err)
+	}
+
+	orchestrator := NewSharedTaskOrchestrator(provider, nil, nil)
+
+	claims := &auth.Claims{OrganizationID: "org-1"}
+	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
+
+	task, err := orchestrator.ClaimTask(ctxWithClaims, "agent-1")
+	if err != nil {
+		t.Fatalf("ClaimTask failed: %v", err)
+	}
+
+	if task == nil {
+		t.Fatalf("ClaimTask returned nil task")
+	}
+
+	if task.TaskID != "task-1" {
+		t.Errorf("Expected task ID task-1, got %s", task.TaskID)
+	}
+
+	var status, assignedAgentID string
+	err = provider.QueryRow(ctx, "SELECT status, assigned_agent_id FROM shared_tasks WHERE id = 'task-1'").Scan(&status, &assignedAgentID)
+	if err != nil {
+		t.Fatalf("Failed to fetch task from DB: %v", err)
+	}
+
+	if status != "IN_PROGRESS" {
+		t.Errorf("Expected DB status IN_PROGRESS, got %s", status)
+	}
+	if assignedAgentID != "agent-1" {
+		t.Errorf("Expected DB assigned agent ID agent-1, got %s", assignedAgentID)
+	}
+}
+
+func TestSharedTaskOrchestrator_ClaimTask_Postgres(t *testing.T) {
+	_ = t.TempDir()
+	ctx := context.Background()
+	provider := db.NewTestProvider(t)
+
+	// Wrap provider to simulate Postgres
+	pgProvider := &mockPgProvider{Provider: provider}
+
+	_, err := pgProvider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			parent_plan_id TEXT,
+			title TEXT NOT NULL,
+			description TEXT,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			assigned_agent_id TEXT,
+			dependencies JSONB,
+			created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+
+	_, err = pgProvider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS state_machine_transitions (
+            id TEXT PRIMARY KEY,
+            entity_id TEXT,
+            entity_type TEXT,
+            from_state TEXT,
+            to_state TEXT,
+            agent_id TEXT,
+            reason TEXT,
+            occurred_at TIMESTAMPTZ
+        )
+    `)
+	if err != nil {
+		t.Fatalf("Failed to create transitions table: %v", err)
+	}
+
+	_, err = pgProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-pg-1', 'org-pg', 'Task PG 1', 'PENDING', '[]')")
+	if err != nil {
+		t.Fatalf("Failed to insert task: %v", err)
+	}
+
+	orchestrator := NewSharedTaskOrchestrator(pgProvider, nil, nil)
+
+	claims := &auth.Claims{OrganizationID: "org-pg"}
+	ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
+
+	task, err := orchestrator.ClaimTask(ctxWithClaims, "agent-pg")
+	if err != nil {
+		t.Fatalf("ClaimTask failed: %v", err)
+	}
+
+	if task == nil {
+		t.Fatalf("ClaimTask returned nil task")
+	}
+
+	if task.TaskID != "task-pg-1" {
+		t.Errorf("Expected task ID task-pg-1, got %s", task.TaskID)
+	}
+
+	var status, assignedAgentID string
+	err = pgProvider.QueryRow(ctx, "SELECT status, assigned_agent_id FROM shared_tasks WHERE id = 'task-pg-1'").Scan(&status, &assignedAgentID)
+	if err != nil {
+		t.Fatalf("Failed to fetch task from DB: %v", err)
+	}
+
+	if status != "IN_PROGRESS" {
+		t.Errorf("Expected DB status IN_PROGRESS, got %s", status)
+	}
+	if assignedAgentID != "agent-pg" {
+		t.Errorf("Expected DB assigned agent ID agent-pg, got %s", assignedAgentID)
+	}
+}

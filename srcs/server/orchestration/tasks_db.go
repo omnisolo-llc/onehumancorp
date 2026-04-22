@@ -77,40 +77,45 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
         defer to.mu.Unlock()
 
         query := `
-            SELECT t.id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1 FROM json_each(t.dependencies) d
-                JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED'
-            )
-            LIMIT 1
+            UPDATE shared_tasks
+            SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = (
+                SELECT t.id FROM shared_tasks t
+                WHERE t.status = 'PENDING' AND t.organization_id = $2
+                AND NOT EXISTS (
+                    SELECT 1 FROM json_each(t.dependencies) d
+                    JOIN shared_tasks dep ON dep.id = d.value
+                    WHERE dep.status != 'COMPLETED'
+                )
+                LIMIT 1
+            ) AND organization_id = $2
+            RETURNING id
         `
-        err = tx.QueryRow(ctx, query, orgID).Scan(&id)
+        err = tx.QueryRow(ctx, query, agentID, orgID).Scan(&id)
     } else {
         query := `
-            SELECT t.id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            AND NOT EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) d
-                JOIN shared_tasks dep ON dep.id::text = d
-                WHERE dep.status != 'COMPLETED'
-            )
-            LIMIT 1
-            FOR UPDATE SKIP LOCKED
+            UPDATE shared_tasks
+            SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = (
+                SELECT t.id FROM shared_tasks t
+                WHERE t.status = 'PENDING' AND t.organization_id = $2
+                AND NOT EXISTS (
+                    SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) d
+                    JOIN shared_tasks dep ON dep.id::text = d
+                    WHERE dep.status != 'COMPLETED'
+                )
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            ) AND organization_id = $2
+            RETURNING id
         `
-        err = tx.QueryRow(ctx, query, orgID).Scan(&id)
+        err = tx.QueryRow(ctx, query, agentID, orgID).Scan(&id)
     }
 
     if err != nil {
         if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
             return nil, nil
         }
-        return nil, err
-    }
-
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
-    if err != nil {
         return nil, err
     }
 
@@ -371,30 +376,35 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 		defer to.mu.Unlock()
 
 		query := `
-            SELECT t.id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            LIMIT 1
+            UPDATE shared_tasks
+            SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = (
+                SELECT t.id FROM shared_tasks t
+                WHERE t.status = 'PENDING' AND t.organization_id = $2
+                LIMIT 1
+            ) AND organization_id = $2
+            RETURNING id
         `
-		err = tx.QueryRow(ctx, query, orgID).Scan(&id)
+		err = tx.QueryRow(ctx, query, agentID, orgID).Scan(&id)
 	} else {
 		query := `
-            SELECT t.id FROM shared_tasks t
-            WHERE t.status = 'PENDING' AND t.organization_id = $1
-            LIMIT 1
-            FOR UPDATE SKIP LOCKED
+            UPDATE shared_tasks
+            SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
+            WHERE id = (
+                SELECT t.id FROM shared_tasks t
+                WHERE t.status = 'PENDING' AND t.organization_id = $2
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+            ) AND organization_id = $2
+            RETURNING id
         `
-		err = tx.QueryRow(ctx, query, orgID).Scan(&id)
+		err = tx.QueryRow(ctx, query, agentID, orgID).Scan(&id)
 	}
 
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
 			return nil, nil
 		}
-		return nil, err
-	}
-
-	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'ASSIGNED', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
-	if err != nil {
 		return nil, err
 	}
 
