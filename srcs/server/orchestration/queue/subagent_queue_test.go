@@ -39,7 +39,7 @@ func TestSQLiteSubAgentTaskQueue(t *testing.T) {
 		t.Fatalf("Enqueue failed: %v", err)
 	}
 
-	p, err := q.Acquire(ctx, "l5-implementers")
+	p, err := q.Process(ctx, "l5-implementers")
 	if err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
