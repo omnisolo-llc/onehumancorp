@@ -43,7 +43,7 @@ nav:
       - Hybrid Health Check: ui/guide_proactive_onboarding_health_check.md
   - API:
       - api/index.md
-      - "Interactive Api Playbook": api/api_playbook.md
+      - "Interactive Api Playbook": api/playbook.md
   - Features:
       - Hybrid WebSockets MCP: research/[integrations]_hybrid_websockets_mcp.md
       - Hybrid Feature Flags MCP: research/[integrations]_hybrid_feature_flags_mcp.md
@@ -60,7 +60,6 @@ nav:
       - Proactive RAG MCP: research/[backend]_scribe_proactive_rag_mcp.md
   - Walkthroughs:
       - KAIROS Orchestrator CLI Walkthrough: technical/walkthroughs/kairos_orchestrator_cli.md
-      - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
       - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
       - Agent Harness Visual Walkthrough: walkthroughs/agent_harness_walkthrough.md
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
