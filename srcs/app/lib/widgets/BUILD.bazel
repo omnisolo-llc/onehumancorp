@@ -51,3 +51,21 @@ alias(
     name = "sub_agent_queue_widget",
     actual = ":widgets_lib",
 )
+
+load("@rules_flutter//flutter:defs.bzl", "flutter_test")
+
+flutter_test(
+    name = "tooltip_registry_test",
+    srcs = ["tooltip_registry_test.dart"],
+    embed = [":widgets_lib"],
+    test_files = ["tooltip_registry_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "ai_help_chat_test",
+    srcs = ["ai_help_chat_test.dart"],
+    embed = [":widgets_lib"],
+    test_files = ["ai_help_chat_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
