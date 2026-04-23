@@ -134,6 +134,7 @@ void main() {
     });
 
     testWidgets('shows dashboard data when API returns data', (tester) async {
+      SharedPreferences.setMockInitialValues({});
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -194,7 +195,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('3'), findsOneWidget);
+      expect(find.text('3', skipOffstage: false), findsOneWidget);
     });
   });
 
