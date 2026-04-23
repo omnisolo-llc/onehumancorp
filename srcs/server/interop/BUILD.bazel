@@ -6,30 +6,32 @@ go_library(
         "autogen_adapter.go",
         "crewai_adapter.go",
         "ironclaw_adapter.go",
+        "lock.go",
+        "mesh.go",
+        "mesh_telemetry.go",
         "openclaw_adapter.go",
         "semantickernel_adapter.go",
         "types.go",
-        "lock.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/interop",
-    deps = [
-        "@com_github_redis_rueidis//:rueidis",
-        "@com_github_google_uuid//:uuid",
-    ],
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+        "@com_github_redis_rueidis//:rueidis",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
 )
 
 go_test(
     name = "interop_test",
     srcs = [
         "ironclaw_adapter_test.go",
+        "lock_test.go",
+        "mesh_test.go",
         "swarm_test.go",
         "types_test.go",
-        "lock_test.go",
-    ],
-    deps = [
-        "@com_github_redis_rueidis//:rueidis",
-        "@com_github_google_uuid//:uuid",
     ],
     embed = [":interop"],
 )

@@ -4,12 +4,12 @@ go_library(
     name = "pricing",
     srcs = [
         "budget.go",
-        "router.go",
         "cache.go",
         "calculator.go",
         "compression.go",
         "deduplicator.go",
         "pricing.go",
+        "router.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/lib/pricing",
     visibility = ["//visibility:public"],
@@ -19,12 +19,12 @@ go_test(
     name = "pricing_test",
     srcs = [
         "budget_test.go",
-        "router_test.go",
         "cache_test.go",
         "calculator_test.go",
         "compression_test.go",
         "deduplicator_test.go",
         "pricing_test.go",
+        "router_test.go",
     ],
     embed = [":pricing"],
 )
