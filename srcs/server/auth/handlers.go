@@ -93,7 +93,7 @@ func (h *Handlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 	claims := ClaimsFromContext(r.Context())
 	if claims != nil {
-		h.store.RevokeToken(claims.TokenID, time.Unix(claims.Expires, 0))
+		h.store.RevokeToken(claims.TokenID, time.Unix(claims.Expires, 0), claims.OrganizationID)
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "logged out"})
 }

@@ -97,7 +97,7 @@ func (s *Store) ValidateToken(token string) (*Claims, error) {
 		}
 		return nil, err
 	}
-	if s.IsRevoked(claims.TokenID) {
+	if s.IsRevoked(claims.TokenID, claims.OrganizationID) {
 		return nil, errors.New("token revoked")
 	}
 	return claims, nil

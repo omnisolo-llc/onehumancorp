@@ -195,10 +195,47 @@ func TestJWT_RevokedToken(t *testing.T) {
 		t.Fatalf("initial validate: %v", err)
 	}
 
-	s.RevokeToken(claims.TokenID, time.Unix(claims.Expires, 0))
+	s.RevokeToken(claims.TokenID, time.Unix(claims.Expires, 0), claims.OrganizationID)
 
 	if _, err := s.ValidateToken(token); err == nil {
 		t.Error("expected error for revoked token")
+	}
+}
+
+func TestJWT_RevokedToken_MultiTenant(t *testing.T) {
+	s := auth.NewStore()
+	org1 := "acme"
+	org2 := "globex"
+
+	// Create user in org1
+	u1, _ := s.CreateUser("revoke-tenant1", "revoke1@test.com", "revpass1", nil, org1)
+	token1, _ := s.IssueToken(u1)
+	claims1, _ := s.ValidateToken(token1)
+
+	// Revoke token1 in org1
+	s.RevokeToken(claims1.TokenID, time.Unix(claims1.Expires, 0), org1)
+
+	// Validate it is revoked in org1
+	if s.IsRevoked(claims1.TokenID, org1) == false {
+		t.Error("token1 should be revoked in org1")
+	}
+
+	// Ensure ValidateToken fails
+	if _, err := s.ValidateToken(token1); err == nil {
+		t.Error("expected error for revoked token in org1")
+	}
+
+	// It should NOT be revoked in org2 (even though JTI is unique, the check isolates it)
+	if s.IsRevoked(claims1.TokenID, org2) == true {
+		t.Error("token1 should NOT be revoked in org2")
+	}
+
+	// Legacy token support: if a token was revoked with an empty org, it applies universally
+	// or rather it applies when queried with any org if the underlying store uses the OR logic
+	// In-memory store uses exact tenantKey match, but let's test exact tenantKey
+	s.RevokeToken("legacy-jti", time.Now().Add(1*time.Hour), "")
+	if s.IsRevoked("legacy-jti", "") == false {
+		t.Error("legacy token should be revoked under empty org")
 	}
 }
 
@@ -1068,13 +1105,13 @@ func TestOIDC_MalformedOIDCConfig(t *testing.T) {
 
 func TestStore_RevokeCleanup(t *testing.T) {
 	s := auth.NewStore()
-	s.RevokeToken("jti-1", time.Now().Add(-1*time.Hour))
-	s.RevokeToken("jti-2", time.Now().Add(1*time.Hour))
+	s.RevokeToken("jti-1", time.Now().Add(-1*time.Hour), "")
+	s.RevokeToken("jti-2", time.Now().Add(1*time.Hour), "")
 
-	if s.IsRevoked("jti-1") {
+	if s.IsRevoked("jti-1", "") {
 		t.Error("jti-1 should have been cleaned up on the second RevokeToken call")
 	}
-	if !s.IsRevoked("jti-2") {
+	if !s.IsRevoked("jti-2", "") {
 		t.Error("jti-2 should be active")
 	}
 }

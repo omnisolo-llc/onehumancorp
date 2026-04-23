@@ -129,7 +129,7 @@ type Store struct {
 	byName  map[tenantKey]*User
 	byEmail map[tenantKey]*User
 	byOIDC  map[tenantKey]*User     // OIDC subject → User
-	revoked map[string]time.Time // JTI → expiry (for token revocation)
+	revoked map[tenantKey]time.Time // orgID + JTI → expiry (for token revocation)
 	secret  []byte               // HS256 signing secret
 	repo    UserRepository
 	oidcCfg OIDCConfig
@@ -156,7 +156,7 @@ func newStore(repo UserRepository) *Store {
 		byName:  make(map[tenantKey]*User),
 		byEmail: make(map[tenantKey]*User),
 		byOIDC:  make(map[tenantKey]*User),
-		revoked: make(map[string]time.Time),
+		revoked: make(map[tenantKey]time.Time),
 		repo:    repo,
 	}
 
@@ -528,17 +528,17 @@ func (s *Store) CreateRole(name string, permissions []string) (*Role, error) {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
-func (s *Store) RevokeToken(jti string, exp time.Time) {
+func (s *Store) RevokeToken(jti string, exp time.Time, orgID string) {
 	if s.repo != nil {
-		if err := s.repo.RevokeToken(context.Background(), jti, exp); err != nil {
-			slog.Error("failed to revoke token in repository", "jti", jti, "error", err)
+		if err := s.repo.RevokeToken(context.Background(), jti, exp, orgID); err != nil {
+			slog.Error("failed to revoke token in repository", "jti", jti, "orgID", orgID, "error", err)
 		}
 		return
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.revoked[jti] = exp
+	s.revoked[tenantKey{orgID, jti}] = exp
 	// GC expired entries
 	now := time.Now()
 	for k, v := range s.revoked {
@@ -553,11 +553,11 @@ func (s *Store) RevokeToken(jti string, exp time.Time) {
 // Returns bool.
 // Produces no errors.
 // Has no side effects.
-func (s *Store) IsRevoked(jti string) bool {
+func (s *Store) IsRevoked(jti string, orgID string) bool {
 	if s.repo != nil {
-		revoked, err := s.repo.IsRevoked(context.Background(), jti)
+		revoked, err := s.repo.IsRevoked(context.Background(), jti, orgID)
 		if err != nil {
-			slog.Error("failed to check token revocation in repository", "jti", jti, "error", err)
+			slog.Error("failed to check token revocation in repository", "jti", jti, "orgID", orgID, "error", err)
 			return false
 		}
 		return revoked
@@ -565,7 +565,10 @@ func (s *Store) IsRevoked(jti string) bool {
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	_, ok := s.revoked[jti]
+	_, ok := s.revoked[tenantKey{orgID, jti}]
+	if !ok && orgID != "" {
+		_, ok = s.revoked[tenantKey{"", jti}]
+	}
 	return ok
 }
 

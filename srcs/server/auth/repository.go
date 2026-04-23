@@ -34,7 +34,7 @@ type UserRepository interface {
 	// --- Token revocation ---
 
 	// RevokeToken records a JWT ID (jti) as revoked until exp.
-	RevokeToken(ctx context.Context, jti string, exp time.Time) error
+	RevokeToken(ctx context.Context, jti string, exp time.Time, orgID string) error
 	// IsRevoked reports whether a JWT ID has been revoked.
-	IsRevoked(ctx context.Context, jti string) (bool, error)
+	IsRevoked(ctx context.Context, jti string, orgID string) (bool, error)
 }

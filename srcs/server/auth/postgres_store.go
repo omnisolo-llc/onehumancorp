@@ -33,9 +33,11 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User, orgID str
 
 	email := user.Email
 	oidcSubject := user.OIDCSubject
+	username := user.Username
 
 	if r.pool.IsSQLite() {
 		email = EncryptDeterministic(email)
+		username = EncryptDeterministic(username)
 		if oidcSubject != "" {
 			oidcSubject = EncryptDeterministic(oidcSubject)
 		}
@@ -59,7 +61,7 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User, orgID str
 	_, err := r.pool.Exec(ctx, `
 		INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-		user.ID, user.Username, email, user.PasswordHash,
+		user.ID, username, email, user.PasswordHash,
 		rolesArg, user.Active, user.OrganizationID,
 		nilIfEmpty(oidcSubject),
 		user.CreatedAt, user.UpdatedAt,
@@ -78,10 +80,14 @@ func (r *PgUserRepository) GetByID(ctx context.Context, id string, orgID string)
 }
 
 func (r *PgUserRepository) GetByUsername(ctx context.Context, username string, orgID string) (*User, error) {
-	if orgID == "" || orgID == "sys" {
-		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1", username)
+	lookupUsername := username
+	if r.pool.IsSQLite() {
+		lookupUsername = EncryptDeterministic(username)
 	}
-	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2", username, orgID)
+	if orgID == "" || orgID == "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1", lookupUsername)
+	}
+	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2", lookupUsername, orgID)
 }
 
 func (r *PgUserRepository) GetByEmail(ctx context.Context, email string, orgID string) (*User, error) {
@@ -131,6 +137,7 @@ func (r *PgUserRepository) ListUsers(ctx context.Context, orgID string) ([]*User
 			}
 			_ = json.Unmarshal([]byte(rolesJSON), &u.Roles)
 			u.Email = DecryptDeterministic(u.Email)
+			u.Username = DecryptDeterministic(u.Username)
 			if u.OIDCSubject != "" {
 				u.OIDCSubject = DecryptDeterministic(u.OIDCSubject)
 			}
@@ -159,9 +166,11 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User, orgID str
 
 	email := user.Email
 	oidcSubject := user.OIDCSubject
+	username := user.Username
 
 	if r.pool.IsSQLite() {
 		email = EncryptDeterministic(email)
+		username = EncryptDeterministic(username)
 		if oidcSubject != "" {
 			oidcSubject = EncryptDeterministic(oidcSubject)
 		}
@@ -182,7 +191,7 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User, orgID str
 			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
 			organization_id=$7, oidc_subject=$8, updated_at=$9
 			WHERE id=$1`,
-			user.ID, user.Username, email, user.PasswordHash,
+			user.ID, username, email, user.PasswordHash,
 			rolesArg, user.Active, user.OrganizationID,
 			nilIfEmpty(oidcSubject), user.UpdatedAt,
 		)
@@ -191,7 +200,7 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User, orgID str
 			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
 			organization_id=$7, oidc_subject=$8, updated_at=$9
 			WHERE id=$1 AND organization_id=$10`,
-			user.ID, user.Username, email, user.PasswordHash,
+			user.ID, username, email, user.PasswordHash,
 			rolesArg, user.Active, user.OrganizationID,
 			nilIfEmpty(oidcSubject), user.UpdatedAt, orgID,
 		)
@@ -215,10 +224,10 @@ func (r *PgUserRepository) DeleteUser(ctx context.Context, id string, orgID stri
 	return nil
 }
 
-func (r *PgUserRepository) RevokeToken(ctx context.Context, jti string, exp time.Time) error {
+func (r *PgUserRepository) RevokeToken(ctx context.Context, jti string, exp time.Time, orgID string) error {
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO revoked_tokens (jti, expires_at) VALUES ($1, $2)
-		ON CONFLICT (jti) DO NOTHING`, jti, exp)
+		INSERT INTO revoked_tokens (jti, expires_at, organization_id) VALUES ($1, $2, $3)
+		ON CONFLICT (organization_id, jti) DO NOTHING`, jti, exp, orgID)
 	if err != nil {
 		return fmt.Errorf("pg: revoke token: %w", err)
 	}
@@ -227,9 +236,10 @@ func (r *PgUserRepository) RevokeToken(ctx context.Context, jti string, exp time
 	return nil
 }
 
-func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string) (bool, error) {
+func (r *PgUserRepository) IsRevoked(ctx context.Context, jti string, orgID string) (bool, error) {
 	var count int
-	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP", jti).Scan(&count)
+	// We check for organization_id = '' as well to support tokens revoked prior to multi-tenant rollout.
+	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP AND (organization_id = $2 OR organization_id = '')", jti, orgID).Scan(&count)
 	if err != nil {
 		return false, fmt.Errorf("pg: check revoked: %w", err)
 	}
@@ -259,6 +269,7 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 		u.CreatedAt = created.Time
 		u.UpdatedAt = updated.Time
 		u.Email = DecryptDeterministic(u.Email)
+		u.Username = DecryptDeterministic(u.Username)
 		if u.OIDCSubject != "" {
 			u.OIDCSubject = DecryptDeterministic(u.OIDCSubject)
 		}
