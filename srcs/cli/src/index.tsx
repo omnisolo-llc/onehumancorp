@@ -1,8 +1,5 @@
 import React from 'react';
-import { render, Text } from 'ink';
-
-const App = () => (
-	<Text>Hello World</Text>
-);
+import { render } from 'ink';
+import { App } from './App';
 
 render(<App />);

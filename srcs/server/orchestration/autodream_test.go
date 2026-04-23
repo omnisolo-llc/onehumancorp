@@ -877,12 +877,3 @@ func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string
 	}{topic, payload})
 	return nil
 }
-
-func (m *mockMeshTransport) BroadcastMessage(ctx context.Context, topic string, msg Message) error {
-	return nil
-}
-
-func (m *mockMeshTransport) SubscribeMessage(ctx context.Context, topic string) (<-chan Message, error) {
-	ch := make(chan Message)
-	return ch, nil
-}

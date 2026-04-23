@@ -148,48 +148,54 @@ impl AgentServiceImpl {
         }
     }
 
-    fn build_run_config(&self, req: &RunTaskRequest, department: &str) -> AgentRunConfig {
-        let model = if req.model.is_empty() {
-            self.cfg.model.clone()
-        } else {
-            req.model.clone()
-        };
-
-        let system = if req.system_prompt.is_empty() {
-            let base_prompt = if !department.is_empty() {
-                if let Ok(dep) = Department::from_str(department) {
-                    get_department_config(dep).system_prompt
-                } else {
-                    &self.cfg.system_prompt
-                }
-            } else {
-                &self.cfg.system_prompt
-            };
-            inject_memories_into_prompt(&self.memory, base_prompt)
-        } else {
-            inject_memories_into_prompt(&self.memory, &req.system_prompt)
-        };
-
-        let max_tokens = if req.max_tokens == 0 {
-            if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens }
-        } else {
-            req.max_tokens
-        };
-
-        let max_iterations = if req.max_context_messages == 0 {
-            self.cfg.max_iterations
-        } else {
-            req.max_context_messages
-        };
-
-        AgentRunConfig {
-            model,
-            system,
-            max_tokens,
-            temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
-            max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
+    fn build_run_config(&self, req: &RunTaskRequest, _department: &str) -> AgentRunConfig {
+        let mut run_cfg = AgentRunConfig {
+            model: self.cfg.model.clone(),
+            system: self.cfg.system_prompt.clone(),
+            max_tokens: self.cfg.max_tokens,
+            temperature: self.cfg.temperature,
+            max_iterations: self.cfg.max_iterations,
             max_task_tokens: 0,
+        };
+
+        if let Some(runtime_config) = &req.runtime_config {
+            if !runtime_config.model.is_empty() {
+                run_cfg.model = runtime_config.model.clone();
+            }
+            if !runtime_config.system_prompt.is_empty() {
+                run_cfg.system = runtime_config.system_prompt.clone();
+            }
+            if runtime_config.max_tokens > 0 {
+                run_cfg.max_tokens = runtime_config.max_tokens;
+            }
+            if runtime_config.temperature > 0.0 {
+                run_cfg.temperature = runtime_config.temperature;
+            }
+            if runtime_config.max_iterations > 0 {
+                run_cfg.max_iterations = runtime_config.max_iterations;
+            }
+        } else {
+            if !req.model.is_empty() {
+                run_cfg.model = req.model.clone();
+            }
+            if !req.system_prompt.is_empty() {
+                run_cfg.system = req.system_prompt.clone();
+            }
+            if req.max_tokens > 0 {
+                run_cfg.max_tokens = req.max_tokens;
+            }
+            if req.temperature > 0.0 {
+                run_cfg.temperature = req.temperature;
+            }
         }
+
+        if !_department.is_empty() {
+            if let Ok(dep) = Department::from_str(_department) {
+                run_cfg.system = get_department_config(dep).system_prompt.to_string();
+            }
+        }
+
+        run_cfg
     }
 }
 
@@ -212,8 +218,17 @@ impl AgentService for AgentServiceImpl {
         self.check_auth(&req)?;
 
         let task_req = req.into_inner();
-        let llm = self.resolve_llm(&task_req.llm_provider, &task_req.model, &task_req.llm_endpoint);
-        let run_cfg = self.build_run_config(&task_req, &task_req.department);
+
+        let mut req_provider = task_req.llm_provider.clone();
+        let mut req_model = task_req.model.clone();
+        let mut req_endpoint = task_req.llm_endpoint.clone();
+        if let Some(runtime_config) = &task_req.runtime_config {
+            if !runtime_config.llm_provider.is_empty() { req_provider = runtime_config.llm_provider.clone(); }
+            if !runtime_config.model.is_empty() { req_model = runtime_config.model.clone(); }
+            if !runtime_config.llm_endpoint.is_empty() { req_endpoint = runtime_config.llm_endpoint.clone(); }
+        }
+        let llm = self.resolve_llm(&req_provider, &req_model, &req_endpoint);
+        let mut run_cfg = self.build_run_config(&task_req, &task_req.department);
         let task = task_req.task.clone();
         let memory = self.memory.clone();
 
@@ -234,7 +249,10 @@ impl AgentService for AgentServiceImpl {
         } else {
             all_tools
         };
-        
+
+        // Inject memories into system prompt
+        run_cfg.system = inject_memories_into_prompt(&memory, &run_cfg.system);
+
         let agent = Arc::new(Agent::new(llm, tools));
 
         let (tx, rx) = mpsc::channel::<Result<RunTaskEvent, Status>>(64);
@@ -334,15 +352,35 @@ impl AgentService for AgentServiceImpl {
 
         // In-process dispatch when no remote address.
         if sub_req.sub_agent_address.is_empty() {
-            let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
-            let run_cfg = AgentRunConfig {
-                model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
+            let mut req_provider = sub_req.llm_provider.clone();
+            let mut req_model = sub_req.model.clone();
+            let mut req_endpoint = sub_req.llm_endpoint.clone();
+
+            let mut run_cfg = AgentRunConfig {
+                model: self.cfg.model.clone(),
                 system: self.cfg.system_prompt.clone(),
                 max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
                 temperature: self.cfg.temperature,
                 max_iterations: 100,
                 max_task_tokens: 0,
             };
+
+            if let Some(runtime_config) = &sub_req.runtime_config {
+                if !runtime_config.llm_provider.is_empty() { req_provider = runtime_config.llm_provider.clone(); }
+                if !runtime_config.model.is_empty() { req_model = runtime_config.model.clone(); run_cfg.model = runtime_config.model.clone(); }
+                if !runtime_config.llm_endpoint.is_empty() { req_endpoint = runtime_config.llm_endpoint.clone(); }
+                if !runtime_config.system_prompt.is_empty() { run_cfg.system = runtime_config.system_prompt.clone(); }
+                if runtime_config.max_tokens > 0 { run_cfg.max_tokens = runtime_config.max_tokens; }
+                if runtime_config.temperature > 0.0 { run_cfg.temperature = runtime_config.temperature; }
+                if runtime_config.max_iterations > 0 { run_cfg.max_iterations = runtime_config.max_iterations; }
+            } else {
+                if !sub_req.model.is_empty() { run_cfg.model = sub_req.model.clone(); }
+                if !sub_req.system_prompt.is_empty() { run_cfg.system = sub_req.system_prompt.clone(); }
+                if sub_req.max_tokens > 0 { run_cfg.max_tokens = sub_req.max_tokens; }
+                if sub_req.temperature > 0.0 { run_cfg.temperature = sub_req.temperature; }
+            }
+
+            let llm = self.resolve_llm(&req_provider, &req_model, &req_endpoint);
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
             let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
