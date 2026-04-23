@@ -27,7 +27,8 @@ Guidelines:
 - Prefer targeted edits over full rewrites.
 - When you are done, provide a clear summary of what you did.
 - If you encounter errors, try to understand them and fix them.
-- Do not ask clarifying questions; make reasonable assumptions and proceed.`
+- Do not ask clarifying questions; make reasonable assumptions and proceed.
+- The directories .ohc/memory/auto/ and .ohc/memory/team/ already exist. Write state to them directly.`
 )
 
 // AgentConfig holds the configuration for a local agent run.

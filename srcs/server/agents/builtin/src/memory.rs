@@ -87,6 +87,10 @@ pub fn inject_memories_into_prompt(store: &MemoryStore, system_prompt: &str) -> 
         s.push('\n');
     }
     s.push_str("\n---\n\n");
+    if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+        s.push_str("\n# Memory Fallback (Standalone Mode)\n");
+        s.push_str("The directories .ohc/memory/auto/ and .ohc/memory/team/ already exist. Write state to them directly.\n\n");
+    }
     s.push_str(system_prompt);
     s
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
+
+	"github.com/onehumancorp/mono/srcs/server/harness/mcp"
 )
 
 // Result represents the outcome of an agent execution.
@@ -22,12 +24,14 @@ type AgentHarness interface {
 type Registry struct {
 	mu       sync.RWMutex
 	harnesses map[string]AgentHarness
+	mcpClient *mcp.ClientManager
 }
 
 // NewRegistry creates a new AgentHarness registry.
 func NewRegistry() *Registry {
 	return &Registry{
 		harnesses: make(map[string]AgentHarness),
+		mcpClient: mcp.NewClientManager(),
 	}
 }
 
@@ -60,4 +64,9 @@ func (r *Registry) GetManager(name string) (SandboxManager, error) {
 		return nil, fmt.Errorf("harness %q is not a SandboxManager", name)
 	}
 	return manager, nil
+}
+
+// MCPClient returns the active MCP client manager.
+func (r *Registry) MCPClient() *mcp.ClientManager {
+	return r.mcpClient
 }

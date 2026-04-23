@@ -1,0 +1,36 @@
+--- srcs/server/harness/registry.go
++++ srcs/server/harness/registry.go
+@@ -5,6 +5,8 @@
+	"context"
+	"fmt"
+	"sync"
++
++	"github.com/onehumancorp/mono/srcs/server/harness/mcp"
+ )
+
+ // Result represents the outcome of an agent execution.
+@@ -19,13 +21,15 @@
+ // Registry manages the available agent execution strategies.
+ type Registry struct {
+	mu       sync.RWMutex
+	harnesses map[string]AgentHarness
++	mcpClient *mcp.ClientManager
+ }
+
+ // NewRegistry creates a new AgentHarness registry.
+ func NewRegistry() *Registry {
+	return &Registry{
+		harnesses: make(map[string]AgentHarness),
++		mcpClient: mcp.NewClientManager(),
+	}
+ }
+
+@@ -56,3 +60,8 @@
+	}
+	return manager, nil
+ }
++
++// MCPClient returns the active MCP client manager.
++func (r *Registry) MCPClient() *mcp.ClientManager {
++	return r.mcpClient
++}

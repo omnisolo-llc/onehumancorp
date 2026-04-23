@@ -108,3 +108,11 @@ func (cm *ClientManager) Disconnect(id string) error {
 	delete(cm.servers, id)
 	return nil
 }
+
+// GetServer returns an active MCP server connection by ID.
+func (cm *ClientManager) GetServer(id string) (*MCPServer, bool) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+	srv, exists := cm.servers[id]
+	return srv, exists
+}

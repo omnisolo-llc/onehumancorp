@@ -1,0 +1,19 @@
+--- srcs/server/harness/bwrap_runner.go
++++ srcs/server/harness/bwrap_runner.go
+@@ -39,16 +39,6 @@
+		args = append(args, "--unshare-net")
+	}
+
+-	// Additional dynamic bounds handling
+-	if policy != nil {
+-		for _, path := range policy.AllowedPaths { // Maps to allowRead or generic allow
+-			args = append(args, "--bind", path, path)
+-		}
+-		for _, path := range policy.BlockedPaths { // Maps to denyWrite/blocked
+-			args = append(args, "--tmpfs", path)
+-		}
+-	}
+-
+	// Default read-only bind of root, but specific policies can override this.
+	// In a real implementation we would be more restrictive.
+	args = append(args, "--ro-bind", "/", "/")
