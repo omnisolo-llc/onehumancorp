@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
 	"github.com/onehumancorp/mono/srcs/server/utils"
+	"github.com/onehumancorp/mono/srcs/server/agents/builtin"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -25,7 +27,7 @@ type Tool interface {
 // It mirrors the ASYNC_AGENT_ALLOWED_TOOLS from CC-Source.
 func DefaultTools() []Tool {
 	return []Tool{
-		&bashTool{},
+		&bashTool{validator: builtin.NewASTCommandValidator()},
 		&playwrightTool{daemonURL: getDaemonURL()},
 		&fileReadTool{},
 		&fileWriteTool{},
@@ -60,7 +62,9 @@ func intArg(input map[string]interface{}, key string, def int) int {
 
 // ─── BashTool ─────────────────────────────────────────────────────────────────
 
-type bashTool struct{}
+type bashTool struct{
+	validator builtin.CommandValidator
+}
 
 func (t *bashTool) Definition() ToolDefinition {
 	return ToolDefinition{
@@ -87,6 +91,13 @@ func (t *bashTool) Execute(ctx context.Context, workDir string, input map[string
 	command := strArg(input, "command")
 	if command == "" {
 		return "", errors.New("bash: command is required")
+	}
+
+	if t.validator != nil {
+		if err := t.validator.Validate(ctx, command); err != nil {
+			slog.Warn("local agent runner: blocked malicious command execution", "command", command, "err", err)
+			return "", fmt.Errorf("bash validation failed: %w", err)
+		}
 	}
 	timeoutSec := intArg(input, "timeout", 120)
 	timeoutDur := time.Duration(timeoutSec) * time.Second

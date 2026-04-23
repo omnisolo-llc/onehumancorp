@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
 exports_files([
@@ -17,6 +17,7 @@ go_library(
         "llm_ollama.go",
         "llm_openai.go",
         "tools.go",
+        "validator.go",
         "types.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/builtin",
@@ -24,6 +25,8 @@ go_library(
     deps = [
         "//srcs/server/telemetry",
         "//srcs/server/utils",
+        "@com_github_smacker_go_tree_sitter//:go-tree-sitter",
+        "@com_github_smacker_go_tree_sitter//bash",
     ],
 )
 
@@ -61,3 +64,9 @@ RUST_PROC_MACRO_DEPS = [
 ]
 
 # Rust targets moved to src/BUILD.bazel
+
+go_test(
+    name = "builtin_test",
+    srcs = ["validator_test.go"],
+    embed = [":builtin"],
+)
