@@ -17,11 +17,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
+  bool _isSignup = false;
+  final _emailCtrl = TextEditingController();
   String? _error;
 
   @override
   void dispose() {
     _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -33,9 +36,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (_isSignup) {
+        await ref
+            .read(authStateProvider.notifier)
+            .signup(_usernameCtrl.text.trim(), _emailCtrl.text.trim(), _passwordCtrl.text);
+      } else {
+        await ref
+            .read(authStateProvider.notifier)
+            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -262,7 +271,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in to orchestrate your swarm',
+                          _isSignup ? 'Create an account to orchestrate your swarm' : 'Sign in to orchestrate your swarm',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'Inter',
@@ -274,7 +283,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _usernameCtrl,
                           keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
+                            labelText: _isSignup ? 'Username' : 'Email or Username',
                             prefixIcon: const Icon(Icons.person_outline),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -286,6 +295,24 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ? 'Enter your email or username'
                                       : null,
                         ),
+                        if (_isSignup) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: const Icon(Icons.email_outline),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (v) {
+                              if (!_isSignup) return null;
+                              return (v == null || v.trim().isEmpty || !v.contains('@')) ? 'Enter a valid email' : null;
+                            },
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordCtrl,
@@ -329,7 +356,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 24),
                         Semantics(
                           button: true,
-                          label: 'Sign In',
+                          label: _isSignup ? 'Sign Up' : 'Sign In',
                           child: FilledButton(
                             onPressed: _loading ? null : _submit,
                             style: FilledButton.styleFrom(
@@ -348,8 +375,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : const Text(
-                                        'Sign In',
+                                    : Text(
+                                        _isSignup ? 'Sign Up' : 'Sign In',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
@@ -358,7 +385,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                           ),
                         ),
-                        const SizedBox(height: 24),
+                                                const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isSignup = !_isSignup;
+                              _error = null;
+                            });
+                          },
+                          child: Text(
+                            _isSignup ? 'Already have an account? Sign In' : "Don't have an account? Sign Up",
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+const SizedBox(height: 24),
                         Row(
                           children: [
                             const Expanded(child: Divider()),
