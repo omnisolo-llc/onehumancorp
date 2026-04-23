@@ -34,6 +34,8 @@ import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/widgets/help_chat_fab.dart';
 
 /// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
 /// [GoRouter.refreshListenable], so the router re-evaluates its redirect
@@ -98,7 +100,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/diagnostics',
             builder: (context, state) => const DiagnosticsScreen(),
           ),
-          GoRoute(
+                    GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
           ),
@@ -223,7 +229,10 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Row(children: [_Sidebar(), Expanded(child: child)]),
+      floatingActionButton: const HelpChatFab(),
+    );
   }
 }
 
@@ -241,6 +250,7 @@ class _Sidebar extends StatelessWidget {
           ),
         ),
         const Divider(),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(
