@@ -15,6 +15,7 @@ type MeshRepository interface {
 	UpdateMissionStatus(ctx context.Context, id, status string) error
 	GetMissionDependencies(ctx context.Context, missionID string) ([]string, error)
 	InsertAutodreamVector(ctx context.Context, vector *models.AutodreamVector) error
+	GetAgentsWithCapability(ctx context.Context, capability string) ([]string, error)
 }
 
 type meshRepositoryImpl struct {
@@ -41,6 +42,36 @@ func (r *meshRepositoryImpl) CreateMission(ctx context.Context, mission *models.
 	}
 
 	return nil
+}
+
+func (r *meshRepositoryImpl) GetAgentsWithCapability(ctx context.Context, capability string) ([]string, error) {
+	q := `SELECT DISTINCT agent_id FROM agent_session_data WHERE capabilities @> $1`
+	arg := fmt.Sprintf("[\"%s\"]", capability)
+
+	if r.dbProvider.IsSQLite() {
+		q = `SELECT DISTINCT agent_id FROM agent_session_data, json_each(capabilities) WHERE json_each.value = $1`
+		arg = capability
+	}
+
+	rows, err := r.dbProvider.Query(ctx, q, arg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query agents with capability: %w", err)
+	}
+	defer rows.Close()
+
+	var agents []string
+	for rows.Next() {
+		var agentID string
+		if err := rows.Scan(&agentID); err != nil {
+			return nil, fmt.Errorf("failed to scan agent id: %w", err)
+		}
+		agents = append(agents, agentID)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return agents, nil
 }
 
 func (r *meshRepositoryImpl) UpdateMissionStatus(ctx context.Context, id, status string) error {

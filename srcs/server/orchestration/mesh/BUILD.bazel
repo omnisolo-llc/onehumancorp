@@ -10,6 +10,7 @@ go_library(
         "mesh.go",
         "redis_broker.go",
         "redis_mesh.go",
+        "router.go",
         "server.go",
         "mesh_coordinator.go",
     ],
@@ -29,6 +30,7 @@ go_test(
         "broker_test.go",
         "mesh_test.go",
         "mesh_coordinator_test.go",
+        "router_test.go",
     ],
     embed = [":mesh"],
     deps = [

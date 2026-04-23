@@ -213,3 +213,44 @@ func TestMeshRepository_SQLiteFallback(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestMeshRepository_GetAgentsWithCapability(t *testing.T) {
+	mockDB := &MockDBProvider{
+		rows: &mockRows{
+			data: [][]interface{}{
+				{"agent1"},
+				{"agent2"},
+			},
+		},
+	}
+	repo := NewMeshRepository(mockDB)
+
+	agents, err := repo.GetAgentsWithCapability(context.Background(), "capability1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(agents) != 2 {
+		t.Fatalf("expected 2 agents, got %d", len(agents))
+	}
+	if agents[0] != "agent1" || agents[1] != "agent2" {
+		t.Fatalf("unexpected agents: %v", agents)
+	}
+
+	// Test SQLite branch
+	mockDB.isSQLite = true
+	agents, err = repo.GetAgentsWithCapability(context.Background(), "capability1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(agents) != 2 {
+		t.Fatalf("expected 2 agents, got %d", len(agents))
+	}
+
+	// Test error case
+	mockDB.queryErr = errors.New("db error")
+	_, err = repo.GetAgentsWithCapability(context.Background(), "capability1")
+	if err == nil {
+		t.Fatalf("expected error, got nil")
+	}
+}
