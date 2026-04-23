@@ -36,6 +36,6 @@ void main() {
     expect(find.text('Shared Task List'), findsOneWidget);
     expect(find.text('Task 1'), findsOneWidget);
     expect(find.text('Parent Task: parent-123'), findsOneWidget);
-    expect(find.text('Workflow State: {"step": "DECOMPOSING"}'), findsOneWidget);
+    expect(find.text('State: {"step": "DECOMPOSING"}'), findsOneWidget);
   });
 }

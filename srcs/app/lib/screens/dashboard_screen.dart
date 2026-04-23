@@ -13,7 +13,7 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
-import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/widgets/proactive_task_stream_widget.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -184,30 +184,7 @@ class _DashboardContent extends StatelessWidget {
           child: const HybridTelemetryWidget(),
         ),
         const SizedBox(height: 16),
-        SizedBox(
-          height: 350,
-          child: GlassCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                      child: Text(
-                        'Proactive Task Stream',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontFamily: 'Outfit',
-                        ),
-                      ),
-                    ),
-                    const Expanded(child: TaskListView()),
-                  ],
-                ),
-          ),
-        ),
+        const ProactiveTaskStreamWidget(),
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
         const SizedBox(height: 16),

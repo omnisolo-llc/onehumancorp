@@ -1,6 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:ohc_app/models/shared_task.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -53,57 +53,101 @@ class _TaskGlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GlassCard(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            task.title,
-            style: const TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: BackdropFilter(
+          filter: ImageFilter.compose(
+            outer: const ColorFilter.matrix(<double>[
+              1.168, -0.153, -0.015, 0, 0,
+              -0.046, 1.061, -0.015, 0, 0,
+              -0.046, -0.152, 1.198, 0, 0,
+              0, 0, 0, 1, 0,
+            ]),
+            inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color.fromRGBO(255, 255, 255, 0.03),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.title,
+                  style: const TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      task.status.replaceAll('_', ' '),
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: _getStatusColor(task.status),
+                      ),
+                    ),
+                    if (task.agentId != null)
+                      Text(
+                        'Agent: ${task.agentId}',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          color: Colors.white.withValues(alpha: 0.6),
+                        ),
+                      ),
+                  ],
+                ),
+                if (task.dependencies != null && task.dependencies!.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Dependencies: ${task.dependencies!.join(', ')}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: Colors.white.withValues(alpha: 0.4),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+                if (task.parentTaskId != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Parent Task: ${task.parentTaskId}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: Colors.blueGrey.withValues(alpha: 0.8),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+                if (task.workflowState != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'State: ${task.workflowState}',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      color: Colors.white.withValues(alpha: 0.4),
+                      fontSize: 10,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Status: ${task.status}',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              color: _getStatusColor(task.status),
-            ),
-          ),
-          if (task.agentId != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Agent: ${task.agentId}',
-              style: const TextStyle(fontFamily: 'Inter', color: Colors.white70),
-            ),
-          ],
-          if (task.dependencies != null && task.dependencies!.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Dependencies: ${task.dependencies!.join(', ')}',
-              style: const TextStyle(fontFamily: 'Inter', color: Colors.white54, fontSize: 12),
-            ),
-          ],
-          if (task.parentTaskId != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Parent Task: ${task.parentTaskId}',
-              style: const TextStyle(fontFamily: 'Inter', color: Colors.blueGrey, fontSize: 12),
-            ),
-          ],
-          if (task.workflowState != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Workflow State: ${task.workflowState}',
-              style: const TextStyle(fontFamily: 'Inter', color: Colors.white54, fontSize: 12, fontStyle: FontStyle.italic),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }

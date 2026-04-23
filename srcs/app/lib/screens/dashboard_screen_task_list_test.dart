@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
+import 'package:ohc_app/widgets/proactive_task_stream_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/models/dashboard.dart';
 
@@ -40,15 +41,17 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
 
-    // Since TaskListView is in a scroll view, we might need to scroll
+    // Since ProactiveTaskStreamWidget is in a scroll view, we might need to scroll
     final listFinder = find.byType(Scrollable).first;
     await tester.scrollUntilVisible(
-      find.byType(TaskListView),
+      find.byType(ProactiveTaskStreamWidget),
       500.0,
       scrollable: listFinder,
       maxScrolls: 50,
     );
 
+    expect(find.byType(ProactiveTaskStreamWidget), findsOneWidget);
+    expect(find.text('Proactive Task Stream'), findsOneWidget);
     expect(find.byType(TaskListView), findsOneWidget);
 
     // reset view properties
