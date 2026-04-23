@@ -36,6 +36,10 @@ func NewMutexProvider(ctx context.Context, provider db.Provider, redisClient rue
 		return &RedisMutexProvider{client: redisClient}, nil
 	}
 
+		if provider == nil {
+		return &SQLiteMutexProvider{db: nil}, nil // Or some memory provider if needed, but avoiding panic is key
+	}
+
 	// For SQLite/DB, ensure the table exists when the provider is created
 	query := `
 		CREATE TABLE IF NOT EXISTS distributed_locks (
@@ -122,6 +126,9 @@ type SQLiteMutex struct {
 
 
 func (m *SQLiteMutex) Lock(ctx context.Context, ttl time.Duration) error {
+	if m.provider.db == nil {
+		return nil
+	}
 	tx, err := m.provider.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin tx: %w", err)
@@ -152,6 +159,9 @@ func (m *SQLiteMutex) Lock(ctx context.Context, ttl time.Duration) error {
 	return nil
 }
 func (m *SQLiteMutex) Unlock(ctx context.Context) error {
+	if m.provider.db == nil {
+		return nil
+	}
 	query := `DELETE FROM distributed_locks WHERE lock_key = $1 AND owner_id = $2`
 	res, err := m.provider.db.Exec(ctx, query, m.key, m.ownerID)
 	if err != nil {

@@ -18,6 +18,9 @@ func TestKairosSharedTaskRepo(t *testing.T) {
             agent_id TEXT,
             status TEXT,
             payload TEXT,
+            action_risk TEXT,
+            approval_status TEXT,
+            proposed_content TEXT,
             created_at DATETIME
         );
     `)

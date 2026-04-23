@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "kairos",
     srcs = [
+        "approval_api.go",
         "kairos_shared_task.go",
         "mesh.go",
         "mesh_api.go",
@@ -21,6 +22,7 @@ go_library(
 go_test(
     name = "kairos_test",
     srcs = [
+        "approval_api_test.go",
         "kairos_shared_task_test.go",
         "mesh_test.go",
         "mesh_api_test.go",

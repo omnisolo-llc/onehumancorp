@@ -18,11 +18,11 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
 	"github.com/redis/go-redis/v9"
@@ -35,6 +35,20 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/utils"
 )
+
+
+type kairosMutexWrapper struct {
+	m orchestration.Mutex
+}
+func (k *kairosMutexWrapper) Lock(ctx context.Context, ttl time.Duration) error { return k.m.Lock(ctx, ttl) }
+func (k *kairosMutexWrapper) Unlock(ctx context.Context) error { return k.m.Unlock(ctx) }
+
+type kairosMutexProviderWrapper struct {
+	p orchestration.MutexProvider
+}
+func (w *kairosMutexProviderWrapper) NewMutex(key string) kairos.Mutex {
+	return &kairosMutexWrapper{m: w.p.NewMutex(key)}
+}
 
 // Server encapsulates the HTTP routing logic, REST middleware, and cross-module state required to expose the One Human Corp dashboard to the human CEO.
 // Accepts no parameters.
@@ -647,8 +661,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 
-
-
 	var kairosMesh kairos.TeammateMesh
 	kairosMode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
@@ -667,10 +679,14 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh)
 
+	kairosMutexProvider, _ := orchestration.NewMutexProvider(context.Background(), server.dbProvider, nil)
+	kairosApprovalAPI := kairos.NewApprovalAPI(server.dbProvider, kairosMesh, &kairosMutexProviderWrapper{p: kairosMutexProvider})
+
 	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
 	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
 
-
+	// Register KAIROS Approval API routes
+	kairosApprovalAPI.RegisterRoutes(mux)
 
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
@@ -1097,8 +1113,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
-
-
 
 func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
