@@ -21,6 +21,9 @@ func TestCostAuditor(t *testing.T) {
 	ctx := context.Background()
 	auditor.RecordEvent(ctx, AuditEvent{
 		AgentID:              "miser-1",
+		OrganizationID:       "test-org",
+		Role:                 "test-role",
+		Model:                "test-model",
 		InputTokens:          1000,
 		OutputTokens:         500,
 		CachedInputTokens:    0,
@@ -33,6 +36,9 @@ func TestCostAuditor(t *testing.T) {
 	}
 	auditor.RecordCacheHit(ctx, AuditEvent{
 		AgentID:              "miser-1",
+		OrganizationID:       "test-org",
+		Role:                 "test-role",
+		Model:                "test-model",
 		InputTokens:          1000,
 		OutputTokens:         500,
 		CachedInputTokens:    2000,
@@ -42,7 +48,7 @@ func TestCostAuditor(t *testing.T) {
 	if savings != 0.01 {
 		t.Errorf("expected savings %f, got %f", 0.01, savings)
 	}
-	savingsStorage := auditor.RecordStorageCompression(ctx, 10737418240, 5368709120)
+	savingsStorage := auditor.RecordStorageCompression(ctx, "test-org", 10737418240, 5368709120)
 	if savingsStorage != 0.115 {
 		t.Errorf("expected storage savings 0.115, got %f", savingsStorage)
 	}
@@ -52,6 +58,9 @@ func TestCostAuditor(t *testing.T) {
 	}
 	auditor.RecordComputeEvent(ctx, ComputeEvent{
 		AgentID:            "miser-1",
+		OrganizationID:     "test-org",
+		Role:               "test-role",
+		Model:              "test-model",
 		ComputeHours:       2.5,
 		NetworkEgressBytes: 2147483648, // 2GB
 	})
@@ -85,7 +94,10 @@ func TestBudget(t *testing.T) {
 	auditor.SetAgentBudget("miser-2", 0.01)
 
 	auditor.RecordEvent(ctx, AuditEvent{
-		AgentID:      "miser-2",
+		AgentID:              "miser-2",
+		OrganizationID:       "test-org",
+		Role:                 "test-role",
+		Model:                "test-model",
 		InputTokens:  1000,
 		OutputTokens: 500,
 	})

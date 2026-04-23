@@ -8,6 +8,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/lib/pricing/tokencalc",
+        "//srcs/server/telemetry",
     ],
 )
 go_test(
