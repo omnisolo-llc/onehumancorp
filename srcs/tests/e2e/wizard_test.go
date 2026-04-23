@@ -238,12 +238,12 @@ func TestOnboardingCompletionWelcomeSetupWizardIsDismissible(t *testing.T) {
 func TestWizardSetupCanBeReachedFromTheRootPage(t *testing.T) {
 	page := newPage(t)
 	defer page.Close()
-
 	loginAsAdmin(t, page)
 
-	// Test: wizard / setup: can be reached from the root page
-	body, _ := page.Content()
-	_ = body
+	// Navigate to Wizard
+	page.GetByText("Business Setup").Click()
+	page.WaitForSelector("text=Business Setup")
+
 }
 
 func TestWizardFirstStepContainsModelProviderFieldsOrSkipOption(t *testing.T) {
@@ -260,12 +260,22 @@ func TestWizardFirstStepContainsModelProviderFieldsOrSkipOption(t *testing.T) {
 func TestWizardNextButtonAdvancesToADifferentStep(t *testing.T) {
 	page := newPage(t)
 	defer page.Close()
-
 	loginAsAdmin(t, page)
 
-	// Test: wizard: Next button advances to a different step
-	body, _ := page.Content()
-	_ = body
+	// Navigate to Wizard
+	page.GetByText("Business Setup").Click()
+	page.WaitForSelector("text=Business Setup")
+
+	// Ensure on Step 0
+	page.WaitForSelector("text=Your AI team, ready in minutes")
+
+	// Click next
+	page.GetByText("Continue").Click()
+
+	// Ensure on Step 1
+	page.WaitForSelector("text=Business Profile")
+	page.WaitForSelector("text=Company name")
+
 }
 
 func TestWizardSkipButtonExistsOnAtLeastOneStep(t *testing.T) {
@@ -315,12 +325,40 @@ func TestWizardChatIntegrationStepRendersWithoutError(t *testing.T) {
 func TestWizardAllStepsCanBeReachedWithoutAJsException(t *testing.T) {
 	page := newPage(t)
 	defer page.Close()
-
 	loginAsAdmin(t, page)
 
-	// Test: wizard: all steps can be reached without a JS exception
-	body, _ := page.Content()
-	_ = body
+	// Navigate to Wizard
+	page.GetByText("Business Setup").Click()
+	page.WaitForSelector("text=Business Setup")
+
+	// Step 0 -> Step 1
+	page.GetByText("Continue").First().Click()
+	page.WaitForSelector("text=Business Profile")
+
+	// Fill out Step 1
+	page.Locator("input[type='text']").First().Fill("My Playwright Company")
+	page.GetByText("Continue").First().Click()
+
+	// Step 2
+	page.WaitForSelector("text=Goal Selection")
+	page.GetByText("Continue").First().Click()
+
+	// Step 3
+	page.WaitForSelector("text=Deployment")
+	page.GetByText("Continue").First().Click()
+
+	// Step 4
+	page.WaitForSelector("text=Admin Account")
+	inputs := page.Locator("input[type='text']")
+	inputs.Nth(0).Fill("Playwright Admin")
+	inputs.Nth(1).Fill("playwright@example.com")
+	page.Locator("input[type='password']").Fill("secret")
+	page.GetByText("Continue").First().Click()
+
+	// Step 5 Review
+	page.WaitForSelector("text=Review & Launch")
+	page.WaitForSelector("text=My Playwright Company")
+
 }
 
 func TestOnboardingWizardCanBeSkippedEntirelyFromTheFirstStep(t *testing.T) {

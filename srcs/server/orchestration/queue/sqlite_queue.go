@@ -44,7 +44,7 @@ func (q *SQLiteTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 	return err
 }
 
-func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
+func (q *SQLiteTaskQueue) Acquire(ctx context.Context, roles []string) (*Job, error) {
 	// In SQLite, we don't have FOR UPDATE SKIP LOCKED.
 	// We'll use a transaction with a quick UPDATE to acquire.
 	tx, err := q.provider.Begin(ctx)
