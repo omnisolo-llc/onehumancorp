@@ -21,14 +21,14 @@ func TestAuthenticationLoginWithCorrectCredentialsSucceeds(t *testing.T) {
 
 	// Verify we are on the dashboard or some indicator of successful login
 	t.Log("Verifying redirection to dashboard...")
-	
+
 	// One Human Corp text is usually visible on dashboard
 	content, err := page.Content()
 	require.NoError(t, err)
-	
+
 	// Assert presence of key dashboard elements
 	assert.Contains(t, content, "One Human Corp", "Dashboard should contain brand text")
-	
+
 	fmt.Println("Login Success E2E test completed successfully")
 }
 
@@ -58,7 +58,7 @@ func TestAuthenticationLoginWithIncorrectCredentialsShowsAnError(t *testing.T) {
 	page.WaitForTimeout(2000) // Wait for network and transition
 	content, err := page.Content()
 	require.NoError(t, err)
-	
+
 	// The backend returns 401 which the frontend displays as "Invalid credentials"
 	assert.Contains(t, content, "Invalid credentials", "Page should show invalid credentials error")
 }
@@ -72,7 +72,7 @@ func TestAuthenticationLogoutClearsTheSession(t *testing.T) {
 	defer page.Close()
 
 	loginAsAdmin(t, page)
-	
+
 	// Verify we are logged in
 	content, _ := page.Content()
 	require.Contains(t, content, "One Human Corp")
@@ -82,13 +82,13 @@ func TestAuthenticationLogoutClearsTheSession(t *testing.T) {
 	// But once logged in, we expect a user menu.
 	// Based on general app patterns, we'll try to find a logout button.
 	logoutBtn := page.Locator(`button:has-text("Logout"), button:has-text("Log Out"), [aria-label*="logout" i]`).First()
-	
+
 	// If not immediately visible, it might be in a menu
 	if visible, _ := logoutBtn.IsVisible(); !visible {
 		profileIcon := page.Locator(`[aria-label*="Profile" i], .profile-icon, .user-avatar`).First()
 		_ = profileIcon.Click()
 	}
-	
+
 	err := logoutBtn.Click()
 	if err != nil {
 		t.Logf("Clicking logout failed: %v, trying direct navigation to /login", err)

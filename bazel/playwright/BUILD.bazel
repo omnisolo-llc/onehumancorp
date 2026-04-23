@@ -18,19 +18,19 @@ genrule(
         mkdir -p $(@D)/ms-playwright/chromium-1200
         mkdir -p $(@D)/ms-playwright/firefox-1497
         mkdir -p $(@D)/ms-playwright/ffmpeg-1011
-        
+
         # Using a more robust way to find the sources
         # Bazel provides their paths, but we want the root of each repo.
         # Since they are http_archives, we can just use the paths from the runfiles of the inputs.
-        
+
         # Actually, the simplest is to just copy them.
-        # Note: We must be careful about where the files are. 
+        # Note: We must be careful about where the files are.
         # In Bzlmod, they are under 'external/playwright_chromium' etc.
-        
+
         cp -RL external/playwright_chromium/* $(@D)/ms-playwright/chromium-1200/
         cp -RL external/playwright_firefox/* $(@D)/ms-playwright/firefox-1497/
         cp -RL external/playwright_ffmpeg/* $(@D)/ms-playwright/ffmpeg-1011/
-        
+
         # Create a marker for the output directory
         touch $@
     """,
