@@ -77,8 +77,8 @@ void main() {
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
-      // LoginScreen validates email/username field with 'Enter your email or username'
-      expect(find.text('Enter your email or username'), findsOneWidget);
+      // LoginScreen validates email/username field with 'Enter your email'
+      expect(find.text('Enter your email'), findsOneWidget);
     });
 
     testWidgets('invalid email format does NOT show format error (only empty check)', (tester) async {

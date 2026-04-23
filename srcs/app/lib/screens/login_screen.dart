@@ -13,14 +13,17 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
+  bool _isLogin = true;
   String? _error;
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
@@ -33,9 +36,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (_isLogin) {
+        await ref
+            .read(authStateProvider.notifier)
+            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      } else {
+        await ref
+            .read(authStateProvider.notifier)
+            .register(_usernameCtrl.text.trim(), _passwordCtrl.text, _nameCtrl.text.trim());
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -262,7 +271,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in to orchestrate your swarm',
+                          _isLogin ? 'Sign in to orchestrate your swarm' : 'Create an account to build your swarm',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'Inter',
@@ -270,11 +279,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
+                        if (!_isLogin) ...[
+                          TextFormField(
+                            controller: _nameCtrl,
+                            keyboardType: TextInputType.name,
+                            textInputAction: TextInputAction.next,
+                            decoration: InputDecoration(
+                              labelText: 'Full Name',
+                              prefixIcon: const Icon(Icons.badge_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator:
+                                (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                        ? 'Enter your name'
+                                        : null,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         TextFormField(
                           controller: _usernameCtrl,
-                          keyboardType: TextInputType.text,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
+                            labelText: _isLogin ? 'Email or Username' : 'Email Address',
                             prefixIcon: const Icon(Icons.person_outline),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -283,7 +313,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           validator:
                               (v) =>
                                   (v == null || v.trim().isEmpty)
-                                      ? 'Enter your email or username'
+                                      ? 'Enter your email'
                                       : null,
                         ),
                         const SizedBox(height: 16),

@@ -80,7 +80,7 @@ void main() {
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Enter your email or username'), findsOneWidget);
+      expect(find.text('Enter your email'), findsOneWidget);
     });
   });
 

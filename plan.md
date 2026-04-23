@@ -1,31 +1,18 @@
-1. **Create Database Migration:**
-   - Run `cat << 'MIG' > srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql ... MIG` to add `locked_until` (via ALTER TABLE if missing) and the indices on `status` and `locked_until` on `shared_tasks`.
-   - Add a verification step: `ls -la srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql` to verify creation.
-   - Run a Python script or `sed` to update `embedsrcs` in `srcs/server/db/BUILD.bazel` to include this new migration.
-   - Add a verification step: `cat srcs/server/db/BUILD.bazel | grep 20260427020001_shared_tasks_indexes.sql` to confirm.
-
-2. **Update TaskManager Enhancements:**
-   - Use a Python script to inject `tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")` in `CompleteTaskWithResult` inside `srcs/server/orchestration/tasks.go`.
-   - Use a Python script to replace the status update in `ReviewTask` to utilize `tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Oh, wait, `ReviewTask` is ALREADY doing `err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Let me verify `tasks.go` again to see what exactly needs modification.
-
-3. **Modify API Endpoints:**
-   - Use a Python script to add a `requireSPIFFE` HTTP middleware in `srcs/server/orchestration/service.go`. The middleware will check the `Authorization` header for a bearer token, and validate it starts with `spiffe://` using `interop.ValidateSPIFFEID`.
-   - Wrap the HTTP handlers defined in `RegisterTaskHTTPHandlers` with this new middleware.
-   - Add a verification step: `cat srcs/server/orchestration/service.go | grep -C 5 requireSPIFFE` to verify changes.
-
-4. **Update Tests:**
-   - Run `cat << 'TEST' > srcs/server/orchestration/patch_tasks_test.py ... TEST` and execute it to inject `TestSharedTask_StateMachine` in `srcs/server/orchestration/tasks_test.go` covering all transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-   - Add a verification step: `grep -nri "TestSharedTask_StateMachine" srcs/server/orchestration/tasks_test.go` to confirm injection.
-
-5. **Expose Prometheus Metrics:**
-   - Write a python script to ensure `telemetry.RecordSwarmTaskTransition` is properly used inside `tasks.go` right after state transitions, and ensure we use `metric.WithAttributes` properly in `telemetry.go`.
-   - Add verification step: `cat srcs/server/orchestration/tasks.go | grep RecordSwarmTaskTransition` to confirm changes.
-
-6. **Test the changes:**
-   - Run `bazelisk test //srcs/server/orchestration/... //srcs/server/db/...` to verify the logic.
-
-7. **Pre-commit steps:**
+1. **Add Registration Backend:**
+   - Modify `srcs/server/auth/handlers.go`: Add `HandleRegister` which receives a `registerRequest` (Username, Email, Password). It calls `h.store.CreateUser` (with default role `viewer` and org `sys` or empty if not provided), and then generates a token exactly like `HandleLogin`.
+   - Modify `srcs/server/dashboard/server.go`: Expose `mux.HandleFunc("/api/auth/register", server.authHandlers.HandleRegister)`.
+   - Update `srcs/server/auth/middleware.go` to add `"/api/auth/register"` to the `publicRoutes` array.
+   - Update `srcs/server/dashboard/tenant.go` to allow `"/api/auth/register"` to hit the public router gracefully.
+2. **Update Flutter Auth Service (`srcs/app/lib/services/auth_service.dart`):**
+   - Add `Future<AuthUser> register(String email, String password, String name)` to `AuthService`, sending `POST /api/auth/register` with `{'username': name, 'email': email, 'password': password}`.
+   - Add `Future<void> register(String email, String password, String name)` to `AuthNotifier`, calling `service.register` and updating the `state` & preferences.
+3. **Update Flutter Login UI (`srcs/app/lib/screens/login_screen.dart`):**
+   - Add a boolean `_isLogin = true;` to `_LoginScreenState`.
+   - Add a name field (`_nameCtrl`) for registration.
+   - Add a toggle button or text button (e.g. "Don't have an account? Sign Up" / "Already have an account? Sign In").
+   - Update `_submit()` to call `login` or `register` depending on `_isLogin`.
+   - Change strings like "Sign in to orchestrate your swarm" dynamically based on `_isLogin`.
+4. **Testing:**
+   - Execute tests (`bazelisk test //srcs/server/...` and Flutter tests `cd srcs/app && flutter test`).
+5. **Pre-commit steps:**
    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-8. **Completion:**
-   - Output a final unstructured message containing issue_id.
