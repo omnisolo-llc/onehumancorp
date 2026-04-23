@@ -1,0 +1,33 @@
+{
+  "title": "Harness Efficiency (Cloud vs Standalone)",
+  "panels": [
+    {
+      "title": "Harness Execution Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(harness_execution_latency_sum{env_mode=\"cloud\"}[5m]) / rate(harness_execution_latency_count{env_mode=\"cloud\"}[5m])",
+          "legendFormat": "Cloud"
+        },
+        {
+          "expr": "rate(harness_execution_latency_sum{env_mode=\"standalone\"}[5m]) / rate(harness_execution_latency_count{env_mode=\"standalone\"}[5m])",
+          "legendFormat": "Standalone"
+        }
+      ]
+    },
+    {
+      "title": "Harness DB I/O Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(harness_db_io_latency_sum{env_mode=\"cloud\"}[5m]) / rate(harness_db_io_latency_count{env_mode=\"cloud\"}[5m])",
+          "legendFormat": "Cloud"
+        },
+        {
+          "expr": "rate(harness_db_io_latency_sum{env_mode=\"standalone\"}[5m]) / rate(harness_db_io_latency_count{env_mode=\"standalone\"}[5m])",
+          "legendFormat": "Standalone"
+        }
+      ]
+    }
+  ]
+}

@@ -44,20 +44,20 @@ func (d *SyncDaemon) Start(ctx context.Context) {
 }
 
 func (d *SyncDaemon) syncOnce(ctx context.Context) error {
-	rows, err := d.db.QueryContext(ctx, "SELECT id, metric_type, payload FROM telemetry_buffer ORDER BY id ASC LIMIT $1", d.batchSize)
+	rows, err := d.db.QueryContext(ctx, "SELECT id, metric_name, labels_json FROM local_telemetry_buffer ORDER BY id ASC LIMIT $1", d.batchSize)
 	if err != nil {
-		return fmt.Errorf("query telemetry_buffer: %w", err)
+		return fmt.Errorf("query local_telemetry_buffer: %w", err)
 	}
 	defer rows.Close()
 
 	var payloads []map[string]interface{}
-	var ids []int64
+	var ids []string
 
 	for rows.Next() {
-		var id int64
+		var id string
 		var metricType, payload string
 		if err := rows.Scan(&id, &metricType, &payload); err != nil {
-			return fmt.Errorf("scan telemetry_buffer: %w", err)
+			return fmt.Errorf("scan local_telemetry_buffer: %w", err)
 		}
 		payloads = append(payloads, map[string]interface{}{
 			"metric_type": metricType,
@@ -93,8 +93,8 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 
 	// Delete synced rows
 	for _, id := range ids {
-		if _, err := d.db.ExecContext(ctx, "DELETE FROM telemetry_buffer WHERE id = $1", id); err != nil {
-			return fmt.Errorf("delete telemetry_buffer id=%d: %w", id, err)
+		if _, err := d.db.ExecContext(ctx, "DELETE FROM local_telemetry_buffer WHERE id = $1", id); err != nil {
+			return fmt.Errorf("delete local_telemetry_buffer id=%s: %w", id, err)
 		}
 	}
 
@@ -112,7 +112,7 @@ func InitStandaloneBuffer(db *sql.DB) {
 			}
 		}
 
-		_, err := db.ExecContext(ctx, "INSERT INTO telemetry_buffer (metric_type, payload) VALUES ($1, $2)", metricType, payload)
+		_, err := db.ExecContext(ctx, "INSERT INTO local_telemetry_buffer (id, metric_name, value, labels_json, timestamp) VALUES (lower(hex(randomblob(16))), $1, 1.0, $2, CURRENT_TIMESTAMP)", metricType, payload)
 		if err != nil {
 			return fmt.Errorf("failed to buffer metric %s: %w", metricType, err)
 		}

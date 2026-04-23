@@ -1858,7 +1858,7 @@ func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode strin
 	}
 	if autoDreamSyncDuration != nil {
 		autoDreamSyncDuration.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
+			attribute.String("EnvMode", mode),
 		))
 	}
 }
@@ -1877,7 +1877,7 @@ func RecordAutoDreamQueryLatency(ctx context.Context, latency float64, mode stri
 	}
 	if autoDreamQueryDuration != nil {
 		autoDreamQueryDuration.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
+			attribute.String("EnvMode", mode),
 		))
 	}
 }
@@ -1929,7 +1929,7 @@ func RecordMeshBroadcast(ctx context.Context, mode string) {
 	}
 	if meshBroadcastTotal != nil {
 		meshBroadcastTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
+			attribute.String("EnvMode", mode),
 		))
 	}
 }
@@ -2221,7 +2221,7 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 		return
 	}
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("mode", mode),
+		attribute.String("EnvMode", mode),
 	))
 }
 
@@ -2346,7 +2346,7 @@ func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string)
 	}
 	if HarnessInitLatency != nil {
 		HarnessInitLatency.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
+			attribute.String("EnvMode", mode),
 		))
 	}
 }
@@ -2365,7 +2365,7 @@ func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string)
 	}
 	if HarnessDbIoLatency != nil {
 		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
+			attribute.String("EnvMode", mode),
 		))
 	}
 }
@@ -2384,7 +2384,7 @@ func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode st
 	}
 	if HarnessExecutionLatency != nil {
 		HarnessExecutionLatency.Record(ctx, latency, metric.WithAttributes(
-			attribute.String("deployment_mode", mode),
+			attribute.String("EnvMode", mode),
 		))
 	}
 }

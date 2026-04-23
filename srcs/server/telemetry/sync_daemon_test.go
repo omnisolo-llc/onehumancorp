@@ -20,18 +20,18 @@ func TestSyncDaemon(t *testing.T) {
 	defer db.Close()
 
 	_, err = db.Exec(`
-		CREATE TABLE IF NOT EXISTS telemetry_buffer (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			metric_type TEXT NOT NULL,
-			payload TEXT NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		CREATE TABLE IF NOT EXISTS local_telemetry_buffer (
+			id TEXT PRIMARY KEY,
+			metric_name TEXT NOT NULL, value REAL, labels_json TEXT,
+
+			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
 		t.Fatalf("create table: %v", err)
 	}
 
-	_, err = db.Exec("INSERT INTO telemetry_buffer (metric_type, payload) VALUES ('test_metric', '{\"foo\":\"bar\"}')")
+	_, err = db.Exec("INSERT INTO local_telemetry_buffer (id, metric_name, value, labels_json, timestamp) VALUES ('1', 'test_metric', 1.0, '{\"foo\":\"bar\"}', CURRENT_TIMESTAMP)")
 	if err != nil {
 		t.Fatalf("insert: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestSyncDaemon(t *testing.T) {
 	}
 
 	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
+	err = db.QueryRow("SELECT COUNT(*) FROM local_telemetry_buffer").Scan(&count)
 	if err != nil {
 		t.Fatalf("count: %v", err)
 	}
