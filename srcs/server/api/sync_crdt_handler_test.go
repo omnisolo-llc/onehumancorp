@@ -25,6 +25,18 @@ func (m *mockExecDBProvider) Exec(ctx context.Context, sql string, arguments ...
 	return 1, nil
 }
 
+type mockExecErrorDBProvider struct {
+	db.Provider
+}
+
+func (m *mockExecErrorDBProvider) IsSQLite() bool {
+	return false
+}
+
+func (m *mockExecErrorDBProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
+	return 0, context.DeadlineExceeded // arbitrary error
+}
+
 func TestHandleSyncMCPDeltas_InvalidMethod(t *testing.T) {
 	req := httptest.NewRequest("GET", "/api/v1/sync/mcp-deltas", nil)
 	w := httptest.NewRecorder()
@@ -116,5 +128,40 @@ func TestHandleSyncMCPDeltas_Success(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &res)
 	if res["synced_count"].(float64) != 1 {
 		t.Errorf("expected synced_count 1, got %v", res["synced_count"])
+	}
+}
+
+func TestHandleSyncMCPDeltas_ExecError(t *testing.T) {
+	payload := map[string]interface{}{
+		"deltas": []map[string]interface{}{
+			{
+				"id":         "delta1",
+				"entity_id":  "e1",
+				"data":       "testdata",
+				"updated_at": "2026-04-17T12:00:00Z",
+			},
+		},
+	}
+	data, _ := json.Marshal(payload)
+	req := httptest.NewRequest("POST", "/api/v1/sync/mcp-deltas", bytes.NewBuffer(data))
+	ctx := context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
+	req = req.WithContext(ctx)
+
+	w := httptest.NewRecorder()
+
+	hub := &orchestration.Hub{}
+	sipDB, _ := orchestration.NewSIPDBWithProvider(&mockExecErrorDBProvider{}, "test-org")
+	hub.SetSIPDB(sipDB)
+	handler := HandleSyncMCPDeltas(hub)
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	var res map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &res)
+	if res["synced_count"].(float64) != 0 {
+		t.Errorf("expected synced_count 0, got %v", res["synced_count"])
 	}
 }

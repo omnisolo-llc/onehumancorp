@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -251,6 +252,150 @@ func TestHybridSyncDaemon_ProcessCRDTSync_NotSQLiteFixed(t *testing.T) {
 
 	// Should return early and not panic
 	daemon.ProcessCRDTSync(context.Background())
+	// Cover ProcessSync and Start/Stop while we're at it with non-sqlite DB
+	daemon.ProcessSync(context.Background())
+	daemon.Start(context.Background())
+	daemon.Stop()
+}
+
+func TestHybridSyncDaemon_ProcessCRDTSync_ErrorScenarios(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE crdt_deltas (
+			tenant_id VARCHAR NOT NULL,
+			id VARCHAR NOT NULL,
+			entity_id VARCHAR NOT NULL,
+			data TEXT NOT NULL,
+			updated_at VARCHAR NOT NULL,
+			synced_to_cloud BOOLEAN DEFAULT FALSE,
+			PRIMARY KEY (tenant_id, id)
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create crdt_deltas table: %v", err)
+	}
+
+	_, err = sqlDB.Exec(`
+		INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud)
+		VALUES
+			('test-org', 'd1', 'e1', 'data1', '2026', false)
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+
+	// 1. Cloud API returns 500
+	srvError := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srvError.Close()
+
+	daemon1 := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srvError.URL)
+	daemon1.ProcessCRDTSync(context.Background())
+
+	var synced int
+	err = sqlDB.QueryRow("SELECT COUNT(*) FROM crdt_deltas WHERE synced_to_cloud = true").Scan(&synced)
+	if err != nil {
+		t.Fatalf("failed to query count: %v", err)
+	}
+	if synced != 0 {
+		t.Errorf("expected 0 items synced to cloud due to 500 error, got %d", synced)
+	}
+
+	// 2. Cloud API URL is completely invalid causing request creation/execution failure
+	daemon2 := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, "http://invalid-url-123.local")
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	daemon2.ProcessCRDTSync(ctx)
+
+	// 3. Drop table to force query error
+	sqlDB.Exec("DROP TABLE crdt_deltas")
+	daemon3 := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, "http://localhost:8080")
+	daemon3.ProcessCRDTSync(context.Background())
+}
+
+func TestHybridSyncDaemon_ProcessSync_ErrorScenarios(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE swarm_memory_embeddings (
+			memory_id TEXT PRIMARY KEY,
+			context TEXT NOT NULL
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create swarm_memory_embeddings table: %v", err)
+	}
+
+	_, err = sqlDB.Exec(`
+		INSERT INTO swarm_memory_embeddings (memory_id, context)
+		VALUES
+			('m1', '{"escalation_required":true}')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+
+	// 1. Cloud API returns 500
+	srvError := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srvError.Close()
+
+	daemon1 := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srvError.URL)
+	daemon1.ProcessSync(context.Background())
+
+	var contextData string
+	err = sqlDB.QueryRow("SELECT context FROM swarm_memory_embeddings WHERE memory_id = 'm1'").Scan(&contextData)
+	if err != nil {
+		t.Fatalf("failed to query m1 context: %v", err)
+	}
+	if !strings.Contains(contextData, "true") {
+		t.Errorf("expected m1 escalation_required to remain true due to error, got %s", contextData)
+	}
+
+	// 2. Drop table to force query error
+	sqlDB.Exec("DROP TABLE swarm_memory_embeddings")
+	daemon2 := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, "http://localhost:8080")
+	daemon2.ProcessSync(context.Background())
+
+	// 3. Begin transaction error (if db is closed)
+	sqlDB.Close()
+	daemon3 := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, "http://localhost:8080")
+	daemon3.ProcessSync(context.Background())
+}
+
+func TestHybridSyncDaemon_StartStop_SQLite(t *testing.T) {
+	sqlDB, _ := sql.Open("sqlite", ":memory:")
+	defer sqlDB.Close()
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+
+	// use small poll interval
+	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Millisecond, "http://localhost:8080")
+	ctx, cancel := context.WithCancel(context.Background())
+	daemon.Start(ctx)
+
+	// let it tick a few times
+	time.Sleep(10 * time.Millisecond)
+	daemon.Stop()
+	cancel()
 }
 
 func TestHybridSyncDaemon_SyncLocalToCloud(t *testing.T) {
