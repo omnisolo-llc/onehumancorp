@@ -17,6 +17,7 @@ import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';
 import 'package:ohc_app/screens/diagnostics_screen.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
+import 'package:ohc_app/screens/website_builder_wizard_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
 import 'package:ohc_app/screens/cost_dashboard_screen.dart';
 import 'package:ohc_app/screens/scaling_screen.dart';
@@ -86,6 +87,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           // Business setup requires authentication — moved inside the shell.
+          GoRoute(
+            path: '/website_builder',
+            builder: (context, state) => const WebsiteBuilderWizardScreen(),
+          ),
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
