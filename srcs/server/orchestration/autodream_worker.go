@@ -16,6 +16,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	_ "github.com/onehumancorp/mono/srcs/server/orchestration/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
+	autodream_metrics "github.com/onehumancorp/mono/srcs/server/orchestration/autodream"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"gopkg.in/yaml.v3"
 )
@@ -58,6 +59,10 @@ func (w *AutoDreamWorker) ProcessMemories(ctx context.Context) error {
 	start := time.Now()
 	_ = mode
 	_ = start
+
+	defer func() {
+		autodream_metrics.BatchProcessingDuration.WithLabelValues(mode, "ProcessMemories").Observe(time.Since(start).Seconds())
+	}()
 
 	// Apply batch limit of 500 as requested
 	if len(matches) > 500 {
