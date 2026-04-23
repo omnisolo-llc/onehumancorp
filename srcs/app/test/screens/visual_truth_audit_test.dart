@@ -76,3 +76,4 @@ void main() {
     expect(backdropFilter.filter.toString().contains('ColorFilter.matrix'), isTrue);
   });
 }
+// Ensure this file is picked up by the patch
