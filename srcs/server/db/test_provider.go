@@ -26,5 +26,5 @@ func NewTestProvider(t *testing.T) Provider {
 		db.Close()
 	})
 
-	return NewSqliteProvider(db)
+	return &DB{Provider: NewSqliteProvider(db)}
 }

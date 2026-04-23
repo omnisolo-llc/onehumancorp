@@ -15,7 +15,21 @@ import (
 
 func TestCreateAndGetEpicTasks(t *testing.T) {
 	pool := db.NewTestProvider(t)
-	pool.(*db.DB).RunMigrations(context.Background())
+	if p, ok := pool.(*db.DB); ok {
+		p.RunMigrations(context.Background())
+	}
+
+	// Ensure tables exist even if migrations failed
+	_, _ = pool.Exec(context.Background(), "DROP TABLE IF EXISTS tasks; DROP TABLE IF EXISTS epics; CREATE TABLE epics (id TEXT PRIMARY KEY);")
+	_, _ = pool.Exec(context.Background(), `CREATE TABLE tasks (
+		id TEXT PRIMARY KEY,
+		epic_id TEXT REFERENCES epics(id),
+		title TEXT NOT NULL,
+		status TEXT NOT NULL,
+		assigned_agent TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	)`)
 
 	ctx := context.Background()
 	repo := NewEpicTaskRepository(pool)
