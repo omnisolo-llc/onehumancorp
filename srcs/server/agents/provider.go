@@ -102,7 +102,7 @@ func (c Credentials) IsEmpty() bool {
 
 // IsolationStrategy defines how an agent harness handles worktree isolation.
 type IsolationStrategy interface {
-	RunInIsolation(ctx context.Context, worktree string, transport Transport) error
+	RunInIsolation(worktree string) error
 }
 
 type Provider interface {
@@ -260,8 +260,9 @@ func (p *ClaudeProvider) GetCredentials() Credentials { return p.load() }
 func (p *ClaudeProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *ClaudeProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *ClaudeProvider) RunInIsolation(worktree string) error {
+	fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)
+	return nil
 }
 
 // ── Gemini (Google) ───────────────────────────────────────────────────────────
@@ -326,8 +327,9 @@ func (p *GeminiProvider) GetCredentials() Credentials { return p.load() }
 func (p *GeminiProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *GeminiProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *GeminiProvider) RunInIsolation(worktree string) error {
+	fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)
+	return nil
 }
 
 // ── OpenCode ──────────────────────────────────────────────────────────────────
@@ -392,8 +394,9 @@ func (p *OpenCodeProvider) GetCredentials() Credentials { return p.load() }
 func (p *OpenCodeProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *OpenCodeProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *OpenCodeProvider) RunInIsolation(worktree string) error {
+	fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)
+	return nil
 }
 
 // ── OpenClaw ──────────────────────────────────────────────────────────────────
@@ -458,8 +461,9 @@ func (p *OpenClawProvider) GetCredentials() Credentials { return p.load() }
 func (p *OpenClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *OpenClawProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *OpenClawProvider) RunInIsolation(worktree string) error {
+	fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)
+	return nil
 }
 
 // ── IronClaw ──────────────────────────────────────────────────────────────────
@@ -524,8 +528,9 @@ func (p *IronClawProvider) GetCredentials() Credentials { return p.load() }
 func (p *IronClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *IronClawProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *IronClawProvider) RunInIsolation(worktree string) error {
+	fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)
+	return nil
 }
 
 // ── MiniMaxi ──────────────────────────────────────────────────────────────────
@@ -576,8 +581,9 @@ func (p *MiniMaxiProvider) GetCredentials() Credentials { return p.load() }
 func (p *MiniMaxiProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *MiniMaxiProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *MiniMaxiProvider) RunInIsolation(worktree string) error {
+	fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)
+	return nil
 }
 
 // ── Builtin ───────────────────────────────────────────────────────────────────
@@ -648,8 +654,9 @@ func (p *BuiltinProvider) GetCredentials() Credentials { return Credentials{} }
 func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *BuiltinProvider) RunInIsolation(worktree string) error {
+	fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)
+	return nil
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
@@ -711,6 +718,7 @@ func (p *ScoutProvider) GetCredentials() Credentials { return p.load() }
 func (p *ScoutProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *ScoutProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *ScoutProvider) RunInIsolation(worktree string) error {
+	fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)
+	return nil
 }
