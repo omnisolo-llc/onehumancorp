@@ -1,8 +1,13 @@
+# Release Notes
+
+## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
+- Scaling (Cloud): Various cloud orchestration and stability improvements.
+- Privacy/Offline (Standalone): Various standalone privacy enhancements.
+
 ## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
 - Scaling (Cloud): Business Setup Onboarding Overhaul for streamlined multi-tenant SaaS scaling.
 - Privacy/Offline (Standalone): Enhances Day One onboarding user privacy and local setup capabilities.
 
-# Release Notes
 
 ## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
 - Scaling (Cloud): Implement robust HTTP API GZIP Compression, Add research brief for AutoDream queue observability, Implement AI Agent Department backend framework, Fix Omni-Context Grounding file name and header prefix.

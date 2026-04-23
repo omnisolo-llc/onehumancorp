@@ -1,3 +1,7 @@
+## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
+- Scaling (Cloud): Various cloud orchestration and stability improvements.
+- Privacy/Offline (Standalone): Various standalone privacy enhancements.
+
 ## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
 ### Cloud Scaling Improvements
 - Business Setup Onboarding Overhaul for streamlined multi-tenant SaaS scaling.
