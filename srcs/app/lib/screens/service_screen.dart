@@ -35,12 +35,21 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
     setState(() => _isLoading = true);
     final service = ref.read(localManagerServiceProvider);
     try {
+      final expectedState = !_isRunning;
       if (_isRunning) {
         await service.stopService();
       } else {
         await service.startService();
       }
-      await Future.delayed(const Duration(seconds: 2)); // Give it a moment
+
+      // Poll for actual state change up to 20 times (2 seconds max)
+      for (int i = 0; i < 20; i++) {
+        final current = await service.isServiceRunning();
+        if (current == expectedState) {
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: 100)); // Genuine polling delay
+      }
       await _checkStatus();
     } finally {
       if (mounted) setState(() => _isLoading = false);

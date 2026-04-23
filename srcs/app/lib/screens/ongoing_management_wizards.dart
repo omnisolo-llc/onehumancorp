@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/glass_card.dart';
+import 'package:ohc_app/services/api_service.dart';
 
 // --- Fix This Wizard ---
 class FixThisWizardScreen extends ConsumerStatefulWidget {
@@ -48,8 +49,17 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
-                                await Future.delayed(const Duration(seconds: 2));
-                                if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                try {
+                                  await ref.read(apiServiceProvider)?.triggerHybridSync();
+                                  if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                } catch (e) {
+                                  if (mounted) {
+                                    setState(() => _isApplying = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Failed to apply fix: $e')),
+                                    );
+                                  }
+                                }
                               },
                               child: const Text('Apply Fix'),
                             ),
@@ -61,85 +71,6 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                       FilledButton(
                         onPressed: () => context.go('/agents'),
                         child: const Text('Return to Agents'),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// --- Upgrade Wizard ---
-class UpgradeWizardScreen extends ConsumerStatefulWidget {
-  const UpgradeWizardScreen({super.key});
-
-  @override
-  ConsumerState<UpgradeWizardScreen> createState() => _UpgradeWizardScreenState();
-}
-
-class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
-  int _progress = 0;
-  bool _isUpgrading = false;
-  bool _done = false;
-
-  void _startUpgrade() async {
-    setState(() { _isUpgrading = true; });
-    for (int i = 1; i <= 4; i++) {
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) setState(() => _progress = i);
-    }
-    if (mounted) setState(() { _done = true; _isUpgrading = false; });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Platform Upgrade')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: GlassCard(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Upgrade to v2.4 ✨', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    if (!_isUpgrading && !_done) ...[
-                      const Text("What's new:\n• Improved agent reasoning\n• 2x faster orchestration\n• New observability metrics", style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: _startUpgrade,
-                        child: const Text('Upgrade in 1 click'),
-                      ),
-                    ] else if (_isUpgrading) ...[
-                      LinearProgressIndicator(value: _progress / 4),
-                      const SizedBox(height: 16),
-                      Text(
-                        _progress == 1 ? 'Downloading...' :
-                        _progress == 2 ? 'Applying migrations...' :
-                        _progress == 3 ? 'Restarting services...' : 'Finalizing...',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'Inter'),
-                      ),
-                      const SizedBox(height: 24),
-                      TextButton(onPressed: () {}, child: const Text('Rollback')),
-                    ] else if (_done) ...[
-                      const Icon(Icons.celebration, color: Colors.blueAccent, size: 64),
-                      const SizedBox(height: 16),
-                      const Text('Upgrade complete!', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: () => context.go('/dashboard'),
-                        child: const Text('Go to Dashboard'),
                       ),
                     ],
                   ],

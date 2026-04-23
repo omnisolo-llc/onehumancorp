@@ -177,10 +177,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path: '/wizards/upgrade',
-            builder: (context, state) => const UpgradeWizardScreen(),
-          ),
-          GoRoute(
             path: '/wizards/billing',
             builder: (context, state) => const BillingWizardScreen(),
           ),
