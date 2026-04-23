@@ -19,7 +19,7 @@ func TestBwrapHarness_Coverage(t *testing.T) {
 		AllowedPaths: []string{"/tmp"},
 	}
 
-	out, err := h.Execute(ctx, execCtx)
+	stdout, _, err := h.Execute(ctx, execCtx)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -27,8 +27,8 @@ func TestBwrapHarness_Coverage(t *testing.T) {
 			return
 		}
 	} else {
-		if !strings.Contains(string(out), "test") {
-			t.Errorf("expected 'test' in output, got: %s", string(out))
+		if !strings.Contains(string(stdout), "test") {
+			t.Errorf("expected 'test' in output, got: %s", string(stdout))
 		}
 	}
 }
@@ -42,7 +42,7 @@ func TestBwrapHarness_ExecutionLatency(t *testing.T) {
 		AllowedPaths: []string{"/tmp"},
 	}
 
-	_, err := h.Execute(ctx, execCtx)
+	_, _, err := h.Execute(ctx, execCtx)
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		// Just swallow error if bwrap not found, we just want coverage
 	}

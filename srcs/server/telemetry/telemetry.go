@@ -35,6 +35,8 @@ var (
 	HarnessInitLatency         metric.Float64Histogram
 	HarnessDbIoLatency         metric.Float64Histogram
 	HarnessExecutionLatency    metric.Float64Histogram
+	HarnessCommandDurationSeconds metric.Float64Histogram
+	HarnessIOBytesTotal        metric.Int64Counter
 	TasksEscalatedTotal        metric.Int64Counter
 	BubblewrapViolationTotal   metric.Int64Counter
 	meter                      metric.Meter
@@ -879,6 +881,22 @@ func InitWithMeter(m mockableMeter) error {
 		"ohc_bubblewrap_execution_latency_seconds",
 		metric.WithDescription("Latency of Bubblewrap execution in seconds"),
 		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	HarnessCommandDurationSeconds, err = m.Float64Histogram(
+		"ohc_harness_command_duration_seconds",
+		metric.WithDescription("Latency of command execution via LocalShellTask harness"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	HarnessIOBytesTotal, err = m.Int64Counter(
+		"ohc_harness_io_bytes_total",
+		metric.WithDescription("Total count of output bytes produced by harness executed shell tasks"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -2163,6 +2181,27 @@ func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode st
 	if HarnessExecutionLatency != nil {
 		HarnessExecutionLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+// RecordHarnessCommandDuration records the latency of shell command executions by the harness.
+func RecordHarnessCommandDuration(ctx context.Context, duration float64, tenantID, commandPrefix, exitCode string) {
+	if HarnessCommandDurationSeconds != nil {
+		HarnessCommandDurationSeconds.Record(ctx, duration, metric.WithAttributes(
+			attribute.String("tenant_id", tenantID),
+			attribute.String("command_prefix", commandPrefix),
+			attribute.String("exit_code", exitCode),
+		))
+	}
+}
+
+// RecordHarnessIOBytes records the total I/O byte counts emitted by shell tasks inside the harness.
+func RecordHarnessIOBytes(ctx context.Context, bytesCount int64, tenantID, streamType string) {
+	if HarnessIOBytesTotal != nil {
+		HarnessIOBytesTotal.Add(ctx, bytesCount, metric.WithAttributes(
+			attribute.String("tenant_id", tenantID),
+			attribute.String("stream_type", streamType),
 		))
 	}
 }

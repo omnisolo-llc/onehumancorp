@@ -3,6 +3,7 @@
 package harness
 
 import (
+	"bytes"
 	"context"
 	"os/exec"
 	"strings"
@@ -17,7 +18,7 @@ func NewIsolationHarness() IsolationHarness {
 	return NewPermissionInterceptor(&BwrapHarness{})
 }
 
-func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {
+func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, []byte, error) {
 	telemetry.RecordBubblewrapSpawn(ctx)
 	start := time.Now()
 
@@ -45,7 +46,15 @@ func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([
 	if execCtx.NetworkProxy != "" {
 		cmd.Env = append(cmd.Environ(), "HTTP_PROXY="+execCtx.NetworkProxy, "HTTPS_PROXY="+execCtx.NetworkProxy)
 	}
-	out, err := cmd.CombinedOutput()
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+
+	outStdout := stdout.Bytes()
+	outStderr := stderr.Bytes()
 
 	duration := time.Since(start).Seconds()
 	telemetry.RecordBubblewrapExecutionLatency(ctx, duration)
@@ -54,7 +63,7 @@ func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([
 		if exitErr, ok := err.(*exec.ExitError); ok {
 			// Common violation codes: 126 (command invoked cannot execute)
 			// Or check the output for "Permission denied"
-			if exitErr.ExitCode() != 0 && (strings.Contains(string(out), "Permission denied") || exitErr.ExitCode() == 126) {
+			if exitErr.ExitCode() != 0 && (strings.Contains(string(outStdout), "Permission denied") || strings.Contains(string(outStderr), "Permission denied") || exitErr.ExitCode() == 126) {
 				telemetry.RecordBubblewrapViolation(ctx)
 			}
 		} else {
@@ -66,5 +75,5 @@ func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([
 		}
 	}
 
-	return out, err
+	return outStdout, outStderr, err
 }

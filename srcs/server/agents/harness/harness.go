@@ -9,5 +9,5 @@ type ExecutionContext struct {
 }
 
 type IsolationHarness interface {
-	Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error)
+	Execute(ctx context.Context, execCtx ExecutionContext) (stdout []byte, stderr []byte, err error)
 }

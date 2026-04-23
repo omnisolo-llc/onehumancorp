@@ -7,8 +7,8 @@ import (
 
 type MockHarness struct{}
 
-func (m *MockHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {
-	return []byte("success"), nil
+func (m *MockHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, []byte, error) {
+	return []byte("success"), nil, nil
 }
 
 func TestPermissionInterceptor(t *testing.T) {
@@ -60,7 +60,7 @@ func TestPermissionInterceptor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := interceptor.Execute(ctx, ExecutionContext{Command: tt.command})
+			_, _, err := interceptor.Execute(ctx, ExecutionContext{Command: tt.command})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
 			}

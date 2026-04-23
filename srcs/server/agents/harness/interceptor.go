@@ -85,7 +85,7 @@ func NewPermissionInterceptor(next IsolationHarness) *PermissionInterceptor {
 	}
 }
 
-func (i *PermissionInterceptor) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {
+func (i *PermissionInterceptor) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, []byte, error) {
 	// Reconstruct the actual bash command payload to ensure tree-sitter parses nested scripts properly
 	// If it's a "bash -c 'something'", we must parse the 'something'
 	var cmdToParse string
@@ -97,7 +97,7 @@ func (i *PermissionInterceptor) Execute(ctx context.Context, execCtx ExecutionCo
 
 	if err := i.parser.parseForSecurity(ctx, cmdToParse); err != nil {
 		telemetry.RecordBubblewrapViolation(ctx)
-		return nil, fmt.Errorf("security violation: %w", err)
+		return nil, nil, fmt.Errorf("security violation: %w", err)
 	}
 
 	telemetry.RecordBubblewrapSpawn(ctx) // Prometheus tracking for all bash executions

@@ -3,6 +3,7 @@
 package harness
 
 import (
+	"bytes"
 	"context"
 	"os/exec"
 )
@@ -13,7 +14,7 @@ func NewIsolationHarness() IsolationHarness {
 	return NewPermissionInterceptor(&SandboxHarness{})
 }
 
-func (h *SandboxHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, error) {
+func (h *SandboxHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([]byte, []byte, error) {
 	profile := "(version 1)\n(deny default)\n(allow process-exec)\n"
 
 	// Add allowed paths
@@ -35,5 +36,11 @@ func (h *SandboxHarness) Execute(ctx context.Context, execCtx ExecutionContext) 
 	if execCtx.NetworkProxy != "" {
 		cmd.Env = append(cmd.Environ(), "HTTP_PROXY="+execCtx.NetworkProxy, "HTTPS_PROXY="+execCtx.NetworkProxy)
 	}
-	return cmd.CombinedOutput()
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	return stdout.Bytes(), stderr.Bytes(), err
 }
