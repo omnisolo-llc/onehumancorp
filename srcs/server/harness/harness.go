@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -26,6 +27,7 @@ type SandboxConfig struct {
 	ReadPaths      []string
 	WritePaths     []string
 	EnableSeccomp  bool
+	SeccompBPFPath string
 }
 
 type Harness struct {
@@ -186,8 +188,17 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 		bwrapArgs = append(bwrapArgs, "--bind", p, p)
 	}
 
-	if h.config.EnableSeccomp {
-		// Just a placeholder, as actual seccomp filtering in bwrap would be passed via --seccomp <fd>
+	var extraFiles []*os.File
+	if h.config.EnableSeccomp && h.config.SeccompBPFPath != "" {
+		f, err := os.Open(h.config.SeccompBPFPath)
+		if err != nil {
+			return Result{}, fmt.Errorf("failed to open seccomp BPF file: %w", err)
+		}
+		defer f.Close()
+		extraFiles = append(extraFiles, f)
+		// bwrap uses FD starting from 3 for ExtraFiles
+		fd := 2 + len(extraFiles)
+		bwrapArgs = append(bwrapArgs, "--seccomp", fmt.Sprintf("%d", fd))
 	}
 
 	bwrapArgs = append(bwrapArgs, "--")
@@ -195,6 +206,10 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 	bwrapArgs = append(bwrapArgs, args...)
 
 	execCmd := exec.CommandContext(ctx, "bwrap", bwrapArgs...)
+
+	if len(extraFiles) > 0 {
+		execCmd.ExtraFiles = extraFiles
+	}
 
 	// Pass a restricted environment to the sandboxed process.
 	execCmd.Env = []string{

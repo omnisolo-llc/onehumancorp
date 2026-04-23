@@ -1,31 +1,23 @@
-1. **Create Database Migration:**
-   - Run `cat << 'MIG' > srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql ... MIG` to add `locked_until` (via ALTER TABLE if missing) and the indices on `status` and `locked_until` on `shared_tasks`.
-   - Add a verification step: `ls -la srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql` to verify creation.
-   - Run a Python script or `sed` to update `embedsrcs` in `srcs/server/db/BUILD.bazel` to include this new migration.
-   - Add a verification step: `cat srcs/server/db/BUILD.bazel | grep 20260427020001_shared_tasks_indexes.sql` to confirm.
+1. **Create Seccomp BPF filter file (`srcs/server/harness/seccomp.go`)**
+   - Use `run_in_bash_session` to create `srcs/server/harness/seccomp.go` containing `CompileSeccompBPF(path string) error`. It will use `golang.org/x/net/bpf` to compile a filter blocking `socket(AF_UNIX, ...)` by returning `EACCES` and allowing everything else.
+   - Run `cat srcs/server/harness/seccomp.go` to verify the file was created correctly.
 
-2. **Update TaskManager Enhancements:**
-   - Use a Python script to inject `tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")` in `CompleteTaskWithResult` inside `srcs/server/orchestration/tasks.go`.
-   - Use a Python script to replace the status update in `ReviewTask` to utilize `tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Oh, wait, `ReviewTask` is ALREADY doing `err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Let me verify `tasks.go` again to see what exactly needs modification.
+2. **Update `SandboxConfig` in `srcs/server/harness/harness.go`**
+   - Use `replace_with_git_merge_diff` to add `SeccompBPFPath string` to `SandboxConfig` struct in `srcs/server/harness/harness.go`.
+   - Run `grep -n "SeccompBPFPath" srcs/server/harness/harness.go` to verify the struct was updated.
 
-3. **Modify API Endpoints:**
-   - Use a Python script to add a `requireSPIFFE` HTTP middleware in `srcs/server/orchestration/service.go`. The middleware will check the `Authorization` header for a bearer token, and validate it starts with `spiffe://` using `interop.ValidateSPIFFEID`.
-   - Wrap the HTTP handlers defined in `RegisterTaskHTTPHandlers` with this new middleware.
-   - Add a verification step: `cat srcs/server/orchestration/service.go | grep -C 5 requireSPIFFE` to verify changes.
+3. **Update `Run` method in `srcs/server/harness/harness.go`**
+   - Use `replace_with_git_merge_diff` to modify the `Run` method inside `srcs/server/harness/harness.go`.
+   - Specifically, around line 186 where it checks `if h.config.EnableSeccomp`, I will replace it to check `if h.config.EnableSeccomp && h.config.SeccompBPFPath != ""` and append the file descriptor to `execCmd.ExtraFiles`.
+   - Run `cat srcs/server/harness/harness.go` and `go build ./srcs/server/harness/...` to verify the syntax and logic.
 
-4. **Update Tests:**
-   - Run `cat << 'TEST' > srcs/server/orchestration/patch_tasks_test.py ... TEST` and execute it to inject `TestSharedTask_StateMachine` in `srcs/server/orchestration/tasks_test.go` covering all transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-   - Add a verification step: `grep -nri "TestSharedTask_StateMachine" srcs/server/orchestration/tasks_test.go` to confirm injection.
+4. **Add tests**
+   - Use `run_in_bash_session` to create `srcs/server/harness/seccomp_test.go` with a unit test `TestCompileSeccompBPF` that ensures the filter compiles without errors.
+   - Use `replace_with_git_merge_diff` to update `srcs/server/harness/harness_test.go` to set `SeccompBPFPath` in a test and verify `--seccomp` is appended or executed.
+   - Run `cat srcs/server/harness/seccomp_test.go` to verify test creation.
 
-5. **Expose Prometheus Metrics:**
-   - Write a python script to ensure `telemetry.RecordSwarmTaskTransition` is properly used inside `tasks.go` right after state transitions, and ensure we use `metric.WithAttributes` properly in `telemetry.go`.
-   - Add verification step: `cat srcs/server/orchestration/tasks.go | grep RecordSwarmTaskTransition` to confirm changes.
+5. **Run all tests**
+   - Use `run_in_bash_session` to run `bazelisk test //srcs/server/harness/...` to ensure all modifications work and maintain 100% test coverage.
 
-6. **Test the changes:**
-   - Run `bazelisk test //srcs/server/orchestration/... //srcs/server/db/...` to verify the logic.
-
-7. **Pre-commit steps:**
+6. **Complete pre-commit steps**
    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-8. **Completion:**
-   - Output a final unstructured message containing issue_id.

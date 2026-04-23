@@ -8,6 +8,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 )
@@ -55,23 +56,33 @@ func TestHarnessProxy(t *testing.T) {
 }
 
 func TestHarnessRun(t *testing.T) {
-    // We can't really test metrics properly without a full exporter setup
-    // But we can check that it doesn't crash when executed
+	// We can't really test metrics properly without a full exporter setup
+	// But we can check that it doesn't crash when executed
 
-    // Basic test that args are built correctly.
-    // Full run requires bwrap which may not be available in test environment.
-    config := &SandboxConfig{
-        ReadPaths: []string{"/tmp"},
-        WritePaths: []string{"/tmp/workspace"},
-    }
+	tmpDir := t.TempDir()
+	bpfPath := tmpDir + "/test_seccomp.bpf"
 
-    h := NewHarness(config)
-    defer h.Stop()
+	// Create a dummy file for BPF
+	if err := os.WriteFile(bpfPath, []byte("dummy"), 0644); err != nil {
+		t.Fatalf("failed to write dummy bpf file: %v", err)
+	}
 
-    // Just verify the method doesn't panic
-    _, _ = h.Run(context.Background(), "echo", []string{"hello"})
+	// Basic test that args are built correctly.
+	// Full run requires bwrap which may not be available in test environment.
+	config := &SandboxConfig{
+		ReadPaths:      []string{"/tmp"},
+		WritePaths:     []string{"/tmp/workspace"},
+		EnableSeccomp:  true,
+		SeccompBPFPath: bpfPath,
+	}
 
-    if err == nil && res.ExitCode != 0 {
-        // Just sanity check
-    }
+	h := NewHarness(config)
+	defer h.Stop()
+
+	// Just verify the method doesn't panic
+	res, err := h.Run(context.Background(), "echo", []string{"hello"})
+
+	if err == nil && res.ExitCode != 0 {
+		// Just sanity check
+	}
 }
