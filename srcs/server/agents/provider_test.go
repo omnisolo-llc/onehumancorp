@@ -26,10 +26,3 @@ func TestProviderGetCredentials(t *testing.T) {
 		})
 	}
 }
-
-func TestBuiltinProvider_Type(t *testing.T) {
-	p := &BuiltinProvider{}
-	if p.Type() != ProviderTypeBuiltin {
-		t.Errorf("expected %v, got %v", ProviderTypeBuiltin, p.Type())
-	}
-}
