@@ -1,0 +1,23 @@
+--- srcs/app/test/cuj_handoffs_e2e_test.dart
++++ srcs/app/test/cuj_handoffs_e2e_test.dart
+@@ -96,7 +96,7 @@
+       await tester.pumpAndSettle();
+
+       // Intent text should be visible
+-      expect(find.textContaining('Deploy to production'), findsWidgets);
++      expect(find.textContaining('DEPLOY TO PRODUCTION'), findsWidgets);
+     });
+
+     testWidgets('refresh icon button is present in AppBar', (tester) async {
+@@ -145,10 +145,10 @@
+       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
+       await tester.pumpAndSettle();
+
+-      final approveBtn = find.textContaining('Approve');
++      final approveBtn = find.byIcon(Icons.chevron_right);
+       if (approveBtn.evaluate().isNotEmpty) {
+-        await tester.tap(approveBtn.first);
++        await tester.drag(approveBtn.first, const Offset(300, 0));
+         await tester.pumpAndSettle();
+
+         verify(
