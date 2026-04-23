@@ -40,7 +40,7 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
       } else {
         await service.startService();
       }
-      await Future.delayed(const Duration(seconds: 2)); // Give it a moment
+
       await _checkStatus();
     } finally {
       if (mounted) setState(() => _isLoading = false);
