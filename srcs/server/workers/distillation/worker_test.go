@@ -46,6 +46,18 @@ func (m *mockConsolidator) Consolidate(ctx context.Context, sessionID string, lo
 	return nil
 }
 
+func (m *mockConsolidator) ResolveConflicts(ctx context.Context, organizationID string, topic string) error {
+	return nil
+}
+
+func (m *mockConsolidator) PruneStaleContext(ctx context.Context, organizationID string, threshold time.Duration) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockConsolidator) GetSharedContext(ctx context.Context, query string) (string, error) {
+	return "", nil
+}
+
 func TestSemanticDistillationWorker_DistillThread(t *testing.T) {
 	cp := &mockCheckpointer{}
 	ad := &mockConsolidator{}
