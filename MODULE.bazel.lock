@@ -493,6 +493,41 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
+    "//bazel:playwright_browsers.bzl%playwright_browsers_extension": {
+      "general": {
+        "bzlTransitiveDigest": "km8HR+chuUoZ2CzV7JAZGtU5TLQzHu/gQQYHjIX11EE=",
+        "usagesDigest": "YrglNbpqJ+vemHB9ydQ3uZrVa8cqcFbQPw8oU3rxFCg=",
+        "recordedInputs": [
+          "REPO_MAPPING:,bazel_tools bazel_tools"
+        ],
+        "generatedRepoSpecs": {
+          "playwright_chromium": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "url": "https://playwright.azureedge.net/builds/chromium/1200/chromium-linux.zip",
+              "sha256": "ab56b2a7955c2961f74348e2349f1e907489283da23dba37c730b624e4d670bb",
+              "build_file_content": "filegroup(name = 'files', srcs = glob(['**']), visibility = ['//visibility:public'])"
+            }
+          },
+          "playwright_firefox": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "url": "https://playwright.azureedge.net/builds/firefox/1497/firefox-ubuntu-24.04.zip",
+              "sha256": "168e69855d6e49997823fe765d66f02720f6add035a9d3ac94e51073d391a272",
+              "build_file_content": "filegroup(name = 'files', srcs = glob(['**']), visibility = ['//visibility:public'])"
+            }
+          },
+          "playwright_ffmpeg": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "url": "https://playwright.azureedge.net/builds/ffmpeg/1011/ffmpeg-linux.zip",
+              "sha256": "ebc74fc5b94830176a3c2914ae96bd8bc7f6a91f4f33890230f84a172ee61ccc",
+              "build_file_content": "filegroup(name = 'files', srcs = glob(['**']), visibility = ['//visibility:public'])"
+            }
+          }
+        }
+      }
+    },
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
         "bzlTransitiveDigest": "fqriFRbq45Y0SGRhj5dAU3t6mwYtVsworK9aBha0kho=",
@@ -1494,7 +1529,7 @@
     },
     "@@rules_rust+//crate_universe:extensions.bzl%crate": {
       "general": {
-        "bzlTransitiveDigest": "8b3SfiS9cOfs/B3H5V6mkuWw1pD3XjSAXsepv/qDFXc=",
+        "bzlTransitiveDigest": "pPZkXGLiC3X92aE8y0f5QXCrW8BjYZhavxNcL0fkxk4=",
         "usagesDigest": "ITimTtMFqADiEELnWA/JjITd3LVsywEOsBreHKet3+8=",
         "recordedInputs": [
           "ENV:CARGO_BAZEL_DEBUG \\0",

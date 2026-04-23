@@ -1,164 +1,95 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# [architecture] Business Journey Architecture
+# Title
+AI Agent Department Architecture for Invisible Operations
 
-## Title
-End-to-End Business Journey Architecture for OHC Personas
+# Problem Statement
+Small business owners (like Maya the baker, Carlos the handyman, Priya the boutique owner) are overwhelmed by the cognitive load of running a business. They have to juggle multiple tools for operations, marketing, sales, customer support, and finance. Existing solutions like Shopify or Wix provide tools, but the user still has to do the work. The problem is that non-technical founders need an autonomous platform where "AI does the work" invisibly in the background. The complexity of orchestrating multiple AI agents to act cohesively across different business domains (departments) without overwhelming the user is a significant gap in the market.
 
-## Problem Statement
-Small business owners—ranging from home bakers to freelance handymen—often lack the technical expertise to piece together fragmented solutions (e.g., website builder + booking calendar + CRM + AI chatbots) to run their operations. They need a simple, guided, and cohesive journey to start, operate, and grow their businesses without ever encountering complex configurations or code. The friction of setting up multi-tool workflows typically leads to abandonment. We need a unified Business Journey Architecture that works flawlessly across all key personas, particularly on a mobile 375px display, offloading all complexities to specialized AI Agent Departments.
+# Research Report
+Competitive analysis shows that platforms like Shopify use AI primarily as a bolt-on chatbot (Sidekick) to assist the user, while Wix uses it for initial website generation. None treat AI as the fundamental infrastructure of the business.
+To achieve "Radical Simplicity," OHC's agents must be organized into functional "Departments" (Operations, Marketing, Sales, Customer Success, Finance, Legal, Advisory) that map directly to real business functions.
+- **Operations ("The Manager")**: Processing orders, managing inventory.
+- **Marketing & Advertising ("The Promoter")**: Web design, SEO, social posting.
+- **Sales & Acquisition ("The Salesperson")**: Quotes, lead follow-up.
+- **Customer Success ("The Ambassador")**: Replies, review requests.
+- **Finance & Payments ("The Accountant")**: Payments, financial reporting.
+- **Legal & Compliance ("The Protector")**: Contracts, policies.
+- **Business Advisory ("The Advisor")**: Insights, recommendations.
 
-## Research Report
-Current market solutions (Shopify, Wix, Squarespace, GoDaddy) cater well to users who are somewhat tech-savvy or willing to invest 30-60 minutes in setup. However, they fall short for true non-technical users who require an instant, mobile-first experience.
-- **Shopify:** Powerful but overwhelming; requires 30-60 minutes. Better suited for pure e-commerce.
-- **Wix:** Highly customizable, but AI features (Wix AI) are often disjointed add-ons.
-- **Squarespace:** Great for portfolios but requires a desktop for efficient initial setup.
-- **GoDaddy:** Simple but lacks the depth needed for specialized businesses like service bookings or food cart pre-orders.
+These agents need to coordinate events seamlessly. For example, when a custom cake order is placed, Operations handles the order, Finance processes the deposit, Customer Success confirms the order, and the Advisor notes the transaction for weekly reporting. The architecture must support this cross-agent coordination safely and transparently to the user, running in the background while adhering to usage quotas.
 
-**OHC Differentiation:**
-OHC's advantage is its invisible AI infrastructure that handles complexity from Day 1. By treating the AI as "departments," the business owner experiences a seamless journey.
+# Design Doc
 
-## Design Doc
+The architecture utilizes an event-driven publish/subscribe model for cross-department coordination and a unified vector memory layer for shared context.
 
-### Architecture Diagrams (Mermaid.js)
+## AI Agent Department Integration Architecture
 
-#### 1. Maya (The Home Baker) Journey
 ```mermaid
-sequenceDiagram
-    participant M as Maya (Mobile UI)
-    participant MA as Marketing & Advertising
-    participant CS as Customer Success
-    participant Op as Operations
-    participant Fin as Finance & Payments
+graph TD
+    subgraph OHC Platform
+        UI[Mobile / Web UI]
+        API[API Gateway]
+        Events[Event Bus / Message Broker]
+        MemDB[(Vector Memory Layer)]
+        Jobs[(Job Queue / Scheduler)]
+    end
 
-    M->>MA: Onboarding: "I bake custom cakes"
-    MA->>M: Designs Storefront & Generates Content
-    Note over M: Customer browses & orders custom cake
-    M->>Op: Custom Order Submitted
-    Op->>Fin: Process Deposit Payment
-    Fin-->>Op: Payment Success
-    Op->>CS: Trigger Confirmation
-    CS->>M: Sends Order Confirmation SMS/Email
+    subgraph Departments
+        Ops[Operations Agent]
+        Mktg[Marketing Agent]
+        Sales[Sales Agent]
+        CS[Customer Success Agent]
+        Fin[Finance Agent]
+        Legal[Legal Agent]
+        Adv[Business Advisory Agent]
+    end
+
+    UI --> API
+    API --> Events
+    Events --> Jobs
+
+    Jobs --> Ops
+    Jobs --> Mktg
+    Jobs --> Sales
+    Jobs --> CS
+    Jobs --> Fin
+    Jobs --> Legal
+    Jobs --> Adv
+
+    Ops <--> MemDB
+    Mktg <--> MemDB
+    Sales <--> MemDB
+    CS <--> MemDB
+    Fin <--> MemDB
+    Legal <--> MemDB
+    Adv <--> MemDB
+
+    Ops --> Events
+    Mktg --> Events
+    Fin --> Events
+    CS --> Events
 ```
 
-#### 2. Carlos (The Freelance Handyman) Journey
-```mermaid
-sequenceDiagram
-    participant C as Carlos (Mobile UI)
-    participant SA as Sales & Acquisition
-    participant Op as Operations
-    participant Fin as Finance & Payments
-    participant CS as Customer Success
+## Mobile UX Flow (375px First)
+1. **Home Dashboard**: Displays a minimalist feed of agent activities. Example: "The Manager confirmed 3 new orders", "The Accountant processed $150".
+2. **Action Review Center**: Some actions require approval (e.g., custom quotes, refund issuance). Users swipe right to approve, left to reject.
+3. **Department Views**: Each department has a simple settings page to tune the `system_prompt` (e.g., "Always be polite and use emojis" for Customer Success).
+4. **Insights Screen**: A plain-language weekly summary from the Advisor agent.
 
-    C->>SA: Onboarding: "I fix things"
-    SA->>C: Generates Service Listings & Quote Form
-    Note over C: Customer requests a plumbing fix
-    C->>SA: Customer Inquiry
-    SA->>C: Drafts Quote for Review
-    C->>SA: Approves Quote
-    SA->>Op: Schedules Booking
-    Op->>Fin: Collects Deposit
-    Fin-->>Op: Deposit Confirmed
-    Op->>CS: Triggers Follow-Up
-    CS->>C: Requests Testimonial Post-Job
-```
+## Key Design Decisions
+- **Event-Driven Coordination**: Departments communicate asynchronously via domain events (e.g., `order.created`, `payment.received`). This prevents tightly coupled dependencies between agents.
+- **Shared Memory Layer**: All interactions and events are embedded into a unified vector index. When an agent wakes up, it retrieves relevant context (e.g., the Customer Success agent can see the customer's previous chat history and order history before replying).
+- **Approval Workflows**: Critical actions (like modifying a refund policy or sending a custom invoice over $500) are routed to a "Draft-for-Review" state, notifying the user via the app for approval.
+- **Usage Throttling**: Agent executions are metered per tenant via the background processing system to enforce tier limits (e.g., Free tier = 100 AI actions/mo).
 
-#### 3. Priya (The Boutique Owner) Journey
-```mermaid
-sequenceDiagram
-    participant P as Priya (Mobile & Desktop)
-    participant MA as Marketing & Advertising
-    participant Op as Operations
-    participant Fin as Finance & Payments
-    participant BA as Business Advisory
+# Implementation Prompt
+Implement the AI Agent Department backend framework. Define the core structures and interfaces for an AI Department, including methods for handling incoming events, retrieving memory context, and emitting draft actions for user review. Ensure that each department (Operations, Marketing, Sales, Customer Success, Finance, Legal, Advisory) is registered in the main orchestration loop. Provide an E2E test where an `order.created` event triggers the Operations agent to process the order, and the Customer Success agent to draft a confirmation message for review. The test must start from the UI login, trigger the order creation, and verify the drafted message appears in the Action Review Center.
 
-    P->>MA: Onboarding: "I sell clothes in-store and online"
-    MA->>P: Builds Omni-channel Storefront
-    Note over P: In-store Tap-to-Pay Transaction
-    P->>Fin: Stripe Terminal Payment
-    Fin-->>Op: Deducts Inventory (S/M/L)
-    Op->>P: Low Stock Alert (if triggered)
-    BA->>P: Weekly Report: "Red shirts are trending"
-```
-
-#### 4. Leo (The Music Tutor) Journey
-```mermaid
-sequenceDiagram
-    participant L as Leo (Mobile UI)
-    participant SA as Sales & Acquisition
-    participant Op as Operations
-    participant Fin as Finance & Payments
-    participant CS as Customer Success
-
-    L->>SA: Onboarding: "I teach guitar"
-    SA->>L: Builds Link-in-Bio & Booking Page
-    Note over L: Student books a 4-lesson package
-    L->>Op: Booking Received
-    Op->>Fin: Sets up Monthly Subscription
-    Op->>L: Generates Zoom Link & Calendar Sync
-    CS->>L: Re-engages inactive students after 2 weeks
-```
-
-#### 5. Fatima (The Food Cart Operator) Journey
-```mermaid
-sequenceDiagram
-    participant F as Fatima (Mobile UI)
-    participant MA as Marketing & Advertising
-    participant Op as Operations
-    participant Fin as Finance & Payments
-    participant CS as Customer Success
-
-    F->>MA: Onboarding: "I sell Halal food"
-    MA->>F: Creates Bi-lingual Menu
-    Note over F: Customer Pre-orders Pickup
-    F->>Fin: Processes Payment
-    Fin-->>Op: Payment Verified
-    Op->>F: Triggers High-Volume Mobile Notification
-    CS->>F: Auto-updates "Sold Out" state based on stock
-```
-
-### UI Wireframes & Screen Flow (375px First)
-1. **Onboarding (The 10-Minute Launch):**
-   - **Screen 1:** "What do you do?" (Input: Text or Voice).
-   - **Screen 2:** "What's the business name?"
-   - **Screen 3:** "Connecting your AI Departments..." (Loading animation with Glassmorphism).
-   - **Screen 4:** "Your business is live! Here is your link."
-
-2. **Dashboard (The Daily Hub):**
-   - **Top Card:** "Today's Action Items" (e.g., "1 New Quote to Approve", "2 Custom Cake Deposits Paid").
-   - **Middle Grid:** Quick Actions (Add Product, Scan QR, New Post).
-   - **Bottom List:** AI Department Updates (e.g., Business Advisory: "Yesterday was your busiest day!").
-
-3. **Mobile UX Flow:**
-   - **Navigation:** Bottom app bar with Home, Inbox (Customer Success), Orders (Operations), Settings.
-   - **Forms:** Native keyboard inputs. Large touch targets (44x44px minimum).
-   - **Visuals:** Outfit font for headings, Inter for body. Dark/light mode support with blur backdrops.
-
-### AI Agent Integration Points
-- **Onboarding:** "Marketing & Advertising" uses initial inputs to generate branding and structure.
-- **Inbox:** "Customer Success" reads incoming DMs and drafts replies for 1-tap approval.
-- **Reporting:** "Business Advisory" aggregates weekly data and pushes a natural language notification every Monday morning.
-
-### Key Design Decisions
-- **Mobile-First Everything:** Since Carlos and Fatima only use phones, all management interfaces (including adding inventory or approving quotes) must be flawless on a 375px screen.
-- **1-Tap Approvals:** High-risk actions (sending quotes, drafting emails) require human oversight but minimal effort.
-- **Unified Department Orchestration:** Using the KAIROS Orchestrator to route events (e.g., Order -> Payment -> Customer Success follow-up) ensures a cohesive experience rather than disjointed notifications.
-
-## Implementation Prompt
-**Task for Implementer:**
-Implement the end-to-end Onboarding and Activation flow for the OHC mobile client.
-- **User-Facing Outcome:** A non-technical user can input their business idea in a simple text field, and within 3 screens, reach a fully populated dashboard with their personalized storefront link ready to share.
-- **CUJ:** User opens app -> Enters business description -> System orchestrates "Marketing & Advertising" AI to generate a business profile -> User lands on Dashboard seeing their first AI Advisory message.
-- **Acceptance Criteria:**
-  - Must display perfectly on a 375px width screen without horizontal scrolling.
-  - Touch targets must be at least 44x44px.
-  - The flow must communicate with the KAIROS Orchestrator to instantiate the business tenant.
-  - Must include E2E Playwright tests verifying the UI journey from initial launch to the populated dashboard.
-
-## Priority
+# Priority
 P0
 
-## Estimated Scope
+# Estimated Scope
 Large
 
 </div>
