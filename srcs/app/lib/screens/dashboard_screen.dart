@@ -1,4 +1,3 @@
-import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -36,8 +35,7 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
-            floatingActionButton: const AiHelpChatWidget(),
-body: snapshot.when(
+      body: snapshot.when(
         loading:
             () => Center(
               child: CircularProgressIndicator(
@@ -218,7 +216,7 @@ class _DashboardContent extends StatelessWidget {
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
         Text(
-          'Manage your AI team. Hire or fire agents to help run your business.',
+          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontFamily: 'Inter',
@@ -256,7 +254,7 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'System Overview Panel',
+      label: 'System Observability Panel',
       child: Tooltip(
         message: 'View System Health & Metrics',
         child: GlassCard(
@@ -288,7 +286,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'System Overview',
+                              'Full-Spectrum Telemetry',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -306,10 +304,10 @@ class _ObservabilityWidget extends StatelessWidget {
                           runSpacing: 16.0,
                           alignment: WrapAlignment.spaceAround,
                           children: [
-                            _Metric(label: 'System Health', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Active Tasks', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Speed (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Total AI Agents', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
+                            _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
+                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
+                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
                       ],
@@ -612,9 +610,11 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Optional delay for staggered entrance animation if needed
-    if (mounted) {
-      _controller.forward();
-    }
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _controller.forward();
+      }
+    });
   }
 
   @override

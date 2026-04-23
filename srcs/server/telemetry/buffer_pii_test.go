@@ -22,7 +22,7 @@ func TestStandaloneTelemetryPIIDoesNotMutateOriginal(t *testing.T) {
 	}
 	defer db.Close()
 
-	_, err = db.Exec("CREATE TABLE local_telemetry_buffer (id INTEGER PRIMARY KEY AUTOINCREMENT, metric_type TEXT, payload TEXT)")
+	_, err = db.Exec("CREATE TABLE telemetry_buffer (id INTEGER PRIMARY KEY AUTOINCREMENT, metric_type TEXT, payload TEXT)")
 	if err != nil {
 		t.Fatalf("Failed to create table: %v", err)
 	}
@@ -52,7 +52,7 @@ func TestStandaloneTelemetryPIIDoesNotMutateOriginal(t *testing.T) {
 
 	// Read from db
 	var payload string
-	err = db.QueryRow("SELECT payload FROM local_telemetry_buffer LIMIT 1").Scan(&payload)
+	err = db.QueryRow("SELECT payload FROM telemetry_buffer LIMIT 1").Scan(&payload)
 	if err != nil {
 		t.Fatalf("Failed to query db: %v", err)
 	}
