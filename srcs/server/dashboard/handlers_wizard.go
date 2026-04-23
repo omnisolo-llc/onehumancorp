@@ -14,6 +14,7 @@ type wizardStatusResponse struct {
 	Configured bool `json:"configured"`
 	// Steps holds per-step completion status.
 	Steps wizardSteps `json:"steps"`
+	Extras map[string]string `json:"extras,omitempty"`
 }
 
 type wizardSteps struct {
@@ -54,6 +55,7 @@ func (s *Server) handleWizardStatus(w http.ResponseWriter, r *http.Request) {
 	resp := wizardStatusResponse{
 		Configured: steps.Server && steps.AiProvider && steps.Centrifuge,
 		Steps:      steps,
+		Extras:     cfg.Extras,
 	}
 	writeJSON(w, resp)
 }
@@ -124,6 +126,7 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, wizardStatusResponse{
 		Configured: steps.Server && steps.AiProvider && steps.Centrifuge,
 		Steps:      steps,
+		Extras:     cfg.Extras,
 	})
 }
 

@@ -21,6 +21,7 @@ class BusinessSetupState {
   final bool isLoading;
   final String? errorMessage;
   final bool obscurePassword;
+  final bool isInitialized;
 
   const BusinessSetupState({
     this.step = 0,
@@ -35,6 +36,7 @@ class BusinessSetupState {
     this.isLoading = false,
     this.errorMessage,
     this.obscurePassword = true,
+    this.isInitialized = false,
   });
 
   BusinessSetupState copyWith({
@@ -50,6 +52,7 @@ class BusinessSetupState {
     bool? isLoading,
     String? errorMessage,
     bool? obscurePassword,
+    bool? isInitialized,
   }) {
     return BusinessSetupState(
       step: step ?? this.step,
@@ -64,6 +67,7 @@ class BusinessSetupState {
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       obscurePassword: obscurePassword ?? this.obscurePassword,
+      isInitialized: isInitialized ?? this.isInitialized,
     );
   }
 }
@@ -72,15 +76,93 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
   BusinessSetupState build() => const BusinessSetupState();
 
-  void nextStep() {
-    if (state.step < 6) {
-      state = state.copyWith(step: state.step + 1);
+  Future<void> init(BuildContext context, WidgetRef ref) async {
+    if (state.isInitialized) return;
+
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        final res = await http.get(
+          Uri.parse('\$baseUrl/api/wizard/status'),
+          headers: {
+            'Authorization': 'Bearer \$\{user.token\}',
+          },
+        );
+
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data['extras'] != null) {
+            final extras = data['extras'] as Map<String, dynamic>;
+            final businessType = extras['business_type'] as String? ?? '';
+            final companyName = extras['company_name'] as String? ?? '';
+            final description = extras['description'] as String? ?? '';
+            final whatYouSellStr = extras['what_you_sell'] as String? ?? '';
+            final whatYouSell = whatYouSellStr.isNotEmpty ? whatYouSellStr.split(',') : <String>[];
+            final payments = extras['payments'] as String? ?? '';
+            final adminName = extras['admin_name'] as String? ?? '';
+            final adminEmail = extras['admin_email'] as String? ?? '';
+
+            state = state.copyWith(
+              businessType: businessType,
+              companyName: companyName,
+              description: description,
+              whatYouSell: whatYouSell,
+              payments: payments,
+              adminName: adminName,
+              adminEmail: adminEmail,
+              isInitialized: true,
+            );
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+    state = state.copyWith(isInitialized: true);
+  }
+
+  Future<void> saveState(BuildContext context, WidgetRef ref) async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+
+    if (user != null && baseUrl.isNotEmpty) {
+      final body = {
+        'extras': {
+          'business_type': state.businessType,
+          'company_name': state.companyName,
+          'description': state.description,
+          'what_you_sell': state.whatYouSell.join(','),
+          'payments': state.payments,
+          'admin_name': state.adminName,
+          'admin_email': state.adminEmail,
+        }
+      };
+
+      try {
+        await http.post(
+          Uri.parse('\$baseUrl/api/wizard/configure'),
+          headers: {
+            'Authorization': 'Bearer \$\{user.token\}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        );
+      } catch (_) {}
     }
   }
 
-  void prevStep() {
+  void nextStep(BuildContext context, WidgetRef ref) {
+    if (state.step < 6) {
+      state = state.copyWith(step: state.step + 1);
+      saveState(context, ref);
+    }
+  }
+
+  void prevStep(BuildContext context, WidgetRef ref) {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      saveState(context, ref);
     }
   }
 
@@ -314,6 +396,12 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
     final state = ref.watch(businessSetupProvider);
     final notifier = ref.read(businessSetupProvider.notifier);
 
+    if (!state.isInitialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifier.init(context, ref);
+      });
+    }
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -365,7 +453,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                     children: [
                       if (state.step > 0)
                         TextButton(
-                          onPressed: state.isLoading ? null : notifier.prevStep,
+                          onPressed: state.isLoading ? null : () => notifier.prevStep(context, ref),
                           child: const Text('Back', style: TextStyle(fontFamily: 'Inter')),
                         )
                       else
@@ -373,7 +461,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                       ElevatedButton(
                         onPressed: state.isLoading ? null : () {
                           if (state.step < 6) {
-                            notifier.nextStep();
+                            notifier.nextStep(context, ref);
                           } else {
                             notifier.launch(context, ref);
                           }
