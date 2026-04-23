@@ -1,5 +1,6 @@
 import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
+import 'package:ohc_app/widgets/business_share_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -212,6 +213,8 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
+        const SizedBox(height: 16),
+        const BusinessShareWidget(),
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),

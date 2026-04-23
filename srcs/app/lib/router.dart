@@ -30,6 +30,7 @@ import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
+import 'package:ohc_app/screens/storefront_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
@@ -73,10 +74,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
+      final isStorefrontRoute = state.matchedLocation == '/storefront';
       final redirectTarget = safeRedirectTarget(state.uri.queryParameters['redirect']);
 
       // Allow these public routes without authentication.
-      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) {
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute && !isStorefrontRoute) {
         final encodedTarget = Uri.encodeComponent(state.uri.toString());
         return '/login?redirect=$encodedTarget';
       }
@@ -85,6 +87,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
+      GoRoute(path: '/storefront', builder: (context, state) => const StorefrontScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
