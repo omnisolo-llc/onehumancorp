@@ -96,7 +96,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Intent text should be visible
-      expect(find.textContaining('Deploy to production'), findsWidgets);
+      expect(find.textContaining('DEPLOY TO PRODUCTION'), findsWidgets);
     });
 
     testWidgets('refresh icon button is present in AppBar', (tester) async {
@@ -145,10 +145,10 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
       await tester.pumpAndSettle();
 
-      final approveBtn = find.textContaining('Approve');
-      if (approveBtn.evaluate().isNotEmpty) {
-        await tester.tap(approveBtn.first);
-        await tester.pumpAndSettle();
+      final slider = find.bySemanticsLabel('Slide to Approve');
+      if (slider.evaluate().isNotEmpty) {
+        await tester.drag(slider.first, const Offset(400.0, 0.0));
+        await tester.pump(); await tester.pump(const Duration(milliseconds: 500));
 
         verify(
           () => mockClient.post(

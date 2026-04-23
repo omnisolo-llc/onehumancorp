@@ -62,8 +62,8 @@ void main() {
       ).thenAnswer(
         (_) async => http.Response(
           jsonEncode([
-            _fakeUser('u1', 'alice', admin: true),
-            _fakeUser('u2', 'bob'),
+            _fakeUser('u1', 'Alice', admin: true),
+            _fakeUser('u2', 'Bob'),
           ]),
           200,
         ),
@@ -77,8 +77,8 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('alice'), findsWidgets);
-      expect(find.textContaining('bob'), findsWidgets);
+      expect(find.textContaining('Alice'), findsWidgets);
+      await tester.drag(find.byType(Scrollable).last, const Offset(0, -500)); await tester.pumpAndSettle(); expect(find.textContaining('Bob'), findsWidgets);
     });
 
     testWidgets('Invite User FAB is present', (tester) async {
@@ -97,7 +97,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Invite'), findsOneWidget);
+      expect(find.text('Invite User'), findsOneWidget);
     });
 
     testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
@@ -116,10 +116,10 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Invite'));
+      await tester.tap(find.text('Invite User'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Generate Secure Invite'), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
