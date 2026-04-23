@@ -136,17 +136,11 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 				var insertQuery string
 				if p.db.IsSQLite() {
-					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, ?, 'session_compression')"
-					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
-					if err == nil {
-						_, err = tx.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES (?, ?, ?, ?)", uuid.New().String(), "Session Compression: "+s.ID, summary, embeddingStr)
-					}
+					insertQuery = "INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, ?, 'session_compression')"
+					_, err = tx.Exec(ctx, insertQuery, uuid.New().String(), s.ID, summary, embeddingStr)
 				} else {
-					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, 'system', $2, $3, $4::vector, 'session_compression')"
-					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
-					if err == nil {
-						_, err = tx.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES ($1, $2, $3, $4::vector)", uuid.New().String(), "Session Compression: "+s.ID, summary, embeddingStr)
-					}
+					insertQuery = "INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type) VALUES ($1, 'system', $2, $3, $4::vector, 'session_compression')"
+					_, err = tx.Exec(ctx, insertQuery, uuid.New().String(), s.ID, summary, embeddingStr)
 				}
 
 				if err != nil {
@@ -250,46 +244,103 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 			if p.db.IsSQLite() {
 				insertQuery = `
-					INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-					VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
+					INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, created_at)
+					VALUES (?, 'system', ?, ?, ?, 'memory_file', CURRENT_TIMESTAMP)
 					ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 				`
-				insertArgs = []interface{}{memID, chunk, embeddingStr}
+				insertArgs = []interface{}{memID, missionID, chunk, embeddingStr}
 				if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
 					slog.Warn("AutoDreamPipeline: failed to insert memory chunk", "id", memID, "error", err)
 					success = false
 				} else {
-					_, err = p.db.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES (?, ?, ?, ?)", uuid.New().String(), "Memory File: "+memID, chunk, embeddingStr)
-					if err != nil {
-						slog.Warn("AutoDreamPipeline: failed to insert into swarm_long_term_memory", "id", memID, "error", err)
-						success = false
-					} else {
-						slog.Debug("AutoDreamPipeline: consolidated memory chunk", "id", memID)
-					}
+					slog.Debug("AutoDreamPipeline: consolidated memory chunk", "id", memID)
 				}
 			} else {
 				insertQuery = `
-					INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-					VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
+					INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, created_at)
+					VALUES ($1, 'system', $2, $3, $4::vector, 'memory_file', NOW())
 					ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 				`
-				insertArgs = []interface{}{memID, chunk, embeddingStr}
+				insertArgs = []interface{}{memID, missionID, chunk, embeddingStr}
 				if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
 					slog.Warn("AutoDreamPipeline: failed to insert memory chunk", "id", memID, "error", err)
 					success = false
 				} else {
-					_, err = p.db.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES ($1, $2, $3, $4::vector)", uuid.New().String(), "Memory File: "+memID, chunk, embeddingStr)
-					if err != nil {
-						slog.Warn("AutoDreamPipeline: failed to insert into swarm_long_term_memory", "id", memID, "error", err)
-						success = false
-					} else {
-						slog.Debug("AutoDreamPipeline: consolidated memory chunk", "id", memID)
-					}
+					slog.Debug("AutoDreamPipeline: consolidated memory chunk", "id", memID)
 				}
 			}
 		}
 		if success {
 			os.Remove(file)
+		}
+	}
+
+
+	// 3. Process completed shared_tasks
+	var tasksQuery string
+	if p.db.IsSQLite() {
+		tasksQuery = "SELECT id, title, COALESCE(payload, '{}') FROM shared_tasks WHERE status = 'COMPLETED' AND id NOT IN (SELECT task_id FROM autodream_memories WHERE task_id IS NOT NULL) LIMIT 500"
+	} else {
+		tasksQuery = "SELECT id, title, COALESCE(payload, '{}') FROM shared_tasks WHERE status = 'COMPLETED' AND id NOT IN (SELECT task_id FROM autodream_memories WHERE task_id IS NOT NULL) LIMIT 500 FOR UPDATE SKIP LOCKED"
+	}
+
+	taskRows, err := p.db.Query(ctx, tasksQuery)
+	if err != nil {
+		slog.Error("AutoDreamPipeline: failed to fetch completed shared_tasks", "error", err)
+	} else {
+		type Task struct {
+			ID      string
+			Title   string
+			Payload string
+		}
+		var tasks []Task
+		for taskRows.Next() {
+			var t Task
+			if err := taskRows.Scan(&t.ID, &t.Title, &t.Payload); err == nil {
+				tasks = append(tasks, t)
+			}
+		}
+		taskRows.Close()
+
+		for _, t := range tasks {
+			contentToEmbed := "Task Title: " + t.Title + "\nPayload: " + t.Payload
+
+			var vec []string
+			for i := 0; i < 1536; i++ {
+				vec = append(vec, "0.0")
+			}
+			embeddingStr := "[" + strings.Join(vec, ",") + "]"
+
+			if p.client != nil {
+				ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
+				resp, err := p.client.GenerateEmbedding(ctxTimeout, contentToEmbed)
+				cancel()
+				if err == nil && len(resp) > 0 {
+					if bytes, err := json.Marshal(resp); err == nil {
+						embeddingStr = string(bytes)
+					}
+				} else if err != nil {
+					slog.Warn("AutoDreamPipeline: failed to generate embedding for task", "task_id", t.ID, "error", err)
+				}
+			}
+
+			memID := uuid.New().String()
+			var insertQuery string
+			var insertErr error
+
+			if p.db.IsSQLite() {
+				insertQuery = "INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, created_at) VALUES (?, 'system', ?, ?, ?, 'shared_tasks', CURRENT_TIMESTAMP)"
+				_, insertErr = p.db.Exec(ctx, insertQuery, memID, t.ID, contentToEmbed, embeddingStr)
+			} else {
+				insertQuery = "INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding, source_type, created_at) VALUES ($1, 'system', $2, $3, $4::vector, 'shared_tasks', NOW())"
+				_, insertErr = p.db.Exec(ctx, insertQuery, memID, t.ID, contentToEmbed, embeddingStr)
+			}
+
+			if insertErr != nil {
+				slog.Error("AutoDreamPipeline: failed to insert memory for shared_tasks", "task_id", t.ID, "error", insertErr)
+			} else {
+				slog.Debug("AutoDreamPipeline: consolidated shared_tasks", "task_id", t.ID)
+			}
 		}
 	}
 
