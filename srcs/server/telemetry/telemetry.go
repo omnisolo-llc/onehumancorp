@@ -47,6 +47,7 @@ var (
 	tokenUsageCounter                  metric.Int64Counter
 	AgentTokenUsageTotal               metric.Int64Counter
 	AgentCostEstimateUSD               metric.Float64Counter
+	MissionCostCents                   metric.Int64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -529,6 +530,14 @@ func InitWithMeter(m mockableMeter) error {
 	AgentTokenUsageTotal, err = m.Int64Counter(
 		"ohc_agent_token_usage_total",
 		metric.WithDescription("Total tokens consumed by agents across all models"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MissionCostCents, err = m.Int64Counter(
+		"ohc_mission_cost_cents",
+		metric.WithDescription("Cost per successful mission completion in cents"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -2452,4 +2461,24 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	TelemetryBatchSizeGauge.Record(ctx, size)
+}
+
+// RecordMissionCost records the cost of a successful mission completion in cents.
+func RecordMissionCost(ctx context.Context, missionID string, cents int64) {
+	if MissionCostCents == nil {
+		return
+	}
+	MissionCostCents.Add(ctx, cents, metric.WithAttributes(
+		attribute.String("mission_id", missionID),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"mission_id": missionID,
+			"cost_cents": cents,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "mission_cost", string(payloadBytes))
+	}
 }

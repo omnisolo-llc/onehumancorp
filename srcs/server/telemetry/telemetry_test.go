@@ -71,6 +71,10 @@ func TestInitTelemetry(t *testing.T) {
 	if AgentTokenUsageTotal == nil {
 		t.Error("expected AgentTokenUsageTotal to be initialized")
 	}
+	if MissionCostCents == nil {
+		t.Error("expected MissionCostCents to be initialized")
+	}
+
 	if AgentCostEstimateUSD == nil {
 		t.Error("expected AgentCostEstimateUSD to be initialized")
 	}
@@ -415,7 +419,6 @@ func TestRecordFunctions(t *testing.T) {
 		RecordSQLiteRetryEvent(ctx, "query")
 	})
 
-
 	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
 		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
 	})
@@ -434,6 +437,10 @@ func TestRecordFunctions(t *testing.T) {
 
 	t.Run("RecordAgentTokenUsage", func(t *testing.T) {
 		RecordAgentTokenUsage(ctx, "agent-1", "org-1", "developer", "gpt-4", 1000)
+	})
+
+	t.Run("RecordMissionCost", func(t *testing.T) {
+		RecordMissionCost(ctx, "mission-123", 450)
 	})
 
 	t.Run("RecordAgentCost", func(t *testing.T) {
@@ -849,7 +856,6 @@ func TestInitTelemetry_StandaloneOptIn_EnvVar(t *testing.T) {
 	}
 	cleanup()
 }
-
 
 func TestRecordBubblewrapMetrics(t *testing.T) {
 	// Initialize a dummy context
