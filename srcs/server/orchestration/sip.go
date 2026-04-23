@@ -716,30 +716,110 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		// 1. Mark stagnant PENDING missions as STUCK after 1 hour to trigger triage visibility
-		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
+		tx, err := s.db.Begin(ctx)
 		if err == nil {
-			for rows.Next() {
-				var id, prevStatus string
-				var prevTime time.Time
-				if rows.Scan(&id, &prevStatus, &prevTime) == nil && !prevTime.IsZero() {
-					telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(prevStatus)+"_to_stuck", time.Since(prevTime).Seconds())
+			queryStuck := "SELECT id, status, updated_at FROM agent_missions WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 LIMIT 1000"
+			if !s.db.IsSQLite() {
+				queryStuck += " FOR UPDATE SKIP LOCKED"
+			}
+			rows, err := tx.Query(ctx, queryStuck, stuckThreshold, s.orgID)
+			if err == nil {
+				var idsToUpdate []string
+				var prevStatuses []string
+				var prevTimes []time.Time
+				for rows.Next() {
+					var id, prevStatus string
+					var prevTime time.Time
+					if err := rows.Scan(&id, &prevStatus, &prevTime); err == nil {
+						idsToUpdate = append(idsToUpdate, id)
+						prevStatuses = append(prevStatuses, prevStatus)
+						prevTimes = append(prevTimes, prevTime)
+					}
+				}
+				rows.Close()
+
+				if len(idsToUpdate) > 0 {
+					var args []interface{}
+					var placeholders []string
+					for i, id := range idsToUpdate {
+						placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
+						args = append(args, id)
+					}
+					queryUpdate := fmt.Sprintf("UPDATE agent_missions SET status = 'STUCK' WHERE id IN (%s)", strings.Join(placeholders, ","))
+
+					if s.db.IsSQLite() {
+						var sqlitePlaceholders []string
+						for range idsToUpdate {
+							sqlitePlaceholders = append(sqlitePlaceholders, "?")
+						}
+						queryUpdate = fmt.Sprintf("UPDATE agent_missions SET status = 'STUCK' WHERE id IN (%s)", strings.Join(sqlitePlaceholders, ","))
+					}
+
+					_, errUpdate := tx.Exec(ctx, queryUpdate, args...)
+					if errUpdate == nil {
+						for i := range prevStatuses {
+							if !prevTimes[i].IsZero() {
+								telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(prevStatuses[i])+"_to_stuck", time.Since(prevTimes[i]).Seconds())
+							}
+						}
+					}
 				}
 			}
-			rows.Close()
+			_ = tx.Commit(ctx)
 		}
 
 		// 2. Mark missions as FAILED if they exceed the absolute age threshold
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
-		rowsFail, errFail := s.db.Query(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", failThreshold, s.orgID)
-		if errFail == nil {
-			for rowsFail.Next() {
-				var id, prevStatus string
-				var prevTime time.Time
-				if rowsFail.Scan(&id, &prevStatus, &prevTime) == nil && !prevTime.IsZero() {
-					telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(prevStatus)+"_to_failed", time.Since(prevTime).Seconds())
+		txFail, errFailTx := s.db.Begin(ctx)
+		if errFailTx == nil {
+			queryFail := "SELECT id, status, updated_at FROM agent_missions WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 LIMIT 1000"
+			if !s.db.IsSQLite() {
+				queryFail += " FOR UPDATE SKIP LOCKED"
+			}
+			rowsFail, errFail := txFail.Query(ctx, queryFail, failThreshold, s.orgID)
+			if errFail == nil {
+				var idsToUpdate []string
+				var prevStatuses []string
+				var prevTimes []time.Time
+				for rowsFail.Next() {
+					var id, prevStatus string
+					var prevTime time.Time
+					if err := rowsFail.Scan(&id, &prevStatus, &prevTime); err == nil {
+						idsToUpdate = append(idsToUpdate, id)
+						prevStatuses = append(prevStatuses, prevStatus)
+						prevTimes = append(prevTimes, prevTime)
+					}
+				}
+				rowsFail.Close()
+
+				if len(idsToUpdate) > 0 {
+					var args []interface{}
+					var placeholders []string
+					for i, id := range idsToUpdate {
+						placeholders = append(placeholders, fmt.Sprintf("$%d", i+1))
+						args = append(args, id)
+					}
+					queryUpdate := fmt.Sprintf("UPDATE agent_missions SET status = 'FAILED' WHERE id IN (%s)", strings.Join(placeholders, ","))
+
+					if s.db.IsSQLite() {
+						var sqlitePlaceholders []string
+						for range idsToUpdate {
+							sqlitePlaceholders = append(sqlitePlaceholders, "?")
+						}
+						queryUpdate = fmt.Sprintf("UPDATE agent_missions SET status = 'FAILED' WHERE id IN (%s)", strings.Join(sqlitePlaceholders, ","))
+					}
+
+					_, errUpdate := txFail.Exec(ctx, queryUpdate, args...)
+					if errUpdate == nil {
+						for i := range prevStatuses {
+							if !prevTimes[i].IsZero() {
+								telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(prevStatuses[i])+"_to_failed", time.Since(prevTimes[i]).Seconds())
+							}
+						}
+					}
 				}
 			}
-			rowsFail.Close()
+			_ = txFail.Commit(ctx)
 		}
 
 		// 3. Remove COMPLETED, or very old FAILED missions
