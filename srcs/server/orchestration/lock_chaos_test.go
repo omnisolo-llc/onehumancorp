@@ -6,8 +6,43 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
+
+func TestWithSipRetry_ExponentialBackoff(t *testing.T) {
+	t.Run("Exponential backoff delays correctly", func(t *testing.T) {
+		calls := 0
+		op := func() error {
+			calls++
+			if calls < 3 {
+				return fmt.Errorf("database is locked")
+			}
+			return nil
+		}
+
+		start := time.Now()
+		err := withSipRetry(context.Background(), op)
+		duration := time.Since(start)
+
+		if err != nil {
+			t.Errorf("Expected success, got %v", err)
+		}
+		if calls != 3 {
+			t.Errorf("Expected 3 calls, got %d", calls)
+		}
+
+		// Expected delays:
+		// Attempt 1 fails -> wait 10ms
+		// Attempt 2 fails -> wait 20ms
+		// Attempt 3 succeeds
+		// Minimum expected duration: 10ms + 20ms = 30ms.
+		// Maximum expected duration: 30ms + generous buffer for test execution overhead (e.g. 50ms)
+		if duration < 30*time.Millisecond {
+			t.Errorf("Expected duration to be at least 30ms, got %v", duration)
+		}
+	})
+}
 
 func TestLock_ContentionResilience(t *testing.T) {
 	tmpDir := t.TempDir()
