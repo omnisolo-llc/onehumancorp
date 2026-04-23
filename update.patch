@@ -1,9 +1,0 @@
---- srcs/server/orchestration/centrifuge_hub.go
-+++ srcs/server/orchestration/centrifuge_hub.go
-@@ -365,6 +365,6 @@
-     }
-
-     // Publish to the Centrifuge redis pubsub backend
--    _, _ = cn.node.Publish("orchestration.tasks", data)
-+    _, _ = cn.node.Publish("mesh:tasks", data)
- }

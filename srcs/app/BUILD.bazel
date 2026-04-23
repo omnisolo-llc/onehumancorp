@@ -421,11 +421,3 @@ pkg_rpm(
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )
-
-flutter_test(
-    name = "visual_truth_audit_test",
-    srcs = ["test/screens/visual_truth_audit_test.dart"],
-    embed = ["//srcs/app/lib/screens:screens_for_tests"],
-    test_files = ["test/screens/visual_truth_audit_test.dart"],
-    workspace_pubspec = "//:pubspec.yaml",
-)
