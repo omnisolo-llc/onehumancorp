@@ -17,7 +17,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/agents"
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
-	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
@@ -44,7 +43,6 @@ import (
 type Server struct {
 	mu           sync.RWMutex
 	MeshBroker   orchmesh.MeshBroker
-	TeammateMesh *meshapi.TeammateMesh
 	org          domain.Organization
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
@@ -498,16 +496,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 			server.MeshBroker = orchmesh.NewLocalMeshBroker()
 		}
 
-		// Initialize the new TeammateMesh for Cloud mode
-		opt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
-		if err == nil {
-			server.TeammateMesh = meshapi.NewTeammateMesh(redis.NewClient(opt))
-		} else {
-			server.TeammateMesh = meshapi.NewTeammateMesh(nil)
-		}
 	} else {
 		server.MeshBroker = orchmesh.NewLocalMeshBroker()
-		server.TeammateMesh = meshapi.NewTeammateMesh(nil)
 	}
 	server.bootstrapInternalDefaultAgent()
 	// Load initial settings.

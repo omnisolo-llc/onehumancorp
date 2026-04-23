@@ -46,6 +46,16 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 			// Get sync backlog
 			var count int
 			err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'PENDING'").Scan(&count)
+
+			// If standalone mode, also add the local-to-cloud mission sync backlog
+			var unsyncedCount int
+			if probe.Mode == "standalone" {
+				syncErr := h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE synced_to_cloud = false").Scan(&unsyncedCount)
+				if syncErr == nil {
+					count += unsyncedCount
+				}
+			}
+
 			if err == nil {
 				probe.SyncBacklog = count
 			}
