@@ -76,6 +76,7 @@ go_library(
         "migrations/20260415124100_autodream_memories_master.sql",
         "migrations/20260416000000_shared_tasks_decomposition_pg.sql",
         "migrations/20260416000000_shared_tasks_decomposition_sqlite.sql",
+        "migrations/20260429000000_shared_tasks_decomposition_table.sql",
         "migrations/20260416020000_hybrid_mcp_sync_queue.sql",
         "migrations/058_autodream_sync.sql",
         "migrations/20260421000000_swarm_tasks_and_state_machine_pg.sql",
