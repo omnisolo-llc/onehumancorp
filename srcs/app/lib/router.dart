@@ -1,3 +1,7 @@
+import 'package:ohc_app/screens/help/help_center_screen.dart';
+import 'package:ohc_app/screens/help/help_article_screen.dart';
+import 'package:ohc_app/screens/help/changelog_screen.dart';
+import 'package:ohc_app/screens/help/api_docs_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
@@ -14,7 +18,7 @@ import 'package:ohc_app/screens/logs_screen.dart';
 import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/service_screen.dart';
-import 'package:ohc_app/screens/wizard_screen.dart';
+
 import 'package:ohc_app/screens/diagnostics_screen.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
@@ -150,7 +154,7 @@ GoRoute(
           ),
           GoRoute(
             path: '/wizard',
-            builder: (context, state) => const SetupWizardScreen(),
+            builder: (context, state) => const BusinessSetupWizardScreen(),
           ),
           GoRoute(
             path: '/handoffs',
@@ -320,6 +324,8 @@ class _Sidebar extends StatelessWidget {
           label: 'Setup Wizard',
           path: '/wizard',
         ),
+        const SizedBox(height: 16),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
         const SizedBox(height: 16),
         _NavItem(
           icon: Icons.health_and_safety,
