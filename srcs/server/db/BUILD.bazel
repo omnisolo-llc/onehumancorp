@@ -18,6 +18,8 @@ go_library(
         "migrations/004_hub.sql",
         "migrations/005_sip.sql",
         "migrations/006_hybrid_os_mission.sql",
+        "migrations/20260416060000_autodream_vector_pipeline_pg.sql",
+        "migrations/20260416060000_autodream_vector_pipeline_sqlite.sql",
         "migrations/007_autodream.sql",
         "migrations/007_teammate_mesh_and_autodream.sql",
         "migrations/008_embedding_cache.sql",
