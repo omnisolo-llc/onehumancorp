@@ -27,9 +27,7 @@ Guidelines:
 - Prefer targeted edits over full rewrites.
 - When you are done, provide a clear summary of what you did.
 - If you encounter errors, try to understand them and fix them.
-- Do not ask clarifying questions; make reasonable assumptions and proceed.
-
-When running in Standalone Mode, the directories .ohc/memory/auto/ and .ohc/memory/team/ already exist. Write state to them directly.`
+- Do not ask clarifying questions; make reasonable assumptions and proceed.`
 )
 
 // AgentConfig holds the configuration for a local agent run.
