@@ -18,6 +18,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/blobinspector"
+	"github.com/onehumancorp/mono/srcs/server/tools/searchmcp"
 	"github.com/onehumancorp/mono/srcs/server/tools/localstatefulproxy"
 	"github.com/onehumancorp/mono/srcs/server/tools/edgeoffloadmcp"
 	"go.opentelemetry.io/otel"
@@ -411,6 +412,26 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 
 		ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
 		res, err := inspector.CallTool(ctx, req.Action, params)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]any{
+			"result":           res,
+			"HybridEscalation": true,
+		}, nil
+
+	// ── Hybrid Search tool ────────────────────────────────────────────────────
+	case "hybrid_search":
+		searchFactory := searchmcp.NewProviderFactory(s.dbProvider)
+		searchTool := searchmcp.NewHybridSearchMCP(searchFactory)
+
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil {
+			return nil, fmt.Errorf("invalid hybrid_search parameters: %w", err)
+		}
+
+		res, err := searchTool.CallTool(ctx, req.Action, params)
 		if err != nil {
 			return nil, err
 		}
