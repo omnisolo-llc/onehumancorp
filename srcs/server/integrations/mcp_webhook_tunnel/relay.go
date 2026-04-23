@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc/codes"
@@ -124,6 +125,8 @@ func (r *CloudRelay) HandleWebhook(ctx context.Context, payload *WebhookPayloadM
 	err := stream.Send(payload)
 	if err != nil {
 		span.RecordError(err)
+	} else {
+		telemetry.RecordWebhookRelayForwarded(ctx)
 	}
 	return err
 }
@@ -174,6 +177,8 @@ func (r *CloudRelay) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		Headers: headers,
 		Body:    bodyBytes,
 	}
+
+	telemetry.RecordWebhookRelayReceived(ctx)
 
 	err = r.HandleWebhook(ctx, payload)
 	if err != nil {

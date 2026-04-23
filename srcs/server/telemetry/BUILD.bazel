@@ -13,6 +13,7 @@ go_library(
         "telemetry_bridge.go",
         "forecaster.go",
         "mcp_sync_worker.go",
+        "mcp_webhook_metrics.go",
         "sync_daemon.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/telemetry",

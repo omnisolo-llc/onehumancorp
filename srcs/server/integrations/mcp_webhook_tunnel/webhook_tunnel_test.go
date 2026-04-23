@@ -14,6 +14,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/integrations/mcp_webhook_tunnel"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/tools/mcpwebhooktunnel"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -42,6 +43,7 @@ func (w *wrappedStream) Context() context.Context {
 }
 
 func TestCloudRelay_RegisterAndForward(t *testing.T) {
+	telemetry.InitTelemetry() // Prevent nil pointer in metric testing if initialized
 	listener := bufconn.Listen(bufSize)
 	agentID := "test-agent-123"
 

@@ -23,6 +23,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/integrations/mcp_webhook_tunnel",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/telemetry",
         "@@gazelle++go_deps+io_opentelemetry_go_otel//:otel",
         "@@gazelle++go_deps+io_opentelemetry_go_otel//attribute",
         "@@gazelle++go_deps+org_golang_google_grpc//:grpc",
@@ -39,6 +40,7 @@ go_test(
     deps = [
         ":mcp_webhook_tunnel",
         "//srcs/server/db",
+        "//srcs/server/telemetry",
         "//srcs/server/tools/mcpwebhooktunnel",
         "@@gazelle++go_deps+org_golang_google_grpc//:grpc",
         "@@gazelle++go_deps+org_golang_google_grpc//credentials",

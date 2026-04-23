@@ -353,6 +353,11 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	err = initWebhookMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	sqliteThrottledRequestCounter, err = m.Int64Counter(
 		"ohc_sqlite_throttled_request_total",
 		metric.WithDescription("Total times SQLite write operations were throttled by concurrency limiter."),
