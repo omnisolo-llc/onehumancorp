@@ -41,11 +41,11 @@ func TestSIPDB_NetworkPartition(t *testing.T) {
 
 			// Note: If mesh is nil due to init failure, we simulate that part of the system failing
 			if mesh != nil {
-				msg := MeshMessage{
-					SenderID:  fmt.Sprintf("agent-%d", idx),
+				msg := &meshpb.MeshEvent{
+					SenderId:  fmt.Sprintf("agent-%d", idx),
 					Role:      "TEST",
 					Content:   "Network partition message",
-					Timestamp: time.Now(),
+					TimestampMs: time.Now().UnixMilli(),
 				}
 				// Should timeout or fail quickly, not hang forever
 				err := mesh.PublishMessage(ctx, msg)
@@ -75,4 +75,8 @@ func TestSIPDB_NetworkPartition(t *testing.T) {
 	}
 
 	t.Log("Local DB degraded gracefully and succeeded")
+}
+
+func ptrString(s string) *string {
+	return &s
 }

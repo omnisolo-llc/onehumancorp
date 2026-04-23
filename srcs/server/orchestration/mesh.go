@@ -17,23 +17,15 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
+	meshpb "github.com/onehumancorp/mono/srcs/proto/ohc/mesh"
 	"github.com/redis/go-redis/v9"
 	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
 
-// MeshMessage represents a realtime message sent over the mesh.
+// *meshpb.MeshEvent represents a realtime message sent over the mesh.
 // OHC-SIP requires agent_id, action, status at root.
-type MeshMessage struct {
-	AgentID   string    `json:"agent_id"`
-	Action    string    `json:"action"`
-	Status    string    `json:"status"`
-	SenderID  string    `json:"sender_id,omitempty"`
-	Role      string    `json:"role,omitempty"`
-	Content   string    `json:"content,omitempty"`
-	Timestamp time.Time `json:"timestamp"`
-}
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -142,11 +134,11 @@ func (tm *LegacyTeammateMesh) HandleWebSocket(w http.ResponseWriter, r *http.Req
 		}
 
 		// Ensure it's valid JSON
-		var msg MeshMessage
+		var msg *meshpb.MeshEvent
 		if err := json.Unmarshal(payload, &msg); err != nil {
 			continue
 		}
-		msg.Timestamp = time.Now()
+		msg.SetTimestampMs(time.Now().UnixMilli())
 		broadcastPayload, _ := json.Marshal(msg)
 
 		tm.Publish(ctx, roomID, string(broadcastPayload))
@@ -217,8 +209,8 @@ type AgentCapabilities struct {
 type TeammateMesh interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+	BroadcastCoordination(ctx context.Context, msg *meshpb.MeshEvent) error
+	SubscribeCoordination(ctx context.Context) (<-chan *meshpb.MeshEvent, error)
 }
 
 type RedisTeammateMesh struct {
@@ -307,7 +299,7 @@ func (rm *RedisMeshTransport) SubscribeTeammateMesh(ctx context.Context, channel
 	return rm.SubscribeMeshEvents(ctx, channel)
 }
 
-func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg *meshpb.MeshEvent) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
 
@@ -315,7 +307,7 @@ func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg Mes
 		telemetry.RecordMeshBroadcast(ctx, "coordination")
 	}
 
-	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
+	if err := interop.ValidateSPIFFEID(msg.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
 	data, err := json.Marshal(msg)
@@ -328,15 +320,15 @@ func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg Mes
 	})
 }
 
-func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan *meshpb.MeshEvent, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeCoordination", time.Since(start)) }()
 
-	ch := make(chan MeshMessage, 100)
+	ch := make(chan *meshpb.MeshEvent, 100)
 
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:coordination").Build(), func(msg rueidis.PubSubMessage) {
-			var m MeshMessage
+			var m *meshpb.MeshEvent
 			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
 				select {
 				case ch <- m:
@@ -487,8 +479,8 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 	return ch, nil
 }
 
-func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
-	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
+func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg *meshpb.MeshEvent) error {
+	if err := interop.ValidateSPIFFEID(msg.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
 	data, err := json.Marshal(msg)
@@ -501,12 +493,12 @@ func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg Mesh
 	})
 }
 
-func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
-	ch := make(chan MeshMessage, 100)
+func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan *meshpb.MeshEvent, error) {
+	ch := make(chan *meshpb.MeshEvent, 100)
 
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:coordination").Build(), func(msg rueidis.PubSubMessage) {
-			var m MeshMessage
+			var m *meshpb.MeshEvent
 			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
 				select {
 				case ch <- m:
@@ -531,8 +523,8 @@ type MemoryMeshTransport struct {
 	persist        []chan Task
 	mu             []sync.RWMutex
 	subs           []map[chan Task]struct{}
-	coordBroadcast []chan MeshMessage
-	coordSubs      []map[chan MeshMessage]struct{}
+	coordBroadcast []chan *meshpb.MeshEvent
+	coordSubs      []map[chan *meshpb.MeshEvent]struct{}
 	coordMu        []sync.RWMutex
 
 	capsBroadcast []chan pb.AgentCapabilities
@@ -552,8 +544,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		persist:         make([]chan Task, numShards),
 		mu:              make([]sync.RWMutex, numShards),
 		subs:            make([]map[chan Task]struct{}, numShards),
-		coordBroadcast:  make([]chan MeshMessage, numShards),
-		coordSubs:       make([]map[chan MeshMessage]struct{}, numShards),
+		coordBroadcast:  make([]chan *meshpb.MeshEvent, numShards),
+		coordSubs:       make([]map[chan *meshpb.MeshEvent]struct{}, numShards),
 		coordMu:         make([]sync.RWMutex, numShards),
 		capsBroadcast:   make([]chan pb.AgentCapabilities, numShards),
 		capsSubs:        make([]map[chan pb.AgentCapabilities]struct{}, numShards),
@@ -569,8 +561,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.broadcast[i] = make(chan Task, 10000)
 		lm.persist[i] = make(chan Task, 10000)
 		lm.subs[i] = make(map[chan Task]struct{})
-		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
-		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
+		lm.coordBroadcast[i] = make(chan *meshpb.MeshEvent, 10000)
+		lm.coordSubs[i] = make(map[chan *meshpb.MeshEvent]struct{})
 		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
 		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
@@ -712,7 +704,7 @@ func (lm *MemoryMeshTransport) run(shardIdx int) {
 	}
 }
 
-func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg *meshpb.MeshEvent) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
 
@@ -720,10 +712,10 @@ func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg Me
 		telemetry.RecordMeshBroadcast(ctx, "coordination")
 	}
 
-	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
+	if err := interop.ValidateSPIFFEID(msg.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
-	shardIdx := lm.getShard(msg.AgentID)
+	shardIdx := lm.getShard(msg.GetAgentId())
 
 	// Use backoff retry for coord broadcast channel
 	err := meshWithRetry(ctx, 3, func() error {
@@ -741,11 +733,11 @@ func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg Me
 	return nil
 }
 
-func (lm *MemoryMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+func (lm *MemoryMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan *meshpb.MeshEvent, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeCoordination", time.Since(start)) }()
 
-	ch := make(chan MeshMessage, 100)
+	ch := make(chan *meshpb.MeshEvent, 100)
 
 	for i := 0; i < numShards; i++ {
 		lm.coordMu[i].Lock()

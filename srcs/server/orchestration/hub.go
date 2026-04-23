@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	meshpb "github.com/onehumancorp/mono/srcs/proto/ohc/mesh"
 
 	pb "github.com/onehumancorp/mono/srcs/proto"
 )
@@ -95,8 +96,8 @@ func ProcessForecastTick(ctx context.Context, history map[string][]int64, getAct
 type MeshTransport interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+	BroadcastCoordination(ctx context.Context, msg *meshpb.MeshEvent) error
+	SubscribeCoordination(ctx context.Context) (<-chan *meshpb.MeshEvent, error)
 	AdvertiseCapabilities(ctx context.Context, caps pb.AgentCapabilities) error
 	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
 	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error

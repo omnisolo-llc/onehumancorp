@@ -34,11 +34,11 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				msg := MeshMessage{
-					SenderID:  fmt.Sprintf("agent-%d", idx),
-					Role:      "TEST",
-					Content:   "Stress mesh message",
-					Timestamp: time.Now(),
+				msg := &meshpb.MeshEvent{
+					SenderId: ptrString(fmt.Sprintf("agent-%d", idx)),
+					Role: ptrString("TEST"),
+					Content: ptrString("Stress mesh message"),
+					TimestampMs: time.Now().UnixMilli(),
 				}
 				_ = mesh.PublishMessage(ctx, msg)
 			}(i)
@@ -285,4 +285,8 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 		wg.Wait()
 		t.Log("Postgres Parity PruneStaleMissions completed without panic")
 	})
+}
+
+func ptrString(s string) *string {
+	return &s
 }

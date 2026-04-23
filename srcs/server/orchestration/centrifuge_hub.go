@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/centrifugal/centrifuge"
+	"time"
 )
 
 // Node is an interface for Centrifuge operations to allow mocking in tests.
@@ -149,10 +150,10 @@ func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
 			for msg := range ch {
 				cm := Message{
 					ID:         "coord",
-					FromAgent:  msg.AgentID,
+					FromAgent:  msg.GetAgentId(),
 					Type:       "coordination",
-					Content:    msg.Content,
-					OccurredAt: msg.Timestamp,
+					Content:    msg.GetContent(),
+					OccurredAt: time.UnixMilli(msg.GetTimestampMs()),
 				}
 				cn.PublishCoordinationMessage(cm)
 			}
