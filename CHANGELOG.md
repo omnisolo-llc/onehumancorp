@@ -1,45 +1,4 @@
-## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
-### Cloud Scaling Improvements
-- Business Setup Onboarding Overhaul for streamlined multi-tenant SaaS scaling.
-
-### Privacy/Offline Improvements
-- Enhances Day One onboarding user privacy and local setup capabilities.
-
 # OHC Hybrid Agentic OS - Changelog
-## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
-### Cloud Scaling Improvements
-- Implement robust HTTP API GZIP Compression (#7075)
-- Add research brief for AutoDream queue observability (#7073)
-- feat: implement AI Agent Department backend framework (#7072)
-- Fix Omni-Context Grounding file name and header prefix (#7069)
-
-### Privacy/Offline Improvements
-- Fix Redis async connection deprecation warnings in builtin agent (#7068)
-
-
-## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
-### Cloud Scaling Improvements
-- Implement robust HTTP API GZIP Compression (#7075).
-- implement AI Agent Department backend framework (#7072).
-- Fix Omni-Context Grounding file name and header prefix (#7069).
-
-### Privacy/Offline Improvements
-- Add research brief for AutoDream queue observability (#7073).
-- Fix Redis async connection deprecation warnings in builtin agent (#7068).
-
-## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
-### Cloud Scaling Improvements
-- Submit observability gap analysis report.
-
-### Privacy/Offline Improvements
-- Fix Standalone DB path in CLI.
-
-## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
-### Cloud Scaling Improvements
-- Implement Hybrid Agent Harness with OpenTelemetry.
-
-### Privacy/Offline Improvements
-- Add AST Validation to enhance subshell obfuscation prevention.
 
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 ### Cloud Scaling Improvements

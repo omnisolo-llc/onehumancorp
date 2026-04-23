@@ -1,4 +1,4 @@
-package orchestration // issue_id: 4173
+package orchestration
 
 import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"

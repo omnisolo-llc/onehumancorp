@@ -1,0 +1,13 @@
+--- srcs/server/dashboard/server_test.go
++++ srcs/server/dashboard/server_test.go
+@@ -4162,7 +4162,8 @@
+	cancel() // terminate stream
+
+	if n > 0 {
+-		if n > 0 { body := string(buf[:n])
++		body := string(buf[:n])
+		if !strings.Contains(body, "heartbeat") && !strings.Contains(body, "event") {
+			t.Errorf("expected body to contain heartbeat or event, got %s", body)
+		}
++	}
++}

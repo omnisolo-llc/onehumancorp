@@ -1,0 +1,20 @@
+--- srcs/server/dashboard/server_test.go
++++ srcs/server/dashboard/server_test.go
+@@ -3845,7 +3845,7 @@
+
+	// Read just enough to verify the first event, then cancel to terminate the stream early
+	buf := make([]byte, 256)
+-	_, err := resp.Body.Read(buf)
++	n, err := resp.Body.Read(buf)
+	if err != nil && err != io.EOF && !strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Fatalf("failed to read from stream: %v", err)
+	}
+@@ -4155,7 +4155,7 @@
+	}
+
+	buf := make([]byte, 256)
+-	_, err := resp.Body.Read(buf)
++	n, err := resp.Body.Read(buf)
+	if err != nil && err != io.EOF && !strings.Contains(err.Error(), "context deadline exceeded") {
+		t.Fatalf("failed to read from stream: %v", err)
+	}

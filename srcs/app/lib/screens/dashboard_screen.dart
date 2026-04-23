@@ -1,4 +1,3 @@
-import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -36,8 +35,7 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
-            floatingActionButton: const AiHelpChatWidget(),
-body: snapshot.when(
+      body: snapshot.when(
         loading:
             () => Center(
               child: CircularProgressIndicator(
@@ -144,34 +142,34 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Today\'s Sales',
-              value: '\$0.00',
-              icon: Icons.attach_money,
+              label: 'Active Agents',
+              value: data.agents.where((a) => a.isRunning).length.toString(),
+              icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'New Orders',
+              label: 'Dashboard Updates',
               value: data.statuses.length.toString(),
-              icon: Icons.shopping_bag,
+              icon: Icons.pending_actions,
               color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
-              label: 'Pending Appointments',
+              label: 'Open Meetings',
               value: data.meetings.length.toString(),
-              icon: Icons.calendar_today,
+              icon: Icons.video_call,
               color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
-              label: 'Active AI Helpers',
-              value: data.agents.where((a) => a.isRunning).length.toString(),
-              icon: Icons.smart_toy,
+              label: 'Total Org Members',
+              value: data.organization.members.length.toString(),
+              icon: Icons.people,
               color: Theme.of(context).colorScheme.primaryContainer,
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ],
         ),
         const SizedBox(height: 32),
-        _SectionTitle('System Status'),
+        _SectionTitle('System Observability'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -196,7 +194,7 @@ class _DashboardContent extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: Text(
-                        'Tasks in Progress',
+                        'Proactive Task Stream',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
