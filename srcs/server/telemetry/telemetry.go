@@ -1,15 +1,16 @@
 package telemetry
 
 import (
-	"reflect"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -20,6 +21,83 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
+
+// TokenForecaster tracks and extrapolates the token burn rate for tenants.
+type TokenForecaster struct {
+	mu           sync.RWMutex
+	totals       map[string]int64
+	movingAvgs   map[string]float64
+	alpha        float64
+	windowTokens map[string]int64
+}
+
+// GlobalTokenForecaster is the default token forecaster instance.
+var GlobalTokenForecaster = NewTokenForecaster(0.2)
+
+// NewTokenForecaster creates a new TokenForecaster.
+func NewTokenForecaster(alpha float64) *TokenForecaster {
+	return &TokenForecaster{
+		totals:       make(map[string]int64),
+		movingAvgs:   make(map[string]float64),
+		windowTokens: make(map[string]int64),
+		alpha:        alpha,
+	}
+}
+
+// RecordUsage records token usage for a given tenant.
+func (f *TokenForecaster) RecordUsage(ctx context.Context, tenantID string, tokens int64) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.totals[tenantID] += tokens
+	f.windowTokens[tenantID] += tokens
+}
+
+// GetForecast returns the extrapolated moving average burn rate for a tenant.
+func (f *TokenForecaster) GetForecast(tenantID string) float64 {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	return f.movingAvgs[tenantID]
+}
+
+// StartBackgroundWorker starts a background loop that calculates the EWMA periodically.
+func (f *TokenForecaster) StartBackgroundWorker(ctx context.Context, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				f.tick(ctx)
+			}
+		}
+	}()
+}
+
+// tick calculates the EWMA for all tenants.
+func (f *TokenForecaster) tick(ctx context.Context) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for tenant, tokens := range f.windowTokens {
+		prev, exists := f.movingAvgs[tenant]
+		if !exists {
+			f.movingAvgs[tenant] = float64(tokens)
+		} else {
+			f.movingAvgs[tenant] = (f.alpha * float64(tokens)) + ((1 - f.alpha) * prev)
+		}
+
+		if tokenBurnRateEwmaGauge != nil {
+			tokenBurnRateEwmaGauge.Record(ctx, f.movingAvgs[tenant], metric.WithAttributes(
+				attribute.String("tenant_id", tenant),
+			))
+		}
+
+		// Reset window usage
+		f.windowTokens[tenant] = 0
+	}
+}
 
 var (
 	IdentityVerificationSuccessTotal metric.Int64Counter
@@ -48,6 +126,7 @@ var (
 	AgentTokenUsageTotal               metric.Int64Counter
 	AgentCostEstimateUSD               metric.Float64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
+	tokenBurnRateEwmaGauge             metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
 	agentExecutionTracesTotal          metric.Int64Counter
@@ -66,14 +145,14 @@ var (
 	AutoDreamMemoriesIngestedCounter   metric.Int64Counter
 	AutoDreamMemoriesCompressedCounter metric.Int64Counter
 	AutoDreamConsolidationTotal        metric.Int64Counter
-	AutoDreamIngestionErrorCounter metric.Int64Counter
-	AutoDreamCompressionErrorCounter metric.Int64Counter
+	AutoDreamIngestionErrorCounter     metric.Int64Counter
+	AutoDreamCompressionErrorCounter   metric.Int64Counter
 	TeammateMeshBroadcastsCounter      metric.Int64Counter
 	TeammateMeshDirectMessagesCounter  metric.Int64Counter
 	TaskQueueLengthGauge               metric.Int64UpDownCounter
 	subAgentQueueLengthGauge           metric.Int64UpDownCounter
-	AutoDreamRecordsSyncedTotal metric.Int64Counter
-	AutoDreamSyncErrorsTotal    metric.Int64Counter
+	AutoDreamRecordsSyncedTotal        metric.Int64Counter
+	AutoDreamSyncErrorsTotal           metric.Int64Counter
 	SubAgentQueueDelayHistogram        metric.Float64Histogram
 	TaskClaimContentionTotal           metric.Int64Counter
 	SandboxViolationsTotal             metric.Int64Counter
@@ -83,15 +162,15 @@ var (
 	DeliberationPhaseDuration          metric.Float64Histogram
 	TaskProcessingLatency              metric.Float64Histogram
 
-	TelemetrySyncBackoffDuration       metric.Float64Histogram
-	TelemetryBatchSizeGauge            metric.Int64Gauge
+	TelemetrySyncBackoffDuration metric.Float64Histogram
+	TelemetryBatchSizeGauge      metric.Int64Gauge
 
-	AgentTransitionLatency             metric.Float64Histogram
+	AgentTransitionLatency metric.Float64Histogram
 
-	SyncCompletedCount     metric.Int64Counter
-	SyncFailedCount        metric.Int64Counter
-	SyncEscalationsCount   metric.Int64Counter
-	SyncLatency            metric.Float64Histogram
+	SyncCompletedCount           metric.Int64Counter
+	SyncFailedCount              metric.Int64Counter
+	SyncEscalationsCount         metric.Int64Counter
+	SyncLatency                  metric.Float64Histogram
 	SyncPayloadSize              metric.Int64Histogram
 	RateLimitExceededCount       metric.Int64Counter
 	syncDaemonBatchSize          metric.Int64Histogram
@@ -296,6 +375,8 @@ func InitTelemetry() (func(), error) {
 	if err != nil {
 		return nil, err
 	}
+
+	GlobalTokenForecaster.StartBackgroundWorker(context.Background(), 1*time.Minute)
 
 	// Initialize the global forecaster with 1 minute interval and 1 hour window.
 	GlobalForecaster = NewForecaster(1*time.Minute, 1*time.Hour)
@@ -518,7 +599,6 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
-
 	tokenUsageCounter, err = m.Int64Counter(
 		"ohc_token_usage_total",
 		metric.WithDescription("Total tokens used by agents"),
@@ -538,6 +618,14 @@ func InitWithMeter(m mockableMeter) error {
 	AgentCostEstimateUSD, err = m.Float64Counter(
 		"ohc_agent_cost_estimate_usd",
 		metric.WithDescription("Cumulative estimated USD cost of agent LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	tokenBurnRateEwmaGauge, err = m.Float64Gauge(
+		"ohc_token_burn_rate_ewma",
+		metric.WithDescription("Extrapolated moving average burn rate for a tenant"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1031,6 +1119,7 @@ func RecordTokenUsage(ctx context.Context, agentID, role, model, tokenType strin
 
 // RecordAgentTokenUsage increments the centralized agent token counter.
 func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, model string, count int64) {
+	GlobalTokenForecaster.RecordUsage(ctx, organizationID, count)
 	if AgentTokenUsageTotal == nil {
 		return
 	}
@@ -1493,7 +1582,7 @@ func RecordAutoDreamMemoryIngested(ctx context.Context, agentID string) {
 				"agent_id": agentID,
 			}
 
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+			payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 			_ = BufferMetricFunc(ctx, "autodream_memory_ingested", string(payloadBytes))
 		}
 		return
@@ -1511,7 +1600,7 @@ func RecordAutoDreamConsolidation(ctx context.Context, agentID string) {
 				"agent_id": agentID,
 			}
 
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+			payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 			_ = BufferMetricFunc(ctx, "autodream_consolidation_total", string(payloadBytes))
 		}
 		return
@@ -1529,7 +1618,7 @@ func RecordAutoDreamMemoryCompressed(ctx context.Context, agentID string) {
 				"agent_id": agentID,
 			}
 
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+			payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 			_ = BufferMetricFunc(ctx, "autodream_memory_compressed", string(payloadBytes))
 		}
 		return
@@ -1980,40 +2069,40 @@ func RecordRagEscalation(ctx context.Context) {
 
 // RecordAutoDreamIngestionError records an ingestion error.
 func RecordAutoDreamIngestionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
-        _ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
-    }
-    if AutoDreamIngestionErrorCounter != nil {
-        AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+		_ = BufferMetricFunc(ctx, "autodream_ingestion_error", string(payloadBytes))
+	}
+	if AutoDreamIngestionErrorCounter != nil {
+		AutoDreamIngestionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordAutoDreamCompressionError records a compression error.
 func RecordAutoDreamCompressionError(ctx context.Context, agentID string, errorType string) {
-    if BufferMetricFunc != nil {
-        payloadMap := map[string]interface{}{
-            "agent_id": agentID,
-            "error_type": errorType,
-        }
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":   agentID,
+			"error_type": errorType,
+		}
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
-        _ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
-    }
-    if AutoDreamCompressionErrorCounter != nil {
-        AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
-            attribute.String("agent_id", agentID),
-            attribute.String("error_type", errorType),
-        ))
-    }
+		_ = BufferMetricFunc(ctx, "autodream_compression_error", string(payloadBytes))
+	}
+	if AutoDreamCompressionErrorCounter != nil {
+		AutoDreamCompressionErrorCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("agent_id", agentID),
+			attribute.String("error_type", errorType),
+		))
+	}
 }
 
 // RecordSubAgentQueueDelay records the duration from job enqueue to dequeue.
@@ -2072,7 +2161,6 @@ func RecordSandboxViolation(ctx context.Context, violationType, agentID, path st
 	))
 }
 
-
 // RecordAutoDreamSyncSuccess increments the successful sync counter.
 func RecordAutoDreamSyncSuccess(ctx context.Context, agentID string) {
 	if BufferMetricFunc != nil {
@@ -2094,7 +2182,7 @@ func RecordAutoDreamSyncSuccess(ctx context.Context, agentID string) {
 func RecordAutoDreamSyncError(ctx context.Context, agentID, errorType string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
-			"agent_id": agentID,
+			"agent_id":   agentID,
 			"error_type": errorType,
 		}
 
@@ -2108,7 +2196,6 @@ func RecordAutoDreamSyncError(ctx context.Context, agentID, errorType string) {
 		))
 	}
 }
-
 
 // RecordBubblewrapSpawn increments the counter for Bubblewrap sandbox spawns.
 func RecordBubblewrapSpawn(ctx context.Context) {
@@ -2138,6 +2225,7 @@ func RecordBubblewrapViolation(ctx context.Context) {
 		BubblewrapViolationTotal.Add(ctx, 1)
 	}
 }
+
 // added for tracking
 
 // RecordHarnessInitLatency records the latency of harness initialization.
@@ -2187,7 +2275,6 @@ func RecordCapabilityViolation(ctx context.Context, sessionID, capability string
 		))
 	}
 }
-
 
 // RecordTelemetrySyncBackoff records the backoff duration for telemetry sync.
 func RecordTelemetrySyncBackoff(ctx context.Context, duration float64) {

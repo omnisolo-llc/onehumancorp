@@ -900,3 +900,39 @@ func TestRecordHarnessExecutionLatency(t *testing.T) {
 
 	RecordHarnessExecutionLatency(context.Background(), 120.5, "standalone")
 }
+
+func TestTokenForecaster(t *testing.T) {
+	forecaster := NewTokenForecaster(0.2)
+	ctx := context.Background()
+
+	// Record some usage
+	forecaster.RecordUsage(ctx, "tenant-A", 1000)
+	forecaster.RecordUsage(ctx, "tenant-A", 500)
+	forecaster.RecordUsage(ctx, "tenant-B", 300)
+
+	if avg := forecaster.GetForecast("tenant-A"); avg != 0 {
+		t.Errorf("expected 0, got %f", avg)
+	}
+
+	// We test the tick logic directly to avoid flaky time.Sleep tests
+	forecaster.tick(ctx)
+
+	avgA := forecaster.GetForecast("tenant-A")
+	if avgA != 1500 {
+		t.Errorf("expected 1500 after first tick, got %f", avgA)
+	}
+
+	// Add more usage
+	forecaster.RecordUsage(ctx, "tenant-A", 2000)
+
+	forecaster.tick(ctx)
+
+	avgA2 := forecaster.GetForecast("tenant-A")
+	if avgA2 != 1600 {
+		t.Errorf("expected 1600 after second tick, got %f", avgA2)
+	}
+}
+
+func TestRecordSQLiteThrottledRequest(t *testing.T) {
+	RecordSQLiteThrottledRequest(context.Background(), "test")
+}

@@ -621,10 +621,20 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		task.Metadata["agent_id"] = ac.AgentID
 		task.Metadata["parent_session_id"] = ac.ParentSessionID
 	}
-	if err := acquireThrottle(ctx); err != nil {
-		return err
+	if os.Getenv("OHC_STANDALONE") == "true" {
+		select {
+		case standaloneThrottle <- struct{}{}:
+			defer func() { <-standaloneThrottle }()
+		default:
+			telemetry.RecordSQLiteThrottledRequest(ctx, "DelegateMission")
+			select {
+			case standaloneThrottle <- struct{}{}:
+				defer func() { <-standaloneThrottle }()
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
 	}
-	defer releaseThrottle()
 
 	_ = CheckDocumentationGate(task.Content)
 
