@@ -18,11 +18,12 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
+	"github.com/onehumancorp/mono/srcs/server/lib/perf"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
 	"github.com/redis/go-redis/v9"
@@ -647,8 +648,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 
-
-
 	var kairosMesh kairos.TeammateMesh
 	kairosMode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
@@ -669,8 +668,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
 	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
-
-
 
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
@@ -1310,25 +1307,48 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.orgAgentsLocked()
+	var agents []orchestration.Agent
+	var meetings []orchestration.MeetingRoom
+	var costs billing.Summary
+	var queue []orchestration.SharedTask
+	var queueLen int
 
-	queue := make([]orchestration.SharedTask, 0)
-	queueLen := 0
-	if s.hub != nil && s.hub.TaskManager() != nil {
-		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
-			for _, t := range pending {
-				if t != nil {
-					queue = append(queue, *t)
+	coordinator := perf.NewCoordinatorMode(4)
+	tasks := []func() error{
+		func() error {
+			agents = s.orgAgentsLocked()
+			return nil
+		},
+		func() error {
+			meetings = s.orgMeetingsLocked()
+			return nil
+		},
+		func() error {
+			costs = s.tracker.Summary(s.org.ID)
+			return nil
+		},
+		func() error {
+			queue = make([]orchestration.SharedTask, 0)
+			if s.hub != nil && s.hub.TaskManager() != nil {
+				if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
+					for _, t := range pending {
+						if t != nil {
+							queue = append(queue, *t)
+						}
+					}
+					queueLen = len(queue)
 				}
 			}
-			queueLen = len(queue)
-		}
+			return nil
+		},
 	}
+
+	_ = coordinator.ExecuteParallel(context.Background(), tasks)
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.orgMeetingsLocked(),
-		Costs:        s.tracker.Summary(s.org.ID),
+		Meetings:     meetings,
+		Costs:        costs,
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
