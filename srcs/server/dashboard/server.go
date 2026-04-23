@@ -18,11 +18,11 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
 	"github.com/redis/go-redis/v9"
@@ -647,8 +647,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 
-
-
 	var kairosMesh kairos.TeammateMesh
 	kairosMode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
@@ -665,12 +663,15 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		kairosMesh = kairos.NewTeammateMesh(nil)
 	}
 
-	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh)
+	var sharedTaskRepo *kairos.SharedTaskRepo
+	if server.dbProvider != nil {
+		sharedTaskRepo = kairos.NewSharedTaskRepo(server.dbProvider)
+	}
+	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh, sharedTaskRepo)
 
 	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
 	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
-
-
+	mux.HandleFunc("/api/kairos/mesh/approvals", auth.RequireRole("system", kairosMeshAPI.HandleApprovals))
 
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
@@ -1097,8 +1098,6 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
-
-
 
 func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

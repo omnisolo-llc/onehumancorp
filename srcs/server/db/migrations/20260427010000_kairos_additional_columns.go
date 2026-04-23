@@ -41,6 +41,20 @@ func upKairosAdditionalColumns20260427010000(ctx context.Context, tx *sql.Tx) er
 		}
 
 		_, err = tx.ExecContext(ctx, `
+			ALTER TABLE shared_tasks ADD COLUMN IF NOT EXISTS action_risk VARCHAR(50);
+		`)
+		if err != nil && !strings.Contains(err.Error(), "already exists") {
+			return err
+		}
+
+		_, err = tx.ExecContext(ctx, `
+			ALTER TABLE shared_tasks ADD COLUMN IF NOT EXISTS approval_status VARCHAR(50);
+		`)
+		if err != nil && !strings.Contains(err.Error(), "already exists") {
+			return err
+		}
+
+		_, err = tx.ExecContext(ctx, `
 			CREATE TABLE IF NOT EXISTS agent_mesh_messages (
 				id UUID PRIMARY KEY,
 				tenant_id VARCHAR NOT NULL,
@@ -84,6 +98,20 @@ func upKairosAdditionalColumns20260427010000(ctx context.Context, tx *sql.Tx) er
 	}
 
 	_, err = tx.ExecContext(ctx, `
+		ALTER TABLE shared_tasks ADD COLUMN action_risk TEXT;
+	`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, `
+		ALTER TABLE shared_tasks ADD COLUMN approval_status TEXT;
+	`)
+	if err != nil && !strings.Contains(err.Error(), "duplicate column name") {
+		return err
+	}
+
+	_, err = tx.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS agent_mesh_messages (
 			id TEXT PRIMARY KEY,
 			tenant_id TEXT NOT NULL,
@@ -107,7 +135,7 @@ func downKairosAdditionalColumns20260427010000(ctx context.Context, tx *sql.Tx) 
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, "ALTER TABLE shared_tasks DROP COLUMN IF EXISTS parent_id, DROP COLUMN IF EXISTS epic_id, DROP COLUMN IF EXISTS assigned_agent")
+		_, err = tx.ExecContext(ctx, "ALTER TABLE shared_tasks DROP COLUMN IF EXISTS parent_id, DROP COLUMN IF EXISTS epic_id, DROP COLUMN IF EXISTS assigned_agent, DROP COLUMN IF EXISTS action_risk, DROP COLUMN IF EXISTS approval_status")
 		return err
 	}
 

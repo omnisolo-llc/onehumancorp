@@ -11,15 +11,17 @@ import (
 
 type MeshAPI struct {
 	mesh TeammateMesh
+	repo *SharedTaskRepo
 }
 
-func NewMeshAPI(mesh TeammateMesh) *MeshAPI {
-	return &MeshAPI{mesh: mesh}
+func NewMeshAPI(mesh TeammateMesh, repo *SharedTaskRepo) *MeshAPI {
+	return &MeshAPI{mesh: mesh, repo: repo}
 }
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/kairos/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/kairos/mesh/subscribe", api.HandleSubscribe)
+	mux.HandleFunc("/api/kairos/mesh/approvals", api.HandleApprovals)
 }
 
 type PublishRequest struct {
@@ -113,8 +115,8 @@ func (api *MeshAPI) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			// Connection was closed by client, or read error
 			return
 		case <-r.Context().Done():
-		    // Connection was dropped at HTTP level
-		    return
+			// Connection was dropped at HTTP level
+			return
 		case msg, ok := <-sub:
 			if !ok {
 				return
@@ -124,4 +126,51 @@ func (api *MeshAPI) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+type ApprovalUpdateRequest struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
+func (api *MeshAPI) HandleApprovals(w http.ResponseWriter, r *http.Request) {
+	if api.repo == nil {
+		http.Error(w, "repository not available", http.StatusInternalServerError)
+		return
+	}
+
+	if r.Method == http.MethodGet {
+		tasks, err := api.repo.ListPendingApprovals(r.Context())
+		if err != nil {
+			http.Error(w, "failed to fetch approvals", http.StatusInternalServerError)
+			return
+		}
+		json.NewEncoder(w).Encode(tasks)
+		return
+	}
+
+	if r.Method == http.MethodPut || r.Method == http.MethodPost {
+		var req ApprovalUpdateRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		if req.ID == "" || req.Status == "" {
+			http.Error(w, "missing required fields", http.StatusBadRequest)
+			return
+		}
+
+		ActionApprovalsTotal.WithLabelValues(req.Status, "high").Inc()
+		if err := api.repo.UpdateApprovalStatus(r.Context(), req.ID, req.Status); err != nil {
+			http.Error(w, "failed to update approval status", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"ok"}`))
+		return
+	}
+
+	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"github.com/onehumancorp/mono/srcs/server/db"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -45,7 +46,7 @@ func createMockTLSRequest(method, urlStr string, body []byte, hasCert bool) *htt
 
 func TestMeshAPI_HandlePublish(t *testing.T) {
 	mockMesh := &mockTeammateMesh{}
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	tests := []struct {
 		name       string
@@ -93,7 +94,7 @@ func TestMeshAPI_HandleSubscribe_Errors(t *testing.T) {
 	mockMesh := &mockTeammateMeshWithSubscribe{
 		subChan: make(chan []byte, 1),
 	}
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	req2 := httptest.NewRequest(http.MethodPost, "/api/kairos/mesh/subscribe", nil)
 	w2 := httptest.NewRecorder()
@@ -114,7 +115,7 @@ func TestMeshAPI_HandleSubscribe_Success(t *testing.T) {
 	mockMesh := &mockTeammateMeshWithSubscribe{
 		subChan: make(chan []byte, 10),
 	}
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	mux := http.NewServeMux()
 	api.RegisterRoutes(mux)
@@ -144,5 +145,85 @@ func TestMeshAPI_HandleSubscribe_Success(t *testing.T) {
 
 	if string(msg) != string(expectedMsg) {
 		t.Errorf("expected %s, got %s", expectedMsg, msg)
+	}
+}
+
+func TestMeshAPI_HandleApprovals_NoRepo(t *testing.T) {
+	mockMesh := &mockTeammateMesh{}
+	api := NewMeshAPI(mockMesh, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/kairos/mesh/approvals", nil)
+	w := httptest.NewRecorder()
+
+	api.HandleApprovals(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestMeshAPI_HandleApprovals_Success(t *testing.T) {
+	mockMesh := &mockTeammateMesh{}
+	provider := db.NewTestProvider(t)
+	ctx := context.Background()
+
+	_, err := provider.Exec(ctx, `
+        CREATE TABLE IF NOT EXISTS shared_tasks (
+            id TEXT PRIMARY KEY,
+            agent_id TEXT,
+            status TEXT,
+            payload TEXT,
+            created_at DATETIME,
+            action_risk TEXT,
+            approval_status TEXT
+        );
+    `)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
+
+	repo := NewSharedTaskRepo(provider)
+	api := NewMeshAPI(mockMesh, repo)
+
+	task := &SharedTask{
+		ID:             "test-pending-1",
+		AgentID:        "agent-1",
+		Status:         "PENDING",
+		ActionRisk:     "HIGH",
+		ApprovalStatus: "PENDING",
+		Payload:        []byte(`{"msg":"draft"}`),
+		CreatedAt:      time.Now().Truncate(time.Second).UTC(),
+	}
+	if err := repo.Insert(ctx, task); err != nil {
+		t.Fatalf("failed to insert: %v", err)
+	}
+
+	// GET test
+	reqGet := httptest.NewRequest(http.MethodGet, "/api/kairos/mesh/approvals", nil)
+	wGet := httptest.NewRecorder()
+	api.HandleApprovals(wGet, reqGet)
+
+	if wGet.Code != http.StatusOK {
+		t.Errorf("expected 200 GET, got %d", wGet.Code)
+	}
+	if !strings.Contains(wGet.Body.String(), "test-pending-1") {
+		t.Errorf("expected GET to return pending task, got %s", wGet.Body.String())
+	}
+
+	// POST/PUT test
+	reqBody := `{"id":"test-pending-1", "status":"APPROVED"}`
+	reqPost := httptest.NewRequest(http.MethodPost, "/api/kairos/mesh/approvals", bytes.NewBuffer([]byte(reqBody)))
+	reqPost.Header.Set("Content-Type", "application/json")
+	wPost := httptest.NewRecorder()
+
+	api.HandleApprovals(wPost, reqPost)
+
+	if wPost.Code != http.StatusOK {
+		t.Errorf("expected 200 POST, got %d", wPost.Code)
+	}
+
+	fetched, _ := repo.Get(ctx, task.ID)
+	if fetched.ApprovalStatus != "APPROVED" {
+		t.Errorf("expected approval status APPROVED, got %s", fetched.ApprovalStatus)
 	}
 }
