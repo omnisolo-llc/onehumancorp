@@ -27,6 +27,8 @@ go_library(
         "migrations/20260426010000_ultraplan_votes.sql",
         "migrations/20260427014004_create_shared_tasks_schema.sql",
         "migrations/20260416040000_shared_tasks_v2.sql",
+        "migrations/20260416060000_autodream_vector_pipeline_pg.sql",
+        "migrations/20260416060000_autodream_vector_pipeline_sqlite.sql",
         "migrations/20260416030000_kairos_mesh.sql",
         "migrations/011_autodream_sync.sql",
         "migrations/012_hybrid_rag_mission.sql",
