@@ -30,6 +30,9 @@ type SubAgentJob struct {
 	Payload        map[string]interface{}
 	Status         string
 	WorkerID       *string
+	Attempts       int
+	MaxAttempts    int
+	RunAfter       time.Time
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -53,9 +56,9 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 
 	query := `
 		INSERT INTO sub_agent_queue (
-			id, organization_id, parent_task_id, payload, status, created_at, updated_at
+			id, organization_id, parent_task_id, payload, status, attempts, max_attempts, run_after, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 		)
 	`
 	now := time.Now()
@@ -65,10 +68,16 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 	if job.UpdatedAt.IsZero() {
 		job.UpdatedAt = now
 	}
+	if job.RunAfter.IsZero() {
+		job.RunAfter = now
+	}
+	if job.MaxAttempts == 0 {
+		job.MaxAttempts = 3
+	}
 
 	_, err = q.provider.Exec(ctx, query,
 		job.ID, job.OrganizationID, job.ParentTaskID, string(payloadBytes),
-		"QUEUED", job.CreatedAt, job.UpdatedAt,
+		"QUEUED", job.Attempts, job.MaxAttempts, job.RunAfter, job.CreatedAt, job.UpdatedAt,
 	)
 	if err == nil {
 		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Inc()
@@ -83,20 +92,22 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		q.mu.Lock()
 		defer q.mu.Unlock()
 
+		now := time.Now()
 		query := `
-			SELECT id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
-			FROM sub_agent_queue
-			WHERE status = 'QUEUED'
-			ORDER BY created_at ASC
+			SELECT q.id, q.organization_id, q.parent_task_id, q.payload, q.status, q.worker_id, q.attempts, q.max_attempts, q.run_after, q.created_at, q.updated_at
+			FROM sub_agent_queue q
+			WHERE q.status = 'QUEUED' AND q.run_after <= $1
+			  AND (SELECT COUNT(*) FROM sub_agent_queue r WHERE r.organization_id = q.organization_id AND r.status = 'RUNNING') < 10
+			ORDER BY q.created_at ASC
 			LIMIT 1
 		`
 		var j SubAgentJob
 		var payloadStr string
 		var wID sql.NullString
-		var createdAt, updatedAt string
+		var runAfterStr, createdAt, updatedAt string
 
-		row := q.provider.QueryRow(ctx, query)
-		err := row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt)
+		row := q.provider.QueryRow(ctx, query, now)
+		err := row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &j.Attempts, &j.MaxAttempts, &runAfterStr, &createdAt, &updatedAt)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		} else if err != nil {
@@ -118,6 +129,9 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		}
 		j.Status = "RUNNING"
 
+		if t, err := time.Parse(time.RFC3339Nano, runAfterStr); err == nil {
+			j.RunAfter = t
+		}
 		if t, err := time.Parse(time.RFC3339Nano, createdAt); err == nil {
 			j.CreatedAt = t
 		}
@@ -130,26 +144,28 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 		return &j, nil
 	} else {
 		// Postgres mode
+		now := time.Now()
 		query := `
 			UPDATE sub_agent_queue
 			SET status = 'RUNNING', worker_id = $1, updated_at = $2
 			WHERE id = (
-				SELECT id
-				FROM sub_agent_queue
-				WHERE status = 'QUEUED'
-				ORDER BY created_at ASC
+				SELECT q.id
+				FROM sub_agent_queue q
+				WHERE q.status = 'QUEUED' AND q.run_after <= $2
+				  AND (SELECT COUNT(*) FROM sub_agent_queue r WHERE r.organization_id = q.organization_id AND r.status = 'RUNNING') < 10
+				ORDER BY q.created_at ASC
 				FOR UPDATE SKIP LOCKED
 				LIMIT 1
 			)
-			RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
+			RETURNING id, organization_id, parent_task_id, payload, status, worker_id, attempts, max_attempts, run_after, created_at, updated_at
 		`
 		var j SubAgentJob
 		var payloadStr string
 		var wID sql.NullString
-		var createdAt, updatedAt time.Time
+		var runAfter, createdAt, updatedAt time.Time
 
-		err := q.provider.QueryRow(ctx, query, workerID, time.Now()).Scan(
-			&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt,
+		err := q.provider.QueryRow(ctx, query, workerID, now).Scan(
+			&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &j.Attempts, &j.MaxAttempts, &runAfter, &createdAt, &updatedAt,
 		)
 
 		if errors.Is(err, sql.ErrNoRows) {
@@ -162,6 +178,7 @@ func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob,
 			j.WorkerID = &wID.String
 		}
 		j.Status = "RUNNING"
+		j.RunAfter = runAfter
 		j.CreatedAt = createdAt
 		j.UpdatedAt = updatedAt
 

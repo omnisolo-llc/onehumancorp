@@ -53,9 +53,26 @@ func (q *QueueManager) MarkCompleted(ctx context.Context, jobID string) error {
 	return err
 }
 
-// MarkFailed updates the job status to FAILED
+// MarkFailed updates the job status to FAILED or implements exponential backoff retry logic
 func (q *QueueManager) MarkFailed(ctx context.Context, jobID string, reason string) error {
-	query := `UPDATE sub_agent_queue SET status = 'FAILED', updated_at = $1 WHERE id = $2` // In a real system, we'd also store the reason
-	_, err := q.provider.Exec(ctx, query, time.Now(), jobID)
+	query := `SELECT attempts, max_attempts FROM sub_agent_queue WHERE id = $1`
+	var attempts, maxAttempts int
+	err := q.provider.QueryRow(ctx, query, jobID).Scan(&attempts, &maxAttempts)
+	if err != nil {
+		return err
+	}
+
+	if attempts < maxAttempts {
+		attempts++
+		backoff := time.Duration(1<<attempts) * time.Second
+		nextRun := time.Now().Add(backoff)
+
+		updateQuery := `UPDATE sub_agent_queue SET status = 'QUEUED', attempts = $1, run_after = $2, updated_at = $3 WHERE id = $4`
+		_, err = q.provider.Exec(ctx, updateQuery, attempts, nextRun, time.Now(), jobID)
+		return err
+	}
+
+	updateQuery := `UPDATE sub_agent_queue SET status = 'FAILED', updated_at = $1 WHERE id = $2`
+	_, err = q.provider.Exec(ctx, updateQuery, time.Now(), jobID)
 	return err
 }

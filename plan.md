@@ -1,31 +1,26 @@
-1. **Create Database Migration:**
-   - Run `cat << 'MIG' > srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql ... MIG` to add `locked_until` (via ALTER TABLE if missing) and the indices on `status` and `locked_until` on `shared_tasks`.
-   - Add a verification step: `ls -la srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql` to verify creation.
-   - Run a Python script or `sed` to update `embedsrcs` in `srcs/server/db/BUILD.bazel` to include this new migration.
-   - Add a verification step: `cat srcs/server/db/BUILD.bazel | grep 20260427020001_shared_tasks_indexes.sql` to confirm.
+1. **Create Database Migration**:
+   - Create `srcs/server/db/migrations/20260429000000_sub_agent_queue_backoff.sql` (both Postgres and SQLite compatible if possible, or use `.go` migration, wait, `goose` supports basic SQL `ALTER TABLE`).
+   - Add columns: `attempts INTEGER DEFAULT 0`, `max_attempts INTEGER DEFAULT 3`, `run_after TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP` to `sub_agent_queue`.
 
-2. **Update TaskManager Enhancements:**
-   - Use a Python script to inject `tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")` in `CompleteTaskWithResult` inside `srcs/server/orchestration/tasks.go`.
-   - Use a Python script to replace the status update in `ReviewTask` to utilize `tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Oh, wait, `ReviewTask` is ALREADY doing `err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Let me verify `tasks.go` again to see what exactly needs modification.
+2. **Update `SubAgentJob` and `QueueManager.Enqueue`**:
+   - Update `SubAgentJob` struct in `srcs/server/orchestration/queue/queue_manager.go` with `Attempts`, `MaxAttempts`, `RunAfter`.
+   - In `Enqueue`, initialize `RunAfter = time.Now()` if zero, and `MaxAttempts = 3` if zero. Modify the `INSERT` query to include these fields.
 
-3. **Modify API Endpoints:**
-   - Use a Python script to add a `requireSPIFFE` HTTP middleware in `srcs/server/orchestration/service.go`. The middleware will check the `Authorization` header for a bearer token, and validate it starts with `spiffe://` using `interop.ValidateSPIFFEID`.
-   - Wrap the HTTP handlers defined in `RegisterTaskHTTPHandlers` with this new middleware.
-   - Add a verification step: `cat srcs/server/orchestration/service.go | grep -C 5 requireSPIFFE` to verify changes.
+3. **Update `QueueManager.Poll` (Quota and Scheduling)**:
+   - Modify the `Poll` method to only select jobs where `run_after <= NOW()`.
+   - Add a condition to ensure the organization hasn't exceeded the VRAM/Token quota (simulated as max 10 `RUNNING` jobs).
+   - In both PostgreSQL (`FOR UPDATE SKIP LOCKED`) and SQLite lock methods, the subquery must include `(SELECT COUNT(*) FROM sub_agent_queue r WHERE r.organization_id = sub_agent_queue.organization_id AND r.status = 'RUNNING') < 10`.
 
-4. **Update Tests:**
-   - Run `cat << 'TEST' > srcs/server/orchestration/patch_tasks_test.py ... TEST` and execute it to inject `TestSharedTask_StateMachine` in `srcs/server/orchestration/tasks_test.go` covering all transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-   - Add a verification step: `grep -nri "TestSharedTask_StateMachine" srcs/server/orchestration/tasks_test.go` to confirm injection.
+4. **Update `QueueManager.MarkFailed` (Exponential Backoff)**:
+   - Query the current `attempts` and `max_attempts`.
+   - If `attempts < max_attempts`, increment `attempts`, calculate `run_after = NOW() + (2^attempts * 1s)`, and `UPDATE` status back to `QUEUED`.
+   - If `attempts >= max_attempts`, `UPDATE` status to `FAILED`.
 
-5. **Expose Prometheus Metrics:**
-   - Write a python script to ensure `telemetry.RecordSwarmTaskTransition` is properly used inside `tasks.go` right after state transitions, and ensure we use `metric.WithAttributes` properly in `telemetry.go`.
-   - Add verification step: `cat srcs/server/orchestration/tasks.go | grep RecordSwarmTaskTransition` to confirm changes.
+5. **Write Unit Tests**:
+   - In `srcs/server/orchestration/queue/queue_manager_loop_test.go`, add `TestQueueManager_QuotaEnforcement` to verify a 11th job is NOT dequeued if 10 are running.
+   - Add `TestQueueManager_ExponentialBackoff` to verify `MarkFailed` correctly retries up to `max_attempts`.
 
-6. **Test the changes:**
-   - Run `bazelisk test //srcs/server/orchestration/... //srcs/server/db/...` to verify the logic.
-
-7. **Pre-commit steps:**
+6. **Pre-commit and Submit**:
+   - Run `pre_commit_instructions` and execute checks (`bazelisk test //...`).
    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-8. **Completion:**
-   - Output a final unstructured message containing issue_id.
+   - Run `submit` with issue ID 5049.
