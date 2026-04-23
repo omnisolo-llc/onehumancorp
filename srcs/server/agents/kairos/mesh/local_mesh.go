@@ -34,12 +34,14 @@ type LocalMesh struct {
 	subscribers map[string]map[*localSubscription]struct{}
 	locks       sync.Mutex
 	activeLocks map[string]localLockInfo
+	presences   map[string]AgentPresence
 }
 
 func NewLocalMesh() *LocalMesh {
 	return &LocalMesh{
 		subscribers: make(map[string]map[*localSubscription]struct{}),
 		activeLocks: make(map[string]localLockInfo),
+		presences:   make(map[string]AgentPresence),
 	}
 }
 
@@ -148,4 +150,22 @@ func (m *LocalMesh) ReleaseLock(ctx context.Context, key string, token string) e
 
 	delete(m.activeLocks, key)
 	return nil
+}
+
+func (m *LocalMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.presences[agentID] = AgentPresence{AgentID: agentID, Status: status}
+	return nil
+}
+
+func (m *LocalMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var agents []AgentPresence
+	for _, p := range m.presences {
+		agents = append(agents, p)
+	}
+	return agents, nil
 }

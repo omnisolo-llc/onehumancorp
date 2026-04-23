@@ -53,3 +53,32 @@ func TestVectorSyncHandler(t *testing.T) {
         t.Errorf("expected body to contain 'vectors synced successfully', got '%s'", w.Body.String())
     }
 }
+
+func TestHandleTelemetrySync(t *testing.T) {
+	payloads := []map[string]interface{}{
+		{
+			"metric_type": "token_usage",
+			"payload":     "{\"agent_id\":\"agent1\", \"role\":\"test\", \"model\":\"gpt-4o\", \"type\":\"prompt\", \"count\":10}",
+		},
+	}
+	body, _ := json.Marshal(payloads)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/telemetry/sync", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	HandleTelemetrySync(w, req)
+
+	res := w.Result()
+	if res.StatusCode != http.StatusOK {
+		t.Errorf("expected status 200, got %d", res.StatusCode)
+	}
+
+	var response map[string]interface{}
+	json.NewDecoder(res.Body).Decode(&response)
+	if response["status"] != "success" {
+		t.Errorf("expected status success, got %v", response["status"])
+	}
+	if response["synced_count"].(float64) != 1 {
+		t.Errorf("expected synced_count 1, got %v", response["synced_count"])
+	}
+}
