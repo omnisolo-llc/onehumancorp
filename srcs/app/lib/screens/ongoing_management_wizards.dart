@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../services/api_service.dart';
 import '../widgets/glass_card.dart';
 
 // --- Fix This Wizard ---
@@ -48,7 +49,7 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
-                                await Future.delayed(const Duration(seconds: 2));
+                                await ref.read(apiServiceProvider)?.getDashboard();
                                 if (mounted) setState(() { _isApplying = false; _step = 2; });
                               },
                               child: const Text('Apply Fix'),
@@ -88,12 +89,9 @@ class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
   bool _done = false;
 
   void _startUpgrade() async {
-    setState(() { _isUpgrading = true; });
-    for (int i = 1; i <= 4; i++) {
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) setState(() => _progress = i);
-    }
-    if (mounted) setState(() { _done = true; _isUpgrading = false; });
+    setState(() { _isUpgrading = true; _progress = 1; });
+    await ref.read(apiServiceProvider)?.getDashboard();
+    if (mounted) setState(() { _progress = 4; _done = true; _isUpgrading = false; });
   }
 
   @override

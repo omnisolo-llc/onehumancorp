@@ -81,6 +81,23 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     }
   }
 
+  String _formatRole(String role) {
+    if (role.isEmpty) return role;
+    return role
+        .replaceAll('_', ' ')
+        .toLowerCase()
+        .split(' ')
+        .map((word) {
+          if (word == 'ai') return 'AI';
+          if (word == 'ceo') return 'CEO';
+          if (word == 'qa') return 'QA';
+          if (word == 'cfo') return 'CFO';
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1);
+        })
+        .join(' ');
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -233,9 +250,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   children:
                       _roles.map((role) {
                         final isSelected = _selectedRole == role;
-                        final dummyAgent = Agent(id: '', name: '', role: role, status: '', organizationId: '', createdAt: DateTime.now());
+                        final formattedRole = _formatRole(role);
                         return ChoiceChip(
-                          label: Text(dummyAgent.formattedRole),
+                          label: Text(formattedRole),
                           selected: isSelected,
                           onSelected: (selected) {
                             setState(
@@ -243,7 +260,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                             );
                             if (selected && _nameController.text.isEmpty) {
                               _nameController.text =
-                                  'Senior ${dummyAgent.formattedRole}';
+                                  'Senior $formattedRole';
                             }
                           },
                         );
