@@ -7,6 +7,7 @@ import 'dart:ui';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
+import 'wizard_screen.dart'; // To get the wizardStatusProvider
 
 class BusinessSetupState {
   final bool obscurePassword;
@@ -143,9 +144,8 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
 
     state = state.copyWith(isLoading: false);
 
-    if (context.mounted) {
-      GoRouter.of(context).go('/dashboard');
-    }
+    // Invalidate the provider so the router sees the updated configuration
+    ref.invalidate(wizardStatusProvider);
   }
 }
 

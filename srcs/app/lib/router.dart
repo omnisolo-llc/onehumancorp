@@ -76,7 +76,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         final encodedTarget = Uri.encodeComponent(state.uri.toString());
         return '/login?redirect=$encodedTarget';
       }
-      if (isLoggedIn && isLoginRoute) return redirectTarget ?? '/dashboard';
+      if (isLoggedIn && isLoginRoute) {
+        final statusAsync = ref.read(wizardStatusProvider);
+        if (statusAsync.isLoading) {
+            return null; // Wait for the status to load
+        }
+        final status = statusAsync.valueOrNull;
+        if (status != null && status.configured) {
+          return redirectTarget ?? '/dashboard';
+        } else {
+          return redirectTarget ?? '/business_setup';
+        }
+      }
+
+      // If the user goes directly to dashboard, but isn't configured, redirect to setup
+      if (isLoggedIn && state.matchedLocation == '/dashboard') {
+        final statusAsync = ref.read(wizardStatusProvider);
+        if (statusAsync.isLoading) {
+             return null;
+        }
+        final status = statusAsync.valueOrNull;
+        if (status == null || !status.configured) {
+          return '/business_setup';
+        }
+      }
+
       return null;
     },
     routes: [
