@@ -7,6 +7,7 @@ import 'dart:ui';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/pulse_animation.dart';
 
 class BusinessSetupState {
   final bool obscurePassword;
@@ -73,7 +74,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   BusinessSetupState build() => const BusinessSetupState();
 
   void nextStep() {
-    if (state.step < 4) {
+    if (state.step < 5) {
       state = state.copyWith(step: state.step + 1);
     }
   }
@@ -298,6 +299,30 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                                 ),
                               ),
                             ),
+                          ] else if (state.step == 5) ...[
+                            const Text('Review & Launch', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.05),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Company: ${state.companyName}', style: const TextStyle(color: Colors.white, fontFamily: 'Inter')),
+                                  const SizedBox(height: 8),
+                                  Text('Industry: ${state.industry}', style: const TextStyle(color: Colors.white, fontFamily: 'Inter')),
+                                  const SizedBox(height: 8),
+                                  Text('Size: ${state.size}', style: const TextStyle(color: Colors.white, fontFamily: 'Inter')),
+                                  const SizedBox(height: 8),
+                                  Text('Deployment: ${state.deployment}', style: const TextStyle(color: Colors.white, fontFamily: 'Inter')),
+                                  const SizedBox(height: 8),
+                                  Text('Admin: ${state.adminName} (${state.adminEmail})', style: const TextStyle(color: Colors.white, fontFamily: 'Inter')),
+                                ],
+                              ),
+                            ),
                           ],
                         ],
                       ),
@@ -316,7 +341,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         const SizedBox(),
                       ElevatedButton(
                         onPressed: state.isLoading ? null : () {
-                          if (state.step < 4) {
+                          if (state.step < 5) {
                             notifier.nextStep();
                           } else {
                             notifier.launch(context, ref);
@@ -324,7 +349,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         },
                         child: state.isLoading
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                            : state.step == 5 ? const PulseAnimation(child: Text('Launch My AI Team →', style: TextStyle(fontFamily: 'Inter'))) : const Text('Next', style: TextStyle(fontFamily: 'Inter')),
                       ),
                     ],
                   ),

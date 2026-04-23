@@ -66,6 +66,11 @@ void main() {
     await tester.enterText(find.byType(TextField).at(2), 'password');
     await tester.pumpAndSettle();
 
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 5: Review & Launch
+    expect(find.text('Review & Launch'), findsOneWidget);
     expect(find.text('Launch My AI Team →'), findsOneWidget);
   });
 
@@ -90,9 +95,10 @@ void main() {
     notifier.nextStep();
     notifier.nextStep();
     notifier.nextStep();
+    notifier.nextStep();
 
     notifier.nextStep();
-    expect(container.read(businessSetupProvider).step, 4);
+    expect(container.read(businessSetupProvider).step, 5);
 
     notifier.updateCompany('NewCo');
     expect(container.read(businessSetupProvider).companyName, 'NewCo');
@@ -145,7 +151,7 @@ void main() {
       ),
     );
 
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 5; i++) {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
     }
