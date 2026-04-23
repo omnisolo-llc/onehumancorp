@@ -7,6 +7,7 @@ import 'dart:ui';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/pulse_animation.dart';
 
 class BusinessSetupState {
   final int step;
@@ -156,37 +157,53 @@ final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSe
 class BusinessSetupWizardScreen extends ConsumerWidget {
   const BusinessSetupWizardScreen({super.key});
 
-  Widget _buildStepZero() {
+  Widget _buildStepZero(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: const [
-        Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
+      children: [
+        PulseAnimation(child: Text('Welcome! Your AI team, ready in minutes.', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Inter', color: Theme.of(context).colorScheme.onSurface))),
         SizedBox(height: 8),
-        Text('Your business, live in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white70, fontSize: 14)),
+        Text('Your business, live in minutes.', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontFamily: 'Inter', color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
       ],
     );
   }
 
-  Widget _buildStepOne(BusinessSetupState state, BusinessSetupNotifier notifier) {
+  Widget _buildStepOne(BuildContext context, BusinessSetupState state, BusinessSetupNotifier notifier) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('Business type', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+        Text('Business type', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         Wrap(
           spacing: 8.0,
           runSpacing: 8.0,
           children: ['Online Store', 'Service Business', 'Restaurant / Food', 'Creative / Portfolio', 'Local Business', 'Other'].map((type) {
             final isSelected = state.businessType == type;
-            return ChoiceChip(
-              label: Text(type, style: const TextStyle(fontFamily: 'Inter')),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) notifier.updateBusinessType(type);
-              },
-              selectedColor: Colors.blueAccent,
-              backgroundColor: const Color(0xFF1A1A33),
-              labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.white70),
+            return GlassCard(
+              color: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2) : Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
+              padding: EdgeInsets.zero,
+              child: InkWell(
+                onTap: () => notifier.updateBusinessType(type),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.business, color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface, size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        type,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             );
           }).toList(),
         ),
@@ -194,87 +211,149 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStepTwo(BusinessSetupState state, BusinessSetupNotifier notifier) {
+  Widget _buildStepTwo(BuildContext context, BusinessSetupState state, BusinessSetupNotifier notifier) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
-          decoration: const InputDecoration(labelText: 'Business name', labelStyle: TextStyle(color: Colors.white70)),
+          decoration: const InputDecoration(labelText: 'Business name', border: OutlineInputBorder()),
           onChanged: notifier.updateCompany,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+          style: const TextStyle(fontFamily: 'Inter'),
         ),
         const SizedBox(height: 16),
         TextField(
-          decoration: const InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: Colors.white70)),
+          decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
           onChanged: notifier.updateDescription,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+          style: const TextStyle(fontFamily: 'Inter'),
         ),
       ],
     );
   }
 
-  Widget _buildStepThree(BusinessSetupState state, BusinessSetupNotifier notifier) {
+  Widget _buildStepThree(BuildContext context, BusinessSetupState state, BusinessSetupNotifier notifier) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('What do you sell?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-        ...['Physical products', 'Digital downloads', 'Services / appointments', 'Food & beverages', 'Subscriptions'].map((item) => CheckboxListTile(
-          title: Text(item, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-          value: state.whatYouSell.contains(item),
-          checkColor: Colors.black,
-          activeColor: Colors.white,
-          onChanged: (bool? value) {
-            notifier.toggleWhatYouSell(item);
-          },
-        )),
+        Text('What do you sell?', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+        ...['Physical products', 'Digital downloads', 'Services / appointments', 'Food & beverages', 'Subscriptions'].map((item) {
+          final isSelected = state.whatYouSell.contains(item);
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: GlassCard(
+              color: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
+              padding: EdgeInsets.zero,
+              child: InkWell(
+                onTap: () => notifier.toggleWhatYouSell(item),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  child: Row(
+                    children: [
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (bool? value) => notifier.toggleWhatYouSell(item),
+                        activeColor: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(item, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontFamily: 'Inter')),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildStepFour(BusinessSetupState state, BusinessSetupNotifier notifier) {
+  Widget _buildStepFour(BuildContext context, BusinessSetupState state, BusinessSetupNotifier notifier) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('How do you want to receive payments?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-        ...['Online only', 'In-person (POS)', 'Both', 'Skip for now'].map((dep) => RadioListTile<String>(
-          title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-          value: dep,
-          groupValue: state.payments,
-          activeColor: Colors.blueAccent,
-          onChanged: (String? value) {
-            if (value != null) notifier.updatePayments(value);
-          },
-        )),
+        Text('How do you want to receive payments?', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+        ...[
+          {'label': 'Online only', 'time': 'Est. time to first payment: Instant'},
+          {'label': 'In-person (POS)', 'time': 'Est. time to first payment: Requires hardware setup'},
+          {'label': 'Both', 'time': 'Est. time to first payment: Varies'},
+          {'label': 'Skip for now', 'time': ''},
+        ].map((opt) {
+          final label = opt['label']!;
+          final time = opt['time']!;
+          final isSelected = state.payments == label;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: GlassCard(
+              color: isSelected ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
+              padding: EdgeInsets.zero,
+              child: InkWell(
+                onTap: () => notifier.updatePayments(label),
+                borderRadius: BorderRadius.circular(16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  child: Row(
+                    children: [
+                      Radio<String>(
+                        value: label,
+                        groupValue: state.payments,
+                        onChanged: (String? value) {
+                          if (value != null) notifier.updatePayments(value);
+                        },
+                        activeColor: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(label, style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontFamily: 'Inter')),
+                            if (time.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(time, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontFamily: 'Inter', color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+                            ]
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ],
     );
   }
 
-  Widget _buildStepFive(BusinessSetupState state, BusinessSetupNotifier notifier) {
+  Widget _buildStepFive(BuildContext context, BusinessSetupState state, BusinessSetupNotifier notifier) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
-          decoration: const InputDecoration(labelText: 'Admin Name', labelStyle: TextStyle(color: Colors.white70)),
+          decoration: const InputDecoration(labelText: 'Admin Name', border: OutlineInputBorder()),
           onChanged: notifier.updateAdminName,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+          style: const TextStyle(fontFamily: 'Inter'),
         ),
         const SizedBox(height: 16),
         TextField(
-          decoration: const InputDecoration(labelText: 'Admin Email', labelStyle: TextStyle(color: Colors.white70)),
+          decoration: const InputDecoration(labelText: 'Admin Email', border: OutlineInputBorder()),
           onChanged: notifier.updateAdminEmail,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+          style: const TextStyle(fontFamily: 'Inter'),
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
         TextField(
           obscureText: state.obscurePassword,
           onChanged: notifier.updateAdminPassword,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+          style: const TextStyle(fontFamily: 'Inter'),
           decoration: InputDecoration(
             labelText: 'Admin Password',
-            labelStyle: const TextStyle(color: Colors.white70),
+
             suffixIcon: IconButton(
-              icon: Icon(state.obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+              icon: Icon(state.obscurePassword ? Icons.visibility : Icons.visibility_off),
               onPressed: notifier.toggleObscurePassword,
             ),
           ),
@@ -283,24 +362,24 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStepSix(BusinessSetupState state) {
+  Widget _buildStepSix(BuildContext context, BusinessSetupState state) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text('Review & Launch', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+        Text('Review & Launch', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         GlassCard(
-          color: Colors.white.withOpacity(0.05),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.05),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Business: ${state.companyName}', style: const TextStyle(color: Colors.white)),
-                Text('Type: ${state.businessType}', style: const TextStyle(color: Colors.white70)),
-                Text('Selling: ${state.whatYouSell.join(", ")}', style: const TextStyle(color: Colors.white70)),
-                Text('Payments: ${state.payments}', style: const TextStyle(color: Colors.white70)),
-                Text('Admin: ${state.adminName} (${state.adminEmail})', style: const TextStyle(color: Colors.white70)),
+                Text('Business: ${state.companyName}', style: Theme.of(context).textTheme.bodyLarge),
+                Text('Type: ${state.businessType}', style: Theme.of(context).textTheme.bodyMedium),
+                Text('Selling: ${state.whatYouSell.join(", ")}', style: Theme.of(context).textTheme.bodyMedium),
+                Text('Payments: ${state.payments}', style: Theme.of(context).textTheme.bodyMedium),
+                Text('Admin: ${state.adminName} (${state.adminEmail})', style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
           ),
@@ -316,13 +395,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0D0D1A), Color(0xFF1A1A33)],
-          ),
-        ),
+        color: Theme.of(context).colorScheme.surface,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
@@ -332,7 +405,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Business Setup', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
+                  Text('Business Setup', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
                   const SizedBox(height: 16),
                   if (state.errorMessage != null) ...[
                     Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
@@ -347,13 +420,13 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                       key: ValueKey<int>(state.step),
                       child: () {
                         switch (state.step) {
-                          case 0: return _buildStepZero();
-                          case 1: return _buildStepOne(state, notifier);
-                          case 2: return _buildStepTwo(state, notifier);
-                          case 3: return _buildStepThree(state, notifier);
-                          case 4: return _buildStepFour(state, notifier);
-                          case 5: return _buildStepFive(state, notifier);
-                          case 6: return _buildStepSix(state);
+                          case 0: return _buildStepZero(context);
+                          case 1: return _buildStepOne(context, state, notifier);
+                          case 2: return _buildStepTwo(context, state, notifier);
+                          case 3: return _buildStepThree(context, state, notifier);
+                          case 4: return _buildStepFour(context, state, notifier);
+                          case 5: return _buildStepFive(context, state, notifier);
+                          case 6: return _buildStepSix(context, state);
                           default: return const SizedBox();
                         }
                       }(),

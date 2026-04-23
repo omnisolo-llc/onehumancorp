@@ -33,7 +33,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Business type'), findsOneWidget);
-    expect(find.byType(ChoiceChip), findsNWidgets(6));
+    expect(find.text('Online Store'), findsOneWidget);
 
     await tester.tap(find.text('Online Store'));
     await tester.pumpAndSettle();
@@ -55,7 +55,7 @@ void main() {
 
     // Step 3: What do you sell?
     expect(find.text('What do you sell?'), findsOneWidget);
-    expect(find.byType(CheckboxListTile), findsNWidgets(5));
+    expect(find.text('Physical products'), findsOneWidget);
 
     await tester.tap(find.text('Physical products'));
     await tester.pumpAndSettle();
@@ -65,7 +65,7 @@ void main() {
 
     // Step 4: Payments
     expect(find.text('How do you want to receive payments?'), findsOneWidget);
-    expect(find.byType(RadioListTile<String>), findsNWidgets(4));
+    expect(find.text('Online only'), findsOneWidget);
 
     await tester.tap(find.text('Online only'));
     await tester.pumpAndSettle();
