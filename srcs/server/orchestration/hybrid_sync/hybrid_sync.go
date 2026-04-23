@@ -137,7 +137,7 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 		return
 	}
 
-	telemetry.RecordSyncEscalation(ctx, int64(len(payloads)))
+	telemetry.RecordSyncEscalation(ctx, int64(len(payloads)), "Standalone")
 	for range payloads {
 		telemetry.RecordRagEscalation(ctx)
 	}

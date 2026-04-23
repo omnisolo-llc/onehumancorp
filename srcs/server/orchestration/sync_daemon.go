@@ -82,6 +82,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 
 	tx, err := d.dbWrapper.Begin(ctx)
 	if err != nil {
+		telemetry.RecordSyncDaemonError(ctx, "Standalone")
 		slog.Error("sync_daemon: failed to begin transaction", "error", err)
 		return false
 	}
@@ -93,6 +94,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	}
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
+		telemetry.RecordSyncDaemonError(ctx, "Standalone")
 		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
 		return false
 	}
@@ -133,6 +135,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	}
 
 	if err := d.sendToCloud(ctx, payloads); err != nil {
+		telemetry.RecordSyncDaemonError(ctx, "Standalone")
 		slog.Warn("sync_daemon: failed to send agent_missions to cloud (transient)", "error", err)
 		return false
 	}
@@ -152,21 +155,23 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 		}
 		_, err := tx.Exec(ctx, updateQuery)
 		if err != nil {
+			telemetry.RecordSyncDaemonError(ctx, "Standalone")
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
 			return false
 		} else {
-			telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
+			telemetry.RecordSyncEscalation(ctx, int64(len(ids)), "Standalone")
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		telemetry.RecordSyncDaemonError(ctx, "Standalone")
 		slog.Error("sync_daemon: failed to commit transaction", "error", err)
 		return false
 	}
 
-	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
+	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)), "Standalone")
 
-	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
+	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()), "Standalone")
 
 	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
 	return true
@@ -177,7 +182,7 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
-	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
+	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)), "Standalone")
 
 	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
 

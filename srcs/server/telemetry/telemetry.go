@@ -89,6 +89,7 @@ var (
 	AgentTransitionLatency metric.Float64Histogram
 
 	SyncCompletedCount           metric.Int64Counter
+	SyncDaemonErrorTotal         metric.Int64Counter
 	SyncFailedCount              metric.Int64Counter
 	SyncEscalationsCount         metric.Int64Counter
 	SyncLatency                  metric.Float64Histogram
@@ -763,6 +764,14 @@ func InitWithMeter(m mockableMeter) error {
 	TeammateMeshDirectMessagesCounter, err = m.Int64Counter(
 		"teammate_mesh_direct_messages_total",
 		metric.WithDescription("Total number of Teammate Mesh direct messages sent"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+		SyncDaemonErrorTotal, err = m.Int64Counter(
+		"ohc_sync_daemon_error_total",
+		metric.WithDescription("Total errors encountered in sync daemon"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1645,11 +1654,12 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
-func RecordSyncEscalation(ctx context.Context, count int64) {
+func RecordSyncEscalation(ctx context.Context, count int64, mode string) {
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"count": count,
+			"mode":  mode,
 		}
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
@@ -1658,7 +1668,9 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 	if SyncEscalationsCount == nil {
 		return
 	}
-	SyncEscalationsCount.Add(ctx, count)
+	SyncEscalationsCount.Add(ctx, count, metric.WithAttributes(
+		attribute.String("mode", mode),
+	))
 }
 
 // RecordLocalToCloudMissionSync records a local-to-cloud mission synchronization.
@@ -1681,11 +1693,12 @@ func RecordLocalToCloudMissionSync(ctx context.Context, missionID string) {
 }
 
 // RecordSyncLatency records the latency of the sync process.
-func RecordSyncLatency(ctx context.Context, latency float64) {
+func RecordSyncLatency(ctx context.Context, latency float64, mode string) {
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"latency": latency,
+			"mode":    mode,
 		}
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
@@ -1694,15 +1707,18 @@ func RecordSyncLatency(ctx context.Context, latency float64) {
 	if SyncLatency == nil {
 		return
 	}
-	SyncLatency.Record(ctx, latency)
+	SyncLatency.Record(ctx, latency, metric.WithAttributes(
+		attribute.String("mode", mode),
+	))
 }
 
 // RecordSyncPayloadSize records the size of the sync payload.
-func RecordSyncPayloadSize(ctx context.Context, size int64) {
+func RecordSyncPayloadSize(ctx context.Context, size int64, mode string) {
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"size": size,
+			"mode": mode,
 		}
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
@@ -1711,15 +1727,18 @@ func RecordSyncPayloadSize(ctx context.Context, size int64) {
 	if SyncPayloadSize == nil {
 		return
 	}
-	SyncPayloadSize.Record(ctx, size)
+	SyncPayloadSize.Record(ctx, size, metric.WithAttributes(
+		attribute.String("mode", mode),
+	))
 }
 
 // RecordSyncDaemonBatchSize records the batch size processed by SyncDaemon.
-func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
+func RecordSyncDaemonBatchSize(ctx context.Context, size int64, mode string) {
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"size": size,
+			"mode": mode,
 		}
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
@@ -1728,7 +1747,9 @@ func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
 	if syncDaemonBatchSize == nil {
 		return
 	}
-	syncDaemonBatchSize.Record(ctx, size)
+	syncDaemonBatchSize.Record(ctx, size, metric.WithAttributes(
+		attribute.String("mode", mode),
+	))
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
@@ -2452,4 +2473,23 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	TelemetryBatchSizeGauge.Record(ctx, size)
+}
+
+// RecordSyncDaemonError increments the sync daemon error counter.
+func RecordSyncDaemonError(ctx context.Context, mode string) {
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"mode": mode,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "sync_daemon_error", string(payloadBytes))
+	}
+	if SyncDaemonErrorTotal == nil {
+		return
+	}
+	SyncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("mode", mode),
+	))
 }

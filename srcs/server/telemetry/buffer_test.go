@@ -165,25 +165,25 @@ func TestBufferMetricFunc(t *testing.T) {
 	}
 	called = false
 
-	RecordSyncEscalation(ctx, 1)
+	RecordSyncEscalation(ctx, 1, "Standalone")
 	if !called {
 		t.Errorf("expected buffer call for RecordSyncEscalation")
 	}
 	called = false
 
-	RecordSyncLatency(ctx, 1.5)
+	RecordSyncLatency(ctx, 1.5, "Standalone")
 	if !called {
 		t.Errorf("expected buffer call for RecordSyncLatency")
 	}
 	called = false
 
-	RecordSyncPayloadSize(ctx, 100)
+	RecordSyncPayloadSize(ctx, 100, "Standalone")
 	if !called {
 		t.Errorf("expected buffer call for RecordSyncPayloadSize")
 	}
 	called = false
 
-	RecordSyncDaemonBatchSize(ctx, 10)
+	RecordSyncDaemonBatchSize(ctx, 10, "Standalone")
 	if !called {
 		t.Errorf("expected buffer call for RecordSyncDaemonBatchSize")
 	}
