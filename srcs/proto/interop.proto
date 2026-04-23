@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package ohc.interop;
+
+option go_package = "github.com/onehumancorp/mono/srcs/proto/interop;interoppb";
+
+// JobDispatch represents a reliable job dispatch across the mesh.
+message JobDispatch {
+    string job_id = 1;
+    string target_agent_id = 2;
+    bytes payload = 3;
+    int64 timestamp = 4;
+    int32 max_retries = 5;
+}
+
+// JobAck represents an acknowledgment of a received JobDispatch.
+message JobAck {
+    string job_id = 1;
+    string agent_id = 2;
+    int64 timestamp = 3;
+    bool success = 4;
+}
+
+// StateHandoffData represents state data synchronized when transitioning between Cloud and Standalone modes.
+message StateHandoffData {
+    string tenant_id = 1;
+    bytes mission_state = 2;
+    bytes ai_context = 3;
+    int64 last_synced = 4;
+}
+
+// HealthProbe represents a ping to check cross-mode agent health.
+message HealthProbe {
+    string probe_id = 1;
+    int64 timestamp = 2;
+}
+
+// HealthStatus represents the response to a HealthProbe.
+message HealthStatus {
+    string probe_id = 1;
+    string agent_id = 2;
+    int64 timestamp = 3;
+    string status = 4; // e.g., "healthy", "degraded"
+}
+
+// Dummy service to trigger _grpc.pb.go generation required by the bazel macro
+service InteropService {
+    rpc Ping(HealthProbe) returns (HealthStatus);
+}

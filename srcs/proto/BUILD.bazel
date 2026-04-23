@@ -167,3 +167,24 @@ proto_dart_library(
     protos = ":app_proto",
     visibility = ["//visibility:public"],
 )
+
+# ── Interop ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "interop_proto",
+    srcs = ["interop.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library_with_tags(
+    name = "interop_go_proto",
+    protos = ["interop.proto"],
+    importpath = "github.com/onehumancorp/mono/srcs/proto/interop",
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "interop_dart_proto",
+    protos = ":interop_proto",
+    visibility = ["//visibility:public"],
+)
