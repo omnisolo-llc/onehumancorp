@@ -59,12 +59,6 @@ func TestInitTelemetry(t *testing.T) {
 	if BubblewrapViolationTotal == nil {
 		t.Error("expected BubblewrapViolationTotal to be initialized")
 	}
-	if SIPSyncLatencyRecorder == nil {
-		t.Error("expected SIPSyncLatencyRecorder to be initialized")
-	}
-	if SIPSyncPayloadSizeRecorder == nil {
-		t.Error("expected SIPSyncPayloadSizeRecorder to be initialized")
-	}
 	if AgentTransitionLatency == nil {
 		t.Error("expected AgentTransitionLatency to be initialized")
 	}
