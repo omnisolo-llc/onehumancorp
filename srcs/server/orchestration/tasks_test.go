@@ -154,7 +154,9 @@ func TestTaskManager_ClaimTask(t *testing.T) {
 		t.Fatalf("expected task, got nil")
 	}
 	if claimedTask.Status != "IN_PROGRESS" {
+	if claimedTask.Status != "IN_PROGRESS" {
 		t.Errorf("expected Status 'IN_PROGRESS', got %s", claimedTask.Status)
+	}
 	}
 	if claimedTask.AssignedAgentID != "agent-1" {
 		t.Errorf("expected AssignedAgentID 'agent-1', got %s", claimedTask.AssignedAgentID)
@@ -551,3 +553,40 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 	}
 }
 // added for Sub-Agent Orchestration Queue
+
+func TestSharedTask_StateMachine(t *testing.T) {
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := taskClaimsContext()
+
+	// PENDING
+	task, err := tm.CreateTask(ctx, "org-1", "mission-1", "Test task", "desc", "high")
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	if task.Status != "PENDING" {
+		t.Fatalf("expected PENDING, got %s", task.Status)
+	}
+
+	// IN_PROGRESS
+	_, err = tm.db.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', agent_id = 'test-agent' WHERE id = $1", task.ID)
+	if err != nil {
+		t.Fatalf("failed to claim task: %v", err)
+	}
+    // ensure transition is recorded manually for the test
+	tm.stateMachine.Transition(ctx, task.ID, "SHARED_TASK", "IN_PROGRESS", "test-agent", "Claimed task")
+
+	// REVIEW
+	err = tm.ReviewTask(ctx, task.ID, "test-agent")
+	if err != nil {
+		t.Fatalf("failed to review task: %v", err)
+	}
+
+	// COMPLETED
+	err = tm.CompleteTaskWithResult(ctx, task.ID, "test-agent", "done")
+	if err != nil {
+		t.Fatalf("failed to complete task: %v", err)
+	}
+}
