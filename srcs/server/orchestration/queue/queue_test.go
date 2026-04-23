@@ -53,7 +53,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 		t.Fatalf("Enqueue failed: %v", err)
 	}
 
-	dequeued, err := q.Acquire(ctx, []string{"tester"})
+	dequeued, err := q.Dequeue(ctx, []string{"tester"})
 	if err != nil {
 		t.Fatalf("Dequeue failed: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 		MaxAttempts:  3,
 	}
 	q.Enqueue(ctx, job2)
-	q.Acquire(ctx, []string{"tester"})
+	q.Dequeue(ctx, []string{"tester"})
 
 	if err := q.Fail(ctx, "test-job-2", "some error"); err != nil {
 		t.Fatalf("Fail failed: %v", err)
@@ -145,7 +145,7 @@ func TestQueueManager(t *testing.T) {
 		t.Fatalf("failed to enqueue: %v", err)
 	}
 
-	polledJob, err := qm.Acquire(ctx, "worker-1")
+	polledJob, err := qm.Poll(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("failed to poll: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestQueueManager(t *testing.T) {
 		t.Errorf("expected status RUNNING, got %s", polledJob.Status)
 	}
 
-	polledJob2, err := qm.Acquire(ctx, "worker-2")
+	polledJob2, err := qm.Poll(ctx, "worker-2")
 	if err != nil {
 		t.Fatalf("failed to poll second time: %v", err)
 	}
@@ -219,7 +219,7 @@ func TestQueueManager_Postgres(t *testing.T) {
 		t.Fatalf("expected error on enqueue invalid json")
 	}
 
-	polledJob, err := qm.Acquire(ctx, "worker-1")
+	polledJob, err := qm.Poll(ctx, "worker-1")
 	if err == nil {
 		t.Fatalf("expected error because sqlite doesn't support SKIP LOCKED, got %v", polledJob)
 	}
@@ -229,7 +229,6 @@ type mockPostgresProvider struct {
 	db.Provider
 }
 
-func (m *mockPostgresProvider) ClaimTask(ctx context.Context, taskID string) error { return nil }
 func (m *mockPostgresProvider) IsSQLite() bool {
 	return false
 }
@@ -283,7 +282,7 @@ func TestQueueManager_Postgres_Poll_Success(t *testing.T) {
 	qm := NewQueueManager(mockProvider)
 	ctx := context.Background()
 
-	polledJob, err := qm.Acquire(ctx, "worker-1")
+	polledJob, err := qm.Poll(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
 	}
@@ -305,7 +304,7 @@ func TestQueueManager_Postgres_Poll_NoRows(t *testing.T) {
 	qm := NewQueueManager(mockProvider)
 	ctx := context.Background()
 
-	polledJob, err := qm.Acquire(ctx, "worker-1")
+	polledJob, err := qm.Poll(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("expected nil err, got %v", err)
 	}

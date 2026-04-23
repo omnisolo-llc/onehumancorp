@@ -9,7 +9,6 @@ go_library(
         "//srcs/server/db",
         "//srcs/server/orchestration/kairos",
         "@com_github_prometheus_client_golang//prometheus",
-        "@com_github_redis_rueidis//:rueidis",
     ],
 )
 
@@ -20,7 +19,5 @@ go_test(
     deps = [
         "//srcs/server/db",
         "@org_modernc_sqlite//:sqlite",
-        "@com_github_alicebob_miniredis_v2//:miniredis",
-        "@com_github_redis_rueidis//:rueidis",
     ],
 )

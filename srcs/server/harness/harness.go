@@ -16,8 +16,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type SandboxConfig struct {
@@ -162,9 +160,6 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 	ctx, span := h.tracer.Start(ctx, "Harness.Run")
 	defer span.End()
 
-	telemetry.RecordBubblewrapSpawn(ctx)
-	start := time.Now()
-
 	span.SetAttributes(attribute.String("command", cmd))
 
 	bwrapArgs := []string{
@@ -210,22 +205,12 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 	execCmd.Stderr = &stderr
 
 	err := execCmd.Run()
-
-	duration := time.Since(start).Seconds()
-	telemetry.RecordBubblewrapExecutionLatency(ctx, duration)
-
 	exitCode := 0
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
-			if exitCode != 0 && (strings.Contains(stderr.String(), "Permission denied") || exitCode == 126) {
-				telemetry.RecordBubblewrapViolation(ctx)
-			}
 		} else {
 			exitCode = -1
-			if strings.Contains(err.Error(), "permission denied") {
-				telemetry.RecordBubblewrapViolation(ctx)
-			}
 		}
 	}
 

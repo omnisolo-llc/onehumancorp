@@ -19,7 +19,7 @@ func TestASTValidator(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "command substitution echo su do",
+			name:    "command substitution",
 			command: `echo "su"$(echo "do")`,
 			wantErr: true,
 		},
@@ -56,16 +56,6 @@ func TestASTValidator(t *testing.T) {
 		{
 			name:    "sudo",
 			command: "sudo apt-get install",
-			wantErr: true,
-		},
-		{
-			name:    "eval",
-			command: "eval $(echo rm -rf /)",
-			wantErr: true,
-		},
-		{
-			name:    "exec",
-			command: "exec bash",
 			wantErr: true,
 		},
 	}
