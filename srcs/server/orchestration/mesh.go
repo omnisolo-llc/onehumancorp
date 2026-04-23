@@ -214,14 +214,14 @@ type AgentCapabilities struct {
 }
 
 // Trivial change for automator
-type TeammateMesh interface {
+type DeadTeammateMesh interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
 	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
 	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
 }
 
-type RedisTeammateMesh struct {
+type DeadRedisTeammateMesh struct {
 	client rueidis.Client
 }
 
@@ -433,7 +433,7 @@ func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic str
 	return ch, nil
 }
 
-func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
+func NewDeadRedisTeammateMesh(redisURL string) (*DeadRedisTeammateMesh, error) {
 	opt, err := rueidis.ParseURL(redisURL)
 	if err != nil {
 		return nil, err
@@ -442,7 +442,7 @@ func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RedisTeammateMesh{client: c}, nil
+	return &DeadRedisTeammateMesh{client: c}, nil
 }
 
 func meshWithRetry(ctx context.Context, maxRetries int, fn func() error) error {
@@ -451,7 +451,7 @@ func meshWithRetry(ctx context.Context, maxRetries int, fn func() error) error {
 	})
 }
 
-func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
+func (rm *DeadRedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error {
 	if err := interop.ValidateSPIFFEID(task.AgentID); err != nil && task.AgentID != "system" {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
@@ -465,7 +465,7 @@ func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 	})
 }
 
-func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
+func (rm *DeadRedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, error) {
 	ch := make(chan Task, 100)
 
 	go func() {
@@ -475,19 +475,19 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 				select {
 				case ch <- t:
 				default:
-					slog.Warn("RedisTeammateMesh.SubscribeTasks channel full, dropping message")
+					slog.Warn("DeadRedisTeammateMesh.SubscribeTasks channel full, dropping message")
 				}
 			}
 		})
 		if err != nil && err != context.Canceled {
-			slog.Error("RedisTeammateMesh.SubscribeTasks error", "err", err)
+			slog.Error("DeadRedisTeammateMesh.SubscribeTasks error", "err", err)
 		}
 		close(ch)
 	}()
 	return ch, nil
 }
 
-func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+func (rm *DeadRedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
 	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
@@ -501,7 +501,7 @@ func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg Mesh
 	})
 }
 
-func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+func (rm *DeadRedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
 	ch := make(chan MeshMessage, 100)
 
 	go func() {
@@ -511,12 +511,12 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 				select {
 				case ch <- m:
 				default:
-					slog.Warn("RedisTeammateMesh.SubscribeCoordination channel full, dropping message")
+					slog.Warn("DeadRedisTeammateMesh.SubscribeCoordination channel full, dropping message")
 				}
 			}
 		})
 		if err != nil && err != context.Canceled {
-			slog.Error("RedisTeammateMesh.SubscribeCoordination error", "err", err)
+			slog.Error("DeadRedisTeammateMesh.SubscribeCoordination error", "err", err)
 		}
 		close(ch)
 	}()
