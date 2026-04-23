@@ -21,24 +21,19 @@ func (s *localSubscription) Close() error {
 	return nil
 }
 
-type presenceEntry struct {
-	AgentPresence
-	ExpiresAt time.Time
-}
-
 type LocalMesh struct {
 	mu          sync.RWMutex
 	subscribers map[string]map[*localSubscription]struct{}
 	locks       sync.Mutex
 	activeLocks map[string]time.Time
-	presences   map[string]presenceEntry
+	presences   map[string]AgentPresence
 }
 
 func NewLocalMesh() *LocalMesh {
 	return &LocalMesh{
 		subscribers: make(map[string]map[*localSubscription]struct{}),
 		activeLocks: make(map[string]time.Time),
-		presences:   make(map[string]presenceEntry),
+		presences:   make(map[string]AgentPresence),
 	}
 }
 
@@ -58,15 +53,6 @@ func (m *LocalMesh) Publish(ctx context.Context, topic string, payload []byte) e
 			return ctx.Err()
 		default:
 			// Dropping message if channel is full in this simple implementation
-			// To ensure parity and not drop messages under normal load, wait briefly or increase channel size.
-			// Try with a timer to avoid pile-up.
-			timer := time.NewTimer(10 * time.Millisecond)
-			select {
-			case sub.ch <- payload:
-				timer.Stop()
-			case <-timer.C:
-				// drop if still full
-			}
 		}
 	}
 	return nil
@@ -77,7 +63,7 @@ func (m *LocalMesh) Subscribe(ctx context.Context, topic string, handler func(ms
 	sub := &localSubscription{
 		mesh:    m,
 		topic:   topic,
-		ch:      make(chan []byte, 1000), // Increased channel buffer to handle burst
+		ch:      make(chan []byte, 100),
 		handler: handler,
 		ctx:     subCtx,
 		cancel:  cancel,
@@ -142,25 +128,17 @@ func (m *LocalMesh) ReleaseLock(ctx context.Context, key string) error {
 func (m *LocalMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.presences[agentID] = presenceEntry{
-		AgentPresence: AgentPresence{AgentID: agentID, Status: status},
-		ExpiresAt:     time.Now().Add(30 * time.Second),
-	}
+	m.presences[agentID] = AgentPresence{AgentID: agentID, Status: status}
 	return nil
 }
 
 func (m *LocalMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	var agents []AgentPresence
-	now := time.Now()
-	for id, p := range m.presences {
-		if now.Before(p.ExpiresAt) {
-			agents = append(agents, p.AgentPresence)
-		} else {
-			delete(m.presences, id)
-		}
+	for _, p := range m.presences {
+		agents = append(agents, p)
 	}
 	return agents, nil
 }
