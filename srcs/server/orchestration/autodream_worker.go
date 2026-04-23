@@ -17,6 +17,7 @@ import (
 	_ "github.com/onehumancorp/mono/srcs/server/orchestration/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/lib/llm"
 	"gopkg.in/yaml.v3"
 )
 
@@ -474,4 +475,107 @@ func (d *AutoDreamWorkerDaemon) Stop() {
 	d.stopOnce.Do(func() {
 		close(d.done)
 	})
+}
+
+// AutoDreamConsolidator implements the pipeline connecting the execution layer to the pgvector database.
+type AutoDreamConsolidator struct {
+	pool     db.Provider
+	embedder llm.Embedder
+}
+
+func NewAutoDreamConsolidator(pool db.Provider, embedder llm.Embedder) *AutoDreamConsolidator {
+	return &AutoDreamConsolidator{
+		pool:     pool,
+		embedder: embedder,
+	}
+}
+
+// ConsolidateCompletedTasks fetches COMPLETED tasks and inserts embeddings into autodream_memories_master.
+func (c *AutoDreamConsolidator) ConsolidateCompletedTasks(ctx context.Context) error {
+	tx, err := c.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	var query string
+	if c.pool.IsSQLite() {
+		query = "SELECT id, title, COALESCE(payload, '{}'), tenant_id FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 100"
+	} else {
+		query = "SELECT id, title, COALESCE(payload, '{}'), tenant_id FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 100 FOR UPDATE SKIP LOCKED"
+	}
+
+	rows, err := tx.Query(ctx, query)
+	if err != nil {
+		return fmt.Errorf("failed to fetch completed tasks: %w", err)
+	}
+
+	type taskEntry struct {
+		id       string
+		title    string
+		payload  string
+		tenantID string
+	}
+	var entries []taskEntry
+	for rows.Next() {
+		var e taskEntry
+		if err := rows.Scan(&e.id, &e.title, &e.payload, &e.tenantID); err == nil {
+			entries = append(entries, e)
+		}
+	}
+	rows.Close()
+
+	if len(entries) == 0 {
+		return nil
+	}
+
+	for _, e := range entries {
+		contentToEmbed := fmt.Sprintf("Task Title: %s\nPayload: %s", e.title, e.payload)
+
+		embedding, err := c.embedder.GenerateEmbedding(ctx, contentToEmbed)
+		if err != nil {
+			slog.Error("AutoDreamConsolidator: failed to generate embedding", "error", err)
+			embedding = make([]float32, 1536)
+		}
+
+		memID := uuid.New().String()
+		var embStr string
+		if c.pool.IsSQLite() {
+			embBytes, _ := json.Marshal(embedding)
+			embStr = string(embBytes)
+		} else {
+			embStr = formatFloat32SliceForVector(embedding)
+		}
+
+		var insertQuery string
+		if c.pool.IsSQLite() {
+			insertQuery = `INSERT INTO autodream_memories_master (id, organization_id, memory_type, content, embedding, source_task_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`
+		} else {
+			insertQuery = `INSERT INTO autodream_memories_master (id, organization_id, memory_type, content, embedding, source_task_id, created_at) VALUES ($1, $2, $3, $4, $5::vector, $6, CURRENT_TIMESTAMP)`
+		}
+
+		// Fallback tenant_id if null or empty to prevent not-null constraint failure
+		orgID := e.tenantID
+		if orgID == "" {
+			orgID = "system"
+		}
+
+		_, err = tx.Exec(ctx, insertQuery, memID, orgID, "task_execution", contentToEmbed, embStr, e.id)
+		if err != nil {
+			slog.Error("AutoDreamConsolidator: failed to insert memory into autodream_memories_master", "error", err)
+			continue
+		}
+
+		updateQuery := "UPDATE shared_tasks SET status = 'ARCHIVED' WHERE id = $1 RETURNING id"
+		var retId string
+		err = tx.QueryRow(ctx, updateQuery, e.id).Scan(&retId)
+		if err != nil && err.Error() != "sql: no rows in result set" && err.Error() != "no rows in result set" {
+			slog.Error("AutoDreamConsolidator: failed to update task status to ARCHIVED", "error", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit tx: %w", err)
+	}
+	return nil
 }

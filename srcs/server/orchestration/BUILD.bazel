@@ -55,6 +55,7 @@ go_library(
         "//srcs/server/orchestration/statemachine",
         "//srcs/server/orchestration/queue",
         "//srcs/server/memory/autodream",
+        "//srcs/server/lib/llm",
         "//srcs/server/orchestration/autodream",
         "//srcs/server/orchestration/kairos",
         "@com_github_centrifugal_centrifuge//:centrifuge",
@@ -78,6 +79,7 @@ go_library(
 go_test(
     name = "orchestration_test",
     srcs = [
+        "autodream_consolidator_test.go",
         "agent_context_test.go",
         "auth_interceptor_test.go",
         "autodream_test.go",
