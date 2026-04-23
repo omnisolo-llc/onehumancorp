@@ -7,7 +7,7 @@ The core AutoDream pipelines (memory pruning, conflict resolution, truth injecti
 The required SQL migrations:
 - `20260416060000_autodream_vector_pipeline_pg.sql`
 - `20260416060000_autodream_vector_pipeline_sqlite.sql`
-were already verified to be correctly defined.
+were already verified to be correctly defined, and their corresponding Bazel target inclusions in `srcs/server/db/BUILD.bazel` have been made.
 
 Unit tests including `TestAutoDreamPipeline_Batch` and `TestAutoDreamPipeline_Files` exist and cover >90% of the relevant pipeline logic, successfully mocking database and LLM calls, as verified by running `bazelisk test //srcs/server/pipeline/...`.
 
