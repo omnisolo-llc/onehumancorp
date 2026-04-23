@@ -3,6 +3,7 @@ module github.com/onehumancorp/mono
 go 1.26
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/centrifugal/centrifuge v0.38.0
 	github.com/google/uuid v1.6.0
@@ -12,6 +13,7 @@ require (
 	github.com/minio/minio-go/v7 v7.0.100
 	github.com/modelcontextprotocol/go-sdk v1.5.0
 	github.com/nats-io/nats.go v1.51.0
+	github.com/pgvector/pgvector-go v0.3.0
 	github.com/playwright-community/playwright-go v0.5700.1
 	github.com/pressly/goose/v3 v3.27.0
 	github.com/prometheus/client_golang v1.23.2
