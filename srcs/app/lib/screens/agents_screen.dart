@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:ohc_app/widgets/help/tooltip_registry.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
@@ -224,8 +225,8 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                           ),
                                           if (widget.agent.svidVerified) ...[
                                             const SizedBox(width: 6),
-                                            Tooltip(
-                                              message: 'SPIFFE mTLS Secured',
+                                            ContextTooltip(
+                                              tooltipKey: 'agent_status',
                                               child: Icon(
                                                 Icons.verified_user,
                                                 size: 16,
