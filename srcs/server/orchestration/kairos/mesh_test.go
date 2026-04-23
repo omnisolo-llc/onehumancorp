@@ -75,7 +75,7 @@ func TestNewTeammateMesh(t *testing.T) {
 }
 
 func TestLocalTeammateMesh_PublishSubscribe(t *testing.T) {
-	mesh := NewLocalTeammateMesh()
+	mesh := NewLocalTeammateMesh(nil)
 	ctx := context.Background()
 
 	taskCh, err := mesh.SubscribeTasks(ctx)
@@ -104,5 +104,36 @@ func TestLocalTeammateMesh_PublishSubscribe(t *testing.T) {
 		assert.Equal(t, coordMsg, received)
 	case <-time.After(time.Second):
 		t.Fatal("timeout waiting for coordination message")
+	}
+}
+
+func TestLocalTeammateMesh_Redis(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+	}
+	defer mr.Close()
+
+	client := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+
+	mesh := NewLocalTeammateMesh(client)
+	ctx := context.Background()
+
+	taskCh, err := mesh.SubscribeTasks(ctx)
+	assert.NoError(t, err)
+
+	time.Sleep(100 * time.Millisecond)
+
+	taskMsg := []byte("redis task message")
+	err = mesh.PublishTask(ctx, taskMsg)
+	assert.NoError(t, err)
+
+	select {
+	case received := <-taskCh:
+		assert.Equal(t, taskMsg, received)
+	case <-time.After(time.Second):
+		t.Fatal("timeout waiting for task message over redis")
 	}
 }

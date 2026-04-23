@@ -108,12 +108,12 @@ func (r *RedisMesh) Subscribe(ctx context.Context, channel string) (<-chan []byt
 
 // LocalTeammateMesh implements TeammateMesh and provides explicit channels for mesh:tasks and mesh:coordination.
 type LocalTeammateMesh struct {
-	mesh *MemoryMesh
+	mesh TeammateMesh
 }
 
-func NewLocalTeammateMesh() *LocalTeammateMesh {
+func NewLocalTeammateMesh(redisClient *redis.Client) *LocalTeammateMesh {
 	return &LocalTeammateMesh{
-		mesh: NewMemoryMesh(),
+		mesh: NewTeammateMesh(redisClient),
 	}
 }
 

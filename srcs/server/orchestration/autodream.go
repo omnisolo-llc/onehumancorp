@@ -435,7 +435,7 @@ func (w *AutoDreamWorker) compressSessionContexts(ctx context.Context) {
 func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 	memoryDir := os.Getenv("OHC_MEMORY_DIR")
 	if memoryDir == "" {
-		return // DB-backed memory; no file ingestion needed
+		memoryDir = ".agent-task/memory"
 	}
 	files, err := os.ReadDir(memoryDir)
 	if err != nil {
@@ -464,9 +464,9 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 		var check int
 		var checkQuery string
 		if w.pool.IsSQLite() {
-			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = ? LIMIT 1"
+			checkQuery = "SELECT 1 FROM consolidated_memory WHERE id = ? LIMIT 1"
 		} else {
-			checkQuery = "SELECT 1 FROM autodream_memories WHERE source_mission_id = $1 LIMIT 1"
+			checkQuery = "SELECT 1 FROM consolidated_memory WHERE id = $1 LIMIT 1"
 		}
 		if err := w.pool.QueryRow(ctx, checkQuery, memoryID).Scan(&check); err == nil {
 			// Already exists, delete file and skip
@@ -494,12 +494,11 @@ func (w *AutoDreamWorker) ingestAgentMemories(ctx context.Context) {
 
 		var insertQuery string
 		if w.pool.IsSQLite() {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, 'autodream')"
-			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = w.pool.Exec(ctx, insertQuery, id, content, embeddingStr)
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, 'system', 'system', ?, ?, 'autodream')"
+			_, err = w.pool.Exec(ctx, insertQuery, memoryID, content, embeddingStr)
 		} else {
-			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, content, embedding, source_type) VALUES (gen_random_uuid(), 'system', $1, $2::vector, 'autodream')"
-			_, err = w.pool.Exec(ctx, insertQuery, content, embeddingStr)
+			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, 'system', 'system', $2, $3::vector, 'autodream')"
+			_, err = w.pool.Exec(ctx, insertQuery, memoryID, content, embeddingStr)
 		}
 
 		if err != nil {

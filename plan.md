@@ -1,31 +1,19 @@
-1. **Create Database Migration:**
-   - Run `cat << 'MIG' > srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql ... MIG` to add `locked_until` (via ALTER TABLE if missing) and the indices on `status` and `locked_until` on `shared_tasks`.
-   - Add a verification step: `ls -la srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql` to verify creation.
-   - Run a Python script or `sed` to update `embedsrcs` in `srcs/server/db/BUILD.bazel` to include this new migration.
-   - Add a verification step: `cat srcs/server/db/BUILD.bazel | grep 20260427020001_shared_tasks_indexes.sql` to confirm.
+1. **Schema Migration**
+   - Use `write_file` to create `srcs/server/db/migrations/20260429000000_kairos_shared_tasks_add_columns_pg.sql` containing standard Goose Up/Down migrations adding `agent_id VARCHAR(255)`, `priority INTEGER`, and `payload JSONB` to `shared_tasks`.
+   - Use `write_file` to create `srcs/server/db/migrations/20260429000000_kairos_shared_tasks_add_columns_sqlite.sql` containing standard Goose Up/Down migrations adding `agent_id TEXT`, `priority INTEGER`, and `payload TEXT` to `shared_tasks`.
+   - Use `run_in_bash_session` to execute `cat` on both `.sql` files to confirm they were written successfully.
 
-2. **Update TaskManager Enhancements:**
-   - Use a Python script to inject `tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")` in `CompleteTaskWithResult` inside `srcs/server/orchestration/tasks.go`.
-   - Use a Python script to replace the status update in `ReviewTask` to utilize `tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Oh, wait, `ReviewTask` is ALREADY doing `err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Let me verify `tasks.go` again to see what exactly needs modification.
+2. **Teammate Mesh**
+   - Use `replace_with_git_merge_diff` to modify `srcs/server/orchestration/kairos/mesh.go`. Change `LocalTeammateMesh` struct to have field `mesh TeammateMesh`. Update `NewLocalTeammateMesh(redisClient *redis.Client)` to wrap `NewTeammateMesh(redisClient)`.
+   - Use `replace_with_git_merge_diff` to modify `srcs/server/orchestration/kairos/mesh_test.go` to update `TestLocalTeammateMesh_PublishSubscribe` to call `NewLocalTeammateMesh(nil)` and add `TestLocalTeammateMesh_Redis`.
+   - Use `run_in_bash_session` to execute `cat` on both modified files to verify the changes.
 
-3. **Modify API Endpoints:**
-   - Use a Python script to add a `requireSPIFFE` HTTP middleware in `srcs/server/orchestration/service.go`. The middleware will check the `Authorization` header for a bearer token, and validate it starts with `spiffe://` using `interop.ValidateSPIFFEID`.
-   - Wrap the HTTP handlers defined in `RegisterTaskHTTPHandlers` with this new middleware.
-   - Add a verification step: `cat srcs/server/orchestration/service.go | grep -C 5 requireSPIFFE` to verify changes.
+3. **AutoDream Pipeline**
+   - Use `replace_with_git_merge_diff` to modify `srcs/server/orchestration/autodream.go`. Inside `ingestAgentMemories`, update `memoryDir := os.Getenv("OHC_MEMORY_DIR")` to fallback to `".agent-task/memory"` if empty. Update `checkQuery` to query `SELECT 1 FROM consolidated_memory WHERE id = ? LIMIT 1` (and `$1` for PG) using `memoryID`. Update `insertQuery` for both SQLite and PG to target `consolidated_memory` using `(id, organization_id, agent_id, content, embedding, source_type)` with values like `(?, 'system', 'system', ?, ?, 'autodream')` (and `$1`, `$2`, `$3::vector` for PG).
+   - Use `run_in_bash_session` to execute `cat srcs/server/orchestration/autodream.go` to verify the changes.
 
-4. **Update Tests:**
-   - Run `cat << 'TEST' > srcs/server/orchestration/patch_tasks_test.py ... TEST` and execute it to inject `TestSharedTask_StateMachine` in `srcs/server/orchestration/tasks_test.go` covering all transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-   - Add a verification step: `grep -nri "TestSharedTask_StateMachine" srcs/server/orchestration/tasks_test.go` to confirm injection.
+4. **Run Tests**
+   - Use `run_in_bash_session` to execute `bazelisk test //...` to ensure everything is working correctly.
 
-5. **Expose Prometheus Metrics:**
-   - Write a python script to ensure `telemetry.RecordSwarmTaskTransition` is properly used inside `tasks.go` right after state transitions, and ensure we use `metric.WithAttributes` properly in `telemetry.go`.
-   - Add verification step: `cat srcs/server/orchestration/tasks.go | grep RecordSwarmTaskTransition` to confirm changes.
-
-6. **Test the changes:**
-   - Run `bazelisk test //srcs/server/orchestration/... //srcs/server/db/...` to verify the logic.
-
-7. **Pre-commit steps:**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-8. **Completion:**
-   - Output a final unstructured message containing issue_id.
+5. **Pre Commit Steps**
+   - Call `pre_commit_instructions` tool to make sure proper testing, verifications, reviews and reflections are done.
