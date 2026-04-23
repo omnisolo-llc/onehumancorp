@@ -551,8 +551,8 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 		// Use a common upsert pattern where possible, but handle Postgres locking explicitly.
 		if s.db.IsSQLite() {
 			upsertQuery := `
-				INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id)
-				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4)
+				INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id, synced_to_cloud)
+				VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4, false)
 				ON CONFLICT(id) DO UPDATE SET
 					status = CASE WHEN $5 THEN excluded.status ELSE agent_missions.status END,
 					payload = CASE WHEN $5 THEN excluded.payload ELSE agent_missions.payload END,
@@ -586,7 +586,7 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 					return nil // Skip to avoid contention if not forced
 				}
 				// Row truly doesn't exist, proceed to insert with DO NOTHING on conflict to be safe
-				_, errInsert := tx.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING", missionID, status, payload, s.orgID)
+				_, errInsert := tx.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id, synced_to_cloud) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4, false) ON CONFLICT(id) DO NOTHING", missionID, status, payload, s.orgID)
 				return errInsert
 			}
 
@@ -677,7 +677,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 	taskBytes, _ := json.Marshal(wrapper)
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
-			"INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $3)",
+			"INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id, synced_to_cloud) VALUES ($1, 'PENDING', $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $3, false)",
 			missionID, string(taskBytes), s.orgID,
 		)
 		return err
@@ -714,6 +714,36 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 	return withSipRetry(ctx, func() error {
 		stuckThreshold := time.Now().Add(-1 * time.Hour).UTC().Format("2006-01-02 15:04:05")
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
+
+		// Prioritize resolving "STUCK" missions first by trying to re-queue them before outright deletion
+		// Handles the backlog management part for agent_missions queue in both SQLite and Postgres.
+		if s.db.IsSQLite() {
+			_, errSQLite := s.db.Exec(ctx, `
+				UPDATE agent_missions
+				SET status = 'PENDING',
+					updated_at = CURRENT_TIMESTAMP,
+					payload = json_set(payload, '$.retry_count', COALESCE(json_extract(payload, '$.retry_count'), 0) + 1)
+				WHERE status = 'STUCK'
+				  AND organization_id = $1
+				  AND COALESCE(json_extract(payload, '$.retry_count'), 0) < 3
+			`, s.orgID)
+			if errSQLite != nil {
+				slog.Warn("failed to requeue stuck missions in SQLite", "error", errSQLite)
+			}
+		} else {
+			_, errPg := s.db.Exec(ctx, `
+				UPDATE agent_missions
+				SET status = 'PENDING',
+					updated_at = CURRENT_TIMESTAMP,
+					payload = jsonb_set(payload::jsonb, '{retry_count}', (COALESCE((payload::json->>'retry_count')::int, 0) + 1)::text::jsonb)::text
+				WHERE status = 'STUCK'
+				  AND organization_id = $1
+				  AND COALESCE((payload::json->>'retry_count')::int, 0) < 3
+			`, s.orgID)
+			if errPg != nil {
+				slog.Warn("failed to requeue stuck missions in Postgres", "error", errPg)
+			}
+		}
 
 		// 1. Mark stagnant PENDING missions as STUCK after 1 hour to trigger triage visibility
 		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)

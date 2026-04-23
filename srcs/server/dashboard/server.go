@@ -840,9 +840,26 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 	}
 
 	details["stuck_missions"] = probe.StuckMissions
-	if probe.StuckMissions > 0 {
+	if probe.StuckMissions > 0 && status != "error" {
 		status = "degraded"
 		details["status"] = status
+	}
+
+	if isStandalone {
+		details["cloud_connected"] = probe.CloudConnected
+		if !probe.CloudConnected {
+			if status != "error" {
+				status = "degraded"
+			}
+			details["status"] = status
+			checklist = append(checklist, map[string]interface{}{
+				"id": "cloud_connection", "label": "Cloud Sync Connection", "status": "error", "description": "Cannot reach Cloud OHC services",
+			})
+		} else {
+			checklist = append(checklist, map[string]interface{}{
+				"id": "cloud_connection", "label": "Cloud Sync Connection", "status": "ok", "description": "Connected to Cloud OHC services",
+			})
+		}
 	}
 
 	resp := map[string]interface{}{

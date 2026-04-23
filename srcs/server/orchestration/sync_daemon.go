@@ -82,7 +82,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 
 	tx, err := d.dbWrapper.Begin(ctx)
 	if err != nil {
-		slog.Error("sync_daemon: failed to begin transaction", "error", err)
+		slog.Warn("sync_daemon: failed to begin transaction", "error", err)
 		return false
 	}
 	defer tx.Rollback(ctx)
@@ -93,7 +93,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	}
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
-		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
+		slog.Warn("sync_daemon: failed to query agent_missions", "error", err)
 		return false
 	}
 	defer rows.Close()
@@ -104,7 +104,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	for rows.Next() {
 		var id, status, payloadData string
 		if err := rows.Scan(&id, &status, &payloadData); err != nil {
-			slog.Error("sync_daemon: failed to scan agent_missions", "error", err)
+			slog.Warn("sync_daemon: failed to scan agent_missions", "error", err)
 			continue
 		}
 
@@ -152,7 +152,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 		}
 		_, err := tx.Exec(ctx, updateQuery)
 		if err != nil {
-			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
+			slog.Warn("sync_daemon: failed to update agent_missions status in bulk", "error", err)
 			return false
 		} else {
 			telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
@@ -160,7 +160,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		slog.Error("sync_daemon: failed to commit transaction", "error", err)
+		slog.Warn("sync_daemon: failed to commit transaction", "error", err)
 		return false
 	}
 

@@ -74,8 +74,8 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if resp["status"] != "healthy" && resp["status"] != "ok" {
-		t.Errorf("Expected status to be healthy or ok, got %s", resp["status"])
+	if resp["status"] != "healthy" && resp["status"] != "ok" && resp["status"] != "degraded" {
+		t.Errorf("Expected status to be healthy, ok, or degraded, got %s", resp["status"])
 	}
 
 	checklist, ok := resp["checklist"].([]interface{})
@@ -83,8 +83,8 @@ func TestHandleHybridHealthCheck(t *testing.T) {
 		t.Fatalf("Expected checklist in response, got %v", resp)
 	}
 
-	if len(checklist) != 2 {
-		t.Errorf("Expected 2 items in checklist, got %d", len(checklist))
+	if len(checklist) < 2 {
+		t.Errorf("Expected at least 2 items in checklist, got %d", len(checklist))
 	}
 
 	foundDB := false
