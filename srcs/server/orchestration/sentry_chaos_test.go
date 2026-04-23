@@ -103,4 +103,38 @@ func TestSentry_TeamMesh_Corruption(t *testing.T) {
 	worker.ingestAgentMemories(ctx)
 
 	t.Log("Successfully verified ML-Resilience: AutoDreamWorker gracefully handled degraded IO without panic.")
+
+	// Test .agent-lock/ corruption
+	lockDir := filepath.Join(tmpDir, ".agent-lock")
+	err = os.MkdirAll(lockDir, 0755)
+	if err != nil {
+		t.Fatalf("Failed to create lock dir: %v", err)
+	}
+
+	lockFile := filepath.Join(lockDir, "sentry_test.lock")
+	err = os.WriteFile(lockFile, []byte("locked"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create lock file: %v", err)
+	}
+
+	err = os.Chmod(lockFile, 0400)
+	if err != nil {
+		t.Fatalf("Failed to chmod lock file: %v", err)
+	}
+	defer os.Chmod(lockFile, 0644)
+
+	err = withSipRetry(ctx, func() error {
+		f, err := os.OpenFile(lockFile, os.O_WRONLY, 0666)
+		if err != nil {
+			return err
+		}
+		f.Close()
+		return nil
+	})
+
+	if err == nil {
+		t.Errorf("Expected error acquiring corrupted lock, but succeeded")
+	} else {
+		t.Logf("Successfully handled corrupted lock via withSipRetry: %v", err)
+	}
 }
