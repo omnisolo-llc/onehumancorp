@@ -1,0 +1,29 @@
+{
+  "title": "Financial Advisory",
+  "panels": [
+    {
+      "title": "Agent Cost Estimate (USD)",
+      "targets": [
+        {
+          "expr": "ohc_agent_cost_estimate_usd"
+        }
+      ]
+    },
+    {
+      "title": "Token Burn Rate Predicted (24h)",
+      "targets": [
+        {
+          "expr": "ohc_token_burn_rate_predicted_24h"
+        }
+      ]
+    },
+    {
+      "title": "USD Burn Rate Forecast",
+      "targets": [
+        {
+          "expr": "ohc_usd_burn_rate_forecast"
+        }
+      ]
+    }
+  ]
+}

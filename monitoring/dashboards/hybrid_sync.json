@@ -1,0 +1,42 @@
+{
+  "title": "Hybrid Synchronization",
+  "panels": [
+    {
+      "title": "Local to Cloud Mission Sync Count",
+      "targets": [
+        {
+          "expr": "ohc_local_to_cloud_mission_sync_count"
+        }
+      ]
+    },
+    {
+      "title": "AutoDream Records Synced Total",
+      "targets": [
+        {
+          "expr": "autodream_records_synced_total"
+        }
+      ]
+    },
+    {
+      "title": "Cloud vs Local Lock Contention",
+      "targets": [
+        {
+          "expr": "rate(ohc_postgres_lock_contention_total[5m])",
+          "legendFormat": "Cloud (Postgres)"
+        },
+        {
+          "expr": "rate(ohc_sqlite_lock_contention_total[5m])",
+          "legendFormat": "Local (SQLite)"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Retry Exhausted Total",
+      "targets": [
+        {
+          "expr": "rate(ohc_sqlite_retry_exhausted_total[5m])"
+        }
+      ]
+    }
+  ]
+}

@@ -99,6 +99,7 @@ var (
 	RateLimitExceededCount       metric.Int64Counter
 	syncDaemonBatchSize          metric.Int64Histogram
 	LocalToCloudMissionSyncCount metric.Int64Counter
+	LocalToCloudTransitionLatency metric.Float64Histogram
 
 	sqliteLockContentionCounter   metric.Int64Counter
 	sqliteRetryExhaustedCounter   metric.Int64Counter
@@ -588,6 +589,15 @@ func InitWithMeter(m mockableMeter) error {
 	agentApiCallsCounter, err = m.Int64Counter(
 		"ohc_agent_api_calls_total",
 		metric.WithDescription("Total API calls made by or for agents"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	LocalToCloudTransitionLatency, err = m.Float64Histogram(
+		"ohc_local_to_cloud_transition_latency_seconds",
+		metric.WithDescription("Latency of transition from local to cloud"),
+		metric.WithUnit("s"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1686,6 +1696,40 @@ func RecordSyncEscalation(ctx context.Context, count int64) {
 		return
 	}
 	SyncEscalationsCount.Add(ctx, count)
+}
+
+// RecordLocalToCloudTransitionLatency records the duration of a transition from local to cloud.
+func RecordLocalToCloudTransitionLatency(ctx context.Context, latencyMS float64) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"latency_ms": latencyMS,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "local_to_cloud_transition_latency", string(payloadBytes))
+	}
+	if LocalToCloudTransitionLatency == nil {
+		return
+	}
+	LocalToCloudTransitionLatency.Record(ctx, latencyMS/1000.0)
+}
+
+// RecordTokenBudgetAlert tracks budget alerts triggered for a given organization.
+func RecordTokenBudgetAlert(ctx context.Context, orgID string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"org_id": orgID,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "token_budget_alert", string(payloadBytes))
+	}
+	if TokenBudgetAlertTotal == nil {
+		return
+	}
+	TokenBudgetAlertTotal.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("org_id", orgID),
+	))
 }
 
 // RecordLocalToCloudMissionSync records a local-to-cloud mission synchronization.

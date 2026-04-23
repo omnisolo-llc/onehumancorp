@@ -1,0 +1,37 @@
+{
+  "title": "Swarm Health & Efficiency",
+  "panels": [
+    {
+      "title": "Swarm Task Queue Length",
+      "targets": [
+        {
+          "expr": "ohc_swarm_task_queue_length"
+        }
+      ]
+    },
+    {
+      "title": "Task Enqueued Total",
+      "targets": [
+        {
+          "expr": "rate(ohc_task_enqueued_total[5m])"
+        }
+      ]
+    },
+    {
+      "title": "Task Failed Total",
+      "targets": [
+        {
+          "expr": "rate(ohc_task_failed_total[5m])"
+        }
+      ]
+    },
+    {
+      "title": "Swarm Task Processing Latency",
+      "targets": [
+        {
+          "expr": "rate(ohc_swarm_task_processing_latency_ms_sum[5m]) / rate(ohc_swarm_task_processing_latency_ms_count[5m])"
+        }
+      ]
+    }
+  ]
+}

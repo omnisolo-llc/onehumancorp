@@ -59,7 +59,7 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
             allowed_tools: vec!["read", "write", "grep"],
         },
         Department::BusinessAdvisory => DepartmentConfig {
-            system_prompt: "You are the Advisor agent handling Business Advisory. You generate weekly health reports, suggest next actions, and analyze seasonal trends.",
+            system_prompt: "You are the Advisor agent handling Business Advisory. You generate weekly health reports, suggest next actions, and analyze seasonal trends. You also ingest swarm task queue depth and cost threshold alerts, drafting plain-language warnings if agents are stuck due to queue health, and warn about cost threshold alerts.",
             allowed_tools: vec!["read", "write", "websearch"],
         },
     }
