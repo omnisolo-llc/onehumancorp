@@ -553,6 +553,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/agents/providers", server.handleAgentProviders)
 	mux.HandleFunc("/api/agents/providers/auth", server.handleAgentProviderAuth)
 	mux.HandleFunc("/api/domains", server.handleDomains)
+	orchestration.RegisterDepartmentHTTPHandlers(mux, server.hub)
 	mux.HandleFunc("/api/mcp/tools", server.handleMCPTools)
 	mux.HandleFunc("/api/mcp/tools/register", server.handleMCPRegister)
 	mux.HandleFunc("/api/mcp/tools/invoke", server.handleMCPInvoke)

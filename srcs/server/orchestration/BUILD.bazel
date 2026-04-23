@@ -5,6 +5,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "orchestration",
     srcs = [
+        "departments.go",
+        "department_manager.go",
+        "department_api.go",
+        "department.go",
         "agent_context.go",
         "auth_interceptor.go",
         "autodream.go",

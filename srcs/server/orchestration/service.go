@@ -291,6 +291,7 @@ type Hub struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	taskManager    *TaskManager
+	DeptManager    *DepartmentManager
 }
 
 func (h *Hub) TaskManager() *TaskManager {
@@ -342,6 +343,7 @@ func newHub(repo HubRepository, taskRepo scheduler.TaskRepository) *Hub {
 		settingsStore: settings.NewStore(),
 		ctx:           ctx,
 		cancel:        cancel,
+		DeptManager:   NewDepartmentManager(),
 	}
 
 	// Use S3/Minio for blob storage.  The bucket name is read from the
@@ -2136,4 +2138,11 @@ func (h *Hub) ForkAgent(ctx context.Context, parentID string, directive string) 
 	h.Publish(directiveMsg)
 
 	return childID, nil
+}
+
+// DispatchDepartmentEvent routes a domain event to all registered departments.
+func (h *Hub) DispatchDepartmentEvent(ctx context.Context, event DepartmentEvent) {
+	if h.DeptManager != nil {
+		h.DeptManager.DispatchEvent(ctx, event)
+	}
 }
