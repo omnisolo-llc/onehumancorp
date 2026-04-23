@@ -1,0 +1,39 @@
+# This BUILD file gathers the browser binaries into the directory structure Playwright expects.
+# Playwright expects a directory containing:
+#  - chromium-1200/
+#  - firefox-1497/
+#  - ffmpeg-1011/
+
+# We use genrules to create this structure.
+
+genrule(
+    name = "browsers",
+    srcs = [
+        "@playwright_chromium//:files",
+        "@playwright_firefox//:files",
+        "@playwright_ffmpeg//:files",
+    ],
+    outs = ["ms-playwright"],
+    cmd = """
+        mkdir -p $(@D)/ms-playwright/chromium-1200
+        mkdir -p $(@D)/ms-playwright/firefox-1497
+        mkdir -p $(@D)/ms-playwright/ffmpeg-1011
+
+        # In Bzlmod, the path contains a plus + so it's not simply 'external/playwright_chromium'
+        # e.g., external/playwright+
+
+        # We can extract the external workspace directory from one of the source paths
+        CHROMIUM_DIR=$$(echo "$(SRCS)" | grep "playwright_chromium" | head -n 1 | awk -F '/playwright_chromium' '{print $$1"/playwright_chromium~"}')
+        FIREFOX_DIR=$$(echo "$(SRCS)" | grep "playwright_firefox" | head -n 1 | awk -F '/playwright_firefox' '{print $$1"/playwright_firefox~"}')
+        FFMPEG_DIR=$$(echo "$(SRCS)" | grep "playwright_ffmpeg" | head -n 1 | awk -F '/playwright_ffmpeg' '{print $$1"/playwright_ffmpeg~"}')
+
+        # Try wildcards first, then fallback
+        cp -RL external/*playwright_chromium*/* $(@D)/ms-playwright/chromium-1200/ || true
+        cp -RL external/*playwright_firefox*/* $(@D)/ms-playwright/firefox-1497/ || true
+        cp -RL external/*playwright_ffmpeg*/* $(@D)/ms-playwright/ffmpeg-1011/ || true
+
+        # Create a marker for the output directory
+        touch $@
+    """,
+    visibility = ["//visibility:public"],
+)
