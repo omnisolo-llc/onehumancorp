@@ -89,6 +89,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/help/article/:id',
+            builder: (context, state) => HelpArticleScreen(articleId: state.pathParameters['id'] ?? 'unknown'),
+          ),
+          GoRoute(
+            path: '/help/api-docs',
+            builder: (context, state) => const ApiDocsScreen(),
+          ),
+          GoRoute(
+            path: '/help/changelog',
+            builder: (context, state) => const ChangelogScreen(),
+          ),
           // Business setup requires authentication — moved inside the shell.
           GoRoute(
             path: '/business_setup',

@@ -11,7 +11,7 @@ class AiHelpChatWidget extends StatelessWidget {
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
-          builder: (context) => const _ChatBottomSheet(),
+          builder: (context) => const ChatBottomSheet(),
         );
       },
       icon: const Icon(Icons.help_outline),
@@ -20,8 +20,8 @@ class AiHelpChatWidget extends StatelessWidget {
   }
 }
 
-class _ChatBottomSheet extends StatelessWidget {
-  const _ChatBottomSheet();
+class ChatBottomSheet extends StatelessWidget {
+  const ChatBottomSheet();
 
   @override
   Widget build(BuildContext context) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 
 class HelpArticleScreen extends StatelessWidget {
   final String articleId;
@@ -48,6 +49,47 @@ class HelpArticleScreen extends StatelessWidget {
                 height: 1.5,
               ),
             ),
+
+            // Mocked Backend Metadata Fetch
+            FutureBuilder<String?>(
+              future: Future.value(articleId == 'getting-started' ? 'https://backend.example.com/videos/1.mp4' : null),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting || !snapshot.hasData || snapshot.data == null) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Video Tutorial',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    AspectRatio(
+                      aspectRatio: 9 / 16, // Mobile portrait-optimized player
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.play_circle_fill,
+                            color: Colors.white,
+                            size: 64,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
             const SizedBox(height: 32),
             const Text(
               'Need more help?',
@@ -60,7 +102,12 @@ class HelpArticleScreen extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () {
-                // Trigger AI help chat
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => const ChatBottomSheet(),
+                );
               },
               icon: const Icon(Icons.chat),
               label: const Text('Ask our AI Support Agent'),

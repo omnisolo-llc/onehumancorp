@@ -14,6 +14,7 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/interactive_walkthrough_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -28,7 +29,16 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(dashboardProvider);
-    return Scaffold(
+    final GlobalKey dashboardKey = GlobalKey();
+    return InteractiveWalkthrough(
+      steps: [
+        WalkthroughStep(
+          key: dashboardKey,
+          title: "Welcome to your Dashboard",
+          description: "This is where you can see how your business is doing at a glance.",
+        ),
+      ],
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         leading: const Padding(
@@ -688,6 +698,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
           ),
         ),
       ),
+    )
     );
   }
 }
