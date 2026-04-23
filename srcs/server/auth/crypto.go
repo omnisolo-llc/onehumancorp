@@ -4,9 +4,13 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 func getCryptoKey() []byte {
@@ -16,7 +20,33 @@ func getCryptoKey() []byte {
 	}
 	if key == "" {
 		if os.Getenv("OHC_STANDALONE") == "true" {
-			key = "standalone_ephemeral_key"
+			if os.Getenv("CI") != "true" && !strings.Contains(os.Args[0], "test") {
+				homeDir, err := os.UserHomeDir()
+				keyDir := ""
+				if err == nil {
+					keyDir = filepath.Join(homeDir, ".ohc")
+				} else {
+					keyDir = os.TempDir()
+				}
+				if err := os.MkdirAll(keyDir, 0700); err == nil {
+					keyFile := filepath.Join(keyDir, ".ohc_key")
+					if keyData, err := os.ReadFile(keyFile); err == nil {
+						key = string(keyData)
+					} else {
+						newKey := make([]byte, 32)
+						if _, err := rand.Read(newKey); err == nil {
+							key = hex.EncodeToString(newKey)
+							_ = os.WriteFile(keyFile, []byte(key), 0600)
+						} else {
+							key = "standalone_ephemeral_key"
+						}
+					}
+				} else {
+					key = "standalone_ephemeral_key"
+				}
+			} else {
+				key = "standalone_ephemeral_key"
+			}
 		} else {
 			key = "transient_memory_key"
 		}
