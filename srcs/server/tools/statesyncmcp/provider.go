@@ -110,7 +110,7 @@ func (p *DBStateSyncProvider) SyncUp(ctx context.Context, claims *auth.Claims) (
 		missions = append(missions, map[string]interface{}{
 			"id": id,
 			"status": status,
-			"payload": parsedPayload,
+			"payload": payload,
 		})
 		ids = append(ids, id)
 	}
@@ -124,9 +124,7 @@ func (p *DBStateSyncProvider) SyncUp(ctx context.Context, claims *auth.Claims) (
 	}
 
 	// Send to cloud endpoint
-	_, err = p.sendToCloud(ctx, "/api/v1/sync/up", http.MethodPost, map[string]interface{}{
-		"missions": missions,
-	}, claims)
+	_, err = p.sendToCloud(ctx, "/api/sync/missions", http.MethodPost, missions, claims)
 
 	if err != nil {
 		return nil, fmt.Errorf("sync up to cloud failed: %w", err)
@@ -149,7 +147,7 @@ func (p *DBStateSyncProvider) SyncDown(ctx context.Context, claims *auth.Claims)
 		return nil, fmt.Errorf("local database not configured or not running in standalone mode")
 	}
 
-	body, err := p.sendToCloud(ctx, "/api/v1/sync/down", http.MethodGet, nil, claims)
+	body, err := p.sendToCloud(ctx, "/api/sync/missions/down", http.MethodGet, nil, claims)
 	if err != nil {
 		return nil, fmt.Errorf("sync down from cloud failed: %w", err)
 	}
