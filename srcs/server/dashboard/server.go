@@ -643,7 +643,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 
 	// Standalone Cloud Sync Endpoints
-	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
+	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", api.HandleTelemetrySync))
 
 	// Teammate Mesh APIs
 
@@ -723,7 +723,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
 
-	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
+	return telemetry.Middleware(utils.GzipMiddleware(auth.Middleware(store)(mux)))
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching
@@ -746,9 +746,11 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
 	meetingRoomsQuery := "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = $1"
+	agentMissionsQuery := "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1"
 	if isStandalone {
 		// SQLite does not support ANY(array). We use json_each since SQLite provider falls back arrays to JSON arrays.
 		meetingRoomsQuery = "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON EXISTS (SELECT 1 FROM json_each(mr.participants) WHERE value = a.id) WHERE a.organization_id = $1"
+		agentMissionsQuery = "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = json_extract(am.payload, '$.agent_id') WHERE a.organization_id = $1"
 	}
 
 	syncRules := map[string]interface{}{
@@ -765,7 +767,7 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table":      "agent_missions",
-				"query":      "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1",
+				"query":      agentMissionsQuery,
 				"parameters": []interface{}{orgID},
 			},
 			{
@@ -1096,69 +1098,7 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
-func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
-	var payloads []struct {
-		MetricType string `json:"metric_type"`
-		Payload    string `json:"payload"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	ctx := r.Context()
-	for _, p := range payloads {
-		var data map[string]interface{}
-		if err := json.Unmarshal([]byte(p.Payload), &data); err != nil {
-			continue // Skip malformed payloads
-		}
-
-		switch p.MetricType {
-		case "token_usage":
-			agentID, _ := data["agent_id"].(string)
-			role, _ := data["role"].(string)
-			model, _ := data["model"].(string)
-			tokenType, _ := data["type"].(string)
-			var count int64
-			if c, ok := data["count"].(float64); ok {
-				count = int64(c)
-			}
-			telemetry.RecordTokenUsage(ctx, agentID, role, model, tokenType, count)
-		case "agent_api_call":
-			agentID, _ := data["agent_id"].(string)
-			role, _ := data["role"].(string)
-			api, _ := data["api"].(string)
-			telemetry.RecordAgentApiCall(ctx, agentID, role, api)
-		case "agent_api_error":
-			agentID, _ := data["agent_id"].(string)
-			role, _ := data["role"].(string)
-			api, _ := data["api"].(string)
-			telemetry.RecordAgentApiError(ctx, agentID, role, api)
-		case "human_interaction":
-			interactionType, _ := data["type"].(string)
-			telemetry.RecordHumanInteraction(ctx, interactionType)
-		case "meeting_event":
-			eventType, _ := data["type"].(string)
-			telemetry.RecordMeetingEvent(ctx, eventType)
-		case "swarm_task_completed":
-			missionID, _ := data["mission_id"].(string)
-			telemetry.RecordSwarmTaskCompleted(ctx, missionID)
-		default:
-			if telemetry.BufferMetricFunc != nil {
-				_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
-			}
-		}
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok"}`))
-}
 
 func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
