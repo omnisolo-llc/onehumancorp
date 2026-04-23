@@ -421,3 +421,11 @@ pkg_rpm(
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )
+
+flutter_test(
+    name = "cuj_help_center_e2e_test",
+    srcs = ["test/cuj_help_center_e2e_test.dart"],
+    embed = [":app_for_tests"],
+    test_files = ["test/cuj_help_center_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
