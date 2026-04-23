@@ -2,9 +2,6 @@
 
 # Title: Data Model Architecture
 
-**Priority**: P0
-**Estimated Scope**: Large
-
 ## Problem Statement
 The OneHumanCorp (OHC) platform aims to provide a radically simple, AI-assisted small business management system where anyone can launch a live business in under 10 minutes. A fundamental challenge is managing complex and varied business models (physical products, digital downloads, services, food & beverage pre-orders, and subscriptions) under a unified SaaS framework without exposing database intricacies to the end-user. We currently lack a consolidated Data Model Architecture that clearly defines core entities, their relationships, multi-tenant boundaries (RLS), and AI agent access patterns. Without this, development efforts risk creating fragmented, insecure, or inefficient data silos that hinder mobile-first performance and cross-department AI operations.
 
@@ -157,3 +154,10 @@ erDiagram
 - Enable PostgreSQL Row-Level Security (RLS) on all tenant-scoped tables to ensure data isolation.
 - Provide a unified query layer that correctly applies the active tenant context for both user-initiated API calls and background AI agent jobs.
 - Include unit/E2E tests verifying that a user from Tenant A cannot access data from Tenant B under any circumstances.
+
+
+## Priority
+P0
+
+## Estimated Scope
+Large
