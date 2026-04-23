@@ -51,7 +51,7 @@ go_library(
         "migrations/027_consolidated_memory.sql",
         "migrations/027_state_machine_transitions.sql",
         "migrations/028_sub_agent_jobs.sql",
-        "migrations/028_sub_agent_queue.sql",
+
         "migrations/029_autodream_memories.sql",
         "migrations/030_kairos_shared_tasks.sql",
         "migrations/040_kairos_mesh_and_autodream.sql",
@@ -60,7 +60,7 @@ go_library(
         "migrations/032_hybrid_rag_sync.sql",
         "migrations/032_telemetry_mesh.sql",
         "migrations/033_kairos_shared_tasks.sql", # issue_id: 3980
-        "migrations/034_kairos_sub_agent_queue.sql", # issue_id: 4240
+         # issue_id: 4240
         "migrations/046_autodream_pgvector.sql",
         "migrations/047_competitor_metrics.sql",
         "migrations/049_mesh_bridges.sql",
@@ -94,6 +94,7 @@ go_library(
         "migrations/20260427000000_autodream_memories_decomposition.go",
                         "migrations/20260428000000_kairos_shared_tasks_state_machine_pg.sql",
         "migrations/20260428000000_kairos_shared_tasks_state_machine_sqlite.sql",
+        "migrations/20260429000000_sub_agent_queue.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],

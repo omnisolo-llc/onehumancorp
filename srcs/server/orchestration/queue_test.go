@@ -9,113 +9,139 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
 
-func TestSQLiteTaskQueue(t *testing.T) {
+func TestTaskQueue_EnqueueDequeue(t *testing.T) {
 	os.Setenv("OHC_MULTITENANT", "false")
 	defer os.Unsetenv("OHC_MULTITENANT")
 
 	prov := db.NewTestProvider(t)
 	defer prov.Close()
 
-	q := NewTaskQueue(prov, nil)
+	// Create table for sqlite
+	_, err := prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS sub_agent_queue (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			parent_task_id TEXT NOT NULL,
+			payload TEXT,
+			status TEXT NOT NULL DEFAULT 'QUEUED',
+			worker_id TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create schema: %v", err)
+	}
+
+	q := NewTaskQueue(prov)
 
 	ctx := context.Background()
 
+	task := &Task{
+		OrganizationID: "org-1",
+		ParentTaskID:   "parent-1",
+		Payload:        map[string]interface{}{"data": "value"},
+	}
+
 	// Enqueue
-	id, err := q.Enqueue(ctx, "test_queue", map[string]interface{}{"data": "value"})
+	err = q.Enqueue(ctx, task)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if id == "" {
+	if task.ID == "" {
 		t.Fatal("expected non-empty id")
 	}
 
-	// Poll
-	task, err := q.Poll(ctx, "test_queue")
+	// Dequeue
+	dequeuedTask, err := q.Dequeue(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if task == nil {
+	if dequeuedTask == nil {
 		t.Fatal("expected task")
 	}
-	if task.ID != id {
-		t.Errorf("expected id %s, got %s", id, task.ID)
+	if dequeuedTask.ID != task.ID {
+		t.Errorf("expected id %s, got %s", task.ID, dequeuedTask.ID)
 	}
-	if task.Payload["data"] != "value" {
-		t.Errorf("expected value, got %v", task.Payload["data"])
+	if dequeuedTask.Payload["data"] != "value" {
+		t.Errorf("expected value, got %v", dequeuedTask.Payload["data"])
+	}
+	if dequeuedTask.WorkerID != "worker-1" {
+		t.Errorf("expected worker-1, got %v", dequeuedTask.WorkerID)
+	}
+	if dequeuedTask.Status != "RUNNING" {
+		t.Errorf("expected RUNNING, got %v", dequeuedTask.Status)
 	}
 
-	// Complete
-	err = q.Complete(ctx, "test_queue", id)
+	// Dequeue empty
+	emptyTask, err := q.Dequeue(ctx, "worker-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if emptyTask != nil {
+		t.Fatal("expected nil task")
+	}
+}
+
+func TestTaskQueue_Acknowledge(t *testing.T) {
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
+
+	prov := db.NewTestProvider(t)
+	defer prov.Close()
+
+	// Create table for sqlite
+	_, err := prov.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS sub_agent_queue (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			parent_task_id TEXT NOT NULL,
+			payload TEXT,
+			status TEXT NOT NULL DEFAULT 'QUEUED',
+			worker_id TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create schema: %v", err)
+	}
+
+	q := NewTaskQueue(prov)
+
+	ctx := context.Background()
+
+	task := &Task{
+		OrganizationID: "org-1",
+		ParentTaskID:   "parent-1",
+		Payload:        map[string]interface{}{"data": "value"},
+	}
+
+	// Enqueue
+	err = q.Enqueue(ctx, task)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Dequeue
+	dequeuedTask, err := q.Dequeue(ctx, "worker-1")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	// Acknowledge
+	err = q.Acknowledge(ctx, dequeuedTask.ID)
 	if err != nil {
 		t.Fatalf("expected no error on complete, got %v", err)
 	}
 
-	// Poll again (should be empty)
-	task2, err := q.Poll(ctx, "test_queue")
+	// Verify status in DB
+	var status string
+	err = prov.QueryRow(ctx, "SELECT status FROM sub_agent_queue WHERE id = $1", dequeuedTask.ID).Scan(&status)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if task2 != nil {
-		t.Fatal("expected nil task, got", task2)
-	}
-}
-
-func TestSQLiteTaskQueue_Delayed(t *testing.T) {
-	os.Setenv("OHC_MULTITENANT", "false")
-	defer os.Unsetenv("OHC_MULTITENANT")
-
-	prov := db.NewTestProvider(t)
-	defer prov.Close()
-
-	q := NewTaskQueue(prov, nil)
-
-	ctx := context.Background()
-
-	id, err := q.EnqueueDelayed(ctx, "test_queue", map[string]interface{}{"data": "value"}, 100*time.Millisecond)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	// Poll immediately (should be empty)
-	task, err := q.Poll(ctx, "test_queue")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if task != nil {
-		t.Fatal("expected nil task immediately")
-	}
-
-	// Wait and poll again
-	time.Sleep(150 * time.Millisecond)
-	task, err = q.Poll(ctx, "test_queue")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if task == nil {
-		t.Fatal("expected task after delay")
-	}
-	if task.ID != id {
-		t.Errorf("expected id %s, got %s", id, task.ID)
-	}
-}
-
-
-func TestJobQueue_MapHighLevelTask(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
-	provider, cleanup := db.SetupTestDB(t)
-	defer cleanup()
-
-	jq := &JobQueue{DB: provider}
-	ctx := context.Background()
-	task := &QueuedTask{
-		Payload: map[string]interface{}{
-			"title": "test task",
-			"organization_id": "test-org",
-		},
-	}
-
-	err := jq.MapHighLevelTask(ctx, task)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+	if status != "COMPLETED" {
+		t.Fatalf("expected COMPLETED, got %v", status)
 	}
 }
