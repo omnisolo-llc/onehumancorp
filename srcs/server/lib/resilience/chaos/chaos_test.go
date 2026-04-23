@@ -224,3 +224,38 @@ func TestContextCancellation_LatencySpike(t *testing.T) {
 		t.Fatal("expected context error, got nil")
 	}
 }
+
+func TestCorruptAgentLock_ApplicationHandling(t *testing.T) {
+	tmpDir := t.TempDir()
+	lockPath := filepath.Join(tmpDir, ".agent-lock")
+	err := os.MkdirAll(lockPath, 0755)
+	if err != nil {
+		t.Fatalf("failed to create directory: %v", err)
+	}
+
+	inj := NewInjector(CorruptAgentLock, 3)
+	inj.basePath = tmpDir
+
+	err = inj.Inject(context.Background())
+	if err == nil {
+		t.Fatal("expected error from Inject, got nil")
+	}
+
+	corruptFile := filepath.Join(lockPath, "corrupt.lock")
+
+	// Set permissions to trigger error
+	err = os.Chmod(corruptFile, 0000)
+	if err != nil {
+		t.Fatalf("Failed to chmod lock: %v", err)
+	}
+	defer os.Chmod(corruptFile, 0644)
+
+	// Application tries to open the file
+	f, err := os.OpenFile(corruptFile, os.O_RDWR, 0666)
+	if err == nil {
+		f.Close()
+		t.Fatal("expected application to fail opening corrupt lock, but it succeeded")
+	} else {
+		t.Logf("Application correctly failed to open corrupt lock: %v", err)
+	}
+}

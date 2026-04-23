@@ -18,7 +18,7 @@ import 'package:ohc_app/screens/logs_screen.dart';
 import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/service_screen.dart';
-import 'package:ohc_app/screens/wizard_screen.dart';
+
 import 'package:ohc_app/screens/diagnostics_screen.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
@@ -151,7 +151,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/wizard',
-            builder: (context, state) => const SetupWizardScreen(),
+            builder: (context, state) => const BusinessSetupWizardScreen(),
           ),
           GoRoute(
             path: '/handoffs',

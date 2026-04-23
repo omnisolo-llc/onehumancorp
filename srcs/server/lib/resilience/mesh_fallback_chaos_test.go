@@ -128,3 +128,41 @@ func TestMeshFallback_ZeroJitter(t *testing.T) {
 		t.Error("Expected error but got nil")
 	}
 }
+
+func TestMeshFallback_CorruptLock(t *testing.T) {
+	tmpDir := t.TempDir()
+	lockDir := filepath.Join(tmpDir, ".agent-lock")
+	if err := os.MkdirAll(lockDir, 0755); err != nil {
+		t.Fatalf("Failed to create lock dir: %v", err)
+	}
+	lockFile := filepath.Join(lockDir, "mesh.lock")
+
+	err := os.WriteFile(lockFile, []byte("corrupt"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to write corrupt lock: %v", err)
+	}
+
+	// Make the lock read-only to simulate a permanent corruption that cannot be acquired or removed
+	err = os.Chmod(lockFile, 0400)
+	if err != nil {
+		t.Fatalf("Failed to chmod lock: %v", err)
+	}
+	defer os.Chmod(lockFile, 0644)
+
+	ctx := context.Background()
+	// Test if it returns error gracefully without spinning indefinitely
+	err = WithRetry(ctx, 3, 10*time.Millisecond, func(c context.Context) error {
+		f2, err := os.OpenFile(lockFile, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+		if err != nil {
+			return err
+		}
+		f2.Close()
+		return nil
+	})
+
+	if err == nil {
+		t.Error("Expected failure due to corrupted lock, but succeeded")
+	} else {
+		t.Logf("Successfully returned error for corrupt lock: %v", err)
+	}
+}
