@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"io"
 	"os/exec"
 )
@@ -87,16 +88,17 @@ func (r *BwrapRunner) ExecuteWithPolicy(ctx context.Context, command string, pol
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
-            // When bwrap policy fails or bwrap itself fails to set up the sandbox
-            // we should count that as a violation. If it's just bash failing, we shouldn't.
-            // Bwrap often exits with 1 if it fails to set up, or passes through the exit code.
-            // We'll treat exit code 1 as a potential setup violation since we can't easily distinguish
-            // unless we parse stderr.
-            if exitCode == 1 && bytes.Contains(stderr.Bytes(), []byte("bwrap:")) {
-                violationCount.Add(ctx, 1)
-            }
+			// When bwrap policy fails or bwrap itself fails to set up the sandbox
+			// we should count that as a violation. If it's just bash failing, we shouldn't.
+			// Bwrap often exits with 1 if it fails to set up, or passes through the exit code.
+			// We'll treat exit code 1 as a potential setup violation since we can't easily distinguish
+			// unless we parse stderr.
+			if exitCode == 1 && bytes.Contains(stderr.Bytes(), []byte("bwrap:")) {
+				violationCount.Add(ctx, 1)
+				telemetry.RecordSandboxViolation(ctx, "bwrap_policy", "system", command)
+			}
 		} else {
-            // Infrastructure error launching bwrap process
+			// Infrastructure error launching bwrap process
 			return Result{}, fmt.Errorf("failed to run bwrap: %w", err)
 		}
 	}
@@ -139,9 +141,10 @@ func (r *BwrapRunner) ExecuteStream(ctx context.Context, command string, policy 
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			exitCode = exitError.ExitCode()
-            if exitCode == 1 && bytes.Contains(errBuf.Bytes(), []byte("bwrap:")) {
-                violationCount.Add(ctx, 1)
-            }
+			if exitCode == 1 && bytes.Contains(errBuf.Bytes(), []byte("bwrap:")) {
+				violationCount.Add(ctx, 1)
+				telemetry.RecordSandboxViolation(ctx, "bwrap_policy", "system", command)
+			}
 		} else {
 			return Result{}, fmt.Errorf("failed to run bwrap: %w", err)
 		}

@@ -3,6 +3,7 @@ package harness
 import (
 	"context"
 	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"sync"
 
 	sitter "github.com/smacker/go-tree-sitter"
@@ -52,6 +53,7 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 
 	if err := v.walkAndValidate(tree.RootNode(), command); err != nil {
 		violationCount.Add(ctx, 1)
+		telemetry.RecordSandboxViolation(ctx, "ast_validation", "system", command)
 		return err
 	}
 

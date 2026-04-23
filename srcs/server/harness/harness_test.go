@@ -1,15 +1,12 @@
 package harness
 
 import (
-	"net/url"
-)
-
-import (
 	"context"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+	"net/url"
 )
 
 func TestHarnessProxy(t *testing.T) {
@@ -20,7 +17,6 @@ func TestHarnessProxy(t *testing.T) {
 	h := NewHarness(config)
 	defer h.Stop()
 
-	// Try to make a request through the proxy to a blocked domain
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy: func(*http.Request) (*url.URL, error) {
@@ -33,7 +29,6 @@ func TestHarnessProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Manually construct the proxy request
 	req.Host = "blocked.com"
 	req.URL.Host = "blocked.com"
 	req.URL.Scheme = "http"
@@ -55,11 +50,6 @@ func TestHarnessProxy(t *testing.T) {
 }
 
 func TestHarnessRun(t *testing.T) {
-    // We can't really test metrics properly without a full exporter setup
-    // But we can check that it doesn't crash when executed
-
-    // Basic test that args are built correctly.
-    // Full run requires bwrap which may not be available in test environment.
     config := &SandboxConfig{
         ReadPaths: []string{"/tmp"},
         WritePaths: []string{"/tmp/workspace"},
@@ -68,8 +58,7 @@ func TestHarnessRun(t *testing.T) {
     h := NewHarness(config)
     defer h.Stop()
 
-    // Just verify the method doesn't panic
-    _, _ = h.Run(context.Background(), "echo", []string{"hello"})
+    res, err := h.Run(context.Background(), "echo", []string{"hello"})
 
     if err == nil && res.ExitCode != 0 {
         // Just sanity check
