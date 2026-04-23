@@ -1,14 +1,4 @@
-// CUJ: Integrations & MCP Tools
-//
-// Covers the integrations critical user journey:
-//   1. Screen renders with section headers
-//   2. Connect button is tappable for Telegram
-//   3. Connect button is tappable for Discord
-//   4. MCP tools section renders when tools returned
-//   5. Empty MCP tools section shows appropriate message
-
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,10 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 
-// ── Mocks & Fakes ─────────────────────────────────────────────────────────
-
 class MockHttpClient extends Mock implements http.Client {}
-
 class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, ApiService api) {
@@ -36,10 +23,6 @@ Widget _wrapScreen(Widget screen, ApiService api) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Tests
-// ═══════════════════════════════════════════════════════════════════════════
-
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeUri());
@@ -48,110 +31,70 @@ void main() {
   group('CUJ: Integrations & MCP Tools', () {
     testWidgets('screen renders External Channels section', (tester) async {
       final mockClient = MockHttpClient();
-      when(
-        () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
-      final api = ApiService(
-        baseUrl: 'http://localhost',
-        token: 'tok',
-        client: mockClient,
-      );
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
 
+      final api = ApiService(baseUrl: 'http://localhost', token: 'tok', client: mockClient);
       await tester.pumpWidget(_wrapScreen(const IntegrationsScreen(), api));
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(milliseconds: 100)); await tester.pump(const Duration(seconds: 1));
 
-      expect(find.textContaining('External Channels'), findsOneWidget);
+      expect(find.text('External Channels'), findsOneWidget);
     });
 
     testWidgets('Telegram integration card is displayed', (tester) async {
       final mockClient = MockHttpClient();
-      when(
-        () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
-      final api = ApiService(
-        baseUrl: 'http://localhost',
-        token: 'tok',
-        client: mockClient,
-      );
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
 
+      final api = ApiService(baseUrl: 'http://localhost', token: 'tok', client: mockClient);
       await tester.pumpWidget(_wrapScreen(const IntegrationsScreen(), api));
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(milliseconds: 100)); await tester.pump(const Duration(seconds: 1));
 
-      expect(find.textContaining('Telegram'), findsOneWidget);
+      expect(find.text('Telegram'), findsOneWidget);
     });
 
     testWidgets('Discord integration card is displayed', (tester) async {
       final mockClient = MockHttpClient();
-      when(
-        () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
-      final api = ApiService(
-        baseUrl: 'http://localhost',
-        token: 'tok',
-        client: mockClient,
-      );
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
 
+      final api = ApiService(baseUrl: 'http://localhost', token: 'tok', client: mockClient);
       await tester.pumpWidget(_wrapScreen(const IntegrationsScreen(), api));
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(milliseconds: 100)); await tester.pump(const Duration(seconds: 1));
 
-      expect(find.textContaining('Discord'), findsOneWidget);
+      expect(find.text('Discord'), findsOneWidget);
     });
 
     testWidgets('Connect button opens dialog when tapped', (tester) async {
       final mockClient = MockHttpClient();
-      when(
-        () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
-      final api = ApiService(
-        baseUrl: 'http://localhost',
-        token: 'tok',
-        client: mockClient,
-      );
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
 
+      final api = ApiService(baseUrl: 'http://localhost', token: 'tok', client: mockClient);
       await tester.pumpWidget(_wrapScreen(const IntegrationsScreen(), api));
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(milliseconds: 100)); await tester.pump(const Duration(seconds: 1));
 
-      final connectBtn = find.textContaining('Connect');
-      if (connectBtn.evaluate().isNotEmpty) {
-        await tester.tap(connectBtn.first);
-        await tester.pumpAndSettle();
-        // A connection dialog should appear
-        expect(find.byType(AlertDialog), findsOneWidget);
-      }
-      expect(find.byType(Scaffold), findsOneWidget);
+      await tester.tap(find.text('Configure').first);
+      await tester.pumpAndSettle(const Duration(milliseconds: 100)); await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(AlertDialog), findsOneWidget);
     });
 
     testWidgets('MCP tools section renders when tools are available', (tester) async {
       final mockClient = MockHttpClient();
-      when(
-        () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(
-          jsonEncode([
-            {'id': 't1', 'name': 'GitHub', 'description': 'GitHub integration', 'actions': []},
-          ]),
-          200,
-        ),
-      );
-      final api = ApiService(
-        baseUrl: 'http://localhost',
-        token: 'tok',
-        client: mockClient,
-      );
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response(
+            jsonEncode([
+              {'name': 'TestTool', 'description': 'A dummy tool for testing'}
+            ]),
+            200,
+          ));
 
+      final api = ApiService(baseUrl: 'http://localhost', token: 'tok', client: mockClient);
       await tester.pumpWidget(_wrapScreen(const IntegrationsScreen(), api));
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(milliseconds: 100)); await tester.pump(const Duration(seconds: 1));
 
-      // MCP Tools section or tools name should be visible
-      expect(find.byType(Scaffold), findsOneWidget);
+      expect(find.text('TestTool'), findsOneWidget);
     });
   });
 }
