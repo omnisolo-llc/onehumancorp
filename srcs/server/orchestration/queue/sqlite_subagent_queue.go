@@ -28,7 +28,7 @@ func (q *SQLiteSubAgentTaskQueue) Enqueue(ctx context.Context, payload *SubAgent
 	return err
 }
 
-func (q *SQLiteSubAgentTaskQueue) Process(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error) {
+func (q *SQLiteSubAgentTaskQueue) Acquire(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error) {
 	for {
 		query := "SELECT job_id, payload FROM sub_agent_tasks WHERE status = 'QUEUED' AND queue_name = $1 ORDER BY created_at ASC LIMIT 1"
 		var jobID, payloadStr string

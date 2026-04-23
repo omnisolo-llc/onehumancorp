@@ -93,7 +93,7 @@ func (q *RedisTaskQueue) recoverStaleJobs(ctx context.Context, now int64) {
 	}
 }
 
-func (q *RedisTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
+func (q *RedisTaskQueue) Acquire(ctx context.Context, roles []string) (*Job, error) {
 	now := time.Now().UnixMilli()
 
 	q.recoverStaleJobs(ctx, now)

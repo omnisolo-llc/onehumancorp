@@ -29,7 +29,7 @@ func (q *RedisSubAgentTaskQueue) Enqueue(ctx context.Context, payload *SubAgentT
 	return q.client.Do(ctx, cmd).Error()
 }
 
-func (q *RedisSubAgentTaskQueue) Process(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error) {
+func (q *RedisSubAgentTaskQueue) Acquire(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error) {
 	key := fmt.Sprintf("%s:%s", q.prefix, queueName)
 	cmd := q.client.B().Brpop().Key(key).Timeout(0).Build()
 	res, err := q.client.Do(ctx, cmd).AsStrSlice()

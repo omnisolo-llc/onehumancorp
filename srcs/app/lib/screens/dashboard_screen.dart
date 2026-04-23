@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -35,7 +36,8 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
-      body: snapshot.when(
+            floatingActionButton: const AiHelpChatWidget(),
+body: snapshot.when(
         loading:
             () => Center(
               child: CircularProgressIndicator(
@@ -44,7 +46,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
         error:
             (e, _) => Center(
-              child: Text(
+              child: SelectableText(
                 'Error: $e',
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
@@ -142,34 +144,34 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Active Agents',
-              value: data.agents.where((a) => a.isRunning).length.toString(),
-              icon: Icons.smart_toy,
+              label: 'Today\'s Sales',
+              value: '\$0.00',
+              icon: Icons.attach_money,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Dashboard Updates',
+              label: 'New Orders',
               value: data.statuses.length.toString(),
-              icon: Icons.pending_actions,
+              icon: Icons.shopping_bag,
               color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
-              label: 'Open Meetings',
+              label: 'Pending Appointments',
               value: data.meetings.length.toString(),
-              icon: Icons.video_call,
+              icon: Icons.calendar_today,
               color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
-              label: 'Total Org Members',
-              value: data.organization.members.length.toString(),
-              icon: Icons.people,
+              label: 'Active AI Helpers',
+              value: data.agents.where((a) => a.isRunning).length.toString(),
+              icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primaryContainer,
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ],
         ),
         const SizedBox(height: 32),
-        _SectionTitle('System Observability'),
+        _SectionTitle('System Status'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -186,31 +188,15 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         SizedBox(
           height: 350,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: BackdropFilter(
-              filter: ImageFilter.compose(
-                outer: const ColorFilter.matrix(<double>[
-                  1.787, -0.715, -0.072, 0, 0,
-                  -0.213, 1.285, -0.072, 0, 0,
-                  -0.213, -0.715, 1.928, 0, 0,
-                  0, 0, 0, 1, 0,
-                ]),
-                inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color.fromRGBO(255, 255, 255, 0.03),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                ),
-                child: Column(
+          child: GlassCard(
+            padding: EdgeInsets.zero,
+            child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: Text(
-                        'Proactive Task Stream',
+                        'Tasks in Progress',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -222,8 +208,6 @@ class _DashboardContent extends StatelessWidget {
                     const Expanded(child: TaskListView()),
                   ],
                 ),
-              ),
-            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -234,7 +218,7 @@ class _DashboardContent extends StatelessWidget {
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
         Text(
-          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
+          'Manage your AI team. Hire or fire agents to help run your business.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontFamily: 'Inter',
@@ -272,35 +256,12 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'System Observability Panel',
+      label: 'System Overview Panel',
       child: Tooltip(
         message: 'View System Health & Metrics',
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.compose(
-              outer: ColorFilter.matrix(const <double>[
-                1.168, -0.153, -0.015, 0, 0,
-                -0.046, 1.061, -0.015, 0, 0,
-                -0.046, -0.152, 1.198, 0, 0,
-                0, 0, 0, 1, 0,
-              ]),
-              inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color.fromRGBO(255, 255, 255, 0.03),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Material(
+        child: GlassCard(
+            padding: EdgeInsets.zero,
+            child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
@@ -327,7 +288,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'Full-Spectrum Telemetry',
+                              'System Overview',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -345,10 +306,10 @@ class _ObservabilityWidget extends StatelessWidget {
                           runSpacing: 16.0,
                           alignment: WrapAlignment.spaceAround,
                           children: [
-                            _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
+                            _Metric(label: 'System Health', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
+                            _Metric(label: 'Active Tasks', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
+                            _Metric(label: 'Speed (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'Total AI Agents', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
                       ],
@@ -356,9 +317,7 @@ class _ObservabilityWidget extends StatelessWidget {
                   ),
                 ),
               ),
-            ),
           ),
-        ),
       ),
     );
   }
@@ -653,11 +612,9 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Optional delay for staggered entrance animation if needed
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
+    if (mounted) {
+      _controller.forward();
+    }
   }
 
   @override

@@ -14,26 +14,45 @@ _SHARED_SRCS = [
 
 _COMMON_DEPS = [
     "@com_github_playwright_community_playwright_go//:playwright-go",
+    "@com_github_stretchr_testify//assert",
+    "@com_github_stretchr_testify//require",
 ]
 
 _COMMON_DATA = [
     "//srcs/server:ohc",
+    "//bazel/playwright:browsers",
 ]
 
 _COMMON_ENV = {
     # Skip playwright host-requirements validation so tests are hermetic and
     # pass even when the host is missing optional system libraries (CI containers).
     "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "1",
+    "PLAYWRIGHT_BROWSERS_PATH": "bazel/playwright/ms-playwright",
+    "PLAYWRIGHT_SKIP_INSTALL": "1",
 }
 
 _COMMON_TAGS = [
-    "requires-network",
+    "requires-kvm",
 ]
 
 # ── Auth CUJ ──────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_auth_test",
     srcs = _SHARED_SRCS + ["auth_login_test.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS,
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)
+
+go_test(
+    name = "e2e_hybrid_sync_test",
+    srcs = _SHARED_SRCS + [
+        "hybrid_sync_e2e_test.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
     deps = _COMMON_DEPS,
@@ -226,6 +245,7 @@ test_suite(
         ":e2e_budget_test",
         ":e2e_business_test",
         ":e2e_settings_test",
+        ":e2e_hybrid_sync_test",
         ":e2e_wizard_test",
         ":e2e_model_provider_test",
         ":e2e_admin_test",
