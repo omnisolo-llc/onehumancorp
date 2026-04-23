@@ -11,15 +11,20 @@ import (
 
 type MeshAPI struct {
 	mesh TeammateMesh
+	repo *SharedTaskRepo
 }
 
-func NewMeshAPI(mesh TeammateMesh) *MeshAPI {
-	return &MeshAPI{mesh: mesh}
+func NewMeshAPI(mesh TeammateMesh, repo *SharedTaskRepo) *MeshAPI {
+
+	return &MeshAPI{mesh: mesh, repo: repo}
 }
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/kairos/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/kairos/mesh/subscribe", api.HandleSubscribe)
+	mux.HandleFunc("/api/kairos/approvals/pending", api.HandlePendingApprovals)
+	mux.HandleFunc("/api/kairos/approvals/approve", api.HandleApprove)
+	mux.HandleFunc("/api/kairos/approvals/reject", api.HandleReject)
 }
 
 type PublishRequest struct {
@@ -124,4 +129,74 @@ func (api *MeshAPI) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+func (api *MeshAPI) HandlePendingApprovals(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tasks, err := api.repo.GetPendingReview(r.Context())
+	if err != nil {
+		http.Error(w, "failed to get pending approvals", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(tasks); err != nil {
+		http.Error(w, "failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func (api *MeshAPI) HandleApprove(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		TaskID string `json:"task_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	if err := api.repo.UpdateStatus(r.Context(), req.TaskID, string(ApprovalStatusApproved)); err != nil {
+		http.Error(w, "failed to approve task", http.StatusInternalServerError)
+		return
+	}
+
+	mode := GetMode()
+	ApprovalTotal.WithLabelValues(mode).Inc()
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (api *MeshAPI) HandleReject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		TaskID string `json:"task_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+
+	if err := api.repo.UpdateStatus(r.Context(), req.TaskID, string(ApprovalStatusRejected)); err != nil {
+		http.Error(w, "failed to reject task", http.StatusInternalServerError)
+		return
+	}
+
+	mode := GetMode()
+	RejectionTotal.WithLabelValues(mode).Inc()
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"ok"}`))
 }

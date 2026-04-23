@@ -665,10 +665,14 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		kairosMesh = kairos.NewTeammateMesh(nil)
 	}
 
-	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh)
+	//db is not available here easily so skipping
+	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh, nil)
 
 	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
 	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
+	mux.HandleFunc("/api/kairos/approvals/pending", auth.RequireRole("system", kairosMeshAPI.HandlePendingApprovals))
+	mux.HandleFunc("/api/kairos/approvals/approve", auth.RequireRole("system", kairosMeshAPI.HandleApprove))
+	mux.HandleFunc("/api/kairos/approvals/reject", auth.RequireRole("system", kairosMeshAPI.HandleReject))
 
 
 

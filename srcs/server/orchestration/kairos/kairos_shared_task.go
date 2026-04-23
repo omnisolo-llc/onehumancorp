@@ -62,3 +62,66 @@ func (r *SharedTaskRepo) Get(ctx context.Context, id string) (*SharedTask, error
     }
     return &task, nil
 }
+
+// ActionRisk defines the risk level of an agent action.
+type ActionRisk string
+
+const (
+	ActionRiskLow  ActionRisk = "Low"
+	ActionRiskHigh ActionRisk = "High"
+)
+
+// ApprovalStatus represents the human-in-the-loop review state.
+type ApprovalStatus string
+
+const (
+	ApprovalStatusPending  ApprovalStatus = "Pending"
+	ApprovalStatusApproved ApprovalStatus = "Approved"
+	ApprovalStatusRejected ApprovalStatus = "Rejected"
+)
+
+// AgentTaskPayload extends the SharedTask payload for high-risk actions.
+type AgentTaskPayload struct {
+	ActionRisk      ActionRisk      `json:"action_risk,omitempty"`
+	ProposedContent string          `json:"proposed_content,omitempty"`
+	ApprovalStatus  ApprovalStatus  `json:"approval_status,omitempty"`
+}
+
+func (r *SharedTaskRepo) UpdateStatus(ctx context.Context, id string, status string) error {
+	query := `UPDATE shared_tasks SET status = $1 WHERE id = $2`
+	_, err := r.provider.Exec(ctx, query, status, id)
+	return err
+}
+
+func (r *SharedTaskRepo) GetPendingReview(ctx context.Context) ([]*SharedTask, error) {
+	query := `SELECT id, agent_id, status, payload, created_at FROM shared_tasks WHERE status = 'Pending'`
+	rows, err := r.provider.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	for rows.Next() {
+		var task SharedTask
+		var payloadStr string
+		var createdAt string
+		if r.provider.IsSQLite() {
+			if err := rows.Scan(&task.ID, &task.AgentID, &task.Status, &payloadStr, &createdAt); err != nil {
+				return nil, err
+			}
+			task.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		} else {
+			var t time.Time
+			if err := rows.Scan(&task.ID, &task.AgentID, &task.Status, &payloadStr, &t); err != nil {
+				return nil, err
+			}
+			task.CreatedAt = t
+		}
+		if payloadStr != "" {
+			task.Payload = json.RawMessage(payloadStr)
+		}
+		tasks = append(tasks, &task)
+	}
+	return tasks, nil
+}

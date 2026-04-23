@@ -29,6 +29,22 @@ var (
 	)
 
 	// TaskQueueDepth tracks the current depth of the Sub-Agent task queue.
+	ApprovalTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ohc_kairos_approval_total",
+			Help: "Total number of approved agent actions.",
+		},
+		[]string{"mode"},
+	)
+
+	RejectionTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "ohc_kairos_rejection_total",
+			Help: "Total number of rejected agent actions.",
+		},
+		[]string{"mode"},
+	)
+
 	TaskQueueDepth = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "ohc_agent_task_queue_depth",
@@ -42,6 +58,8 @@ func init() {
 	prometheus.MustRegister(TransitionsTotal)
 	prometheus.MustRegister(TransitionDuration)
 	prometheus.MustRegister(TaskQueueDepth)
+	prometheus.MustRegister(ApprovalTotal)
+	prometheus.MustRegister(RejectionTotal)
 }
 
 // GetMode returns the current execution mode of the OHC Hybrid OS.
