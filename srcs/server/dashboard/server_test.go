@@ -4131,3 +4131,38 @@ func TestHandleSyncRAG(t *testing.T) {
 		t.Errorf("Expected context to contain 'test sensitive context', got '%s'", memories[0].Context)
 	}
 }
+
+func TestHandleStream(t *testing.T) {
+	_, server, token := newTestServer(t)
+
+	req, _ := http.NewRequest("GET", server.URL+"/api/v1/stream", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	// Set a reasonable timeout so we have time to read the first flush
+	ctx, cancel := context.WithTimeout(req.Context(), 2*time.Second)
+	defer cancel()
+	req = req.WithContext(ctx)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("failed to make request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if contentType := resp.Header.Get("Content-Type"); contentType != "text/event-stream" {
+		t.Errorf("expected Content-Type text/event-stream, got %s", contentType)
+	}
+
+	buf := make([]byte, 256)
+	n, err := resp.Body.Read(buf)
+	if err != nil && err != io.EOF {
+		t.Fatalf("failed to read from stream: %v", err)
+	}
+	cancel() // terminate stream
+
+	body := string(buf[:n])
+	if !strings.Contains(body, "heartbeat") && !strings.Contains(body, "event") {
+		t.Errorf("expected body to contain heartbeat or event, got %s", body)
+	}
+}
