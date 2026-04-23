@@ -65,7 +65,18 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 					"HTTP_PROXY": "http://127.0.0.1:8080",
 					"HTTPS_PROXY": "http://127.0.0.1:8080",
 				},
+				// Extract tier from payload or set default. Harness gateway routes based on this.
+				Tier: "free", // Defaulting to free (ServerlessBackend) to lower idle agent cost
 			}
+
+			// Dynamically extract tier from job.Payload if available
+			var payloadData map[string]interface{}
+			if err := json.Unmarshal([]byte(job.Payload), &payloadData); err == nil {
+				if tierVal, ok := payloadData["tier"].(string); ok && tierVal != "" {
+					ac.Tier = tierVal
+				}
+			}
+
 			agentCtx := WithAgentContext(ctx, ac)
 			err := w.spawner.SpawnIsolated(agentCtx, job)
 

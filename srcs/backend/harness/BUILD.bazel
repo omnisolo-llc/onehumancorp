@@ -2,13 +2,21 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "harness",
-    srcs = ["bwrap_executor.go"],
+    srcs = [
+        "backend.go",
+        "bwrap_executor.go",
+        "docker_backend.go",
+        "serverless_backend.go",
+    ],
     importpath = "github.com/onehumancorp/mono/srcs/backend/harness",
     visibility = ["//visibility:public"],
 )
 
 go_test(
     name = "harness_test",
-    srcs = ["bwrap_executor_test.go"],
+    srcs = [
+        "backend_test.go",
+        "bwrap_executor_test.go",
+    ],
     embed = [":harness"],
 )

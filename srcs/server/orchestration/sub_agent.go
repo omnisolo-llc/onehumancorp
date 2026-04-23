@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/backend/harness"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
@@ -40,25 +41,27 @@ type SubAgentSpawner interface {
 
 // DefaultSubAgentSpawner implements SubAgentSpawner.
 type DefaultSubAgentSpawner struct {
-	db       db.Provider
-	tm       *TaskManager
-	hub      *CentrifugeNode // For teammate mesh broadcasts
-	sem      chan struct{} // For concurrency limits in standalone mode
-	wg       sync.WaitGroup
-	ctx      context.Context
-	cancel   context.CancelFunc
+	db             db.Provider
+	tm             *TaskManager
+	hub            *CentrifugeNode // For teammate mesh broadcasts
+	sem            chan struct{} // For concurrency limits in standalone mode
+	wg             sync.WaitGroup
+	ctx            context.Context
+	cancel         context.CancelFunc
+	harnessGateway *harness.HarnessGateway
 }
 
 // NewDefaultSubAgentSpawner creates a new DefaultSubAgentSpawner.
 func NewDefaultSubAgentSpawner(provider db.Provider, tm *TaskManager, hub *CentrifugeNode, concurrency int) *DefaultSubAgentSpawner {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &DefaultSubAgentSpawner{
-		db:     provider,
-		tm:     tm,
-		hub:    hub,
-		sem:    make(chan struct{}, concurrency),
-		ctx:    ctx,
-		cancel: cancel,
+		db:             provider,
+		tm:             tm,
+		hub:            hub,
+		sem:            make(chan struct{}, concurrency),
+		ctx:            ctx,
+		cancel:         cancel,
+		harnessGateway: harness.NewHarnessGateway(),
 	}
 }
 
@@ -152,6 +155,7 @@ func (s *DefaultSubAgentSpawner) executeTask(task *SharedTask) error {
 	var subAgentType string
 	var parentTaskID string
 	var isolatedContext bool
+	var tier string
 
 	if len(task.Payload) > 0 {
 		var payload map[string]interface{}
@@ -165,16 +169,28 @@ func (s *DefaultSubAgentSpawner) executeTask(task *SharedTask) error {
 			if v, ok := payload["isolated_context"].(bool); ok {
 				isolatedContext = v
 			}
+			if v, ok := payload["tier"].(string); ok {
+				tier = v
+			}
 		}
 	}
 
 	// Just checking these values to silence compiler and log intention
-	_ = subAgentType
-	_ = parentTaskID
 	_ = isolatedContext
+	_ = parentTaskID
 
 	// Emit heartbeat to database (replaces former .ohc/runtime/status/<taskID>.yml).
 	writeHeartbeat(context.Background(), s.db, task.ID, "IN_PROGRESS", subAgentType, parentTaskID)
+
+	execCtx := harness.ExecutionContext{
+		Command: []string{"echo", "running sub-agent type:", subAgentType},
+	}
+
+	// Route task execution using Harness Gateway based on the requested tier.
+	_, err := s.harnessGateway.Execute(s.ctx, execCtx, tier)
+	if err != nil {
+		return fmt.Errorf("harness execution failed: %w", err)
+	}
 
 	// Simulate real work that might fail
 	select {
@@ -250,6 +266,24 @@ func (s *DefaultSubAgentSpawner) SpawnIsolated(ctx context.Context, job *queue.J
 		OrganizationID: orgID,
 		Priority:       "DELEGATED",
 	}
+
+	// Update KAIROS orchestrator to route agent tasks to the correct backend based on tier.
+	// The tier is available in AgentContext.
+	// For now, we simulate this routing via the payload since the execution is a mock.
+	agentCtx, ok := GetAgentContext(ctx)
+	tier := "serverless"
+	if ok && agentCtx.Tier != "" {
+		tier = agentCtx.Tier
+	}
+	slog.Info("Spawning isolated task with tier routing", "task_id", task.ID, "tier", tier)
+
+	// We inject the tier into the payload so executeTask can see it, although executeTask simulates the work
+	if payload == nil {
+		payload = make(map[string]interface{})
+	}
+	payload["tier"] = tier
+	b, _ := json.Marshal(payload)
+	task.Payload = string(b)
 
 	return s.Spawn(ctx, task)
 }

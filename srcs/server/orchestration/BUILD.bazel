@@ -36,6 +36,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/backend/harness",
         "//srcs/server/utils",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_gorilla_websocket//:websocket",
