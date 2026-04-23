@@ -23,7 +23,7 @@ func TestV2TeammateMesh(t *testing.T) {
 	err = mesh.BroadcastTask(ctx, Task{
 		TaskID:  "t-123",
 		Action:  "READY",
-		AgentId: "spiffe://onehumancorp.io/agent/x",
+		AgentID: "spiffe://onehumancorp.io/agent/x",
 		Status:  "PENDING",
 	})
 	assert.NoError(t, err)
