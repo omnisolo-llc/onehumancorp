@@ -431,6 +431,27 @@ func shouldServeUI() bool {
 // Returns http.Handler.
 // Produces no errors.
 // Has no side effects.
+type centrifugeWrapper struct {
+	cn *orchestration.CentrifugeNode
+}
+
+func (w *centrifugeWrapper) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
+	w.cn.PublishTaskBroadcast(taskID, payload)
+}
+
+func (w *centrifugeWrapper) PublishCoordinationMessage(msg interface{}) {
+	// type assert or convert map to orchestration.Message
+	if m, ok := msg.(map[string]interface{}); ok {
+		w.cn.PublishCoordinationMessage(orchestration.Message{
+			ID:        m["id"].(string),
+			FromAgent: m["from_agent_id"].(string),
+			ToAgent:   m["to_agent_id"].(string),
+			Type:      m["message_type"].(string),
+			Content:   m["content"].(string),
+		})
+	}
+}
+
 func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing.Tracker, authStore ...*auth.Store) http.Handler {
 	var store *auth.Store
 	if len(authStore) > 0 && authStore[0] != nil {
