@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/services/auth_service.dart';
 
 class GrowthReferralWidget extends ConsumerStatefulWidget {
   const GrowthReferralWidget({super.key});
@@ -57,7 +59,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Grow Your Swarm. Maintain Sovereignty.',
+                          'Share OHC with a friend, both get 1 month free Pro.',
                           style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 20,
@@ -67,7 +69,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
+                          'Share your business and invite other founders to build on OHC.',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
@@ -114,14 +116,37 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       ElevatedButton(
                         onPressed: () async {
                           try {
-                            await ref.read(apiServiceProvider)?.createReferral(
-                              "anonymous",
-                              "xYz8vQ_local_sovereign",
-                            );
-                            if (context.mounted) {
+                            final api = ref.read(apiServiceProvider);
+                            final authUser = ref.read(authStateProvider).valueOrNull;
+                            final userId = authUser?.id ?? "anonymous";
+
+                            // Generate link
+                            final response = await api?.generateReferralLink(userId);
+
+                            if (context.mounted && response != null) {
+                              final link = response['link']!;
+                              final preFilledMessage = response['pre_filled_message']!;
+
+                              // We also record the invite in the backend dashboard logic to track conversions
+                              final referralCode = Uri.parse(link).queryParameters['ref'] ?? 'UNKNOWN';
+                              try {
+                                await api?.createReferral(userId, referralCode);
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Failed to track referral: $e'),
+                                      backgroundColor: colorScheme.error,
+                                    ),
+                                  );
+                                }
+                              }
+
+                              await Clipboard.setData(ClipboardData(text: preFilledMessage));
+
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    'Referral link copied to clipboard!',
                                     style: TextStyle(
                                       color: colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',
@@ -143,7 +168,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                             }
                           }
                         },
-                        child: const Text('Invite Team to Expand Quota', style: TextStyle(fontFamily: 'Outfit')),
+                        child: const Text('Invite a Founder', style: TextStyle(fontFamily: 'Outfit')),
                       ),
                     ],
                   ),
