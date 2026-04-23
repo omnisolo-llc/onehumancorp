@@ -10,6 +10,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/rueidis"
 )
@@ -163,6 +164,21 @@ func (sm *StateMachine) TransitionWithTx(ctx context.Context, tx db.Tx, entityID
 		_, err := tx.Exec(ctx, updateQuery, toState, agentID, entityID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update entity state: %w", err)
+		}
+	}
+
+	if (toState == StateSuccess || toState == StateFailed) && entityType == "SHARED_TASK" && agentID != "" {
+		var totalTokens int64
+		var agentRole, model string
+
+		// Approximate token usage by fetching the total for this agent since task creation
+		query := `SELECT COALESCE(SUM(prompt_tokens + completion_tokens), 0), COALESCE(MAX(agent_role), 'unknown'), COALESCE(MAX(model), 'unknown')
+				  FROM usage_events
+				  WHERE agent_id = $1
+				  AND occurred_at >= (SELECT created_at FROM shared_tasks WHERE id = $2)`
+		err := tx.QueryRow(ctx, query, agentID, entityID).Scan(&totalTokens, &agentRole, &model)
+		if err == nil && totalTokens > 0 {
+			telemetry.RecordTaskResolutionEfficiency(ctx, string(toState), agentRole, model, totalTokens)
 		}
 	}
 

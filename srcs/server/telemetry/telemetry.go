@@ -47,6 +47,8 @@ var (
 	tokenUsageCounter                  metric.Int64Counter
 	AgentTokenUsageTotal               metric.Int64Counter
 	AgentCostEstimateUSD               metric.Float64Counter
+	TaskTokensByOutcomeTotal           metric.Int64Counter
+	AgentEfficiencyGauge               metric.Float64Gauge
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -537,6 +539,22 @@ func InitWithMeter(m mockableMeter) error {
 	AgentCostEstimateUSD, err = m.Float64Counter(
 		"ohc_agent_cost_estimate_usd",
 		metric.WithDescription("Cumulative estimated USD cost of agent LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TaskTokensByOutcomeTotal, err = m.Int64Counter(
+		"ohc_token_usage_by_outcome",
+		metric.WithDescription("Total tokens consumed attributed to task outcomes"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AgentEfficiencyGauge, err = m.Float64Gauge(
+		"ohc_agent_efficiency_gauge",
+		metric.WithDescription("Agent token efficiency ROI score"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1055,6 +1073,36 @@ func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, m
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "agent_token_usage", string(payloadBytes))
+	}
+}
+
+// RecordTaskResolutionEfficiency records token counts and ROI efficiency on task resolution.
+func RecordTaskResolutionEfficiency(ctx context.Context, outcome string, role string, model string, tokens int64) {
+	if TaskTokensByOutcomeTotal != nil {
+		TaskTokensByOutcomeTotal.Add(ctx, tokens, metric.WithAttributes(
+			attribute.String("outcome", outcome),
+			attribute.String("agent_role", role),
+			attribute.String("model", model),
+		))
+	}
+	if AgentEfficiencyGauge != nil && tokens > 0 {
+		// Calculate ROI efficiency score as (1 / (Tokens Consumed / 1000)) = 1000.0 / tokens
+		score := 1000.0 / float64(tokens)
+		AgentEfficiencyGauge.Record(ctx, score, metric.WithAttributes(
+			attribute.String("agent_role", role),
+		))
+	}
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"outcome":    outcome,
+			"agent_role": role,
+			"model":      model,
+			"tokens":     tokens,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "agent_task_efficiency", string(payloadBytes))
 	}
 }
 

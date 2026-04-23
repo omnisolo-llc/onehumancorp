@@ -367,6 +367,9 @@ func TestRecordFunctions(t *testing.T) {
 	t.Run("RecordTokenUsage", func(t *testing.T) {
 		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
 	})
+	t.Run("RecordTaskResolutionEfficiency", func(t *testing.T) {
+		RecordTaskResolutionEfficiency(ctx, "SUCCESS", "developer", "gpt-4", 100)
+	})
 	t.Run("RecordTokensSaved", func(t *testing.T) {
 		RecordTokensSaved(ctx, "reason", "db", 100)
 	})
@@ -466,6 +469,9 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 
 	t.Run("RecordTokenUsage Uninitialized", func(t *testing.T) {
 		RecordTokenUsage(ctx, "agent-1", "developer", "gpt-4", "prompt", 100)
+	})
+	t.Run("RecordTaskResolutionEfficiency Uninitialized", func(t *testing.T) {
+		RecordTaskResolutionEfficiency(ctx, "SUCCESS", "developer", "gpt-4", 100)
 	})
 
 	t.Run("RecordTokenBurnRate", func(t *testing.T) {

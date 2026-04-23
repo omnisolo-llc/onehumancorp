@@ -8,6 +8,7 @@ go_library(
     deps = [
         "//srcs/server/db",
         "//srcs/server/orchestration/kairos",
+        "//srcs/server/telemetry",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_redis_rueidis//:rueidis",
     ],

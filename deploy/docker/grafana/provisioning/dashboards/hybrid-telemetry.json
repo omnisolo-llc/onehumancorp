@@ -2297,6 +2297,59 @@
           "mode": "multi"
         }
       }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "id": 100,
+      "title": "Token Efficiency Heatmap",
+      "type": "heatmap",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(rate(ohc_token_usage_by_outcome_total[5m])) by (outcome, agent_role)",
+          "legendFormat": "{{outcome}} - {{agent_role}}",
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "id": 101,
+      "title": "Swarm ROI",
+      "type": "stat",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "sum(ohc_agent_efficiency_gauge)",
+          "legendFormat": "Efficiency Score",
+          "refId": "A"
+        }
+      ]
     }
   ],
   "refresh": "",
