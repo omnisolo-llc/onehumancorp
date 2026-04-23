@@ -90,6 +90,7 @@ class Organization {
   final String domain;
   final List<OrganizationMember> members;
   final List<RoleProfile> roleProfiles;
+  final OnboardingStatus onboardingStatus;
 
   const Organization({
     required this.id,
@@ -97,6 +98,7 @@ class Organization {
     required this.domain,
     required this.members,
     required this.roleProfiles,
+    required this.onboardingStatus,
   });
 
   factory Organization.fromJson(Map<String, dynamic> json) {
@@ -118,6 +120,7 @@ class Organization {
               )
               .toList() ??
           [],
+      onboardingStatus: json['onboardingStatus'] != null ? OnboardingStatus.fromJson(json['onboardingStatus']) : const OnboardingStatus(),
     );
   }
 }
@@ -215,6 +218,30 @@ class StatusBucket {
     return StatusBucket(
       status: json['status'] as String? ?? '',
       count: json['count'] as int? ?? 0,
+    );
+  }
+}
+
+
+class OnboardingStatus {
+  final bool hasCompletedSetup;
+  final bool hasAddedProducts;
+  final bool hasConnectedSocial;
+  final bool hasSharedLink;
+
+  const OnboardingStatus({
+    this.hasCompletedSetup = false,
+    this.hasAddedProducts = false,
+    this.hasConnectedSocial = false,
+    this.hasSharedLink = false,
+  });
+
+  factory OnboardingStatus.fromJson(Map<String, dynamic> json) {
+    return OnboardingStatus(
+      hasCompletedSetup: json['hasCompletedSetup'] as bool? ?? false,
+      hasAddedProducts: json['hasAddedProducts'] as bool? ?? false,
+      hasConnectedSocial: json['hasConnectedSocial'] as bool? ?? false,
+      hasSharedLink: json['hasSharedLink'] as bool? ?? false,
     );
   }
 }

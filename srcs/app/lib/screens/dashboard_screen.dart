@@ -86,6 +86,45 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        // --- WELCOME CHECKLIST ---
+        if (!data.organization.onboardingStatus.hasCompletedSetup)
+        Container(
+          margin: const EdgeInsets.only(bottom: 24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Welcome Checklist', style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                const Text("You're set up! Here's what to do next:", style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
+                const SizedBox(height: 16),
+                _ChecklistItem(text: '✅ Business live', isDone: true),
+                _ChecklistItem(
+                  text: data.organization.onboardingStatus.hasAddedProducts ? '✅ Added 3 products' : '⬜ Add 3 more products',
+                  isDone: data.organization.onboardingStatus.hasAddedProducts,
+                  onTap: () => context.go('/service'),
+                ),
+                _ChecklistItem(
+                  text: data.organization.onboardingStatus.hasConnectedSocial ? '✅ Connected Instagram' : '⬜ Connect Instagram',
+                  isDone: data.organization.onboardingStatus.hasConnectedSocial,
+                  onTap: () => context.go('/integrations'),
+                ),
+                _ChecklistItem(
+                  text: data.organization.onboardingStatus.hasSharedLink ? '✅ Shared link with a friend' : '⬜ Share your link with a friend',
+                  isDone: data.organization.onboardingStatus.hasSharedLink,
+                  onTap: () => context.go('/referrals'),
+                ),
+              ],
+            ),
+          ),
+        ),
+
         // --- UPGRADE BANNER ---
         Container(
           margin: const EdgeInsets.only(bottom: 24),
@@ -683,6 +722,46 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                         ),
       ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+class _ChecklistItem extends StatelessWidget {
+  final String text;
+  final bool isDone;
+  final VoidCallback? onTap;
+
+  const _ChecklistItem({required this.text, required this.isDone, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  text,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 15,
+                    color: isDone ? Colors.green : Theme.of(context).colorScheme.onSurface,
+                    decoration: isDone ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+              if (onTap != null)
+                Icon(Icons.chevron_right, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ],
           ),
         ),
       ),

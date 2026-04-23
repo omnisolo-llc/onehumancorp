@@ -1312,6 +1312,42 @@ func (s *Server) snapshot() dashboardSnapshot {
 func (s *Server) snapshotLocked() dashboardSnapshot {
 	agents := s.orgAgentsLocked()
 
+	hasProducts := false
+	hasSocial := false
+	hasShared := false
+
+	// Derive onboarding state from actual user progress via agents (proxy for features)
+	for _, a := range agents {
+		if a.Role == "Growth Agent" {
+			hasShared = true
+		}
+		if a.Role == "Product Manager" || a.Role == "Content Strategist" || a.Role == "Designer" {
+			hasProducts = true
+		}
+		if a.Role == "Marketing Manager" || a.Role == "SEO Specialist" {
+			hasSocial = true
+		}
+	}
+
+	// Also check members
+	for _, m := range s.org.Members {
+		if m.Role == "Growth Agent" {
+			hasShared = true
+		}
+		if m.Role == "Product Manager" || m.Role == "Content Strategist" || m.Role == "Designer" {
+			hasProducts = true
+		}
+		if m.Role == "Marketing Manager" || m.Role == "SEO Specialist" {
+			hasSocial = true
+		}
+	}
+
+	orgSnapshot := s.org
+	orgSnapshot.OnboardingStatus.HasCompletedSetup = true
+	orgSnapshot.OnboardingStatus.HasAddedProducts = hasProducts
+	orgSnapshot.OnboardingStatus.HasConnectedSocial = hasSocial
+	orgSnapshot.OnboardingStatus.HasSharedLink = hasShared
+
 	queue := make([]orchestration.SharedTask, 0)
 	queueLen := 0
 	if s.hub != nil && s.hub.TaskManager() != nil {
@@ -1326,7 +1362,7 @@ func (s *Server) snapshotLocked() dashboardSnapshot {
 	}
 
 	return dashboardSnapshot{
-		Organization: s.org,
+		Organization: orgSnapshot,
 		Meetings:     s.orgMeetingsLocked(),
 		Costs:        s.tracker.Summary(s.org.ID),
 		Agents:       agents,
@@ -1353,6 +1389,42 @@ func (s *Server) orgMeetingsLocked() []orchestration.MeetingRoom {
 
 func (s *Server) orgAgentIndexLocked() map[string]struct{} {
 	agents := s.orgAgentsLocked()
+
+	hasProducts := false
+	hasSocial := false
+	hasShared := false
+
+	// Derive onboarding state from actual user progress via agents (proxy for features)
+	for _, a := range agents {
+		if a.Role == "Growth Agent" {
+			hasShared = true
+		}
+		if a.Role == "Product Manager" || a.Role == "Content Strategist" || a.Role == "Designer" {
+			hasProducts = true
+		}
+		if a.Role == "Marketing Manager" || a.Role == "SEO Specialist" {
+			hasSocial = true
+		}
+	}
+
+	// Also check members
+	for _, m := range s.org.Members {
+		if m.Role == "Growth Agent" {
+			hasShared = true
+		}
+		if m.Role == "Product Manager" || m.Role == "Content Strategist" || m.Role == "Designer" {
+			hasProducts = true
+		}
+		if m.Role == "Marketing Manager" || m.Role == "SEO Specialist" {
+			hasSocial = true
+		}
+	}
+
+	orgSnapshot := s.org
+	orgSnapshot.OnboardingStatus.HasCompletedSetup = true
+	orgSnapshot.OnboardingStatus.HasAddedProducts = hasProducts
+	orgSnapshot.OnboardingStatus.HasConnectedSocial = hasSocial
+	orgSnapshot.OnboardingStatus.HasSharedLink = hasShared
 	index := make(map[string]struct{}, len(agents))
 	for _, agent := range agents {
 		index[agent.ID] = struct{}{}

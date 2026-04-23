@@ -159,6 +159,7 @@ type RoleProfile struct {
 // Produces no errors.
 // Has no side effects.
 type Organization struct {
+	OnboardingStatus OnboardingStatus `json:"onboardingStatus"`
 	ID           string        `json:"id"`
 	Name         string        `json:"name"`
 	Domain       string        `json:"domain"`
@@ -558,4 +559,12 @@ func defaultAccountingRoleProfiles() []RoleProfile {
 			ContextInputs: []string{"employee records", "time data", "jurisdiction rules"},
 		},
 	}
+}
+
+
+type OnboardingStatus struct {
+	HasCompletedSetup  bool `json:"hasCompletedSetup"`
+	HasAddedProducts   bool `json:"hasAddedProducts"`
+	HasConnectedSocial bool `json:"hasConnectedSocial"`
+	HasSharedLink      bool `json:"hasSharedLink"`
 }
