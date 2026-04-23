@@ -1671,7 +1671,7 @@ func RecordLocalToCloudMissionSync(ctx context.Context, missionID string) {
 		// then calls RedactInterfacePII centrally. We use RedactInterfacePII here so the AST linter
 		// TestBufferMetricFuncRedactionLinter passes because it statically checks for its presence.
 		payloadMap["missionID"] = RedactInterfacePII(missionID)
-		payloadBytes, _ := json.Marshal(payloadMap)
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "local_to_cloud_mission_sync_count", string(payloadBytes))
 	}
 	if LocalToCloudMissionSyncCount == nil {
@@ -1957,7 +1957,12 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 // RecordQueueLength correctly applies PII redaction before JSON marshaling.
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		payloadMap := map[string]interface{}{
+			"delta": delta,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "sub_agent_queue_length", string(payloadBytes))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
