@@ -48,29 +48,59 @@ void main() {
     registerFallbackValue(FakeUri());
   });
 
+
+
   group('CUJ: Diagnostics', () {
+    late ApiService mockApi;
+
+    setUp(() {
+      final mockClient = MockHttpClient();
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(jsonEncode({
+          'hybridHealth': {
+            'mode': 'cloud',
+            'cloudConnected': true,
+            'meshActive': true,
+            'stuckMissions': 0,
+            'syncBacklog': 0,
+          }
+        }), 200),
+      );
+      mockApi = ApiService(
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
+    });
+
     testWidgets('renders health check section title', (tester) async {
-      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen(), api: mockApi));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 10));
 
       expect(find.textContaining('Day One Setup'), findsOneWidget);
     });
 
     testWidgets('shows Database connectivity status', (tester) async {
-      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen(), api: mockApi));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 10));
 
       expect(find.textContaining('Database'), findsOneWidget);
     });
 
     testWidgets('Run Diagnostics button is tappable', (tester) async {
-      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen(), api: mockApi));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 10));
 
       final btn = find.text('Run Diagnostics');
       expect(btn, findsOneWidget);
       await tester.tap(btn);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 10));
       // Screen should still be functional after tapping
       expect(find.byType(Scaffold), findsOneWidget);
     });

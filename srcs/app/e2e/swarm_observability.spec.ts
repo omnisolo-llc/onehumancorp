@@ -11,12 +11,12 @@ test('Dashboard and Swarm Memory screens display correct observability widgets',
   await page.goto('/#/dashboard');
 
   // Verify Swarm Observability Dashboard
-  await expect(page.locator('text=Teammate Mesh Live Feed')).toBeVisible();
+  await expect(page.locator('text=Live Agent Activity')).toBeVisible();
 
   // Verify new Swarm Velocity Widget
   await expect(page.locator('text=Swarm Velocity')).toBeVisible();
   await expect(page.locator('text=Task Completion Rate')).toBeVisible();
-  await expect(page.locator('text=Average Latency')).toBeVisible();
+  await expect(page.locator('text=Response Time')).toBeVisible();
 
   // 3. Navigate to Swarm Memory Mesh and check visualizer
   await page.goto('/#/swarm-memory');

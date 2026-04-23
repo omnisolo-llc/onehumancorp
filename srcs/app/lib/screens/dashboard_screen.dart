@@ -148,7 +148,7 @@ class _DashboardContent extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Dashboard Updates',
+              label: 'Recent Activity',
               value: data.statuses.length.toString(),
               icon: Icons.pending_actions,
               color: Theme.of(context).colorScheme.secondary,
@@ -254,7 +254,7 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'System Observability Panel',
+      label: 'System Health',
       child: Tooltip(
         message: 'View System Health & Metrics',
         child: GlassCard(
@@ -286,7 +286,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'Full-Spectrum Telemetry',
+                              'System Health Status',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -306,8 +306,8 @@ class _ObservabilityWidget extends StatelessWidget {
                           children: [
                             _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
                             _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
+                            _Metric(label: 'Speed (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'Active Systems', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
                       ],

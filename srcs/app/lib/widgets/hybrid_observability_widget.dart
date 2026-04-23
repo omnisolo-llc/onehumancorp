@@ -45,7 +45,7 @@ class HybridObservabilityWidget extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'Hybrid Swarm Observability',
+                    'AI Team Health',
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 24,
@@ -83,7 +83,7 @@ class HybridObservabilityWidget extends ConsumerWidget {
                     ],
                   ),
                   _MetricRow(label: 'Total Tasks', value: totalTasks.toString()),
-                  const _MetricRow(label: 'Avg Hybrid Latency', value: '45ms'),
+                  const _MetricRow(label: 'Response Time', value: '45ms'),
                 ],
               ),
             ),

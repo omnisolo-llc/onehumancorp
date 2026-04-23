@@ -99,7 +99,7 @@ class _SwarmVelocityWidgetState extends ConsumerState<SwarmVelocityWidget> {
                       color: Colors.greenAccent,
                     ),
                     _VelocityMetric(
-                      label: 'Average Latency',
+                      label: 'Response Time',
                       value: '${_avgLatencyMs.toStringAsFixed(0)} ms',
                       icon: Icons.timer_outlined,
                       color: Colors.orangeAccent,

@@ -40,7 +40,7 @@ class HybridTelemetryWidget extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hybrid Deployment Telemetry',
+                    'Connection Status',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -49,7 +49,7 @@ class HybridTelemetryWidget extends ConsumerWidget {
                     ),
                   ),
                   SizedBox(height: 16),
-                  Text('Cloud throughput: high\nLocal throughput: stable', style: TextStyle(color: Colors.white, fontFamily: 'Inter')),
+                  Text('Cloud connection: fast\nLocal connection: stable', style: TextStyle(color: Colors.white, fontFamily: 'Inter')),
                 ],
               ),
             ),

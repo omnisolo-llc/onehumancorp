@@ -69,7 +69,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
     });
 
     return Semantics(
-      label: 'Swarm Observability Dashboard',
+      label: 'AI Team Live Activity',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
@@ -106,7 +106,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                       ),
                       const SizedBox(width: 12),
                       const Text(
-                        'Teammate Mesh Live Feed',
+                        'Live Agent Activity',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -123,7 +123,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
                     child: _messages.isEmpty
                         ? Center(
                             child: Text(
-                              'Listening for swarm activity...',
+                              'Listening for team activity...',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.5),
                                 fontFamily: 'Inter',
