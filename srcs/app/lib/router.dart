@@ -1,3 +1,7 @@
+import 'package:ohc_app/screens/help/help_center_screen.dart';
+import 'package:ohc_app/screens/help/help_article_screen.dart';
+import 'package:ohc_app/screens/help/changelog_screen.dart';
+import 'package:ohc_app/screens/help/api_docs_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
@@ -310,6 +314,8 @@ class _Sidebar extends StatelessWidget {
           label: 'Setup Wizard',
           path: '/wizard',
         ),
+        const SizedBox(height: 16),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
         const SizedBox(height: 16),
         _NavItem(
           icon: Icons.health_and_safety,

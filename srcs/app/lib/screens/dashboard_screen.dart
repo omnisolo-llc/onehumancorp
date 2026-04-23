@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -35,7 +36,8 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
-      body: snapshot.when(
+            floatingActionButton: const AiHelpChatWidget(),
+body: snapshot.when(
         loading:
             () => Center(
               child: CircularProgressIndicator(
@@ -44,7 +46,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
         error:
             (e, _) => Center(
-              child: Text(
+              child: SelectableText(
                 'Error: $e',
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
@@ -142,34 +144,34 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Active Agents',
-              value: data.agents.where((a) => a.isRunning).length.toString(),
-              icon: Icons.smart_toy,
+              label: 'Today\'s Sales',
+              value: '\$0.00',
+              icon: Icons.attach_money,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Dashboard Updates',
+              label: 'New Orders',
               value: data.statuses.length.toString(),
-              icon: Icons.pending_actions,
+              icon: Icons.shopping_bag,
               color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
-              label: 'Open Meetings',
+              label: 'Pending Appointments',
               value: data.meetings.length.toString(),
-              icon: Icons.video_call,
+              icon: Icons.calendar_today,
               color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
-              label: 'Total Org Members',
-              value: data.organization.members.length.toString(),
-              icon: Icons.people,
+              label: 'Active AI Helpers',
+              value: data.agents.where((a) => a.isRunning).length.toString(),
+              icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primaryContainer,
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ],
         ),
         const SizedBox(height: 32),
-        _SectionTitle('System Observability'),
+        _SectionTitle('System Status'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -194,7 +196,7 @@ class _DashboardContent extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: Text(
-                        'Proactive Task Stream',
+                        'Tasks in Progress',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
