@@ -8,7 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/widgets/swarm_observability_widget.dart';
+import 'package:ohc_app/widgets/swarm_observability_dashboard.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
 import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
@@ -54,6 +56,44 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 }
+
+
+class _ConnectedSwarmObservabilityDashboard extends ConsumerStatefulWidget {
+  const _ConnectedSwarmObservabilityDashboard({super.key});
+
+  @override
+  ConsumerState<_ConnectedSwarmObservabilityDashboard> createState() => _ConnectedSwarmObservabilityDashboardState();
+}
+
+class _ConnectedSwarmObservabilityDashboardState extends ConsumerState<_ConnectedSwarmObservabilityDashboard> {
+  WebSocketChannel? _channel;
+
+  @override
+  void initState() {
+    super.initState();
+    _connect();
+  }
+
+  void _connect() {
+    final api = ref.read(apiServiceProvider);
+    final baseUrl = api?.baseUrl ?? 'http://localhost:8080';
+    final wsUrl = baseUrl.replaceFirst('http', 'ws') + '/ws';
+    _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+  }
+
+  @override
+  void dispose() {
+    _channel?.sink.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_channel == null) return const SizedBox();
+    return SwarmObservabilityDashboard(channel: _channel!);
+  }
+}
+
 
 class _DashboardContent extends StatelessWidget {
   final DashboardSnapshot data;
@@ -173,7 +213,7 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
-        const SwarmObservabilityWidget(),
+        const _ConnectedSwarmObservabilityDashboard(),
         const SizedBox(height: 16),
         const SwarmVelocityWidget(),
         const SizedBox(height: 16),
@@ -279,10 +319,10 @@ class _ObservabilityWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
             filter: ImageFilter.compose(
-              outer: ColorFilter.matrix(const <double>[
-                1.168, -0.153, -0.015, 0, 0,
-                -0.046, 1.061, -0.015, 0, 0,
-                -0.046, -0.152, 1.198, 0, 0,
+                            outer: ColorFilter.matrix(const <double>[
+                1.787, -0.715, -0.072, 0, 0,
+                -0.213, 1.285, -0.072, 0, 0,
+                -0.213, -0.715, 1.928, 0, 0,
                 0, 0, 0, 1, 0,
               ]),
               inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
