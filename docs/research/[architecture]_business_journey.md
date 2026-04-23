@@ -1,180 +1,169 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
+# Business Journey Architecture
 
-# Title: Business Journey Architecture - End-to-End Persona Flow Mapping
+## Title
+[architecture] Implement End-to-End Business Journey Lifecycle and Agentic Onboarding
 
 ## Problem Statement
-
-Small business owners—whether they are home bakers, freelance handymen, boutique owners, music tutors, or food cart operators—frequently abandon software platforms during the setup phase due to overwhelming complexity, jargon, and friction. To achieve the OneHumanCorp (OHC) promise of going from idea to live business in under 10 minutes from a phone, we need a radically simple, AI-assisted business journey. We currently lack a comprehensive architectural mapping of the end-to-end user journey (Acquisition, Onboarding, Activation, Retention, Revenue, Referral) tailored for our core non-technical personas. Without this, engineering efforts risk building disconnected features rather than a cohesive, seamless journey.
+Small business owners (our core personas like Maya the Baker, Carlos the Handyman, Priya the Boutique Owner, Leo the Music Tutor, and Fatima the Food Cart Operator) are overwhelmed by the complexity of launching and growing their business. Traditional platforms like Shopify, Wix, and Squarespace require them to learn multiple systems (web design, inventory, CRM, booking) from day one. This leads to high abandonment rates during onboarding. The core problem is that non-technical users are forced to think like system administrators rather than business owners. They need a guided, magical experience where AI handles the heavy lifting, allowing them to go from an idea to a live business in under 10 minutes from their mobile phones.
 
 ## Research Report
 
-### Findings
-Through our analysis of target personas (Maya, Carlos, Priya, Leo, Fatima) and competitive benchmarking (Shopify, Wix, Squarespace, GoDaddy), we identified several critical friction points where non-technical users drop off:
-1. **The "Blank Canvas" Problem**: Asking users to build a website from scratch or configure complex settings paralyzes them. Competitors like Shopify take 30-60 minutes to set up; Wix and Squarespace take 20-40 minutes.
-2. **Platform Fragmentation**: Users are forced to patch together multiple tools (e.g., website builder + separate booking tool + separate payment gateway).
-3. **Mobile Unfriendliness**: Many platforms offer a "mobile app," but core setup and complex configuration (like inventory or store design) still require a desktop browser.
-4. **Jargon**: Terms like "DNS," "Payment Gateway," "SEO," and "SKUs" alienate non-technical founders.
-
 ### Competitive Analysis
-- **Shopify**: Excellent for e-commerce but intimidating for service-based businesses or solopreneurs. Requires significant time investment and basic technical/business literacy.
-- **Wix/Squarespace**: Good design builders, but setting up a full business logic stack (bookings, payments, inventory) is cumbersome and not truly mobile-first.
-- **GoDaddy**: Fast setup but rigid, basic, and lacks deep AI integration or seamless mobile management.
+| Feature | OHC | Shopify | Wix | Squarespace | GoDaddy |
+|---|---|---|---|---|---|
+| **Setup Time** | < 10 min | 30-60 min | 20-40 min | 30-60 min | 20-40 min |
+| **Technical Knowledge** | Zero | Low | Low | Low | Low |
+| **AI Agents (Invisible)** | Yes, built-in | Sidekick (chat only) | Wix AI | Limited | Airo (limited) |
+| **Mobile-First Management** | Yes | Partial | Partial | No | No |
+| **Unified Business Stack** | All-in-one | Store only | All (complex) | Portfolio + store | Basic |
 
-**OHC's Opportunity**: Be the ONLY platform that is genuinely mobile-first (start to finish), relies entirely on AI agents to do the heavy lifting (invisible setup), and supports any business type in under 10 minutes without jargon.
+### Lifecycle Stages
+1. **Acquisition**: Users typically discover OHC via Instagram/TikTok ads showcasing how easily similar businesses are run on mobile, or via organic search (e.g., "easy booking system for handyman"). CTA is "Launch your business in 5 minutes".
+2. **Onboarding**: A highly opinionated, chat-like wizard. Asks for business name, type, and primary goal (e.g., "take bookings" or "sell physical goods"). Defers complex configuration (taxes, custom domains) to later.
+3. **Activation**: The "Aha!" moment. A live, shareable storefront or booking link is generated immediately. The user adds their first product or service, and the AI agent instantly optimizes its description.
+4. **Retention**: The user returns daily due to proactive push notifications ("You have a new custom cake request!", "Weekly business health summary").
+5. **Revenue**: Free tier users convert to paid tiers (Starter/Pro) when they hit limits (e.g., needing custom domains or more AI actions/month). Upgrades are suggested contextually, not forced upfront.
+6. **Referral**: Organic viral loops embedded in the consumer-facing storefronts (e.g., "Powered by OneHumanCorp" in email footers or booking confirmation pages).
 
 ## Design Doc
 
-### Business Journey Mapping
+### Key Design Decisions
+1. **Deferred Configuration**: We do not block onboarding with payment gateway setup or domain configuration. The user gets a functional link (e.g., `maya-cakes.ohc.app`) immediately.
+2. **Mobile-First (375px) Constraint**: The entire onboarding and management flow must work flawlessly on a phone. Desktop is an additive experience.
+3. **Conversational Agentic Onboarding**: Instead of a massive form, the onboarding is a fluid, AI-driven conversation or step-by-step wizard.
+4. **Proactive Insights**: The Business Advisory agent pushes insights rather than requiring the user to pull reports.
 
-#### 1. Acquisition
-- **Maya (Baker)**: Discovers OHC via an Instagram Ad highlighting "Sell cakes on Insta without a website." Landing Page CTA: "Start selling in 2 minutes."
-- **Carlos (Handyman)**: Word of mouth from another contractor. Landing Page CTA: "Get booked and paid online, easily."
+### UI Wireframes & Screen Flow (375px Mobile First)
+1. **Landing / Acquisition**: Clean hero image. "What do you want to build today?" input field.
+2. **Onboarding Chat**:
+   - AI: "Hi! I'm your new digital team. What's your business name?"
+   - User types "Maya's Cakes".
+   - AI: "Great! What do you sell?" -> Selects "Physical Goods & Custom Orders".
+3. **The "Aha!" Screen**: Confetti animation. "Your business is live at maya-cakes.ohc.app. Let's add your first item."
+4. **Dashboard (Day 1)**: Action-oriented cards. "Upload a photo of your best cake", "Connect Stripe to get paid", "View your live site". No overwhelming menus.
 
-#### 2. Onboarding (Step-by-step Wizard)
-The flow must be conversational and AI-driven. No complex forms. Minimum inputs: Name, Business Type, What do you sell? (AI generates the rest). Deferred: Bank details, domain setup.
+### AI Agent Integration Points
+- **Marketing Agent (The Promoter)**: Auto-generates the initial website layout and copy based on the business type during onboarding.
+- **Customer Success Agent (The Ambassador)**: Greets the user, explains the platform in simple terms, and drafts the first welcome email for their mailing list.
+- **Business Advisory Agent (The Advisor)**: Monitors onboarding progress. If a user stalls at adding a product, it sends a gentle push notification suggesting a popular product template.
 
-#### 3. Activation
-- **Day 1**: First product added, live URL shared.
-- **Week 1**: First order or booking received.
-- **Month 1**: Regular usage of the AI "Advisor" for business health insights.
+### Sequence Diagrams (Mermaid.js)
 
-#### 4. Retention
-- **Carlos**: Brought back daily by push notifications for new service requests and AI-drafted quotes ready for his approval.
-- **Fatima**: Checks the app daily for her printable pre-order pickup list.
-
-#### 5. Revenue
-- **Maya**: Upgrades from Free → Starter when she exceeds 10 products or needs a custom domain. The CTA is presented naturally when she tries to add her 11th cake design, phrased as "Expand your bakery for $9/mo."
-
-#### 6. Referral
-- **Priya**: Shares OHC with a boutique-owner friend through a built-in "Invite a Founder" viral loop button on her dashboard, rewarding both with a month of Pro tier.
-
-### Architecture Diagrams (Mermaid.js)
-
-#### Maya's Journey (The Home Baker)
+#### 1. Maya (The Baker) - Physical Products & Custom Orders
 ```mermaid
 sequenceDiagram
-    actor Maya
-    participant Ad as Instagram Ad
-    participant OHC as OHC Mobile App
-    participant AI as AI Promoter & Manager
-    participant Stripe as Stripe Payments
+    autonumber
+    actor Maya as Maya
+    participant App as OHC App
+    participant Ops as Operations Agent
+    participant Mkt as Marketing Agent
 
-    Maya->>Ad: Clicks "Sell without a website"
-    Ad-->>Maya: Redirects to OHC App Store
-    Maya->>OHC: Downloads & Opens App
-    OHC->>Maya: Asks: "What's your business name?"
-    Maya->>OHC: "Maya's Cakes"
-    OHC->>AI: Trigger site generation
-    AI-->>OHC: Drafts beautiful cake storefront
-    OHC->>Maya: Presents live storefront URL
-    Note over Maya,OHC: Time elapsed: 3 minutes
-    Maya->>OHC: Adds first cake photo & price
-    Maya->>OHC: Shares link on Instagram Bio
-    Maya->>OHC: Connects bank account (Deferred Setup)
-    OHC->>Stripe: Provision connected account
+    Maya->>App: Clicks "Launch Business" (Mobile)
+    App-->>Maya: Asks: "What do you sell?"
+    Maya->>App: "Custom Cakes"
+    App->>Mkt: Trigger: Generate Storefront
+    Mkt-->>App: Returns beautifully designed catalog page
+    App-->>Maya: "Your store is live! Add your first cake."
+    Maya->>App: Uploads cake photo & sets price
+    App->>Mkt: Trigger: Optimize description & SEO
+    Maya->>App: Shares link on Instagram
+    note right of Maya: Activation: First product added & shared
 ```
 
-#### Carlos's Journey (The Freelance Handyman)
+#### 2. Carlos (The Handyman) - Services & Bookings
 ```mermaid
 sequenceDiagram
-    actor Carlos
-    participant Referral as Friend Referral
-    participant OHC as OHC Mobile App
-    participant AI as AI Salesperson
-    participant Customer as Homeowner
+    autonumber
+    actor Carlos as Carlos
+    participant App as OHC App
+    participant Ops as Operations Agent
+    participant Sales as Sales Agent
 
-    Referral->>Carlos: "Use OHC for bookings"
-    Carlos->>OHC: Signs up on Android
-    OHC->>Carlos: "What services do you offer?"
-    Carlos->>OHC: "Plumbing, Painting"
-    OHC->>AI: Generate service catalog & pricing suggestions
-    AI-->>OHC: Displays suggested catalog
-    Carlos->>OHC: Approves and shares link
-    Customer->>OHC: Requests "Fix leaky sink" & picks time slot
-    OHC->>AI: Drafts quote based on description
-    AI-->>Carlos: Push Notification: "Review Quote for Leaky Sink"
-    Carlos->>OHC: Approves Quote
-    OHC->>Customer: Sends Quote & Payment Link
+    Carlos->>App: Signs up via Android App
+    App-->>Carlos: Asks: "What services do you offer?"
+    Carlos->>App: "Plumbing and General Repairs"
+    App->>Ops: Trigger: Setup Booking Calendar
+    Ops-->>App: Calendar configured with default 1hr slots
+    App-->>Carlos: "Your booking page is ready to share."
+    Carlos->>App: Customer calls, Carlos adds them to app
+    App->>Sales: Trigger: Send automated quote to customer
+    note right of Carlos: Retention: Returns to view booking requests
 ```
 
-#### Priya's Journey (The Boutique Owner)
+#### 3. Priya (The Boutique Owner) - Online + In-Person
 ```mermaid
 sequenceDiagram
-    actor Priya
-    participant OHC as OHC App (Mobile + Web)
-    participant POS as Stripe Terminal
-    participant AI as AI Advisor
+    autonumber
+    actor Priya as Priya
+    participant App as OHC App
+    participant Ops as Operations Agent
+    participant Fin as Finance Agent
 
-    Priya->>OHC: Connects in-store inventory
-    OHC->>Priya: Syncs stock online
-    Priya->>POS: Uses phone Tap-to-Pay for in-store customer
-    POS-->>OHC: Records sale & updates inventory
-    OHC->>AI: Analyzes daily sales
-    AI-->>Priya: Push Notification: "Red dress sold out. Reorder?"
-    Priya->>OHC: Clicks "Reorder" CTA
+    Priya->>App: Logs in on iPad (In-store)
+    App->>Ops: Fetch current inventory
+    Ops-->>App: Displays inventory
+    Priya->>App: Taps "Sell item in person"
+    App->>Fin: Trigger: Initiate Stripe Terminal payment
+    Fin-->>App: Payment successful
+    App->>Ops: Deduct from inventory
+    App->>Fin: Update daily revenue stats
+    note right of Priya: Revenue: Uses Pro tier for inventory sync
 ```
 
-#### Leo's Journey (The Music Tutor)
+#### 4. Leo (The Music Tutor) - Subscriptions & Virtual Bookings
 ```mermaid
 sequenceDiagram
-    actor Leo
-    participant OHC as OHC App
-    participant Calendar as Google Calendar
-    participant AI as AI Ambassador
-    participant Student as Student
+    autonumber
+    actor Leo as Leo
+    participant App as OHC App
+    participant Ops as Operations Agent
+    participant CS as Customer Success Agent
 
-    Leo->>OHC: Sets up subscription lesson packages
-    OHC->>Calendar: Syncs availability
-    Student->>OHC: Books 4-lesson package & pays
-    OHC->>Calendar: Creates events with Zoom links
-    Student->>OHC: Misses a week
-    OHC->>AI: Detects inactivity
-    AI-->>Leo: "Drafted follow-up email for [Student]. Send?"
-    Leo->>OHC: "Send"
+    Leo->>App: Creates profile for online tutoring
+    App->>Ops: Generates recurring booking package
+    Leo->>App: Student buys 4-lesson monthly package
+    App->>Ops: Auto-generates Zoom links for 4 weeks
+    Ops-->>App: Saves to calendar
+    App->>CS: Trigger: Send welcome email to student
+    CS-->>App: Email sent
+    note right of Leo: Activation: First subscription sold
 ```
 
-#### Fatima's Journey (The Food Cart Operator)
+#### 5. Fatima (The Food Cart) - Pre-Orders & Pickup
 ```mermaid
 sequenceDiagram
-    actor Fatima
-    participant OHC as OHC App (Arabic/English)
-    participant Customer as Lunch Customer
+    autonumber
+    actor Fatima as Fatima
+    participant App as OHC App
+    participant Ops as Operations Agent
 
-    Fatima->>OHC: Opens app, marks "Chicken Over Rice" as Available
-    Customer->>OHC: Pre-orders and pays online
-    OHC-->>Fatima: Loud phone notification (Ping!)
-    Fatima->>OHC: Acknowledges order
-    Fatima->>OHC: Prints daily summary list
+    Fatima->>App: Logs in on low-end Android
+    App-->>Fatima: Displays simple order queue (Arabic/English)
+    note right of Fatima: Customer places online pre-order
+    App->>Ops: Receive order & calculate pickup time
+    Ops-->>App: Push notification (LOUD) to Fatima's phone
+    Fatima->>App: Taps "Order Ready"
+    App->>Ops: Send SMS to customer: "Food is ready!"
+    note right of Fatima: Retention: Daily use of order queue
 ```
 
-### Key Design Decisions & Why
-- **Deferred Complexity**: Users only provide Name and Business Type initially. AI fills the blanks. Payment details are only required *after* they see value (e.g., when trying to publish).
-- **Mobile-First In-App Actions**: Approvals, edits, and reads are optimized for 375px screens. Large data entry is minimized.
-- **AI as Co-Pilot**: Push notifications aren't just alerts ("You have a message"); they are actionable AI drafts ("Customer asked X. Reply with Y?").
+### Friction Points Identified
+- **Payment Setup**: Requiring KYC/Stripe Connect details immediately will cause abandonment. *Solution*: Defer until the first payout or use a streamlined onboarding flow.
+- **Asset Creation**: Users might not have professional photos (e.g., Fatima's menu). *Solution*: Allow text-only menus initially, or provide stock imagery/AI image generation.
+- **Complex Navigation**: Desktop-style sidebars on mobile confuse users. *Solution*: Use a bottom tab bar and action-oriented home feed on mobile.
 
 ## Implementation Prompt
-
-**Objective**: Implement the end-to-end user journey flows for new business onboarding and activation, ensuring 100% mobile parity and seamless AI agent integration.
-
-**Critical User Journey (CUJ)**:
-1. User opens the application for the first time.
-2. User is greeted by a conversational onboarding UI (no complex forms).
-3. User enters their business name and primary offering (e.g., "Handyman").
-4. AI Manager agent generates a base storefront, service catalog, and initial settings in the background.
-5. User is presented with a live, shareable URL within 3 minutes of opening the app.
-6. User completes deferred onboarding (connecting Stripe/bank details) via a mobile-optimized settings wizard only when they are ready to receive their first payment.
-
-**Acceptance Criteria**:
-- The flow must run flawlessly on a 375px viewport (mobile).
-- The "Blank Canvas" is completely eliminated; the AI must populate initial state based on the provided business type.
-- The UI must utilize the OHC Premium Token library (Glassmorphism, Outfit/Inter typography).
-- Ensure telemetry events are fired for each onboarding step to monitor drop-off rates.
-- E2E test coverage must simulate a complete, unauthenticated user onboarding through to the generation of the live storefront URL.
+**For Implementer Agent:**
+Implement the end-to-end "Day One" onboarding flow for the mobile application (Flutter).
+- Create a guided, conversational wizard that captures the user's business name and primary business type.
+- Do NOT require payment setup or custom domain configuration in this flow.
+- Upon completion, land the user on a simplified dashboard screen (375px mobile-first layout) that displays their live public URL and a primary CTA to "Add your first product/service".
+- The UI must adhere to the OHC Premium Token library (Glassmorphism, Outfit/Inter typography).
+- Ensure the state is managed properly (Riverpod) and the transition from wizard to dashboard feels magical (use micro-animations).
+- **Acceptance Criteria**: A new user can launch the app, complete the wizard in under 3 screens, and view their dashboard with a functional public link.
 
 ## Priority
-P0 (Critical) - Foundational to user acquisition and the core OHC promise.
+P0
 
 ## Estimated Scope
 Large
-
-</div>
