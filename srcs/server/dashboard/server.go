@@ -18,11 +18,12 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/api"
 	"github.com/onehumancorp/mono/srcs/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/srcs/server/api/mesh_legacy"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/srcs/server/auth"
 	"github.com/onehumancorp/mono/srcs/server/billing"
 	"github.com/onehumancorp/mono/srcs/server/domain"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
+	"github.com/onehumancorp/mono/srcs/server/lib/perf"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
 	orchmesh "github.com/onehumancorp/mono/srcs/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/srcs/server/services/growth"
 	"github.com/redis/go-redis/v9"
@@ -431,6 +432,27 @@ func shouldServeUI() bool {
 // Returns http.Handler.
 // Produces no errors.
 // Has no side effects.
+type centrifugeWrapper struct {
+	cn *orchestration.CentrifugeNode
+}
+
+func (w *centrifugeWrapper) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
+	w.cn.PublishTaskBroadcast(taskID, payload)
+}
+
+func (w *centrifugeWrapper) PublishCoordinationMessage(msg interface{}) {
+	// type assert or convert map to orchestration.Message
+	if m, ok := msg.(map[string]interface{}); ok {
+		w.cn.PublishCoordinationMessage(orchestration.Message{
+			ID:        m["id"].(string),
+			FromAgent: m["from_agent_id"].(string),
+			ToAgent:   m["to_agent_id"].(string),
+			Type:      m["message_type"].(string),
+			Content:   m["content"].(string),
+		})
+	}
+}
+
 func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing.Tracker, authStore ...*auth.Store) http.Handler {
 	var store *auth.Store
 	if len(authStore) > 0 && authStore[0] != nil {
@@ -644,11 +666,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
 
 	// Standalone Cloud Sync Endpoints
-	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", server.handleTelemetrySync))
+	mux.HandleFunc("/api/telemetry/sync", auth.RequireRole("system", api.HandleTelemetrySync))
 
 	// Teammate Mesh APIs
-
-
 
 	var kairosMesh kairos.TeammateMesh
 	kairosMode := "cloud"
@@ -670,8 +690,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
 	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
-
-
 
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
@@ -724,7 +742,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
 
-	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
+	return telemetry.Middleware(utils.GzipMiddleware(auth.Middleware(store)(mux)))
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching
@@ -747,9 +765,11 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 
 	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
 	meetingRoomsQuery := "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON a.id = ANY(mr.participants) WHERE a.organization_id = $1"
+	agentMissionsQuery := "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1"
 	if isStandalone {
 		// SQLite does not support ANY(array). We use json_each since SQLite provider falls back arrays to JSON arrays.
 		meetingRoomsQuery = "SELECT mr.* FROM meeting_rooms mr JOIN agents a ON EXISTS (SELECT 1 FROM json_each(mr.participants) WHERE value = a.id) WHERE a.organization_id = $1"
+		agentMissionsQuery = "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = json_extract(am.payload, '$.agent_id') WHERE a.organization_id = $1"
 	}
 
 	syncRules := map[string]interface{}{
@@ -766,7 +786,7 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table":      "agent_missions",
-				"query":      "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id' WHERE a.organization_id = $1",
+				"query":      agentMissionsQuery,
 				"parameters": []interface{}{orgID},
 			},
 			{
@@ -1097,69 +1117,7 @@ func (s *Server) handleMeshDirect(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
-func (s *Server) handleTelemetrySync(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
-	var payloads []struct {
-		MetricType string `json:"metric_type"`
-		Payload    string `json:"payload"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
-		http.Error(w, "invalid request body", http.StatusBadRequest)
-		return
-	}
-
-	ctx := r.Context()
-	for _, p := range payloads {
-		var data map[string]interface{}
-		if err := json.Unmarshal([]byte(p.Payload), &data); err != nil {
-			continue // Skip malformed payloads
-		}
-
-		switch p.MetricType {
-		case "token_usage":
-			agentID, _ := data["agent_id"].(string)
-			role, _ := data["role"].(string)
-			model, _ := data["model"].(string)
-			tokenType, _ := data["type"].(string)
-			var count int64
-			if c, ok := data["count"].(float64); ok {
-				count = int64(c)
-			}
-			telemetry.RecordTokenUsage(ctx, agentID, role, model, tokenType, count)
-		case "agent_api_call":
-			agentID, _ := data["agent_id"].(string)
-			role, _ := data["role"].(string)
-			api, _ := data["api"].(string)
-			telemetry.RecordAgentApiCall(ctx, agentID, role, api)
-		case "agent_api_error":
-			agentID, _ := data["agent_id"].(string)
-			role, _ := data["role"].(string)
-			api, _ := data["api"].(string)
-			telemetry.RecordAgentApiError(ctx, agentID, role, api)
-		case "human_interaction":
-			interactionType, _ := data["type"].(string)
-			telemetry.RecordHumanInteraction(ctx, interactionType)
-		case "meeting_event":
-			eventType, _ := data["type"].(string)
-			telemetry.RecordMeetingEvent(ctx, eventType)
-		case "swarm_task_completed":
-			missionID, _ := data["mission_id"].(string)
-			telemetry.RecordSwarmTaskCompleted(ctx, missionID)
-		default:
-			if telemetry.BufferMetricFunc != nil {
-				_ = telemetry.BufferMetricFunc(ctx, p.MetricType, p.Payload)
-			}
-		}
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok"}`))
-}
 
 func (s *Server) handleMeshMailbox(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
@@ -1311,25 +1269,48 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.orgAgentsLocked()
+	var agents []orchestration.Agent
+	var meetings []orchestration.MeetingRoom
+	var costs billing.Summary
+	var queue []orchestration.SharedTask
+	var queueLen int
 
-	queue := make([]orchestration.SharedTask, 0)
-	queueLen := 0
-	if s.hub != nil && s.hub.TaskManager() != nil {
-		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
-			for _, t := range pending {
-				if t != nil {
-					queue = append(queue, *t)
+	coordinator := perf.NewCoordinatorMode(4)
+	tasks := []func() error{
+		func() error {
+			agents = s.orgAgentsLocked()
+			return nil
+		},
+		func() error {
+			meetings = s.orgMeetingsLocked()
+			return nil
+		},
+		func() error {
+			costs = s.tracker.Summary(s.org.ID)
+			return nil
+		},
+		func() error {
+			queue = make([]orchestration.SharedTask, 0)
+			if s.hub != nil && s.hub.TaskManager() != nil {
+				if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
+					for _, t := range pending {
+						if t != nil {
+							queue = append(queue, *t)
+						}
+					}
+					queueLen = len(queue)
 				}
 			}
-			queueLen = len(queue)
-		}
+			return nil
+		},
 	}
+
+	_ = coordinator.ExecuteParallel(context.Background(), tasks)
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.orgMeetingsLocked(),
-		Costs:        s.tracker.Summary(s.org.ID),
+		Meetings:     meetings,
+		Costs:        costs,
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
