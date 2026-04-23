@@ -14,6 +14,8 @@ import (
 
 	"errors"
 	"sync"
+
+	"github.com/onehumancorp/mono/srcs/server/agents/harness"
 )
 
 // ProviderType is the unique identifier for an external agent implementation.
@@ -174,27 +176,38 @@ func executeInIsolation(ctx context.Context, agentType string, worktree string, 
 		}
 	}
 
-	// Simulating process sandbox stream piping...
+	h := harness.NewIsolationHarness()
+	execCtx := harness.ExecutionContext{
+		Command: []string{"echo", fmt.Sprintf("Execution started in isolated worktree %s", worktree)},
+		AllowedPaths: []string{worktree},
+	}
+	out, err := h.Execute(ctx, execCtx)
+
 	outputMsg, _ := json.Marshal(map[string]interface{}{
 		"agent":   agentType,
 		"stream":  "stdout",
-		"content": "Execution started in isolated worktree " + worktree,
+		"content": string(out),
 	})
 
 	if transport != nil {
 		transport.Send(ctx, outputMsg)
 	}
 
+	status := "COMPLETED"
+	if err != nil {
+		status = "FAILED"
+	}
+
 	endMsg, _ := json.Marshal(map[string]interface{}{
 		"agent":  agentType,
-		"status": "COMPLETED",
+		"status": status,
 	})
 
 	if transport != nil {
 		transport.Send(ctx, endMsg)
 	}
 
-	return nil
+	return err
 }
 
 

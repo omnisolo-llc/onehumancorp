@@ -18,6 +18,7 @@ go_library(
     deps = [
         "//srcs/server/telemetry",
         "//srcs/server/agents/grpc",
+        "//srcs/server/agents/harness",
         "//srcs/proto/agentservice",
         "//srcs/server/db",
         "//srcs/server/integrations/plane",
@@ -42,6 +43,7 @@ go_test(
     ],
     embed = [":agents"],
     deps = [
+        "//srcs/server/agents/harness",
         "//srcs/server/db",
         "//srcs/server/integrations",
         "//srcs/server/integrations/plane",
