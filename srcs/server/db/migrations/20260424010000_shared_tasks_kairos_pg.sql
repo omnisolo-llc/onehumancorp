@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS shared_tasks (
     status VARCHAR NOT NULL DEFAULT 'PENDING',
     agent_id VARCHAR,
     priority VARCHAR NOT NULL DEFAULT 'P2',
-    payload JSONB
+    payload JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 -- +goose StatementEnd

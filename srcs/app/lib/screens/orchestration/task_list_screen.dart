@@ -179,7 +179,13 @@ class _AnimatedTaskGlassCardState extends State<_AnimatedTaskGlassCard> with Sin
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _fadeAnimation,
-        child: _TaskGlassCard(task: widget.task),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color.fromRGBO(255, 255, 255, 0.03),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: _TaskGlassCard(task: widget.task),
+        ),
       ),
     );
   }

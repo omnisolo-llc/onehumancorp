@@ -20,10 +20,28 @@ func TestValidationMiddleware(t *testing.T) {
 	}{
 
 		{
-			name:           "Valid KAIROS payload",
+			name:           "Valid KAIROS payload for mesh:tasks",
 			method:         http.MethodPost,
-			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION", "data": {}}`),
+			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION", "action": "CREATE", "status": "PENDING", "data": {}}`),
 			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Valid payload for other channels",
+			method:         http.MethodPost,
+			body:           []byte(`{"agent_id": "123", "channel": "other_channel", "event_type": "TASK_TRANSITION", "data": {}}`),
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Missing action for mesh:tasks",
+			method:         http.MethodPost,
+			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION", "status": "PENDING", "data": {}}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing status for mesh:tasks",
+			method:         http.MethodPost,
+			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION", "action": "CREATE", "data": {}}`),
+			expectedStatus: http.StatusBadRequest,
 		},
 		{
 			name:           "Missing agent_id",
@@ -77,7 +95,7 @@ func TestValidationMiddleware(t *testing.T) {
 			handler.ServeHTTP(w, req)
 
 			if w.Code != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, w.Code)
+				t.Errorf("expected status %d, got %d for test %s", tt.expectedStatus, w.Code, tt.name)
 			}
 		})
 	}

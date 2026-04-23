@@ -10,6 +10,8 @@ import (
 // meshPayload is used to verify OHC-SIP compliance.
 type meshPayload struct {
 	AgentID   *string         `json:"agent_id"`
+	Action    *string         `json:"action"`
+	Status    *string         `json:"status"`
 	Channel   *string         `json:"channel"`
 	EventType *string         `json:"event_type"`
 	Data      json.RawMessage `json:"data"`
@@ -40,9 +42,18 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		// Enforce original validation
 		if payload.AgentID == nil || payload.Channel == nil || payload.EventType == nil || payload.Data == nil || string(payload.Data) == "null" {
 			http.Error(w, "OHC-SIP compliance failed: missing required payload fields", http.StatusBadRequest)
 			return
+		}
+
+		// Enforce new KAIROS requirements for mesh:tasks
+		if payload.Channel != nil && *payload.Channel == "mesh:tasks" {
+			if payload.Action == nil || payload.Status == nil {
+				http.Error(w, "OHC-SIP compliance failed: missing required payload fields (action, status) for mesh:tasks", http.StatusBadRequest)
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r)
