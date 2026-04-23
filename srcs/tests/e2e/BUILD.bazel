@@ -140,7 +140,7 @@ go_test(
 # ── Wizard ────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_wizard_test",
-    srcs = _SHARED_SRCS + ["wizard_test.go"],
+    srcs = _SHARED_SRCS + ["wizard_test.go", "website_builder_wizard_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
     deps = _COMMON_DEPS,

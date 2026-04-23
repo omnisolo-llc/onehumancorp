@@ -1,7 +1,21 @@
-1. **Implement `IsolationStrategy` interface**: Use a file editing tool (like `replace_with_git_merge_diff`) to add `IsolationStrategy` interface to `srcs/server/agents/provider.go`. The interface will have a single method `RunInIsolation(worktree string) error`.
-2. **Update `Provider` interface**: Use a file editing tool to embed the `IsolationStrategy` interface in the `Provider` interface in `srcs/server/agents/provider.go`.
-3. **Implement `RunInIsolation`**: Use a file editing tool to add `RunInIsolation(worktree string) error` to all the structs implementing `Provider` (or just to `baseProvider` and `BuiltinProvider`) in `srcs/server/agents/provider.go`. The implementation will pipe output streams directly to Redis Pub/Sub, for example: `fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)` and return `nil`.
-4. **Verify code changes**: Run `cat srcs/server/agents/provider.go` to ensure all edits were applied correctly.
-5. **Run tests**: Execute `bazelisk test //srcs/server/agents/...` to ensure all tests pass.
-6. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-7. **Submit the code**: Use the `submit` tool to commit the code, and then output a final message with a YAML block containing `issue_id: 4871`.
+1. **Create `website_builder_wizard_screen.dart`**
+   - Use `run_in_bash_session` to write `srcs/app/lib/screens/website_builder_wizard_screen.dart` containing a 5-step `ConsumerStatefulWidget` for the website builder wizard with OHC styling (`GlassCard`).
+
+2. **Update `router.dart`**
+   - Use `run_in_bash_session` to execute a python script that accurately patches `srcs/app/lib/router.dart` with a regex to insert the import, route, and sidebar navigation item.
+
+3. **Add Flutter Unit Test**
+   - Use `run_in_bash_session` to write `srcs/app/lib/screens/website_builder_wizard_screen_test.dart` containing full coverage tests for the widget. (Note: placing it in `srcs/app/lib/screens` will make it automatically picked up by the `//srcs/app/lib/screens:all_tests` glob used in `srcs/app/BUILD.bazel` for `flutter_unit_tests`).
+
+4. **Add E2E Playwright Test in Go**
+   - Use `run_in_bash_session` to write the new E2E test into `srcs/tests/e2e/website_builder_wizard_test.go` implementing the UI test using `loginAsAdmin` and `newPage`.
+   - Update `srcs/tests/e2e/BUILD.bazel` using `run_in_bash_session` to inject the new test file `website_builder_wizard_test.go` into the existing `e2e_wizard_test` target using a python patch script.
+
+5. **Run tests**
+   - Use `run_in_bash_session` to run tests using `bazelisk test //... > test_output.log 2>&1 &` and monitor progress. Wait for it to finish and then verify results with `tail -n 50 test_output.log`.
+
+6. **Pre-commit Steps**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+7. **Submit Change**
+   - Use the `submit` tool to finalize the changes with a PR title starting with "🧙 Wizard: Website Builder Onboarding".
