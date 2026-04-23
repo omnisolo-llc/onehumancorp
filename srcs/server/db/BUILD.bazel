@@ -94,6 +94,7 @@ go_library(
         "migrations/20260427000000_autodream_memories_decomposition.go",
                         "migrations/20260428000000_kairos_shared_tasks_state_machine_pg.sql",
         "migrations/20260428000000_kairos_shared_tasks_state_machine_sqlite.sql",
+        "migrations/20260427020001_shared_tasks_indexes.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
