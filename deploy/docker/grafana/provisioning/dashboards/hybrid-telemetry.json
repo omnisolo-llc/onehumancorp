@@ -2297,6 +2297,80 @@
           "mode": "multi"
         }
       }
+    },
+    {
+      "type": "heatmap",
+      "title": "Token Efficiency by Agent Role",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 232
+      },
+      "id": 10001,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "sum by (agent_role, outcome) (rate(ohc_token_usage_by_outcome[5m]))",
+          "legendFormat": "{{agent_role}} - {{outcome}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "calculate": false,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges",
+          "steps": 128
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Swarm ROI",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 232
+      },
+      "id": 10002,
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "editorMode": "code",
+          "expr": "avg by (agent_role) (ohc_agent_efficiency_gauge)",
+          "legendFormat": "{{agent_role}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto"
+      }
     }
   ],
   "refresh": "",

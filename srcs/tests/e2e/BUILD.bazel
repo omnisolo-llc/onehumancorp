@@ -111,6 +111,7 @@ go_test(
     srcs = _SHARED_SRCS + [
         "business_test.go",
         "cuj_business_extra_test.go",
+        "cuj_token_efficiency_test.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,

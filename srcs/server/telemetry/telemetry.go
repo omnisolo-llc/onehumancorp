@@ -22,6 +22,8 @@ import (
 )
 
 var (
+	TokenUsageByOutcomeCounter metric.Int64Counter
+	AgentEfficiencyGauge       metric.Float64Gauge
 	IdentityVerificationSuccessTotal metric.Int64Counter
 	IdentityVerificationFailureTotal metric.Int64Counter
 	SyncConflictsResolvedTotal       metric.Int64Counter
@@ -938,8 +940,26 @@ func InitWithMeter(m mockableMeter) error {
 		return errs[0]
 	}
 
+
+	TokenUsageByOutcomeCounter, err = m.Int64Counter(
+		"ohc_token_usage_by_outcome",
+		metric.WithDescription("Total tokens consumed labeled by task outcome"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	AgentEfficiencyGauge, err = m.Float64Gauge(
+		"ohc_agent_efficiency_gauge",
+		metric.WithDescription("Agent efficiency score (Tasks Completed / Tokens Consumed * 1000)"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	return nil
 }
+
 
 // Middleware injects telemetry instrumentation into an HTTP handler chain.
 //
