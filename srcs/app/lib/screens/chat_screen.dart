@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/providers/dashboard_provider.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:uuid/uuid.dart';
@@ -111,6 +112,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final messages = ref.watch(_messagesProvider);
     final room = ref.watch(_roomProvider);
     final user = ref.watch(authStateProvider).valueOrNull;
+    final dashboard = ref.watch(dashboardProvider).valueOrNull;
 
     return Scaffold(
       appBar: AppBar(
@@ -139,7 +141,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       itemBuilder: (_, i) {
                         final m = messages[i];
                         final isMe = m.authorId == user?.id;
-                        return _MessageBubble(message: m, isMe: isMe);
+                        final authorMember = dashboard?.organization.members.where((mm) => mm.id == m.authorId).firstOrNull;
+                        final isCEO = authorMember?.role == 'CEO' || authorMember?.role == 'ceo';
+
+                        return _MessageBubble(message: m, isMe: isMe, isCEO: isCEO);
                       },
                     ),
           ),
@@ -171,8 +176,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 class _MessageBubble extends StatelessWidget {
   final CentrifugeMessage message;
   final bool isMe;
+  final bool isCEO;
 
-  const _MessageBubble({required this.message, required this.isMe});
+  const _MessageBubble({required this.message, required this.isMe, this.isCEO = false});
 
   @override
   Widget build(BuildContext context) {
@@ -180,6 +186,7 @@ class _MessageBubble extends StatelessWidget {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
+        key: const Key('message-bubble'),
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: BoxConstraints(
@@ -187,6 +194,7 @@ class _MessageBubble extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: isMe ? cs.primaryContainer : cs.surfaceContainerHighest,
+          border: isCEO ? Border.all(color: const Color(0xFFFFD700), width: 2) : null,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
             topRight: const Radius.circular(12),
@@ -232,6 +240,7 @@ class _InputBar extends StatelessWidget {
         children: [
           Expanded(
             child: TextField(
+              key: const Key('message-input'),
               controller: controller,
               decoration: const InputDecoration(
                 hintText: 'Type a message…',

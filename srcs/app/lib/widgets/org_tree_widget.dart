@@ -19,8 +19,6 @@ class OrgTreeWidget extends StatelessWidget {
     final children = members.where((m) => m.managerId == parentId).toList();
     if (children.isEmpty) return const SizedBox.shrink();
 
-    final colors = Theme.of(context).colorScheme;
-
     return Padding(
       padding: EdgeInsets.only(left: depth == 0 ? 0 : 20.0),
       child: Column(
@@ -58,6 +56,7 @@ class _OrgMemberRow extends StatelessWidget {
           'Organization member: ${member.name}, Role: ${member.role.replaceAll('_', ' ')}${member.isHuman ? ', YOU' : ''}',
       excludeSemantics: true,
       child: Padding(
+        key: const Key('agent-node'),
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Row(
           children: [

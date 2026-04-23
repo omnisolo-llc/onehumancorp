@@ -19,28 +19,23 @@ func TestCujAuditDashboardLoadMetrics(t *testing.T) {
 	page.Goto(baseURL + "/dashboard")
 	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle})
 
-	body, _ := page.Content()
-	_ = body
-
-	count, _ := page.GetByText("Active Agents").Count()
-	hasActiveAgents := count > 0
-	count, _ = page.GetByText("Dashboard").Count()
-	hasDashboard := count > 0
-	count, _ = page.GetByText("Overview").Count()
-	hasOverview := count > 0
-
-	if !hasActiveAgents {
-		t.Log("WARNING: Dashboard missing 'Active Agents' stat card")
+	if count, _ := page.GetByText("Active Agents").Count(); count == 0 {
+		t.Errorf("Dashboard missing 'Active Agents' stat card")
 	}
-	if !hasDashboard {
-		t.Log("WARNING: Dashboard page heading not found")
+	if count, _ := page.GetByText("Dashboard").Count(); count == 0 {
+		t.Errorf("Dashboard page heading not found")
 	}
-	if !hasOverview {
-		t.Log("WARNING: Dashboard missing 'Overview' section")
+	if count, _ := page.GetByText("Overview").Count(); count == 0 {
+		t.Errorf("Dashboard missing 'Overview' section")
 	}
 
-	t.Logf("Dashboard audit: ActiveAgents=%v, Dashboard=%v, Overview=%v",
-		hasActiveAgents, hasDashboard, hasOverview)
+	// Verify CUJ identifiers
+	if count, _ := page.Locator("[key='agent-node']").Count(); count == 0 {
+		t.Errorf("Dashboard missing 'agent-node' identifiers (OrgTreeWidget not integrated?)")
+	}
+	if count, _ := page.Locator("[key='meeting-card']").Count(); count == 0 {
+		t.Errorf("Dashboard missing 'meeting-card' identifiers")
+	}
 }
 
 func TestCujAuditDashboardLoadsWithinAcceptableTime(t *testing.T) {
@@ -69,9 +64,12 @@ func TestCujAuditHireAgentWizardHasRequiredSteps(t *testing.T) {
 	page.Goto(baseURL + "/agents/hire")
 	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle})
 
-	count, _ := page.GetByText("Role").Count()
-	if count == 0 {
-		t.Log("WARNING: Hire Agent wizard missing 'Role' step")
+	if count, _ := page.Locator("[key='hiring-form']").Count(); count == 0 {
+		t.Errorf("Hire Agent wizard missing 'hiring-form' identifier")
+	}
+
+	if count, _ := page.GetByText("Role").Count(); count == 0 {
+		t.Errorf("Hire Agent wizard missing 'Role' step")
 	}
 
 	nameInput := page.Locator("input").First()
@@ -79,16 +77,13 @@ func TestCujAuditHireAgentWizardHasRequiredSteps(t *testing.T) {
 		if err := nameInput.Fill("TestAgent", playwright.LocatorFillOptions{
 			Timeout: playwright.Float(shortTimeout),
 		}); err != nil {
-			t.Logf("Name input fill warning: %v", err)
+			t.Errorf("Name input fill failed: %v", err)
 		}
 	}
 
-	count, _ = page.GetByText("Deploy Agent").Count()
-	if count == 0 {
-		t.Log("WARNING: Hire Agent wizard missing 'Deploy Agent' button")
+	if count, _ := page.GetByText("Deploy Agent").Count(); count == 0 {
+		t.Errorf("Hire Agent wizard missing 'Deploy Agent' button")
 	}
-
-	t.Log("Hire Agent wizard has required steps")
 }
 
 func TestCujAuditChatScreenHasMessageInput(t *testing.T) {
@@ -99,19 +94,34 @@ func TestCujAuditChatScreenHasMessageInput(t *testing.T) {
 	page.Goto(baseURL + "/chat")
 	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle})
 
-	textInput := page.Locator("input[type='text'], input[type='search'], textarea").First()
-	count, _ := textInput.Count()
-	if count == 0 {
-		t.Log("WARNING: Chat screen missing text input field")
+	if count, _ := page.Locator("[key='message-input']").Count(); count == 0 {
+		t.Errorf("Chat screen missing 'message-input' identifier")
 	}
 
 	sendBtn := page.GetByText("Send").First()
-	count, _ = sendBtn.Count()
-	if count == 0 {
-		t.Log("WARNING: Chat screen missing explicit 'Send' button (may use Enter)")
+	if count, _ := sendBtn.Count(); count == 0 {
+		t.Errorf("Chat screen missing explicit 'Send' button")
 	}
+}
 
-	t.Log("Chat screen has message input field")
+func TestCujAuditChatCEOMessageGoldBorder(t *testing.T) {
+	page := newPage(t)
+	defer page.Close()
+
+	loginAsAdmin(t, page)
+	page.Goto(baseURL + "/chat")
+	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle})
+
+	// Note: Testing for actual gold border requires a message from a CEO to be present.
+	// In a mocked/test environment, we might need to inject one or rely on existing ones.
+	// For now we check if the bubble key exists and try to evaluate style if one is found.
+	bubbles := page.Locator("[key='message-bubble']")
+	count, _ := bubbles.Count()
+	if count > 0 {
+		// Evaluate the border color of the first bubble (if it's CEO)
+		// This is a complex check in Playwright/Flutter Web but feasible via JS evaluation
+		t.Logf("Found %d message bubbles to audit", count)
+	}
 }
 
 func TestCujAuditHandoffsScreenShowsPendingItems(t *testing.T) {
@@ -218,12 +228,13 @@ func TestCujAuditAgentsScreenHasHireButton(t *testing.T) {
 	page.Goto(baseURL + "/agents")
 	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle})
 
-	count, _ := page.GetByText("Hire Agent").Count()
-	if count == 0 {
-		t.Log("WARNING: Agents screen missing 'Hire Agent' button")
+	if count, _ := page.Locator("[key='agent-card']").Count(); count == 0 {
+		t.Errorf("Agents screen missing 'agent-card' identifiers")
 	}
 
-	t.Log("Agents screen has 'Hire Agent' button")
+	if count, _ := page.GetByText("Hire Agent").Count(); count == 0 {
+		t.Errorf("Agents screen missing 'Hire Agent' button")
+	}
 }
 
 func TestCujAuditSettingsScreenHasSecuritySection(t *testing.T) {

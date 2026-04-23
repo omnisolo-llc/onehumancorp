@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/pulse_animation.dart';
 
 final _agentsProvider = FutureProvider<List<Agent>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -170,6 +171,127 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
             ? colorScheme.onPrimaryContainer
             : colorScheme.onSurfaceVariant;
 
+    final isNew = DateTime.now().difference(widget.agent.createdAt).inMinutes < 5;
+
+    Widget card = GlassCard(
+      key: const Key('agent-card'),
+      decoration: isNew ? BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.greenAccent, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.greenAccent.withValues(alpha: 0.3),
+            blurRadius: 8,
+            spreadRadius: 2,
+          ),
+        ],
+      ) : null,
+      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          // Optional: Handle agent card tap
+        },
+        child: Tooltip(
+          message: 'View details for ${widget.agent.name}',
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  width: 48,
+                  height: 48,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isRunningColor.withValues(alpha: 0.8),
+                  ),
+                  child: Icon(Icons.smart_toy, color: isRunningIconColor),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            widget.agent.name,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: colorScheme.onSurface,
+                              fontFamily: 'Outfit',
+                            ),
+                          ),
+                          if (widget.agent.svidVerified) ...[
+                            const SizedBox(width: 6),
+                            Tooltip(
+                                              message: 'Identity Verified',
+                              child: Icon(
+                                Icons.verified_user,
+                                size: 16,
+                                color: Colors.greenAccent,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.agent.formattedRole,
+                        style: TextStyle(
+                          color: colorScheme.onSurfaceVariant,
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: chipBgColor.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    widget.agent.status,
+                    style: TextStyle(
+                      color: chipTextColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                if (!widget.agent.isRunning) ...[
+                  const SizedBox(width: 8),
+                  FilledButton.tonalIcon(
+                    onPressed: () => context.go('/wizards/fix/${widget.agent.id ?? widget.agent.name}'),
+                    icon: const Icon(Icons.build, size: 16),
+                    label: const Text('Help me fix this'),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                      minimumSize: const Size(0, 32),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (isNew) {
+      card = PulseAnimation(child: card);
+    }
+
     return Semantics(
       label: 'Agent ${widget.agent.name}, Role: ${widget.agent.role}, Status: ${widget.agent.status}',
       button: true,
@@ -179,108 +301,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
           opacity: _fadeAnimation,
           child: Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: GlassCard(
-        child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () {
-                          // Optional: Handle agent card tap
-                        },
-                        child: Tooltip(
-                          message: 'View details for ${widget.agent.name}',
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                  width: 48,
-                                  height: 48,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: isRunningColor.withValues(alpha: 0.8),
-                                  ),
-                                  child: Icon(Icons.smart_toy, color: isRunningIconColor),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            widget.agent.name,
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                              color: colorScheme.onSurface,
-                                              fontFamily: 'Outfit',
-                                            ),
-                                          ),
-                                          if (widget.agent.svidVerified) ...[
-                                            const SizedBox(width: 6),
-                                            Tooltip(
-                                              message: 'SPIFFE mTLS Secured',
-                                              child: Icon(
-                                                Icons.verified_user,
-                                                size: 16,
-                                                color: Colors.greenAccent,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        widget.agent.formattedRole,
-                                        style: TextStyle(
-                                          color: colorScheme.onSurfaceVariant,
-                                          fontFamily: 'Inter',
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: chipBgColor.withValues(alpha: 0.8),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    widget.agent.status,
-                                    style: TextStyle(
-                                      color: chipTextColor,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                                if (!widget.agent.isRunning) ...[
-                                  const SizedBox(width: 8),
-                                  FilledButton.tonalIcon(
-                                    onPressed: () => context.go('/wizards/fix/${widget.agent.id ?? widget.agent.name}'),
-                                    icon: const Icon(Icons.build, size: 16),
-                                    label: const Text('Help me fix this'),
-                                    style: FilledButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                                      minimumSize: const Size(0, 32),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-      ),
+            child: card,
           ),
         ),
       ),

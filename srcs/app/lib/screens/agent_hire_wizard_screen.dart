@@ -142,6 +142,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
         ),
       ),
       body: Stepper(
+        key: const Key('hiring-form'),
         type: StepperType.vertical,
         currentStep: _step,
         onStepContinue: () {

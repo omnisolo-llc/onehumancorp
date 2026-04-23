@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ohc_app/screens/dashboard_screen.dart';
+import 'package:ohc_app/providers/dashboard_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:ohc_app/widgets/agent_status_indicator.dart';
 

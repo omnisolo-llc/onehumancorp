@@ -9,18 +9,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/providers/dashboard_provider.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/org_tree_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
-
-final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
-  final api = ref.watch(apiServiceProvider);
-  if (api == null) throw Exception('API not available');
-  return api.getDashboard();
-});
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -215,6 +211,25 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),
+        _SectionTitle('Upcoming Appointments'),
+        const SizedBox(height: 16),
+        if (data.meetings.isEmpty)
+          const GlassCard(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Center(child: Text('No upcoming appointments', style: TextStyle(fontFamily: 'Inter'))),
+            ),
+          )
+        else
+          ...data.meetings.take(3).map((m) => _MeetingCard(meeting: m as Map<String, dynamic>)),
+        const SizedBox(height: 12),
+        TextButton.icon(
+          onPressed: () => context.go('/meetings'),
+          icon: const Icon(Icons.arrow_forward),
+          label: const Text('View all meetings'),
+        ),
+
+        const SizedBox(height: 32),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
         Text(
@@ -225,6 +240,8 @@ class _DashboardContent extends StatelessWidget {
               ),
         ),
         const SizedBox(height: 16),
+        OrgTreeWidget(members: data.organization.members),
+        const SizedBox(height: 24),
         Wrap(
           spacing: 16,
           runSpacing: 16,
@@ -552,6 +569,38 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                     ),
       ),
         ),
+      ),
+    );
+  }
+}
+
+class _MeetingCard extends StatelessWidget {
+  final Map<String, dynamic> meeting;
+
+  const _MeetingCard({required this.meeting});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final status = meeting['status'] as String? ?? 'scheduled';
+    final name = meeting['name'] as String? ?? 'Meeting';
+
+    return GlassCard(
+      key: const Key('meeting-card'),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: colors.primary.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.video_call, color: colors.primary),
+        ),
+        title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+        subtitle: Text(status.toUpperCase(), style: TextStyle(fontSize: 12, color: colors.primary, fontWeight: FontWeight.bold, fontFamily: 'Inter')),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.go('/meetings'),
       ),
     );
   }
