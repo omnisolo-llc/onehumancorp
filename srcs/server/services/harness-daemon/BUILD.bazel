@@ -12,6 +12,9 @@ go_library(
 
 go_test(
     name = "harnessdaemon_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = ["daemon_test.go"],
     embed = [":harnessdaemon"],
     deps = [
