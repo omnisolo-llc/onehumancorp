@@ -1310,27 +1310,78 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.orgAgentsLocked()
+	var wg sync.WaitGroup
 
-	queue := make([]orchestration.SharedTask, 0)
-	queueLen := 0
-	if s.hub != nil && s.hub.TaskManager() != nil {
-		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
-			for _, t := range pending {
-				if t != nil {
-					queue = append(queue, *t)
+	var agents []orchestration.Agent
+	var queue []orchestration.SharedTask
+	var queueLen int
+	var costs billing.Summary
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		agents = s.orgAgentsLocked()
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		queue = make([]orchestration.SharedTask, 0)
+		if s.hub != nil && s.hub.TaskManager() != nil {
+			if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
+				for _, t := range pending {
+					if t != nil {
+						queue = append(queue, *t)
+					}
 				}
+				queueLen = len(queue)
 			}
-			queueLen = len(queue)
 		}
-	}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if s.tracker != nil {
+			costs = s.tracker.Summary(s.org.ID)
+		}
+	}()
+
+	wg.Wait()
+
+	// Meetings and Statuses depend on agents, we calculate them after agents are fetched
+	var innerWg sync.WaitGroup
+	var statuses []statusCount
+	var meetings []orchestration.MeetingRoom
+
+	innerWg.Add(1)
+	go func() {
+		defer innerWg.Done()
+		statuses = summarizeStatuses(agents)
+	}()
+
+	innerWg.Add(1)
+	go func() {
+		defer innerWg.Done()
+		if s.hub != nil {
+			index := make(map[string]struct{}, len(agents))
+			for _, agent := range agents {
+				index[agent.ID] = struct{}{}
+			}
+			meetings = filterMeetingsByAgentIDs(s.hub.Meetings(), index)
+		} else {
+			meetings = []orchestration.MeetingRoom{}
+		}
+	}()
+
+	innerWg.Wait()
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.orgMeetingsLocked(),
-		Costs:        s.tracker.Summary(s.org.ID),
+		Meetings:     meetings,
+		Costs:        costs,
 		Agents:       agents,
-		Statuses:     summarizeStatuses(agents),
+		Statuses:     statuses,
 		TaskQueue:    queue,
 		QueueLength:  queueLen,
 		UpdatedAt:    time.Now().UTC(),
