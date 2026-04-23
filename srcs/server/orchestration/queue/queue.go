@@ -23,7 +23,7 @@ type Job struct {
 // TaskQueue defines the contract for an execution queue.
 type TaskQueue interface {
 	Enqueue(ctx context.Context, job *Job) error
-	Dequeue(ctx context.Context, roles []string) (*Job, error)
+	Acquire(ctx context.Context, roles []string) (*Job, error)
 	Complete(ctx context.Context, jobID string) error
 	Fail(ctx context.Context, jobID string, reason string) error
 }
@@ -48,6 +48,6 @@ type SubAgentTaskQueuePayload struct {
 
 type SubAgentTaskQueue interface {
 	Enqueue(ctx context.Context, payload *SubAgentTaskQueuePayload) error
-	Process(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error)
+	Acquire(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error)
 }
 // added for Sub-Agent Orchestration Queue - issue_id 4240
