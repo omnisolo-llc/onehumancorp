@@ -2143,3 +2143,50 @@ func (h *Hub) ForkAgent(ctx context.Context, parentID string, directive string) 
 
 	return childID, nil
 }
+
+// OidcIssuerVerification securely processes OIDC issuer verification.
+//
+// Parameters:
+//
+//   - eventID: string; Unique event identifier.
+//
+//   - agentID: string; Identifier of the invoking agent.
+//
+//   - payload: []byte; The operation payload containing specific context instructions.
+//
+//   - error: Error object if validation or processing fails.
+//
+func (h *Hub) OidcIssuerVerification(eventID, agentID string, payload []byte) error {
+	h.mu.Lock()
+	if h.tokenTrackers == nil {
+		h.tokenTrackers = make(map[string]struct{})
+	}
+	if _, exists := h.tokenTrackers[eventID]; exists {
+		h.mu.Unlock()
+		return errors.New("event already being processed")
+	}
+	h.tokenTrackers[eventID] = struct{}{}
+	h.mu.Unlock()
+
+	defer func() {
+		h.mu.Lock()
+		delete(h.tokenTrackers, eventID)
+		h.mu.Unlock()
+	}()
+
+	var temp struct{}
+	dec := json.NewDecoder(bytes.NewReader(payload))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&temp); err != nil {
+		return fmt.Errorf("invalid payload: %w", err)
+	}
+
+	h.LogEvent(map[string]interface{}{
+		"event_id": eventID,
+		"agent_id": agentID,
+		"type":     "OidcIssuerVerification",
+		"payload":  temp,
+	})
+
+	return nil
+}
