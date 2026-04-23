@@ -1,7 +1,23 @@
-1. **Implement `IsolationStrategy` interface**: Use a file editing tool (like `replace_with_git_merge_diff`) to add `IsolationStrategy` interface to `srcs/server/agents/provider.go`. The interface will have a single method `RunInIsolation(worktree string) error`.
-2. **Update `Provider` interface**: Use a file editing tool to embed the `IsolationStrategy` interface in the `Provider` interface in `srcs/server/agents/provider.go`.
-3. **Implement `RunInIsolation`**: Use a file editing tool to add `RunInIsolation(worktree string) error` to all the structs implementing `Provider` (or just to `baseProvider` and `BuiltinProvider`) in `srcs/server/agents/provider.go`. The implementation will pipe output streams directly to Redis Pub/Sub, for example: `fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)` and return `nil`.
-4. **Verify code changes**: Run `cat srcs/server/agents/provider.go` to ensure all edits were applied correctly.
-5. **Run tests**: Execute `bazelisk test //srcs/server/agents/...` to ensure all tests pass.
-6. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-7. **Submit the code**: Use the `submit` tool to commit the code, and then output a final message with a YAML block containing `issue_id: 4871`.
+1. **Implement Website Builder Wizard Screen:**
+    - Create a new file `srcs/app/lib/screens/website_builder_wizard_screen.dart`.
+    - Implement a progressive wizard based on the "Website Builder Onboarding" requirements in the task description.
+    - Requirements:
+        - Steps: Template gallery, Brand colors & logo, Add first product/service, Connect domain, Go Live.
+        - UI constraints: Glassmorphism (`GlassCard`), progressive disclosure (Expert mode toggle), mobile-first.
+        - State management using Riverpod.
+    - Make sure to use the exact specified text copies like "Use this template →" and "Publish".
+
+2. **Add Website Builder Wizard to Router:**
+    - Update `srcs/app/lib/router.dart` to add a new route for the website builder (e.g. `/wizard/website`).
+    - Add a button in the dashboard or wherever it should be accessible, or just make it accessible via route for testing. Since the task says "Triggered after the setup wizard, or when the user taps 'Build My Website'", I'll add a trigger button on the Dashboard.
+
+3. **Write E2E Test for the Wizard:**
+    - Create `srcs/app/test/screens/website_builder_wizard_screen_test.dart` to verify state transitions and UI rendering.
+    - Create an E2E test `srcs/app/test/cuj_website_builder_e2e_test.dart` meeting the CUJ standard (start from login, navigate to wizard, complete flow, assert final state).
+
+4. **Pre-commit Checks:**
+    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+5. **Submit Change:**
+    - Use `bazelisk test //srcs/app/...` to verify all tests pass.
+    - Submit PR.
