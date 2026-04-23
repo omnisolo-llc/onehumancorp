@@ -1,6 +1,8 @@
 package mesh
 
 import (
+	"github.com/redis/go-redis/v9"
+
 	"context"
 	"time"
 )
@@ -26,4 +28,12 @@ type TeammateMesh interface {
 	// Presence
 	RegisterPresence(ctx context.Context, agentID string, status string) error
 	GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
+}
+
+
+func NewHybridMesh(isStandalone bool, redisClient *redis.Client) TeammateMesh {
+	if isStandalone || redisClient == nil {
+		return NewLocalMesh()
+	}
+	return NewRedisMesh(redisClient)
 }

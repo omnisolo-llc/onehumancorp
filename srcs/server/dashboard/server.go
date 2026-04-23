@@ -674,7 +674,47 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
-	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
+	var redisOpt *redis.Options
+	if kairosMode == "cloud" {
+		parsedOpt, err := redis.ParseURL(os.Getenv("REDIS_URL"))
+		if err == nil {
+			redisOpt = parsedOpt
+		}
+	}
+	var redisClient *redis.Client
+	if redisOpt != nil {
+		redisClient = redis.NewClient(redisOpt)
+	}
+	orchMeshAPI := orchmesh.NewMeshAPI(orchmesh.NewHybridMesh(kairosMode == "standalone", redisClient))
+	orchMeshAPI.OnBroadcast = func(channel string, payload []byte) {
+		// Legacy publish for fallback/other agent systems expecting it via hub until fully migrated
+		_ = server.hub.Publish(orchestration.Message{
+			ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+			FromAgent: "system",
+			ToAgent:   "system",
+			Type:      channel,
+			Content:   string(payload),
+		})
+
+		// Map mesh channels to Centrifuge WebSocket channels for UI updates
+		if server.hub != nil && server.hub.CentrifugeNode() != nil {
+			if channel == "mesh:tasks" || channel == "swarm-events" {
+				var data map[string]interface{}
+				_ = json.Unmarshal(payload, &data) // fallback to pass to Centrifuge
+				server.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), data)
+			} else if channel == "mesh:coordination" {
+				server.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
+					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
+					FromAgent: "system",
+					ToAgent:   "system",
+					Type:      channel,
+					Content:   string(payload),
+				})
+			}
+		}
+	}
+	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", orchMeshAPI.HandleBroadcast)))
+	mux.HandleFunc("/api/mesh/v2/subscribe", auth.RequireRole("system", orchMeshAPI.HandleSubscribe))
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
@@ -2028,107 +2068,4 @@ func (s *Server) handleStream(w http.ResponseWriter, r *http.Request) { // added
 			flusher.Flush()
 		}
 	}
-}
-
-func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
-	mode := "cloud"
-	if os.Getenv("OHC_STANDALONE") == "true" {
-		mode = "standalone"
-	}
-	telemetry.RecordMeshBroadcast(r.Context(), mode)
-
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	// Enforce mTLS checks
-	if r.TLS == nil || len(r.TLS.PeerCertificates) == 0 {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-	cert := r.TLS.PeerCertificates[0]
-	if len(cert.URIs) == 0 || cert.URIs[0].Scheme != "spiffe" {
-		http.Error(w, "mTLS SPIFFE identity required", http.StatusForbidden)
-		return
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024)
-
-	var req struct {
-		Channel string                 `json:"channel"`
-		Data    map[string]interface{} `json:"data"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
-		return
-	}
-
-	if req.Channel == "" {
-		http.Error(w, "invalid channel", http.StatusBadRequest)
-		return
-	}
-
-	payloadBytes, err := json.Marshal(req.Data)
-	if err != nil {
-		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
-		return
-	}
-
-	var broker orchmesh.MeshBroker
-	if mode == "cloud" && s.MeshBroker != nil {
-		broker = s.MeshBroker
-	} else {
-		broker = s.MeshBroker // Already initialized to LocalMeshBroker
-	}
-
-	if req.Channel == "mesh:tasks" || req.Channel == "mesh:coordination" {
-		agentID, _ := req.Data["agent_id"].(string)
-		action, _ := req.Data["action"].(string)
-		status, _ := req.Data["status"].(string)
-		if agentID == "" || action == "" || status == "" {
-			http.Error(w, "invalid request: missing required fields (agent_id, action, status)", http.StatusBadRequest)
-			return
-		}
-	}
-
-	err = broker.Broadcast(r.Context(), req.Channel, payloadBytes)
-
-	// Legacy publish for fallback/other agent systems expecting it via hub until fully migrated
-	_ = s.hub.Publish(orchestration.Message{
-		ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-		FromAgent: "system",
-		ToAgent:   "system",
-		Type:      req.Channel,
-		Content:   string(payloadBytes),
-	})
-
-	if err == nil {
-		telemetry.RecordTeammateMeshBroadcast(r.Context(), req.Channel)
-
-		// Map mesh channels to Centrifuge WebSocket channels for UI updates
-		if s.hub != nil && s.hub.CentrifugeNode() != nil {
-			if req.Channel == "mesh:tasks" || req.Channel == "swarm-events" {
-				s.hub.CentrifugeNode().PublishTaskBroadcast(fmt.Sprintf("%d", time.Now().UnixNano()), req.Data)
-			} else if req.Channel == "mesh:coordination" {
-				agentID, _ := req.Data["agent_id"].(string)
-				if agentID == "" {
-					agentID = "system"
-				}
-				s.hub.CentrifugeNode().PublishCoordinationMessage(orchestration.Message{
-					ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
-					FromAgent: agentID,
-					ToAgent:   "system",
-					Type:      req.Channel,
-					Content:   string(payloadBytes),
-				})
-			}
-		}
-	} else {
-		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
