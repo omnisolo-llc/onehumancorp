@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,11 +23,11 @@ func main() {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
-	log.Printf("Harness Daemon is running. Press Ctrl+C to stop.")
+	slog.Info("Harness Daemon is running. Press Ctrl+C to stop.")
 	<-sigCh
 
-	log.Println("Shutting down daemon...")
+	slog.Info("Shutting down daemon...")
 	if err := daemon.Stop(); err != nil {
-		log.Printf("Error stopping daemon: %v", err)
+		slog.Error("Error stopping daemon", "error", err)
 	}
 }
