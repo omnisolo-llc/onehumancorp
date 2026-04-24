@@ -16,7 +16,7 @@ bazel_dep(name = "rules_android", version = "0.7.1")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
 
 # ── Rust support ──────────────────────────────────────────────────────────────
-bazel_dep(name = "rules_rust", version = "0.69.0")
+bazel_dep(name = "rules_rust", version = "0.70.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
