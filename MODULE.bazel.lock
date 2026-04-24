@@ -495,7 +495,7 @@
   "moduleExtensions": {
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
-        "bzlTransitiveDigest": "dT/cKtXRfZtxQ48vsOJmeSMAAHSK5f2d62klO41LMQQ=",
+        "bzlTransitiveDigest": "fqriFRbq45Y0SGRhj5dAU3t6mwYtVsworK9aBha0kho=",
         "usagesDigest": "oUw6GuSrFUfs77OVGTbgKitMUJvsMzzqPeJUgim32og=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
@@ -1495,7 +1495,7 @@
     "@@rules_rust+//crate_universe:extensions.bzl%crate": {
       "general": {
         "bzlTransitiveDigest": "pPZkXGLiC3X92aE8y0f5QXCrW8BjYZhavxNcL0fkxk4=",
-        "usagesDigest": "8s8acVGaUPSz7ZCHgEXBwOyMA2lTq0Nbya3B5mv4jYE=",
+        "usagesDigest": "ITimTtMFqADiEELnWA/JjITd3LVsywEOsBreHKet3+8=",
         "recordedInputs": [
           "ENV:CARGO_BAZEL_DEBUG \\0",
           "ENV:CARGO_BAZEL_GENERATOR_SHA256 \\0",
