@@ -30,15 +30,22 @@ func TestPruneStaleMissions_StuckTransition(t *testing.T) {
 		t.Fatalf("failed to insert mission: %v", err)
 	}
 
-	// 2. Insert a mission that is > 2h old (should become FAILED if ageThreshold=2h)
-	failTime := time.Now().Add(-3 * time.Hour).UTC().Format("2006-01-02 15:04:05")
+	// 2. Insert a mission that is > 1h old and STUCK (should become PENDING)
 	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES (?, ?, ?, ?, ?, ?)",
-		"mission-fail", "PENDING", "{}", failTime, failTime, "system")
+		"mission-requeue", "STUCK", "{}", stuckTime, stuckTime, "system")
 	if err != nil {
 		t.Fatalf("failed to insert mission: %v", err)
 	}
 
-	// 3. Prune missions with 2h threshold
+	// 3. Insert a mission that is > 2h old (should become FAILED if ageThreshold=2h)
+	failTime := time.Now().Add(-3 * time.Hour).UTC().Format("2006-01-02 15:04:05")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES (?, ?, ?, ?, ?, ?)",
+		"mission-fail", "STUCK", "{}", failTime, failTime, "system")
+	if err != nil {
+		t.Fatalf("failed to insert mission: %v", err)
+	}
+
+	// 4. Prune missions with 2h threshold
 	err = sip.PruneStaleMissions(ctx, 2*time.Hour)
 	if err != nil {
 		t.Fatalf("PruneStaleMissions failed: %v", err)
@@ -51,6 +58,14 @@ func TestPruneStaleMissions_StuckTransition(t *testing.T) {
 		t.Errorf("failed to query mission-stuck: %v", err)
 	} else if status != "STUCK" {
 		t.Errorf("expected status STUCK, got %s", status)
+	}
+
+	// mission-requeue should be PENDING
+	err = provider.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = ?", "mission-requeue").Scan(&status)
+	if err != nil {
+		t.Errorf("failed to query mission-requeue: %v", err)
+	} else if status != "PENDING" {
+		t.Errorf("expected status PENDING, got %s", status)
 	}
 
 	// mission-fail should be deleted because it's FAILED and > 2h old

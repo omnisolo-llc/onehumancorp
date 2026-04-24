@@ -716,7 +716,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		// 1. Mark stagnant PENDING missions as STUCK after 1 hour to trigger triage visibility
-		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
+		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK', updated_at = CURRENT_TIMESTAMP WHERE (status = 'PENDING' OR status = 'BURSTING') AND COALESCE(updated_at, created_at) < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
 		if err == nil {
 			for rows.Next() {
 				var id, prevStatus string
@@ -730,7 +730,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 
 		// 2. Mark missions as FAILED if they exceed the absolute age threshold
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
-		rowsFail, errFail := s.db.Query(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", failThreshold, s.orgID)
+		rowsFail, errFail := s.db.Query(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND COALESCE(updated_at, created_at) < $1 AND organization_id = $2 RETURNING id, status, updated_at", failThreshold, s.orgID)
 		if errFail == nil {
 			for rowsFail.Next() {
 				var id, prevStatus string
@@ -742,12 +742,25 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 			rowsFail.Close()
 		}
 
+		// 1.5. Explicitly requeue stagnant STUCK missions to PENDING to allow workers another opportunity to retry them.
+		// We update updated_at so they don't immediately revert to STUCK on the next pass.
+		// We do this AFTER marking them as FAILED, so we don't accidentally requeue missions that should fail.
+		rowsRequeue, errRequeue := s.db.Query(ctx, "UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND COALESCE(updated_at, created_at) < $1 AND organization_id = $2 RETURNING id, updated_at", stuckThreshold, s.orgID)
+		if errRequeue == nil {
+			for rowsRequeue.Next() {
+				var id string
+				var prevTime time.Time
+				_ = rowsRequeue.Scan(&id, &prevTime)
+			}
+			rowsRequeue.Close()
+		}
+
 		// 3. Remove COMPLETED, or very old FAILED missions
 		// ⚡ BOLT: Prevent massive table scans by limiting delete batch size for sub-second latency
 		if s.db.IsSQLite() {
-			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000)", failThreshold, s.orgID)
+			_, err = s.db.Exec(ctx, "DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND COALESCE(updated_at, created_at) < $1)) AND organization_id = $2 LIMIT 1000)", failThreshold, s.orgID)
 		} else {
-			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", failThreshold, s.orgID)
+			_, err = s.db.Exec(ctx, "WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND COALESCE(updated_at, created_at) < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)", failThreshold, s.orgID)
 		}
 
 		return err
