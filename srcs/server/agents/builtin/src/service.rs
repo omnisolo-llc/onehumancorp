@@ -234,7 +234,7 @@ impl AgentService for AgentServiceImpl {
         } else {
             all_tools
         };
-        
+
         let agent = Arc::new(Agent::new(llm, tools));
 
         let (tx, rx) = mpsc::channel::<Result<RunTaskEvent, Status>>(64);
