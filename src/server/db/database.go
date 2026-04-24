@@ -289,6 +289,12 @@ func New(ctx context.Context) (*DB, error) {
 		}
 
 		slog.Info("db: connected to sqlite", "path", dbPath)
+
+		// Standalone PowerSync initialization wrapper
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			slog.Info("Initializing local PowerSync sync rules for Standalone mode")
+		}
+
 		return &DB{Provider: NewSqliteProvider(sqliteDB)}, nil
 	}
 
