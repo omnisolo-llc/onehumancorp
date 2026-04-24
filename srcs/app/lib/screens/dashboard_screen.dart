@@ -13,6 +13,9 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/registry_tooltip.dart';
+import 'package:ohc_app/widgets/interactive_walkthrough.dart';
+
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -24,12 +27,34 @@ final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) as
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
+  static final GlobalKey settingsKey = GlobalKey();
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.tour),
+            tooltip: 'Start Walkthrough',
+            onPressed: () {
+              InteractiveWalkthrough.start(context, [
+                WalkthroughStep(
+                  targetKey: settingsKey,
+                  title: 'Settings',
+                  description: 'Click here to configure your business settings.',
+                ),
+              ]);
+            },
+          ),
+          IconButton(
+            key: settingsKey,
+            icon: const Icon(Icons.settings),
+            onPressed: () {},
+          )
+        ],
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
@@ -175,13 +200,13 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const SwarmObservabilityWidget(),
         const SizedBox(height: 16),
-        const SwarmVelocityWidget(),
+        const RegistryTooltip(tooltipKey: 'dashboard_velocity', child: SwarmVelocityWidget()),
         const SizedBox(height: 16),
         const HybridObservabilityWidget(),
         const SizedBox(height: 16),
         Container(
           key: const ValueKey('hybrid_telemetry'),
-          child: const HybridTelemetryWidget(),
+          child: const RegistryTooltip(tooltipKey: 'dashboard_hybrid', child: HybridTelemetryWidget()),
         ),
         const SizedBox(height: 16),
         SizedBox(
@@ -211,7 +236,7 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
         const SizedBox(height: 16),
-        SubAgentQueueWidget(statuses: data.statuses),
+        RegistryTooltip(tooltipKey: 'dashboard_queue', child: SubAgentQueueWidget(statuses: data.statuses)),
         const SizedBox(height: 32),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),

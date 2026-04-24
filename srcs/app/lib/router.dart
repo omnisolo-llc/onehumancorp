@@ -2,6 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/video_tutorials_screen.dart';
+import 'package:ohc_app/screens/api_reference_screen.dart';
+import 'package:ohc_app/screens/release_notes_screen.dart';
+import 'package:ohc_app/widgets/help_chat_button.dart';
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
@@ -93,6 +98,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/orchestration/tasks',
             builder: (context, state) => const TaskListScreen(),
+          ),
+          GoRoute(
+            path: '/help_center',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/video_tutorials',
+            builder: (context, state) => const VideoTutorialsScreen(),
+          ),
+          GoRoute(
+            path: '/api_reference',
+            builder: (context, state) => const ApiReferenceScreen(),
+          ),
+          GoRoute(
+            path: '/release_notes',
+            builder: (context, state) => const ReleaseNotesScreen(),
           ),
           GoRoute(
             path: '/diagnostics',
@@ -223,7 +244,10 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Row(children: [_Sidebar(), Expanded(child: child)]),
+      floatingActionButton: const HelpChatButton(),
+    );
   }
 }
 
@@ -241,6 +265,7 @@ class _Sidebar extends StatelessWidget {
           ),
         ),
         const Divider(),
+        _NavItem(icon: Icons.help, label: 'Help Center', path: '/help_center'),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(
