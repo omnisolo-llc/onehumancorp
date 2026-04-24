@@ -332,20 +332,20 @@ func TestWizardAllStepsCanBeReachedWithoutAJsException(t *testing.T) {
 	page.WaitForSelector("text=Business Setup")
 
 	// Step 0 -> Step 1
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Next").First().Click()
 	page.WaitForSelector("text=Business Profile")
 
 	// Fill out Step 1
 	page.Locator("input[type='text']").First().Fill("My Playwright Company")
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Next").First().Click()
 
 	// Step 2
 	page.WaitForSelector("text=Goal Selection")
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Next").First().Click()
 
 	// Step 3
 	page.WaitForSelector("text=Deployment")
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Next").First().Click()
 
 	// Step 4
 	page.WaitForSelector("text=Admin Account")
@@ -353,12 +353,26 @@ func TestWizardAllStepsCanBeReachedWithoutAJsException(t *testing.T) {
 	inputs.Nth(0).Fill("Playwright Admin")
 	inputs.Nth(1).Fill("playwright@example.com")
 	page.Locator("input[type='password']").Fill("secret")
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Next").First().Click()
 
-	// Step 5 Review
-	page.WaitForSelector("text=Review & Launch")
-	page.WaitForSelector("text=My Playwright Company")
+	// Step 5 Template
+	page.WaitForSelector("text=Template Selection & Website Preview")
+	page.GetByText("Next").First().Click()
 
+	// Step 6 Product
+	page.WaitForSelector("text=First Product / Service Add")
+	page.GetByText("Next").First().Click()
+
+	// Step 7 Domain
+	page.WaitForSelector("text=Domain & Go-Live")
+	page.GetByText("Next").First().Click()
+
+	// Step 8 Welcome Checklist
+	page.WaitForSelector("text=Welcome Checklist")
+	page.GetByText("Launch My AI Team →").First().Click()
+
+	// Optionally assert final navigation
+	page.WaitForURL("**/dashboard")
 }
 
 func TestOnboardingWizardCanBeSkippedEntirelyFromTheFirstStep(t *testing.T) {

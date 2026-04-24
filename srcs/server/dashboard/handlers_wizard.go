@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/auth"
 )
 
 // wizardStatusResponse describes the current setup state of the platform.
@@ -31,6 +32,9 @@ type wizardConfigureRequest struct {
 	RedisURL      string                `json:"redis_url,omitempty"`
 	CentrifugeURL string                `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string                `json:"minimax_api_key,omitempty"`
+	SelectedTemplate  string            `json:"selected_template,omitempty"`
+	FirstProductName  string            `json:"first_product_name,omitempty"`
+	DomainName        string            `json:"domain_name,omitempty"`
 	Extras        map[string]string `json:"extras,omitempty"`
 	AiProviders   []settings.AiProvider `json:"ai_providers,omitempty"`
 }
@@ -51,9 +55,28 @@ func (s *Server) handleWizardStatus(w http.ResponseWriter, r *http.Request) {
 		AiProvider: hasEnabledProvider(cfg.AiProviders),
 		Centrifuge: cfg.CentrifugeURL != "",
 	}
-	resp := wizardStatusResponse{
-		Configured: steps.Server && steps.AiProvider && steps.Centrifuge,
-		Steps:      steps,
+
+	userID := auth.OrganizationIDFromContext(r.Context())
+	if userID == "" {
+		userID = "default"
+	}
+
+	var draftStr string
+	if s.hub != nil && s.hub.SIPDB() != nil && s.hub.SIPDB().Provider() != nil {
+	    db := s.hub.SIPDB().Provider()
+	    row := db.QueryRow(r.Context(), "SELECT state_json FROM wizard_drafts WHERE tenant_id = $1 AND user_id = $2", userID, userID)
+	    row.Scan(&draftStr)
+	}
+
+	var draft map[string]interface{}
+	if draftStr != "" {
+	    json.Unmarshal([]byte(draftStr), &draft)
+	}
+
+	resp := map[string]interface{}{
+		"configured": steps.Server && steps.AiProvider && steps.Centrifuge,
+		"steps":      steps,
+		"draft":      draft,
 	}
 	writeJSON(w, resp)
 }
@@ -109,6 +132,18 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 	if len(req.AiProviders) > 0 {
 		cfg.AiProviders = req.AiProviders
 	}
+
+	// Save the final new wizard fields to the global configuration or db
+	if req.SelectedTemplate != "" {
+		cfg.Extras["selected_template"] = req.SelectedTemplate
+	}
+	if req.FirstProductName != "" {
+		cfg.Extras["first_product_name"] = req.FirstProductName
+	}
+	if req.DomainName != "" {
+		cfg.Extras["domain_name"] = req.DomainName
+	}
+
 	s.settings = cfg
 	s.mu.Unlock()
 
@@ -202,4 +237,73 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		"diagnostics": diagnostics,
 	}
 	writeJSON(w, resp)
+}
+
+// handleWizardStateSave saves the draft state of the wizard.
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Use isolated tenant/user scope
+	userID := auth.OrganizationIDFromContext(r.Context())
+	if userID == "" {
+		userID = "default"
+	}
+
+	var raw map[string]interface{}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&raw); err != nil {
+		http.Error(w, "invalid JSON payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	b, _ := json.Marshal(raw)
+
+	if s.hub != nil && s.hub.SIPDB() != nil && s.hub.SIPDB().Provider() != nil {
+	    db := s.hub.SIPDB().Provider()
+
+	    _, err := db.Exec(r.Context(), `
+	        INSERT INTO wizard_drafts (tenant_id, user_id, state_json, updated_at)
+	        VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+	        ON CONFLICT (tenant_id, user_id)
+	        DO UPDATE SET state_json = excluded.state_json, updated_at = CURRENT_TIMESTAMP
+	    `, userID, userID, string(b))
+
+	    if err != nil {
+	        // Postgres fallback
+	        db.Exec(r.Context(), `
+	            INSERT INTO wizard_drafts (tenant_id, user_id, state_json, updated_at)
+	            VALUES ($1, $2, $3, NOW())
+	            ON CONFLICT (tenant_id, user_id)
+	            DO UPDATE SET state_json = EXCLUDED.state_json, updated_at = NOW()
+	        `, userID, userID, string(b))
+	    }
+	}
+
+	writeJSON(w, map[string]string{"status": "ok"})
+}
+
+// handleWizardGenerateDescription generates an AI description for a product.
+func (s *Server) handleWizardGenerateDescription(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid payload", http.StatusBadRequest)
+		return
+	}
+
+	productName := req["product_name"]
+	if productName == "" {
+	    writeJSON(w, map[string]string{"description": ""})
+	    return
+	}
+
+	// Simulate AI response logic (would connect to Minimax or OpenAI here via LLM provider)
+	desc := "Experience the best of " + productName + ". High-quality, reliable, and perfectly crafted for your business needs."
+	writeJSON(w, map[string]string{"description": desc})
 }

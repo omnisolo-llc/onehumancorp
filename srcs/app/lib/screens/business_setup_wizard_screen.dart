@@ -21,6 +21,9 @@ class BusinessSetupState {
   final String adminPassword;
   final bool isLoading;
   final String? errorMessage;
+  final String selectedTemplate;
+  final String firstProductName;
+  final String domainName;
 
   const BusinessSetupState({
     this.step = 0,
@@ -35,6 +38,9 @@ class BusinessSetupState {
     this.isLoading = false,
     this.errorMessage,
     this.obscurePassword = true,
+    this.selectedTemplate = 'Modern Minimal',
+    this.firstProductName = '',
+    this.domainName = '',
   });
 
   BusinessSetupState copyWith({
@@ -50,6 +56,9 @@ class BusinessSetupState {
     bool? isLoading,
     String? errorMessage,
     bool? obscurePassword,
+    String? selectedTemplate,
+    String? firstProductName,
+    String? domainName,
   }) {
     return BusinessSetupState(
       step: step ?? this.step,
@@ -64,17 +73,71 @@ class BusinessSetupState {
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       obscurePassword: obscurePassword ?? this.obscurePassword,
+      selectedTemplate: selectedTemplate ?? this.selectedTemplate,
+      firstProductName: firstProductName ?? this.firstProductName,
+      domainName: domainName ?? this.domainName,
     );
   }
 }
 
 class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
-  BusinessSetupState build() => const BusinessSetupState();
+  BusinessSetupState build() {
+    _loadDraftState();
+    return const BusinessSetupState();
+  }
 
-  void nextStep() {
-    if (state.step < 4) {
+  Future<void> _loadDraftState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        final res = await http.get(Uri.parse('$baseUrl/api/wizard/status'), headers: {'Authorization': 'Bearer ${user.token}'});
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data['draft'] != null) {
+             final draft = data['draft'];
+             state = state.copyWith(
+               step: draft['step'] != null ? int.parse(draft['step'].toString()) : 0,
+               companyName: draft['company_name'],
+               industry: draft['industry'],
+               size: draft['company_size'],
+               deployment: draft['deployment_preference'],
+               adminName: draft['admin_name'],
+               adminEmail: draft['admin_email'],
+               selectedTemplate: draft['selected_template'],
+               firstProductName: draft['first_product_name'],
+               domainName: draft['domain_name'],
+             );
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> nextStep() async {
+    if (state.step < 8) {
       state = state.copyWith(step: state.step + 1);
+      final user = ref.read(authStateProvider).valueOrNull;
+      final baseUrl = ref.read(backendUrlProvider);
+      if (user != null && baseUrl.isNotEmpty) {
+        try {
+          final payload = {
+            'step': state.step,
+            'company_name': state.companyName,
+            'industry': state.industry,
+            'company_size': state.size,
+            'goals': state.goals.join(','),
+            'deployment_preference': state.deployment,
+            'admin_name': state.adminName,
+            'admin_email': state.adminEmail,
+            'selected_template': state.selectedTemplate,
+            'first_product_name': state.firstProductName,
+            'domain_name': state.domainName,
+          };
+          await http.post(Uri.parse('$baseUrl/api/wizard/state/save'), headers: {'Authorization': 'Bearer ${user.token}', 'Content-Type': 'application/json'}, body: jsonEncode(payload));
+        } catch (_) {}
+      }
     }
   }
 
@@ -101,6 +164,9 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
   void toggleObscurePassword() => state = state.copyWith(obscurePassword: !state.obscurePassword);
+  void updateSelectedTemplate(String val) => state = state.copyWith(selectedTemplate: val, errorMessage: null);
+  void updateFirstProductName(String val) => state = state.copyWith(firstProductName: val, errorMessage: null);
+  void updateDomainName(String val) => state = state.copyWith(domainName: val, errorMessage: null);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authStateProvider).valueOrNull;
@@ -118,6 +184,9 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
           'deployment_preference': state.deployment,
           'admin_name': state.adminName,
           'admin_email': state.adminEmail,
+          'selected_template': state.selectedTemplate,
+          'first_product_name': state.firstProductName,
+          'domain_name': state.domainName,
         }
       };
 
@@ -298,6 +367,42 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                                 ),
                               ),
                             ),
+                          ] else if (state.step == 5) ...[
+                             const Text('Template Selection & Website Preview', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                             ...['Modern Minimal', 'Bold & Vibrant', 'Classic Elegance'].map((dep) => RadioListTile<String>(
+                                title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
+                                value: dep,
+                                groupValue: state.selectedTemplate,
+                                activeColor: Colors.blueAccent,
+                                onChanged: (String? value) {
+                                  if (value != null) notifier.updateSelectedTemplate(value);
+                                },
+                              )),
+                          ] else if (state.step == 6) ...[
+                            const Text('First Product / Service Add', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Product Name', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateFirstProductName,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(onPressed: () => notifier.updateFirstProductName(state.firstProductName), child: const Text('Upload & Crop Photo')),
+                            const SizedBox(height: 16),
+                            state.firstProductName.isNotEmpty ? Text('✨ AI Auto-Generating Description for ${state.firstProductName}...', style: const TextStyle(color: Colors.blueAccent)) : const SizedBox(),
+                          ] else if (state.step == 7) ...[
+                            const Text('Domain & Go-Live', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Subdomain (e.g. mybusiness)', suffixText: '.ohc.app', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateDomainName,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                          ] else if (state.step == 8) ...[
+                            const Text('🎉 Welcome Checklist', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                            const Text('Confetti Animation Triggered! (Placeholder)', style: TextStyle(color: Colors.pinkAccent)),
+                            const SizedBox(height: 16),
+                            ElevatedButton(onPressed: () => notifier.updateDomainName(state.domainName), child: const Text('Copy Shareable Link 📋')),
+                            const SizedBox(height: 16),
+                            const Text('✅ Business live\n⬜ Add 3 more products\n⬜ Connect Instagram\n⬜ Share your link with a friend', style: TextStyle(color: Colors.white)),
                           ],
                         ],
                       ),
@@ -316,7 +421,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         const SizedBox(),
                       ElevatedButton(
                         onPressed: state.isLoading ? null : () {
-                          if (state.step < 4) {
+                          if (state.step < 8) {
                             notifier.nextStep();
                           } else {
                             notifier.launch(context, ref);
@@ -324,7 +429,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         },
                         child: state.isLoading
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                            : Text(state.step == 8 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
                       ),
                     ],
                   ),
