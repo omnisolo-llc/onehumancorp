@@ -1731,7 +1731,7 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			time.Sleep(1 * time.Second)
+			select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(1 * time.Second): }
 			continue
 		}
 
@@ -1740,14 +1740,14 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 				// Retry on high load without recording circuit breaker failure immediately
 				resp.Body.Close()
 				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
-				time.Sleep(2 * time.Second) // Longer backoff for overloaded
+				select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(2 * time.Second): } // Longer backoff for overloaded
 				continue
 			}
 			c.cb.RecordFailure()
 			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			lastErr = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
-			time.Sleep(1 * time.Second)
+			select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(1 * time.Second): }
 			continue
 		}
 
@@ -1765,14 +1765,14 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			time.Sleep(1 * time.Second)
+			select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(1 * time.Second): }
 			continue
 		}
 
 		if len(result.Choices) == 0 {
 			c.cb.RecordFailure()
 			lastErr = errors.New("empty response from minimax")
-			time.Sleep(1 * time.Second)
+			select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(1 * time.Second): }
 			continue
 		}
 
@@ -1848,7 +1848,7 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			time.Sleep(1 * time.Second)
+			select { case <-ctx.Done(): return nil, ctx.Err(); case <-time.After(1 * time.Second): }
 			continue
 		}
 
@@ -1856,13 +1856,13 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 			if resp.StatusCode >= 500 {
 				resp.Body.Close()
 				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
-				time.Sleep(2 * time.Second)
+				select { case <-ctx.Done(): return nil, ctx.Err(); case <-time.After(2 * time.Second): }
 				continue
 			}
 			c.cb.RecordFailure()
 			lastErr = fmt.Errorf("minimax API error: status %d", resp.StatusCode)
 			resp.Body.Close()
-			time.Sleep(1 * time.Second)
+			select { case <-ctx.Done(): return nil, ctx.Err(); case <-time.After(1 * time.Second): }
 			continue
 		}
 
