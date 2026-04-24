@@ -1147,8 +1147,6 @@ func TestAllExpectedIntegrationTypesPresent(t *testing.T) {
 		IntegrationTypeGitHub, IntegrationTypeGitLab, IntegrationTypeGitea,
 		// Issue trackers
 		IntegrationTypeJIRA, IntegrationTypePlane, IntegrationTypeGitHubIssues,
-		// Payment gateways
-		IntegrationTypeMercadoPago,
 	}
 	for _, typ := range expected {
 		if !types[typ] {

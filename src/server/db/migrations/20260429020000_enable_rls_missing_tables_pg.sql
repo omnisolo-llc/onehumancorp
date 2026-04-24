@@ -18,5 +18,18 @@ CREATE POLICY "tenant_isolation_policy" ON shared_tasks_decomposition USING (org
 
 -- +goose Down
 -- +goose StatementBegin
--- Not required to reverse
+DROP POLICY IF EXISTS "tenant_isolation_policy" ON shared_tasks_decomposition;
+ALTER TABLE shared_tasks_decomposition DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "tenant_isolation_policy" ON shared_tasks_master;
+ALTER TABLE shared_tasks_master DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "tenant_isolation_policy" ON shared_tasks_v4;
+ALTER TABLE shared_tasks_v4 DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "tenant_isolation_policy" ON shared_tasks_v2;
+ALTER TABLE shared_tasks_v2 DISABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "tenant_isolation_policy" ON shared_tasks;
+ALTER TABLE shared_tasks DISABLE ROW LEVEL SECURITY;
 -- +goose StatementEnd
