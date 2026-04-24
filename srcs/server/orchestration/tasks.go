@@ -755,6 +755,28 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 	return tasks, nil
 }
 
+// CountCompletedTasks returns the number of completed tasks for the organization.
+func (tm *TaskManager) CountCompletedTasks(ctx context.Context) (int, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return 0, errors.New("unauthorized: missing claims")
+	}
+
+	var query string
+	if tm.db.IsSQLite() {
+		query = `SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND status = 'COMPLETED'`
+	} else {
+		query = `SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND status = 'COMPLETED'`
+	}
+
+	var count int
+	err := tm.db.QueryRow(ctx, query, claims.OrganizationID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count completed tasks: %w", err)
+	}
+	return count, nil
+}
+
 // PollTasks attempts to claim up to `limit` PENDING tasks for the given agentID.
 // It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, or relies on
 // SQLite's concurrent writes lock for safe queue picking.

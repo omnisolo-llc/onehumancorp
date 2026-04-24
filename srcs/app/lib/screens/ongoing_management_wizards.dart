@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../services/api_service.dart';
 import '../widgets/glass_card.dart';
 
 // --- Fix This Wizard ---
@@ -75,29 +76,13 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
 }
 
 // --- Upgrade Wizard ---
-class UpgradeWizardScreen extends ConsumerStatefulWidget {
+class UpgradeWizardScreen extends ConsumerWidget {
   const UpgradeWizardScreen({super.key});
 
   @override
-  ConsumerState<UpgradeWizardScreen> createState() => _UpgradeWizardScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final quotaAsync = ref.watch(quotaProvider);
 
-class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
-  int _progress = 0;
-  bool _isUpgrading = false;
-  bool _done = false;
-
-  void _startUpgrade() async {
-    setState(() { _isUpgrading = true; });
-    for (int i = 1; i <= 4; i++) {
-
-      if (mounted) setState(() => _progress = i);
-    }
-    if (mounted) setState(() { _done = true; _isUpgrading = false; });
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Platform Upgrade')),
       body: Center(
@@ -111,37 +96,25 @@ class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Upgrade to v2.4 ✨', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                    Text('Upgrade Plan 🚀', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
-                    if (!_isUpgrading && !_done) ...[
-                      const Text("What's new:\n• Improved agent reasoning\n• 2x faster orchestration\n• New observability metrics", style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: _startUpgrade,
-                        child: const Text('Upgrade in 1 click'),
-                      ),
-                    ] else if (_isUpgrading) ...[
-                      LinearProgressIndicator(value: _progress / 4),
-                      const SizedBox(height: 16),
-                      Text(
-                        _progress == 1 ? 'Downloading...' :
-                        _progress == 2 ? 'Applying migrations...' :
-                        _progress == 3 ? 'Restarting services...' : 'Finalizing...',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontFamily: 'Inter'),
-                      ),
-                      const SizedBox(height: 24),
-                      TextButton(onPressed: () {}, child: const Text('Rollback')),
-                    ] else if (_done) ...[
-                      const Icon(Icons.celebration, color: Colors.blueAccent, size: 64),
-                      const SizedBox(height: 16),
-                      const Text('Upgrade complete!', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: () => context.go('/dashboard'),
-                        child: const Text('Go to Dashboard'),
-                      ),
-                    ],
+                    const Text("To increase your daily task quota, you can invite more users to the platform.", style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                    const SizedBox(height: 24),
+                    quotaAsync.when(
+                      data: (quota) {
+                        final max = quota['max'] ?? 0;
+                        return Text('Your current daily quota is $max tasks.', style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.bold));
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => Text('Error loading quota: $err', style: const TextStyle(color: Colors.red)),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text("Each successful referral adds 50 tasks to your daily limit.", style: TextStyle(fontFamily: 'Inter', fontSize: 14, color: Colors.grey)),
+                    const SizedBox(height: 32),
+                    FilledButton(
+                      onPressed: () => context.go('/referrals'),
+                      child: const Text('Go to Referrals'),
+                    ),
                   ],
                 ),
               ),
@@ -154,11 +127,20 @@ class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
 }
 
 // --- Billing Wizard ---
+
+final quotaProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  if (api == null) throw Exception('Not authenticated');
+  return api.getQuota();
+});
+
 class BillingWizardScreen extends ConsumerWidget {
   const BillingWizardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final quotaAsync = ref.watch(quotaProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Billing & Credits')),
       body: Center(
@@ -192,16 +174,24 @@ class BillingWizardScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text('Your current plan includes 1000 AI tasks per day. You have used 450 today.', style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
+                    quotaAsync.when(
+                      data: (quota) {
+                        final used = quota['used'] ?? 0;
+                        final max = quota['max'] ?? 0;
+                        return Text('Your current plan includes $max AI tasks per day. You have used $used today.', style: const TextStyle(fontFamily: 'Inter', fontSize: 14));
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => Text('Error loading quota: $err', style: const TextStyle(color: Colors.red)),
+                    ),
                     const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: () {},
-                      child: const Text('Add Credits'),
+                    const FilledButton(
+                      onPressed: null,
+                      child: Text('Add Credits'),
                     ),
                     const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: () {},
-                      child: const Text('Switch Plan'),
+                    const OutlinedButton(
+                      onPressed: null,
+                      child: Text('Switch Plan'),
                     ),
                   ],
                 ),
