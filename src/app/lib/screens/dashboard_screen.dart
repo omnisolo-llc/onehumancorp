@@ -14,7 +14,6 @@ import 'package:ohc_app/services/api_service.dart';
 
 
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
-import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -37,7 +36,12 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       body: snapshot.when(
-        loading: () => const DashboardShimmer(),
+        loading:
+            () => Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
         error:
             (e, _) => Center(
               child: SelectableText(
@@ -82,28 +86,14 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          alignment: WrapAlignment.spaceBetween,
-          spacing: 16,
-          runSpacing: 16,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _SectionTitle('My Business'),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: () => context.go('/wizards/website_builder'),
-                  icon: const Icon(Icons.web),
-                  label: const Text('Build My Website'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => context.go('/wizards/billing'),
-                  icon: const Icon(Icons.credit_card),
-                  label: const Text('Billing & Credits'),
-                ),
-              ],
+            OutlinedButton.icon(
+              onPressed: () => context.go('/wizards/billing'),
+              icon: const Icon(Icons.credit_card),
+              label: const Text('Billing & Credits'),
             ),
           ],
         ),

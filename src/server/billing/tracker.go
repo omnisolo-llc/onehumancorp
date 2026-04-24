@@ -303,7 +303,6 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 	// Record unified agent metrics
 	telemetry.RecordAgentTokenUsage(ctx, usage.AgentID, usage.OrganizationID, usage.AgentRole, usage.Model, usage.PromptTokens+usage.CompletionTokens+usage.CachedTokens)
 	telemetry.RecordAgentCost(ctx, usage.AgentID, usage.OrganizationID, usage.AgentRole, usage.Model, usage.CostUSD)
-	telemetry.RecordMissionCostCents(ctx, usage.AgentID, usage.OrganizationID, usage.AgentRole, usage.Model, usage.CostUSD*100.0)
 
 	return usage, nil
 }
