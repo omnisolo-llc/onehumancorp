@@ -22,7 +22,7 @@ func upAutodreamAgentMemories(ctx context.Context, tx *sql.Tx) error {
 	_, err = tx.ExecContext(ctx, alterTasksQuery)
 	if err != nil {
 		// Log but don't fail if column already exists (sqlite compatibility)
-		fmt.Printf("Info: adding auto_dreamed column: %v\n", err)
+		_ = err
 	}
 
 	if !isSQLite {

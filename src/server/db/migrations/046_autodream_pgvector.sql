@@ -9,3 +9,4 @@ CREATE TABLE IF NOT EXISTS ohc_memory_embeddings (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     source_task_id VARCHAR
 );
+ALTER TABLE ohc_memory_embeddings ENABLE ROW LEVEL SECURITY;

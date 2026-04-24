@@ -7,3 +7,4 @@ CREATE TABLE IF NOT EXISTS crdt_deltas (
     synced_to_cloud BOOLEAN DEFAULT FALSE,
     PRIMARY KEY (tenant_id, id)
 );
+ALTER TABLE crdt_deltas ENABLE ROW LEVEL SECURITY;

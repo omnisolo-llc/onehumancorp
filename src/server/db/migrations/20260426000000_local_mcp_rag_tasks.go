@@ -23,7 +23,24 @@ CREATE TABLE local_mcp_rag_tasks (
 );
 `
 	_, err := tx.ExecContext(ctx, query)
-	return err
+	if err != nil {
+		return err
+	}
+
+	isSqlite := false
+	var version string
+	err = tx.QueryRowContext(ctx, "select sqlite_version()").Scan(&version)
+	if err == nil {
+		isSqlite = true
+	}
+	if !isSqlite {
+		_, err = tx.ExecContext(ctx, "ALTER TABLE local_mcp_rag_tasks ENABLE ROW LEVEL SECURITY;")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func downLocalMcpRagTasks(ctx context.Context, tx *sql.Tx) error {

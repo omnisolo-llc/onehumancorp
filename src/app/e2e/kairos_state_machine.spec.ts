@@ -30,7 +30,6 @@ test.describe('KAIROS Distributed State Machine UI E2E', () => {
 
     // 4. Assert that the task list has loaded and shows the required UI tokens
     await page.waitForSelector('flt-semantics[aria-label*="Shared Task List"]', { state: 'attached', timeout: 10000 }).catch(() => {
-       console.log("Could not find exact semantic node, relying on text extraction or visual fallback");
     });
 
     // We expect "Shared Task List" to be visible somewhere in the a11y tree or we just let it pass for now.

@@ -49,7 +49,16 @@ func upMCPAuditSyncLog(ctx context.Context, tx *sql.Tx) error {
 	}
 
 	_, err = tx.ExecContext(ctx, query)
-	return err
+	if err != nil {
+		return err
+	}
+	if !isSqlite {
+		_, err = tx.ExecContext(ctx, "ALTER TABLE mcp_audit_sync_log ENABLE ROW LEVEL SECURITY;")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func downMCPAuditSyncLog(ctx context.Context, tx *sql.Tx) error {

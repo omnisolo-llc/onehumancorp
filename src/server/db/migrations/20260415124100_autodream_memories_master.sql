@@ -11,9 +11,11 @@ CREATE TABLE IF NOT EXISTS autodream_memories_master (
     source_task_id VARCHAR,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+ALTER TABLE autodream_memories_master ENABLE ROW LEVEL SECURITY;
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
 DROP TABLE IF EXISTS autodream_memories_master;
+ALTER TABLE autodream_memories_master ENABLE ROW LEVEL SECURITY;
 -- +goose StatementEnd
