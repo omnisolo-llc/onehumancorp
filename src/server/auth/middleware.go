@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strings"
-
-	"github.com/onehumancorp/mono/src/server/interop"
 )
 
 type contextKey string
@@ -64,17 +62,6 @@ func Middleware(store *Store) func(http.Handler) http.Handler {
 
 			claims, err := store.ValidateToken(token)
 			if err != nil {
-				// Fallback to service-to-service internal auth using SPIFFE
-				if err := interop.ValidateSPIFFEID(token); err == nil {
-					// Dummy claims for internal service requests
-					internalClaims := &Claims{
-						Subject: token,
-						Roles:   []string{"system"},
-					}
-					ctx := context.WithValue(r.Context(), claimsContextKey, internalClaims)
-					next.ServeHTTP(w, r.WithContext(ctx))
-					return
-				}
 				jsonError(w, "invalid token: "+err.Error(), http.StatusUnauthorized)
 				return
 			}
