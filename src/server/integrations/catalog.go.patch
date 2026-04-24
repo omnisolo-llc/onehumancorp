@@ -1,0 +1,10 @@
+--- src/server/integrations/catalog.go
++++ src/server/integrations/catalog.go
+@@ -34,6 +34,7 @@
+	&powersync.PowerSyncIntegration{},
+	&restic.ResticIntegration{},
+	&obsidian.ObsidianIntegration{},
++	&MercadoPagoIntegration{},
+ }
+
+ // GetCatalog returns all available integration providers.
