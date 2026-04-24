@@ -12,6 +12,7 @@ import (
     "github.com/onehumancorp/mono/srcs/server/db"
     "github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 )
 
 type SharedTaskDB struct {
@@ -35,6 +36,7 @@ type SharedTaskOrchestrator struct {
     mu         sync.Mutex
     mesh       MeshTransport
     autodream  autodream.MemoryConsolidator
+    stateMachine *statemachine.StateMachine
 }
 
 func NewSharedTaskOrchestrator(dbProvider db.Provider, mesh MeshTransport, ad autodream.MemoryConsolidator) *SharedTaskOrchestrator {
@@ -42,6 +44,7 @@ func NewSharedTaskOrchestrator(dbProvider db.Provider, mesh MeshTransport, ad au
         dbProvider: dbProvider,
         mesh:       mesh,
         autodream:  ad,
+        stateMachine: statemachine.NewStateMachine(dbProvider, nil, nil),
     }
 }
 
@@ -109,20 +112,25 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
         return nil, err
     }
 
-    _, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
+    broadcastFunc, err := to.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Task claimed by agent")
     if err != nil {
-        return nil, err
+        return nil, fmt.Errorf("failed to transition state: %w", err)
     }
 
-    if err := to.insertTransition(ctx, tx, id, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
-        return nil, fmt.Errorf("failed to insert transition: %w", err)
+    _, err = tx.Exec(ctx, "UPDATE shared_tasks SET assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
+    if err != nil {
+        return nil, err
     }
 
     if err := tx.Commit(ctx); err != nil {
         return nil, err
     }
 
-    return &Task{TaskID: id, Status: "IN_PROGRESS", AgentID: agentID}, nil
+    if broadcastFunc != nil {
+        broadcastFunc()
+    }
+
+	return &Task{TaskID: id, Status: "IN_PROGRESS", AgentID: agentID}, nil
 }
 
 func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, agentID, fromState, toState, reason string) error {
@@ -141,16 +149,17 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
         return fmt.Errorf("task %s is in state %s, expected %s", taskID, current, fromState)
     }
 
-    if _, err := tx.Exec(ctx, "UPDATE shared_tasks_master SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
-        return err
-    }
-
-    if err := to.insertTransition(ctx, tx, taskID, fromState, toState, agentID, reason); err != nil {
+    broadcastFunc, err := to.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", toState, agentID, reason)
+    if err != nil {
         return err
     }
 
     if err := tx.Commit(ctx); err != nil {
         return err
+    }
+
+    if broadcastFunc != nil {
+        broadcastFunc()
     }
 
     if toState == "COMPLETED" {
@@ -340,11 +349,13 @@ func (to *SharedTaskOrchestrator) CreateTaskV4(ctx context.Context, task *Shared
 type TasksDB struct {
 	dbProvider db.Provider
 	mu         sync.Mutex
+	stateMachine *statemachine.StateMachine
 }
 
 func NewTasksDB(dbProvider db.Provider) *TasksDB {
 	return &TasksDB{
 		dbProvider: dbProvider,
+		stateMachine: statemachine.NewStateMachine(dbProvider, nil, nil),
 	}
 }
 
@@ -412,17 +423,22 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 		return nil, err
 	}
 
-	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
+	broadcastFunc, err := to.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Task claimed by agent")
+	if err != nil {
+		return nil, fmt.Errorf("failed to transition state: %w", err)
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE shared_tasks SET assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND organization_id = $3", agentID, id, orgID)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := to.insertTransition(ctx, tx, id, "PENDING", "IN_PROGRESS", agentID, "Task claimed by agent"); err != nil {
-		return nil, fmt.Errorf("failed to insert transition: %w", err)
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
+	}
+
+	if broadcastFunc != nil {
+		broadcastFunc()
 	}
 
 	return &Task{TaskID: id, Status: "IN_PROGRESS", AgentID: agentID}, nil
@@ -444,13 +460,21 @@ func (to *TasksDB) TransitionTask(ctx context.Context, taskID, agentID, fromStat
 		return fmt.Errorf("task %s is in state %s, expected %s", taskID, current, fromState)
 	}
 
-	if _, err := tx.Exec(ctx, "UPDATE shared_tasks SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", toState, taskID); err != nil {
-		return err
-	}
+	broadcastFunc, err := to.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", toState, agentID, reason)
+    if err != nil {
+        return err
+    }
 
-	if err := to.insertTransition(ctx, tx, taskID, fromState, toState, agentID, reason); err != nil {
-		return err
-	}
+    if err := tx.Commit(ctx); err != nil {
+        return err
+    }
 
-	return tx.Commit(ctx)
+    if broadcastFunc != nil {
+        broadcastFunc()
+    }
+
+	if broadcastFunc != nil {
+		broadcastFunc()
+	}
+	return nil
 }
