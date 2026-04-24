@@ -5,6 +5,7 @@ import (
 )
 
 func TestAuditLogAdminCanViewTheActivityLog(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -16,6 +17,7 @@ func TestAuditLogAdminCanViewTheActivityLog(t *testing.T) {
 }
 
 func TestAuditLogActivityLogCanBeFilteredByDateRange(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -27,6 +29,7 @@ func TestAuditLogActivityLogCanBeFilteredByDateRange(t *testing.T) {
 }
 
 func TestApiKeyManagementCreateANewApiKey(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -38,6 +41,7 @@ func TestApiKeyManagementCreateANewApiKey(t *testing.T) {
 }
 
 func TestApiKeyManagementRevokeAnExistingApiKey(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -49,6 +53,7 @@ func TestApiKeyManagementRevokeAnExistingApiKey(t *testing.T) {
 }
 
 func TestBackupBackupConfigurationSectionIsAccessible(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -60,6 +65,7 @@ func TestBackupBackupConfigurationSectionIsAccessible(t *testing.T) {
 }
 
 func TestWebhookManagementAddAnOutboundWebhook(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -71,6 +77,7 @@ func TestWebhookManagementAddAnOutboundWebhook(t *testing.T) {
 }
 
 func TestWebhookManagementWebhookEventTypesAreSelectable(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -82,6 +89,7 @@ func TestWebhookManagementWebhookEventTypesAreSelectable(t *testing.T) {
 }
 
 func TestComplianceTermsAcceptanceFlowIsAccessible(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -93,6 +101,7 @@ func TestComplianceTermsAcceptanceFlowIsAccessible(t *testing.T) {
 }
 
 func TestApiIntegrationsApiKeySectionIsReachable(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -104,6 +113,7 @@ func TestApiIntegrationsApiKeySectionIsReachable(t *testing.T) {
 }
 
 func TestApiKeysGenerateCreateApiKeyButtonExists(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -115,6 +125,7 @@ func TestApiKeysGenerateCreateApiKeyButtonExists(t *testing.T) {
 }
 
 func TestAuditLogActivityLogPageIsReachable(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -126,6 +137,7 @@ func TestAuditLogActivityLogPageIsReachable(t *testing.T) {
 }
 
 func TestComplianceTermsOfServiceAcceptanceUiIsReachable(t *testing.T) {
+	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
