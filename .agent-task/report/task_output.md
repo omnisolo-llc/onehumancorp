@@ -1,164 +1,183 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-# [architecture] Business Journey Architecture
+# Tool Integration Research [Q3]
 
-## Title
-End-to-End Business Journey Architecture for OHC Personas
+## [Social Media Integration] Unified Inbox for Instagram & WhatsApp
 
-## Problem Statement
-Small business owners—ranging from home bakers to freelance handymen—often lack the technical expertise to piece together fragmented solutions (e.g., website builder + booking calendar + CRM + AI chatbots) to run their operations. They need a simple, guided, and cohesive journey to start, operate, and grow their businesses without ever encountering complex configurations or code. The friction of setting up multi-tool workflows typically leads to abandonment. We need a unified Business Journey Architecture that works flawlessly across all key personas, particularly on a mobile 375px display, offloading all complexities to specialized AI Agent Departments.
+**Title**: Implement Unified Unified Inbox for Instagram DMs and WhatsApp Messages
 
-## Research Report
-Current market solutions (Shopify, Wix, Squarespace, GoDaddy) cater well to users who are somewhat tech-savvy or willing to invest 30-60 minutes in setup. However, they fall short for true non-technical users who require an instant, mobile-first experience.
-- **Shopify:** Powerful but overwhelming; requires 30-60 minutes. Better suited for pure e-commerce.
-- **Wix:** Highly customizable, but AI features (Wix AI) are often disjointed add-ons.
-- **Squarespace:** Great for portfolios but requires a desktop for efficient initial setup.
-- **GoDaddy:** Simple but lacks the depth needed for specialized businesses like service bookings or food cart pre-orders.
+**Problem Statement**: Small business owners like Maya the baker receive orders and questions scattered across Instagram DMs and WhatsApp. Managing multiple apps is overwhelming, and missed messages mean lost revenue. They need a single, simple inbox where they can see and reply to all customer messages, and have the AI agent auto-draft responses.
 
-**OHC Differentiation:**
-OHC's advantage is its invisible AI infrastructure that handles complexity from Day 1. By treating the AI as "departments," the business owner experiences a seamless journey.
+**Research Report**:
+- **Tool Evaluated**: Meta Graph API (Instagram Messaging, WhatsApp Business API).
+- **Evaluation**: The Meta API allows centralized messaging. Setup requires Facebook Business login and OAuth, which can be slightly complex but we can streamline it into a "Connect Facebook" button. It's the industry standard for these channels. Pricing is generally per conversation (WhatsApp) or free (Instagram DMs). It's robust and essential. Works well in both Cloud and Standalone (with proper OAuth app credentials).
 
-## Design Doc
+**Design Doc**:
+- Users navigate to the "Customer Success" section of OHC.
+- They click "Connect Instagram/WhatsApp".
+- After standard Meta OAuth, incoming DMs and WhatsApp messages appear in the OHC Customer Inbox.
+- The AI "Ambassador" drafts suggested replies based on past messages and FAQs.
+- Users can click to send the drafted reply or edit it.
 
-### Architecture Diagrams (Mermaid.js)
+**Implementation Prompt**:
+- Create a unified inbox view on both mobile and desktop.
+- Add an integration flow to connect an Instagram Professional account and WhatsApp Business account.
+- Ensure incoming messages appear in real-time in the inbox.
+- Provide UI for AI-suggested replies.
+- Acceptance criteria: A user can connect their account, receive a message from Instagram, and reply from within the OHC app.
 
-#### 1. Maya (The Home Baker) Journey
-```mermaid
-sequenceDiagram
-    participant M as Maya (Mobile UI)
-    participant MA as Marketing & Advertising
-    participant CS as Customer Success
-    participant Op as Operations
-    participant Fin as Finance & Payments
+**Priority**: P0
+**Estimated Scope**: Large
 
-    M->>MA: Onboarding: "I bake custom cakes"
-    MA->>M: Designs Storefront & Generates Content
-    Note over M: Customer browses & orders custom cake
-    M->>Op: Custom Order Submitted
-    Op->>Fin: Process Deposit Payment
-    Fin-->>Op: Payment Success
-    Op->>CS: Trigger Confirmation
-    CS->>M: Sends Order Confirmation SMS/Email
-```
 
-#### 2. Carlos (The Freelance Handyman) Journey
-```mermaid
-sequenceDiagram
-    participant C as Carlos (Mobile UI)
-    participant SA as Sales & Acquisition
-    participant Op as Operations
-    participant Fin as Finance & Payments
-    participant CS as Customer Success
+## [Calendar & Scheduling] Google Calendar Two-Way Sync
 
-    C->>SA: Onboarding: "I fix things"
-    SA->>C: Generates Service Listings & Quote Form
-    Note over C: Customer requests a plumbing fix
-    C->>SA: Customer Inquiry
-    SA->>C: Drafts Quote for Review
-    C->>SA: Approves Quote
-    SA->>Op: Schedules Booking
-    Op->>Fin: Collects Deposit
-    Fin-->>Op: Deposit Confirmed
-    Op->>CS: Triggers Follow-Up
-    CS->>C: Requests Testimonial Post-Job
-```
+**Title**: Add Google Calendar Two-Way Sync for Seamless Bookings
 
-#### 3. Priya (The Boutique Owner) Journey
-```mermaid
-sequenceDiagram
-    participant P as Priya (Mobile & Desktop)
-    participant MA as Marketing & Advertising
-    participant Op as Operations
-    participant Fin as Finance & Payments
-    participant BA as Business Advisory
+**Problem Statement**: Service providers like Carlos the handyman and Leo the music tutor rely on Google Calendar to manage their lives. When customers book appointments on OHC, they need to avoid double-booking with personal events, and new bookings must show up on their phone's native calendar immediately.
 
-    P->>MA: Onboarding: "I sell clothes in-store and online"
-    MA->>P: Builds Omni-channel Storefront
-    Note over P: In-store Tap-to-Pay Transaction
-    P->>Fin: Stripe Terminal Payment
-    Fin-->>Op: Deducts Inventory (S/M/L)
-    Op->>P: Low Stock Alert (if triggered)
-    BA->>P: Weekly Report: "Red shirts are trending"
-```
+**Research Report**:
+- **Tool Evaluated**: Google Calendar API.
+- **Evaluation**: Industry standard for personal and small business scheduling. Free tier is generous. OAuth flow is straightforward. Handling timezones and recurring events requires care. Completely necessary for any booking-based business. Works in both Cloud and Standalone (with standard OAuth).
 
-#### 4. Leo (The Music Tutor) Journey
-```mermaid
-sequenceDiagram
-    participant L as Leo (Mobile UI)
-    participant SA as Sales & Acquisition
-    participant Op as Operations
-    participant Fin as Finance & Payments
-    participant CS as Customer Success
+**Design Doc**:
+- The "Operations" department handles the calendar sync.
+- Users click "Sync Google Calendar" in their profile.
+- Once connected, OHC reads free/busy times from Google Calendar and removes those slots from the public booking page.
+- When a new booking is made via OHC, an event is automatically pushed to the user's Google Calendar.
 
-    L->>SA: Onboarding: "I teach guitar"
-    SA->>L: Builds Link-in-Bio & Booking Page
-    Note over L: Student books a 4-lesson package
-    L->>Op: Booking Received
-    Op->>Fin: Sets up Monthly Subscription
-    Op->>L: Generates Zoom Link & Calendar Sync
-    CS->>L: Re-engages inactive students after 2 weeks
-```
+**Implementation Prompt**:
+- Build a connection flow for Google Calendar via OAuth.
+- Update the booking widget to check availability against the connected calendar.
+- Create calendar events when a service is booked.
+- Acceptance criteria: Connecting a calendar prevents booking over existing events, and new OHC bookings appear on the synced Google Calendar.
 
-#### 5. Fatima (The Food Cart Operator) Journey
-```mermaid
-sequenceDiagram
-    participant F as Fatima (Mobile UI)
-    participant MA as Marketing & Advertising
-    participant Op as Operations
-    participant Fin as Finance & Payments
-    participant CS as Customer Success
+**Priority**: P0
+**Estimated Scope**: Medium
 
-    F->>MA: Onboarding: "I sell Halal food"
-    MA->>F: Creates Bi-lingual Menu
-    Note over F: Customer Pre-orders Pickup
-    F->>Fin: Processes Payment
-    Fin-->>Op: Payment Verified
-    Op->>F: Triggers High-Volume Mobile Notification
-    CS->>F: Auto-updates "Sold Out" state based on stock
-```
 
-### UI Wireframes & Screen Flow (375px First)
-1. **Onboarding (The 10-Minute Launch):**
-   - **Screen 1:** "What do you do?" (Input: Text or Voice).
-   - **Screen 2:** "What's the business name?"
-   - **Screen 3:** "Connecting your AI Departments..." (Loading animation with Glassmorphism).
-   - **Screen 4:** "Your business is live! Here is your link."
+## [Email Marketing] Automated Email Campaigns with Mailgun
 
-2. **Dashboard (The Daily Hub):**
-   - **Top Card:** "Today's Action Items" (e.g., "1 New Quote to Approve", "2 Custom Cake Deposits Paid").
-   - **Middle Grid:** Quick Actions (Add Product, Scan QR, New Post).
-   - **Bottom List:** AI Department Updates (e.g., Business Advisory: "Yesterday was your busiest day!").
+**Title**: Integrated Email Campaigns for Customer Re-engagement
 
-3. **Mobile UX Flow:**
-   - **Navigation:** Bottom app bar with Home, Inbox (Customer Success), Orders (Operations), Settings.
-   - **Forms:** Native keyboard inputs. Large touch targets (44x44px minimum).
-   - **Visuals:** Outfit font for headings, Inter for body. Dark/light mode support with blur backdrops.
+**Problem Statement**: Boutique owners like Priya want to tell their customers about a new clothing line, but standalone tools like Mailchimp are too complex and expensive. She just wants to click "Send email to everyone who bought a dress last month" without leaving the app.
 
-### AI Agent Integration Points
-- **Onboarding:** "Marketing & Advertising" uses initial inputs to generate branding and structure.
-- **Inbox:** "Customer Success" reads incoming DMs and drafts replies for 1-tap approval.
-- **Reporting:** "Business Advisory" aggregates weekly data and pushes a natural language notification every Monday morning.
+**Research Report**:
+- **Tool Evaluated**: Mailgun (or SendGrid/Postmark via unified API).
+- **Evaluation**: Mailgun offers reliable transactional and bulk email sending. Pricing is very affordable for small volumes (often free tier covers early SMBs). The challenge is managing spam reputation (SPF/DKIM), which we must abstract away or handle automatically on custom domains. For Standalone, users might plug in their own SMTP or Mailgun API keys.
 
-### Key Design Decisions
-- **Mobile-First Everything:** Since Carlos and Fatima only use phones, all management interfaces (including adding inventory or approving quotes) must be flawless on a 375px screen.
-- **1-Tap Approvals:** High-risk actions (sending quotes, drafting emails) require human oversight but minimal effort.
-- **Unified Department Orchestration:** Using the KAIROS Orchestrator to route events (e.g., Order -> Payment -> Customer Success follow-up) ensures a cohesive experience rather than disjointed notifications.
+**Design Doc**:
+- The "Marketing & Advertising" department provides a simple "Campaigns" tab.
+- Users select an audience (e.g., "All Customers", "Recent Buyers").
+- AI drafts the email content based on a simple prompt ("Tell them about the summer sale").
+- OHC handles the sending via the integrated email provider.
 
-## Implementation Prompt
-**Task for Implementer:**
-Implement the end-to-end Onboarding and Activation flow for the OHC mobile client.
-- **User-Facing Outcome:** A non-technical user can input their business idea in a simple text field, and within 3 screens, reach a fully populated dashboard with their personalized storefront link ready to share.
-- **CUJ:** User opens app -> Enters business description -> System orchestrates "Marketing & Advertising" AI to generate a business profile -> User lands on Dashboard seeing their first AI Advisory message.
-- **Acceptance Criteria:**
-  - Must display perfectly on a 375px width screen without horizontal scrolling.
-  - Touch targets must be at least 44x44px.
-  - The flow must communicate with the KAIROS Orchestrator to instantiate the business tenant.
-  - Must include E2E Playwright tests verifying the UI journey from initial launch to the populated dashboard.
+**Implementation Prompt**:
+- Create a simple UI to draft and send bulk emails to customer segments.
+- Integrate an email sending service (like Mailgun) in the backend.
+- Abstract away the complexity of email list management.
+- Acceptance criteria: User can select a segment, use AI to draft a message, and send it. Recipients receive the email formatted cleanly.
 
-## Priority
-P0
+**Priority**: P1
+**Estimated Scope**: Medium
 
-## Estimated Scope
-Large
+
+## [Payment Processing] Mercado Pago for LATAM
+
+**Title**: Integrate Mercado Pago as an Alternative Payment Processor
+
+**Problem Statement**: While Stripe is great, it's not available or preferred everywhere. For users in Latin America, Mercado Pago is essential. Business owners need a way to accept local payment methods seamlessly.
+
+**Research Report**:
+- **Tool Evaluated**: Mercado Pago API.
+- **Evaluation**: Dominant in LATAM. Supports local payment methods like PIX in Brazil, which are critical for conversion. The API is robust and well-documented. Transaction fees are competitive for the region. Works well in Cloud and Standalone.
+
+**Design Doc**:
+- The "Finance & Payments" department adds Mercado Pago as an option alongside Stripe.
+- Users in supported regions can authenticate their Mercado Pago account.
+- The checkout flow dynamically offers Mercado Pago (including PIX) based on the seller's configuration.
+
+**Implementation Prompt**:
+- Add Mercado Pago to the payment provider options.
+- Update the checkout UI to support Mercado Pago payment flows.
+- Ensure webhooks handle payment success/failure correctly.
+- Acceptance criteria: A merchant in LATAM can connect Mercado Pago and a customer can successfully checkout using it.
+
+**Priority**: P1
+**Estimated Scope**: Medium
+
+
+## [Shipping & Logistics] Real-time Shipping Labels via Shippo
+
+**Title**: Automated Shipping Label Generation with Shippo
+
+**Problem Statement**: Sellers of physical goods struggle with calculating shipping costs and buying labels at the post office. They need a way to automatically calculate rates at checkout and click "Print Label" when an order is ready.
+
+**Research Report**:
+- **Tool Evaluated**: Shippo API.
+- **Evaluation**: Shippo aggregates multiple carriers (USPS, UPS, FedEx, international) into one API. It handles rate calculation and label generation. It's very developer-friendly. Pricing is per-label (often pennies) plus carrier costs, which is perfect for SMBs. Fits well with OHC.
+
+**Design Doc**:
+- The "Operations" department handles order fulfillment.
+- When an order is placed, Shippo calculates the rate.
+- In the order details view, the owner clicks "Create Shipping Label".
+- OHC fetches a printable PDF label from Shippo.
+
+**Implementation Prompt**:
+- Integrate Shippo for real-time rates during checkout.
+- Add a "Buy Label" button in the order management UI.
+- Provide a simple view to download/print the generated label.
+- Acceptance criteria: Checkout shows accurate shipping rates, and the merchant can generate and print a valid shipping label for an order.
+
+**Priority**: P1
+**Estimated Scope**: Large
+
+
+## [SMS & Notifications] Twilio SMS Alerts
+
+**Title**: SMS Order Notifications via Twilio
+
+**Problem Statement**: Food cart operators like Fatima don't always look at their email or app. When an order comes in, they need an immediate text message on their phone so they can start cooking.
+
+**Research Report**:
+- **Tool Evaluated**: Twilio Programmable SMS.
+- **Evaluation**: Twilio is the gold standard for SMS delivery globally. Very reliable. Cost is fractions of a cent per message. Crucial for real-time, low-tech notifications. In Standalone, users could supply their own Twilio credentials.
+
+**Design Doc**:
+- Users can enable "SMS Notifications" in their profile settings.
+- The system asks for their mobile number and verifies it.
+- When a new order or booking occurs, the "Customer Success" department triggers an SMS via Twilio directly to the business owner.
+
+**Implementation Prompt**:
+- Add a phone number field and verification flow in user settings.
+- Integrate Twilio to send short, plain-text alerts for new orders.
+- Acceptance criteria: When a customer places an order, the business owner receives a text message with the order summary within seconds.
+
+**Priority**: P0
+**Estimated Scope**: Small
+
+
+## [Video Conferencing] Auto-generated Google Meet Links
+
+**Title**: Auto-generate Google Meet Links for Bookings
+
+**Problem Statement**: Online tutors like Leo need a unique video link for every lesson. Manually creating and emailing Zoom or Meet links for every booking is tedious and error-prone.
+
+**Research Report**:
+- **Tool Evaluated**: Google Calendar/Meet API.
+- **Evaluation**: Since we are already building Google Calendar sync (see above), adding Google Meet links is almost free via the same API by simply requesting conference data when creating the event. It is easier and cheaper than implementing a separate Zoom OAuth flow.
+
+**Design Doc**:
+- When a user configures a "Service" (e.g., "1hr Guitar Lesson"), they can select "Location: Online (Google Meet)".
+- Upon booking, the created Google Calendar event automatically includes a Meet link.
+- Both the owner and the customer receive the link in their confirmation emails.
+
+**Implementation Prompt**:
+- Extend the Google Calendar integration to request conference data (Meet links).
+- Update the booking confirmation UI and emails to prominently display the video link.
+- Acceptance criteria: A customer booking an online service receives an email with a valid Google Meet link, and the owner sees the same link in their calendar.
+
+**Priority**: P1
+**Estimated Scope**: Small
 
 </div>
