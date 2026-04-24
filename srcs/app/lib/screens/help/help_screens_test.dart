@@ -5,6 +5,7 @@ import 'package:ohc_app/screens/help/help_article_screen.dart';
 import 'package:ohc_app/screens/help/changelog_screen.dart';
 import 'package:ohc_app/screens/help/api_docs_screen.dart';
 import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
+import 'package:ohc_app/screens/help/video_tutorials_screen.dart';
 import 'package:ohc_app/widgets/tooltip_registry.dart';
 
 void main() {
@@ -40,6 +41,12 @@ void main() {
   testWidgets('ApiDocsScreen renders correctly', (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: ApiDocsScreen()));
     expect(find.text('API Reference'), findsOneWidget);
+  });
+
+  testWidgets('VideoTutorialsScreen renders correctly', (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: VideoTutorialsScreen()));
+    expect(find.text('Video Tutorials'), findsOneWidget);
+    expect(find.text('Set up your store in 5 minutes'), findsOneWidget);
   });
 
   testWidgets('AiHelpChatWidget renders button', (WidgetTester tester) async {

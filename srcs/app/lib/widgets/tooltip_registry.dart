@@ -17,6 +17,8 @@ class TooltipRegistry {
     'login_show_password': 'Show or hide your password.',
     'settings_backend_url': 'Change the server address (advanced).',
     'help_button': 'Open the Help Center to find answers or ask our AI.',
+    'dashboard_scale_allocation': 'Manage allocation scale.',
+    'dashboard_view_item': 'View item details.',
   };
 
   /// Retrieves the tooltip text for a given key.

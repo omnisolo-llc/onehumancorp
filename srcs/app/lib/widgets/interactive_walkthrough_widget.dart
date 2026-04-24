@@ -14,11 +14,15 @@ class InteractiveWalkthrough extends StatefulWidget {
 
   const InteractiveWalkthrough({super.key, required this.steps, required this.child});
 
+  static InteractiveWalkthroughState? of(BuildContext context) {
+    return context.findAncestorStateOfType<InteractiveWalkthroughState>();
+  }
+
   @override
-  State<InteractiveWalkthrough> createState() => _InteractiveWalkthroughState();
+  State<InteractiveWalkthrough> createState() => InteractiveWalkthroughState();
 }
 
-class _InteractiveWalkthroughState extends State<InteractiveWalkthrough> {
+class InteractiveWalkthroughState extends State<InteractiveWalkthrough> {
   int _currentStepIndex = -1;
 
   void startWalkthrough() {
@@ -45,15 +49,13 @@ class _InteractiveWalkthroughState extends State<InteractiveWalkthrough> {
     setState(() {
       _currentStepIndex = -1;
     });
-    // Remove overlay if needed
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
   }
 
   void _showOverlay() {
-    // In a real implementation, you would use an OverlayEntry to draw
-    // a highlight around the widget and show a speech bubble.
-    // This is a simplified placeholder.
     if (_currentStepIndex >= 0 && _currentStepIndex < widget.steps.length) {
       final step = widget.steps[_currentStepIndex];
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Column(
@@ -76,7 +78,6 @@ class _InteractiveWalkthroughState extends State<InteractiveWalkthrough> {
 
   @override
   Widget build(BuildContext context) {
-    // We could provide a way to start it via context, but for now it's internal logic.
     return widget.child;
   }
 }

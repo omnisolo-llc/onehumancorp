@@ -14,6 +14,8 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
+import 'package:ohc_app/widgets/interactive_walkthrough_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -35,9 +37,24 @@ class DashboardScreen extends ConsumerWidget {
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.tour),
+            tooltip: 'Start Tour',
+            onPressed: () {
+              InteractiveWalkthrough.of(context)?.startWalkthrough();
+            },
+          ),
+        ],
       ),
             floatingActionButton: const AiHelpChatWidget(),
-body: snapshot.when(
+body: InteractiveWalkthrough(
+      steps: [
+        WalkthroughStep(key: GlobalKey(), title: 'Set up your store', description: 'Start here to add products.'),
+        WalkthroughStep(key: GlobalKey(), title: 'Accept your first payment', description: 'Configure payment methods.'),
+        WalkthroughStep(key: GlobalKey(), title: 'Activate your AI Support Agent', description: 'Let AI handle your support.'),
+      ],
+      child: snapshot.when(
         loading:
             () => Center(
               child: CircularProgressIndicator(
@@ -257,8 +274,8 @@ class _ObservabilityWidget extends StatelessWidget {
 
     return Semantics(
       label: 'System Observability Panel',
-      child: Tooltip(
-        message: 'View System Health & Metrics',
+      child: RegisteredTooltip(
+        tooltipKey: 'dashboard_system_health',
         child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
@@ -460,8 +477,8 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
+      child: RegisteredTooltip(
+        tooltipKey: 'dashboard_scale_allocation',
         child: SizedBox(
           width: 320,
           child: GlassCard(
@@ -508,7 +525,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                               onPressed: widget.count > 0 && !_isScaling
                                   ? () => _scaleTo(widget.count - 1)
                                   : null,
-                              tooltip: 'Fire Agent',
+                              tooltip: TooltipRegistry.get('dashboard_fire_agent'),
                             ),
                           ),
                           SizedBox(
@@ -542,7 +559,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                               onPressed: !_isScaling
                                   ? () => _scaleTo(widget.count + 1)
                                   : null,
-                              tooltip: 'Hire Agent',
+                              tooltip: TooltipRegistry.get('dashboard_hire_agent'),
                             ),
                           ),
                             ],
@@ -634,8 +651,8 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
-      child: Tooltip(
-        message: 'View ${widget.label}',
+      child: RegisteredTooltip(
+        tooltipKey: 'dashboard_view_item',
         child: SizedBox(
           width: 200,
           child: SlideTransition(
