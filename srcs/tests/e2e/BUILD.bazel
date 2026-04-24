@@ -234,6 +234,17 @@ go_test(
 # ── All-in-one (backward compat alias) ───────────────────────────────────────
 # Keep the original :e2e_test target as a test_suite so existing references
 # (//srcs/tests/e2e:e2e_test) continue to work.
+
+go_test(
+    name = "e2e_cuj_help_center_test",
+    srcs = _SHARED_SRCS + ["cuj_help_center_test.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS + ["@com_github_stretchr_testify//require"],
+    env = _COMMON_ENV,
+    tags = _COMMON_TAGS,
+)
+
 test_suite(
     name = "e2e_test",
     tests = [
@@ -250,6 +261,7 @@ test_suite(
         ":e2e_cuj_audit_test",
         ":e2e_cuj_extended_test",
         ":e2e_cuj_accessibility_test",
+        ":e2e_cuj_help_center_test",
         ":e2e_misc_test",
     ],
 )
