@@ -1,0 +1,11 @@
+--- src/server/telemetry/global_pii_linter_test.go
++++ src/server/telemetry/global_pii_linter_test.go
+@@ -58,7 +58,7 @@
+						isTargetArg := false
+
+						if innerIdent, ok := arg.(*ast.Ident); ok {
+-							if innerIdent.Name == "payload" || innerIdent.Name == "payloadMap" || innerIdent.Name == "raw" || innerIdent.Name == "logEntry" {
++							if innerIdent.Name == "payload" || innerIdent.Name == "payloadMap" || innerIdent.Name == "raw" || innerIdent.Name == "logEntry" || innerIdent.Name == "body" || innerIdent.Name == "arguments" || innerIdent.Name == "val" || innerIdent.Name == "jsonData" || innerIdent.Name == "argsBytes" || strings.Contains(innerIdent.Name, "redacted") {
+								isTargetArg = true
+							}
+						} else if innerCall, ok := arg.(*ast.CallExpr); ok {

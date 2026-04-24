@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -19,7 +20,7 @@ func NewSQLiteSubAgentTaskQueue(provider db.Provider) *SQLiteSubAgentTaskQueue {
 }
 
 func (q *SQLiteSubAgentTaskQueue) Enqueue(ctx context.Context, payload *SubAgentTaskQueuePayload) error {
-	data, err := json.Marshal(payload)
+	data, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return err
 	}

@@ -8,5 +8,8 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/src/server/integrations/plane",
     visibility = ["//visibility:public"],
-    deps = ["//src/server/integrations"],
+    deps = [
+        "//src/server/integrations",
+        "//src/server/telemetry",
+    ],
 )

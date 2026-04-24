@@ -7,6 +7,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/db",
+        "//src/server/telemetry",
     ],
 )
 
@@ -16,5 +17,6 @@ go_test(
     embed = [":tasks"],
     deps = [
         "//src/server/db",
+        "//src/server/telemetry",
     ],
 )

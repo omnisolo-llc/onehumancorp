@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"github.com/google/uuid"
@@ -178,7 +179,7 @@ func (q *SQLiteTaskQueue) EnqueueDelayed(ctx context.Context, queueName string, 
 	}
 
 	id := uuid.New().String()
-	payloadBytes, err := json.Marshal(payload)
+	payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return "", err
 	}

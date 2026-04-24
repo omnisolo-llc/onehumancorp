@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
     "bytes"
     "context"
     "encoding/json"
@@ -67,7 +68,7 @@ func (o *Orchestrator) ClaimTask(ctx context.Context, agentID string) (string, e
             "new_state":      "IN_PROGRESS",
         },
     }
-    payloadBytes, _ := json.Marshal(payload)
+    payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 
     req, err := http.NewRequestWithContext(ctx, "POST", o.BaseURL+"/api/mesh/broadcast", bytes.NewReader(payloadBytes))
     if err == nil {
@@ -135,7 +136,7 @@ func (o *Orchestrator) CompleteTask(ctx context.Context, missionID string, agent
             "new_state":      "DONE",
         },
     }
-    payloadBytes, _ := json.Marshal(payload)
+    payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 
     req, err := http.NewRequestWithContext(ctx, "POST", o.BaseURL+"/api/mesh/broadcast", bytes.NewReader(payloadBytes))
     if err == nil {
@@ -207,7 +208,7 @@ func (o *Orchestrator) FailTask(ctx context.Context, missionID string, agentID s
             "reason":         reason,
         },
     }
-    payloadBytes, _ := json.Marshal(payload)
+    payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 
     req, err := http.NewRequestWithContext(ctx, "POST", o.BaseURL+"/api/mesh/broadcast", bytes.NewReader(payloadBytes))
     if err == nil {

@@ -13,6 +13,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -257,7 +258,7 @@ func (cn *CentrifugeNode) PublishPresenceBroadcast(agentID string, status string
 		"status":   status,
 	}
 
-	dataBytes, err := json.Marshal(payload)
+	dataBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		slog.Error("[centrifuge] marshal presence broadcast", "error", err)
 		return
@@ -273,7 +274,7 @@ func (cn *CentrifugeNode) PublishPresenceBroadcast(agentID string, status string
 
 func (cn *CentrifugeNode) PublishTaskBroadcast(taskID string, payload map[string]interface{}) {
 	if cn.meshTransport != nil {
-		data, err := json.Marshal(payload)
+		data, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 		if err == nil {
 			_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), "tasks", data)
 		}
@@ -361,7 +362,7 @@ func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, action, status strin
 
     // Also dispatch to internal transport fallback memory if active
     if cn.meshTransport != nil {
-        payloadBytes, _ := json.Marshal(payload)
+        payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
         _ = cn.meshTransport.PublishTeammateMeshEvent(context.Background(), "teammate_mesh", agentID, action, status, payloadBytes)
     }
 

@@ -8,7 +8,10 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/src/server/integrations/chatwoot",
     visibility = ["//visibility:public"],
-    deps = ["//src/server/integrations"],
+    deps = [
+        "//src/server/integrations",
+        "//src/server/telemetry",
+    ],
 )
 
 go_test(

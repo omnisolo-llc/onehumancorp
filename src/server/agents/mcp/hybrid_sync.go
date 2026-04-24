@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -43,7 +44,7 @@ func (t *HybridSyncTool) Execute(ctx context.Context, payload map[string]interfa
 
 // syncState handles the sync_state operation.
 func (t *HybridSyncTool) syncState(payload map[string]interface{}) (*ExecutionResult, error) {
-	_, err := json.Marshal(payload)
+	_, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return nil, err
 	}

@@ -1,0 +1,11 @@
+--- global_pii_linter_test.go
++++ global_pii_linter_test.go
+@@ -58,7 +58,7 @@
+						isTargetArg := false
+
+						if innerIdent, ok := arg.(*ast.Ident); ok {
+-							if innerIdent.Name == "payloadMap" || innerIdent.Name == "logEntry" {
++							if innerIdent.Name == "payloadMap" || innerIdent.Name == "logEntry" || innerIdent.Name == "payload" || innerIdent.Name == "raw" || innerIdent.Name == "body" || innerIdent.Name == "arguments" || innerIdent.Name == "val" || innerIdent.Name == "jsonData" || innerIdent.Name == "argsBytes" || strings.Contains(innerIdent.Name, "redacted") {
+								isTargetArg = true
+							} else if strings.Contains(path, "telemetry") && (innerIdent.Name == "payload" || innerIdent.Name == "logEntry") {
+								// Only telemetry directory payload variable needs checking because it handles core telemetry structs

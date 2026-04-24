@@ -11,6 +11,7 @@ go_library(
     deps = [
         "//src/server/auth",
         "//src/server/db",
+        "//src/server/telemetry",
     ],
 )
 
@@ -24,5 +25,6 @@ go_test(
     deps = [
         "//src/server/auth",
         "//src/server/db",
+        "//src/server/telemetry",
     ],
 )

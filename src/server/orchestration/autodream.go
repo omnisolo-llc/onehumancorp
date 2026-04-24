@@ -1454,7 +1454,7 @@ func (w *AutoDreamWorker) ConsolidateMemories(ctx context.Context) error {
 					"status":    "SUCCESS",
 					"memory_id": e.id,
 				}
-				payloadBytes, err := json.Marshal(payload)
+				payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 				if err == nil {
 					w.mesh.BroadcastMeshEvent(ctx, "tasks", payloadBytes)
 				} else {

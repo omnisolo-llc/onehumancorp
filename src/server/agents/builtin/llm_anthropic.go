@@ -158,7 +158,7 @@ func (c *AnthropicClient) Chat(ctx context.Context, req ChatRequest) (ChatRespon
 		payload.MaxTokens = 2048
 	}
 
-	body, _ := json.Marshal(payload)
+	body, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", "https://api.anthropic.com/v1/messages", bytes.NewReader(body))
 	if err != nil {

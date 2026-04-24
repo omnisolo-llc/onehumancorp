@@ -1,6 +1,7 @@
 package statesyncmcp
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -35,7 +36,7 @@ func (p *DBStateSyncProvider) sendToCloud(ctx context.Context, endpoint string, 
 
 	var bodyReader io.Reader
 	if payload != nil {
-		jsonData, err := json.Marshal(payload)
+		jsonData, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 		if err != nil {
 			return nil, fmt.Errorf("marshal payload: %w", err)
 		}

@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -31,7 +32,7 @@ func (c *HTTPCloudClient) PushSanitizedMemory(ctx context.Context, memoryID, san
 		"memory_id": memoryID,
 		"context":   sanitizedContext,
 	}
-	body, err := json.Marshal(payload)
+	body, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return "", err
 	}

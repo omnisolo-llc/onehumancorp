@@ -258,7 +258,7 @@ func (c *anthropicClient) Complete(ctx context.Context, req CompletionRequest) (
 		Tools:     tools,
 	}
 
-	raw, err := json.Marshal(body)
+	raw, err := json.Marshal(telemetry.RedactInterfacePII(body))
 	if err != nil {
 		return nil, fmt.Errorf("anthropic: marshal request: %w", err)
 	}
@@ -492,7 +492,7 @@ func (c *openAICompatClient) Complete(ctx context.Context, req CompletionRequest
 	}
 
 	body := openAIRequest{Model: c.model, Messages: msgs, Tools: tools, MaxTokens: maxTok}
-	raw, err := json.Marshal(body)
+	raw, err := json.Marshal(telemetry.RedactInterfacePII(body))
 	if err != nil {
 		return nil, fmt.Errorf("openai-compat: marshal: %w", err)
 	}

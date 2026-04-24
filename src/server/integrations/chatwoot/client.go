@@ -10,6 +10,7 @@
 package chatwoot
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -302,7 +303,7 @@ func (c *Client) get(path string, dest interface{}) error {
 }
 
 func (c *Client) post(path string, body, dest interface{}) error {
-	data, err := json.Marshal(body)
+	data, err := json.Marshal(telemetry.RedactInterfacePII(body))
 	if err != nil {
 		return err
 	}

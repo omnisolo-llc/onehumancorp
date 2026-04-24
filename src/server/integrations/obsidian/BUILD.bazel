@@ -10,6 +10,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto:hub_go_proto",
+        "//src/server/telemetry",
         "//src/server/db",
         "@org_golang_google_protobuf//proto",
     ],

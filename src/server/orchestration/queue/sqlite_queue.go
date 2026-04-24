@@ -189,7 +189,7 @@ func (q *SQLiteTaskQueue) Fail(ctx context.Context, jobID string, reason string)
 			payload = make(map[string]interface{})
 		}
 		payload["last_error"] = reason
-		newPayload, _ := json.Marshal(payload)
+		newPayload, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 		payloadStr = string(newPayload)
 	}
 

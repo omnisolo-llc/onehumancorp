@@ -67,7 +67,7 @@ func (p *McpSyncProxy) Buffer(ctx context.Context, sessionID, capability, toolNa
 	}
 
 	id := uuid.New().String()
-	argsBytes, err := json.Marshal(arguments)
+	argsBytes, err := json.Marshal(telemetry.RedactInterfacePII(arguments))
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal arguments: %w", err)
 	}
@@ -130,7 +130,7 @@ func (p *McpSyncProxy) Sync(ctx context.Context) (int, error) {
 			"arguments": argsMap,
 		}
 
-		payloadBytes, err := json.Marshal(payload)
+		payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 		if err != nil {
 			continue
 		}

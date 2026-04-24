@@ -215,7 +215,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	payloadMap := map[string]interface{}{
 		"description": description,
 	}
-	payloadBytes, _ := json.Marshal(payloadMap)
+	payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payloadMap))
 	payload := string(payloadBytes)
 
 	if priority == "" {
@@ -673,7 +673,7 @@ func mergeTaskResultPayload(payloadText, result string) ([]byte, error) {
 		payloadMap["result"] = result
 		payloadMap["completed_at"] = time.Now().UTC().Format(time.RFC3339Nano)
 	}
-	return json.Marshal(payloadMap)
+	return json.Marshal(telemetry.RedactInterfacePII(payloadMap))
 }
 
 func appendDeliberationResult(deliberationLog, result string) (string, error) {
@@ -984,7 +984,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 // DelegateSubTask queues a task to an isolated sub-agent worker
 func (tm *TaskManager) DelegateSubTask(ctx context.Context, parentTaskID, agentRole string, payloadMap map[string]interface{}) error {
-	payloadBytes, err := json.Marshal(payloadMap)
+	payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payloadMap))
 	if err != nil {
 		return err
 	}
@@ -1095,7 +1095,7 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 		_ = json.Unmarshal([]byte(task.Payload), &payloadMap)
 	}
 	payloadMap["description"] = task.Description
-	payloadBytes, _ := json.Marshal(payloadMap)
+	payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payloadMap))
 	task.Payload = string(payloadBytes)
 
 	query := `

@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -47,7 +48,7 @@ func NewMcpSyncProxy(dbProvider db.Provider, tlsConfig *tls.Config, cloudEndpoin
 }
 
 func (p *McpSyncProxy) BufferIntegrationState(ctx context.Context, toolName string, payload map[string]interface{}) (string, error) {
-	payloadBytes, err := json.Marshal(payload)
+	payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal payload: %w", err)
 	}

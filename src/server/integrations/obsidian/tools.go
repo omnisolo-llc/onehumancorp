@@ -1,6 +1,7 @@
 package obsidian
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -50,7 +51,7 @@ func (t *ObsidianTool) Execute(ctx context.Context, payload map[string]interface
 
 	// If in Standalone mode, buffer metadata for sync.
 	if os.Getenv("OHC_STANDALONE") == "true" && t.dbProvider != nil {
-		argsBytes, _ := json.Marshal(payload)
+		argsBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 		query := "INSERT INTO hybrid_mcp_sync_queue (id, tool_name, arguments, status, created_at) VALUES ($1, $2, $3, 'PENDING', CURRENT_TIMESTAMP)"
 		// Use a UUID or similar for the ID. For simplicity here, we'm using a timestamped string.
 		id := fmt.Sprintf("obsidian-%d", time.Now().UnixNano())

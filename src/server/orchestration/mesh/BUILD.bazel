@@ -17,6 +17,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/db",
+        "//src/server/telemetry",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_redis_rueidis//:rueidis",
         "@com_github_google_uuid//:uuid",
@@ -33,6 +34,7 @@ go_test(
     embed = [":mesh"],
     deps = [
         "//src/server/db",
+        "//src/server/telemetry",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_alicebob_miniredis_v2//:miniredis",
         "@com_github_stretchr_testify//assert",

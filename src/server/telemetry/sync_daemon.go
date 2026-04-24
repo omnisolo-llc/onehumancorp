@@ -108,7 +108,7 @@ func InitStandaloneBuffer(db *sql.DB) {
 		var data map[string]interface{}
 		if err := json.Unmarshal([]byte(payload), &data); err == nil {
 			redactedData := RedactInterfacePII(data)
-			if redactedBytes, err := json.Marshal(redactedData); err == nil {
+			if redactedBytes, err := json.Marshal(RedactInterfacePII(redactedData)); err == nil {
 				payload = string(redactedBytes)
 			}
 		}

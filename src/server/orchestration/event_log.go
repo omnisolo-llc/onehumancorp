@@ -15,7 +15,7 @@ const maxInMemoryHubEvents = 200
 // sanitizeHubEvent strictly applies PII redaction before marshaling.
 func sanitizeHubEvent(raw interface{}) (HubEvent, error) {
 	redactedRaw := telemetry.RedactInterfacePII(raw)
-	payload, err := json.Marshal(redactedRaw)
+	payload, err := json.Marshal(telemetry.RedactInterfacePII(redactedRaw))
 	if err != nil {
 		return HubEvent{}, fmt.Errorf("marshal hub event: %w", err)
 	}

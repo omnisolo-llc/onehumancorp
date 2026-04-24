@@ -270,7 +270,7 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 
 func (d *HybridMCPRAGDaemon) sendRAGToCloud(ctx context.Context, records []RagSyncRecord) error {
 	payload := map[string]interface{}{"records": records}
-	jsonData, err := json.Marshal(payload)
+	jsonData, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return fmt.Errorf("marshal RAG records: %w", err)
 	}

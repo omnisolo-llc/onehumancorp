@@ -955,7 +955,7 @@ type TeammateMeshEvent struct {
 }
 
 func (rm *RedisMeshTransport) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
-	data, err := json.Marshal(payload)
+	data, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return err
 	}
@@ -987,7 +987,7 @@ func (rm *RedisMeshTransport) SubscribeChannel(ctx context.Context, channel stri
 }
 
 func (lm *MemoryMeshTransport) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
-	data, err := json.Marshal(payload)
+	data, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return err
 	}

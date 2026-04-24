@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -48,7 +49,7 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 		"messages":    messages,
 	}
 
-	body, _ := json.Marshal(payload)
+	body, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {

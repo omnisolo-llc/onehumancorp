@@ -1,6 +1,7 @@
 package mesh
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -21,7 +22,7 @@ func HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	payloadBytes, err := json.Marshal(payload)
+	payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
 		return

@@ -1,6 +1,7 @@
 package queue
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -20,7 +21,7 @@ func NewRedisSubAgentTaskQueue(client RedisClient, prefix string) *RedisSubAgent
 }
 
 func (q *RedisSubAgentTaskQueue) Enqueue(ctx context.Context, payload *SubAgentTaskQueuePayload) error {
-	data, err := json.Marshal(payload)
+	data, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return err
 	}

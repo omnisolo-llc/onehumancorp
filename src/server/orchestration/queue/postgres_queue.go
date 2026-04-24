@@ -39,7 +39,7 @@ func (q *PostgresTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 	payloadMap["attempts"] = job.Attempts
 	payloadMap["max_attempts"] = job.MaxAttempts
 
-	newPayload, _ := json.Marshal(payloadMap)
+	newPayload, _ := json.Marshal(telemetry.RedactInterfacePII(payloadMap))
 
 	orgID := ""
 	if val, ok := payloadMap["organization_id"].(string); ok {
@@ -183,7 +183,7 @@ func (q *PostgresTaskQueue) Fail(ctx context.Context, jobID string, reason strin
 	}
 
 	payload["last_error"] = reason
-	newPayload, _ := json.Marshal(payload)
+	newPayload, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 
 	updateQuery := `
 		UPDATE sub_agent_queue

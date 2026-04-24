@@ -239,7 +239,7 @@ func (d *HybridSyncDaemon) ProcessCRDTSync(ctx context.Context) {
 	}
 
 	payload := SyncDeltasPayload{Deltas: deltas}
-	jsonData, err := json.Marshal(payload)
+	jsonData, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		slog.Error("hybrid_sync: failed to marshal CRDT deltas", "error", err)
 		return
@@ -299,7 +299,7 @@ func (d *HybridSyncDaemon) SyncLocalToCloud(ctx context.Context, mission *AgentM
 	var redactedPayload string
 	if err := json.Unmarshal([]byte(mission.Payload), &parsedPayload); err == nil {
 		redactedInterface := telemetry.RedactInterfacePII(parsedPayload)
-		if redactedBytes, err := json.Marshal(redactedInterface); err == nil {
+		if redactedBytes, err := json.Marshal(telemetry.RedactInterfacePII(redactedInterface)); err == nil {
 			redactedPayload = string(redactedBytes)
 		} else {
 			redactedPayload = telemetry.RedactPII(mission.Payload)

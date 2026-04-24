@@ -236,7 +236,7 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 				if s.hub.SIPDB() != nil {
 					// Redact PII before saving for cloud escalation
 					redactedResult := telemetry.RedactInterfacePII(result)
-					payloadBytes, marshalErr := json.Marshal(redactedResult)
+					payloadBytes, marshalErr := json.Marshal(telemetry.RedactInterfacePII(redactedResult))
 					if marshalErr == nil {
 						missionID := "esc-" + time.Now().UTC().Format("20060102150405.999999999")
 						if err := s.hub.SIPDB().UpsertMission(r.Context(), missionID, "CLOUD_ESCALATION", string(payloadBytes), false); err != nil {
@@ -417,7 +417,7 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 			if err != nil {
 				return nil, err
 			}
-			resBytes, _ := json.Marshal(res)
+			resBytes, _ := json.Marshal(telemetry.RedactInterfacePII(res))
 			return map[string]interface{}{"content": []map[string]interface{}{{"type": "text", "text": string(resBytes)}}}, nil
 		}
 		return nil, fmt.Errorf("method not supported")
@@ -570,7 +570,7 @@ func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
 		status = "PENDING"
 	}
 
-	payloadBytes, err := json.Marshal(payload)
+	payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		http.Error(w, "failed to re-marshal payload", http.StatusInternalServerError)
 		return
@@ -634,7 +634,7 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// If context isn't a direct top level key, marshal the whole sanitized payload as the context
-		sanitizedBytes, _ := json.Marshal(payload)
+		sanitizedBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 		contextStr = string(sanitizedBytes)
 	}
 
@@ -710,7 +710,7 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 		var parsedPayload interface{}
 		if err := json.Unmarshal([]byte(payloads[i].Payload), &parsedPayload); err == nil {
 			redactedPayload := telemetry.RedactInterfacePII(parsedPayload)
-			if redactedBytes, err := json.Marshal(redactedPayload); err == nil {
+			if redactedBytes, err := json.Marshal(telemetry.RedactInterfacePII(redactedPayload)); err == nil {
 				payloads[i].Payload = string(redactedBytes)
 			}
 		}
@@ -801,7 +801,7 @@ func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
 			contextStr = string(marshaled)
 		}
 	} else {
-		sanitizedBytes, _ := json.Marshal(payload)
+		sanitizedBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 		contextStr = string(sanitizedBytes)
 	}
 

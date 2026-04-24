@@ -8,6 +8,7 @@
 package plane
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -173,7 +174,7 @@ func (c *Client) get(path string, dest interface{}) error {
 }
 
 func (c *Client) patch(path string, body, dest interface{}) error {
-	data, err := json.Marshal(body)
+	data, err := json.Marshal(telemetry.RedactInterfacePII(body))
 	if err != nil {
 		return err
 	}

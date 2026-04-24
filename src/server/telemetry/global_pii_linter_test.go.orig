@@ -55,7 +55,7 @@ func TestGlobalPIIRedactionLinter(t *testing.T) {
 						isTargetArg := false
 
 						if innerIdent, ok := arg.(*ast.Ident); ok {
-							if innerIdent.Name == "payload" || innerIdent.Name == "payloadMap" || innerIdent.Name == "raw" || innerIdent.Name == "logEntry" || innerIdent.Name == "body" || innerIdent.Name == "arguments" || innerIdent.Name == "val" || innerIdent.Name == "jsonData" || innerIdent.Name == "argsBytes" || strings.Contains(innerIdent.Name, "redacted") {
+							if innerIdent.Name == "payload" || innerIdent.Name == "payloadMap" || innerIdent.Name == "raw" || innerIdent.Name == "logEntry" {
 								isTargetArg = true
 							}
 						} else if innerCall, ok := arg.(*ast.CallExpr); ok {

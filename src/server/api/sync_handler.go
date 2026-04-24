@@ -43,7 +43,7 @@ func HandleHybridSyncMissions(hub *orchestration.Hub) http.HandlerFunc {
 			var parsedPayload interface{}
 			if err := json.Unmarshal([]byte(payloads[i].Payload), &parsedPayload); err == nil {
 				redactedPayload := telemetry.RedactInterfacePII(parsedPayload)
-				if redactedBytes, err := json.Marshal(redactedPayload); err == nil {
+				if redactedBytes, err := json.Marshal(telemetry.RedactInterfacePII(redactedPayload)); err == nil {
 					payloads[i].Payload = string(redactedBytes)
 				}
 			}

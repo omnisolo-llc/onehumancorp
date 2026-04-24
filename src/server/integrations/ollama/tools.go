@@ -1,6 +1,7 @@
 package ollama
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -97,7 +98,7 @@ func (t *OllamaTool) PullOllamaModel(ctx context.Context, url, modelName string)
 		Stream: false,
 	}
 
-	jsonData, err := json.Marshal(payload)
+	jsonData, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %w", err)
 	}
@@ -148,7 +149,7 @@ func (t *OllamaTool) CheckOllamaHealth(ctx context.Context, url, modelName strin
 		Stream: false,
 	}
 
-	jsonData, err := json.Marshal(payload)
+	jsonData, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return false, fmt.Errorf("failed to marshal payload: %w", err)
 	}

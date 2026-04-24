@@ -35,7 +35,7 @@ func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(r.Context(), "events")
 	} else {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(map[string]interface{}{"mode": "events"}))
 		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
 	}
 
@@ -76,7 +76,7 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(r.Context(), "events")
 	} else {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(map[string]interface{}{"mode": "events"}))
 		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
 	}
 
@@ -130,7 +130,7 @@ func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(r.Context(), "events")
 	} else {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(map[string]interface{}{"mode": "events"}))
 		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
 	}
 
@@ -171,7 +171,7 @@ func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(r.Context(), "events")
 	} else {
-		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		payloadBytes, _ := json.Marshal(telemetry.RedactInterfacePII(map[string]interface{}{"mode": "events"}))
 		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
 	}
 
@@ -207,7 +207,7 @@ func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request
 		payloadMap["payload"] = req.Payload
 	}
 
-	payloadBytes, err := json.Marshal(payloadMap)
+	payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payloadMap))
 	if err != nil {
 		http.Error(w, "Failed to marshal payload", http.StatusInternalServerError)
 		return

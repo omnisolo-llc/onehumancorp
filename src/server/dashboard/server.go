@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"strings"
 	"sync"
 	"time"
@@ -31,7 +32,6 @@ import (
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/settings"
-	"github.com/onehumancorp/mono/src/server/telemetry"
 
 	"github.com/onehumancorp/mono/src/server/utils"
 )
@@ -1003,7 +1003,7 @@ func (s *Server) handleMeshBroadcast(w http.ResponseWriter, r *http.Request) { /
 		payloadMap["payload"] = req.Payload
 	}
 
-	payloadBytes, err := json.Marshal(payloadMap)
+	payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payloadMap))
 	if err != nil {
 		http.Error(w, "failed to marshal payload", http.StatusInternalServerError)
 		return

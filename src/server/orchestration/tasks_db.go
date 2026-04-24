@@ -176,7 +176,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
                     "agent_id": agentID,
                     "status":   "COMPLETED",
                 }
-                payloadBytes, err := json.Marshal(payload)
+                payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
                 if err == nil {
                     _ = to.mesh.BroadcastMeshEvent(context.Background(), "tasks", payloadBytes)
                 }
