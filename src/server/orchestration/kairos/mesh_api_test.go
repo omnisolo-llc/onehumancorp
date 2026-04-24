@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/onehumancorp/mono/src/server/auth"
 )
 
 type mockTeammateMesh struct {
@@ -46,7 +45,7 @@ func createMockTLSRequest(method, urlStr string, body []byte, hasCert bool) *htt
 
 func TestMeshAPI_HandlePublish(t *testing.T) {
 	mockMesh := &mockTeammateMesh{}
-	api := NewMeshAPI(mockMesh, nil)
+	api := NewMeshAPI(mockMesh)
 
 	tests := []struct {
 		name       string
@@ -94,7 +93,7 @@ func TestMeshAPI_HandleSubscribe_Errors(t *testing.T) {
 	mockMesh := &mockTeammateMeshWithSubscribe{
 		subChan: make(chan []byte, 1),
 	}
-	api := NewMeshAPI(mockMesh, nil)
+	api := NewMeshAPI(mockMesh)
 
 	req2 := httptest.NewRequest(http.MethodPost, "/api/kairos/mesh/subscribe", nil)
 	w2 := httptest.NewRecorder()
@@ -115,7 +114,7 @@ func TestMeshAPI_HandleSubscribe_Success(t *testing.T) {
 	mockMesh := &mockTeammateMeshWithSubscribe{
 		subChan: make(chan []byte, 10),
 	}
-	api := NewMeshAPI(mockMesh, nil)
+	api := NewMeshAPI(mockMesh)
 
 	mux := http.NewServeMux()
 	api.RegisterRoutes(mux)
@@ -145,70 +144,5 @@ func TestMeshAPI_HandleSubscribe_Success(t *testing.T) {
 
 	if string(msg) != string(expectedMsg) {
 		t.Errorf("expected %s, got %s", expectedMsg, msg)
-	}
-}
-
-func TestMeshAPI_HandleGetPendingActions(t *testing.T) {
-	mockMesh := &mockTeammateMesh{}
-	api := NewMeshAPI(mockMesh, nil)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/kairos/actions/pending?agent_id=test-agent", nil)
-	ctx := context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1", Subject: "user-1", Roles: []string{"system"}})
-	req = req.WithContext(ctx)
-
-	w := httptest.NewRecorder()
-	api.handleGetPendingActions(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
-	}
-	if w.Body.String() != "[]" {
-		t.Errorf("expected empty array, got %s", w.Body.String())
-	}
-}
-
-func TestMeshAPI_HandleApproveAction(t *testing.T) {
-	mockMesh := &mockTeammateMesh{}
-	api := NewMeshAPI(mockMesh, nil)
-
-	req := httptest.NewRequest(http.MethodPost, "/api/kairos/actions/approve", bytes.NewBuffer([]byte(`{"task_id":"task-123"}`)))
-	ctx := context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1", Subject: "user-1", Roles: []string{"system"}})
-	req = req.WithContext(ctx)
-
-	w := httptest.NewRecorder()
-	api.handleApproveAction(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
-	}
-
-	if !mockMesh.publishCalled {
-		t.Errorf("expected Publish to be called")
-	}
-	if mockMesh.lastChannel != "approval_events" {
-		t.Errorf("expected channel approval_events, got %s", mockMesh.lastChannel)
-	}
-}
-
-func TestMeshAPI_HandleRejectAction(t *testing.T) {
-	mockMesh := &mockTeammateMesh{}
-	api := NewMeshAPI(mockMesh, nil)
-
-	req := httptest.NewRequest(http.MethodPost, "/api/kairos/actions/reject", bytes.NewBuffer([]byte(`{"task_id":"task-123"}`)))
-	ctx := context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "org-1", Subject: "user-1", Roles: []string{"system"}})
-	req = req.WithContext(ctx)
-
-	w := httptest.NewRecorder()
-	api.handleRejectAction(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
-	}
-
-	if !mockMesh.publishCalled {
-		t.Errorf("expected Publish to be called")
-	}
-	if mockMesh.lastChannel != "approval_events" {
-		t.Errorf("expected channel approval_events, got %s", mockMesh.lastChannel)
 	}
 }
