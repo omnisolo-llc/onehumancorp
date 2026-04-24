@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:intl/intl.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
@@ -127,6 +128,9 @@ class _DashboardContent extends StatelessWidget {
           ),
         ),
 
+        _MyPlanCard(data: data),
+        const SizedBox(height: 24),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -238,6 +242,107 @@ class _DashboardContent extends StatelessWidget {
           }).toList(),
         ),
       ],
+    );
+  }
+}
+
+class _MyPlanCard extends StatelessWidget {
+  final DashboardSnapshot data;
+  const _MyPlanCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final NumberFormat currencyFormat = NumberFormat.currency(symbol: '\$');
+    final double cost = data.costs.projectedMonthlyUSD > 0 ? data.costs.projectedMonthlyUSD : data.costs.totalCostUSD;
+    final int tokens = data.costs.totalTokens;
+    final String currentPlan = 'Starter';
+    final int tokenLimit = 1000;
+
+    // Simulate storage from tokens loosely, as actual DB doesn't have storage quotas yet
+    final double storageGB = (tokens * 0.0012).clamp(0.0, 5.0);
+    final double storageLimitGB = 5.0;
+
+    return GlassCard(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'My Plan',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Outfit',
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    currentPlan,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('AI Actions Used', style: TextStyle(fontFamily: 'Inter', color: Colors.white70)),
+                Text('$tokens / $tokenLimit', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: (tokens / tokenLimit).clamp(0.0, 1.0),
+              backgroundColor: Colors.white24,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Storage Used', style: TextStyle(fontFamily: 'Inter', color: Colors.white70)),
+                Text('${storageGB.toStringAsFixed(1)} GB / $storageLimitGB GB', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: (storageGB / storageLimitGB).clamp(0.0, 1.0),
+              backgroundColor: Colors.white24,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Estimated Next Bill', style: TextStyle(fontFamily: 'Inter', color: Colors.white70)),
+                Text(currencyFormat.format(cost), style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 18)),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => context.go('/wizards/upgrade'),
+                icon: const Icon(Icons.arrow_upward),
+                label: const Text('Upgrade Plan'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

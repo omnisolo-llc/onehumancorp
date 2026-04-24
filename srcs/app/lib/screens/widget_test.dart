@@ -148,10 +148,10 @@ void main() {
             },
             'meetings': [],
             'costs': {
-              'total': 1234.56,
-              'currency': 'USD',
-              'period': 'monthly',
-              'breakdown': {},
+              'totalCostUSD': 1234.56,
+              'totalTokens': 1000,
+              'projectedMonthlyUsd': 1500.00,
+              'agents': [],
             },
             'agents': [
               {
@@ -194,7 +194,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('3'), findsOneWidget);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+
+      // Verify My Plan elements inside DashboardScreen
+      expect(find.text('My Plan'), findsWidgets);
+      expect(find.text('Starter'), findsWidgets);
+      expect(find.text('1000 / 1000'), findsWidgets); // Based on mock data: 1000 tokens
+      expect(find.text('1.2 GB / 5.0 GB'), findsWidgets); // 1000 * 0.0012 = 1.2
+      expect(find.text('\$1,500.00'), findsWidgets); // currencyFormat parses 1500.00
     });
   });
 

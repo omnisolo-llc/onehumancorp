@@ -163,11 +163,13 @@ class OrganizationMember {
 class CostSummary {
   final double totalCostUSD;
   final int totalTokens;
+  final double projectedMonthlyUSD;
   final List<AgentCost> agents;
 
   const CostSummary({
     required this.totalCostUSD,
     required this.totalTokens,
+    required this.projectedMonthlyUSD,
     required this.agents,
   });
 
@@ -176,6 +178,7 @@ class CostSummary {
       totalCostUSD:
           (json['totalCostUSD'] ?? json['total_cost_usd'] ?? 0.0).toDouble(),
       totalTokens: json['totalTokens'] ?? json['total_tokens'] ?? 0,
+      projectedMonthlyUSD: (json['projectedMonthlyUsd'] ?? json['projected_monthly_usd'] ?? 0.0).toDouble(),
       agents:
           (json['agents'] as List<dynamic>?)
               ?.map((e) => AgentCost.fromJson(e as Map<String, dynamic>))
