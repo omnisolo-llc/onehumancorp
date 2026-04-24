@@ -35,6 +35,7 @@ import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/website_builder_wizard_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -149,6 +150,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/wizard',
             builder: (context, state) => const BusinessSetupWizardScreen(),
+          ),
+          GoRoute(
+            path: '/website-builder',
+            builder: (context, state) => const WebsiteBuilderWizardScreen(),
           ),
           GoRoute(
             path: '/handoffs',
@@ -313,6 +318,11 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.auto_fix_high,
           label: 'Setup Wizard',
           path: '/wizard',
+        ),
+        _NavItem(
+          icon: Icons.dashboard,
+          label: 'Website Builder',
+          path: '/website-builder',
         ),
         const SizedBox(height: 16),
         _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
