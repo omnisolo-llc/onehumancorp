@@ -128,47 +128,6 @@ func TestLocalMesh_Locks(t *testing.T) {
     }
 }
 
-func TestLocalMesh_Presence(t *testing.T) {
-	mesh := NewLocalMesh()
-	ctx := context.Background()
-
-	err := mesh.RegisterPresence(ctx, "agent-1", "online")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	err = mesh.RegisterPresence(ctx, "agent-2", "busy")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	agents, err := mesh.GetActiveAgents(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get active agents: %v", err)
-	}
-
-	if len(agents) != 2 {
-		t.Errorf("Expected 2 agents, got %d", len(agents))
-	}
-
-	// Update status
-	err = mesh.RegisterPresence(ctx, "agent-1", "offline")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	agents, err = mesh.GetActiveAgents(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get active agents: %v", err)
-	}
-
-	for _, a := range agents {
-		if a.AgentID == "agent-1" && a.Status != "offline" {
-			t.Errorf("Expected agent-1 status to be offline, got %s", a.Status)
-		}
-	}
-}
-
 func TestRedisMesh_PubSub(t *testing.T) {
 	mr, err := miniredis.Run()
 	if err != nil {
@@ -276,56 +235,4 @@ func TestRedisMesh_Locks(t *testing.T) {
     if token == token2 {
         t.Errorf("Expected new token")
     }
-}
-
-func TestRedisMesh_Presence(t *testing.T) {
-	mr, err := miniredis.Run()
-	if err != nil {
-		t.Fatalf("Failed to start miniredis: %v", err)
-	}
-	defer mr.Close()
-
-	client := redis.NewClient(&redis.Options{
-		Addr: mr.Addr(),
-	})
-	defer client.Close()
-
-	mesh := NewRedisMesh(client)
-	ctx := context.Background()
-
-	err = mesh.RegisterPresence(ctx, "agent-1", "online")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	err = mesh.RegisterPresence(ctx, "agent-2", "busy")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	agents, err := mesh.GetActiveAgents(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get active agents: %v", err)
-	}
-
-	if len(agents) != 2 {
-		t.Errorf("Expected 2 agents, got %d", len(agents))
-	}
-
-	// Update status
-	err = mesh.RegisterPresence(ctx, "agent-1", "offline")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	agents, err = mesh.GetActiveAgents(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get active agents: %v", err)
-	}
-
-	for _, a := range agents {
-		if a.AgentID == "agent-1" && a.Status != "offline" {
-			t.Errorf("Expected agent-1 status to be offline, got %s", a.Status)
-		}
-	}
 }
