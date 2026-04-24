@@ -66,7 +66,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			deliberation_log TEXT,
 			depth INTEGER,
 			dependencies TEXT NOT NULL DEFAULT '[]',
-			locked_until TIMESTAMP, action_risk TEXT, approval_status TEXT, proposed_content TEXT,
+			locked_until TIMESTAMP,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
@@ -551,47 +551,3 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 	}
 }
 // added for Sub-Agent Orchestration Queue
-
-func TestSharedTask_StateMachine(t *testing.T) {
-	t.Setenv("OHC_MULTITENANT", "false")
-
-	tm, cleanup := setupTasksTestDB(t)
-	defer cleanup()
-
-	ctx := taskClaimsContext()
-	_, err := tm.CreateTask(ctx, "org-1", "mission-1", "Task 1", "Desc", "P1")
-	if err != nil {
-		t.Fatalf("expected no error creating task, got %v", err)
-	}
-
-	claimedTask, err := tm.PollTasks(ctx, "agent-1", 1)
-	if err != nil {
-		t.Fatalf("expected no error polling tasks, got %v", err)
-	}
-	if len(claimedTask) == 0 {
-		t.Fatalf("expected 1 task, got 0")
-	}
-
-	err = tm.ReviewTask(ctx, claimedTask[0].ID, "agent-1")
-	if err != nil {
-		t.Fatalf("expected no error reviewing task, got %v", err)
-	}
-
-	_, err = tm.CreateTask(ctx, "org-1", "mission-1", "Task 2", "Desc", "P1")
-	if err != nil {
-		t.Fatalf("expected no error creating task2, got %v", err)
-	}
-
-	claimedTask2, err := tm.PollTasks(ctx, "agent-1", 1)
-	if err != nil {
-		t.Fatalf("expected no error polling tasks, got %v", err)
-	}
-	if len(claimedTask2) == 0 {
-		t.Fatalf("expected 1 task, got 0")
-	}
-
-	err = tm.CompleteTaskWithResult(ctx, claimedTask2[0].ID, "agent-1", "result")
-	if err != nil {
-		t.Fatalf("expected no error completing task2, got %v", err)
-	}
-}

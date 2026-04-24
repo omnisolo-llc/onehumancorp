@@ -33,9 +33,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>",
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
+        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>"
       },
       "transparent": true,
       "id": 1
@@ -50,9 +48,7 @@
       "id": 2,
       "options": {
         "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
-        "mode": "html",
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
+        "mode": "html"
       },
       "title": "Aesthetic Mandate Injector",
       "transparent": true,
@@ -134,9 +130,7 @@
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        },
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
+        }
       },
       "targets": [
         {
@@ -152,8 +146,7 @@
         }
       ],
       "title": "HTTP Request Rate (Cloud vs Standalone)",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -180,12 +173,7 @@
         }
       ],
       "title": "P95 Latency",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -212,12 +200,7 @@
         }
       ],
       "title": "Token Usage Rate",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -244,12 +227,7 @@
         }
       ],
       "title": "Token Burn Rate Forecast",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -276,12 +254,7 @@
         }
       ],
       "title": "Agent API Calls Rate",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -308,12 +281,7 @@
         }
       ],
       "title": "Agent API Error Rate",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "title": "Teammate Mesh Broadcasts",
@@ -330,12 +298,7 @@
           "refId": "A"
         }
       ],
-      "id": 9,
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "id": 9
     },
     {
       "datasource": {
@@ -353,9 +316,7 @@
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
-        },
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
+        }
       },
       "targets": [
         {
@@ -370,8 +331,7 @@
         }
       ],
       "title": "SQLite Lock Contention Rate",
-      "type": "timeseries",
-      "transparent": true
+      "type": "timeseries"
     },
     {
       "id": 11,
@@ -396,12 +356,7 @@
           "expr": "ohc_task_queue_length",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     },
     {
       "id": 12,
@@ -426,12 +381,7 @@
           "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     },
     {
       "id": 13,
@@ -457,12 +407,7 @@
           "legendFormat": "{{error}}",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     },
     {
       "id": 14,
@@ -488,12 +433,7 @@
           "legendFormat": "{{operation}}",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     },
     {
       "datasource": {
@@ -520,12 +460,7 @@
         }
       ],
       "title": "Token Burn Rate Forecast",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -552,12 +487,7 @@
         }
       ],
       "title": "Agent State Transition Latency",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -592,12 +522,7 @@
         }
       ],
       "title": "LLM Cache Performance",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -623,12 +548,7 @@
         }
       ],
       "title": "API Rate Limits Exceeded",
-      "type": "timeseries",
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -706,9 +626,7 @@
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        },
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
+        }
       },
       "targets": [
         {
@@ -803,9 +721,7 @@
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        },
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
+        }
       },
       "targets": [
         {
@@ -840,12 +756,7 @@
           "legendFormat": "P95 Batch Size",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     },
     {
       "id": 22,
@@ -863,12 +774,7 @@
           "legendFormat": "{{agent_id}} - {{trace_type}}",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     },
     {
       "id": 23,
@@ -886,12 +792,7 @@
           "legendFormat": "Queue Length",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     },
     {
       "id": 24,
@@ -948,11 +849,8 @@
         },
         "tooltip": {
           "mode": "single"
-        },
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      },
-      "transparent": true
+        }
+      }
     },
     {
       "type": "timeseries",
@@ -973,9 +871,7 @@
         "legend": {
           "displayMode": "table",
           "placement": "bottom"
-        },
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
+        }
       },
       "fieldConfig": {
         "defaults": {
@@ -1006,12 +902,7 @@
           "legendFormat": "Batch Size",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     },
     {
       "id": 27,
@@ -1029,12 +920,7 @@
           "legendFormat": "Avg Backoff Duration",
           "refId": "A"
         }
-      ],
-      "transparent": true,
-      "options": {
-        "glassmorphism": true,
-        "typography": "Outfit, Inter"
-      }
+      ]
     }
   ],
   "refresh": "",

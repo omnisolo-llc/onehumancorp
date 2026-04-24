@@ -1,4 +1,3 @@
-import 'package:ohc_app/widgets/help/tooltip_registry.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -30,7 +29,7 @@ class DashboardScreen extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
-        title: OhcTooltip(message: TooltipRegistry.get('dashboard_title'), child: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold))),
+        title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
@@ -87,49 +86,6 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _SectionTitle('My Business'),
-            OutlinedButton.icon(
-              onPressed: () => context.go('/wizards/billing'),
-              icon: const Icon(Icons.credit_card),
-              label: const Text('Billing & Credits'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            _StatCard(
-              label: 'Active Agents',
-              value: data.agents.where((a) => a.isRunning).length.toString(),
-              icon: Icons.smart_toy,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            _StatCard(
-              label: 'Active Tasks',
-              value: data.statuses.length.toString(),
-              icon: Icons.pending_actions,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            _StatCard(
-              label: 'Scheduled Calls',
-              value: data.meetings.length.toString(),
-              icon: Icons.video_call,
-              color: Theme.of(context).colorScheme.tertiary,
-            ),
-            _StatCard(
-              label: 'Team Members',
-              value: data.organization.members.length.toString(),
-              icon: Icons.people,
-              color: Theme.of(context).colorScheme.primaryContainer,
-              iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-          ],
-        ),
         // --- UPGRADE BANNER ---
         Container(
           margin: const EdgeInsets.only(bottom: 24),
@@ -168,9 +124,52 @@ class _DashboardContent extends StatelessWidget {
             ),
           ),
         ),
+
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _SectionTitle('Overview'),
+            OutlinedButton.icon(
+              onPressed: () => context.go('/wizards/billing'),
+              icon: const Icon(Icons.credit_card),
+              label: const Text('Billing & Credits'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _StatCard(
+              label: 'Active Agents',
+              value: data.agents.where((a) => a.isRunning).length.toString(),
+              icon: Icons.smart_toy,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            _StatCard(
+              label: 'Dashboard Updates',
+              value: data.statuses.length.toString(),
+              icon: Icons.pending_actions,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+            _StatCard(
+              label: 'Open Meetings',
+              value: data.meetings.length.toString(),
+              icon: Icons.video_call,
+              color: Theme.of(context).colorScheme.tertiary,
+            ),
+            _StatCard(
+              label: 'Total Org Members',
+              value: data.organization.members.length.toString(),
+              icon: Icons.people,
+              color: Theme.of(context).colorScheme.primaryContainer,
+              iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+          ],
+        ),
         const SizedBox(height: 32),
-        const SizedBox(height: 32),
-        _SectionTitle('System Health'),
+        _SectionTitle('System Observability'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -287,7 +286,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'AI System Status',
+                              'Full-Spectrum Telemetry',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -306,9 +305,9 @@ class _ObservabilityWidget extends StatelessWidget {
                           alignment: WrapAlignment.spaceAround,
                           children: [
                             _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Current Tasks', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'System Speed', value: 'Fast', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Running Agents', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.smart_toy, iconColor: colors.onPrimaryContainer),
+                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
+                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
                       ],
@@ -501,15 +500,13 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Decrease $formattedRole count',
-                            child: OhcTooltip(
-                              message: TooltipRegistry.get('dashboard_fire'),
-                              child: IconButton(
-                                icon: const Icon(Icons.remove_circle_outline, size: 28),
-                                color: colors.primary,
-                                onPressed: widget.count > 0 && !_isScaling
-                                    ? () => _scaleTo(widget.count - 1)
-                                    : null,
-                              ),
+                            child: IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, size: 28),
+                              color: colors.primary,
+                              onPressed: widget.count > 0 && !_isScaling
+                                  ? () => _scaleTo(widget.count - 1)
+                                  : null,
+                              tooltip: 'Fire Agent',
                             ),
                           ),
                           SizedBox(
@@ -537,15 +534,13 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Increase $formattedRole count',
-                            child: OhcTooltip(
-                              message: TooltipRegistry.get('dashboard_hire'),
-                              child: IconButton(
-                                icon: const Icon(Icons.add_circle_outline, size: 28),
-                                color: colors.primary,
-                                onPressed: !_isScaling
-                                    ? () => _scaleTo(widget.count + 1)
-                                    : null,
-                              ),
+                            child: IconButton(
+                              icon: const Icon(Icons.add_circle_outline, size: 28),
+                              color: colors.primary,
+                              onPressed: !_isScaling
+                                  ? () => _scaleTo(widget.count + 1)
+                                  : null,
+                              tooltip: 'Hire Agent',
                             ),
                           ),
                             ],

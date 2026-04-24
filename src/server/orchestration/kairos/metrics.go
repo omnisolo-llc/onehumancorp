@@ -38,22 +38,10 @@ var (
 	)
 )
 
-var (
-	// ApprovalActionsTotal tracks the number of approved/rejected KAIROS actions.
-	ApprovalActionsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "ohc_kairos_approval_actions_total",
-			Help: "Total number of KAIROS agent actions approved or rejected.",
-		},
-		[]string{"action", "department"},
-	)
-)
-
 func init() {
 	prometheus.MustRegister(TransitionsTotal)
 	prometheus.MustRegister(TransitionDuration)
 	prometheus.MustRegister(TaskQueueDepth)
-	prometheus.MustRegister(ApprovalActionsTotal)
 }
 
 // GetMode returns the current execution mode of the OHC Hybrid OS.

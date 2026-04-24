@@ -85,9 +85,6 @@ func TestProvider_AcquireTask(t *testing.T) {
 		parent_plan_id TEXT,
 		dependencies TEXT NOT NULL DEFAULT '[]',
 		locked_until DATETIME,
-		action_risk TEXT,
-		approval_status TEXT,
-		proposed_content TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`

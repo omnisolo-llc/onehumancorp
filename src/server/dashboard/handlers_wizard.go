@@ -143,25 +143,25 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	runMode := "cloud"
+	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		runMode = "standalone"
+		mode = "standalone"
 	}
 
-	var healthChecks []map[string]interface{}
-	isAllHealthy := true
+	var diagnostics []map[string]interface{}
+	allHealthy := true
 
-	if runMode == "cloud" {
+	if mode == "cloud" {
 		dbUrl := os.Getenv("DATABASE_URL")
 		if dbUrl == "" {
-			isAllHealthy = false
-			healthChecks = append(healthChecks, map[string]interface{}{
+			allHealthy = false
+			diagnostics = append(diagnostics, map[string]interface{}{
 				"check":   "DATABASE_URL",
 				"status":  "missing",
 				"message": "DATABASE_URL is required in cloud mode",
 			})
 		} else {
-			healthChecks = append(healthChecks, map[string]interface{}{
+			diagnostics = append(diagnostics, map[string]interface{}{
 				"check":   "DATABASE_URL",
 				"status":  "ok",
 				"message": "DATABASE_URL is configured",
@@ -170,21 +170,21 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 
 		redisUrl := os.Getenv("REDIS_URL")
 		if redisUrl == "" {
-			isAllHealthy = false
-			healthChecks = append(healthChecks, map[string]interface{}{
+			allHealthy = false
+			diagnostics = append(diagnostics, map[string]interface{}{
 				"check":   "REDIS_URL",
 				"status":  "missing",
 				"message": "REDIS_URL is required in cloud mode",
 			})
 		} else {
-			healthChecks = append(healthChecks, map[string]interface{}{
+			diagnostics = append(diagnostics, map[string]interface{}{
 				"check":   "REDIS_URL",
 				"status":  "ok",
 				"message": "REDIS_URL is configured",
 			})
 		}
 	} else {
-		healthChecks = append(healthChecks, map[string]interface{}{
+		diagnostics = append(diagnostics, map[string]interface{}{
 			"check":   "OHC_STANDALONE",
 			"status":  "ok",
 			"message": "Standalone mode active",
@@ -192,14 +192,14 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 	}
 
 	respStatus := "healthy"
-	if !isAllHealthy {
+	if !allHealthy {
 		respStatus = "degraded"
 	}
 
 	resp := map[string]interface{}{
 		"status":      respStatus,
-		"mode":        runMode,
-		"diagnostics": healthChecks,
+		"mode":        mode,
+		"diagnostics": diagnostics,
 	}
 	writeJSON(w, resp)
 }

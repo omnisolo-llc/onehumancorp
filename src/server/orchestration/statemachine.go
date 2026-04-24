@@ -11,11 +11,10 @@ import (
 
 // Valid transitions for KAIROS
 var KAIROSValidTransitions = map[string][]string{
-	"PENDING":          {"READY", "IN_PROGRESS"},
-	"READY":            {"IN_PROGRESS"},
-	"IN_PROGRESS":      {"COMPLETED", "BLOCKED", "FAILED", "PENDING_APPROVAL"},
-	"BLOCKED":          {"IN_PROGRESS", "FAILED"},
-	"PENDING_APPROVAL": {"IN_PROGRESS", "COMPLETED"},
+	"PENDING":     {"READY", "IN_PROGRESS"},
+	"READY":       {"IN_PROGRESS"},
+	"IN_PROGRESS": {"COMPLETED", "BLOCKED", "FAILED"},
+	"BLOCKED":     {"IN_PROGRESS", "FAILED"},
 }
 
 // StateMachine for KAIROS task orchestration
