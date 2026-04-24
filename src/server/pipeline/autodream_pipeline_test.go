@@ -38,7 +38,7 @@ func TestAutoDreamPipeline_Batch(t *testing.T) {
 
 	// Insert mock stale session
 	oldTime := time.Now().Add(-2 * time.Hour).UTC().Format("2006-01-02 15:04:05")
-	_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', ?)", oldTime)
+	_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed, organization_id) VALUES ('s1', 'a1', 'test context', ?, 'org-1')", oldTime)
 	if err != nil {
 		t.Fatalf("failed to insert mock session: %v", err)
 	}
