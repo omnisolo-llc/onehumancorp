@@ -1,13 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
+import 'package:ohc_app/services/api_service.dart';
+
+class MockApiService extends Mock implements ApiService {}
 
 void main() {
   testWidgets('ReviewPendingActionsWizardScreen test', (WidgetTester tester) async {
+    final mockApi = MockApiService();
+
+    when(() => mockApi.getApprovals()).thenAnswer((_) async => [
+      {
+        'id': '1',
+        'agentId': 'Customer Success Agent',
+        'action': 'Send refund email',
+        'riskLevel': 'High',
+      },
+      {
+        'id': '2',
+        'agentId': 'Marketing & Advertising Agent',
+        'action': 'Publish Instagram post',
+        'riskLevel': 'High',
+      }
+    ]);
+
+    when(() => mockApi.decideApproval(any(), any())).thenAnswer((_) async {});
+
     await tester.pumpWidget(
-      const ProviderScope(
-        child: MaterialApp(
+      ProviderScope(
+        overrides: [
+          apiServiceProvider.overrideWithValue(mockApi),
+        ],
+        child: const MaterialApp(
           home: ReviewPendingActionsWizardScreen(),
         ),
       ),

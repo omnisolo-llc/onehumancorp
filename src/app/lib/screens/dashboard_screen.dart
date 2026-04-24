@@ -14,6 +14,7 @@ import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -64,6 +65,7 @@ class _DashboardContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Collect all unique roles
+    final pendingState = ref.watch(pendingActionsProvider);
     final Set<String> allRoles = {};
     for (final profile in data.organization.roleProfiles) {
       if (profile.role.isNotEmpty && profile.role != 'CEO') {
@@ -131,44 +133,45 @@ class _DashboardContent extends StatelessWidget {
         ),
 
         // --- PENDING ACTIONS BANNER ---
-        Container(
-          margin: const EdgeInsets.only(bottom: 24),
-          decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
+        if (pendingState.actions.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
-              onTap: () => context.go('/wizards/pending-actions'),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber, color: Colors.orange),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Pending Actions", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
-                          const Text("Your AI agents have proposed high-risk actions that need your approval.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
-                        ],
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => context.go('/wizards/pending-actions'),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber, color: Colors.orange),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Pending Actions", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
+                            const Text("Your AI agents have proposed high-risk actions that need your approval.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                          ],
+                        ),
                       ),
-                    ),
-                    FilledButton(
-                      onPressed: () => context.go('/wizards/pending-actions'),
-                      style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-                      child: const Text('Review Now'),
-                    ),
-                  ],
+                      FilledButton(
+                        onPressed: () => context.go('/wizards/pending-actions'),
+                        style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                        child: const Text('Review Now'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
         // --- UPGRADE BANNER ---
         Container(
           margin: const EdgeInsets.only(bottom: 24),

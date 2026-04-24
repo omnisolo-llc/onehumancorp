@@ -138,6 +138,15 @@ class ApiService {
     _checkStatus(res);
   }
 
+  Future<List<dynamic>> getApprovals() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/approvals'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
   Future<void> decideApproval(String approvalId, String decision) async {
     final res = await _client.post(
       Uri.parse('$baseUrl/api/approvals/$approvalId/decide'),

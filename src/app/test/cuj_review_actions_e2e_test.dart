@@ -46,6 +46,33 @@ void main() {
     // Mock dashboard API response
     when(
       () => mockClient.get(
+        any(that: predicate<Uri>((u) => u.path.contains('approvals') && !u.path.contains('decide'))),
+        headers: any(named: 'headers'),
+      ),
+    ).thenAnswer(
+      (_) async => http.Response(
+        jsonEncode([
+          {
+            "id": "1",
+            "agentId": "Customer Success Agent",
+            "action": "Send refund email to customer maya@example.com for order #123",
+            "riskLevel": "High"
+          }
+        ]),
+        200,
+      ),
+    );
+
+    when(
+      () => mockClient.post(
+        any(that: predicate<Uri>((u) => u.path.contains('decide'))),
+        headers: any(named: 'headers'),
+        body: any(named: 'body'),
+      ),
+    ).thenAnswer((_) async => http.Response('', 200));
+
+    when(
+      () => mockClient.get(
         any(that: predicate<Uri>((u) => u.path.contains('dashboard'))),
         headers: any(named: 'headers'),
       ),

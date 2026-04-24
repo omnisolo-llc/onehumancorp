@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/services/api_service.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/glass_card.dart';
 
@@ -253,54 +254,70 @@ class PendingActionsState {
 class PendingActionsNotifier extends Notifier<PendingActionsState> {
   @override
   PendingActionsState build() {
-    _loadMockActions();
+    _loadActions();
     return const PendingActionsState(isLoading: true);
   }
 
-  Future<void> _loadMockActions() async {
-    // Mock API delay
-    await Future.delayed(const Duration(milliseconds: 500));
-    // Notifier doesn't have mounted context. Just let state update.
-
-    state = state.copyWith(
-      isLoading: false,
-      actions: [
-        const PendingAction(
-          id: '1',
-          agentName: 'Customer Success Agent',
-          actionDescription: 'Send refund email to customer maya@example.com for order #123',
-          riskLevel: 'High',
-        ),
-        const PendingAction(
-          id: '2',
-          agentName: 'Marketing & Advertising Agent',
-          actionDescription: 'Publish Instagram post for new vegan cake catalog',
-          riskLevel: 'High',
-        ),
-      ],
-    );
+  Future<void> _loadActions() async {
+    try {
+      final api = ref.read(apiServiceProvider);
+      if (api == null) return;
+      final data = await api.getApprovals();
+      final List<PendingAction> loadedActions = data.map((e) => PendingAction(
+        id: e['id'] ?? '',
+        agentName: e['agentId'] ?? 'Unknown Agent',
+        actionDescription: e['action'] ?? '',
+        riskLevel: e['riskLevel'] ?? 'Unknown',
+      )).toList();
+      state = state.copyWith(isLoading: false, actions: loadedActions);
+    } catch (e) {
+      state = state.copyWith(isLoading: false);
+    }
   }
 
   Future<void> approveAction(BuildContext context, String id) async {
-    // Mock API call to approve
-    state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Action approved and executed.')),
-      );
+    try {
+      final api = ref.read(apiServiceProvider);
+      if (api != null) {
+        await api.decideApproval(id, 'approve');
+        state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Action approved and executed.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error approving action: $e')),
+        );
+      }
     }
   }
 
   Future<void> rejectAction(BuildContext context, String id) async {
-    // Mock API call to reject
-    state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Action rejected and discarded.')),
-      );
+    try {
+      final api = ref.read(apiServiceProvider);
+      if (api != null) {
+        await api.decideApproval(id, 'reject');
+        state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Action rejected and discarded.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error rejecting action: $e')),
+        );
+      }
     }
   }
 }
+
 
 final pendingActionsProvider = NotifierProvider<PendingActionsNotifier, PendingActionsState>(() {
   return PendingActionsNotifier();
