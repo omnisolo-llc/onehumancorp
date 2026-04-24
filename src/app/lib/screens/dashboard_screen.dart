@@ -1,4 +1,6 @@
 import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
+import 'package:ohc_app/widgets/interactive_walkthrough_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -36,7 +38,10 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
-            floatingActionButton: const AiHelpChatWidget(),
+            floatingActionButton: const RegisteredTooltip(
+        tooltipKey: 'help_button',
+        child: AiHelpChatWidget(),
+      ),
 body: snapshot.when(
         loading:
             () => Center(
@@ -57,14 +62,25 @@ body: snapshot.when(
   }
 }
 
-class _DashboardContent extends StatelessWidget {
+class _DashboardContent extends StatefulWidget {
   final DashboardSnapshot data;
   final WidgetRef ref;
 
-  const _DashboardContent({required this.data, required this.ref});
+  const _DashboardContent({super.key, required this.data, required this.ref});
+
+  @override
+  State<_DashboardContent> createState() => _DashboardContentState();
+}
+
+class _DashboardContentState extends State<_DashboardContent> {
+  final _walkthroughKey = GlobalKey<InteractiveWalkthroughState>();
+  final _step1Key = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
+    final data = widget.data;
+    final ref = widget.ref;
+
     // Collect all unique roles
     final Set<String> allRoles = {};
     for (final profile in data.organization.roleProfiles) {
@@ -85,10 +101,27 @@ class _DashboardContent extends StatelessWidget {
 
     final roleList = allRoles.toList()..sort();
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        // --- UPGRADE BANNER ---
+    final walkthroughSteps = [
+      WalkthroughStep(
+        key: _step1Key,
+        title: 'Welcome to your Dashboard!',
+        description: 'Here you can see an overview of your business.',
+      ),
+    ];
+
+    return InteractiveWalkthrough(
+      key: _walkthroughKey,
+      steps: walkthroughSteps,
+      child: ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          OutlinedButton.icon(
+            onPressed: () => _walkthroughKey.currentState?.startWalkthrough(),
+            icon: const Icon(Icons.tour),
+            label: const Text('Start Tour'),
+          ),
+          const SizedBox(height: 16),
+          // --- UPGRADE BANNER ---
         Container(
           margin: const EdgeInsets.only(bottom: 24),
           decoration: BoxDecoration(
@@ -130,7 +163,7 @@ class _DashboardContent extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _SectionTitle('Overview'),
+            Container(key: _step1Key, child: const _SectionTitle('Overview')),
             OutlinedButton.icon(
               onPressed: () => context.go('/wizards/billing'),
               icon: const Icon(Icons.credit_card),
@@ -242,6 +275,7 @@ class _DashboardContent extends StatelessWidget {
           }).toList(),
         ),
       ],
+    ),
     );
   }
 }
