@@ -65,24 +65,6 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _IntegrationCard(
-                  title: 'Mercado Pago',
-                  subtitle: 'Process local payments in LATAM',
-                  icon: Icons.payments_outlined,
-                  color: Theme.of(context).colorScheme.primary,
-                  onConnect: () => _showConnectionDialog('Mercado Pago'),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Container(),
-              ),
-            ],
-          ),
           const SizedBox(height: 48),
 
           Text(

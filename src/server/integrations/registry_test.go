@@ -1147,8 +1147,6 @@ func TestAllExpectedIntegrationTypesPresent(t *testing.T) {
 		IntegrationTypeGitHub, IntegrationTypeGitLab, IntegrationTypeGitea,
 		// Issue trackers
 		IntegrationTypeJIRA, IntegrationTypePlane, IntegrationTypeGitHubIssues,
-		// Payment gateways
-		IntegrationTypeMercadoPago,
 	}
 	for _, typ := range expected {
 		if !types[typ] {
@@ -1399,10 +1397,6 @@ func TestTelegramAPIBaseSSRF(t *testing.T) {
 }
 
 func TestSendTelegramMessage_NewRequestError(t *testing.T) {
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
-
 	originalBase := TelegramAPIBase
 	TelegramAPIBase = "http://example.com"
 	defer func() { TelegramAPIBase = originalBase }()

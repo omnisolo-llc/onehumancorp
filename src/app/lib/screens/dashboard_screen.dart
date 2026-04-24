@@ -14,7 +14,6 @@ import 'package:ohc_app/services/api_service.dart';
 
 
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
-import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -37,7 +36,12 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       body: snapshot.when(
-        loading: () => const DashboardShimmer(),
+        loading:
+            () => Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
         error:
             (e, _) => Center(
               child: SelectableText(
