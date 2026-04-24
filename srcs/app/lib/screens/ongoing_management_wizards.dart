@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/glass_card.dart';
+import '../services/local_manager_service.dart';
 
 // --- Fix This Wizard ---
 class FixThisWizardScreen extends ConsumerStatefulWidget {
@@ -48,8 +49,18 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
-                                await Future.delayed(const Duration(seconds: 2));
-                                if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                final manager = ref.read(localManagerServiceProvider);
+                                try {
+                                  await manager.restartService();
+                                  if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                } catch (e) {
+                                  if (mounted) {
+                                    setState(() { _isApplying = false; });
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Failed to apply fix: $e')),
+                                    );
+                                  }
+                                }
                               },
                               child: const Text('Apply Fix'),
                             ),
@@ -88,12 +99,26 @@ class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
   bool _done = false;
 
   void _startUpgrade() async {
-    setState(() { _isUpgrading = true; });
-    for (int i = 1; i <= 4; i++) {
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) setState(() => _progress = i);
+    setState(() { _isUpgrading = true; _progress = 1; });
+    final manager = ref.read(localManagerServiceProvider);
+
+    // Wire to a real doctor check and restart sequence
+    try {
+      if (mounted) setState(() => _progress = 2);
+      await manager.runDoctor();
+
+      if (mounted) setState(() => _progress = 3);
+      await manager.restartService();
+
+      if (mounted) setState(() { _progress = 4; _done = true; _isUpgrading = false; });
+    } catch (e) {
+      if (mounted) {
+        setState(() { _isUpgrading = false; _progress = 0; });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upgrade failed: $e')),
+        );
+      }
     }
-    if (mounted) setState(() { _done = true; _isUpgrading = false; });
   }
 
   @override

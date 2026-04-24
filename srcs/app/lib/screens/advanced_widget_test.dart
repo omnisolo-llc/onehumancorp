@@ -432,7 +432,7 @@ void main() {
         'password',
       );
       await tester.tap(find.text('Sign In'));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('shows error when login fails', (tester) async {
@@ -467,8 +467,7 @@ void main() {
         'pw',
       );
       await tester.tap(find.text('Sign In'));
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
     });
   });
 

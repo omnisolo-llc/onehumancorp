@@ -40,7 +40,15 @@ class _ServiceScreenState extends ConsumerState<ServiceScreen> {
       } else {
         await service.startService();
       }
-      await Future.delayed(const Duration(seconds: 2)); // Give it a moment
+
+      // Poll for status change up to 5 times instead of a fixed delay
+      for (int i = 0; i < 5; i++) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        final isRunningNow = await service.isServiceRunning();
+        if (_isRunning != isRunningNow) {
+          break;
+        }
+      }
       await _checkStatus();
     } finally {
       if (mounted) setState(() => _isLoading = false);
