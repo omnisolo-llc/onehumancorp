@@ -25,7 +25,6 @@ import (
 	"github.com/onehumancorp/mono/src/server/domain"
 	"github.com/onehumancorp/mono/src/server/integrations/chatwoot"
 	"github.com/onehumancorp/mono/src/server/memory"
-	"github.com/onehumancorp/mono/src/server/memory/autodream"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/pipeline"
 	"github.com/onehumancorp/mono/src/server/scheduler"
@@ -317,8 +316,7 @@ func run(now time.Time, listen listenFunc) error {
 		// Setup Semantic Distillation Worker
 		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
 
-		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil)
-		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver, adConsolidator)
+		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver)
 		// Run distillation as a background job
 		go func() {
 			ticker := time.NewTicker(1 * time.Hour)

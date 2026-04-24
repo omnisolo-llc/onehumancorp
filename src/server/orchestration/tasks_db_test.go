@@ -77,7 +77,7 @@ func TestClaimTask_SQLite(t *testing.T) {
     claims := &auth.Claims{OrganizationID: "org-1"}
     ctxWithClaims := context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 
-    to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
+    to := NewSharedTaskOrchestrator(dbProvider, nil)
 
     task, err := to.ClaimTaskV4(ctxWithClaims, "org-1", "spiffe://onehumancorp.io/agent/1")
     if err != nil {
@@ -168,7 +168,7 @@ func TestClaimTask_Postgres(t *testing.T) {
 
     // Dependency added directly above in JSON format
 
-    to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
+    to := NewSharedTaskOrchestrator(dbProvider, nil)
 
     task, err := to.ClaimTaskV4(ctx, "org-1", "agent-pg")
     if err != nil {
@@ -215,7 +215,7 @@ func TestClaimTaskV4LockingPg(t *testing.T) {
         t.Fatalf("failed to insert: %v", err)
     }
 
-    to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
+    to := NewSharedTaskOrchestrator(dbProvider, nil)
 
     // Test that the method successfully claims a task using the sqlite fallback logic
     task, err := to.ClaimTaskV4(ctx, "org-1", "agent-pg")
@@ -267,7 +267,7 @@ func TestClaimTaskDag(t *testing.T) {
     dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-1', 'org-1', 'Test 1', 'COMPLETED', '[]')")
     dbProvider.Exec(ctx, "INSERT INTO shared_tasks (id, organization_id, title, status, dependencies) VALUES ('task-2', 'org-1', 'Test 2', 'PENDING', '[\"task-1\"]')")
 
-    to := NewSharedTaskOrchestrator(dbProvider, nil, nil)
+    to := NewSharedTaskOrchestrator(dbProvider, nil)
     task, err := to.ClaimTask(ctxWithClaims, "agent-1")
     if err != nil {
         t.Fatalf("ClaimTask failed: %v", err)

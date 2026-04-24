@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//src/server/checkpointer",
         "//src/server/db",
-        "//src/server/memory/autodream",
     ],
 )
 

@@ -37,18 +37,8 @@ func (m *mockCheckpointer) ListCheckpoints(ctx context.Context, threadID string)
 	return result, nil
 }
 
-type mockConsolidator struct {
-	consolidated bool
-}
-
-func (m *mockConsolidator) Consolidate(ctx context.Context, sessionID string, logs []string) error {
-	m.consolidated = true
-	return nil
-}
-
 func TestSemanticDistillationWorker_DistillThread(t *testing.T) {
 	cp := &mockCheckpointer{}
-	ad := &mockConsolidator{}
 
 	// Add test checkpoints
 	cp.PutCheckpoint(context.Background(), &checkpointer.Checkpoint{
@@ -58,9 +48,8 @@ func TestSemanticDistillationWorker_DistillThread(t *testing.T) {
 		CreatedAt:    time.Now(),
 	})
 
-	worker := NewSemanticDistillationWorker(nil, cp, ad)
+	worker := NewSemanticDistillationWorker(nil, cp)
 
 	err := worker.DistillThread(context.Background(), "thread-1")
 	assert.NoError(t, err)
-	assert.True(t, ad.consolidated)
 }

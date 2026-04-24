@@ -77,7 +77,7 @@ func TestSubAgentSpawner_FailedJobUpdatesParent(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create TaskManager (StateMachine requires it)
-	tm := NewTaskManager(pool, nil, nil)
+	tm := NewTaskManager(pool, nil)
 
 	// 2. Initialize SubAgentSpawner
 	spawner := NewDefaultSubAgentSpawner(pool, tm, nil, 2)

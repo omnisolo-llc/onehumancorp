@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/memory/autodream"
 	"github.com/onehumancorp/mono/src/server/orchestration/queue"
 	"github.com/onehumancorp/mono/src/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/src/server/telemetry"
@@ -61,12 +60,11 @@ type TaskManager struct {
 	stateMachine *statemachine.StateMachine
 	taskQueue    queue.TaskQueue
 	mu           sync.Mutex // For Standalone mode SQLite locking
-	autodream    autodream.MemoryConsolidator
 	mesh         MeshTransport
 }
 
 // NewTaskManager creates a new TaskManager.
-func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.MemoryConsolidator) *TaskManager {
+func NewTaskManager(provider db.Provider, hub *CentrifugeNode) *TaskManager {
 	var broadcast func(string, map[string]interface{})
 	if hub != nil {
 		broadcast = hub.PublishTaskBroadcast
@@ -76,7 +74,6 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.Memo
 		db:           provider,
 		hub:          hub,
 		stateMachine: statemachine.NewStateMachine(provider, broadcast, nil),
-		autodream:    ad,
 	}
 
 	if envBoolDefault("OHC_MULTITENANT", true) {
@@ -618,27 +615,22 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
 
-	if tm.autodream != nil {
-		go func() {
-			logLine := strings.TrimSpace(result)
-			if logLine == "" {
-				logLine = "Task " + taskID + " completed successfully."
-			}
-			logs := []string{logLine}
+	go func() {
+		logLine := strings.TrimSpace(result)
+		if logLine == "" {
+			logLine = "Task " + taskID + " completed successfully."
+		}
 
-			// Enqueue task for AutoDream consolidation
-			query := "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES ($1, $2, $3, $4, $5, 'task_completion')"
-			if tm.db.IsSQLite() {
-				query = "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, 'task_completion')"
-			}
-			_, err := tm.db.Exec(context.Background(), query, uuid.New().String(), logLine, taskID, claims.OrganizationID, agentID)
-			if err != nil {
-				// Ignore error for now to match background task semantics
-			}
-
-			_ = tm.autodream.Consolidate(context.Background(), taskID, logs)
-		}()
-	}
+		// Enqueue task for AutoDream consolidation
+		query := "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES ($1, $2, $3, $4, $5, 'task_completion')"
+		if tm.db.IsSQLite() {
+			query = "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, 'task_completion')"
+		}
+		_, err := tm.db.Exec(context.Background(), query, uuid.New().String(), logLine, taskID, claims.OrganizationID, agentID)
+		if err != nil {
+			// Ignore error for now to match background task semantics
+		}
+	}()
 
 	// Broadcast task completion
 	if tm.mesh != nil {

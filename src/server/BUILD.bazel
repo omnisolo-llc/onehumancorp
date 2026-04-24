@@ -24,7 +24,6 @@ go_library(
         "//src/server/workers",
         "//src/server/workers/distillation",
         "//src/server/checkpointer",
-        "//src/server/memory/autodream",
         "//src/server/memory",
         "@org_golang_google_grpc//:grpc",
         "@com_github_redis_rueidis//:rueidis",

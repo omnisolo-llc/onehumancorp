@@ -10,7 +10,6 @@ import (
     "github.com/google/uuid"
     "github.com/onehumancorp/mono/src/server/auth"
     "github.com/onehumancorp/mono/src/server/db"
-    "github.com/onehumancorp/mono/src/server/memory/autodream"
 	"github.com/onehumancorp/mono/src/server/telemetry"
 )
 
@@ -34,14 +33,12 @@ type SharedTaskOrchestrator struct {
     dbProvider db.Provider
     mu         sync.Mutex
     mesh       MeshTransport
-    autodream  autodream.MemoryConsolidator
 }
 
-func NewSharedTaskOrchestrator(dbProvider db.Provider, mesh MeshTransport, ad autodream.MemoryConsolidator) *SharedTaskOrchestrator {
+func NewSharedTaskOrchestrator(dbProvider db.Provider, mesh MeshTransport) *SharedTaskOrchestrator {
     return &SharedTaskOrchestrator{
         dbProvider: dbProvider,
         mesh:       mesh,
-        autodream:  ad,
     }
 }
 
@@ -154,20 +151,6 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
     }
 
     if toState == "COMPLETED" {
-        if to.autodream != nil {
-            go func() {
-                var payloadText, deliberationLog string
-                err := to.dbProvider.QueryRow(context.Background(), "SELECT COALESCE(payload, '{}'), COALESCE(deliberation_log, '{}') FROM shared_tasks_master WHERE id = $1", taskID).Scan(&payloadText, &deliberationLog)
-                if err != nil {
-                    // Log error here in a real scenario
-                    return
-                }
-
-                logs := []string{"Task " + taskID + " completed successfully.", "Payload: " + payloadText, "Deliberation Log: " + deliberationLog}
-                _ = to.autodream.Consolidate(context.Background(), taskID, logs)
-            }()
-        }
-
         if to.mesh != nil {
             go func() {
                 payload := map[string]interface{}{

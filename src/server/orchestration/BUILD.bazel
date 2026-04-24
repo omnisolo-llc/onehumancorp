@@ -53,7 +53,6 @@ go_library(
         "//src/server/lib/perf",
         "//src/server/orchestration/statemachine",
         "//src/server/orchestration/queue",
-        "//src/server/memory/autodream",
         "//src/server/orchestration/autodream",
         "//src/server/orchestration/kairos",
         "@com_github_centrifugal_centrifuge//:centrifuge",

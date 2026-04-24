@@ -9,22 +9,19 @@ import (
 
 	"github.com/onehumancorp/mono/src/server/checkpointer"
 	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/memory/autodream"
 )
 
 // SemanticDistillationWorker distills stale checkpoints into durable vector summaries
 type SemanticDistillationWorker struct {
 	provider     db.Provider
 	checkpointer checkpointer.CheckpointSaver
-	autodream    autodream.MemoryConsolidator
 }
 
 // NewSemanticDistillationWorker creates a new instance
-func NewSemanticDistillationWorker(provider db.Provider, cp checkpointer.CheckpointSaver, ad autodream.MemoryConsolidator) *SemanticDistillationWorker {
+func NewSemanticDistillationWorker(provider db.Provider, cp checkpointer.CheckpointSaver) *SemanticDistillationWorker {
 	return &SemanticDistillationWorker{
 		provider:     provider,
 		checkpointer: cp,
-		autodream:    ad,
 	}
 }
 
@@ -92,13 +89,6 @@ func (w *SemanticDistillationWorker) DistillThread(ctx context.Context, threadID
 		data, err := json.Marshal(cp.Data)
 		if err == nil {
 			logs = append(logs, string(data))
-		}
-	}
-
-	if w.autodream != nil {
-		err = w.autodream.Consolidate(ctx, threadID, logs)
-		if err != nil {
-			return fmt.Errorf("failed to consolidate logs for thread %s: %w", threadID, err)
 		}
 	}
 
