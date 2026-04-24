@@ -10,6 +10,7 @@ import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/models/handoff.dart';
 import 'package:ohc_app/models/pipeline.dart';
 import 'package:ohc_app/models/dashboard.dart';
+import 'package:ohc_app/models/video_tutorial.dart';
 import 'package:ohc_app/models/settings.dart';
 import 'package:ohc_app/models/user.dart';
 import 'package:ohc_app/services/auth_service.dart';
@@ -102,6 +103,16 @@ class ApiService {
     return DashboardSnapshot.fromJson(
       jsonDecode(res.body) as Map<String, dynamic>,
     );
+  }
+
+  Future<List<VideoTutorial>> getHelpVideos() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/help/videos'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list.map((e) => VideoTutorial.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<void> seedScenario(String scenario) async {

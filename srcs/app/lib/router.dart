@@ -2,6 +2,7 @@ import 'package:ohc_app/screens/help/help_center_screen.dart';
 import 'package:ohc_app/screens/help/help_article_screen.dart';
 import 'package:ohc_app/screens/help/changelog_screen.dart';
 import 'package:ohc_app/screens/help/api_docs_screen.dart';
+import 'package:ohc_app/screens/help/video_tutorials_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
@@ -213,6 +214,26 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
+          ),
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/help/article/:id',
+            builder: (context, state) => HelpArticleScreen(articleId: state.pathParameters['id'] ?? 'unknown'),
+          ),
+          GoRoute(
+            path: '/help/video-tutorials',
+            builder: (context, state) => const VideoTutorialsScreen(),
+          ),
+          GoRoute(
+            path: '/help/changelog',
+            builder: (context, state) => const ChangelogScreen(),
+          ),
+          GoRoute(
+            path: '/help/api-docs',
+            builder: (context, state) => const ApiDocsScreen(),
           ),
         ],
       ),

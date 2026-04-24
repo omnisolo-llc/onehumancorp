@@ -43,6 +43,7 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Server struct {
+	mux          *http.ServeMux
 	mu           sync.RWMutex
 	MeshBroker   orchmesh.MeshBroker
 	TeammateMesh *meshapi.TeammateMesh
@@ -559,10 +560,12 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		_ = server.agentProviderRegistry.Authenticate(agents.ProviderTypeOpenCode, agents.Credentials{APIKey: key})
 	}
 	mux := http.NewServeMux()
+	server.mux = mux
 	if server.serveUI {
 		mux.HandleFunc("/", server.handleApp)
 	}
 	mux.HandleFunc("/api/dashboard", server.handleDashboard)
+	mux.HandleFunc("/api/help/videos", server.handleHelpVideos)
 	mux.HandleFunc("/api/org", server.handleOrg)
 	mux.HandleFunc("/api/meetings", server.handleMeetings)
 	mux.HandleFunc("/api/costs", server.handleCosts)
@@ -1260,6 +1263,11 @@ type providerAuthRequest struct {
 type mcpRegisterRequest struct {
 	Tool     MCPTool `json:"tool"`
 	SPIFFEID string  `json:"spiffeId"`
+}
+
+// Mux returns the underlying HTTP router mux, useful for testing.
+func (s *Server) Mux() *http.ServeMux {
+	return s.mux
 }
 
 func (s *Server) snapshot() dashboardSnapshot {

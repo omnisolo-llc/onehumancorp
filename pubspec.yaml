@@ -10,3 +10,5 @@ workspace:
 
 flutter:
   uses-material-design: true
+dependencies:
+  url_launcher: ^6.3.2

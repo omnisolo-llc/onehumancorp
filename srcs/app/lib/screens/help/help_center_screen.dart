@@ -52,6 +52,13 @@ class HelpCenterScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           ListTile(
+            leading: const Icon(Icons.video_library),
+            title: const Text('Video Tutorials', style: TextStyle(fontFamily: 'Outfit')),
+            subtitle: const Text('Quick guides to help you out', style: TextStyle(fontFamily: 'Inter')),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () => context.push('/help/video-tutorials'),
+          ),
+          ListTile(
             leading: const Icon(Icons.code),
             title: const Text('API Documentation', style: TextStyle(fontFamily: 'Outfit')),
             subtitle: const Text('For advanced users', style: TextStyle(fontFamily: 'Inter')),

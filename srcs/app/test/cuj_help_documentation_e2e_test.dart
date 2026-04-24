@@ -2,9 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:ohc_app/screens/help/help_center_screen.dart';
 import 'package:ohc_app/screens/help/help_article_screen.dart';
 import 'package:ohc_app/screens/help/video_tutorials_screen.dart';
+import 'package:ohc_app/models/video_tutorial.dart';
+import 'package:ohc_app/services/api_service.dart';
+
+class MockApiService extends Mock implements ApiService {}
 
 Widget _wrapScreen(Widget screen) {
   final router = GoRouter(
@@ -15,7 +20,22 @@ Widget _wrapScreen(Widget screen) {
       GoRoute(path: '/help/video-tutorials', builder: (context, state) => const VideoTutorialsScreen()),
     ],
   );
+  final mockApiService = MockApiService();
+  when(() => mockApiService.getHelpVideos()).thenAnswer((_) async => [
+    VideoTutorial(
+      id: 'v1',
+      title: 'How to set up your store',
+      duration: '1:30',
+      description: 'A quick guide to adding products, setting prices, and getting your storefront ready.',
+      url: 'https://test.video/1.mp4',
+      thumbnail: 'https://test.video/1.jpg',
+    ),
+  ]);
+
   return ProviderScope(
+    overrides: [
+      apiServiceProvider.overrideWithValue(mockApiService),
+    ],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -47,7 +67,8 @@ void main() {
 
     // Tap Video Tutorials
     await tester.tap(find.text('Video Tutorials'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1)); // wait for future
 
     // Verify Video Tutorials screen
     expect(find.text('Video Tutorials'), findsWidgets);
