@@ -163,11 +163,19 @@ class OrganizationMember {
 class CostSummary {
   final double totalCostUSD;
   final int totalTokens;
+  final String currentPlan;
+  final int aiActionsUsed;
+  final int aiActionsLimit;
+  final double storageUsedGB;
   final List<AgentCost> agents;
 
   const CostSummary({
     required this.totalCostUSD,
     required this.totalTokens,
+    this.currentPlan = 'Free',
+    this.aiActionsUsed = 0,
+    this.aiActionsLimit = 100,
+    this.storageUsedGB = 0.0,
     required this.agents,
   });
 
@@ -176,6 +184,10 @@ class CostSummary {
       totalCostUSD:
           (json['totalCostUSD'] ?? json['total_cost_usd'] ?? 0.0).toDouble(),
       totalTokens: json['totalTokens'] ?? json['total_tokens'] ?? 0,
+      currentPlan: json['currentPlan'] ?? json['current_plan'] ?? 'Free',
+      aiActionsUsed: json['aiActionsUsed'] ?? json['ai_actions_used'] ?? 0,
+      aiActionsLimit: json['aiActionsLimit'] ?? json['ai_actions_limit'] ?? 100,
+      storageUsedGB: (json['storageUsedGB'] ?? json['storage_used_gb'] ?? 0.0).toDouble(),
       agents:
           (json['agents'] as List<dynamic>?)
               ?.map((e) => AgentCost.fromJson(e as Map<String, dynamic>))

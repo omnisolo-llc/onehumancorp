@@ -257,6 +257,7 @@ class _Sidebar extends StatelessWidget {
           label: 'Handoffs',
           path: '/handoffs',
         ),
+        _NavItem(icon: Icons.monetization_on_outlined, label: 'Plans & Pricing', path: '/pricing'),
         _NavItem(icon: Icons.bar_chart, label: 'Cost & Usage', path: '/cost'),
         _NavItem(
           icon: Icons.rocket_launch,

@@ -211,6 +211,15 @@ flutter_test(
 )
 
 flutter_test(
+    name = "cuj_pricing_e2e_test",
+    srcs = ["test/cuj_pricing_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_pricing_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
     name = "cuj_handoffs_e2e_test",
     srcs = ["test/cuj_handoffs_e2e_test.dart"],
     embed = [":app_lib"],
@@ -276,6 +285,7 @@ test_suite(
         ":cuj_auth_e2e_test",
         ":cuj_agents_hire_e2e_test",
         ":cuj_cost_e2e_test",
+        ":cuj_pricing_e2e_test",
         ":cuj_handoffs_e2e_test",
         ":cuj_pipelines_e2e_test",
         ":cuj_users_e2e_test",

@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -104,6 +105,71 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                 ],
               ),
               const SizedBox(height: 32),
+
+              // My Plan Section
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'My Plan',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Outfit',
+                            ),
+                          ),
+                          FilledButton.icon(
+                            onPressed: () {
+                              try {
+                                GoRouter.of(context).go('/pricing');
+                              } catch (_) {}
+                            },
+                            icon: const Icon(Icons.arrow_upward),
+                            label: const Text('Upgrade'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Current Plan: ${costs.currentPlan}',
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('AI Actions Used'),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: costs.aiActionsLimit > 0 ? costs.aiActionsUsed / costs.aiActionsLimit : 0,
+                        backgroundColor: colors.surfaceContainerHighest,
+                        color: colors.primary,
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${costs.aiActionsUsed} / ${costs.aiActionsLimit}'),
+
+                      const SizedBox(height: 16),
+                      const Text('Storage Used'),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: costs.storageUsedGB / 5.0,
+                        backgroundColor: colors.surfaceContainerHighest,
+                        color: colors.secondary,
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${costs.storageUsedGB.toStringAsFixed(2)} GB / 5.0 GB'),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
 
               // Usage per Agent Chart
               Text(
