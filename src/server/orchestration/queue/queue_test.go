@@ -122,8 +122,8 @@ func TestQueueManager(t *testing.T) {
 		payload JSONB,
 		status TEXT NOT NULL DEFAULT 'QUEUED',
 		worker_id TEXT,
-		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);
 	`
 	_, err := provider.Exec(ctx, schema)
@@ -145,7 +145,7 @@ func TestQueueManager(t *testing.T) {
 		t.Fatalf("failed to enqueue: %v", err)
 	}
 
-	polledJob, err := qm.Poll(ctx, "worker-1")
+	polledJob, err := qm.Acquire(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("failed to poll: %v", err)
 	}
@@ -160,7 +160,7 @@ func TestQueueManager(t *testing.T) {
 		t.Errorf("expected status RUNNING, got %s", polledJob.Status)
 	}
 
-	polledJob2, err := qm.Poll(ctx, "worker-2")
+	polledJob2, err := qm.Acquire(ctx, "worker-2")
 	if err != nil {
 		t.Fatalf("failed to poll second time: %v", err)
 	}
@@ -171,59 +171,6 @@ func TestQueueManager(t *testing.T) {
 
 
 // added for Sub-Agent Orchestration Queue - issue_id: 4240
-
-func TestQueueManager_Postgres(t *testing.T) {
-	provider := db.NewTestProvider(t)
-	mockProvider := &mockPostgresProvider{Provider: provider}
-	ctx := context.Background()
-
-	schema := `
-	CREATE TABLE IF NOT EXISTS sub_agent_queue (
-		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
-		parent_task_id TEXT NOT NULL,
-		payload JSONB,
-		status TEXT NOT NULL DEFAULT 'QUEUED',
-		worker_id TEXT,
-		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-	);
-	`
-	_, err := mockProvider.Exec(ctx, schema)
-	if err != nil {
-		t.Fatalf("failed to create schema: %v", err)
-	}
-
-	qm := NewQueueManager(mockProvider)
-
-	job := &SubAgentJob{
-		ID:             "job-pg-1",
-		OrganizationID: "org-1",
-		ParentTaskID:   "task-1",
-		Payload:        map[string]interface{}{"key": "value"},
-	}
-
-	err = qm.Enqueue(ctx, job)
-	if err != nil {
-		t.Fatalf("failed to enqueue: %v", err)
-	}
-
-	jobInvalid := &SubAgentJob{
-		ID:             "job-pg-2",
-		OrganizationID: "org-1",
-		ParentTaskID:   "task-1",
-		Payload:        map[string]interface{}{"key": make(chan int)},
-	}
-	err = qm.Enqueue(ctx, jobInvalid)
-	if err == nil {
-		t.Fatalf("expected error on enqueue invalid json")
-	}
-
-	polledJob, err := qm.Poll(ctx, "worker-1")
-	if err == nil {
-		t.Fatalf("expected error because sqlite doesn't support SKIP LOCKED, got %v", polledJob)
-	}
-}
 
 type mockPostgresProvider struct {
 	db.Provider
@@ -282,7 +229,7 @@ func TestQueueManager_Postgres_Poll_Success(t *testing.T) {
 	qm := NewQueueManager(mockProvider)
 	ctx := context.Background()
 
-	polledJob, err := qm.Poll(ctx, "worker-1")
+	polledJob, err := qm.Acquire(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("expected success, got %v", err)
 	}
@@ -304,11 +251,70 @@ func TestQueueManager_Postgres_Poll_NoRows(t *testing.T) {
 	qm := NewQueueManager(mockProvider)
 	ctx := context.Background()
 
-	polledJob, err := qm.Poll(ctx, "worker-1")
+	polledJob, err := qm.Acquire(ctx, "worker-1")
 	if err != nil {
 		t.Fatalf("expected nil err, got %v", err)
 	}
 	if polledJob != nil {
 		t.Fatalf("expected nil job, got %v", polledJob)
+	}
+}
+
+func TestQueueManager_Postgres(t *testing.T) {
+	provider := db.NewTestProvider(t)
+	mockProvider := &mockPostgresProvider{Provider: provider}
+	ctx := context.Background()
+
+	schema := `
+	CREATE TABLE IF NOT EXISTS sub_agent_queue (
+		id TEXT PRIMARY KEY,
+		organization_id TEXT NOT NULL,
+		parent_task_id TEXT NOT NULL,
+		payload JSONB,
+		status TEXT NOT NULL DEFAULT 'QUEUED',
+		worker_id TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+	`
+	_, err := mockProvider.Exec(ctx, schema)
+	if err != nil {
+		t.Fatalf("failed to create schema: %v", err)
+	}
+
+	qm := NewQueueManager(mockProvider)
+
+	job := &SubAgentJob{
+		ID:             "job-pg-1",
+		OrganizationID: "org-1",
+		ParentTaskID:   "task-1",
+		Payload:        map[string]interface{}{"key": "value"},
+	}
+
+	err = qm.Enqueue(ctx, job)
+	if err != nil {
+		t.Fatalf("failed to enqueue: %v", err)
+	}
+
+	jobInvalid := &SubAgentJob{
+		ID:             "job-pg-2",
+		OrganizationID: "org-1",
+		ParentTaskID:   "task-1",
+		Payload:        map[string]interface{}{"key": make(chan int)},
+	}
+	err = qm.Enqueue(ctx, jobInvalid)
+	if err == nil {
+		t.Fatalf("expected error on enqueue invalid json")
+	}
+
+	polledJob, err := qm.Acquire(ctx, "worker-1")
+	if err != nil {
+		t.Fatalf("failed to acquire job: %v", err)
+	}
+	if polledJob == nil {
+		t.Fatalf("expected job, got nil")
+	}
+	if polledJob.ID != "job-pg-1" {
+		t.Fatalf("expected job-pg-1, got %v", polledJob.ID)
 	}
 }
