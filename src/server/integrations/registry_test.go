@@ -1427,9 +1427,9 @@ func (e *errorTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func TestSendTelegramMessage_DoError(t *testing.T) {
-	oldLookupIP := LookupIPFunc
+	originalLookupIP := LookupIPFunc
 	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
+	defer func() { LookupIPFunc = originalLookupIP }()
 
 	originalBase := TelegramAPIBase
 	TelegramAPIBase = "http://example.com"
@@ -1449,9 +1449,9 @@ func TestSendTelegramMessage_DoError(t *testing.T) {
 }
 
 func TestSendDiscordWebhook_DoError(t *testing.T) {
-	oldLookupIP := LookupIPFunc
+	originalLookupIP := LookupIPFunc
 	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
+	defer func() { LookupIPFunc = originalLookupIP }()
 
 	originalClient := safeClient
 	safeClient = &http.Client{Transport: &errorTripper{}}
