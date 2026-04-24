@@ -6,11 +6,13 @@ import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 void main() {
   testWidgets('BusinessSetupWizardScreen renders welcome screen', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: BusinessSetupWizardScreen())));
+    await tester.pumpAndSettle();
     expect(find.text('Your business, live in minutes'), findsOneWidget);
   });
 
   testWidgets('BusinessSetupWizardScreen steps navigation', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: BusinessSetupWizardScreen())));
+    await tester.pumpAndSettle();
 
     // Step 0 -> 1
     await tester.tap(find.text('Get Started'));

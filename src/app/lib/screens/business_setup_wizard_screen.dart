@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert';
@@ -33,6 +34,34 @@ class BusinessSetupState {
     this.errorMessage,
   });
 
+  factory BusinessSetupState.fromJson(Map<String, dynamic> json) {
+    return BusinessSetupState(
+      step: json['step'] ?? 0,
+      businessType: json['businessType'] ?? '',
+      companyName: json['companyName'] ?? '',
+      businessDescription: json['businessDescription'] ?? '',
+      whatYouSell: (json['whatYouSell'] as List<dynamic>?)?.map((e) => e as String).toList() ?? const [],
+      paymentMethod: json['paymentMethod'] ?? '',
+      adminName: json['adminName'] ?? '',
+      adminEmail: json['adminEmail'] ?? '',
+      adminPassword: json['adminPassword'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'step': step,
+      'businessType': businessType,
+      'companyName': companyName,
+      'businessDescription': businessDescription,
+      'whatYouSell': whatYouSell,
+      'paymentMethod': paymentMethod,
+      'adminName': adminName,
+      'adminEmail': adminEmail,
+      'adminPassword': adminPassword,
+    };
+  }
+
   BusinessSetupState copyWith({
     int? step,
     String? businessType,
@@ -66,15 +95,67 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
   BusinessSetupState build() => const BusinessSetupState();
 
+  Timer? _saveTimer;
+
+  Future<void> loadState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/api/wizard/state'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+          },
+        );
+
+        if (res.statusCode == 200 && res.body.isNotEmpty && res.body != '{}') {
+          final data = jsonDecode(res.body);
+          if (data is Map<String, dynamic> && data.isNotEmpty) {
+            state = BusinessSetupState.fromJson(data);
+          }
+        }
+      } catch (e) {
+        // ignore errors on load
+      }
+    }
+  }
+
+  Future<void> _saveState() async {
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 500), () async {
+      final user = ref.read(authStateProvider).valueOrNull;
+      final baseUrl = ref.read(backendUrlProvider);
+
+      if (user != null && baseUrl.isNotEmpty) {
+        try {
+          await http.post(
+            Uri.parse('$baseUrl/api/wizard/state/save'),
+            headers: {
+              'Authorization': 'Bearer ${user.token}',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(state.toJson()),
+          );
+        } catch (e) {
+          // ignore background save errors
+        }
+      }
+    });
+  }
+
   void nextStep() {
     if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
+      _saveState();
     }
   }
 
   void prevStep() {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      _saveState();
     }
   }
 
@@ -83,8 +164,14 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     nextStep();
   }
 
-  void updateCompany(String name) => state = state.copyWith(companyName: name);
-  void updateDescription(String desc) => state = state.copyWith(businessDescription: desc);
+  void updateCompany(String name) {
+    state = state.copyWith(companyName: name);
+    _saveState();
+  }
+  void updateDescription(String desc) {
+    state = state.copyWith(businessDescription: desc);
+    _saveState();
+  }
 
   void toggleWhatYouSell(String item) {
     final list = List<String>.from(state.whatYouSell);
@@ -94,13 +181,26 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
       list.add(item);
     }
     state = state.copyWith(whatYouSell: list);
+    _saveState();
   }
 
-  void updatePaymentMethod(String method) => state = state.copyWith(paymentMethod: method);
+  void updatePaymentMethod(String method) {
+    state = state.copyWith(paymentMethod: method);
+    _saveState();
+  }
 
-  void updateAdminName(String name) => state = state.copyWith(adminName: name);
-  void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
-  void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
+  void updateAdminName(String name) {
+    state = state.copyWith(adminName: name);
+    _saveState();
+  }
+  void updateAdminEmail(String val) {
+    state = state.copyWith(adminEmail: val);
+    _saveState();
+  }
+  void updateAdminPassword(String val) {
+    state = state.copyWith(adminPassword: val);
+    _saveState();
+  }
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authStateProvider).valueOrNull;
@@ -161,6 +261,21 @@ class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
 
 class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
   bool _obscurePassword = true;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(businessSetupProvider.notifier).loadState().then((_) {
+        if (mounted) {
+          setState(() {
+            _initialized = true;
+          });
+        }
+      });
+    });
+  }
 
   Widget _buildStep(BusinessSetupState state, BusinessSetupNotifier notifier) {
     if (state.step == 0) {
@@ -413,6 +528,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
 
   @override
   Widget build(BuildContext context) {
+    if (!_initialized) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0D0D1A),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final state = ref.watch(businessSetupProvider);
     final notifier = ref.read(businessSetupProvider.notifier);
 

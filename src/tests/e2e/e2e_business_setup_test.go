@@ -3,69 +3,95 @@ package e2e
 import (
 	"testing"
 	"time"
+	"github.com/playwright-community/playwright-go"
 )
 
 func TestBusinessSetupWizard(t *testing.T) {
-	page, cleanup := setupE2ETest(t)
-	defer cleanup()
+	page := newPage(t)
+	defer page.Close()
 
 	// 1. Log in using the UI.
-	loginE2E(t, page, "admin@onehumancorp.com", "admin123")
-
-	// Wait for home screen.
-	expectElement(t, page, `[aria-label="Dashboard"]`)
+	loginAsAdmin(t, page)
 
 	// Setup Wizard might be triggered by a specific button or URL
 	// For testing, let's navigate to /business_setup directly or click on the Setup Business button
-	if err := page.Goto(baseURL + "/#/business_setup"); err != nil {
+	if _, err := page.Goto(baseURL + "/#/business_setup_wizard"); err != nil {
 		t.Fatalf("Failed to navigate to business setup: %v", err)
 	}
 
 	// Wait for the UI to settle
 	time.Sleep(1 * time.Second)
 
+	// Helper function for click
+	clickText := func(text string) {
+		loc := page.Locator("text=" + text)
+		if err := loc.First().Click(); err != nil {
+			t.Fatalf("Failed to click %s: %v", text, err)
+		}
+		time.Sleep(1 * time.Second) // wait for animation
+	}
+
+	// Helper for checking text visibility
+	expectText := func(text string) {
+		loc := page.Locator("text=" + text)
+		if err := loc.First().WaitFor(playwright.LocatorWaitForOptions{
+			State: playwright.WaitForSelectorStateVisible,
+			Timeout: playwright.Float(5000),
+		}); err != nil {
+			t.Fatalf("Expected text %s to be visible: %v", text, err)
+		}
+	}
+
 	// Step 0 -> Step 1
-	clickElement(t, page, "text=Get Started")
-	expectElement(t, page, "text=What kind of business are you building?")
+	clickText("Get Started")
+	expectText("What kind of business are you building?")
 
 	// Step 1 -> Step 2
-	clickElement(t, page, "text=Online Store")
-	expectElement(t, page, "text=Tell us about your business")
+	clickText("Online Store")
+	expectText("Tell us about your business")
 
 	// Step 2 -> Step 3
-	fillInput(t, page, "Business Name", "Acme Corp")
-	fillInput(t, page, "Short Description", "A great store")
-	clickElement(t, page, "text=Continue")
-	expectElement(t, page, "text=What do you sell?")
+	// Just fill any input available for step 2
+	inputs := page.Locator("input")
+	inputs.Nth(0).Fill("Acme Corp")
+	inputs.Nth(1).Fill("A great store")
+	clickText("Continue")
+	expectText("What do you sell?")
 
 	// Step 3 -> Step 4
-	clickElement(t, page, "text=Physical products")
-	clickElement(t, page, "text=Continue")
-	expectElement(t, page, "text=How do you want to receive payments?")
+	clickText("Physical products")
+	clickText("Continue")
+	expectText("How do you want to receive payments?")
 
 	// Step 4 -> Step 5
-	clickElement(t, page, "text=Online only")
-	clickElement(t, page, "text=Continue")
-	expectElement(t, page, "text=Administrator account")
+	clickText("Online only")
+	clickText("Continue")
+	expectText("Administrator account")
 
 	// Step 5 -> Step 6
-	fillInput(t, page, "Name", "Admin")
-	fillInput(t, page, "Email", "admin@acmecorp.com")
-	fillInput(t, page, "Password", "supersecret")
-	clickElement(t, page, "text=Continue")
-	expectElement(t, page, "text=Review & Launch")
+	inputs = page.Locator("input")
+	inputs.Nth(0).Fill("Admin")
+	inputs.Nth(1).Fill("admin@acmecorp.com")
+	inputs.Nth(2).Fill("supersecret")
+	clickText("Continue")
+	expectText("Review & Launch")
 
 	// Check summary output
-	expectElement(t, page, "text=Acme Corp")
-	expectElement(t, page, "text=Online Store")
-	expectElement(t, page, "text=Physical products")
-	expectElement(t, page, "text=Online only")
-	expectElement(t, page, "text=admin@acmecorp.com")
+	expectText("Acme Corp")
+	expectText("Online Store")
+	expectText("Physical products")
+	expectText("Online only")
+	expectText("admin@acmecorp.com")
 
 	// Finish
-	clickElement(t, page, "text=Launch My Business →")
+	clickText("Launch My Business →")
 
 	// We expect the user to be redirected to the dashboard eventually.
-	// Check for a dashboard element
-	expectElement(t, page, "text=Dashboard")
+	// We can just sleep and check if the dashboard element is present, but checking URL is better.
+	time.Sleep(2 * time.Second)
+
+	url := page.URL()
+	if url != baseURL+"/#/" && url != baseURL+"/#/dashboard" && url != baseURL+"/" {
+		t.Fatalf("Expected dashboard URL after launch, got: %s", url)
+	}
 }

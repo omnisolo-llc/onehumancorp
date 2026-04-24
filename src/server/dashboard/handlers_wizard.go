@@ -135,6 +135,67 @@ func hasEnabledProvider(providers []settings.AiProvider) bool {
 	return false
 }
 
+// handleWizardStateSave handles POST /api/wizard/state/save
+// It expects a JSON payload of the wizard state and stores it in settings.Extras
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var state map[string]interface{}
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	if err := dec.Decode(&state); err != nil {
+		http.Error(w, "invalid JSON payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	stateBytes, err := json.Marshal(state)
+	if err != nil {
+		http.Error(w, "failed to marshal state", http.StatusInternalServerError)
+		return
+	}
+
+	s.mu.Lock()
+	cfg := s.settings
+	newExtras := make(map[string]string)
+	if cfg.Extras != nil {
+		for k, v := range cfg.Extras {
+			newExtras[k] = v
+		}
+	}
+	newExtras["business_setup_wizard_state"] = string(stateBytes)
+	cfg.Extras = newExtras
+	s.settings = cfg
+	s.mu.Unlock()
+
+	_ = s.hub.SettingsStore().Update(cfg)
+
+	writeJSON(w, map[string]string{"status": "ok"})
+}
+
+// handleWizardStateLoad handles GET /api/wizard/state
+// It returns the previously saved wizard state from settings.Extras
+func (s *Server) handleWizardStateLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	stateStr := s.settings.Extras["business_setup_wizard_state"]
+	s.mu.RUnlock()
+
+	if stateStr == "" {
+		writeJSON(w, map[string]interface{}{})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(stateStr))
+}
+
 // handleWizardOnboardingVerify performs a diagnostic verification of env vars
 // and connection requirements for Day One onboarding.
 func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Request) {
