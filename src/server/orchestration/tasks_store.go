@@ -6,7 +6,7 @@ import (
 )
 
 type TaskStore interface {
-	ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error)
+	ClaimTask(ctx context.Context, agentID string) (*SharedTask, error)
 	TransitionTask(ctx context.Context, taskID, agentID, fromState, toState, reason string) error
 }
 

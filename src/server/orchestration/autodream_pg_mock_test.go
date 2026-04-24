@@ -10,17 +10,17 @@ import (
 	"github.com/onehumancorp/mono/src/server/db"
 )
 
-type mockPgProvider struct {
+type mockPgProviderMock struct {
 	db.Provider
 	execCount int
 	queries   []string
 }
 
-func (m *mockPgProvider) IsSQLite() bool {
+func (m *mockPgProviderMock) IsSQLite() bool {
 	return false
 }
 
-func (m *mockPgProvider) Begin(ctx context.Context) (db.Tx, error) {
+func (m *mockPgProviderMock) Begin(ctx context.Context) (db.Tx, error) {
 	tx, err := m.Provider.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -28,13 +28,13 @@ func (m *mockPgProvider) Begin(ctx context.Context) (db.Tx, error) {
 	return &mockPgTx{Tx: tx, provider: m}, nil
 }
 
-func (m *mockPgProvider) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
+func (m *mockPgProviderMock) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
 	m.queries = append(m.queries, sql)
 	m.execCount++
 	return m.Provider.Exec(ctx, sql, arguments...)
 }
 
-func (m *mockPgProvider) Query(ctx context.Context, sql string, args ...interface{}) (db.Rows, error) {
+func (m *mockPgProviderMock) Query(ctx context.Context, sql string, args ...interface{}) (db.Rows, error) {
 	m.queries = append(m.queries, sql)
 
 	// Intercept vector operator queries and replace them with standard SQLite syntax
@@ -49,7 +49,7 @@ func (m *mockPgProvider) Query(ctx context.Context, sql string, args ...interfac
 
 type mockPgTx struct {
 	db.Tx
-	provider *mockPgProvider
+	provider *mockPgProviderMock
 }
 
 func (t *mockPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
@@ -120,7 +120,7 @@ func TestAutoDreamWorker_ProcessMemories_Pg(t *testing.T) {
 		t.Fatalf("failed to insert agent_session_data: %v", err)
 	}
 
-	mockProvider := &mockPgProvider{Provider: provider}
+	mockProvider := &mockPgProviderMock{Provider: provider}
 	worker := NewAutoDreamWorker(mockProvider)
 
 	t.Setenv("OHC_MEMORY_DIR", t.TempDir())
@@ -150,7 +150,7 @@ func TestAutoDreamWorker_ProcessMemories_Pg_LockFailed(t *testing.T) {
 		t.Fatalf("failed to create agent_session_data: %v", err)
 	}
 
-	mockProvider := &mockPgProvider{Provider: provider}
+	mockProvider := &mockPgProviderMock{Provider: provider}
 	worker := NewAutoDreamWorker(mockProvider)
 
 	t.Setenv("OHC_MEMORY_DIR", t.TempDir())
@@ -173,7 +173,7 @@ func TestAutoDreamWorker_ProcessMemories_Pg_LockFailed(t *testing.T) {
 
 func TestAutoDreamWorker_IngestCompletedTasks_Pg(t *testing.T) {
 	provider := setupTestDB(t)
-	mockProvider := &mockPgProvider{Provider: provider}
+	mockProvider := &mockPgProviderMock{Provider: provider}
 	worker := NewAutoDreamWorker(mockProvider)
 	ctx := context.Background()
 
@@ -199,7 +199,7 @@ func TestAutoDreamWorker_IngestCompletedTasks_Pg(t *testing.T) {
 
 func TestAutoDreamWorker_SearchMemories_Pg(t *testing.T) {
 	provider := setupTestDB(t)
-	mockProvider := &mockPgProvider{Provider: provider}
+	mockProvider := &mockPgProviderMock{Provider: provider}
 	worker := NewAutoDreamWorker(mockProvider)
 	ctx := context.Background()
 
@@ -225,7 +225,7 @@ func TestAutoDreamWorker_SearchMemories_Pg(t *testing.T) {
 
 func TestAutoDreamWorker_ConsolidateMemories_Pg(t *testing.T) {
 	provider := setupTestDB(t)
-	mockProvider := &mockPgProvider{Provider: provider}
+	mockProvider := &mockPgProviderMock{Provider: provider}
 	worker := NewAutoDreamWorker(mockProvider)
 	ctx := context.Background()
 
@@ -379,7 +379,7 @@ func TestAutoDreamWorker_CommitFailures(t *testing.T) {
 // A provider that simulates lock errors in ProcessMemories
 type lockErrorPgTx struct {
 	db.Tx
-	provider *mockPgProvider
+	provider *mockPgProviderMock
 }
 func (t *lockErrorPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
 	if sql == "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED" {
@@ -395,21 +395,21 @@ func (t *lockErrorPgTx) QueryRow(ctx context.Context, sql string, args ...interf
 }
 
 type lockErrorPgProvider struct {
-	mockPgProvider
+	mockPgProviderMock
 }
 func (p *lockErrorPgProvider) Begin(ctx context.Context) (db.Tx, error) {
 	tx, err := p.Provider.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &lockErrorPgTx{Tx: tx, provider: &p.mockPgProvider}, nil
+	return &lockErrorPgTx{Tx: tx, provider: &p.mockPgProviderMock}, nil
 }
 
 func TestAutoDreamWorker_ProcessMemories_LockError(t *testing.T) {
 	provider := setupTestDB(t)
 	setupMockMemories(t, 2)
 
-	mockProvider := &lockErrorPgProvider{mockPgProvider{Provider: provider}}
+	mockProvider := &lockErrorPgProvider{mockPgProviderMock{Provider: provider}}
 	worker := NewAutoDreamWorker(mockProvider)
 
 	t.Setenv("OHC_MEMORY_DIR", t.TempDir())
@@ -437,14 +437,14 @@ func (t *insertErrorPgTx) Exec(ctx context.Context, sql string, arguments ...int
 	return t.mockPgTx.Exec(ctx, sql, arguments...)
 }
 type insertErrorPgProvider struct {
-	mockPgProvider
+	mockPgProviderMock
 }
 func (p *insertErrorPgProvider) Begin(ctx context.Context) (db.Tx, error) {
 	tx, err := p.Provider.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mockTx := &mockPgTx{Tx: tx, provider: &p.mockPgProvider}
+	mockTx := &mockPgTx{Tx: tx, provider: &p.mockPgProviderMock}
 	return &insertErrorPgTx{mockPgTx: mockTx}, nil
 }
 
@@ -459,7 +459,7 @@ func TestAutoDreamWorker_ProcessMemories_InsertError(t *testing.T) {
 	}
 	_, err = provider.Exec(context.Background(), "INSERT INTO agent_session_data (session_id, content) VALUES ('mission-1', 'test content')")
 
-	mockProvider := &insertErrorPgProvider{mockPgProvider{Provider: provider}}
+	mockProvider := &insertErrorPgProvider{mockPgProviderMock{Provider: provider}}
 	worker := NewAutoDreamWorker(mockProvider)
 
 	t.Setenv("OHC_MEMORY_DIR", t.TempDir())
@@ -479,7 +479,7 @@ func TestAutoDreamWorker_ProcessMemories_InsertError(t *testing.T) {
 func TestAutoDreamWorker_IngestCompletedTasks_Minimax(t *testing.T) {
 	t.Setenv("MINIMAX_API_KEY", "dummy_key")
 	provider := setupTestDB(t)
-	mockProvider := &mockPgProvider{Provider: provider}
+	mockProvider := &mockPgProviderMock{Provider: provider}
 	worker := NewAutoDreamWorker(mockProvider)
 	worker.SetLLMClient(&failingMinimaxClient{})
 	ctx := context.Background()
@@ -508,20 +508,20 @@ func (t *fetchErrorPgTx) Query(ctx context.Context, sql string, args ...interfac
 	return t.mockPgTx.Query(ctx, sql, args...)
 }
 type fetchErrorPgProvider struct {
-	mockPgProvider
+	mockPgProviderMock
 }
 func (p *fetchErrorPgProvider) Begin(ctx context.Context) (db.Tx, error) {
 	tx, err := p.Provider.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	mockTx := &mockPgTx{Tx: tx, provider: &p.mockPgProvider}
+	mockTx := &mockPgTx{Tx: tx, provider: &p.mockPgProviderMock}
 	return &fetchErrorPgTx{mockPgTx: mockTx}, nil
 }
 
 func TestAutoDreamWorker_IngestCompletedTasks_FetchError(t *testing.T) {
 	provider := setupTestDB(t)
-	mockProvider := &fetchErrorPgProvider{mockPgProvider{Provider: provider}}
+	mockProvider := &fetchErrorPgProvider{mockPgProviderMock{Provider: provider}}
 	worker := NewAutoDreamWorker(mockProvider)
 
 	err := worker.IngestCompletedTasks(context.Background())
