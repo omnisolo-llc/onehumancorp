@@ -89,9 +89,12 @@ func (r *RedisTransport) Publish(ctx context.Context, channel string, payload []
 func (r *RedisTransport) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
 	ch := make(chan []byte, 100)
 
+	client, cancel := r.client.Dedicate()
+
 	go func() {
 		defer close(ch)
-		err := r.client.Receive(ctx, r.client.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
+		defer cancel()
+		err := client.Receive(ctx, client.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
 			select {
 			case ch <- []byte(msg.Message):
 			case <-ctx.Done():
