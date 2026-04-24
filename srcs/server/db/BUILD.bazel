@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "db",
     srcs = [
+        "autodream.go",
         "database.go",
         "flextime.go",
         "postgres_provider.go",
@@ -94,6 +95,8 @@ go_library(
         "migrations/20260427000000_autodream_memories_decomposition.go",
                         "migrations/20260428000000_kairos_shared_tasks_state_machine_pg.sql",
         "migrations/20260428000000_kairos_shared_tasks_state_machine_sqlite.sql",
+        "migrations/20260429000000_autodream_findings_pg.sql",
+        "migrations/20260429000000_autodream_findings_sqlite.sql",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/db",
     visibility = ["//visibility:public"],
@@ -111,6 +114,7 @@ go_library(
 go_test(
     name = "db_test",
     srcs = [
+        "autodream_test.go",
         "database_test.go",
         "provider_test.go",
         "swarm_tasks_migration_test.go",

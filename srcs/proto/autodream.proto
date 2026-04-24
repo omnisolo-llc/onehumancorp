@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package ohc.autodream;
+
+option go_package = "github.com/onehumancorp/mono/srcs/proto/autodream;autodreampb";
+
+message Finding {
+    string id = 1;
+    string timestamp = 2; // ISO8601 string for simplicity if timestamp.proto is missing
+    string content = 3;
+    repeated float embedding = 4;
+}
+
+message StoreFindingRequest {
+    Finding finding = 1;
+}
+
+message StoreFindingResponse {
+    bool success = 1;
+}
+
+message SearchFindingsRequest {
+    repeated float query_embedding = 1;
+    int32 limit = 2;
+}
+
+message SearchFindingsResponse {
+    repeated Finding findings = 1;
+}
+
+service AutoDreamService {
+    rpc StoreFinding(StoreFindingRequest) returns (StoreFindingResponse);
+    rpc SearchFindings(SearchFindingsRequest) returns (SearchFindingsResponse);
+}

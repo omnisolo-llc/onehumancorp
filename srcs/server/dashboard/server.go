@@ -672,6 +672,11 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 
 
+	adRepo := db.NewAutoDreamRepository(pool.Provider)
+	adHandler := mesh.NewAutoDreamHandler(adRepo)
+	mux.HandleFunc("/api/mesh/autodream/search", auth.RequireRole("system", adHandler.Search))
+	mux.HandleFunc("/api/mesh/autodream/store", auth.RequireRole("system", adHandler.Store))
+
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))

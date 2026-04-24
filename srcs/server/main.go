@@ -33,6 +33,8 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/onehumancorp/mono/srcs/server/workers"
 	"github.com/onehumancorp/mono/srcs/server/workers/distillation"
+	adservice "github.com/onehumancorp/mono/srcs/server/services/autodream"
+	adpb "github.com/onehumancorp/mono/srcs/proto/autodream"
 )
 
 const defaultAddress = ":8080"
@@ -582,6 +584,11 @@ func run(now time.Time, listen listenFunc) error {
 			grpc.StreamInterceptor(orchestration.SPIFFEStreamInterceptor()),
 		)
 		orchestration.RegisterHubService(s, hub, mesh)
+		if pool != nil {
+			adRepo := db.NewAutoDreamRepository(pool.Provider)
+			adSvc := adservice.NewAutoDreamService(adRepo)
+			adpb.RegisterAutoDreamServiceServer(s, adSvc)
+		}
 		slog.Info("serving gRPC", "address", grpcAddress)
 		if err := s.Serve(lis); err != nil {
 			slog.Error("failed to serve gRPC", "error", err)
