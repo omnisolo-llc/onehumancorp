@@ -10,7 +10,7 @@ func TestBusinessSetupWizard(t *testing.T) {
 	defer cleanup()
 
 	// 1. Log in using the UI.
-	loginE2E(t, page, "admin@onehumancorp.com", "admin123")
+	loginAsAdmin(t, page)
 
 	// Wait for home screen.
 	expectElement(t, page, `[aria-label="Dashboard"]`)

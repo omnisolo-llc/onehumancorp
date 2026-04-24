@@ -64,17 +64,79 @@ class BusinessSetupState {
 
 class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
-  BusinessSetupState build() => const BusinessSetupState();
+  BusinessSetupState build() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadState();
+    });
+    return const BusinessSetupState();
+  }
+
+  Future<void> _loadState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/api/wizard/state'),
+          headers: {'Authorization': 'Bearer ${user.token}'},
+        );
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data['step'] != null) {
+            state = state.copyWith(
+              step: data['step'],
+              businessType: data['business_type'],
+              companyName: data['company_name'],
+              businessDescription: data['business_description'],
+              whatYouSell: (data['what_you_sell'] as String?)?.split(',').where((e) => e.isNotEmpty).toList() ?? [],
+              paymentMethod: data['payment_method'],
+              adminName: data['admin_name'],
+              adminEmail: data['admin_email'],
+            );
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _saveState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+    if (user != null && baseUrl.isNotEmpty) {
+      final body = {
+        'step': state.step,
+        'business_type': state.businessType,
+        'company_name': state.companyName,
+        'business_description': state.businessDescription,
+        'what_you_sell': state.whatYouSell.join(','),
+        'payment_method': state.paymentMethod,
+        'admin_name': state.adminName,
+        'admin_email': state.adminEmail,
+      };
+      try {
+        await http.post(
+          Uri.parse('$baseUrl/api/wizard/state/save'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        );
+      } catch (_) {}
+    }
+  }
 
   void nextStep() {
     if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
+      _saveState();
     }
   }
 
   void prevStep() {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      _saveState();
     }
   }
 
@@ -233,13 +295,17 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         children: [
           const Text('Tell us about your business', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
           const SizedBox(height: 16),
-          TextField(
+          TextFormField(
+            key: const ValueKey('companyName'),
+            initialValue: state.companyName,
             decoration: const InputDecoration(labelText: 'Business Name', labelStyle: TextStyle(color: Colors.white70)),
             onChanged: notifier.updateCompany,
             style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
           ),
           const SizedBox(height: 16),
-          TextField(
+          TextFormField(
+            key: const ValueKey('businessDesc'),
+            initialValue: state.businessDescription,
             decoration: const InputDecoration(labelText: 'Short Description', labelStyle: TextStyle(color: Colors.white70)),
             onChanged: notifier.updateDescription,
             maxLines: 3,
@@ -335,20 +401,26 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         children: [
           const Text('Administrator account', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
           const SizedBox(height: 16),
-          TextField(
+          TextFormField(
+            key: const ValueKey('adminName'),
+            initialValue: state.adminName,
             decoration: const InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: Colors.white70)),
             onChanged: notifier.updateAdminName,
             style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
           ),
           const SizedBox(height: 16),
-          TextField(
+          TextFormField(
+            key: const ValueKey('adminEmail'),
+            initialValue: state.adminEmail,
             keyboardType: TextInputType.emailAddress,
             decoration: const InputDecoration(labelText: 'Email', labelStyle: TextStyle(color: Colors.white70)),
             onChanged: notifier.updateAdminEmail,
             style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
           ),
           const SizedBox(height: 16),
-          TextField(
+          TextFormField(
+            key: const ValueKey('adminPassword'),
+            initialValue: state.adminPassword,
             obscureText: _obscurePassword,
             onChanged: notifier.updateAdminPassword,
             style: const TextStyle(fontFamily: 'Inter', color: Colors.white),

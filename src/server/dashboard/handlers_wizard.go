@@ -181,6 +181,65 @@ func hasEnabledProvider(providers []settings.AiProvider) bool {
 	return false
 }
 
+type wizardStateResponse struct {
+	State map[string]interface{} `json:"state"`
+}
+
+// handleWizardStateSave saves the current wizard progress to the settings extras.
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var state map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&state); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	stateJSON, err := json.Marshal(state)
+	if err != nil {
+		http.Error(w, "failed to marshal state", http.StatusInternalServerError)
+		return
+	}
+
+	s.mu.Lock()
+	cfg := s.settings
+	if cfg.Extras == nil {
+		cfg.Extras = make(map[string]string)
+	}
+	cfg.Extras["wizard_state"] = string(stateJSON)
+	s.settings = cfg
+	s.mu.Unlock()
+
+	_ = s.hub.SettingsStore().Update(cfg)
+
+	writeJSON(w, map[string]string{"status": "ok"})
+}
+
+// handleWizardStateLoad retrieves the saved wizard progress from the settings extras.
+func (s *Server) handleWizardStateLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	cfg := s.settings
+	s.mu.RUnlock()
+
+	stateStr := cfg.Extras["wizard_state"]
+	if stateStr == "" {
+		// Return empty state if not found
+		writeJSON(w, map[string]interface{}{})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write([]byte(stateStr))
+}
+
 // handleWizardOnboardingVerify performs a diagnostic verification of env vars
 // and connection requirements for Day One onboarding.
 func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Request) {

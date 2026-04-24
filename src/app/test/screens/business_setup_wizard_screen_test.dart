@@ -23,50 +23,61 @@ void main() {
     );
 
     // Initial state
-    expect(find.text('Business Setup'), findsOneWidget);
-    expect(find.text('Welcome! Your AI team, ready in minutes.'), findsOneWidget);
-    expect(find.text('Next'), findsOneWidget);
+    expect(find.text('Your business, live in minutes'), findsOneWidget);
+    expect(find.text('Get Started'), findsOneWidget);
 
-    // Step 1: Business Profile
-    await tester.tap(find.text('Next'));
+    // Step 1: Business Type
+    await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(TextField), findsNWidgets(2)); // Company Name, Industry
-    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget); // Size
+    expect(find.text('What kind of business are you building?'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField).first, 'Test Company');
+    await tester.tap(find.text('Online Store'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Next'));
+    // Step 2: Business Profile
+    expect(find.text('Tell us about your business'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(2)); // Company Name, Description
+
+    await tester.enterText(find.byType(TextFormField).first, 'Test Company');
     await tester.pumpAndSettle();
 
-    // Step 2: Goal selection
-    expect(find.text('Select Goals'), findsOneWidget);
-    expect(find.byType(CheckboxListTile), findsNWidgets(5));
-
-    await tester.tap(find.text('Support'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Next'));
+    // Step 3: What do you sell
+    expect(find.text('What do you sell?'), findsOneWidget);
+
+    await tester.tap(find.text('Physical products'));
     await tester.pumpAndSettle();
 
-    // Step 3: Deployment Preference (Cloud Mode)
-    expect(find.text('Deployment Preference'), findsOneWidget);
-    expect(find.byType(RadioListTile<String>), findsNWidgets(3));
-    expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsNothing);
-
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    // Step 4: Administrator account
-    expect(find.byType(TextField), findsNWidgets(3)); // Admin Name, Admin Email, Admin Password
+    // Step 4: Payments
+    expect(find.text('How do you want to receive payments?'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField).at(0), 'Admin');
-    await tester.enterText(find.byType(TextField).at(1), 'admin@test.com');
-    await tester.enterText(find.byType(TextField).at(2), 'password');
+    await tester.tap(find.text('Online only'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Launch My AI Team →'), findsOneWidget);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 5: Administrator account
+    expect(find.text('Administrator account'), findsOneWidget);
+    expect(find.byType(TextFormField), findsNWidgets(3)); // Admin Name, Admin Email, Admin Password
+
+    await tester.enterText(find.byType(TextFormField).at(0), 'Admin');
+    await tester.enterText(find.byType(TextFormField).at(1), 'admin@test.com');
+    await tester.enterText(find.byType(TextFormField).at(2), 'password');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    // Step 6: Review
+    expect(find.text('Review & Launch'), findsOneWidget);
+    expect(find.text('Launch My Business →'), findsOneWidget);
   });
 
   test('BusinessSetupNotifier covers all state mutations', () {
@@ -97,20 +108,20 @@ void main() {
     notifier.updateCompany('NewCo');
     expect(container.read(businessSetupProvider).companyName, 'NewCo');
 
-    notifier.updateIndustry('Tech');
-    expect(container.read(businessSetupProvider).industry, 'Tech');
+    notifier.updateDescription('Tech');
+    expect(container.read(businessSetupProvider).businessDescription, 'Tech');
 
-    notifier.updateSize('L');
-    expect(container.read(businessSetupProvider).size, 'L');
+    notifier.updateBusinessType('L');
+    expect(container.read(businessSetupProvider).businessType, 'L');
 
-    notifier.toggleGoal('Support');
-    expect(container.read(businessSetupProvider).goals.contains('Support'), true);
+    notifier.toggleWhatYouSell('Support');
+    expect(container.read(businessSetupProvider).whatYouSell.contains('Support'), true);
 
-    notifier.toggleGoal('Support');
-    expect(container.read(businessSetupProvider).goals.contains('Support'), false);
+    notifier.toggleWhatYouSell('Support');
+    expect(container.read(businessSetupProvider).whatYouSell.contains('Support'), false);
 
-    notifier.updateDeployment('Desktop');
-    expect(container.read(businessSetupProvider).deployment, 'Desktop');
+    notifier.updatePaymentMethod('Desktop');
+    expect(container.read(businessSetupProvider).paymentMethod, 'Desktop');
 
     notifier.updateAdminName('Admin');
     expect(container.read(businessSetupProvider).adminName, 'Admin');
@@ -145,45 +156,16 @@ void main() {
       ),
     );
 
-    for(int i = 0; i < 4; i++) {
-      await tester.tap(find.text('Next'));
+    for(int i = 0; i < 6; i++) {
+      await tester.tap(find.text(i == 0 ? 'Get Started' : 'Continue'));
       await tester.pumpAndSettle();
     }
 
-    await tester.tap(find.text('Launch My AI Team →'));
+    await tester.tap(find.text('Launch My Business →'));
     await tester.pumpAndSettle();
 
     // As auth is null, the API is bypassed and we should navigate to /dashboard
     expect(find.text('Dashboard'), findsOneWidget);
   });
 
-  testWidgets('BusinessSetupWizardScreen renders and navigates steps in Standalone Mode', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          clientSettingsProvider.overrideWith(
-            (ref) => ClientSettingsNotifier(ref)..state = const AsyncValue.data(
-              ClientSettings(backendUrl: 'http://localhost', standaloneMode: true),
-            ),
-          ),
-        ],
-        child: const MaterialApp(
-          home: BusinessSetupWizardScreen(),
-        ),
-      ),
-    );
-
-    // Navigate to Step 3
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Step 3: Deployment Preference (Standalone Mode)
-    expect(find.text('Deployment Preference'), findsOneWidget);
-    expect(find.byType(RadioListTile<String>), findsNothing); // Should be hidden
-    expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsOneWidget); // Bypass message
-  });
 }
