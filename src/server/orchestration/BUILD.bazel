@@ -114,6 +114,7 @@ go_test(
         "chaos_thin_client_test.go",
         "sentry_chaos_test.go",
         "shared_task_list_repo_test.go",
+        "service_spiffe_test.go",
     ],
     embed = [":orchestration"],
     deps = [
