@@ -158,31 +158,31 @@ func (b *baseProvider) load() Credentials {
 // It syncs subagent statuses and errors dynamically via the Teammate Mesh API (Redis Pub/Sub).
 func executeInIsolation(ctx context.Context, agentType string, worktree string, transport Transport) error {
 	// 1. Process Sandboxing & Temporary Worktrees
-	sandboxID := fmt.Sprintf("sandbox-%s-%d", agentType, time.Now().UnixNano())
+	isolationSandboxID := fmt.Sprintf("sandbox-%s-%d", agentType, time.Now().UnixNano())
 
 	// 2. Dynamic status syncing to Teammate Mesh API via Redis Pub/Sub
-	statusMsg, _ := json.Marshal(map[string]interface{}{
+	isolationStatusMsg, _ := json.Marshal(map[string]interface{}{
 		"agent":    agentType,
 		"status":   "RUNNING",
 		"worktree": worktree,
-		"sandbox":  sandboxID,
+		"sandbox":  isolationSandboxID,
 	})
 
 	if transport != nil {
-		if err := transport.Send(ctx, statusMsg); err != nil {
+		if err := transport.Send(ctx, isolationStatusMsg); err != nil {
 			return err
 		}
 	}
 
 	// Simulating process sandbox stream piping...
-	outputMsg, _ := json.Marshal(map[string]interface{}{
+	isolationOutputMsg, _ := json.Marshal(map[string]interface{}{
 		"agent":   agentType,
 		"stream":  "stdout",
 		"content": "Execution started in isolated worktree " + worktree,
 	})
 
 	if transport != nil {
-		transport.Send(ctx, outputMsg)
+		transport.Send(ctx, isolationOutputMsg)
 	}
 
 	endMsg, _ := json.Marshal(map[string]interface{}{
