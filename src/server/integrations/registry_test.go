@@ -1397,6 +1397,10 @@ func TestTelegramAPIBaseSSRF(t *testing.T) {
 }
 
 func TestSendTelegramMessage_NewRequestError(t *testing.T) {
+	oldLookupIP := LookupIPFunc
+	LookupIPFunc = mockLookupIP
+	defer func() { LookupIPFunc = oldLookupIP }()
+
 	originalBase := TelegramAPIBase
 	TelegramAPIBase = "http://example.com"
 	defer func() { TelegramAPIBase = originalBase }()
@@ -1411,6 +1415,10 @@ func TestSendTelegramMessage_NewRequestError(t *testing.T) {
 }
 
 func TestSendDiscordWebhook_NewRequestError(t *testing.T) {
+	oldLookupIP := LookupIPFunc
+	LookupIPFunc = mockLookupIP
+	defer func() { LookupIPFunc = oldLookupIP }()
+
 	err := sendDiscordWebhook(nil, "http://example.com/webhook", "user", "msg")
 	if err == nil {
 		t.Fatal("expected error from http.NewRequestWithContext, got nil")
