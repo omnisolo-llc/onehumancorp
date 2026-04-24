@@ -44,23 +44,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _oauthLogin(String provider) async {
-    // Simulated OAuth flow with Graceful Degradation / Loading states for Thin Client
+    // Graceful failure for unimplemented OAuth endpoint in Thin Client mode
     setState(() {
-      _loading = true;
-      _error = null;
+      _loading = false;
     });
-    try {
-      // In a real app this would open a webview or use an OAuth library
-      // For Thin Client mode, simulate variable-latency remote calls
-      await Future.delayed(const Duration(milliseconds: 1500));
-      await ref
-          .read(authStateProvider.notifier)
-          .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
-    } catch (e) {
-      // Handle missing context or network degradation gracefully
-      setState(() => _error = "OAuth Login Unavailable: Remote endpoint unreachable ($e)");
-    } finally {
-      if (mounted) setState(() => _loading = false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("OAuth Login Unavailable: Thin Client flow not implemented"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
