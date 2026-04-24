@@ -55,7 +55,13 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 
 	err := os.Mkdir(path, 0777)
 	if err != nil {
-		if os.IsExist(err) {
+		// Just remove and retry if path is occupied by a file.
+		if info, errStat := os.Stat(path); errStat == nil && !info.IsDir() {
+			os.Remove(path)
+			return m.Lock(ctx, key, ttl)
+		}
+
+		if os.IsExist(err) || strings.Contains(err.Error(), "file exists") {
 			// Check if it's actually a file from a previous version and remove it
 			info, err := os.Stat(path)
 			if err == nil && !info.IsDir() {
