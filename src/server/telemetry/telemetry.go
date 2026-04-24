@@ -1644,8 +1644,7 @@ func RecordLocalToCloudMissionSync(ctx context.Context, missionID string) {
 		// In Standalone Mode, BufferMetricFunc unmarshals the JSON payload into a map[string]interface{},
 		// then calls RedactInterfacePII centrally. We use RedactInterfacePII here so the AST linter
 		// TestBufferMetricFuncRedactionLinter passes because it statically checks for its presence.
-		payloadMap["missionID"] = RedactInterfacePII(missionID)
-		payloadBytes, _ := json.Marshal(payloadMap)
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "local_to_cloud_mission_sync_count", string(payloadBytes))
 	}
 	if LocalToCloudMissionSyncCount == nil {
