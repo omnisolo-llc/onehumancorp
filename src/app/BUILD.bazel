@@ -336,6 +336,7 @@ sh_binary(
     srcs = ["test/capture_screenshots.sh"],
     data = [
         ":app",
+        "e2e/capture_screenshots.mjs",
         "//:node_modules/@playwright/test",
     ],
     visibility = ["//visibility:public"],

@@ -158,7 +158,7 @@ fi
 node_modules_dir="$(dirname -- "$(dirname -- "${playwright_package_dir}")")"
 export NODE_PATH="${node_modules_dir}${NODE_PATH:+:${NODE_PATH}}"
 
-if ! "${node_bin}" "${cli_js}" install chromium 2>/dev/null; then
+if ! "${node_bin}" "${cli_js}" install 2>/dev/null; then
   echo "WARNING: could not install a fresh Chromium build; using any available browser." >&2
 fi
 
