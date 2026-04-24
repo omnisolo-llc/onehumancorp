@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/db"
+
 	"github.com/onehumancorp/mono/src/server/orchestration/kairos"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"
@@ -76,11 +78,14 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 	return err
 }
 
-func (q *QueueManager) Poll(ctx context.Context, workerID string) (*SubAgentJob, error) {
+func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJob, error) {
 	pollCounter.Add(ctx, 1, metric.WithAttributes(attribute.String("worker_id", workerID)))
 
 	if q.provider.IsSQLite() {
-		q.mu.Lock()
+		if !q.mu.TryLock() {
+			telemetry.RecordSQLiteLockContention(ctx, "acquire")
+			q.mu.Lock()
+		}
 		defer q.mu.Unlock()
 
 		query := `

@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "authz",
@@ -7,6 +7,16 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/telemetry",
+        "//src/server/db",
+        "//src/server/db/models",
+    ],
+)
+
+go_test(
+    name = "authz_test",
+    srcs = ["authorizer_test.go"],
+    embed = [":authz"],
+    deps = [
         "//src/server/db",
         "//src/server/db/models",
     ],
