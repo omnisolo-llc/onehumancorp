@@ -57,10 +57,7 @@ func openApp(t *testing.T, page playwright.Page) {
 	if _, err := page.Goto(baseURL + "/"); err != nil {
 		t.Fatalf("openApp goto: %v", err)
 	}
-	if err := page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-		State:   playwright.LoadStateNetworkidle,
-		Timeout: playwright.Float(5000),
-	}); err != nil {
+	if err := page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle}); err != nil {
 		t.Logf("openApp networkidle: %v", err)
 	}
 }
@@ -91,10 +88,7 @@ func loginAsAdmin(t *testing.T, page playwright.Page) {
 		}
 
 		_ = page.WaitForURL("**", playwright.PageWaitForURLOptions{Timeout: playwright.Float(15000)})
-		_ = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-			State:   playwright.LoadStateNetworkidle,
-			Timeout: playwright.Float(5000),
-		})
+		_ = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle})
 	}
 }
 
