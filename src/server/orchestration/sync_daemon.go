@@ -87,13 +87,14 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	}
 	defer tx.Rollback(ctx)
 
-		query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100"
+	query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100"
 	if d.dbWrapper.IsSQLite() {
 		query = "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND status = 'CLOUD_ESCALATION' LIMIT 100"
 	}
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone")
 		return false
 	}
 	defer rows.Close()
@@ -134,6 +135,7 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 
 	if err := d.sendToCloud(ctx, payloads); err != nil {
 		slog.Warn("sync_daemon: failed to send agent_missions to cloud (transient)", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone")
 		return false
 	}
 
@@ -153,20 +155,22 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 		_, err := tx.Exec(ctx, updateQuery)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
+			telemetry.RecordSyncDaemonError(ctx, "Standalone")
 			return false
 		} else {
-			telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
+			telemetry.RecordSyncEscalation(ctx, int64(len(ids)), "Standalone")
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		slog.Error("sync_daemon: failed to commit transaction", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone")
 		return false
 	}
 
-	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
+	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)), "Standalone")
 
-	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
+	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()), "Standalone")
 
 	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
 	return true
@@ -177,7 +181,7 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
-	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
+	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)), "Standalone")
 
 	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
 

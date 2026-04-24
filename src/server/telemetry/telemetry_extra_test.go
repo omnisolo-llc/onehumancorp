@@ -2,10 +2,10 @@ package telemetry
 
 import (
 	"context"
-	"testing"
-	"time"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
+	"testing"
+	"time"
 )
 
 func TestPushMetrics(t *testing.T) {
@@ -39,13 +39,13 @@ func TestRecordOtherMetrics(t *testing.T) {
 	RecordAutoDreamMemoryIngested(ctx, "agent1")
 	RecordAutoDreamMemoryCompressed(ctx, "agent1")
 	RecordTaskQueueLength(ctx, 10)
-	RecordTaskProcessed(ctx, 5 * time.Second)
-	RecordSyncEscalation(ctx, 1)
-	RecordSyncLatency(ctx, 1.5)
-	RecordSyncPayloadSize(ctx, 100)
+	RecordTaskProcessed(ctx, 5*time.Second)
+	RecordSyncEscalation(ctx, 1, "Cloud")
+	RecordSyncLatency(ctx, 1.5, "Cloud")
+	RecordSyncPayloadSize(ctx, 100, "Cloud")
 	RecordSIPSyncLatency(ctx, 100*time.Millisecond)
 	RecordSIPSyncPayloadSize(ctx, 200)
-	RecordSyncDaemonBatchSize(ctx, 50)
+	RecordSyncDaemonBatchSize(ctx, 50, "Cloud")
 	RecordSwarmTaskTransition(ctx, "mission1", "open", "done")
 	RecordSwarmTaskQueueLength(ctx, 1)
 	RecordSwarmTaskProcessingLatency(ctx, 100.5)
@@ -129,11 +129,11 @@ func TestRecordOtherMetricsUninitialized(t *testing.T) {
 	RecordAutoDreamMemoryIngested(ctx, "agent1")
 	RecordAutoDreamMemoryCompressed(ctx, "agent1")
 	RecordTaskQueueLength(ctx, 10)
-	RecordTaskProcessed(ctx, 5 * time.Second)
-	RecordSyncEscalation(ctx, 1)
-	RecordSyncLatency(ctx, 1.5)
-	RecordSyncPayloadSize(ctx, 100)
-	RecordSyncDaemonBatchSize(ctx, 50)
+	RecordTaskProcessed(ctx, 5*time.Second)
+	RecordSyncEscalation(ctx, 1, "Cloud")
+	RecordSyncLatency(ctx, 1.5, "Cloud")
+	RecordSyncPayloadSize(ctx, 100, "Cloud")
+	RecordSyncDaemonBatchSize(ctx, 50, "Cloud")
 	RecordSwarmTaskTransition(ctx, "mission1", "open", "done")
 	RecordSwarmTaskQueueLength(ctx, 1)
 	RecordSwarmTaskProcessingLatency(ctx, 100.5)
@@ -179,7 +179,6 @@ func TestRecordAgentExecutionTrace(t *testing.T) {
 	// Enable metrics for this test
 	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
 
-
 	InitWithMeter(meter)
 
 	// If metrics initialization failed (e.g., no provider setup), skip the active record
@@ -208,4 +207,9 @@ func TestRecordLocalToCloudMissionSync(t *testing.T) {
 	LocalToCloudMissionSyncCount = nil
 	defer func() { LocalToCloudMissionSyncCount = originalMetric }()
 	RecordLocalToCloudMissionSync(ctx, "mission-456")
+}
+
+func TestRecordSyncDaemonError(t *testing.T) {
+	ctx := context.Background()
+	RecordSyncDaemonError(ctx, "Standalone")
 }
