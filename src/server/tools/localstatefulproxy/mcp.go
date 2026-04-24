@@ -122,3 +122,41 @@ func (p *ProxyTool) Execute(ctx context.Context, args map[string]interface{}) (*
 		},
 	}, nil
 }
+
+// AgentProxyTool wraps ProxyTool to implement the new registry.AgentTool interface.
+type AgentProxyTool struct {
+	Proxy *ProxyTool
+}
+
+func (a *AgentProxyTool) Name() string {
+	return "local_stateful_proxy"
+}
+
+func (a *AgentProxyTool) Description() string {
+	return "Proxies execution commands and structured queries to the local standalone context."
+}
+
+func (a *AgentProxyTool) InputSchema() json.RawMessage {
+	return json.RawMessage(`{"type": "object", "properties": {"command": {"type": "string"}, "context_id": {"type": "string"}}, "required": ["command", "context_id"]}`)
+}
+
+func (a *AgentProxyTool) Execute(ctx context.Context, input json.RawMessage) (json.RawMessage, error) {
+	var args map[string]interface{}
+	if err := json.Unmarshal(input, &args); err != nil {
+		return nil, fmt.Errorf("invalid json input: %v", err)
+	}
+
+	// Delegate to the real ProxyTool execution logic
+	result, err := a.Proxy.Execute(ctx, args)
+	if err != nil {
+		return nil, err
+	}
+
+	if result != nil && len(result.Content) > 0 {
+		if textContent, ok := result.Content[0].(*mcp.TextContent); ok {
+			return json.RawMessage(textContent.Text), nil
+		}
+	}
+
+	return json.RawMessage(`{"status":"success","message":"Executed with empty response"}`), nil
+}
