@@ -30,6 +30,8 @@ type UserRepository interface {
 	UpdateUser(ctx context.Context, user *User, orgID string) error
 	// DeleteUser removes a user by ID.
 	DeleteUser(ctx context.Context, id string, orgID string) error
+	// MarkSetupCompleted marks a user's setup process as completed.
+	MarkSetupCompleted(ctx context.Context, id string, orgID string) error
 
 	// --- Token revocation ---
 

@@ -56,12 +56,13 @@ type User struct {
 	Username       string    `json:"username"`
 	Email          string    `json:"email"`
 	PasswordHash   string    `json:"-"` // never serialised to JSON
-	Roles          []string  `json:"roles"`
-	Active         bool      `json:"active"`
-	OrganizationID string    `json:"organizationId,omitempty"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
-	OIDCSubject    string    `json:"oidcSubject,omitempty"`
+	Roles             []string  `json:"roles"`
+	Active            bool      `json:"active"`
+	OrganizationID    string    `json:"organizationId,omitempty"`
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
+	OIDCSubject       string    `json:"oidcSubject,omitempty"`
+	HasCompletedSetup bool      `json:"has_completed_setup"`
 }
 
 // UserPublic represents the sanitized, non-sensitive profile of a user suitable for external API consumption.
@@ -70,15 +71,16 @@ type User struct {
 // Produces no errors.
 // Has no side effects.
 type UserPublic struct {
-	ID             string    `json:"id"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	Roles          []string  `json:"roles"`
-	Active         bool      `json:"active"`
-	OrganizationID string    `json:"organizationId,omitempty"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
-	OIDCSubject    string    `json:"oidcSubject,omitempty"`
+	ID                string    `json:"id"`
+	Username          string    `json:"username"`
+	Email             string    `json:"email"`
+	Roles             []string  `json:"roles"`
+	Active            bool      `json:"active"`
+	OrganizationID    string    `json:"organizationId,omitempty"`
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
+	OIDCSubject       string    `json:"oidcSubject,omitempty"`
+	HasCompletedSetup bool      `json:"has_completed_setup"`
 }
 
 // PublicView returns a UserPublic with no sensitive fields.
@@ -88,15 +90,16 @@ type UserPublic struct {
 // Has no side effects.
 func (u *User) PublicView() UserPublic {
 	return UserPublic{
-		ID:             u.ID,
-		Username:       u.Username,
-		Email:          u.Email,
-		Roles:          u.Roles,
-		Active:         u.Active,
-		OrganizationID: u.OrganizationID,
-		CreatedAt:      u.CreatedAt,
-		UpdatedAt:      u.UpdatedAt,
-		OIDCSubject:    u.OIDCSubject,
+		ID:                u.ID,
+		Username:          u.Username,
+		Email:             u.Email,
+		Roles:             u.Roles,
+		Active:            u.Active,
+		OrganizationID:    u.OrganizationID,
+		CreatedAt:         u.CreatedAt,
+		UpdatedAt:         u.UpdatedAt,
+		OIDCSubject:       u.OIDCSubject,
+		HasCompletedSetup: u.HasCompletedSetup,
 	}
 }
 
@@ -481,6 +484,32 @@ func (s *Store) DeleteUser(id string, orgID string) error {
 	if u.OIDCSubject != "" {
 		delete(s.byOIDC, tenantKey{u.OrganizationID, u.OIDCSubject})
 	}
+	return nil
+}
+
+// MarkSetupCompleted marks a user's setup process as completed.
+// Accepts parameters: ctx context.Context, id string, orgID string.
+// Returns error.
+func (s *Store) MarkSetupCompleted(ctx context.Context, id string, orgID string) error {
+	if s.repo != nil {
+		if _, err := s.repo.GetByID(ctx, id, orgID); err != nil {
+			if errors.Is(err, ErrUserNotFound) {
+				return errors.New("user not found")
+			}
+			return err
+		}
+		return s.repo.MarkSetupCompleted(ctx, id, orgID)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	if !ok || (orgID != "" && orgID != "sys" && u.OrganizationID != orgID) {
+		return errors.New("user not found")
+	}
+
+	u.HasCompletedSetup = true
+	u.UpdatedAt = time.Now()
 	return nil
 }
 

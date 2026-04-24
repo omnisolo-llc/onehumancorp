@@ -57,11 +57,11 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User, orgID str
 	}
 
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, has_completed_setup, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		user.ID, user.Username, email, user.PasswordHash,
 		rolesArg, user.Active, user.OrganizationID,
-		nilIfEmpty(oidcSubject),
+		nilIfEmpty(oidcSubject), user.HasCompletedSetup,
 		user.CreatedAt, user.UpdatedAt,
 	)
 	if err != nil {
@@ -72,16 +72,16 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User, orgID str
 
 func (r *PgUserRepository) GetByID(ctx context.Context, id string, orgID string) (*User, error) {
 	if orgID == "" || orgID == "sys" {
-		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1", id)
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE id = $1", id)
 	}
-	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2", id, orgID)
+	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2", id, orgID)
 }
 
 func (r *PgUserRepository) GetByUsername(ctx context.Context, username string, orgID string) (*User, error) {
 	if orgID == "" || orgID == "sys" {
-		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1", username)
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE username = $1", username)
 	}
-	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2", username, orgID)
+	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2", username, orgID)
 }
 
 func (r *PgUserRepository) GetByEmail(ctx context.Context, email string, orgID string) (*User, error) {
@@ -90,9 +90,9 @@ func (r *PgUserRepository) GetByEmail(ctx context.Context, email string, orgID s
 		lookupEmail = EncryptDeterministic(email)
 	}
 	if orgID == "" || orgID == "sys" {
-		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1", lookupEmail)
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE email = $1", lookupEmail)
 	}
-	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2", lookupEmail, orgID)
+	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2", lookupEmail, orgID)
 }
 
 func (r *PgUserRepository) GetByOIDCSubject(ctx context.Context, sub string, orgID string) (*User, error) {
@@ -101,18 +101,18 @@ func (r *PgUserRepository) GetByOIDCSubject(ctx context.Context, sub string, org
 		lookupSub = EncryptDeterministic(sub)
 	}
 	if orgID == "" || orgID == "sys" {
-		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1", lookupSub)
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE oidc_subject = $1", lookupSub)
 	}
-	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2", lookupSub, orgID)
+	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2", lookupSub, orgID)
 }
 
 func (r *PgUserRepository) ListUsers(ctx context.Context, orgID string) ([]*User, error) {
 	var rows db.Rows
 	var err error
 	if orgID == "" || orgID == "sys" {
-		rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users ORDER BY created_at")
+		rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users ORDER BY created_at")
 	} else {
-		rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at", orgID)
+		rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), has_completed_setup, created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at", orgID)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("pg: list users: %w", err)
@@ -180,20 +180,20 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User, orgID str
 	if orgID == "" || orgID == "sys" {
 		_, err = r.pool.Exec(ctx, `
 			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-			organization_id=$7, oidc_subject=$8, updated_at=$9
+			organization_id=$7, oidc_subject=$8, has_completed_setup=$9, updated_at=$10
 			WHERE id=$1`,
 			user.ID, user.Username, email, user.PasswordHash,
 			rolesArg, user.Active, user.OrganizationID,
-			nilIfEmpty(oidcSubject), user.UpdatedAt,
+			nilIfEmpty(oidcSubject), user.HasCompletedSetup, user.UpdatedAt,
 		)
 	} else {
 		_, err = r.pool.Exec(ctx, `
 			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-			organization_id=$7, oidc_subject=$8, updated_at=$9
-			WHERE id=$1 AND organization_id=$10`,
+			organization_id=$7, oidc_subject=$8, has_completed_setup=$9, updated_at=$10
+			WHERE id=$1 AND organization_id=$11`,
 			user.ID, user.Username, email, user.PasswordHash,
 			rolesArg, user.Active, user.OrganizationID,
-			nilIfEmpty(oidcSubject), user.UpdatedAt, orgID,
+			nilIfEmpty(oidcSubject), user.HasCompletedSetup, user.UpdatedAt, orgID,
 		)
 	}
 	if err != nil {
@@ -247,7 +247,7 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 		err := r.pool.QueryRow(ctx, query, args...).Scan(
 			&u.ID, &u.Username, &u.Email, &u.PasswordHash,
 			&rolesJSON, &u.Active, &u.OrganizationID, &u.OIDCSubject,
-			&created, &updated,
+			&u.HasCompletedSetup, &created, &updated,
 		)
 		if err != nil {
 			if strings.Contains(err.Error(), "no rows in result set") || strings.Contains(err.Error(), "sql: no rows in result set") {
@@ -268,7 +268,7 @@ func (r *PgUserRepository) scanUser(ctx context.Context, query string, args ...a
 	err := r.pool.QueryRow(ctx, query, args...).Scan(
 		&u.ID, &u.Username, &u.Email, &u.PasswordHash,
 		&u.Roles, &u.Active, &u.OrganizationID, &u.OIDCSubject,
-		&created, &updated,
+		&u.HasCompletedSetup, &created, &updated,
 	)
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
