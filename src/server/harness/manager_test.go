@@ -17,9 +17,7 @@ func init() {
 }
 
 func TestManager(t *testing.T) {
-	runner := NewBwrapRunner(nil)
-	runner.ProxySock = "" // Disable proxy socket in tests
-	manager := NewManager(nil, runner)
+	manager := NewManager(nil, nil)
 	ctx := context.Background()
 
 	t.Run("Initialize", func(t *testing.T) {
@@ -65,7 +63,7 @@ func TestManager(t *testing.T) {
 		// and attempts to use the buffers.
 		if err == nil {
 			if !strings.Contains(outBuf.String(), "stream_test") && !strings.Contains(res.Stdout, "stream_test") {
-				t.Errorf("Expected output to contain 'stream_test', got outBuf: %q, res.Stdout: %q, errBuf: %q, res.Stderr: %q, ExitCode: %d", outBuf.String(), res.Stdout, errBuf.String(), res.Stderr, res.ExitCode)
+				t.Errorf("Expected output to contain 'stream_test'")
 			}
 		}
 	})
