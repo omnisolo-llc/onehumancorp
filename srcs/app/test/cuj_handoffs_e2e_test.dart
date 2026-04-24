@@ -93,7 +93,8 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump();
 
       // Intent text should be visible
       expect(find.textContaining('Deploy to production'), findsWidgets);
@@ -143,12 +144,14 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump();
 
       final approveBtn = find.textContaining('Approve');
       if (approveBtn.evaluate().isNotEmpty) {
         await tester.tap(approveBtn.first);
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump();
 
         verify(
           () => mockClient.post(
@@ -186,12 +189,14 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump();
 
       final rejectBtn = find.textContaining('Reject');
       if (rejectBtn.evaluate().isNotEmpty) {
         await tester.tap(rejectBtn.first);
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump();
 
         verify(
           () => mockClient.post(

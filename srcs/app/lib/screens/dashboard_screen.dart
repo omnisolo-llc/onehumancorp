@@ -1,5 +1,6 @@
 import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
+import 'package:ohc_app/widgets/website_builder_cta_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -126,6 +127,8 @@ class _DashboardContent extends StatelessWidget {
             ),
           ),
         ),
+
+        const WebsiteBuilderCtaWidget(),
 
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
