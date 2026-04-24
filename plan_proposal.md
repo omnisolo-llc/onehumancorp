@@ -1,7 +1,7 @@
-1. **Implement `IsolationStrategy` interface**: Use a file editing tool (like `replace_with_git_merge_diff`) to add `IsolationStrategy` interface to `srcs/server/agents/provider.go`. The interface will have a single method `RunInIsolation(worktree string) error`.
-2. **Update `Provider` interface**: Use a file editing tool to embed the `IsolationStrategy` interface in the `Provider` interface in `srcs/server/agents/provider.go`.
-3. **Implement `RunInIsolation`**: Use a file editing tool to add `RunInIsolation(worktree string) error` to all the structs implementing `Provider` (or just to `baseProvider` and `BuiltinProvider`) in `srcs/server/agents/provider.go`. The implementation will pipe output streams directly to Redis Pub/Sub, for example: `fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)` and return `nil`.
-4. **Verify code changes**: Run `cat srcs/server/agents/provider.go` to ensure all edits were applied correctly.
-5. **Run tests**: Execute `bazelisk test //srcs/server/agents/...` to ensure all tests pass.
+1. **Refactor `AgentHireWizardScreen`**: Use `run_in_bash_session` to write a python script that will overwrite `srcs/app/lib/screens/agent_hire_wizard_screen.dart` with a new 4-step wizard implementing the Agent Gallery (Card grid), Capability selection, Schedule / frequency, and Review & Activate steps.
+2. **Verify `AgentHireWizardScreen` changes**: Use `run_in_bash_session` with `cat srcs/app/lib/screens/agent_hire_wizard_screen.dart` to verify that the file was correctly refactored.
+3. **Update `AgentHireWizardScreen` Tests**: Use `run_in_bash_session` to write a python script that will overwrite `srcs/app/test/screens/agent_hire_wizard_screen_test.dart` to match the new 4-step wizard implementation and achieve 100% test coverage.
+4. **Verify Test changes**: Use `run_in_bash_session` with `cat srcs/app/test/screens/agent_hire_wizard_screen_test.dart` to verify that the test file was correctly overwritten.
+5. **Run tests**: Execute `bazelisk test //srcs/app/...` to verify that all frontend tests pass and cover the modified code.
 6. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-7. **Submit the code**: Use the `submit` tool to commit the code, and then output a final message with a YAML block containing `issue_id: 4871`.
+7. **Submit the code**: Use the `submit` tool to finalize the task.
