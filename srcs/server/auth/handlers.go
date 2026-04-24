@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -13,7 +14,8 @@ import (
 // Produces no errors.
 // Has no side effects.
 type Handlers struct {
-	store *Store
+	store   *Store
+	oidcCfg OIDCConfig
 }
 
 // NewHandlers creates an HTTP handler bundle backed by the given store.
@@ -22,7 +24,13 @@ type Handlers struct {
 // Produces no errors.
 // Has no side effects.
 func NewHandlers(store *Store) *Handlers {
-	return &Handlers{store: store}
+	// Extract OIDC Configuration from environment for validation
+	oidcCfg := OIDCConfig{
+		IssuerURL: os.Getenv("OIDC_ISSUER_URL"),
+		ClientID:  os.Getenv("OIDC_CLIENT_ID"),
+		Enabled:   os.Getenv("OIDC_ISSUER_URL") != "",
+	}
+	return &Handlers{store: store, oidcCfg: oidcCfg}
 }
 
 // ── auth endpoints ────────────────────────────────────────────────────────────
@@ -312,4 +320,43 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
+}
+// HandleHandshake validates thin client credentials/OAuth tokens and returns a signed JWT alongside tenant isolation context. GET/POST /api/auth/handshake {"token":"...","tenant_id":"..."}
+func (h *Handlers) HandleHandshake(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Token    string `json:"token"`
+		TenantID string `json:"tenant_id"`
+		Mode     string `json:"mode"`
+	}
+
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	claims, err := ValidateOIDCToken(req.Token, h.oidcCfg)
+	if err != nil {
+		jsonError(w, "invalid token or unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	user, ok := h.store.GetUser(claims.Subject, req.TenantID)
+	if !ok {
+		jsonError(w, "user not found for tenant", http.StatusUnauthorized)
+		return
+	}
+
+	token, err := h.store.IssueToken(user)
+	if err != nil {
+		jsonError(w, "failed to issue token", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"token": token, "tenant_id": req.TenantID, "mode": req.Mode})
 }

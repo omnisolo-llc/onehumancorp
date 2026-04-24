@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS kairos_shared_tasks (
 );
 
 ALTER TABLE kairos_shared_tasks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_policy ON kairos_shared_tasks
+    USING (tenant_id = current_setting('app.current_tenant_id', true));
 
 CREATE TABLE IF NOT EXISTS kairos_state_transitions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -33,6 +35,8 @@ CREATE TABLE IF NOT EXISTS kairos_state_transitions (
 );
 
 ALTER TABLE kairos_state_transitions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_policy ON kairos_state_transitions
+    USING (tenant_id = current_setting('app.current_tenant_id', true));
 
 CREATE TABLE IF NOT EXISTS kairos_sub_agent_jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -46,6 +50,8 @@ CREATE TABLE IF NOT EXISTS kairos_sub_agent_jobs (
 );
 
 ALTER TABLE kairos_sub_agent_jobs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_policy ON kairos_sub_agent_jobs
+    USING (tenant_id = current_setting('app.current_tenant_id', true));
 
 CREATE TABLE IF NOT EXISTS autodream_vector_memories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -57,3 +63,5 @@ CREATE TABLE IF NOT EXISTS autodream_vector_memories (
 );
 
 ALTER TABLE autodream_vector_memories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation_policy ON autodream_vector_memories
+    USING (tenant_id = current_setting('app.current_tenant_id', true));

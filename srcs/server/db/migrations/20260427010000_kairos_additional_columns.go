@@ -58,6 +58,11 @@ func upKairosAdditionalColumns20260427010000(ctx context.Context, tx *sql.Tx) er
 		_, err = tx.ExecContext(ctx, `
 			ALTER TABLE agent_mesh_messages ENABLE ROW LEVEL SECURITY;
 		`)
+		if err == nil {
+			_, err = tx.ExecContext(ctx, `
+				CREATE POLICY tenant_isolation_policy ON agent_mesh_messages USING (tenant_id = current_setting('app.current_tenant_id', true));
+			`)
+		}
 		return err
 	}
 
