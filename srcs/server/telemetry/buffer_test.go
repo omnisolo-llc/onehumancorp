@@ -207,15 +207,15 @@ func TestBufferMetricFunc(t *testing.T) {
 	}
 	called = false
 
-	RecordSyncLatency(ctx, 100.0)
+	RecordSIPSyncLatency(ctx, 100)
 	if !called {
-		t.Errorf("expected buffer call for RecordSyncLatency")
+		t.Errorf("expected buffer call for RecordSIPSyncLatency")
 	}
 	called = false
 
-	RecordSyncPayloadSize(ctx, 200)
+	RecordSIPSyncPayloadSize(ctx, 200)
 	if !called {
-		t.Errorf("expected buffer call for RecordSyncPayloadSize")
+		t.Errorf("expected buffer call for RecordSIPSyncPayloadSize")
 	}
 	called = false
 
