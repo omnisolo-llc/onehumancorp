@@ -15,6 +15,7 @@ func TestQueueManagerLoop(t *testing.T) {
 	defer cancel()
 
 	schema := `
+	DROP TABLE IF EXISTS sub_agent_queue;
 	CREATE TABLE IF NOT EXISTS sub_agent_queue (
 		id TEXT PRIMARY KEY,
 		organization_id TEXT NOT NULL,

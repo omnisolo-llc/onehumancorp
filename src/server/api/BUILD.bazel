@@ -13,7 +13,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/auth",
-        "//src/server/mesh",
+        "//src/server/interop",
         "//src/server/orchestration",
         "//src/server/orchestration/hybrid_sync",
         "//src/server/orchestration/queue",
@@ -39,7 +39,7 @@ go_test(
         "//src/server/auth",
         "//src/server/db",
         "//src/server/lib/analytics",
-        "//src/server/mesh",
+        "//src/server/interop",
         "//src/server/orchestration",
         "//src/server/orchestration/hybrid_sync",
         "//src/server/services/growth",

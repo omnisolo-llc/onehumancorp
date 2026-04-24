@@ -11,11 +11,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/onehumancorp/mono/src/server/mesh"
+	"github.com/onehumancorp/mono/src/server/interop"
 )
 
 type mockFailingTransport struct {
-	mesh.MeshTransport
+	interop.TeammateMesh
 }
 
 func (m *mockFailingTransport) Publish(ctx context.Context, channel string, payload []byte) error {
@@ -27,7 +27,7 @@ func (m *mockFailingTransport) Subscribe(ctx context.Context, channel string) (<
 }
 
 func TestMeshHandler_Broadcast(t *testing.T) {
-	transport := mesh.NewMemoryTransport()
+	transport := interop.NewTeammateMeshWithClient(nil)
 	handler := NewMeshHandler(transport)
 
 	t.Run("Valid Broadcast", func(t *testing.T) {
@@ -77,7 +77,7 @@ func TestMeshHandler_Broadcast(t *testing.T) {
 }
 
 func TestMeshHandler_Subscribe(t *testing.T) {
-	transport := mesh.NewMemoryTransport()
+	transport := interop.NewTeammateMeshWithClient(nil)
 	handler := NewMeshHandler(transport)
 
 	server := httptest.NewServer(http.HandlerFunc(handler.Subscribe))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"github.com/onehumancorp/mono/src/server/utils"
 	"path/filepath"
 	"strings"
 	"time"
@@ -21,7 +22,7 @@ type DistributedLock interface {
 // NewDistributedLock returns a new DistributedLock depending on the execution mode.
 func NewDistributedLock() (DistributedLock, error) {
 	redisURL := os.Getenv("REDIS_URL")
-	if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+	if redisURL != "" && utils.EnvBoolDefault("OHC_MULTITENANT", true) {
 		opts, err := rueidis.ParseURL(redisURL)
 		if err != nil {
 			slog.Warn("failed to parse REDIS_URL, falling back to memory lock", "error", err)
@@ -56,7 +57,7 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 	err := os.Mkdir(path, 0700)
 	if err != nil {
 		if os.IsExist(err) {
-			content, err := os.ReadFile(filepath.Join(path, "lock.data"))
+			content, err := os.ReadFile(filepath.Join(path, "meta.txt"))
 			if err == nil {
 				parts := strings.SplitN(string(content), ",", 2)
 				if len(parts) == 2 {
@@ -84,7 +85,7 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 
 acquired:
 	expiry := time.Now().Add(ttl).Format(time.RFC3339Nano)
-	err = os.WriteFile(filepath.Join(path, "lock.data"), []byte(expiry+","+m.token), 0600)
+	err = os.WriteFile(filepath.Join(path, "meta.txt"), []byte(expiry+","+m.token), 0600)
 	if err != nil {
 		os.RemoveAll(path)
 		return false, err
@@ -104,7 +105,7 @@ func (m *memoryLock) Unlock(ctx context.Context, key string) error {
 		return nil // Lock might already be gone
 	}
 
-	content, err := os.ReadFile(filepath.Join(tempPath, "lock.data"))
+	content, err := os.ReadFile(filepath.Join(tempPath, "meta.txt"))
 	if err == nil {
 		parts := strings.SplitN(string(content), ",", 2)
 		if len(parts) == 2 && parts[1] == m.token {

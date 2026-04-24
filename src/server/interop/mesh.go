@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"github.com/onehumancorp/mono/src/server/utils"
 	"sync"
 
 	"github.com/redis/rueidis"
@@ -24,7 +25,7 @@ type TeammateMesh interface {
 // Otherwise, it returns an in-memory mesh.
 func NewTeammateMesh() (TeammateMesh, error) {
 	redisURL := os.Getenv("REDIS_URL")
-	if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+	if redisURL != "" && utils.EnvBoolDefault("OHC_MULTITENANT", true) {
 		opts, err := rueidis.ParseURL(redisURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse REDIS_URL: %w", err)
