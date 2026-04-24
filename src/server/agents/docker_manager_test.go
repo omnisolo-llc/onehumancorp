@@ -21,7 +21,7 @@ func TestDockerManager_SpawnAgent(t *testing.T) {
 	mockResp := `{
 		"Id": "test-container-id"
 	}`
-	
+
 	client := &http.Client{
 		Transport: &mockRoundTripper{
 			roundTripFunc: func(req *http.Request) (*http.Response, error) {

@@ -37,7 +37,7 @@ func (m *K8sManager) getAuthToken() string {
 // SpawnAgent starts a new agent instance as a K8s Pod.
 func (m *K8sManager) SpawnAgent(ctx context.Context, agent Agent, config string) error {
 	image := "ohc-builtin-agent:latest"
-	
+
 	pod := map[string]interface{}{
 		"apiVersion": "v1",
 		"kind":       "Pod",
@@ -71,7 +71,7 @@ func (m *K8sManager) SpawnAgent(ctx context.Context, agent Agent, config string)
 		return fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	
+
 	if token := m.getAuthToken(); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
