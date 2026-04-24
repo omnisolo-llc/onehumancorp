@@ -11,9 +11,12 @@ import (
 	"time"
 
 	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
-	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/grpc"
-	"github.com/onehumancorp/mono/srcs/server/integrations/plane"
+		"github.com/onehumancorp/mono/srcs/server/integrations/plane"
 	"github.com/onehumancorp/mono/srcs/server/orchestration"
+
+	"github.com/redis/go-redis/v9"
+	"google.golang.org/protobuf/proto"
+
 )
 
 // TaskWorker periodically fetches open issues from the configured issue tracker (Plane)
@@ -212,34 +215,40 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 	}
 }
 
-// dispatchToBuiltinAgent sends a task to the builtin Rust agent gRPC service.
-// The Rust binary must be running and reachable at OHC_AGENT_ADDRESS
-// (default: 127.0.0.1:50051). It exposes the AgentService gRPC interface.
+// dispatchToBuiltinAgent sends a task to the builtin Rust agent via Redis PubSub.
 func dispatchToBuiltinAgent(payload, description string) error {
-	address := os.Getenv("OHC_AGENT_ADDRESS")
-	if address == "" {
-		address = "127.0.0.1:50051"
+	redisURL := os.Getenv("OHC_REDIS_URL")
+	if redisURL == "" {
+		redisURL = "redis://127.0.0.1:6379"
 	}
-	client, err := agentgrpc.NewClient(address, agentgrpc.ClientOptionsFromEnv())
+
+	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
-		return fmt.Errorf("connect to builtin agent at %s: %w", address, err)
+		return fmt.Errorf("parse redis URL: %w", err)
 	}
-	defer client.Close() //nolint:errcheck
+
+	client := redis.NewClient(opt)
+	defer client.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	var lastContent string
-	err = client.RunTask(ctx, &agentservicepb.RunTaskRequest{
-		Task: payload,
-	}, func(evt *agentservicepb.RunTaskEvent) {
-		if evt.Content != "" {
-			lastContent = evt.Content
-		}
-	})
-	if err != nil {
-		return fmt.Errorf("builtin agent RunTask: %w", err)
+	req := &agentservicepb.RunTaskRequest{
+		TaskId:     fmt.Sprintf("task-%d", time.Now().UnixNano()),
+		Task:       payload,
+		Model:      "gpt-4o",
 	}
-	slog.Info("builtin agent task completed", "description", description, "result_len", len(lastContent))
+
+	b, err := proto.Marshal(req)
+	if err != nil {
+		return fmt.Errorf("marshal RunTaskRequest: %w", err)
+	}
+
+	err = client.Publish(ctx, "agent_jobs", b).Err()
+	if err != nil {
+		return fmt.Errorf("builtin agent RunTask publish: %w", err)
+	}
+
+	slog.Info("builtin agent task published", "description", description)
 	return nil
 }

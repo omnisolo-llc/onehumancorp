@@ -5,8 +5,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -17,6 +15,8 @@ import (
 
 const (
 	binaryRunpath = "srcs/server/agents/builtin/src/ohc-builtin-agent"
+	// Attempt to run the binary from the test runfiles root
+	binaryRunpathAlternative = "_main/srcs/server/agents/builtin/src/ohc-builtin-agent"
 	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
@@ -42,46 +42,22 @@ func findFreePort(t *testing.T) string {
 func locateBinary(t *testing.T) string {
 	t.Helper()
 
-	// 1. Bazel runfiles mechanism.
-	if rf := os.Getenv("RUNFILES_DIR"); rf != "" {
-		p := filepath.Join(rf, binaryRunpath)
+	// Try common locations
+	locations := []string{
+		os.Getenv("RUNFILES_DIR") + "/_main/srcs/server/agents/builtin/src/ohc-builtin-agent",
+		os.Getenv("RUNFILES_DIR") + "/mono/srcs/server/agents/builtin/src/ohc-builtin-agent",
+		os.Getenv("TEST_SRCDIR") + "/_main/srcs/server/agents/builtin/src/ohc-builtin-agent",
+		os.Getenv("TEST_SRCDIR") + "/mono/srcs/server/agents/builtin/src/ohc-builtin-agent",
+		"../../../srcs/server/agents/builtin/src/ohc-builtin-agent",
+	}
+
+	for _, p := range locations {
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
 	}
 
-	// 2. TEST_SRCDIR (Bazel test sandbox).
-	if sd := os.Getenv("TEST_SRCDIR"); sd != "" {
-		p := filepath.Join(sd, os.Getenv("TEST_WORKSPACE"), binaryRunpath)
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
-
-	// 3. Relative path from workspace root (dev flow).
-	_, thisFile, _, _ := runtime.Caller(0)
-	root := thisFile
-	for {
-		root = filepath.Dir(root)
-		if root == "/" {
-			break
-		}
-		if _, err := os.Stat(filepath.Join(root, "MODULE.bazel")); err == nil {
-			break
-		}
-	}
-	candidates := []string{
-		filepath.Join(root, "srcs/server/agents/builtin/target/debug/ohc-builtin-agent"),
-		filepath.Join(root, "srcs/server/agents/builtin/target/release/ohc-builtin-agent"),
-		filepath.Join(root, "bazel-bin/srcs/server/agents/builtin/ohc-builtin-agent"),
-	}
-	for _, c := range candidates {
-		if _, err := os.Stat(c); err == nil {
-			return c
-		}
-	}
-
-	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //srcs/server/agents/builtin:ohc-builtin-agent`")
+	t.Skip("Skipping test because ohc-builtin-agent binary could not be found.")
 	return ""
 }
 
