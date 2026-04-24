@@ -40,3 +40,8 @@ func (p *S3Provider) GetBlobURL(ctx context.Context, key string) (string, error)
 	// STUB: Return a fake presigned URL
 	return fmt.Sprintf("https://s3.amazonaws.com/%s/%s?X-Amz-Signature=stub", p.bucketName, key), nil
 }
+
+func (p *S3Provider) GetCDNURL(ctx context.Context, key string) (string, error) {
+	// STUB: Return a fake CDN URL
+	return fmt.Sprintf("https://cdn.onehumancorp.com/%s", key), nil
+}

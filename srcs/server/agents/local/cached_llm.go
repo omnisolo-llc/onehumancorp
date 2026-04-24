@@ -127,6 +127,7 @@ func (c *CachedLLMClient) Complete(ctx context.Context, req CompletionRequest) (
 				if err := json.Unmarshal(decompressed, &msg); err == nil {
 					slog.Debug("CachedLLMClient: found completion in Redis", "hash", reqHash)
 					telemetry.RecordCacheHit(ctx, "llm_completion", "redis")
+					telemetry.RecordTokensSaved(ctx, "llm_completion", "redis", msg.InputTokens)
 					return &msg, nil
 				}
 			}
@@ -148,6 +149,7 @@ func (c *CachedLLMClient) Complete(ctx context.Context, req CompletionRequest) (
 				if err := json.Unmarshal(decompressed, &msg); err == nil {
 					slog.Debug("CachedLLMClient: found completion in DB", "hash", reqHash)
 					telemetry.RecordCacheHit(ctx, "llm_completion", "db")
+					telemetry.RecordTokensSaved(ctx, "llm_completion", "db", msg.InputTokens)
 
 					// Optional: populate Redis if it was missing there
 					if c.redis != nil {

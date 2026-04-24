@@ -104,6 +104,7 @@ type dashboardSnapshot struct {
 	TaskQueue    []orchestration.SharedTask  `json:"taskQueue,omitempty"`
 	QueueLength  int                         `json:"queueLength"`
 	UpdatedAt    time.Time                   `json:"updatedAt"`
+	StorageURL   string                      `json:"storageUrl,omitempty"`
 }
 
 type seedRequest struct {
@@ -1325,6 +1326,11 @@ func (s *Server) snapshotLocked() dashboardSnapshot {
 		}
 	}
 
+	storageURL := ""
+	if s.hub != nil && s.hub.Storage() != nil {
+		storageURL, _ = s.hub.Storage().GetCDNURL(context.Background(), "")
+	}
+
 	return dashboardSnapshot{
 		Organization: s.org,
 		Meetings:     s.orgMeetingsLocked(),
@@ -1334,6 +1340,7 @@ func (s *Server) snapshotLocked() dashboardSnapshot {
 		TaskQueue:    queue,
 		QueueLength:  queueLen,
 		UpdatedAt:    time.Now().UTC(),
+		StorageURL:   storageURL,
 	}
 }
 

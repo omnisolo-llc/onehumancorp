@@ -23,4 +23,6 @@ type Provider interface {
 	ReadBlobMetadata(ctx context.Context, key string) (BlobMetadata, error)
 	// GetBlobURL returns a presigned or accessible URL for the blob.
 	GetBlobURL(ctx context.Context, key string) (string, error)
+	// GetCDNURL returns a CDN-fronted URL for the blob if available.
+	GetCDNURL(ctx context.Context, key string) (string, error)
 }

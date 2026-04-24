@@ -166,6 +166,13 @@ type Organization struct {
 	CreatedAt    time.Time     `json:"createdAt"`
 	Members      []Member      `json:"members"`
 	RoleProfiles []RoleProfile `json:"roleProfiles"`
+
+	// Pricing & Storage Config
+	Tier         string  `json:"tier"`         // "Free", "Starter", "Pro", "Business"
+	StorageQuota int64   `json:"storageQuota"` // Max storage bytes allowed
+	StorageUsed  int64   `json:"storageUsed"`  // Current storage used bytes
+	ActionQuota  int64   `json:"actionQuota"`  // Max AI actions per month
+	ActionUsed   int64   `json:"actionUsed"`   // Current AI actions used
 }
 
 // NewSoftwareCompany constructs a pre-configured engineering organisation with standard tech roles.
@@ -204,6 +211,11 @@ func NewSoftwareCompany(id, name, ceoName string, now time.Time) Organization {
 		CreatedAt:    now.UTC(),
 		Members:      members,
 		RoleProfiles: defaultSoftwareCompanyRoleProfiles(),
+		Tier:         "Starter",
+		StorageQuota: 5 * 1024 * 1024 * 1024, // 5GB for Starter
+		StorageUsed:  0,
+		ActionQuota:  1000,
+		ActionUsed:   0,
 	}
 }
 
@@ -427,6 +439,11 @@ func NewDigitalMarketingAgency(id, name, ceoName string, now time.Time) Organiza
 		CreatedAt:    now.UTC(),
 		Members:      members,
 		RoleProfiles: defaultDigitalMarketingRoleProfiles(),
+		Tier:         "Starter",
+		StorageQuota: 5 * 1024 * 1024 * 1024, // 5GB for Starter
+		StorageUsed:  0,
+		ActionQuota:  1000,
+		ActionUsed:   0,
 	}
 }
 
@@ -516,6 +533,11 @@ func NewAccountingFirm(id, name, ceoName string, now time.Time) Organization {
 		CreatedAt:    now.UTC(),
 		Members:      members,
 		RoleProfiles: defaultAccountingRoleProfiles(),
+		Tier:         "Starter",
+		StorageQuota: 5 * 1024 * 1024 * 1024, // 5GB for Starter
+		StorageUsed:  0,
+		ActionQuota:  1000,
+		ActionUsed:   0,
 	}
 }
 

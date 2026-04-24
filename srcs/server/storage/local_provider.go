@@ -132,6 +132,15 @@ func (p *LocalProvider) ReadBlobMetadata(ctx context.Context, key string) (BlobM
 	}, nil
 }
 
+func (p *LocalProvider) GetCDNURL(ctx context.Context, key string) (string, error) {
+	// CDN not applicable for local files in standalone mode
+	path, err := p.getLocalPath(key)
+	if err != nil {
+		return "", err
+	}
+	return "file://" + path, nil
+}
+
 func (p *LocalProvider) GetBlobURL(ctx context.Context, key string) (string, error) {
 	// For local provider, we might just return the file:// URL or a dummy local URL.
 	// Since MCP tools are run locally, a local absolute path is fine.

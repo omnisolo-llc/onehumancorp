@@ -105,6 +105,75 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
               ),
               const SizedBox(height: 32),
 
+              // My Plan Section
+              Text(
+                'My Plan',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Current Plan: ${data.organization.tier}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.go('/cost/pricing');
+                            },
+                            child: const Text('Upgrade'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      _ProgressBar(
+                        label: 'AI Actions',
+                        used: costs.actionUsed.toDouble(),
+                        total: costs.actionQuota.toDouble(),
+                        usedLabel: '${costs.actionUsed}',
+                        totalLabel: '${costs.actionQuota} Actions',
+                        color: colors.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      _ProgressBar(
+                        label: 'Storage',
+                        used: data.organization.storageUsed.toDouble(),
+                        total: data.organization.storageQuota.toDouble(),
+                        usedLabel: _formatBytes(data.organization.storageUsed),
+                        totalLabel: _formatBytes(data.organization.storageQuota),
+                        color: colors.secondary,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                           Icon(Icons.savings, color: colors.tertiary, size: 20),
+                           const SizedBox(width: 8),
+                           Text(
+                             'Storage Compression Savings: ${currencyFormat.format(costs.storageSavings)}',
+                             style: TextStyle(color: colors.tertiary, fontWeight: FontWeight.w500),
+                           )
+                        ]
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                         'Estimated Next Bill: ${currencyFormat.format(costs.totalCostUSD)}',
+                         style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+
               // Usage per Agent Chart
               Text(
                 'Usage per Agent',
@@ -262,6 +331,110 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+String _formatBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+}
+
+class _ProgressBar extends StatelessWidget {
+  final String label;
+  final double used;
+  final double total;
+  final String usedLabel;
+  final String totalLabel;
+  final Color color;
+
+  const _ProgressBar({
+    required this.label,
+    required this.used,
+    required this.total,
+    required this.usedLabel,
+    required this.totalLabel,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final ratio = total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text('$usedLabel / $totalLabel', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: ratio,
+          backgroundColor: colors.surfaceContainerHighest,
+          color: color,
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ],
+    );
+  }
+}
+
+String _formatBytes(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+  if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+}
+
+class _ProgressBar extends StatelessWidget {
+  final String label;
+  final double used;
+  final double total;
+  final String usedLabel;
+  final String totalLabel;
+  final Color color;
+
+  const _ProgressBar({
+    required this.label,
+    required this.used,
+    required this.total,
+    required this.usedLabel,
+    required this.totalLabel,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final ratio = total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text('$usedLabel / $totalLabel', style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: ratio,
+          backgroundColor: colors.surfaceContainerHighest,
+          color: color,
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ],
     );
   }
 }

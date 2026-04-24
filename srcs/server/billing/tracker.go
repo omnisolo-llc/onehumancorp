@@ -106,6 +106,9 @@ type Summary struct {
 	TotalTokens         int64          `json:"totalTokens"`
 	ProjectedMonthlyUSD float64        `json:"projectedMonthlyUsd"`
 	Agents              []AgentSummary `json:"agents"`
+	StorageSavings      float64        `json:"storageSavings"`
+	ActionQuota         int64          `json:"actionQuota"`
+	ActionUsed          int64          `json:"actionUsed"`
 }
 
 // ⚡ BOLT: [Global mutex contention] - Randomized Selection from Top 5
@@ -116,6 +119,7 @@ const numShards = 64
 type trackerShard struct {
 	mu     sync.RWMutex
 	usages []Usage
+	actions int64 // count of tracked actions
 }
 
 // Tracker calculates and safely persists LLM token consumption and associated costs across highly concurrent operations using an internal sharded read-write mutex.
@@ -289,6 +293,7 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 	shard := t.shards[getShardIndex(usage.OrganizationID)]
 	shard.mu.Lock()
 	shard.usages = append(shard.usages, usage)
+	shard.actions++
 	shard.mu.Unlock()
 
 	ctx := context.Background()
@@ -328,6 +333,7 @@ func (t *Tracker) Summary(organizationID string) Summary {
 	byAgent := map[string]AgentSummary{}
 	var totalCost float64
 	var totalTokens int64
+	var totalActions int64
 
 	for _, usage := range shard.usages {
 		if usage.OrganizationID != organizationID {
@@ -340,6 +346,7 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		byAgent[usage.AgentID] = agent
 		totalCost += usage.CostUSD
 		totalTokens += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
+		totalActions++
 	}
 
 	agents := make([]AgentSummary, 0, len(byAgent))
@@ -356,6 +363,9 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		TotalTokens:         totalTokens,
 		ProjectedMonthlyUSD: totalCost * 30,
 		Agents:              agents,
+		// These would normally be loaded from org configs. Soft limits assume 1000 for Starter
+		ActionQuota:         1000,
+		ActionUsed:          totalActions,
 	}
 }
 

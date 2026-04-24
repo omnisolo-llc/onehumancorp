@@ -10,6 +10,7 @@ class DashboardSnapshot {
   final List<StatusBucket> statuses;
   final DateTime updatedAt;
   final HybridHealth? hybridHealth;
+  final String? storageUrl;
 
   const DashboardSnapshot({
     required this.organization,
@@ -19,6 +20,7 @@ class DashboardSnapshot {
     required this.statuses,
     required this.updatedAt,
     this.hybridHealth,
+    this.storageUrl,
   });
 
   factory DashboardSnapshot.fromJson(Map<String, dynamic> json) {
@@ -51,6 +53,7 @@ class DashboardSnapshot {
       hybridHealth: json['hybridHealth'] != null
           ? HybridHealth.fromJson(json['hybridHealth'] as Map<String, dynamic>)
           : null,
+      storageUrl: json['storageUrl'] as String?,
     );
   }
 }
@@ -90,6 +93,9 @@ class Organization {
   final String domain;
   final List<OrganizationMember> members;
   final List<RoleProfile> roleProfiles;
+  final String tier;
+  final int storageQuota;
+  final int storageUsed;
 
   const Organization({
     required this.id,
@@ -97,6 +103,9 @@ class Organization {
     required this.domain,
     required this.members,
     required this.roleProfiles,
+    required this.tier,
+    required this.storageQuota,
+    required this.storageUsed,
   });
 
   factory Organization.fromJson(Map<String, dynamic> json) {
@@ -118,6 +127,9 @@ class Organization {
               )
               .toList() ??
           [],
+      tier: json['tier'] as String? ?? 'Free',
+      storageQuota: json['storageQuota'] as int? ?? 500 * 1024 * 1024,
+      storageUsed: json['storageUsed'] as int? ?? 0,
     );
   }
 }
@@ -164,11 +176,17 @@ class CostSummary {
   final double totalCostUSD;
   final int totalTokens;
   final List<AgentCost> agents;
+  final double storageSavings;
+  final int actionQuota;
+  final int actionUsed;
 
   const CostSummary({
     required this.totalCostUSD,
     required this.totalTokens,
     required this.agents,
+    required this.storageSavings,
+    required this.actionQuota,
+    required this.actionUsed,
   });
 
   factory CostSummary.fromJson(Map<String, dynamic> json) {
@@ -181,6 +199,9 @@ class CostSummary {
               ?.map((e) => AgentCost.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      storageSavings: (json['storageSavings'] ?? 0.0).toDouble(),
+      actionQuota: json['actionQuota'] ?? 100,
+      actionUsed: json['actionUsed'] ?? 0,
     );
   }
 }
