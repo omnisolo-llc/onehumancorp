@@ -6,7 +6,7 @@ go_library(
         "broker.go",
         "http_handler.go",
         "local_broker.go",
-        "local_mesh.go",
+        "ipc_mesh.go",
         "mesh.go",
         "redis_broker.go",
         "redis_mesh.go",
@@ -28,6 +28,7 @@ go_test(
     srcs = [
         "broker_test.go",
         "mesh_test.go",
+        "ipc_mesh_test.go",
         "mesh_coordinator_test.go",
     ],
     embed = [":mesh"],
@@ -38,5 +39,6 @@ go_test(
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
         "@org_modernc_sqlite//:sqlite",
+        "@com_github_google_uuid//:uuid",
     ],
 )
