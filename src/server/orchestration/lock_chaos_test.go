@@ -38,7 +38,7 @@ func TestLock_ContentionResilience(t *testing.T) {
 	})
 	t.Run("Retry with Telemetry", func(t *testing.T) {
 		called := 0
-		telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload interface{}) error {
 			if metricType == "sqlite_retry_event" {
 				called++
 			}

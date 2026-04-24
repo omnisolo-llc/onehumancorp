@@ -7,7 +7,7 @@ import (
 
 func TestBufferMetricFunc(t *testing.T) {
 	called := false
-	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+	BufferMetricFunc = func(ctx context.Context, metricType string, payload interface{}) error {
 		called = true
 		return nil
 	}

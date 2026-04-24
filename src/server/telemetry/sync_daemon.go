@@ -103,16 +103,29 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 
 // InitStandaloneBuffer configures the telemetry system to buffer metrics locally in SQLite.
 func InitStandaloneBuffer(db *sql.DB) {
-	BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		var data map[string]interface{}
-		if err := json.Unmarshal([]byte(payload), &data); err == nil {
-			redactedData := RedactInterfacePII(data)
-			if redactedBytes, err := json.Marshal(redactedData); err == nil {
-				payload = string(redactedBytes)
+	BufferMetricFunc = func(ctx context.Context, metricType string, payload interface{}) error {
+		var payloadStr string
+		if m, ok := payload.(map[string]interface{}); ok {
+			b, _ := json.Marshal(RedactInterfacePII(m))
+			payloadStr = string(b)
+		} else if st, ok := payload.(string); ok {
+			var data map[string]interface{}
+			if err := json.Unmarshal([]byte(st), &data); err == nil {
+				redactedData := RedactInterfacePII(data)
+				if redactedBytes, err := json.Marshal(redactedData); err == nil {
+					payloadStr = string(redactedBytes)
+				} else {
+					payloadStr = RedactPII(st)
+				}
+			} else {
+				payloadStr = RedactPII(st)
 			}
+		} else {
+			b, _ := json.Marshal(RedactInterfacePII(payload))
+			payloadStr = string(b)
 		}
 
-		_, err := db.ExecContext(ctx, "INSERT INTO telemetry_buffer (metric_type, payload) VALUES ($1, $2)", metricType, payload)
+		_, err := db.ExecContext(ctx, "INSERT INTO telemetry_buffer (metric_type, payload) VALUES ($1, $2)", metricType, payloadStr)
 		if err != nil {
 			return fmt.Errorf("failed to buffer metric %s: %w", metricType, err)
 		}

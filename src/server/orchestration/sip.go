@@ -944,22 +944,34 @@ func (s *SIPDB) Provider() db.Provider {
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the telemetry_buffer table.
-func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
-	// Sanitize payload before storing in the buffer
-	var obj interface{}
-	if err := json.Unmarshal([]byte(payload), &obj); err == nil {
-		sanitizedObj := SanitizePayloadMap(obj)
-		if b, err := json.Marshal(sanitizedObj); err == nil {
-			payload = string(b)
+func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload interface{}) error {
+	var payloadStr string
+	if m, ok := payload.(map[string]interface{}); ok {
+		b, _ := json.Marshal(SanitizePayloadMap(m))
+		payloadStr = string(b)
+	} else if st, ok := payload.(string); ok {
+		var data map[string]interface{}
+		if err := json.Unmarshal([]byte(st), &data); err == nil {
+			redactedData := SanitizePayloadMap(data)
+			if redactedBytes, err := json.Marshal(redactedData); err == nil {
+				payloadStr = string(redactedBytes)
+			} else {
+				payloadStr, _ = SanitizePayload(st)
+			}
+		} else {
+			payloadStr, _ = SanitizePayload(st)
 		}
 	} else {
-		payload, _ = SanitizePayload(payload)
+		// Just redact generic interface
+		redactedData := SanitizePayloadMap(payload)
+		b, _ := json.Marshal(redactedData)
+		payloadStr = string(b)
 	}
 
 	return withSipRetry(ctx, func() error {
 		_, err := s.db.Exec(ctx,
 			"INSERT INTO telemetry_buffer (metric_type, payload, created_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3)",
-			metricType, payload, s.orgID,
+			metricType, payloadStr, s.orgID,
 		)
 		return err
 	})

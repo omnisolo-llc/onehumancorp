@@ -12,7 +12,7 @@ func TestStandaloneTelemetryCompliance(t *testing.T) {
 	t.Setenv("OHC_MULTITENANT", "false")
 	t.Setenv("OHC_TELEMETRY_ENABLED", "false")
 
-	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload interface{}) error {
 		return nil
 	}
 
@@ -43,7 +43,7 @@ func TestStandaloneTelemetryCompliance(t *testing.T) {
 
 	// BufferMetricFunc is not explicitly set by InitTelemetry in true case unless provided earlier.
 	// Let's set it and verify it's NOT cleared.
-	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload interface{}) error {
 		return nil
 	}
 	cleanup3, err3 := telemetry.InitTelemetry()

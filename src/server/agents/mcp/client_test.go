@@ -16,7 +16,7 @@ func TestHybridContextTool(t *testing.T) {
 	metricCalled := false
 	var recordedMetric string
 	var recordedPayload string
-	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload interface{}) error {
 		metricCalled = true
 		recordedMetric = metricType
 		recordedPayload = payload
@@ -66,7 +66,7 @@ func TestLocalFSSyncTool(t *testing.T) {
 
 	metricCalled := false
 	var recordedMetric string
-	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload interface{}) error {
 		metricCalled = true
 		recordedMetric = metricType
 		return nil

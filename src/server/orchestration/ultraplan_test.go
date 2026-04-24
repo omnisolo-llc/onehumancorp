@@ -65,7 +65,7 @@ func TestUltraPlanManager(t *testing.T) {
 	// Set telemetry buffer for testing standalone mode
 	var recordedPhase string
 	var recordedDuration float64
-	telemetry.BufferMetricFunc = func(ctx context.Context, name string, payload string) error {
+	telemetry.BufferMetricFunc = func(ctx context.Context, name string, payload interface{}) error {
 		if name == "deliberation_phase_duration_seconds" {
 			// Extract Phase and Duration (simulated parse)
 			// In a real test we'd parse JSON, but we just want to ensure it was called

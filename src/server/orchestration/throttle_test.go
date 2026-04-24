@@ -82,7 +82,7 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottleTelemetry(t *testing.T) {
 
 	// Set up telemetry mock
 	var called int32
-	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload interface{}) error {
 		if metricType == "sqlite_throttled_request" {
 			atomic.AddInt32(&called, 1)
 		}
