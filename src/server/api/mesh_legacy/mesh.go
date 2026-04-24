@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -84,7 +84,7 @@ func (m *TeammateMesh) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade to websocket: %v", err)
+		slog.Error("Failed to upgrade to websocket", "error", err)
 		return
 	}
 	defer conn.Close()
@@ -94,7 +94,7 @@ func (m *TeammateMesh) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 
 	m.Subscribe(ctx, topic, func(msg MeshMessage) {
 		if err := conn.WriteJSON(msg); err != nil {
-			log.Printf("Failed to write to websocket: %v", err)
+			slog.Error("Failed to write to websocket", "error", err)
 			cancel()
 		}
 	})
@@ -146,7 +146,7 @@ func (m *TeammateMesh) Subscribe(ctx context.Context, topic string, handler func
 				case redisMsg := <-ch:
 					var msg MeshMessage
 					if err := json.Unmarshal([]byte(redisMsg.Payload), &msg); err != nil {
-						log.Printf("Failed to unmarshal mesh message: %v", err)
+						slog.Error("Failed to unmarshal mesh message", "error", err)
 						continue
 					}
 					handler(msg)
