@@ -374,7 +374,7 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 
 	if to.dbProvider.IsSQLite() {
 		if !to.mu.TryLock() {
-			// Fallback to Lock
+			telemetry.RecordPostgresLockContention(ctx, "claim_task")
 			to.mu.Lock()
 		}
 		defer to.mu.Unlock()
