@@ -74,6 +74,78 @@ func (p *AutoDreamPipeline) Stop() {
 func (p *AutoDreamPipeline) process(ctx context.Context) {
 	slog.Info("AutoDreamPipeline: starting memory consolidation sweep")
 
+	// 0. Extraction: Poll completed swarm_tasks
+	var taskQuery string
+	if p.db.IsSQLite() {
+		taskQuery = "SELECT id, assigned_agent_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND updated_at > ? LIMIT 50"
+	} else {
+		taskQuery = "SELECT id, assigned_agent_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND updated_at > $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
+	}
+
+	taskThreshold := time.Now().Add(-24 * time.Hour).UTC()
+	taskRows, err := p.db.Query(ctx, taskQuery, taskThreshold)
+	if err == nil {
+		type TaskData struct {
+			ID      string
+			AgentID string
+			Payload string
+		}
+		var tasks []TaskData
+		for taskRows.Next() {
+			var t TaskData
+			var payload interface{}
+			if err := taskRows.Scan(&t.ID, &t.AgentID, &payload); err == nil {
+				if strPayload, ok := payload.(string); ok {
+					t.Payload = strPayload
+				} else if bytesPayload, ok := payload.([]byte); ok {
+					t.Payload = string(bytesPayload)
+				}
+				tasks = append(tasks, t)
+			}
+		}
+		taskRows.Close()
+
+		for _, t := range tasks {
+			// Check if already vectorized
+			var exists bool
+			if p.db.IsSQLite() {
+				p.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM autodream_memories WHERE source_mission_id = ? AND source_type = 'swarm_task')", t.ID).Scan(&exists)
+			} else {
+				p.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM autodream_memories WHERE source_mission_id = $1 AND source_type = 'swarm_task')", t.ID).Scan(&exists)
+			}
+
+			if !exists && t.Payload != "" && t.Payload != "{}" {
+				var embeddingStr string
+				if p.client != nil {
+					ctxTimeout, cancel := context.WithTimeout(ctx, 15*time.Second)
+					embedding, embedErr := p.client.GenerateEmbedding(ctxTimeout, t.Payload)
+					cancel()
+					if embedErr == nil && len(embedding) > 0 {
+						if bytes, err := json.Marshal(embedding); err == nil {
+							embeddingStr = string(bytes)
+						}
+					}
+				}
+
+				if embeddingStr == "" {
+					var vec []string
+					for i := 0; i < 1536; i++ {
+						vec = append(vec, "0.0")
+					}
+					embeddingStr = "[" + strings.Join(vec, ",") + "]"
+				}
+
+				if p.db.IsSQLite() {
+					insertQuery := "INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, source_mission_id, created_at) VALUES (?, 'system', ?, ?, ?, 'swarm_task', ?, CURRENT_TIMESTAMP)"
+					p.db.Exec(ctx, insertQuery, uuid.New().String(), t.AgentID, t.Payload, embeddingStr, t.ID)
+				} else {
+					insertQuery := "INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type, source_mission_id, created_at) VALUES ($1, 'system', $2, $3, $4::vector, 'swarm_task', $5, CURRENT_TIMESTAMP)"
+					p.db.Exec(ctx, insertQuery, uuid.New().String(), t.AgentID, t.Payload, embeddingStr, t.ID)
+				}
+			}
+		}
+	}
+
 	// 1. Extraction: Poll recent agent_session_data
 	threshold := time.Now().Add(-1 * time.Hour).UTC()
 	var query string

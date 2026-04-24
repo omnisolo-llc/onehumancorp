@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	"fmt"
 	"context"
 	"log/slog"
 	"time"
@@ -105,4 +106,31 @@ type MeshTransport interface {
 	SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error)
 	Publish(topic string, data []byte) error
 	Subscribe(topic string) (<-chan []byte, error)
+}
+
+type OrchestrationHub interface {
+	ProcessTask(ctx context.Context, taskID string) error
+	BroadcastTaskUpdate(ctx context.Context, taskID, status string) error
+}
+
+type defaultOrchestrationHub struct {
+	mesh MeshTransport
+}
+
+func NewOrchestrationHub(m MeshTransport) OrchestrationHub {
+	return &defaultOrchestrationHub{mesh: m}
+}
+
+func (h *defaultOrchestrationHub) ProcessTask(ctx context.Context, taskID string) error {
+	// Task DAG resolution logic is driven by tasks_db.go / task_orchestrator.go
+	// This serves as the boundary orchestrator.
+	return nil
+}
+
+func (h *defaultOrchestrationHub) BroadcastTaskUpdate(ctx context.Context, taskID, status string) error {
+	if h.mesh != nil {
+		payload := fmt.Sprintf(`{"task_id":"%s", "status":"%s"}`, taskID, status)
+		return h.mesh.BroadcastMeshEvent(ctx, "tasks", []byte(payload))
+	}
+	return nil
 }

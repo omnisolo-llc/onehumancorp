@@ -27,6 +27,10 @@ func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/mesh/sync", api.HandleSync)
 	mux.HandleFunc("/api/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/mesh/connect", api.HandleConnect)
+
+	// Issue 4051 specific contracts:
+	mux.HandleFunc("/v1/orchestration/mesh/broadcast", api.HandleMeshV1Broadcast)
+	mux.HandleFunc("/v1/orchestration/tasks/stream", api.HandleStream)
 }
 
 func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {

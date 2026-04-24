@@ -306,7 +306,13 @@ func (to *DefaultTaskOrchestrator) EnqueueTask(ctx context.Context, task *models
 }
 
 func (to *DefaultTaskOrchestrator) AcquireReadyTask(ctx context.Context, agentID string, capabilities []string) (*models.Task, error) {
-	if to.redisClient == nil {
+	if to.db.IsSQLite() {
+		if !to.mu.TryLock() {
+			telemetry.RecordSQLiteLockContention(ctx, "acquire_ready_task")
+			to.mu.Lock()
+		}
+		defer to.mu.Unlock()
+	} else if to.redisClient == nil {
 		to.mu.Lock()
 		defer to.mu.Unlock()
 	}
@@ -728,6 +734,14 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskSQLite(ctx context.Cont
 }
 
 func (to *DefaultTaskOrchestrator) claimDecompositionTaskPostgres(ctx context.Context, agentID string) (*SharedTaskDecompositionDB, error) {
+	if to.db.IsSQLite() {
+		if !to.mu.TryLock() {
+			telemetry.RecordSQLiteLockContention(ctx, "decompose_tasks")
+			to.mu.Lock()
+		}
+		defer to.mu.Unlock()
+	}
+
 	tx, err := to.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -741,6 +755,14 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskPostgres(ctx context.Co
 		LIMIT 1
 		FOR UPDATE SKIP LOCKED
 	`
+	if to.db.IsSQLite() {
+		query = `
+			SELECT id, organization_id, title, description, status, assigned_agent_id, priority, payload, parent_plan_id, dependencies, locked_until, created_at, updated_at
+			FROM shared_tasks_decomposition
+			WHERE status = 'PENDING'
+			LIMIT 1
+		`
+	}
 	row := tx.QueryRow(ctx, query)
 
 	var task SharedTaskDecompositionDB
