@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/settings"
 )
@@ -30,9 +31,11 @@ func (m mockSettingsStore) SetExtra(key, value string) error {
 }
 
 func TestHandleWizardConfigure(t *testing.T) {
+	authStore := auth.NewStore()
 	s := &Server{
-		settings: settings.AppSettings{},
-		hub:      orchestration.NewHub(),
+		settings:  settings.AppSettings{},
+		hub:       orchestration.NewHub(),
+		authStore: authStore,
 	}
 
 	reqBody := wizardConfigureRequest{
@@ -53,10 +56,53 @@ func TestHandleWizardConfigure(t *testing.T) {
 	}
 
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	if s.settings.Extras["company_name"] != "Test Company" {
 		t.Errorf("Expected company_name to be 'Test Company', got '%s'", s.settings.Extras["company_name"])
+	}
+	s.mu.RUnlock()
+}
+
+func TestHandleWizardConfigure_WithAdmin(t *testing.T) {
+	authStore := auth.NewStore()
+	s := &Server{
+		settings:  settings.AppSettings{},
+		hub:       orchestration.NewHub(),
+		authStore: authStore,
+	}
+
+	reqBody := wizardConfigureRequest{
+		Extras: map[string]string{
+			"company_name":   "Test Company",
+			"admin_name":     "admin_test",
+			"admin_email":    "admin@test.com",
+			"admin_password": "supersecretpassword",
+		},
+	}
+	body, _ := json.Marshal(reqBody)
+
+	req, _ := http.NewRequest(http.MethodPost, "/api/wizard/configure", bytes.NewBuffer(body))
+	rr := httptest.NewRecorder()
+
+	s.handleWizardConfigure(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+	}
+
+	// Verify admin was created
+	u, err := authStore.Authenticate("admin_test", "supersecretpassword", "")
+	if err != nil {
+		t.Errorf("Expected admin user to be created and authenticatable, but got error: %v", err)
+	}
+	if u.Email != "admin@test.com" {
+		t.Errorf("Expected user email to be admin@test.com, got %v", u.Email)
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	// verify that password was removed
+	if s.settings.Extras["admin_password"] != "" {
+		t.Errorf("Expected admin_password to be removed from extras")
 	}
 }
 
