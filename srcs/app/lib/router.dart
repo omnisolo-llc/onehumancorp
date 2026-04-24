@@ -31,9 +31,14 @@ import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/video_tutorials_screen.dart';
+import 'package:ohc_app/screens/api_docs_screen.dart';
+import 'package:ohc_app/screens/release_notes_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/ai_help_chat.dart';
 
 /// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
 /// [GoRouter.refreshListenable], so the router re-evaluates its redirect
@@ -117,6 +122,22 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/channels',
             builder: (context, state) => const ChannelsScreen(),
+          ),
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/video-tutorials',
+            builder: (context, state) => const VideoTutorialsScreen(),
+          ),
+          GoRoute(
+            path: '/api-docs',
+            builder: (context, state) => const ApiDocsScreen(),
+          ),
+          GoRoute(
+            path: '/release-notes',
+            builder: (context, state) => const ReleaseNotesScreen(),
           ),
           GoRoute(
             path: '/ai-config',
@@ -223,7 +244,10 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Row(children: [_Sidebar(), Expanded(child: child)]),
+      floatingActionButton: const AiHelpChatButton(),
+    );
   }
 }
 
@@ -316,6 +340,8 @@ class _Sidebar extends StatelessWidget {
           label: 'Diagnostics',
           path: '/diagnostics',
         ),
+        const SizedBox(height: 16),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
         const SizedBox(height: 16),
       ],
     );

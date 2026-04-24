@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
+import 'package:ohc_app/widgets/ai_help_chat.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -421,6 +423,17 @@ class _RoleScaleCard extends StatefulWidget {
 class _RoleScaleCardState extends State<_RoleScaleCard> {
   bool _isScaling = false;
   bool _isHovered = false;
+  late String _formattedRole;
+
+  @override
+  void initState() {
+    super.initState();
+    _formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
+      if (word.isEmpty) return '';
+      if (word.toUpperCase() == 'AI') return 'AI';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
 
   Future<void> _scaleTo(int newCount) async {
     if (_isScaling || newCount < 0) return;
@@ -450,16 +463,11 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      if (word.toUpperCase() == 'AI') return 'AI';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
 
     return Semantics(
-      label: 'Scale $formattedRole role',
+      label: 'Scale $_formattedRole role',
       child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
+        message: TooltipRegistry().getTooltip('scale_role_$_formattedRole', fallback: 'Manage $_formattedRole Allocation'),
         child: SizedBox(
           width: 320,
           child: GlassCard(
@@ -472,7 +480,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  formattedRole,
+                                  _formattedRole,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 18,
@@ -499,14 +507,14 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                         children: [
                           Semantics(
                             button: true,
-                            label: 'Decrease $formattedRole count',
+                            label: 'Decrease $_formattedRole count',
                             child: IconButton(
                               icon: const Icon(Icons.remove_circle_outline, size: 28),
                               color: colors.primary,
                               onPressed: widget.count > 0 && !_isScaling
                                   ? () => _scaleTo(widget.count - 1)
                                   : null,
-                              tooltip: 'Fire Agent',
+                              tooltip: 'Decrease $_formattedRole count',
                             ),
                           ),
                           SizedBox(
@@ -533,14 +541,14 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           ),
                           Semantics(
                             button: true,
-                            label: 'Increase $formattedRole count',
+                            label: 'Increase $_formattedRole count',
                             child: IconButton(
                               icon: const Icon(Icons.add_circle_outline, size: 28),
                               color: colors.primary,
                               onPressed: !_isScaling
                                   ? () => _scaleTo(widget.count + 1)
                                   : null,
-                              tooltip: 'Hire Agent',
+                              tooltip: 'Increase $_formattedRole count',
                             ),
                           ),
                             ],
@@ -633,7 +641,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       button: true,
       excludeSemantics: true,
       child: Tooltip(
-        message: 'View ${widget.label}',
+        message: TooltipRegistry().getTooltip('stat_card_${widget.label}', fallback: 'View ${widget.label}'),
         child: SizedBox(
           width: 200,
           child: SlideTransition(
