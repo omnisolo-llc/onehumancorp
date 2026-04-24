@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/src/server/auth"
+
 	pb "github.com/onehumancorp/mono/src/proto"
 
 	"github.com/onehumancorp/mono/src/server/db"
@@ -85,7 +87,7 @@ func TestTeammateMesh_Publish(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	err = mesh.Publish(context.Background(), "room-1", `{"content":"direct publish"}`)
+	err = mesh.Publish(context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}), "room-1", `{"content":"direct publish"}`)
 	if err != nil {
 		t.Fatalf("publish failed: %v", err)
 	}
@@ -119,7 +121,7 @@ func TestTeammateMesh_MultiTenantIsolation(t *testing.T) {
 func TestMemoryMeshTransport(t *testing.T) {
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
 	// Use NewTestProvider or db.New to init db
-	ctx := context.Background()
+	ctx := context.WithValue(context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"})
 
 	provider := db.NewTestProvider(t)
 	defer provider.Close()
@@ -141,7 +143,6 @@ func TestMemoryMeshTransport(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
-
 
 	mesh := NewMemoryMeshTransport(provider)
 
@@ -183,7 +184,7 @@ func TestMemoryMeshTransport(t *testing.T) {
 }
 
 func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}))
 	defer cancel()
 
 	pool := db.NewTestProvider()
@@ -224,7 +225,7 @@ func TestMemoryMeshTransport_EventsAndCapabilities(t *testing.T) {
 }
 
 func TestMemoryMeshTransport_TeammateMeshEvent(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}))
 	defer cancel()
 
 	pool := db.NewTestProvider()
@@ -262,7 +263,7 @@ func TestRedisMeshTransport_TeammateMeshEvent(t *testing.T) {
 		t.Fatalf("failed to create redis transport: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}))
 	defer cancel()
 
 	sub, err := mt.SubscribeTeammateMesh(ctx, "teammate_mesh")
