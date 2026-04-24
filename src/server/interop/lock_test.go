@@ -217,7 +217,9 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 		t.Fatalf("Expected lock to fail when path is a directory")
 	}
 
-	os.Remove(path) // Cleanup
+	// Note: We need to properly unlock it before we delete it or it messes up Lock state if m.token is persistent or other things. Actually, let's just properly unlock it.
+	lock1.Unlock(ctx, key)
+	os.RemoveAll(path) // Cleanup
 
 	// Test unlock for non-existent file
 	err = lock1.Unlock(ctx, "non_existent_key")
