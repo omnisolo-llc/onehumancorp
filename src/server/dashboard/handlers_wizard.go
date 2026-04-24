@@ -3,6 +3,7 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+	"github.com/onehumancorp/mono/src/server/auth"
 	"os"
 
 	"github.com/onehumancorp/mono/src/server/settings"
@@ -248,4 +249,40 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		"diagnostics": healthChecks,
 	}
 	writeJSON(w, resp)
+}
+
+func (s *Server) handleWizardStateGet(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+    userID := auth.ClaimsFromContext(r.Context()).Subject
+    var stateJSON string
+    err := s.hub.SIPDB().Provider().QueryRow(r.Context(), "SELECT state FROM wizard_drafts WHERE user_id = $1", userID).Scan(&stateJSON)
+    if err != nil {
+        writeJSON(w, map[string]interface{}{})
+        return
+    }
+    w.Header().Set("Content-Type", "application/json")
+    w.Write([]byte(stateJSON))
+}
+
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+    userID := auth.ClaimsFromContext(r.Context()).Subject
+    var req map[string]interface{}
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "invalid request", http.StatusBadRequest)
+        return
+    }
+    stateBytes, _ := json.Marshal(req)
+    _, err := s.hub.SIPDB().Provider().Exec(r.Context(), "INSERT INTO wizard_drafts (user_id, state, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET state = EXCLUDED.state, updated_at = CURRENT_TIMESTAMP", userID, string(stateBytes))
+    if err != nil {
+        http.Error(w, "failed to save state", http.StatusInternalServerError)
+        return
+    }
+    writeJSON(w, map[string]interface{}{"status": "ok"})
 }

@@ -13,6 +13,7 @@ go_library(
     ],
     embedsrcs = [
         "migrations/20260424120126_enable_rls.go",
+        "migrations/20260430000000_wizard_drafts.sql",
         "migrations/001_users.sql",
         "migrations/002_billing.sql",
         "migrations/003_scheduler.sql",

@@ -721,6 +721,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Config wizard API endpoints.
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
+	mux.HandleFunc("/api/wizard/state", auth.RequireRole("viewer", server.handleWizardStateGet))
+	mux.HandleFunc("/api/wizard/state/save", auth.RequireRole("viewer", server.handleWizardStateSave))
+
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
 	mux.HandleFunc("/api/wizard/generate_description", server.handleWizardGenerateDescription)
 	mux.HandleFunc("/api/wizard/generate_logo", server.handleWizardGenerateLogo)

@@ -60,33 +60,120 @@ class BusinessSetupState {
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'step': step,
+      'businessType': businessType,
+      'companyName': companyName,
+      'businessDescription': businessDescription,
+      'whatYouSell': whatYouSell,
+      'paymentMethod': paymentMethod,
+      'adminName': adminName,
+      'adminEmail': adminEmail,
+      'adminPassword': adminPassword,
+    };
+  }
+
+  factory BusinessSetupState.fromJson(Map<String, dynamic> json) {
+    return BusinessSetupState(
+      step: json['step'] as int? ?? 0,
+      businessType: json['businessType'] as String? ?? '',
+      companyName: json['companyName'] as String? ?? '',
+      businessDescription: json['businessDescription'] as String? ?? '',
+      whatYouSell: (json['whatYouSell'] as List<dynamic>?)?.map((e) => e as String).toList() ?? const [],
+      paymentMethod: json['paymentMethod'] as String? ?? '',
+      adminName: json['adminName'] as String? ?? '',
+      adminEmail: json['adminEmail'] as String? ?? '',
+      adminPassword: json['adminPassword'] as String? ?? '',
+    );
+  }
+
 }
 
 class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
-  BusinessSetupState build() => const BusinessSetupState();
+  BusinessSetupState build() {
+    // Load state on mount if possible
+    Future.microtask(() {
+      final user = ref.read(authStateProvider).valueOrNull;
+      final baseUrl = ref.read(backendUrlProvider);
+      if (user != null && baseUrl.isNotEmpty) {
+        loadState(baseUrl, user.token);
+      }
+    });
+    return const BusinessSetupState();
+  }
+
+  void _saveAfterChange() {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+    if (user != null && baseUrl.isNotEmpty) {
+      saveState(baseUrl, user.token);
+    }
+  }
+
+  Future<void> loadState(String baseUrl, String token) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/api/wizard/state'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data is Map<String, dynamic> && data.isNotEmpty) {
+          state = BusinessSetupState.fromJson(data);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  Future<void> saveState(String baseUrl, String token) async {
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/api/wizard/state/save'),
+        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+        body: jsonEncode(state.toJson()),
+      );
+    } catch (e) {
+      // ignore
+    }
+  }
+
 
   void nextStep() {
+    _saveAfterChange();
     if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
     }
   }
 
   void prevStep() {
+    _saveAfterChange();
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
     }
   }
 
   void updateBusinessType(String type) {
+    _saveAfterChange();
     state = state.copyWith(businessType: type);
     nextStep();
   }
 
-  void updateCompany(String name) => state = state.copyWith(companyName: name);
-  void updateDescription(String desc) => state = state.copyWith(businessDescription: desc);
+  void updateCompany(String name) {
+    state = state.copyWith(companyName: name);
+    _saveAfterChange();
+  }
+  void updateDescription(String desc) {
+    state = state.copyWith(businessDescription: desc);
+    _saveAfterChange();
+  }
 
   void toggleWhatYouSell(String item) {
+    _saveAfterChange();
     final list = List<String>.from(state.whatYouSell);
     if (list.contains(item)) {
       list.remove(item);
@@ -96,11 +183,23 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     state = state.copyWith(whatYouSell: list);
   }
 
-  void updatePaymentMethod(String method) => state = state.copyWith(paymentMethod: method);
+  void updatePaymentMethod(String method) {
+    state = state.copyWith(paymentMethod: method);
+    _saveAfterChange();
+  }
 
-  void updateAdminName(String name) => state = state.copyWith(adminName: name);
-  void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
-  void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
+  void updateAdminName(String name) {
+    state = state.copyWith(adminName: name);
+    _saveAfterChange();
+  }
+  void updateAdminEmail(String val) {
+    state = state.copyWith(adminEmail: val);
+    _saveAfterChange();
+  }
+  void updateAdminPassword(String val) {
+    state = state.copyWith(adminPassword: val);
+    _saveAfterChange();
+  }
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authStateProvider).valueOrNull;
