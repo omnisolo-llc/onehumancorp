@@ -2,6 +2,8 @@ package e2e
 
 import (
 	"testing"
+
+	playwright "github.com/playwright-community/playwright-go"
 )
 
 func TestInstallationWizardAppearsOnFirstBootWithModelProviderSetupStep(t *testing.T) {
@@ -241,8 +243,8 @@ func TestWizardSetupCanBeReachedFromTheRootPage(t *testing.T) {
 	loginAsAdmin(t, page)
 
 	// Navigate to Wizard
-	page.GetByText("Business Setup").Click()
-	page.WaitForSelector("text=Business Setup")
+	page.GetByText("Business Setup").Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
+	page.WaitForSelector("text=Business Setup", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 
 }
 
@@ -263,18 +265,18 @@ func TestWizardNextButtonAdvancesToADifferentStep(t *testing.T) {
 	loginAsAdmin(t, page)
 
 	// Navigate to Wizard
-	page.GetByText("Business Setup").Click()
-	page.WaitForSelector("text=Business Setup")
+	page.GetByText("Business Setup").Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
+	page.WaitForSelector("text=Business Setup", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 
 	// Ensure on Step 0
-	page.WaitForSelector("text=Your AI team, ready in minutes")
+	page.WaitForSelector("text=Your AI team, ready in minutes", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 
 	// Click next
-	page.GetByText("Continue").Click()
+	page.GetByText("Continue").Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
 
 	// Ensure on Step 1
-	page.WaitForSelector("text=Business Profile")
-	page.WaitForSelector("text=Company name")
+	page.WaitForSelector("text=Business Profile", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
+	page.WaitForSelector("text=Company name", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 
 }
 
@@ -328,37 +330,37 @@ func TestWizardAllStepsCanBeReachedWithoutAJsException(t *testing.T) {
 	loginAsAdmin(t, page)
 
 	// Navigate to Wizard
-	page.GetByText("Business Setup").Click()
-	page.WaitForSelector("text=Business Setup")
+	page.GetByText("Business Setup").Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
+	page.WaitForSelector("text=Business Setup", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 
 	// Step 0 -> Step 1
-	page.GetByText("Continue").First().Click()
-	page.WaitForSelector("text=Business Profile")
+	page.GetByText("Continue").First().Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
+	page.WaitForSelector("text=Business Profile", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 
 	// Fill out Step 1
 	page.Locator("input[type='text']").First().Fill("My Playwright Company")
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Continue").First().Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
 
 	// Step 2
-	page.WaitForSelector("text=Goal Selection")
-	page.GetByText("Continue").First().Click()
+	page.WaitForSelector("text=Goal Selection", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
+	page.GetByText("Continue").First().Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
 
 	// Step 3
-	page.WaitForSelector("text=Deployment")
-	page.GetByText("Continue").First().Click()
+	page.WaitForSelector("text=Deployment", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
+	page.GetByText("Continue").First().Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
 
 	// Step 4
-	page.WaitForSelector("text=Admin Account")
+	page.WaitForSelector("text=Admin Account", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 	inputs := page.Locator("input[type='text']")
 	inputs.Nth(0).Fill("Playwright Admin")
 	inputs.Nth(1).Fill("playwright@example.com")
+	page.WaitForSelector("input[type='password']", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 	page.Locator("input[type='password']").Fill("secret")
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Continue").First().Click(playwright.LocatorClickOptions{Timeout: playwright.Float(5000)})
 
 	// Step 5 Review
-	page.WaitForSelector("text=Review & Launch")
-	page.WaitForSelector("text=My Playwright Company")
-
+	page.WaitForSelector("text=Review & Launch", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
+	page.WaitForSelector("text=My Playwright Company", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(5000)})
 }
 
 func TestOnboardingWizardCanBeSkippedEntirelyFromTheFirstStep(t *testing.T) {
