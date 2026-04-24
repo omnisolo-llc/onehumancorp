@@ -33,14 +33,17 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
 
 	// In test, creating table
-	_, err = provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS autodream_memories_master (
-		id VARCHAR PRIMARY KEY,
-		organization_id VARCHAR NOT NULL,
-		memory_type TEXT NOT NULL,
+	_, err = provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS consolidated_memory (
+		id TEXT PRIMARY KEY,
+		organization_id TEXT NOT NULL,
+		tenant_id TEXT NOT NULL,
+		agent_id TEXT,
 		content TEXT NOT NULL,
 		embedding BLOB,
+		source_type TEXT NOT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		source_task_id VARCHAR
+		last_accessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		confidence_score FLOAT DEFAULT 1.0
 	);`)
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
