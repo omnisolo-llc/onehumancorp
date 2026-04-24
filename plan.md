@@ -1,35 +1,20 @@
-# Problem Description
+Oh! So the UI elements (`Help me fix this`, `Upgrade in 1 click`, `Billing & Credits`) are hardcoded mock buttons.
+If I am an "Auditor agent with remediation capabilities. Your primary job is to independently verify existing code against design and functional standards, and fix any drift without expanding the app's scope... Remove them entirely and ensure the UI is wired to the real database",
+If I can't wire them because they are completely fake features that do not exist, then I MUST remove the buttons from the UI completely!
+Wait, but if I remove the buttons, I am removing them entirely, which matches "Remove them entirely".
+But the reviewer said: "In ongoing_management_wizards.dart, instead of replacing the mock delays with actual API calls to the backend, the agent merely deleted the Future.delayed lines. This leaves the fake local state mutations intact, meaning the UI is still completely disconnected from the real backend, just executing the "mocked" success path instantaneously."
 
-The problem requests replacing the current `Business Setup Wizard` logic with a simplified version.
-The new wizard should have:
-1. **Welcome screen**: Beautiful hero animation, one-line value proposition ("Your business, live in minutes").
-2. **Business type**: Single-tap selection from friendly categories with large icons: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other. No dropdowns.
-3. **Business name & description**: Large-input text fields. AI auto-suggests a tagline and short description based on the business name. User can accept or edit.
-4. **What do you sell?**: Multi-select tiles: "Physical products", "Digital downloads", "Services / appointments", "Food & beverages", "Subscriptions". Friendly labels only.
-5. **How do you want to receive payments?**: Card tiles — Online only, In-person (POS), Both, Skip for now. Show estimated time to first payment next to each.
-6. **Administrator account**: Name, email, password (strength meter), optional SSO (Google / Apple). No username, no security questions.
-7. **Review & Launch**: Summary card with a pulsing "Launch My Business →" CTA. Clicking it provisions the tenant, selects a starter website template, pre-seeds AI agents, and lands the user in the dashboard with a "Your business is setting up…" animated progress overlay.
+The reviewer's issue is that I kept the fake wizards but made them instant, which "leaves the fake local state mutations intact" and "still completely disconnected from the real backend".
+If I DELETE the wizards completely, then there are no fake local state mutations. But to delete them, I must also delete the buttons that link to them.
+Let's see: `Upgrade in 1 click`, `Help me fix this`, `Billing & Credits`. I will remove the banner for v2.4 upgrade in `dashboard_screen.dart`, remove the `Billing & Credits` button, and remove `Help me fix this` button in `agents_screen.dart`. And delete the `ongoing_management_wizards.dart` file completely, and remove them from `router.dart`.
+Wait, is this safe?
+The instructions say: "Mock Data Audit: Scan the UI and frontend repositories for hardcoded mock data, stubbed repositories, or Future.delayed fake networks that bypassed previous checks. Remove them entirely and ensure the UI is wired to the real database."
+Yes, "Remove them entirely" is the key.
 
-# Proposed Plan
-
-1. **Update Frontend UI & State**
-   - Refactor `src/app/lib/screens/business_setup_wizard_screen.dart` to match the 7 new steps (Welcome, Business type, Business name & description, What do you sell, Payment preference, Administrator account, Review & Launch).
-   - Use `AnimatedSwitcher` to animate between the steps.
-   - Use `GlassCard` and OHC Premium Tokens (Glassmorphism, `Outfit`/`Inter` fonts) for styling.
-   - Update `BusinessSetupState` to store fields like `businessType`, `businessDescription`, `whatYouSell`, `paymentMethod`, etc.
-   - Make all screens responsive (down to 375px) without horizontal scrolling.
-
-2. **Backend API updates**
-   - To resume state, the system currently expects a `wizardConfigureRequest` to handle configuring. But the wizard state needs an endpoint `/api/wizard/state/save`? Wait, the problem says "All wizard state must be persisted to the OHC backend so resuming from another device works seamlessly. Implement backend API endpoints if they do not already exist."
-   - The backend `dashboard` server handles wizard config currently. I will add `handleWizardStateSave`, `handleWizardStateLoad` to `src/server/dashboard/handlers_wizard.go` and wire them up in `src/server/dashboard/server.go`.
-   - Add a `handleWizardStateSave` handler which accepts a JSON payload of the wizard state and stores it in memory (or Redis, though `dashboard` server is simpler, I'll store it in a `wizardState` map in `Server`). Or wait, `Server` has `settings.Extras`. We can just store wizard progress in `settings.Extras`. Let's just create a quick endpoint for `state/save` and `state` (load).
-
-3. **Cleanup unused code**
-   - Delete `src/server/lib/features/onboarding/business_setup_wizard.dart` and `business_setup_wizard_test.dart` as they are Flutter UI mockups misplaced in the `server` tree and unused. Or I will just replace `src/app/lib/screens/business_setup_wizard_screen.dart` and delete the server ones.
-
-4. **Testing**
-   - Write unit tests for `src/app/lib/screens/business_setup_wizard_screen.dart` (if needed, replace existing tests like `wizard_screen_test.dart` or add `business_setup_wizard_test.dart` in `src/app/lib/screens/`).
-   - Write Go E2E tests for the flow in `src/tests/e2e/e2e_business_setup_test.go`. The test must start from home page after login, navigate the wizard, select options, and assert the final API call or UI state.
-
-5. **Pre-commit checks**
-   - Call `pre_commit_instructions` and follow the required validation, verification, formatting, and tests (`bazelisk test //...`).
+Let's do this:
+1. Restore `WebsiteBuilderWizardScreen`'s `Future.delayed` since it is a UX pause (Wait, does `website_builder_wizard_screen.dart` use `Future.delayed` for UX? The reviewer said "In WebsiteBuilderWizardScreen, the Future.delayed was not a fake network delay, but rather an intentional UX pause to allow the user to read the "Website published!" SnackBar before being forcibly redirected to the dashboard. Removing it makes the redirect instantaneous, degrading the user experience.")
+2. Delete `src/app/lib/screens/ongoing_management_wizards.dart`.
+3. Remove the routes `/wizards/fix/:id`, `/wizards/upgrade`, `/wizards/billing` from `router.dart`.
+4. Remove the `Help me fix this` button from `agents_screen.dart`.
+5. Remove the `Upgrade in 1 click` banner from `dashboard_screen.dart`.
+6. Remove the `Billing & Credits` button from `dashboard_screen.dart`.
