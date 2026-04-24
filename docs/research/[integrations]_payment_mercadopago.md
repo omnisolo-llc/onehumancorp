@@ -64,7 +64,7 @@ sequenceDiagram
   - The checkout UI dynamically displays local payment options based on the buyer's IP or selected country.
 
 ## Implementation Prompt
-"Implement a MercadoPago payment provider in `srcs/server/services/payments/`. This must implement the existing `PaymentProcessor` interface used by Stripe. Ensure it supports creating payment preferences (Checkout Pro) and handling asynchronous webhook notifications for delayed payment methods like PIX and Boleto. Update the local SQLite schema to support MercadoPago specific transaction IDs."
+"Implement a MercadoPago payment provider in `src/server/services/payments/`. This must implement the existing `PaymentProcessor` interface used by Stripe. Ensure it supports creating payment preferences (Checkout Pro) and handling asynchronous webhook notifications for delayed payment methods like PIX and Boleto. Update the local SQLite schema to support MercadoPago specific transaction IDs."
 
 ## Priority
 P2

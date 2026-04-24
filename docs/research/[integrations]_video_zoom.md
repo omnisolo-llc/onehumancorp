@@ -59,7 +59,7 @@ sequenceDiagram
   - The business owner authorizes Zoom once in settings. Afterwards, all "Virtual" service bookings automatically include a generated link.
 
 ## Implementation Prompt
-"Integrate the Zoom Meeting API into OHC. Create a Go service in `srcs/server/services/video/` that manages the OAuth 2.0 lifecycle for tenant Zoom accounts. Expose internal gRPC methods for the Operations AI agent to dynamically create unique meeting links. Ensure the service handles token refresh securely and respects Zoom's rate limits."
+"Integrate the Zoom Meeting API into OHC. Create a Go service in `src/server/services/video/` that manages the OAuth 2.0 lifecycle for tenant Zoom accounts. Expose internal gRPC methods for the Operations AI agent to dynamically create unique meeting links. Ensure the service handles token refresh securely and respects Zoom's rate limits."
 
 ## Priority
 P1

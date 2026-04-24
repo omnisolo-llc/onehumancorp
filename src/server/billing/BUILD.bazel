@@ -1,0 +1,26 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "billing",
+    srcs = [
+        "postgres_tracker.go",
+        "repository.go",
+        "sqlite_tracker.go",
+        "tracker.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/billing",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/db",
+        "//src/server/telemetry",
+    ],
+)
+
+go_test(
+    name = "billing_test",
+    srcs = [
+        "burn_rate_test.go",
+        "tracker_test.go",
+    ],
+    embed = [":billing"],
+)

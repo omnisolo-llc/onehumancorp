@@ -12,7 +12,7 @@ Claude Code leverages MCP as the central nervous system of its Agent Harness.
 - **Rate Limiting & Cost Tracking**: MCP tool calls are integrated with a mock rate limiting service (`mockRateLimits.ts`) and a cost tracker (`cost-tracker.ts`) that intercepts all tool usage, ensuring agent execution does not overrun budgets.
 
 ### OHC Gap Analysis
-OHC-HA has basic tool integrations, but they are hardcoded and tightly coupled to the orchestrator (`srcs/server/orchestration/`).
+OHC-HA has basic tool integrations, but they are hardcoded and tightly coupled to the orchestrator (`src/server/orchestration/`).
 1. We lack a dynamic mechanism to discover and register new tools.
 2. We do not have `.mcp.json` scope validation to restrict what files an agent can read or write.
 3. Our tool calls are not standardized using the open Model Context Protocol.
@@ -25,10 +25,10 @@ OHC-HA has basic tool integrations, but they are hardcoded and tightly coupled t
 4. **Telemetry & Cost Proxy**: A wrapper around tool invocations that tracks execution time, token usage, and simulated costs, sending metrics to Prometheus/OpenTelemetry.
 
 ### Implementation Protocol
-1.  **MCP Protocol Implementation**: Create `srcs/server/orchestration/harness/mcp/client.go` to implement the core Model Context Protocol (handling initialization, tool discovery, and execution over `stdio`).
-2.  **Configuration Loader**: Create `srcs/server/orchestration/harness/mcp/config.go` to parse `.mcp.json` files and establish connection parameters for dynamic servers.
-3.  **Scope Validation**: Create `srcs/server/orchestration/harness/mcp/scope.go` to intercept path arguments in tools and validate them against an allowed base directory.
-4.  **Integration**: Update `srcs/server/orchestration/task_orchestrator.go` to fetch available tools from the `MCP Client Core` and expose them to the agent's LLM context.
+1.  **MCP Protocol Implementation**: Create `src/server/orchestration/harness/mcp/client.go` to implement the core Model Context Protocol (handling initialization, tool discovery, and execution over `stdio`).
+2.  **Configuration Loader**: Create `src/server/orchestration/harness/mcp/config.go` to parse `.mcp.json` files and establish connection parameters for dynamic servers.
+3.  **Scope Validation**: Create `src/server/orchestration/harness/mcp/scope.go` to intercept path arguments in tools and validate them against an allowed base directory.
+4.  **Integration**: Update `src/server/orchestration/task_orchestrator.go` to fetch available tools from the `MCP Client Core` and expose them to the agent's LLM context.
 
 ## Visual Context
 <div style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
@@ -46,11 +46,11 @@ OHC-HA has basic tool integrations, but they are hardcoded and tightly coupled t
 
 ## Implementation Prompt
 Implement the Native MCP Integration Layer.
-1. Create `srcs/server/orchestration/harness/mcp/client.go` to manage `stdio` sub-processes for MCP servers.
-2. Create `srcs/server/orchestration/harness/mcp/config.go` to parse a standard `.mcp.json` configuration file.
-3. Create `srcs/server/orchestration/harness/mcp/scope.go` that provides an `IsPathAllowed(requestedPath, basePath)` function to prevent directory traversal attacks (`../`).
-4. Modify `srcs/server/orchestration/task_orchestrator.go` to initialize the MCP Client on startup and inject discovered tools into the LLM context.
-5. Provide 100% test coverage in `srcs/server/orchestration/harness/mcp/*_test.go`. Ensure a test specifically tries to read `/etc/passwd` using a simulated FileRead tool and gets denied by `scope.go`.
+1. Create `src/server/orchestration/harness/mcp/client.go` to manage `stdio` sub-processes for MCP servers.
+2. Create `src/server/orchestration/harness/mcp/config.go` to parse a standard `.mcp.json` configuration file.
+3. Create `src/server/orchestration/harness/mcp/scope.go` that provides an `IsPathAllowed(requestedPath, basePath)` function to prevent directory traversal attacks (`../`).
+4. Modify `src/server/orchestration/task_orchestrator.go` to initialize the MCP Client on startup and inject discovered tools into the LLM context.
+5. Provide 100% test coverage in `src/server/orchestration/harness/mcp/*_test.go`. Ensure a test specifically tries to read `/etc/passwd` using a simulated FileRead tool and gets denied by `scope.go`.
 
 ## Priority
 P1

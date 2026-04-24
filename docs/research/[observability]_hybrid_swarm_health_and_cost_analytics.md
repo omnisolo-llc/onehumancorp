@@ -7,7 +7,7 @@ The OneHumanCorp (OHC) platform scales from Standalone (local SQLite) to Cloud-n
 
 ## Research Report
 **Hybrid Telemetry Review:**
-- Analysis of `srcs/server/telemetry/telemetry.go` and `metrics.go` indicates that metrics like `ohc_agent_cost_estimate_usd` and `ohc_storage_cost_estimate_usd` are recorded via OpenTelemetry but lack sufficient dimension tagging to map back to specific business objects like **products**, **orders**, **customers**, or **bookings**.
+- Analysis of `src/server/telemetry/telemetry.go` and `metrics.go` indicates that metrics like `ohc_agent_cost_estimate_usd` and `ohc_storage_cost_estimate_usd` are recorded via OpenTelemetry but lack sufficient dimension tagging to map back to specific business objects like **products**, **orders**, **customers**, or **bookings**.
 - Throughput variances: In Cloud-native mode, the PostgreSQL `SKIP LOCKED` pattern handles concurrent job queues for high-volume transactions smoothly. Conversely, in Standalone mode, concurrent AI agents updating the same customer profile or booking calendar encounter SQLite retry exhaustion (`sqliteLockContentionCounter`), leading to increased job latency.
 - Currently, there is no high-level dashboard juxtaposing swarm task queue depth against these localized bottlenecks or tracking specific per-tenant API call costs tied to operations like quoting an order or processing a booking.
 
@@ -22,7 +22,7 @@ The OneHumanCorp (OHC) platform scales from Standalone (local SQLite) to Cloud-n
   - Introduce `ohc_swarm_job_latency_by_entity_seconds` as a histogram measuring the end-to-end processing time of a background task, tagged by deployment `mode` and target `entity` (products, orders, customers, bookings).
   - Enrich existing `RecordAgentCost` and `RecordApiCallCost` functions to accept and attach tags for the corresponding business entity and workflow ID.
 - **Data Source Integration:**
-  - Update `srcs/server/telemetry/metrics.go` to add these new dimensions.
+  - Update `src/server/telemetry/metrics.go` to add these new dimensions.
   - Implement periodic push/pull mechanisms that ensure local SQLite metrics are eventually synced to the centralized cloud Prometheus cluster, retaining their Standalone tags.
 - **Dashboard Structure (Grafana):**
   - **Swarm Throughput Panel:** Side-by-side comparison of job queue processing rates for Cloud vs. Standalone.
@@ -31,7 +31,7 @@ The OneHumanCorp (OHC) platform scales from Standalone (local SQLite) to Cloud-n
   - **Cost Analytics Panel:** Per-tenant and per-entity cost breakdown (`AgentCostEstimateUSD` per order/booking).
 
 ## Implementation Prompt
-Update `srcs/server/telemetry/metrics.go` and `srcs/server/telemetry/telemetry.go` to include the new mode-aware and entity-aware dimensions. Register a new histogram `ohc_swarm_job_latency_by_entity_seconds` tagged by `mode` and `entity` (which must support values like 'products', 'orders', 'customers', and 'bookings'). Enhance the `RecordAgentCost` and `RecordApiCallCost` functions to accept the `entity` type. Finally, create a new Grafana dashboard JSON configuration located at `srcs/server/monitoring/dashboards/hybrid_swarm_cost_analytics.json` containing the designated panels for Swarm Throughput, Entity Latency, Contention Heatmap, and Cost Analytics. Ensure that all telemetry changes accurately log deployment mode (`Cloud` vs `Standalone`) using the established context patterns. Ensure an E2E test validates the new metric dimensions.
+Update `src/server/telemetry/metrics.go` and `src/server/telemetry/telemetry.go` to include the new mode-aware and entity-aware dimensions. Register a new histogram `ohc_swarm_job_latency_by_entity_seconds` tagged by `mode` and `entity` (which must support values like 'products', 'orders', 'customers', and 'bookings'). Enhance the `RecordAgentCost` and `RecordApiCallCost` functions to accept the `entity` type. Finally, create a new Grafana dashboard JSON configuration located at `src/server/monitoring/dashboards/hybrid_swarm_cost_analytics.json` containing the designated panels for Swarm Throughput, Entity Latency, Contention Heatmap, and Cost Analytics. Ensure that all telemetry changes accurately log deployment mode (`Cloud` vs `Standalone`) using the established context patterns. Ensure an E2E test validates the new metric dimensions.
 
 ## Priority
 P1

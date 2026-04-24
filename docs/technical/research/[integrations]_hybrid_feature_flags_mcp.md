@@ -29,7 +29,7 @@ graph TD
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/feature_flags/`.
+- Create a new package `src/server/lib/integrations/feature_flags/`.
 - Introduce a `FeatureFlagsManager` implementing the MCP Tool interface.
 - Dynamically select the backend driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize Postgres/Redis to fetch and evaluate feature flags for a given context and organization.
@@ -43,7 +43,7 @@ graph TD
 - Ensure `organization_id` is strictly used in Cloud mode to scope feature flag evaluation and prevent cross-tenant data leakage.
 
 ## Implementation Prompt
-"Implement the Hybrid Feature Flags MCP tool in `srcs/server/lib/integrations/feature_flags/`.
+"Implement the Hybrid Feature Flags MCP tool in `src/server/lib/integrations/feature_flags/`.
 1. Create `feature_flags.go` defining the `FeatureFlagsManager` and its MCP capabilities (`EvaluateFlag`, `ListFlags`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement the flag evaluation using Postgres, ensuring `organization_id` is used to scope the query.

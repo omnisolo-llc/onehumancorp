@@ -8,7 +8,7 @@ The One Human Corp platform operates in both Cloud-native (Kubernetes + PostgreS
 
 # Research Report
 **Hybrid Telemetry Review:**
-- We examined `srcs/server/telemetry/telemetry.go` and `metrics.go` and the `autodream` module usage.
+- We examined `src/server/telemetry/telemetry.go` and `metrics.go` and the `autodream` module usage.
 - While `ohc_autodream_consolidation_total` and `ohc_autodream_memories_compressed_total` exist, there is no granular measurement of the *queue depth* or the *processing latency distribution* (e.g., job wait time vs. execution time) across the two deployment modes.
 - SQLite shows signs of `sqliteLockContentionCounter` scaling with concurrent Swarm tasks in Standalone, but we lack a correlated metric for how this impacts AutoDream's queue draining rate.
 
@@ -29,20 +29,20 @@ The One Human Corp platform operates in both Cloud-native (Kubernetes + PostgreS
   - Add `AutoDreamQueueDepth` (`ohc_autodream_queue_depth`) as a gauge measuring the current number of pending consolidation tasks.
   - Add `AutoDreamJobLatency` (`ohc_autodream_job_latency_seconds`) as a histogram measuring the end-to-end processing time of a background task.
 - **Data Source Integration:**
-  - Update `srcs/server/telemetry/telemetry.go` and `metrics.go` to declare and initialize these metrics using the standard OpenTelemetry API.
-  - Inject recording logic into `srcs/server/workers/autodreamWorker` (or equivalent worker process) where dequeuing and completion occur.
+  - Update `src/server/telemetry/telemetry.go` and `metrics.go` to declare and initialize these metrics using the standard OpenTelemetry API.
+  - Inject recording logic into `src/server/workers/autodreamWorker` (or equivalent worker process) where dequeuing and completion occur.
   - Implement a periodic poller in the telemetry daemon (or worker loop) to emit the queue depth gauge.
 
 **Dashboard Integration:**
 - Create a new Grafana JSON dashboard defining panels for "AutoDream Queue Depth", "Job Processing Latency (Cloud vs Standalone)", and "Database Lock Contention vs Queue Size".
 
 # Implementation Prompt
-1. In `srcs/server/telemetry/telemetry.go`, register a new gauge `AutoDreamQueueDepth` (`ohc_autodream_queue_depth`) and a new histogram `AutoDreamJobLatency` (`ohc_autodream_job_latency_seconds`).
-2. In the module that handles the AI Job Queue (e.g., `srcs/server/pipeline` or AutoDream worker), add logic to:
+1. In `src/server/telemetry/telemetry.go`, register a new gauge `AutoDreamQueueDepth` (`ohc_autodream_queue_depth`) and a new histogram `AutoDreamJobLatency` (`ohc_autodream_job_latency_seconds`).
+2. In the module that handles the AI Job Queue (e.g., `src/server/pipeline` or AutoDream worker), add logic to:
    - Record the time taken to process an AI job and log it to `AutoDreamJobLatency`.
    - Periodically query the database for the count of pending AI jobs (handling both PostgreSQL and SQLite appropriately) and record it using `AutoDreamQueueDepth`.
 3. Ensure the context passed to the metrics includes attributes indicating the current deployment mode (Cloud vs Standalone).
-4. Provide a sample Grafana dashboard JSON file in `srcs/server/telemetry/dashboards/` (or update an existing one) to visualize these new metrics.
+4. Provide a sample Grafana dashboard JSON file in `src/server/telemetry/dashboards/` (or update an existing one) to visualize these new metrics.
 5. Create E2E tests validating that the metrics endpoint exposes the new AutoDream metrics after simulating job creation.
 
 # Priority
