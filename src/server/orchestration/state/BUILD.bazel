@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/db",
+        "//src/server/telemetry",
         "@com_github_redis_rueidis//:rueidis",
     ],
 )
