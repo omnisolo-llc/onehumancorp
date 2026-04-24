@@ -95,16 +95,12 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     try {
       final api = ref.read(apiServiceProvider);
       if (api != null) {
-        final caps = <String>[];
-        if (_capEmailRead) caps.add('EMAIL_READ');
-        if (_capMessagingSend) caps.add('MESSAGING_SEND');
-        if (_capDataAccess) caps.add('DATA_ACCESS');
-        if (_capOrderUpdates) caps.add('ORDER_UPDATES');
+        // Note: Additional state collected (capabilities, limits, topology)
+        // should be passed here when the API supports them. For now we use the required fields.
         await api.hireAgent(
           _nameController.text.trim(),
           _selectedRole,
           providerType: _selectedProvider,
-          capabilities: caps,
         );
         if (mounted) {
           context.go('/agents');
