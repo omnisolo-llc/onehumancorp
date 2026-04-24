@@ -1,5 +1,5 @@
 package interop
-
+// The actual teammate mesh files
 import (
 	"context"
 	"fmt"

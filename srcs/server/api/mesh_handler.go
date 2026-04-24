@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/onehumancorp/mono/srcs/server/mesh"
+	"github.com/onehumancorp/mono/srcs/server/interop"
 )
 
 var upgrader = websocket.Upgrader{
@@ -20,10 +20,10 @@ var upgrader = websocket.Upgrader{
 }
 
 type MeshHandler struct {
-	transport mesh.MeshTransport
+	transport interop.TeammateMesh
 }
 
-func NewMeshHandler(transport mesh.MeshTransport) *MeshHandler {
+func NewMeshHandler(transport interop.TeammateMesh) *MeshHandler {
 	return &MeshHandler{
 		transport: transport,
 	}
