@@ -283,6 +283,7 @@ test_suite(
         ":cuj_channels_extra_e2e_test",
         ":cuj_scaling_e2e_test",
         ":cuj_diagnostics_referrals_e2e_test",
+        ":cuj_onboarding_wizards_e2e_test",
     ],
 )
 
@@ -420,4 +421,12 @@ pkg_rpm(
     summary = "OHC standalone desktop runtime",
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
+)
+
+flutter_test(
+    name = "cuj_onboarding_wizards_e2e_test",
+    srcs = ["test/cuj_onboarding_wizards_e2e_test.dart"],
+    test_files = ["test/cuj_onboarding_wizards_e2e_test.dart"],
+    embed = [":app_lib"],
+    workspace_pubspec = "//:pubspec.yaml",
 )

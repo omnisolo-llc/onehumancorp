@@ -6,7 +6,7 @@ import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/services/settings_service.dart';
 
 void main() {
-  testWidgets('BusinessSetupWizardScreen renders and navigates steps in Cloud Mode', (WidgetTester tester) async {
+  testWidgets('BusinessSetupWizardScreen renders and navigates steps correctly', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -22,51 +22,73 @@ void main() {
       ),
     );
 
-    // Initial state
+    // Initial state (Step 0)
     expect(find.text('Business Setup'), findsOneWidget);
-    expect(find.text('Welcome! Your AI team, ready in minutes.'), findsOneWidget);
+    expect(find.text('Your business, live in minutes.'), findsOneWidget);
     expect(find.text('Next'), findsOneWidget);
 
-    // Step 1: Business Profile
+    // Step 1: Business Type
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(TextField), findsNWidgets(2)); // Company Name, Industry
-    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget); // Size
+    expect(find.text('Business Type'), findsOneWidget);
+    expect(find.text('Online Store'), findsOneWidget);
+    expect(find.text('Service Business'), findsOneWidget);
+
+    await tester.tap(find.text('Online Store'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 2: Company Name & Description
+    expect(find.byType(TextField), findsNWidgets(2));
 
     await tester.enterText(find.byType(TextField).first, 'Test Company');
+    await tester.enterText(find.byType(TextField).last, 'A great test company');
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 2: Goal selection
-    expect(find.text('Select Goals'), findsOneWidget);
+    // Step 3: What do you sell?
+    expect(find.text('What do you sell?'), findsOneWidget);
     expect(find.byType(CheckboxListTile), findsNWidgets(5));
 
-    await tester.tap(find.text('Support'));
+    await tester.tap(find.text('Physical products'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 3: Deployment Preference (Cloud Mode)
-    expect(find.text('Deployment Preference'), findsOneWidget);
-    expect(find.byType(RadioListTile<String>), findsNWidgets(3));
-    expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsNothing);
+    // Step 4: Payments
+    expect(find.text('How do you want to receive payments?'), findsOneWidget);
+    expect(find.byType(RadioListTile<String>), findsNWidgets(4));
+
+    await tester.tap(find.text('Online only'));
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 4: Administrator account
-    expect(find.byType(TextField), findsNWidgets(3)); // Admin Name, Admin Email, Admin Password
+    // Step 5: Administrator account
+    expect(find.byType(TextField), findsNWidgets(3));
 
     await tester.enterText(find.byType(TextField).at(0), 'Admin');
     await tester.enterText(find.byType(TextField).at(1), 'admin@test.com');
     await tester.enterText(find.byType(TextField).at(2), 'password');
     await tester.pumpAndSettle();
 
-    expect(find.text('Launch My AI Team →'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 6: Review & Launch
+    expect(find.text('Review & Launch'), findsOneWidget);
+    expect(find.text('Name: Test Company'), findsOneWidget);
+    expect(find.text('Type: Online Store'), findsOneWidget);
+    expect(find.text('Products: Physical products'), findsOneWidget);
+    expect(find.text('Payments: Online only'), findsOneWidget);
+    expect(find.text('Launch My Business →'), findsOneWidget);
   });
 
   test('BusinessSetupNotifier covers all state mutations', () {
@@ -86,31 +108,35 @@ void main() {
     notifier.prevStep();
     expect(container.read(businessSetupProvider).step, 0);
 
-    notifier.nextStep();
-    notifier.nextStep();
-    notifier.nextStep();
-    notifier.nextStep();
+    notifier.nextStep(); // 1
+    notifier.nextStep(); // 2
+    notifier.nextStep(); // 3
+    notifier.nextStep(); // 4
+    notifier.nextStep(); // 5
+    notifier.nextStep(); // 6
+    expect(container.read(businessSetupProvider).step, 6);
 
+    // Test that we can't go past the last step
     notifier.nextStep();
-    expect(container.read(businessSetupProvider).step, 4);
+    expect(container.read(businessSetupProvider).step, 6);
+
+    notifier.updateBusinessType('Service Business');
+    expect(container.read(businessSetupProvider).businessType, 'Service Business');
 
     notifier.updateCompany('NewCo');
     expect(container.read(businessSetupProvider).companyName, 'NewCo');
 
-    notifier.updateIndustry('Tech');
-    expect(container.read(businessSetupProvider).industry, 'Tech');
+    notifier.updateDescription('Awesome Co');
+    expect(container.read(businessSetupProvider).description, 'Awesome Co');
 
-    notifier.updateSize('L');
-    expect(container.read(businessSetupProvider).size, 'L');
+    notifier.toggleProduct('Subscriptions');
+    expect(container.read(businessSetupProvider).products.contains('Subscriptions'), true);
 
-    notifier.toggleGoal('Support');
-    expect(container.read(businessSetupProvider).goals.contains('Support'), true);
+    notifier.toggleProduct('Subscriptions');
+    expect(container.read(businessSetupProvider).products.contains('Subscriptions'), false);
 
-    notifier.toggleGoal('Support');
-    expect(container.read(businessSetupProvider).goals.contains('Support'), false);
-
-    notifier.updateDeployment('Desktop');
-    expect(container.read(businessSetupProvider).deployment, 'Desktop');
+    notifier.updatePayments('Both');
+    expect(container.read(businessSetupProvider).payments, 'Both');
 
     notifier.updateAdminName('Admin');
     expect(container.read(businessSetupProvider).adminName, 'Admin');
@@ -123,7 +149,6 @@ void main() {
   });
 
   testWidgets('BusinessSetupWizardScreen launch bypasses API and routes to dashboard if no user is set', (WidgetTester tester) async {
-    // We add a minimal go_router configuration so that GoRouter.of(context) does not throw.
     final router = GoRouter(
       routes: [
         GoRoute(
@@ -145,45 +170,14 @@ void main() {
       ),
     );
 
-    for(int i = 0; i < 4; i++) {
+    for(int i = 0; i < 6; i++) {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
     }
 
-    await tester.tap(find.text('Launch My AI Team →'));
+    await tester.tap(find.text('Launch My Business →'));
     await tester.pumpAndSettle();
 
-    // As auth is null, the API is bypassed and we should navigate to /dashboard
     expect(find.text('Dashboard'), findsOneWidget);
-  });
-
-  testWidgets('BusinessSetupWizardScreen renders and navigates steps in Standalone Mode', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          clientSettingsProvider.overrideWith(
-            (ref) => ClientSettingsNotifier(ref)..state = const AsyncValue.data(
-              ClientSettings(backendUrl: 'http://localhost', standaloneMode: true),
-            ),
-          ),
-        ],
-        child: const MaterialApp(
-          home: BusinessSetupWizardScreen(),
-        ),
-      ),
-    );
-
-    // Navigate to Step 3
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Step 3: Deployment Preference (Standalone Mode)
-    expect(find.text('Deployment Preference'), findsOneWidget);
-    expect(find.byType(RadioListTile<String>), findsNothing); // Should be hidden
-    expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsOneWidget); // Bypass message
   });
 }
