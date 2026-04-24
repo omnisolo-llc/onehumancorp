@@ -53,27 +53,25 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 	safeKey := strings.ReplaceAll(key, "/", "_")
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+retry:
+	err := os.Mkdir(path, 0755)
 	if err != nil {
 		if os.IsExist(err) {
-			content, err := os.ReadFile(path)
+			metaPath := filepath.Join(path, "meta.txt")
+			content, err := os.ReadFile(metaPath)
 			if err == nil {
 				parts := strings.SplitN(string(content), ",", 2)
 				if len(parts) == 2 {
 					expiryTime, parseErr := time.Parse(time.RFC3339Nano, parts[0])
 					if parseErr == nil && time.Now().After(expiryTime) {
-						// Expired lock found. To avoid TOCTOU, we don't just blindly remove.
-						// We check the token.
-						// We do not remove it if it has been updated. (token=parts[1])
-						// We just delete it and retry.
-						// Wait, if it has expired, anyone could be trying to delete it.
-						// To be safer, we can try to delete it. If it fails, that's fine.
-						os.Remove(path)
-						file, err = os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
-						if err != nil {
-							return false, nil
+						// Expired lock found. Safely steal it via atomic rename
+						tempPath := path + "_" + uuid.New().String() + ".tmp"
+						renameErr := os.Rename(path, tempPath)
+						if renameErr == nil {
+							// Successfully stole the lock
+							os.RemoveAll(tempPath)
+							goto retry
 						}
-						goto acquired
 					}
 				}
 			}
@@ -82,12 +80,11 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 		return false, err
 	}
 
-acquired:
-	defer file.Close()
 	expiry := time.Now().Add(ttl).Format(time.RFC3339Nano)
-	_, err = file.WriteString(expiry + "," + m.token)
+	metaPath := filepath.Join(path, "meta.txt")
+	err = os.WriteFile(metaPath, []byte(expiry+","+m.token), 0666)
 	if err != nil {
-		os.Remove(path)
+		os.RemoveAll(path)
 		return false, err
 	}
 
@@ -98,19 +95,18 @@ func (m *memoryLock) Unlock(ctx context.Context, key string) error {
 	safeKey := strings.ReplaceAll(key, "/", "_")
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
-	// TOCTOU mitigation: rename the file to a temp file, read it, if valid, delete it. If invalid, rename it back.
-	// Wait, rename on Windows/Linux is atomic.
 	tempPath := path + "_" + uuid.New().String() + ".tmp"
 	err := os.Rename(path, tempPath)
 	if err != nil {
 		return nil // File might already be gone
 	}
 
-	content, err := os.ReadFile(tempPath)
+	metaPath := filepath.Join(tempPath, "meta.txt")
+	content, err := os.ReadFile(metaPath)
 	if err == nil {
 		parts := strings.SplitN(string(content), ",", 2)
 		if len(parts) == 2 && parts[1] == m.token {
-			return os.Remove(tempPath)
+			return os.RemoveAll(tempPath)
 		}
 	}
 
