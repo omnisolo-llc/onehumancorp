@@ -120,10 +120,27 @@ impl Agent {
                 message_count: messages.len(),
             });
 
+            let mut req_messages = messages.clone();
+
+            // Apply JetBrains Observation Masking
+            // Find the index of the last tool message
+            let last_tool_idx = req_messages.iter().rposition(|m| m.role == Role::Tool);
+            if let Some(last_idx) = last_tool_idx {
+                // For all older tool messages, mask their output to save context window
+                for (i, m) in req_messages.iter_mut().enumerate() {
+                    if i < last_idx && m.role == Role::Tool {
+                        for tr in &mut m.tool_results {
+                            tr.content = "[Observation masked to save context window]".to_string();
+                            tr.error = String::new();
+                        }
+                    }
+                }
+            }
+
             let req = ChatRequest {
                 model: cfg.model.clone(),
                 system: cfg.system.clone(),
-                messages: messages.clone(),
+                messages: req_messages,
                 tools: tool_defs.clone(),
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
