@@ -55,7 +55,7 @@ func (p *McpSyncProxy) SyncToCloud(ctx context.Context, gatewayURL, spiffeID str
 	if !p.provider.IsSQLite() {
 		query += " FOR UPDATE SKIP LOCKED"
 	}
-	rows, err := tx.Query(ctx, query)
+	rows, err := tx.Query(ctx, query, tenantID)
 	if err != nil {
 		tx.Rollback(ctx)
 		return fmt.Errorf("failed to query pending executions: %w", err)
