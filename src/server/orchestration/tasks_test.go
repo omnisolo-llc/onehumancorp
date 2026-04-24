@@ -66,7 +66,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			deliberation_log TEXT,
 			depth INTEGER,
 			dependencies TEXT NOT NULL DEFAULT '[]',
-			locked_until TIMESTAMP,
+			locked_until TIMESTAMP, action_risk TEXT, approval_status TEXT, proposed_content TEXT,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
