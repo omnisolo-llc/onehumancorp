@@ -34,6 +34,22 @@ func ValidationMiddleware(next http.Handler) http.Handler {
 		// Restore the body for downstream handlers
 		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 
+		// First verify no deprecated fields exist at root
+		var generic map[string]interface{}
+		if err := json.Unmarshal(bodyBytes, &generic); err != nil {
+			http.Error(w, "invalid json payload", http.StatusBadRequest)
+			return
+		}
+
+		if _, hasAction := generic["action"]; hasAction {
+			http.Error(w, "OHC-SIP compliance failed: 'action' is deprecated at root level", http.StatusBadRequest)
+			return
+		}
+		if _, hasStatus := generic["status"]; hasStatus {
+			http.Error(w, "OHC-SIP compliance failed: 'status' is deprecated at root level", http.StatusBadRequest)
+			return
+		}
+
 		var payload meshPayload
 		if err := json.Unmarshal(bodyBytes, &payload); err != nil {
 			http.Error(w, "invalid json payload", http.StatusBadRequest)

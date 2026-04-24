@@ -26,6 +26,18 @@ func TestValidationMiddleware(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
+			name:           "Deprecated action key",
+			method:         http.MethodPost,
+			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION", "data": {}, "action": "test"}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Deprecated status key",
+			method:         http.MethodPost,
+			body:           []byte(`{"agent_id": "123", "channel": "mesh:tasks", "event_type": "TASK_TRANSITION", "data": {}, "status": "test"}`),
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
 			name:           "Missing agent_id",
 			method:         http.MethodPost,
 			body:           []byte(`{"channel": "test", "event_type": "start", "data": {}}`),

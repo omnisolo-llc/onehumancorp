@@ -142,7 +142,7 @@ func TestMeshHandlerBroadcastEvent(t *testing.T) {
     service := NewMemoryMeshService()
     handler := NewMeshHandler(service)
 
-    body := `{"agent_id": "worker-1", "channel": "orchestration.tasks", "action": "TaskTransition", "status": "success", "payload": {}}`
+    body := `{"agent_id": "worker-1", "channel": "orchestration.tasks", "event_type": "TaskTransition", "data": {"status": "success"}}`
     req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", bytes.NewBufferString(body))
 
     // Add auth claims to context

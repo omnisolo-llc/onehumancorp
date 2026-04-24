@@ -24,11 +24,10 @@ var (
 
 
 type MeshEvent struct {
-	AgentID string `json:"agent_id"`
-	Channel string `json:"channel"`
-	Action  string `json:"action"`
-	Status  string `json:"status"`
-	Payload map[string]interface{} `json:"payload"`
+	AgentID   string          `json:"agent_id"`
+	Channel   string          `json:"channel"`
+	EventType string          `json:"event_type"`
+	Data      json.RawMessage `json:"data"`
 }
 
 type TeammateMeshService interface {
