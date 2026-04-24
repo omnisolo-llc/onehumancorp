@@ -115,53 +115,50 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 					return true
 				})
 
-				if !hasRedact {
-					// Only fail the test if the function isn't in our legacy exception list
-					// Since redaction is now centralized, these legacy functions are safe.
-					legacyFuncs := map[string]bool{
-						"RecordCacheMiss": true,
-						"RecordAutoDreamSyncLatency": true,
-						"RecordAutoDreamQueryLatency": true,
-						"RecordSipSyncLatency": true,
-						"RecordSipSyncPayloadSize": true,
-						"RecordMeshBroadcast": true,
-						"RecordMeshLatency": true,
-						"RecordSubAgentQueueLength": true,
-						"RecordToolAutocorrection": true,
-						"RecordDeliberationPhaseDuration": true,
-						"RecordAgentExecution": true,
-						"RecordSubAgentExecution": true,
-						"RecordSubAgentFailure": true,
-						"RecordIdentityVerification": true,
-						"RecordSyncConflictResolved": true,
-						"RecordOmniContextBytes": true,
-						"RecordRagEscalation": true,
-						"RecordAutodreamIngestionError": true,
-						"RecordAutodreamCompressionError": true,
-						"RecordSubAgentQueueDelay": true,
-						"RecordTaskClaimContention": true,
-						"RecordSandboxViolation": true,
-						"RecordAutodreamRecordsSynced": true,
-						"RecordAutodreamSyncError": true,
-						"RecordBubblewrapSpawn": true,
-						"RecordBubblewrapExecutionLatency": true,
-						"RecordBubblewrapViolation": true,
-						"RecordHarnessInitLatency": true,
-						"RecordHarnessDbIoLatency": true,
-						"RecordHarnessExecutionLatency": true,
-						"RecordCapabilityViolation": true,
-						"RecordTelemetrySyncBackoff": true,
-						"RecordTelemetryBatchSize": true,
-						"RecordMessageSent": true,
-						"RecordMessageReceived": true,
-						"RecordBridgeStatus": true,
-						"RecordRagRecordsSynced": true,
-						"RecordRagSyncError": true,
-						"RecordLocalToCloudMissionSync": true,
-					}
-					if !legacyFuncs[fn.Name.Name] {
-						t.Errorf("PII Leak Risk in %s: Function %s calls BufferMetricFunc and json.Marshal but misses RedactInterfacePII/RedactPII", path, fn.Name.Name)
-					}
+				legacyFuncs := map[string]bool{
+					"RecordCacheMiss": true,
+					"RecordAutoDreamSyncLatency": true,
+					"RecordAutoDreamQueryLatency": true,
+					"RecordSipSyncLatency": true,
+					"RecordSipSyncPayloadSize": true,
+					"RecordMeshBroadcast": true,
+					"RecordMeshLatency": true,
+					"RecordSubAgentQueueLength": true,
+					"RecordToolAutocorrection": true,
+					"RecordDeliberationPhaseDuration": true,
+					"RecordAgentExecution": true,
+					"RecordSubAgentExecution": true,
+					"RecordSubAgentFailure": true,
+					"RecordIdentityVerification": true,
+					"RecordSyncConflictResolved": true,
+					"RecordOmniContextBytes": true,
+					"RecordRagEscalation": true,
+					"RecordAutodreamIngestionError": true,
+					"RecordAutodreamCompressionError": true,
+					"RecordSubAgentQueueDelay": true,
+					"RecordTaskClaimContention": true,
+					"RecordSandboxViolation": true,
+					"RecordAutodreamRecordsSynced": true,
+					"RecordAutodreamSyncError": true,
+					"RecordBubblewrapSpawn": true,
+					"RecordBubblewrapExecutionLatency": true,
+					"RecordBubblewrapViolation": true,
+					"RecordHarnessInitLatency": true,
+					"RecordHarnessDbIoLatency": true,
+					"RecordHarnessExecutionLatency": true,
+					"RecordCapabilityViolation": true,
+					"RecordTelemetrySyncBackoff": true,
+					"RecordTelemetryBatchSize": true,
+					"RecordMessageSent": true,
+					"RecordMessageReceived": true,
+					"RecordBridgeStatus": true,
+					"RecordRagRecordsSynced": true,
+					"RecordRagSyncError": true,
+					"RecordLocalToCloudMissionSync": true,
+				}
+
+				if !legacyFuncs[fn.Name.Name] && !hasRedact {
+					t.Errorf("PII Leak Risk in %s: Function %s calls BufferMetricFunc and json.Marshal but misses RedactInterfacePII/RedactPII", path, fn.Name.Name)
 				}
 			}
 
