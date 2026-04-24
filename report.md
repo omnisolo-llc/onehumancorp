@@ -1,0 +1,4 @@
+I investigated the state of the interactive API playbook for KAIROS. The codebase contains a file `docs/technical/architecture/kairos/interactive-api-playbook.md` and another copy `docs/technical/walkthroughs/kairos_interactive_api_playbook.md`. The latter has the updated and complete structure covering all endpoints with correct HTTP methods, endpoints, payloads, response payloads, and mermaid diagrams.
+I copied the content from `docs/technical/walkthroughs/kairos_interactive_api_playbook.md` into `docs/technical/architecture/kairos/interactive-api-playbook.md` as they are supposed to be identical and `interactive-api-playbook.md` was missing endpoints and had incorrect APIs.
+I also checked that the corresponding APIs actually exist in `src/server/dashboard/server.go` and `src/server/orchestration/service.go`.
+There is no actual code change to make for this task. The request is only about the Interactive API Playbook. I have synced the playbook.
