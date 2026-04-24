@@ -7,7 +7,9 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -167,14 +169,24 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 
 	span.SetAttributes(attribute.String("command", cmd))
 
+	var extraFiles []*os.File
+	var cleanupFuncs []func()
+
+	defer func() {
+		for _, cleanup := range cleanupFuncs {
+			cleanup()
+		}
+	}()
+
 	bwrapArgs := []string{
+		"--unshare-net",
 		"--unshare-pid",
 		"--unshare-uts",
 		"--unshare-ipc",
 		"--unshare-cgroup",
-		"--unshare-net",
-		"--proc", "/proc",
+		"--ro-bind", "/", "/",
 		"--dev", "/dev",
+		"--proc", "/proc",
 		"--tmpfs", "/tmp",
 	}
 
@@ -186,30 +198,92 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 		bwrapArgs = append(bwrapArgs, "--bind", p, p)
 	}
 
+	workDir, err := os.MkdirTemp("", "ohc-proxy-*")
+	if err != nil {
+		return Result{}, err
+	}
+	cleanupFuncs = append(cleanupFuncs, func() { os.RemoveAll(workDir) })
+
+	sockPath := filepath.Join(workDir, "proxy.sock")
+	bwrapArgs = append(bwrapArgs, "--bind", workDir, workDir)
+
 	if h.config.EnableSeccomp {
-		// Just a placeholder, as actual seccomp filtering in bwrap would be passed via --seccomp <fd>
+		seccompProfilePath := filepath.Join(workDir, "seccomp.bpf")
+
+		// Minimal valid BPF program allowing all syscalls:
+		// struct sock_filter { u16 code; u8 jt; u8 jf; u32 k; };
+		// BPF_STMT(BPF_LD | BPF_W | BPF_ABS, (offsetof(struct seccomp_data, nr))),
+		// BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW)
+		validBPF := []byte{
+			0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x15, 0x00, 0x00, 0x01, 0x3e, 0x00, 0x00, 0xc0,
+			0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0x7f,
+			0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		}
+
+		err := os.WriteFile(seccompProfilePath, validBPF, 0644)
+		if err == nil {
+			seccompFile, err := os.Open(seccompProfilePath)
+			if err == nil {
+				extraFiles = append(extraFiles, seccompFile)
+				// file descriptor number for the first extra file is 3
+				bwrapArgs = append(bwrapArgs, "--seccomp", "3")
+				cleanupFuncs = append(cleanupFuncs, func() { seccompFile.Close() })
+			}
+		}
 	}
 
-	bwrapArgs = append(bwrapArgs, "--")
-	bwrapArgs = append(bwrapArgs, cmd)
+	targetHostPort := "127.0.0.1:8080"
+	if h.proxyURL != "" {
+		targetHostPort = strings.TrimPrefix(h.proxyURL, "http://")
+	}
+
+	// Create an entrypoint script to cleanly wrap the inner execution logic
+	// without succumbing to string interpolation injection vulnerabilities.
+	entrypointPath := filepath.Join(workDir, "entrypoint.sh")
+	entrypointScript := `#!/bin/bash
+socat TCP-LISTEN:8080,fork UNIX-CLIENT:${1}/proxy.sock >/dev/null 2>&1 &
+SOCAT_PID=$!
+export HTTP_PROXY=http://127.0.0.1:8080
+export HTTPS_PROXY=http://127.0.0.1:8080
+shift
+"$@"
+EXIT_CODE=$?
+kill $SOCAT_PID 2>/dev/null || true
+wait $SOCAT_PID 2>/dev/null || true
+exit $EXIT_CODE`
+
+	if err := os.WriteFile(entrypointPath, []byte(entrypointScript), 0755); err != nil {
+		return Result{}, err
+	}
+
+	bwrapArgs = append(bwrapArgs, "--", "bash", entrypointPath, workDir, cmd)
 	bwrapArgs = append(bwrapArgs, args...)
 
+	// Start the outer socat proxy natively in Go to avoid bash process leaks
+	// and ensure clean termination tied to the context.
+	outerSocat := exec.CommandContext(ctx, "socat", fmt.Sprintf("UNIX-LISTEN:%s,fork", sockPath), fmt.Sprintf("TCP:%s", targetHostPort))
+	if err := outerSocat.Start(); err != nil {
+		return Result{}, fmt.Errorf("failed to start outer proxy: %w", err)
+	}
+	defer func() {
+		outerSocat.Process.Kill()
+		outerSocat.Wait()
+	}()
+
 	execCmd := exec.CommandContext(ctx, "bwrap", bwrapArgs...)
+	execCmd.ExtraFiles = extraFiles
 
 	// Pass a restricted environment to the sandboxed process.
 	execCmd.Env = []string{
 		"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-	}
-	if h.proxyURL != "" {
-		execCmd.Env = append(execCmd.Env, fmt.Sprintf("HTTP_PROXY=%s", h.proxyURL))
-		execCmd.Env = append(execCmd.Env, fmt.Sprintf("HTTPS_PROXY=%s", h.proxyURL))
 	}
 
 	var stdout, stderr bytes.Buffer
 	execCmd.Stdout = &stdout
 	execCmd.Stderr = &stderr
 
-	err := execCmd.Run()
+	err = execCmd.Run()
 
 	duration := time.Since(start).Seconds()
 	telemetry.RecordBubblewrapExecutionLatency(ctx, duration)

@@ -63,15 +63,16 @@ func TestHarnessRun(t *testing.T) {
     config := &SandboxConfig{
         ReadPaths: []string{"/tmp"},
         WritePaths: []string{"/tmp/workspace"},
+        EnableSeccomp: true,
     }
 
     h := NewHarness(config)
     defer h.Stop()
 
-    // Just verify the method doesn't panic
-    _, _ = h.Run(context.Background(), "echo", []string{"hello"})
+    // Just verify the method doesn't panic and that setup finishes successfully
+    _, err := h.Run(context.Background(), "echo", []string{"hello"})
 
-    if err == nil && res.ExitCode != 0 {
-        // Just sanity check
+    if err != nil && !strings.Contains(err.Error(), "executable file not found") {
+        t.Errorf("Unexpected error during Harness run setup: %v", err)
     }
 }
