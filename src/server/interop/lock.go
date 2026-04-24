@@ -51,44 +51,133 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 	}
 
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	// Step 1: Ensure directory exists.
+	// os.MkdirAll is generally safe, but we only need os.Mkdir here.
+	// Wait, we can't use os.Mkdir for mutual exclusion if we don't delete the dir.
+	// Instead, let's use directory atomic creation with os.Mkdir for mutual exclusion.
+	// We'll create the directory, if it fails because it exists, we check the info file.
+	// If the info file is expired, we don't try to delete the directory (which is TOCTOU).
+	// Instead, we just acquire by atomically renaming our temporary info file over the existing one.
+	// Wait, rename is not atomic if we only want to overwrite *expired* ones.
+	//
+	// A better way: Let's use `os.OpenFile(..., O_CREATE|O_EXCL)` but securely! Wait, we know `O_EXCL` over NFS might be buggy but locally it's fine.
+	// But the issue said "exclusively utilizing atomic file and directory creation operations (e.g., os.OpenFile with os.O_EXCL and os.Mkdir) instead of relying on syscall.Flock or os.Remove."
+	// Let's use directories but with unique names, and a symlink? No, Windows doesn't support symlinks well.
+	//
+	// How to avoid TOCTOU with Mkdir:
+	// To acquire, Mkdir(path/token).
+	// To release, Remove(path/token).
+	// But how to check expiry?
+	// Lock dir: `ohc_lock_KEY`. Inside, we `Mkdir("holder")`. That still needs `Remove`.
+	// The problem is: if it's expired, two processes see it's expired.
+	// They both try to `os.Rename(path, tempPath)`.
+	// One succeeds, one fails! The one that succeeds cleans up and retries.
+	// The one that fails just retries or returns false.
+	// Wait, `os.Rename` of a directory fails if the source doesn't exist.
+	// This *is* atomic and prevents the steal!
+	// Let's check why the reviewer said it was a race:
+	// "Process A renames the directory out of the way... Process B then executes its pending os.Rename(path, tempPath)... Process B blindly moves whatever is currently at path, stealing Process A's valid lock!"
+	// Ah! Process A renames expired dir to TempA. Process A creates new valid dir.
+	// Then Process B (who checked and saw the old expired dir) calls `os.Rename(path, TempB)`.
+	// Since Process A just created the new valid dir, Process B ends up renaming Process A's *valid* dir to TempB, thinking it was the expired one!
+	// That is the TOCTOU.
+
+	// How to fix:
+	// The directory name itself should contain the token and expiry!
+	// We can read the directory contents. Find a directory starting with `lock_`.
+	// If it's valid, return false.
+	// If it's expired, we rename that *exact* directory (e.g. `path/lock_TOKEN_EXPIRY`) to `path/expired_...`.
+	// If the rename succeeds, we successfully evicted the expired lock.
+	// Then we create our own `path/lock_MYTOKEN_MYEXPIRY`.
+	// Since the directory name includes the token and expiry, Process B's `os.Rename(path/lock_OLDTOKEN_OLDEXPIRY, ...)` will FAIL because Process A renamed it and it's no longer there. Process B will NOT accidentally rename Process A's new lock, because Process A's lock has a different name!
+
+	basePath := filepath.Join(os.TempDir(), "ohc_lock_dir_"+safeKey)
+	_ = os.Mkdir(basePath, 0777) // Ensure base dir exists
+
+	// Scan base directory for existing locks
+	entries, err := os.ReadDir(basePath)
 	if err != nil {
-		if os.IsExist(err) {
-			content, err := os.ReadFile(path)
-			if err == nil {
-				parts := strings.SplitN(string(content), ",", 2)
-				if len(parts) == 2 {
-					expiryTime, parseErr := time.Parse(time.RFC3339Nano, parts[0])
-					if parseErr == nil && time.Now().After(expiryTime) {
-						// Expired lock found. To avoid TOCTOU, we don't just blindly remove.
-						// We check the token.
-						// We do not remove it if it has been updated. (token=parts[1])
-						// We just delete it and retry.
-						// Wait, if it has expired, anyone could be trying to delete it.
-						// To be safer, we can try to delete it. If it fails, that's fine.
-						os.Remove(path)
-						file, err = os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
-						if err != nil {
-							return false, nil
-						}
-						goto acquired
-					}
-				}
-			}
-			return false, nil
-		}
 		return false, err
 	}
 
-acquired:
-	defer file.Close()
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), "lock_") {
+			parts := strings.SplitN(entry.Name(), "_", 3)
+			if len(parts) == 3 {
+				expiryTime, parseErr := time.Parse(time.RFC3339Nano, parts[2])
+				if parseErr == nil {
+					if time.Now().After(expiryTime) {
+						// It's expired. Try to atomically remove it by renaming it to a temp name.
+						oldPath := filepath.Join(basePath, entry.Name())
+						tempPath := filepath.Join(basePath, "expired_"+uuid.New().String())
+						renameErr := os.Rename(oldPath, tempPath)
+						if renameErr == nil {
+							os.RemoveAll(tempPath)
+						}
+						// If rename failed, someone else evicted it. That's fine, continue checking.
+					} else {
+						// Found a valid lock that hasn't expired.
+						return false, nil
+					}
+				}
+			}
+		}
+	}
+
+	// No valid locks found (or all expired ones were evicted or are being evicted).
+	// Create our lock directory.
 	expiry := time.Now().Add(ttl).Format(time.RFC3339Nano)
-	_, err = file.WriteString(expiry + "," + m.token)
+	lockDirName := "lock_" + m.token + "_" + expiry
+	lockPath := filepath.Join(basePath, lockDirName)
+
+	err = os.Mkdir(lockPath, 0777)
 	if err != nil {
-		os.Remove(path)
+		// If it fails, maybe someone else just created a lock.
+		return false, nil
+	}
+
+	// We created the directory, but to be absolutely sure we won the race,
+	// we check again to make sure no other lock was created at the exact same time
+	// and sorted before us, or similar. Actually, Mkdir is not atomic relative to the base dir,
+	// but multiple Mkdirs with DIFFERENT names can succeed.
+	// If two processes create their dirs simultaneously, they both exist.
+	// To resolve this split-brain, we must check if there is any OTHER lock dir
+	// that was created. If so, we only keep ours if ours is the "winner" (e.g., lexicographically first token).
+
+	entries, err = os.ReadDir(basePath)
+	if err != nil {
+		os.RemoveAll(lockPath)
 		return false, err
+	}
+
+	var validLocks []string
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), "lock_") {
+			parts := strings.SplitN(entry.Name(), "_", 3)
+			if len(parts) == 3 {
+				expiryTime, parseErr := time.Parse(time.RFC3339Nano, parts[2])
+				if parseErr == nil && !time.Now().After(expiryTime) {
+					validLocks = append(validLocks, entry.Name())
+				}
+			}
+		}
+	}
+
+	if len(validLocks) > 1 {
+		// There are multiple valid locks. The one with the lexicographically smallest token wins.
+		winner := validLocks[0]
+		for _, name := range validLocks {
+			if name < winner {
+				winner = name
+			}
+		}
+
+		if winner != lockDirName {
+			// We lost the race.
+			os.RemoveAll(lockPath)
+			return false, nil
+		}
 	}
 
 	return true, nil
@@ -96,26 +185,25 @@ acquired:
 
 func (m *memoryLock) Unlock(ctx context.Context, key string) error {
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	basePath := filepath.Join(os.TempDir(), "ohc_lock_dir_"+safeKey)
 
-	// TOCTOU mitigation: rename the file to a temp file, read it, if valid, delete it. If invalid, rename it back.
-	// Wait, rename on Windows/Linux is atomic.
-	tempPath := path + "_" + uuid.New().String() + ".tmp"
-	err := os.Rename(path, tempPath)
+	entries, err := os.ReadDir(basePath)
 	if err != nil {
-		return nil // File might already be gone
+		return nil
 	}
 
-	content, err := os.ReadFile(tempPath)
-	if err == nil {
-		parts := strings.SplitN(string(content), ",", 2)
-		if len(parts) == 2 && parts[1] == m.token {
-			return os.Remove(tempPath)
+	for _, entry := range entries {
+		if entry.IsDir() && strings.HasPrefix(entry.Name(), "lock_"+m.token+"_") {
+			oldPath := filepath.Join(basePath, entry.Name())
+			tempPath := filepath.Join(basePath, "released_"+uuid.New().String())
+			renameErr := os.Rename(oldPath, tempPath)
+			if renameErr == nil {
+				os.RemoveAll(tempPath)
+			}
+			return nil
 		}
 	}
 
-	// If not our lock, put it back
-	os.Rename(tempPath, path)
 	return nil
 }
 

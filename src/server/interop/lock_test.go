@@ -149,25 +149,24 @@ func TestMemoryLock_FailuresAndPaths(t *testing.T) {
 		t.Fatalf("Expected lock2 to fail since lock1 has it")
 	}
 
-	// Simulate invalid file content for the lock token file by overwriting it
+	// Simulate an invalid format lock by creating a directory without token and expiry
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
-	os.WriteFile(path, []byte("invalid_format"), 0666)
+	basePath := filepath.Join(os.TempDir(), "ohc_lock_dir_"+safeKey)
+	invalidLockDir := filepath.Join(basePath, "lock_invalid_format")
+	os.Mkdir(invalidLockDir, 0777)
 
-	// Attempt to lock again. Since it's invalid format, parsing expiry should fail, and we shouldn't get the lock
+	// Attempt to lock again. Should still fail since lock1 is valid, but shouldn't panic on invalid format.
 	locked3, _ := lock2.Lock(ctx, key, 1*time.Second)
 	if locked3 {
 		t.Fatalf("Expected lock2 to fail on invalid format lock file")
 	}
 
-	// Unlock with invalid format file should gracefully fail/ignore
 	err := lock1.Unlock(ctx, key)
 	if err != nil {
-		t.Fatalf("Expected unlock to handle invalid format without error: %v", err)
+		t.Fatalf("Expected unlock to handle gracefully: %v", err)
 	}
 
-	// Since lock wasn't deleted by unlock (because of format mismatch), we delete it manually
-	os.Remove(path)
+	os.RemoveAll(basePath)
 }
 
 func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
@@ -178,12 +177,13 @@ func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_expired"
 
-	// Create an artificially expired lock file
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	basePath := filepath.Join(os.TempDir(), "ohc_lock_dir_"+safeKey)
+	os.Mkdir(basePath, 0777)
 
 	expiry := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
-	os.WriteFile(path, []byte(expiry+",old_token"), 0666)
+	expiredLockDir := filepath.Join(basePath, "lock_oldtoken_"+expiry)
+	os.Mkdir(expiredLockDir, 0777)
 
 	// Now try to lock
 	locked, _ := lock1.Lock(ctx, key, 1*time.Second)
@@ -192,6 +192,7 @@ func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
 	}
 
 	_ = lock1.Unlock(ctx, key)
+	os.RemoveAll(basePath)
 }
 
 func TestMemoryLock_CoveragePaths(t *testing.T) {
@@ -203,30 +204,18 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 	key := "test_lock_key_coverage"
 
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	basePath := filepath.Join(os.TempDir(), "ohc_lock_dir_"+safeKey)
 
-	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(basePath)
 
-	// Force os.OpenFile to fail with an error other than IsExist.
-	// We can do this by creating a directory with the lock name.
-	os.Mkdir(path, 0755)
-
-	locked, err := lock1.Lock(ctx, key, 1*time.Second)
-	if locked {
-		t.Fatalf("Expected lock to fail when path is a directory")
-	}
-
-	os.Remove(path) // Cleanup
-
-	// Test unlock for non-existent file
-	err = lock1.Unlock(ctx, "non_existent_key")
+	// Test unlock for non-existent directory
+	err := lock1.Unlock(ctx, "non_existent_key")
 	if err != nil {
-		t.Fatalf("Expected unlock to gracefully handle non-existent file")
+		t.Fatalf("Expected unlock to gracefully handle non-existent directory")
 	}
 
-	// Lock it normally to test close/write errors
-	locked, err = lock1.Lock(ctx, key, 1*time.Second)
+	// Lock it normally
+	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
 		t.Fatalf("Failed to acquire lock")
 	}
@@ -240,6 +229,7 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 
 	// Explicitly unlock it correctly
 	lock1.Unlock(ctx, key)
+	os.RemoveAll(basePath)
 }
 
 func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
@@ -251,18 +241,17 @@ func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
 	key := "test_lock_key_rename_error"
 
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	basePath := filepath.Join(os.TempDir(), "ohc_lock_dir_"+safeKey)
 
-	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(basePath)
 
 	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
 		t.Fatalf("Failed to acquire lock")
 	}
 
-	// Explicitly delete the file so rename fails in Unlock
-	os.Remove(path)
+	// Explicitly delete the directory so rename fails in Unlock
+	os.RemoveAll(basePath)
 
 	// Unlock should gracefully handle the rename failure
 	err = lock1.Unlock(ctx, key)
@@ -280,10 +269,9 @@ func TestMemoryLock_IsExistError(t *testing.T) {
 	key := "test_lock_key_is_exist"
 
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	basePath := filepath.Join(os.TempDir(), "ohc_lock_dir_"+safeKey)
 
-	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(basePath)
 
 	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
@@ -296,7 +284,7 @@ func TestMemoryLock_IsExistError(t *testing.T) {
 		t.Fatalf("Expected lock to fail gracefully")
 	}
 
-	os.Remove(path) // Cleanup
+	os.RemoveAll(basePath) // Cleanup
 }
 
 func TestCloudLock(t *testing.T) {
