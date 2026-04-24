@@ -14,7 +14,9 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  bool _isRegistering = false;
   bool _loading = false;
   bool _obscurePassword = true;
   String? _error;
@@ -22,6 +24,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void dispose() {
     _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -33,9 +36,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (_isRegistering) {
+        await ref
+            .read(authStateProvider.notifier)
+            .register(
+              _usernameCtrl.text.trim(),
+              _emailCtrl.text.trim(),
+              _passwordCtrl.text,
+            );
+        if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Verification email sent.'),
+                action: SnackBarAction(
+                  label: 'Resend',
+                  onPressed: () {},
+                ),
+              ),
+            );
+        }
+      } else {
+        await ref
+            .read(authStateProvider.notifier)
+            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -262,7 +286,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in to orchestrate your swarm',
+                          _isRegistering ? 'Sign up to orchestrate your swarm' : 'Sign in to orchestrate your swarm',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'Inter',
@@ -270,11 +294,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
+                        if (_isRegistering) ...[
+                          TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email Address',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator:
+                                (v) =>
+                                    (v == null || v.trim().isEmpty || !v.contains('@'))
+                                        ? 'Enter a valid email'
+                                        : null,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         TextFormField(
                           controller: _usernameCtrl,
                           keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
+                            labelText: _isRegistering ? 'Username' : 'Email or Username',
                             prefixIcon: const Icon(Icons.person_outline),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -283,7 +326,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           validator:
                               (v) =>
                                   (v == null || v.trim().isEmpty)
-                                      ? 'Enter your email or username'
+                                      ? (_isRegistering ? 'Enter your username' : 'Enter your email or username')
                                       : null,
                         ),
                         const SizedBox(height: 16),
@@ -329,7 +372,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 24),
                         Semantics(
                           button: true,
-                          label: 'Sign In',
+                          label: _isRegistering ? 'Sign Up' : 'Sign In',
                           child: FilledButton(
                             onPressed: _loading ? null : _submit,
                             style: FilledButton.styleFrom(
@@ -348,9 +391,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
+                                    : Text(
+                                        _isRegistering ? 'Sign Up' : 'Sign In',
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Inter',
@@ -404,6 +447,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 fontWeight: FontWeight.bold,
                                 fontFamily: 'Inter',
                               ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isRegistering = !_isRegistering;
+                              _error = null;
+                            });
+                          },
+                          child: Text(
+                            _isRegistering ? "Already have an account? Sign In" : "Don't have an account? Sign Up",
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ),

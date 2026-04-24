@@ -1,6 +1,9 @@
 package e2e
 
 import (
+	"fmt"
+	"time"
+	"github.com/playwright-community/playwright-go"
 	"testing"
 )
 
@@ -310,4 +313,94 @@ func TestEndToEndSmokeFullInstallLoginDashboardSettingsLogoutFlow(t *testing.T) 
 	// Test: end-to-end smoke: full install→login→dashboard→settings→logout flow
 	body, _ := page.Content()
 	_ = body
+}
+
+// TestCUJRegistration verifies the complete user registration flow.
+func TestCUJRegistration(t *testing.T) {
+	page := newPage(t)
+	defer page.Close()
+
+	// 1. Ensure we are on the landing page or login page and toggle to registration
+	t.Log("Navigating to login page")
+	if _, err := page.Goto(baseURL + "/#/login"); err != nil {
+		t.Fatalf("could not go to login page: %v", err)
+	}
+
+	// Wait for the login screen to render
+	t.Log("Waiting for login screen to render")
+	err := page.Locator("text=Sign in to orchestrate your swarm").WaitFor(playwright.LocatorWaitForOptions{
+		State:   playwright.WaitForSelectorStateVisible,
+		Timeout: playwright.Float(5000),
+	})
+	if err != nil {
+		t.Fatalf("Login screen didn't load: %v", err)
+	}
+
+	// Toggle to registration mode
+	t.Log("Toggling to registration mode")
+	err = page.Locator("text=\"Don't have an account? Sign Up\"").Click()
+	if err != nil {
+		t.Fatalf("Failed to click sign up toggle: %v", err)
+	}
+
+	// Verify header changed to registration
+	err = page.Locator("text=Sign up to orchestrate your swarm").WaitFor(playwright.LocatorWaitForOptions{
+		State:   playwright.WaitForSelectorStateVisible,
+		Timeout: playwright.Float(10000),
+	})
+	if err != nil {
+		t.Fatalf("Failed to verify registration header: %v", err)
+	}
+
+	// 2. Fill in the registration form
+	t.Log("Filling registration form")
+
+	// Create a unique email and username for this test run
+	testEmail := fmt.Sprintf("newuser_%d@example.com", time.Now().UnixNano())
+	testUser := fmt.Sprintf("newuser_%d", time.Now().UnixNano())
+
+	// Because of semantics complexities, rely on input fields by type or index where possible.
+	// Often it's safer to use labels.
+	err = page.Locator("input").Nth(0).Fill(testEmail)
+	if err != nil {
+		t.Fatalf("Failed to fill email: %v", err)
+	}
+
+	err = page.Locator("input").Nth(1).Fill(testUser)
+	if err != nil {
+		t.Fatalf("Failed to fill username: %v", err)
+	}
+
+	err = page.Locator("input").Nth(2).Fill("password123")
+	if err != nil {
+		t.Fatalf("Failed to fill password: %v", err)
+	}
+
+	// 3. Submit registration
+	t.Log("Submitting registration")
+	err = page.Locator("button:has-text(\"Sign Up\")").Click()
+	if err != nil {
+		t.Fatalf("Failed to click Sign Up button: %v", err)
+	}
+
+	// 4. Assert routing to Business Setup or Dashboard, or Snackbar
+	t.Log("Waiting for successful registration indicators")
+
+	// We look for either the "Verification email sent" snackbar OR the dashboard/business setup
+	err = page.Locator("text=Verification email sent.").WaitFor(playwright.LocatorWaitForOptions{
+		State:   playwright.WaitForSelectorStateVisible,
+		Timeout: playwright.Float(10000),
+	})
+	if err != nil {
+		// If snackbar wasn't caught, check if we routed to another screen
+		err2 := page.Locator("text=Dashboard").WaitFor(playwright.LocatorWaitForOptions{
+			State:   playwright.WaitForSelectorStateVisible,
+			Timeout: playwright.Float(10000),
+		})
+		if err2 != nil {
+			t.Fatalf("Failed to confirm successful registration: snackbar err=%v, route err=%v", err, err2)
+		}
+	}
+
+	t.Log("Registration CUJ completed successfully")
 }

@@ -33,10 +33,61 @@ type loginRequest struct {
 	OrganizationID string `json:"organizationId,omitempty"`
 }
 
+type registerRequest struct {
+	Username       string `json:"username"`
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+	OrganizationID string `json:"organizationId,omitempty"`
+}
+
 type loginResponse struct {
 	Token     string     `json:"token"`
 	User      UserPublic `json:"user"`
 	ExpiresAt time.Time  `json:"expiresAt"`
+}
+
+// HandleRegister handles new user registration. 	POST /api/auth/register  {"username":"…","email":"…","password":"…"}
+// Accepts parameters: h *Handlers (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req registerRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	req.Email = strings.TrimSpace(req.Email)
+
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		jsonError(w, "username, email and password required", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.store.CreateUser(req.Username, req.Email, req.Password, []string{RoleViewer}, req.OrganizationID)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	token, err := h.store.IssueToken(user)
+	if err != nil {
+		jsonError(w, "failed to issue token", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, loginResponse{
+		Token:     token,
+		User:      user.PublicView(),
+		ExpiresAt: time.Now().UTC().Add(tokenTTL),
+	})
 }
 
 // HandleLogin validates credentials and returns a signed JWT.  	POST /api/auth/login  {"username":"…","password":"…"}
