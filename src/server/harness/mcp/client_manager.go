@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"sync"
 
+	"github.com/onehumancorp/mono/src/server/integrations/mcp/harness"
 	"github.com/onehumancorp/mono/src/server/agents/builtin"
 )
 
@@ -51,8 +51,7 @@ func NewClientManager() *ClientManager {
 type MCPServer struct {
 	config ServerConfig
 	cmd    *exec.Cmd
-	stdin  io.WriteCloser
-	stdout io.ReadCloser
+	bridge harness.TransportBridge
 }
 
 // ConnectStdio spawns an MCP server using stdio transport.
@@ -81,11 +80,11 @@ func (cm *ClientManager) ConnectStdio(ctx context.Context, id string, config Ser
 		return err
 	}
 
+	bridge := harness.NewUniversalBridge("LOCAL", stdout, stdin, nil, "", "")
 	cm.servers[id] = &MCPServer{
 		config: config,
 		cmd:    cmd,
-		stdin:  stdin,
-		stdout: stdout,
+		bridge: bridge,
 	}
 
 	return nil
@@ -101,7 +100,7 @@ func (cm *ClientManager) Disconnect(id string) error {
 		return fmt.Errorf("server %s not found", id)
 	}
 
-	srv.stdin.Close()
+	srv.bridge.Close()
 	srv.cmd.Process.Kill()
 	srv.cmd.Wait()
 
