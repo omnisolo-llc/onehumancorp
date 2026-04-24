@@ -36,8 +36,6 @@ DefaultCatalog = map[string]Price{
 	"claude-3-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00},
 	"claude-3-haiku":  {InputPerMillionUSD: 0.25, OutputPerMillionUSD: 1.25},
 	// Anthropic — Claude 3.5 family
-	"claude-3-5-sonnet-20241022": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
-	"claude-3-5-sonnet-20240620": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
 	"claude-3.5-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
 	"claude-3.5-haiku":  {InputPerMillionUSD: 0.80, OutputPerMillionUSD: 4.00, CachedPerMillionUSD: 0.08},
 	// Anthropic — Claude 3.7 family
@@ -82,7 +80,6 @@ type Usage struct {
 	PromptTokens     int64     `json:"promptTokens"`
 	CompletionTokens int64     `json:"completionTokens"`
 	CachedTokens     int64     `json:"cachedTokens"`
-	IsAction         bool      `json:"isAction"`
 	OccurredAt       time.Time `json:"occurredAt"`
 	CostUSD          float64   `json:"costUsd"`
 }
@@ -93,10 +90,9 @@ type Usage struct {
 // Produces no errors.
 // Has no side effects.
 type AgentSummary struct {
-	AgentID      string  `json:"agentId"`
-	CostUSD      float64 `json:"costUsd"`
-	TokenUsed    int64   `json:"tokenUsed"`
-	TotalActions int64   `json:"totalActions"`
+	AgentID   string  `json:"agentId"`
+	CostUSD   float64 `json:"costUsd"`
+	TokenUsed int64   `json:"tokenUsed"`
 }
 
 // Summary aggregates the total infrastructure spend, overall token count, and per-agent metrics for a specific organization.
@@ -108,7 +104,6 @@ type Summary struct {
 	OrganizationID      string         `json:"organizationId"`
 	TotalCostUSD        float64        `json:"totalCostUsd"`
 	TotalTokens         int64          `json:"totalTokens"`
-	TotalActions        int64          `json:"totalActions"`
 	ProjectedMonthlyUSD float64        `json:"projectedMonthlyUsd"`
 	Agents              []AgentSummary `json:"agents"`
 }
@@ -333,7 +328,6 @@ func (t *Tracker) Summary(organizationID string) Summary {
 	byAgent := map[string]AgentSummary{}
 	var totalCost float64
 	var totalTokens int64
-	var totalActions int64
 
 	for _, usage := range shard.usages {
 		if usage.OrganizationID != organizationID {
@@ -343,10 +337,6 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		agent.AgentID = usage.AgentID
 		agent.CostUSD += usage.CostUSD
 		agent.TokenUsed += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
-		if usage.IsAction {
-			agent.TotalActions++
-			totalActions++
-		}
 		byAgent[usage.AgentID] = agent
 		totalCost += usage.CostUSD
 		totalTokens += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
@@ -364,7 +354,6 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,
 		TotalTokens:         totalTokens,
-		TotalActions:        totalActions,
 		ProjectedMonthlyUSD: totalCost * 30,
 		Agents:              agents,
 	}
