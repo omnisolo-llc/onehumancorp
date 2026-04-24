@@ -59,15 +59,17 @@ func (p *DatabaseLockProvider) trySQLiteLock(ctx context.Context, key string, tt
 			token = excluded.token,
 			expires_at = excluded.expires_at
 		WHERE distributed_locks.expires_at < ?
+		RETURNING key
 	`
 
-	rowsAffected, err := p.db.Exec(ctx, query, key, token, expiresAt, now)
+	var returnedKey string
+	row := p.db.QueryRow(ctx, query, key, token, expiresAt, now)
+	err := row.Scan(&returnedKey)
 	if err != nil {
+		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			return false, nil, nil
+		}
 		return false, nil, fmt.Errorf("failed to acquire sqlite lock: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return false, nil, nil
 	}
 
 	unlock := func(unlockCtx context.Context) error {

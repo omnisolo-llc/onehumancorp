@@ -2,6 +2,8 @@ package interop
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"strings"
@@ -150,10 +152,17 @@ func TestMemoryLock_FailuresAndPaths(t *testing.T) {
 	}
 
 	// Simulate invalid file content for the lock token file by overwriting it
-	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
-	os.Mkdir(path, 0700)
-	os.WriteFile(filepath.Join(path, "lock.data"), []byte("invalid_format"), 0600)
+	hash := sha256.Sum256([]byte(key))
+	hashedKey := hex.EncodeToString(hash[:])
+	path := filepath.Join(os.TempDir(), "ohc_lock_"+hashedKey)
+
+	// We manually rename info_ file to invalid content format to test failure handling
+	entries, _ := os.ReadDir(path)
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "info_") {
+			os.WriteFile(filepath.Join(path, entry.Name()), []byte("invalid_format"), 0600)
+		}
+	}
 
 	// Attempt to lock again. Since it's invalid format, parsing expiry should fail, and we shouldn't get the lock
 	locked3, _ := lock2.Lock(ctx, key, 1*time.Second)
@@ -167,7 +176,7 @@ func TestMemoryLock_FailuresAndPaths(t *testing.T) {
 		t.Fatalf("Expected unlock to handle invalid format without error: %v", err)
 	}
 
-	// Since lock wasn't deleted by unlock (because of format mismatch), we delete it manually
+	// Since lock wasn't deleted by unlock (because of format mismatch or token change), we delete it manually
 	os.RemoveAll(path)
 }
 
@@ -180,12 +189,13 @@ func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
 	key := "test_lock_key_expired"
 
 	// Create an artificially expired lock file
-	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	hash := sha256.Sum256([]byte(key))
+	hashedKey := hex.EncodeToString(hash[:])
+	path := filepath.Join(os.TempDir(), "ohc_lock_"+hashedKey)
 
 	expiry := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
 	os.Mkdir(path, 0700)
-	os.WriteFile(filepath.Join(path, "lock.data"), []byte(expiry+",old_token"), 0600)
+	os.WriteFile(filepath.Join(path, "info_old_token.json"), []byte(expiry), 0600)
 
 	// Now try to lock
 	locked, _ := lock1.Lock(ctx, key, 1*time.Second)
@@ -204,22 +214,23 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_coverage"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	hash := sha256.Sum256([]byte(key))
+	hashedKey := hex.EncodeToString(hash[:])
+	path := filepath.Join(os.TempDir(), "ohc_lock_"+hashedKey)
 
 	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(path)
 
-	// Force os.OpenFile to fail with an error other than IsExist.
-	// We can do this by creating a directory with the lock name.
+	// Force os.Mkdir to fail with an error other than IsExist.
+	// We can do this by creating a file with the lock name.
 	os.WriteFile(path, []byte("blocker"), 0600)
 
 	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if locked {
-		t.Fatalf("Expected lock to fail when path is a directory")
+		t.Fatalf("Expected lock to fail when path is a file blocker")
 	}
 
-	os.Remove(path) // Cleanup
+	os.RemoveAll(path) // Cleanup
 
 	// Test unlock for non-existent file
 	err = lock1.Unlock(ctx, "non_existent_key")
@@ -252,11 +263,12 @@ func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_rename_error"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	hash := sha256.Sum256([]byte(key))
+	hashedKey := hex.EncodeToString(hash[:])
+	path := filepath.Join(os.TempDir(), "ohc_lock_"+hashedKey)
 
 	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(path)
 
 	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
@@ -281,11 +293,12 @@ func TestMemoryLock_IsExistError(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_is_exist"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	hash := sha256.Sum256([]byte(key))
+	hashedKey := hex.EncodeToString(hash[:])
+	path := filepath.Join(os.TempDir(), "ohc_lock_"+hashedKey)
 
 	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(path)
 
 	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
@@ -298,7 +311,7 @@ func TestMemoryLock_IsExistError(t *testing.T) {
 		t.Fatalf("Expected lock to fail gracefully")
 	}
 
-	os.Remove(path) // Cleanup
+	os.RemoveAll(path) // Cleanup
 }
 
 func TestCloudLock(t *testing.T) {
