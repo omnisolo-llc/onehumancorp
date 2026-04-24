@@ -125,14 +125,18 @@ func (r *PgHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool,
 }
 
 func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
+	return r.ListAgentsByOrg(ctx, r.orgID)
+}
+
+func (r *PgHubRepository) ListAgentsByOrg(ctx context.Context, orgID string) ([]Agent, error) {
 	var agents []Agent
 	err := pgWithRetry(ctx, func() error {
 		agents = nil // Reset on retry
 		query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents"
 		var args []any
-		if r.orgID != "" {
+		if orgID != "" {
 			query += " WHERE organization_id = $1"
-			args = append(args, r.orgID)
+			args = append(args, orgID)
 		}
 		query += " ORDER BY id"
 		rows, err := r.pool.Query(ctx, query, args...)
@@ -149,9 +153,6 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 			}
 			a.Status = Status(status)
 			agents = append(agents, a)
-		}
-		if err := rows.Err(); err != nil {
-			return err
 		}
 		return nil
 	})
@@ -292,9 +293,6 @@ func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Me
 			}
 			temp = append(temp, r)
 		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
 
 		// Sort by seq to maintain order since DELETE ... RETURNING does not guarantee order
 		sort.Slice(temp, func(i, j int) bool {
@@ -344,9 +342,6 @@ func (r *PgHubRepository) PeekMessages(ctx context.Context, agentID string) ([]M
 				return fmt.Errorf("pg: scan message: %w", err)
 			}
 			msgs = append(msgs, m)
-		}
-		if err := rows.Err(); err != nil {
-			return err
 		}
 		return nil
 	})
@@ -411,9 +406,6 @@ func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoo
 			m.MeetingID = id
 			room.Transcript = append(room.Transcript, m)
 		}
-		if err := rows.Err(); err != nil {
-			return err
-		}
 		return nil
 	})
 
@@ -472,9 +464,6 @@ func (r *PgHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, erro
 			}
 			_ = json.Unmarshal([]byte(participantsJSON), &room.Participants)
 			rooms = append(rooms, room)
-		}
-		if err := rows.Err(); err != nil {
-			return err
 		}
 		return nil
 	})
