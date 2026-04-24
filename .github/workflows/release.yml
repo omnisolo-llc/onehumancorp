@@ -109,8 +109,8 @@ jobs:
         with:
           name: flutter-android
           path: |
-            srcs/app/build/app/outputs/flutter-apk/*.apk
-            srcs/app/build/app/outputs/bundle/release/*.aab
+            src/app/build/app/outputs/flutter-apk/*.apk
+            src/app/build/app/outputs/bundle/release/*.aab
           retention-days: 7
 
   # ── Build Flutter iOS app (macOS runner) ────────────────────────────────────
@@ -128,7 +128,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: flutter-ios
-          path: srcs/app/build/ios/iphoneos/
+          path: src/app/build/ios/iphoneos/
           retention-days: 7
 
   # ── Build Flutter macOS desktop app ─────────────────────────────────────────
@@ -144,7 +144,7 @@ jobs:
 
       - name: Archive macOS .app
         run: |
-          cd srcs/app/build/macos/Build/Products/Release
+          cd src/app/build/macos/Build/Products/Release
           zip -r ../../../../../../../dist/ohc-app-macos.zip *.app
           mkdir -p "$GITHUB_WORKSPACE/dist"
           cp ../../../../../../../dist/ohc-app-macos.zip "$GITHUB_WORKSPACE/dist/" 2>/dev/null || \
@@ -174,7 +174,7 @@ jobs:
       - name: Archive Windows build
         run: |
           mkdir -p dist
-          cd srcs/app/build/windows/x64/runner/Release
+          cd src/app/build/windows/x64/runner/Release
           7z a ../../../../../../../dist/ohc-app-windows.zip . || \
             powershell Compress-Archive -Path . -DestinationPath "$GITHUB_WORKSPACE/dist/ohc-app-windows.zip"
 
@@ -206,7 +206,7 @@ jobs:
       - name: Archive Linux build
         run: |
           mkdir -p dist
-          tar -C srcs/app/build/linux/x64/release/bundle \
+          tar -C src/app/build/linux/x64/release/bundle \
             -czf dist/ohc-app-linux-x86_64.tar.gz .
 
       - name: Upload Linux artifacts
@@ -230,7 +230,7 @@ jobs:
       - name: Archive Web build
         run: |
           mkdir -p dist
-          tar -C srcs/app/build/web -czf dist/ohc-app-web.tar.gz .
+          tar -C src/app/build/web -czf dist/ohc-app-web.tar.gz .
 
       - name: Upload Web artifacts
         uses: actions/upload-artifact@v4

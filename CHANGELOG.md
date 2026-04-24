@@ -1,4 +1,11 @@
 # OHC Hybrid Agentic OS - Changelog
+## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
+### Cloud Scaling Improvements
+- Migrate `srcs/` directory to `src/` to streamline repository organization.
+
+### Privacy/Offline Improvements
+- Fix release deployment pipeline path references for robust artifact generation.
+
 ## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
 ### Cloud Scaling Improvements
 - Business Setup Onboarding Overhaul for streamlined multi-tenant SaaS scaling.

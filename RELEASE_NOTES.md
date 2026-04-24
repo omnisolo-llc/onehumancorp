@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
+- Scaling (Cloud): Migrate `srcs/` directory to `src/` to streamline repository organization.
+- Privacy/Offline (Standalone): Fix release deployment pipeline path references for robust artifact generation.
+
 ## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
 - Scaling (Cloud): Business Setup Onboarding Overhaul for streamlined multi-tenant SaaS scaling.
 - Privacy/Offline (Standalone): Enhances Day One onboarding user privacy and local setup capabilities.
