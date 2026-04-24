@@ -3,7 +3,7 @@ edition = "2024";
 package ohc.common;
 
 
-option go_package = "github.com/onehumancorp/mono/src/proto/ohc/common;commonpb";
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/agent;agentpb";
 
 enum Role {
   ROLE_UNSPECIFIED = 0;
@@ -23,4 +23,10 @@ enum AgentStatus {
   ACTIVE = 2;
   IN_MEETING = 3;
   BLOCKED = 4;
+}
+
+message DummyMessage {}
+
+service DummyService {
+  rpc Dummy(DummyMessage) returns (DummyMessage);
 }
