@@ -554,11 +554,11 @@ class ApiService {
     }
   }
 
-  Future<void> triggerHybridSync() async {
+  Future<void> triggerHybridSync({List<Map<String, dynamic>> deltas = const []}) async {
     final response = await _client.post(
-      Uri.parse('$baseUrl/api/mcp/sync'),
+      Uri.parse('$baseUrl/api/v1/sync/mcp-deltas'),
       headers: _headers,
-      body: jsonEncode({'action': 'sync_state'}),
+      body: jsonEncode({'deltas': deltas}),
     );
     if (response.statusCode != 200) {
       throw Exception('Failed to trigger hybrid sync');

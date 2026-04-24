@@ -147,11 +147,9 @@ class SettingsScreen extends ConsumerWidget {
                     Icons.sync,
                     color: Colors.blue,
                   ),
-                  title: const Text(
-                    'Trigger Hybrid Sync',
-                    style: TextStyle(
-                      color: Colors.blue,
-                    ),
+                  title: Semantics(
+                    label: 'Trigger Hybrid Sync',
+                    child: Text('Trigger Hybrid Sync', style: TextStyle(color: Colors.blue)),
                   ),
                   onTap: () async {
                     try {
@@ -160,7 +158,7 @@ class SettingsScreen extends ConsumerWidget {
                         await api.triggerHybridSync();
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Sync successful')),
+                            SnackBar(content: Semantics(label: 'Sync successful', child: Text('Sync successful'))),
                           );
                         }
                       }

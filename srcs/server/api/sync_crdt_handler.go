@@ -66,7 +66,9 @@ func HandleSyncMCPDeltas(hub *orchestration.Hub) http.HandlerFunc {
 				query := `INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud)
 				          VALUES ($1, $2, $3, $4, $5, true)
 				          ON CONFLICT(tenant_id, id) DO UPDATE SET
-				          data = excluded.data, updated_at = excluded.updated_at, synced_to_cloud = true`
+				          data = CASE WHEN EXCLUDED.updated_at > crdt_deltas.updated_at THEN EXCLUDED.data ELSE crdt_deltas.data END,
+				          updated_at = CASE WHEN EXCLUDED.updated_at > crdt_deltas.updated_at THEN EXCLUDED.updated_at ELSE crdt_deltas.updated_at END,
+				          synced_to_cloud = true`
 
 				_, err := provider.Exec(ctx, query, tenantID, delta.ID, delta.EntityID, delta.Data, delta.UpdatedAt)
 				if err != nil {
