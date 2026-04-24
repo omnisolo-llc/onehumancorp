@@ -23,6 +23,9 @@ go_library(
         "//src/server/integrations/plane",
         "//src/server/orchestration",
         "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_redis_rueidis//:rueidis",
+        "@com_github_google_uuid//:uuid",
+        "@org_golang_google_protobuf//proto",
     ],
 )
 

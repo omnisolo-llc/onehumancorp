@@ -213,3 +213,200 @@ class BillingWizardScreen extends ConsumerWidget {
     );
   }
 }
+
+
+// --- Review Pending Actions Wizard ---
+class PendingAction {
+  final String id;
+  final String agentName;
+  final String actionDescription;
+  final String riskLevel;
+
+  const PendingAction({
+    required this.id,
+    required this.agentName,
+    required this.actionDescription,
+    required this.riskLevel,
+  });
+}
+
+class PendingActionsState {
+  final List<PendingAction> actions;
+  final bool isLoading;
+
+  const PendingActionsState({
+    this.actions = const [],
+    this.isLoading = false,
+  });
+
+  PendingActionsState copyWith({
+    List<PendingAction>? actions,
+    bool? isLoading,
+  }) {
+    return PendingActionsState(
+      actions: actions ?? this.actions,
+      isLoading: isLoading ?? this.isLoading,
+    );
+  }
+}
+
+class PendingActionsNotifier extends Notifier<PendingActionsState> {
+  @override
+  PendingActionsState build() {
+    _loadMockActions();
+    return const PendingActionsState(isLoading: true);
+  }
+
+  Future<void> _loadMockActions() async {
+    // Mock API delay
+    await Future.delayed(const Duration(milliseconds: 500));
+    // Notifier doesn't have mounted context. Just let state update.
+
+    state = state.copyWith(
+      isLoading: false,
+      actions: [
+        const PendingAction(
+          id: '1',
+          agentName: 'Customer Success Agent',
+          actionDescription: 'Send refund email to customer maya@example.com for order #123',
+          riskLevel: 'High',
+        ),
+        const PendingAction(
+          id: '2',
+          agentName: 'Marketing & Advertising Agent',
+          actionDescription: 'Publish Instagram post for new vegan cake catalog',
+          riskLevel: 'High',
+        ),
+      ],
+    );
+  }
+
+  Future<void> approveAction(BuildContext context, String id) async {
+    // Mock API call to approve
+    state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Action approved and executed.')),
+      );
+    }
+  }
+
+  Future<void> rejectAction(BuildContext context, String id) async {
+    // Mock API call to reject
+    state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Action rejected and discarded.')),
+      );
+    }
+  }
+}
+
+final pendingActionsProvider = NotifierProvider<PendingActionsNotifier, PendingActionsState>(() {
+  return PendingActionsNotifier();
+});
+
+class ReviewPendingActionsWizardScreen extends ConsumerWidget {
+  const ReviewPendingActionsWizardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(pendingActionsProvider);
+    final notifier = ref.read(pendingActionsProvider.notifier);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Review Actions')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Pending Approvals', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 16),
+                    const Text('Review high-risk actions proposed by your AI agents before they are executed.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                    const SizedBox(height: 24),
+                    if (state.isLoading)
+                      const Center(child: CircularProgressIndicator())
+                    else if (state.actions.isEmpty)
+                      const Center(child: Text('All caught up! No pending actions.', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontStyle: FontStyle.italic)))
+                    else
+                      ...state.actions.map((action) => _PendingActionCard(action: action, onApprove: () => notifier.approveAction(context, action.id), onReject: () => notifier.rejectAction(context, action.id))),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingActionCard extends StatelessWidget {
+  final PendingAction action;
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  const _PendingActionCard({
+    required this.action,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.warning_amber, color: Colors.orange[300], size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  action.agentName,
+                  style: const TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            action.actionDescription,
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: onReject,
+                style: TextButton.styleFrom(foregroundColor: Colors.red[300]),
+                child: const Text('Reject', style: TextStyle(fontFamily: 'Inter')),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: onApprove,
+                child: const Text('Approve', style: TextStyle(fontFamily: 'Inter')),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

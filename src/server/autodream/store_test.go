@@ -11,7 +11,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type mockPGProvider struct {
+type mockPGProviderAutodream struct {
 	db.Provider
 	execArgs  []interface{}
 	queryArgs []interface{}
@@ -59,14 +59,14 @@ func (m *mockRows) Scan(dest ...any) error {
 func (m *mockRows) Close()     {}
 func (m *mockRows) Err() error { return m.errErr }
 
-func (m *mockPGProvider) IsSQLite() bool { return false }
+func (m *mockPGProviderAutodream) IsSQLite() bool { return false }
 
-func (m *mockPGProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
+func (m *mockPGProviderAutodream) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	m.execArgs = arguments
 	return 0, m.execErr
 }
 
-func (m *mockPGProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
+func (m *mockPGProviderAutodream) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
 	m.queryArgs = optionsAndArgs
 	if m.queryErr != nil {
 		return nil, m.queryErr
@@ -78,7 +78,7 @@ func (m *mockPGProvider) Query(ctx context.Context, sql string, optionsAndArgs .
 }
 
 func TestPGVectorStore_Store_Success(t *testing.T) {
-	mockDB := &mockPGProvider{}
+	mockDB := &mockPGProviderAutodream{}
 	store := NewPGVectorStore(mockDB)
 	ctx := context.Background()
 
@@ -112,7 +112,7 @@ func TestPGVectorStore_Store_Success(t *testing.T) {
 }
 
 func TestPGVectorStore_Search_Success(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanData: []interface{}{
@@ -140,7 +140,7 @@ func TestPGVectorStore_Search_Success(t *testing.T) {
 }
 
 func TestPGVectorStore_Search_QueryError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		queryErr: errors.New("query error"),
 	}
 	store := NewPGVectorStore(mockDB)
@@ -154,7 +154,7 @@ func TestPGVectorStore_Search_QueryError(t *testing.T) {
 }
 
 func TestPGVectorStore_Search_ScanError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanErr: errors.New("scan error"),
@@ -171,7 +171,7 @@ func TestPGVectorStore_Search_ScanError(t *testing.T) {
 }
 
 func TestPGVectorStore_Search_UnmarshalMetaError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanData: []interface{}{
@@ -193,7 +193,7 @@ func TestPGVectorStore_Search_UnmarshalMetaError(t *testing.T) {
 }
 
 func TestPGVectorStore_Search_UnmarshalEmbError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanData: []interface{}{
@@ -276,7 +276,7 @@ func TestSQLiteVectorStore_E2E(t *testing.T) {
 }
 
 func TestSQLiteVectorStore_Search_QueryError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		queryErr: errors.New("query error"),
 	}
 	store := NewSQLiteVectorStore(mockDB)
@@ -290,7 +290,7 @@ func TestSQLiteVectorStore_Search_QueryError(t *testing.T) {
 }
 
 func TestSQLiteVectorStore_Search_ScanError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanErr: errors.New("scan error"),
@@ -307,7 +307,7 @@ func TestSQLiteVectorStore_Search_ScanError(t *testing.T) {
 }
 
 func TestSQLiteVectorStore_Search_RowsErr(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 0,
 			errErr:  errors.New("rows err"),
@@ -350,7 +350,7 @@ func TestCosineSimilarity(t *testing.T) {
 }
 
 func TestPGVectorStore_Store_InvalidMetadata(t *testing.T) {
-	store := NewPGVectorStore(&mockPGProvider{})
+	store := NewPGVectorStore(&mockPGProviderAutodream{})
 	err := store.Store(context.Background(), "id", []float32{1.0}, map[string]any{"invalid": make(chan int)}, "content")
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -358,7 +358,7 @@ func TestPGVectorStore_Store_InvalidMetadata(t *testing.T) {
 }
 
 func TestPGVectorStore_Store_InvalidEmbedding(t *testing.T) {
-	store := NewPGVectorStore(&mockPGProvider{})
+	store := NewPGVectorStore(&mockPGProviderAutodream{})
 	err := store.Store(context.Background(), "id", []float32{float32(math.NaN())}, map[string]any{}, "content")
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -366,7 +366,7 @@ func TestPGVectorStore_Store_InvalidEmbedding(t *testing.T) {
 }
 
 func TestPGVectorStore_Search_InvalidEmbedding(t *testing.T) {
-	store := NewPGVectorStore(&mockPGProvider{})
+	store := NewPGVectorStore(&mockPGProviderAutodream{})
 	_, err := store.Search(context.Background(), []float32{float32(math.NaN())}, 5)
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -374,7 +374,7 @@ func TestPGVectorStore_Search_InvalidEmbedding(t *testing.T) {
 }
 
 func TestSQLiteVectorStore_Store_InvalidMetadata(t *testing.T) {
-	store := NewSQLiteVectorStore(&mockPGProvider{})
+	store := NewSQLiteVectorStore(&mockPGProviderAutodream{})
 	err := store.Store(context.Background(), "id", []float32{1.0}, map[string]any{"invalid": make(chan int)}, "content")
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -382,7 +382,7 @@ func TestSQLiteVectorStore_Store_InvalidMetadata(t *testing.T) {
 }
 
 func TestSQLiteVectorStore_Store_InvalidEmbedding(t *testing.T) {
-	store := NewSQLiteVectorStore(&mockPGProvider{})
+	store := NewSQLiteVectorStore(&mockPGProviderAutodream{})
 	err := store.Store(context.Background(), "id", []float32{float32(math.NaN())}, map[string]any{}, "content")
 	if err == nil {
 		t.Fatal("expected error, got nil")
@@ -390,7 +390,7 @@ func TestSQLiteVectorStore_Store_InvalidEmbedding(t *testing.T) {
 }
 
 func TestSQLiteVectorStore_Search_UnmarshalMetaError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanData: []interface{}{
@@ -409,7 +409,7 @@ func TestSQLiteVectorStore_Search_UnmarshalMetaError(t *testing.T) {
 }
 
 func TestSQLiteVectorStore_Search_UnmarshalEmbError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanData: []interface{}{

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
+	"log"
 	"net/http"
 	"strings"
 
@@ -40,7 +40,7 @@ type Operation struct {
 
 // ParseAndRegister parses an OpenAPI spec from a URL and registers its tools.
 func (s *Scout) ParseAndRegister(ctx context.Context, openAPIURL string) error {
-	slog.Info("Scout: Fetching OpenAPI spec", "openAPIURL", openAPIURL)
+	log.Printf("Scout: Fetching OpenAPI spec from %s", openAPIURL)
 
 	var tools []hybrid_discovery.ToolSpec
 
@@ -96,13 +96,13 @@ func (s *Scout) ParseAndRegister(ctx context.Context, openAPIURL string) error {
 	}
 
 	for _, tool := range tools {
-		slog.Info("Scout: Validating tool against guardrails", "tool", tool.Name)
+		log.Printf("Scout: Validating tool %s against guardrails", tool.Name)
 		// Simulate guardrail validation (e.g. deny tools with dangerous names)
 		if strings.Contains(strings.ToLower(tool.Name), "dangerous") || strings.Contains(strings.ToLower(tool.Name), "delete") {
 			return fmt.Errorf("tool %s failed guardrail validation", tool.Name)
 		}
 
-		slog.Info("Scout: Registering tool", "tool", tool.Name)
+		log.Printf("Scout: Registering tool %s", tool.Name)
 		err := s.proxy.RegisterTool(ctx, tool)
 		if err != nil {
 			return fmt.Errorf("failed to register tool %s: %w", tool.Name, err)

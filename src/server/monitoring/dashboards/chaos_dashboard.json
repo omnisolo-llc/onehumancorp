@@ -20,6 +20,22 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "title": "OHC Aesthetics",
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .grafana-app {\n    background-color: #0b0c10 !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">CHAOS DASHBOARD</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">System Resilience & Fault Injection Telemetry</p>\n</div>"
+      },
+      "transparent": true,
+      "id": 1
+    },
+    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -75,7 +91,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 3
       },
       "id": 2,
       "options": {
@@ -105,7 +121,10 @@
   "refresh": "5s",
   "schemaVersion": 30,
   "style": "dark",
-  "tags": ["chaos", "resilience"],
+  "tags": [
+    "chaos",
+    "resilience"
+  ],
   "templating": {
     "list": []
   },

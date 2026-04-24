@@ -18,12 +18,13 @@ services:
           memory: 128M
         reservations:
           cpus: "0.1"
-          memory: 64M
+          memory: 32M
     build:
       context: ..
       dockerfile: deploy/docker/ohc-core/Dockerfile
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       LISTEN_ADDR: "0.0.0.0:18789"
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       REDIS_URL: redis://redis:6379
@@ -42,11 +43,12 @@ services:
           cpus: "0.5"
           memory: 128M
         reservations:
-          cpus: "0.2"
-          memory: 128M
+          cpus: "0.1"
+          memory: 64M
     image: onehumancorp/server:latest
     environment:
       LOG_LEVEL: "info"
+      LOG_FORMAT: "json"
       REDIS_ADDR: redis:6379
       DATABASE_URL: postgres://ohc:ohc@postgres:5432/ohc?sslmode=disable
       CHATWOOT_URL: http://chatwoot:3000

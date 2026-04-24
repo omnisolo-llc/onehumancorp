@@ -139,7 +139,7 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_EmbeddingErrorFallback(t *testi
 }
 
 func TestAutoDreamPipeline_ProcessCompletedTasks_QueryError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		queryErr: errors.New("query error"),
 	}
 	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{})
@@ -150,7 +150,7 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_QueryError(t *testing.T) {
 }
 
 func TestAutoDreamPipeline_ProcessCompletedTasks_ScanError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanErr: errors.New("scan error"),
@@ -164,7 +164,7 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_ScanError(t *testing.T) {
 }
 
 func TestAutoDreamPipeline_ProcessCompletedTasks_RowError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 0,
 			errErr:  errors.New("row error"),
@@ -178,7 +178,7 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_RowError(t *testing.T) {
 }
 
 func TestAutoDreamPipeline_ProcessCompletedTasks_EmbeddingError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanData: []interface{}{
@@ -196,7 +196,7 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_EmbeddingError(t *testing.T) {
 }
 
 func TestAutoDreamPipeline_ProcessCompletedTasks_InsertError(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanData: []interface{}{
@@ -215,7 +215,7 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_InsertError(t *testing.T) {
 }
 
 func TestAutoDreamPipeline_ProcessCompletedTasks_EmptyContent(t *testing.T) {
-	mockDB := &mockPGProvider{
+	mockDB := &mockPGProviderAutodream{
 		rows: &mockRows{
 			maxNext: 1,
 			scanData: []interface{}{

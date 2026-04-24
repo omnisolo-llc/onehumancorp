@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS swarm_tasks (
     title TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'PENDING',
     assigned_agent_id TEXT,
-    organization_id TEXT NOT NULL DEFAULT 'default',
     payload JSON,
     locked_until DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP

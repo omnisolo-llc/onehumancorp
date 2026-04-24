@@ -29,8 +29,6 @@ type HubRepository interface {
 	GetAgent(ctx context.Context, id string) (Agent, bool, error)
 	// ListAgents returns all registered agents.
 	ListAgents(ctx context.Context) ([]Agent, error)
-	// ListAgentsByOrg returns all registered agents for a specific organization.
-	ListAgentsByOrg(ctx context.Context, orgID string) ([]Agent, error)
 	// UpdateAgentStatus transitions an agent to a new status.
 	UpdateAgentStatus(ctx context.Context, id string, status Status) error
 	// RemoveAgent deregisters an agent and clears its inbox.

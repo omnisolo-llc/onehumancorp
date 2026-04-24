@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/auth_service.dart';
@@ -407,11 +406,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => context.go('/register'),
-                          child: const Text('Don\'t have an account? Sign Up'),
                         ),
                         ],
                       ),

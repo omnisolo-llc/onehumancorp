@@ -18,14 +18,12 @@ go_library(
         "health.go",
         "hub.go",
         "postgres_hub.go",
-        "powersync.go",
         "repository.go",
         "sanitizer.go",
         "service.go",
         "sip.go",
         "sqlite_hub.go",
         "sync_daemon.go",
-        "rag_sync_daemon.go",
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh_api.go",
@@ -72,8 +70,6 @@ go_library(
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
             "//src/server/lib/resilience",
-        "//src/server/lib/sync",
-        "//src/server/integrations/sync_adapter",
 ],
 )
 

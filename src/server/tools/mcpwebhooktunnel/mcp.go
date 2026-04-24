@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"sync"
 	"time"
 
@@ -103,7 +102,7 @@ func (c *LocalTunnelClient) startListener() {
 						"INSERT INTO local_webhook_events(agent_id, payload) VALUES(?, ?)",
 						c.agentID, payload.Body)
 					if err != nil {
-						slog.Error("failed to inject webhook to sqlite bus", "error", err)
+						fmt.Printf("failed to inject webhook to sqlite bus: %v\n", err)
 					}
 				}
 			}

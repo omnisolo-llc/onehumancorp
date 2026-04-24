@@ -10,10 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
 	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
 	"github.com/onehumancorp/mono/src/server/integrations/plane"
 	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/redis/rueidis"
+	"google.golang.org/protobuf/proto"
 )
 
 // TaskWorker periodically fetches open issues from the configured issue tracker (Plane)
@@ -212,10 +215,76 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 	}
 }
 
-// dispatchToBuiltinAgent sends a task to the builtin Rust agent gRPC service.
-// The Rust binary must be running and reachable at OHC_AGENT_ADDRESS
-// (default: 127.0.0.1:50051). It exposes the AgentService gRPC interface.
+var (
+	redisClientMu sync.Mutex
+	redisClient   rueidis.Client
+)
+
+// getRedisClient returns a shared rueidis client instance.
+func getRedisClient() (rueidis.Client, error) {
+	redisClientMu.Lock()
+	defer redisClientMu.Unlock()
+
+	if redisClient != nil {
+		return redisClient, nil
+	}
+
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		return nil, fmt.Errorf("REDIS_URL not set")
+	}
+
+	opts, err := rueidis.ParseURL(redisURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse REDIS_URL: %w", err)
+	}
+
+	c, err := rueidis.NewClient(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to redis: %w", err)
+	}
+
+	redisClient = c
+	return c, nil
+}
+
+// dispatchToBuiltinAgent sends a task to the builtin Rust agent.
+// In Cloud Mode, it serializes agentservicepb.RunTaskRequest and publishes to the agent_jobs Redis channel.
+// In Standalone Mode, the Rust binary must be running and reachable at OHC_AGENT_ADDRESS
+// (default: 127.0.0.1:50051), and it will dispatch via gRPC.
 func dispatchToBuiltinAgent(payload, description, role string) error {
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+		// Cloud Mode: dispatch via Redis Pub/Sub
+		c, err := getRedisClient()
+		if err != nil {
+			return err
+		}
+
+		req := &agentservicepb.RunTaskRequest{
+			TaskId:     uuid.New().String(),
+			Task:       payload,
+			Department: role,
+		}
+
+		data, err := proto.Marshal(req)
+		if err != nil {
+			return fmt.Errorf("failed to marshal RunTaskRequest: %w", err)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		cmd := c.B().Publish().Channel("agent_jobs").Message(string(data)).Build()
+		if err := c.Do(ctx, cmd).Error(); err != nil {
+			return fmt.Errorf("failed to publish to agent_jobs: %w", err)
+		}
+
+		slog.Info("builtin agent task dispatched via Redis pub/sub", "description", description, "task_id", req.TaskId)
+		return nil
+	}
+
+	// Standalone Mode: fallback to gRPC dispatch
 	address := os.Getenv("OHC_AGENT_ADDRESS")
 	if address == "" {
 		address = "127.0.0.1:50051"
@@ -231,6 +300,7 @@ func dispatchToBuiltinAgent(payload, description, role string) error {
 
 	var lastContent string
 	err = client.RunTask(ctx, &agentservicepb.RunTaskRequest{
+		TaskId:     uuid.New().String(),
 		Task:       payload,
 		Department: role,
 	}, func(evt *agentservicepb.RunTaskEvent) {

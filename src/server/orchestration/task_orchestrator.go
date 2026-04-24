@@ -749,7 +749,7 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskPostgres(ctx context.Co
 		&task.Status, &task.AssignedAgentID, &task.Priority, &task.Payload, &task.ParentPlanID,
 		&task.Dependencies, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
 	); err != nil {
-		if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 			var exists bool
 			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = 'PENDING')").Scan(&exists)
 			if checkErr == nil && exists {

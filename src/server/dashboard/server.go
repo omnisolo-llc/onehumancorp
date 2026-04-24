@@ -679,7 +679,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
-	mux.HandleFunc("/api/auth/register", server.authHandlers.HandleRegister)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
 	mux.HandleFunc("/api/auth/me", server.authHandlers.HandleMe)
 	// PowerSync Endpoints
@@ -1311,25 +1310,48 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.orgAgentsLocked()
+	var wg sync.WaitGroup
+	wg.Add(3)
 
+	var agents []orchestration.Agent
+	var meetings []orchestration.MeetingRoom
+	var costs billing.Summary
 	queue := make([]orchestration.SharedTask, 0)
 	queueLen := 0
-	if s.hub != nil && s.hub.TaskManager() != nil {
-		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
-			for _, t := range pending {
-				if t != nil {
-					queue = append(queue, *t)
-				}
-			}
-			queueLen = len(queue)
+
+	go func() {
+		defer wg.Done()
+		agents = s.orgAgentsLocked()
+		meetings = s.orgMeetingsLocked()
+	}()
+
+	go func() {
+		defer wg.Done()
+		if s.tracker != nil {
+			costs = s.tracker.Summary(s.org.ID)
 		}
-	}
+	}()
+
+	go func() {
+		defer wg.Done()
+		if s.hub != nil && s.hub.TaskManager() != nil {
+			if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
+				for _, t := range pending {
+					if t != nil {
+						queue = append(queue, *t)
+					}
+				}
+				queueLen = len(queue)
+			}
+		}
+	}()
+
+	wg.Wait()
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.orgMeetingsLocked(),
-		Costs:        s.tracker.Summary(s.org.ID),
+		Meetings:     meetings,
+		Costs:        costs,
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
@@ -1342,7 +1364,7 @@ func (s *Server) orgAgentsLocked() []orchestration.Agent {
 	if s == nil || s.hub == nil {
 		return []orchestration.Agent{}
 	}
-	return s.hub.AgentsByOrg(s.org.ID)
+	return filterAgentsByOrg(s.hub.Agents(), s.org.ID)
 }
 
 func (s *Server) orgMeetingsLocked() []orchestration.MeetingRoom {

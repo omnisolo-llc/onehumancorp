@@ -25,7 +25,7 @@ void main() {
     final decoration = container.decoration as BoxDecoration;
     expect(decoration.color, const Color.fromRGBO(255, 255, 255, 0.03));
 
-    expect(find.byType(Stack), findsWidgets);
+    expect(find.byType(Stack), findsOneWidget);
 
     // Pump to let the animation tick
     await tester.pump(const Duration(milliseconds: 500));

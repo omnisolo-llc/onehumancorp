@@ -3,7 +3,6 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "api",
     srcs = [
-        "powersync_handler.go",
         "growth_handler.go",
         "mesh_handler.go",
         "sync_crdt_handler.go",
@@ -14,8 +13,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/auth",
-        "//src/server/db",
-"//src/server/mesh",
+        "//src/server/mesh",
         "//src/server/orchestration",
         "//src/server/orchestration/hybrid_sync",
         "//src/server/orchestration/queue",
@@ -29,7 +27,6 @@ go_library(
 go_test(
     name = "api_test",
     srcs = [
-        "powersync_handler_test.go",
         "growth_e2e_test.go",
         "growth_handler_test.go",
         "mesh_handler_test.go",
@@ -41,7 +38,7 @@ go_test(
     deps = [
         "//src/server/auth",
         "//src/server/db",
-"//src/server/lib/analytics",
+        "//src/server/lib/analytics",
         "//src/server/mesh",
         "//src/server/orchestration",
         "//src/server/orchestration/hybrid_sync",

@@ -83,11 +83,6 @@ func ClaimsFromContext(ctx context.Context) *Claims {
 	return v
 }
 
-// ContextWithClaims returns a new context with the provided Claims attached.
-func ContextWithClaims(ctx context.Context, claims *Claims) context.Context {
-	return context.WithValue(ctx, claimsContextKey, claims)
-}
-
 // RequireRole returns a middleware that further restricts access to users that hold the given role (or "admin").
 // Accepts parameters: role string (No Constraints), next http.HandlerFunc (No Constraints).
 // Returns http.HandlerFunc.
