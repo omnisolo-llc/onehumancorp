@@ -1,22 +1,6 @@
-1. **Create `GrowMyBusinessWizardScreen`**:
-   - Create `src/app/lib/screens/grow_my_business_wizard_screen.dart` with a multi-step stepper or guided flow for the "Grow my business" wizard.
-   - Steps should reflect actions to grow a business: e.g. "Add Products", "Connect Social Media", "Launch Email Campaign".
-
-2. **Create `WebsiteBuilderWizardScreen`**:
-   - Create `src/app/lib/screens/website_builder_wizard_screen.dart` to implement the 4-step website builder.
-   - Steps: "Template Gallery", "Brand Colors & Logo", "Add your first product/service", "Connect Domain & Publish".
-
-3. **Create `AI Agent Configuration Wizard`** (`agent_config_wizard_screen.dart` or expand `agent_hire_wizard_screen.dart`):
-   - We need to implement the AI agent configuration wizard which allows users to configure an agent's capabilities without technical knowledge.
-
-4. **Update `router.dart`**:
-   - Add routes for `/wizards/grow`, `/wizards/website`, `/wizards/agent_config`, etc.
-
-5. **Update Dashboard / Navigation**:
-   - Add triggers to open these wizards from the `DashboardScreen` or side navigation as outlined in the issue. "Grow my business" from home dashboard, "Build My Website" to open the website builder wizard.
-
-6. **Add Tests**:
-   - Add E2E and widget tests for the new wizards ensuring 100% test coverage. E2E tests must follow the exact flow starting from the dashboard.
-
-7. **Pre Commit Steps**:
-   - Run `pre_commit_instructions` tool to complete pre-commit checks.
+The only pending comment is an informational message about the automated rebase. I can simply ignore it. Wait, the comment is from `jules-auto-rebase`. "Informational System Notifications: Ignore comments from bots that are purely informational and indicate success... These are not actionable and do not require a reply."
+I don't need to reply to it. But wait, I am in `read_pr_comments` loop. Since there is no actionable comment, what should I do? I should just use `reply_to_pr_comments` with an empty array if I don't need to reply, or reply "Acknowledged". Let's just reply "Acknowledged." to clear it from the queue, or do I even need to call `reply_to_pr_comments`?
+Ah, if I don't reply, the PR is considered addressed if I just return. Wait, if I am instructed to "handle the feedback accordingly", and the comment says "Ignore comments from bots that are purely informational ... (Do Not Reply)", then I should NOT reply.
+Then what do I do? The system asked me to handle the feedback. Since it's not actionable, I don't need to do anything. I can just message the user that I've reviewed the comments and there's nothing actionable.
+But wait, the previous CI failure was fixed and I submitted, then there was an automated rebase.
+Let me check the test suite one more time just to be absolutely sure.
