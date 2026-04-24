@@ -36,7 +36,7 @@ This report outlines potential tool integrations for the OHC platform to empower
 **Research Report**:
 - **Tool**: Cal.com API v2.
 - **Ease of Use (End User)**: Invisible. The business owner sets their availability in OHC, and OHC handles the rest. Customers see a simple date/time picker on the storefront.
-- **Pricing**: Open-source/Self-hosted (free, but maintenance overhead) or Managed Platform (starts at $15/user/mo, enterprise pricing available for white-label API usage).
+**Pricing**: Open-source/Self-hosted (free, but maintenance overhead) or Managed Platform (starts at $15/user/mo, enterprise pricing available for white-label API usage).
 - **Cloud vs. Standalone**: Cal.com offers a self-hosted option, making it viable for OHC's Standalone mode if bundled, or via API for the Cloud mode.
 **Design Doc**:
 - **Trigger**: User creates a "Service" product type and defines availability hours.
@@ -155,8 +155,3 @@ This report outlines potential tool integrations for the OHC platform to empower
 **Implementation Prompt**: Integrate the Zoom API to automatically generate meeting links for booked online services. Allow users to authenticate their Zoom accounts. When an online service is booked, create a Zoom meeting and include the join link in the confirmation email and calendar event.
 **Priority**: P2
 **Estimated Scope**: Small
-
-
-## Next Steps
-1. Prioritize implementation based on user demand, starting with Social Media (Meta Graph API) and Scheduling (Cal.com).
-2. Begin technical design for the top priorities, focusing on how the OHC AI Agents will interface with these APIs to abstract the complexity from the end-user.
