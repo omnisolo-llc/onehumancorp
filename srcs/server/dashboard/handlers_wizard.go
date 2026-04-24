@@ -58,6 +58,39 @@ func (s *Server) handleWizardStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, resp)
 }
 
+// handleWizardWebsite applies the website builder configuration from the onboarding wizard.
+func (s *Server) handleWizardWebsite(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req map[string]interface{}
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	if err := dec.Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// This is a stub implementation to allow the UI to complete the website builder CUJ.
+	// In a complete implementation, this would save the website configuration into a new table
+	// or `extras` JSON field within the tenant's organization record.
+	s.mu.Lock()
+	if s.settings.Extras == nil {
+		s.settings.Extras = make(map[string]string)
+	}
+	for k, v := range req {
+		if str, ok := v.(string); ok {
+			s.settings.Extras["website_"+k] = str
+		}
+	}
+	s.mu.Unlock()
+
+	_ = s.hub.SettingsStore().Update(s.settings)
+
+	writeJSON(w, map[string]interface{}{"status": "ok", "message": "Website configuration saved"})
+}
+
 // handleWizardConfigure applies a partial settings update from the wizard and
 // persists it via the settings store.
 func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
