@@ -21,7 +21,7 @@ The OHC platform leverages the Model Context Protocol (MCP) to provide agents wi
 ## 3. Detailed Design
 
 ### 3.1 The MCP Switchboard Logic
-The backend server (`srcs/dashboard/server.go`) maintains a `Registry` of available MCP servers. When an agent emits a tool call, the `Hub` routes it based on the `Category`:
+The backend server (`src/dashboard/server.go`) maintains a `Registry` of available MCP servers. When an agent emits a tool call, the `Hub` routes it based on the `Category`:
 ```go
 type MCPTool struct {
     ID          string `json:"id"`
@@ -64,7 +64,7 @@ MCP servers are deployed as independent sidecars or centralized deployments in K
 - **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
-- **Code Organization:** Services located in `srcs/` and proto definitions in `srcs/proto/`.
+- **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 
 ## 8. Edge Cases
 - **Network Partitions:** Fallback to cached state and retry logic for tool calls.

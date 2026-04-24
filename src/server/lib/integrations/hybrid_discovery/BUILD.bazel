@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "hybrid_discovery",
+    srcs = ["discovery.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/lib/integrations/hybrid_discovery",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)
+
+go_test(
+    name = "hybrid_discovery_test",
+    srcs = ["discovery_test.go", "discovery_e2e_test.go"],
+    embed = [":hybrid_discovery"],
+    deps = [
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)

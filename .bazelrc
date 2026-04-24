@@ -2,8 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-build --config=buildbuddy-official
-test --config=buildbuddy-official
+build --config=buildbuddy
+test --config=buildbuddy
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -31,7 +31,7 @@ test --build_tests_only
 test --test_timeout=300,600,900,1800
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
 # Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
-test --local_test_jobs=4
+test --local_test_jobs=16
 # Allow up to 200 parallel remote build actions during tests.
 test --jobs=200
 
@@ -103,13 +103,13 @@ build:buildbuddy --bes_upload_mode=fully_async
 # ── Local: disable remote cache/execution ─────────────────────────────────────
 build:local --remote_cache=
 build:local --remote_executor=
+build:local --experimental_remote_downloader=
 build:local --spawn_strategy=sandboxed,local
 
 # ── Local test: run tests locally and load .env ───────────────────────────────
 # For local development/testing: loads .env and runs tests without remote execution.
 # Usage: bazel test --config=local //path/to:target
 # Or use the wrapper: ./scripts/bazel-test-local.sh //path/to:target
-test:local --config=local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────
@@ -118,3 +118,6 @@ build:android --platforms=@platforms//os:android
 build:ios --platforms=@platforms//os:ios
 build:macos --platforms=@platforms//os:macos
 build:windows --platforms=@platforms//os:windows
+
+# Enable local disk cache
+build --disk_cache=~/.cache/bazel/cache/disk

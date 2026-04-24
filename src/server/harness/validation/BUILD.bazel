@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "validation",
+    srcs = ["validator.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/harness/validation",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_smacker_go_tree_sitter//:go-tree-sitter",
+        "@com_github_smacker_go_tree_sitter//bash",
+    ],
+)
+
+go_test(
+    name = "validation_test",
+    srcs = ["validator_test.go"],
+    embed = [":validation"],
+    deps = ["@com_github_stretchr_testify//assert"],
+)

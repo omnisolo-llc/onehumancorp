@@ -1,0 +1,171 @@
+load("@rules_proto//proto:defs.bzl", "proto_library")
+load("//bazel/rules:proto_go_grpc_library.bzl", "proto_go_grpc_library", "go_proto_library_with_tags")
+load("//bazel/rules:proto_ts_library.bzl", "proto_ts_library")
+load("//bazel/rules:proto_dart_library.bzl", "proto_dart_library")
+
+# ── Hub / Orchestration ────────────────────────────────────────────────────────
+
+proto_library(
+    name = "hub_proto",
+    srcs = ["hub.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library_with_tags(
+    name = "hub_go_proto",
+    protos = ["hub.proto"],
+    importpath = "github.com/onehumancorp/mono/src/proto",
+    visibility = ["//visibility:public"],
+)
+
+proto_ts_library(
+    name = "proto_types_ts",
+    protos = ":hub_proto",
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "hub_dart_proto",
+    protos = ":hub_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Model ──────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "model_proto",
+    srcs = ["model.proto"],
+    deps = [],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library_with_tags(
+    name = "model_go_proto",
+    protos = ["model.proto"],
+    importpath = "github.com/onehumancorp/mono/src/proto/ohc/model",
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "model_dart_proto",
+    protos = ":model_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Common ─────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "common_proto",
+    srcs = ["common.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "common_dart_proto",
+    protos = ":common_proto",
+    visibility = ["//visibility:public"],
+)
+
+# ── Agent ──────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "agent_proto",
+    srcs = ["agent.proto"],
+    deps = [":common_proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library_with_tags(
+    name = "agent_go_proto",
+    protos = ["agent.proto", "common.proto"],
+    importpath = "github.com/onehumancorp/mono/src/proto/ohc/agent",
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "agent_dart_proto",
+    protos = ":agent_proto",
+    visibility = ["//visibility:public"],
+)
+
+# ── Agent Service ──────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "agent_service_proto",
+    srcs = ["agent_service.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "agent_service_dart_proto",
+    protos = ":agent_service_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+
+
+# ── Skills ─────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "skills_proto",
+    srcs = ["skills.proto"],
+    deps = [":common_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "skills_dart_proto",
+    protos = ":skills_proto",
+    visibility = ["//visibility:public"],
+)
+
+# ── Billing ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "billing_proto",
+    srcs = ["billing.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "billing_dart_proto",
+    protos = ":billing_proto",
+    visibility = ["//visibility:public"],
+)
+
+# ── Organization ───────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "organization_proto",
+    srcs = ["organization.proto"],
+    deps = [":common_proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "organization_dart_proto",
+    protos = ":organization_proto",
+    visibility = ["//visibility:public"],
+)
+
+# ── App API ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "app_proto",
+    srcs = ["app.proto"],
+    deps = [
+        ":agent_proto",
+        ":billing_proto",
+        ":organization_proto",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+proto_dart_library(
+    name = "app_dart_proto",
+    protos = ":app_proto",
+    visibility = ["//visibility:public"],
+)

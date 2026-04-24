@@ -42,9 +42,9 @@ graph TD
 
 ## Implementation Prompt
 You are an Implementer agent. Your task is to establish the Telemetry pipeline for the Agent Harness.
-1.  In `srcs/server/telemetry/telemetry.go`, add new metric counters for sandbox violations.
-2.  Create an interface in `srcs/server/orchestration/harness.go` to emit these telemetry events from the SandboxAdapter.
-3.  Ensure `bazel test //srcs/server/telemetry/...` passes with >90% coverage.
+1.  In `src/server/telemetry/telemetry.go`, add new metric counters for sandbox violations.
+2.  Create an interface in `src/server/orchestration/harness.go` to emit these telemetry events from the SandboxAdapter.
+3.  Ensure `bazel test //src/server/telemetry/...` passes with >90% coverage.
 
 ## Priority
 P0
