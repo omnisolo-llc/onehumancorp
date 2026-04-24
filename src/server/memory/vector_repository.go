@@ -2,6 +2,7 @@ package memory
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -10,13 +11,14 @@ import (
 )
 
 type EmbeddingRecord struct {
-	ID           string
-	OrganizationID     string
-	MemoryType   string
-	Content      string
-	Embedding    []float32
-	CreatedAt    time.Time
-	SourceTaskID string
+	ID             string
+	OrganizationID string
+	AgentID        string
+	MemoryType     string
+	Content        string
+	Embedding      []float32
+	CreatedAt      time.Time
+	SourceTaskID   string
 }
 
 type VectorRepository struct {
@@ -34,17 +36,74 @@ func (r *VectorRepository) Upsert(ctx context.Context, record *EmbeddingRecord) 
 	}
 
 	query := `
-		INSERT INTO autodream_memories_master (id, organization_id, memory_type, content, embedding, created_at, source_task_id)
+		INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (id) DO UPDATE SET
+			content = EXCLUDED.content,
+			embedding = EXCLUDED.embedding,
+			source_type = EXCLUDED.source_type
 	`
-	// Use INSERT ... ON CONFLICT if UPSERT logic is required. Keeping it simple as per instructions.
 
-	_, err = r.db.Exec(ctx, query, record.ID, record.OrganizationID, record.MemoryType, record.Content, embBytes, record.CreatedAt, record.SourceTaskID)
+	_, err = r.db.Exec(ctx, query, record.ID, record.OrganizationID, record.AgentID, record.Content, embBytes, record.MemoryType, record.CreatedAt)
 	return err
 }
 
 func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID string, queryEmbedding []float32, limit int) ([]*EmbeddingRecord, error) {
-	// Not fully implemented for vector search as sqlite graceful degradation implies fallback full-text or simply retrieving.
-	// In pgvector, we would use `<->` operator. Here we return empty for now to satisfy interface outline.
-	return nil, nil
+	embBytes, err := json.Marshal(queryEmbedding)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query embedding: %w", err)
+	}
+
+	var query string
+	var rows db.Rows
+	var qErr error
+
+	if r.db.IsSQLite() {
+		query = `
+			SELECT id, organization_id, agent_id, source_type, content, embedding, created_at
+			FROM consolidated_memory
+			WHERE organization_id = $1
+			ORDER BY vec_distance_cosine(embedding, $2) ASC
+			LIMIT $3
+		`
+		rows, qErr = r.db.Query(ctx, query, organizationID, string(embBytes), limit)
+	} else {
+		query = `
+			SELECT id, organization_id, agent_id, source_type, content, embedding, created_at
+			FROM consolidated_memory
+			WHERE organization_id = $1
+			ORDER BY embedding <-> $2
+			LIMIT $3
+		`
+		rows, qErr = r.db.Query(ctx, query, organizationID, string(embBytes), limit)
+	}
+
+	if qErr != nil {
+		return nil, fmt.Errorf("semantic search query failed: %w", qErr)
+	}
+	defer rows.Close()
+
+	var results []*EmbeddingRecord
+	for rows.Next() {
+		var rec EmbeddingRecord
+		var embStr string
+		var agentID sql.NullString
+		if err := rows.Scan(&rec.ID, &rec.OrganizationID, &agentID, &rec.MemoryType, &rec.Content, &embStr, &rec.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		if agentID.Valid {
+			rec.AgentID = agentID.String
+		}
+		if err := json.Unmarshal([]byte(embStr), &rec.Embedding); err != nil {
+			// Skip bad embeddings or handle appropriately
+			continue
+		}
+		results = append(results, &rec)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return results, nil
 }

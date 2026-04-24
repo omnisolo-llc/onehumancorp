@@ -8,6 +8,7 @@ go_library(
         "postgres_provider.go",
         "provider.go",
         "sqlite_provider.go",
+        "register_udf.go",
         "shared_tasks_repo.go",
         "test_provider.go",
     ],

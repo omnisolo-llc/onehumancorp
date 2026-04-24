@@ -3,7 +3,6 @@ package autodream
 import (
 	"context"
 	"testing"
-	"database/sql"
 	_ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/src/server/db"
@@ -22,25 +21,19 @@ func (m *mockLLM) GenerateEmbedding(ctx context.Context, text string) ([]float32
 }
 
 func TestAutoDreamConsolidation(t *testing.T) {
-	dbConn, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("failed to open test sqlite db: %v", err)
-	}
-	defer dbConn.Close()
-
-	provider := db.NewSqliteProvider(dbConn)
+	provider := db.NewTestProvider(t)
 	claims := &auth.Claims{OrganizationID: "test-tenant-123"}
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
 
 	// In test, creating table
-	_, err = provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS autodream_memories_master (
-		id VARCHAR PRIMARY KEY,
-		organization_id VARCHAR NOT NULL,
-		memory_type TEXT NOT NULL,
+	_, err := provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS consolidated_memory (
+		id TEXT PRIMARY KEY,
+		organization_id TEXT NOT NULL,
+		agent_id TEXT,
 		content TEXT NOT NULL,
-		embedding BLOB,
-		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		source_task_id VARCHAR
+		embedding TEXT,
+		source_type TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`)
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
@@ -49,6 +42,19 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	repo := memory.NewVectorRepository(provider)
 	llm := &mockLLM{}
 	service := NewService(repo, llm)
+
+	// Test Upsert and Search manually too
+	initialRec := &memory.EmbeddingRecord{
+		ID:             "past-memory",
+		OrganizationID: claims.OrganizationID,
+		MemoryType:     "TASK_SUMMARY",
+		Content:        "past fact",
+		Embedding:      []float32{0.1, 0.2, 0.3},
+	}
+	err = repo.Upsert(ctx, initialRec)
+	if err != nil {
+		t.Fatalf("failed to upsert initial memory: %v", err)
+	}
 
 	err = service.Consolidate(ctx, "task-123", []string{"log 1", "log 2"})
 	if err != nil {
