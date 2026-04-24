@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:ohc_app/screens/website_builder_wizard_screen.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/models/channel.dart';
@@ -563,6 +564,20 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Failed to trigger hybrid sync');
     }
+  }
+
+  Future<String> generateLogo() async {
+    await Future.delayed(const Duration(seconds: 1));
+    return 'generated_logo.png';
+  }
+
+  Future<String> generateProductDescription(String name) async {
+    await Future.delayed(const Duration(seconds: 1));
+    return 'This is a premium $name designed specifically to meet your needs and exceed your expectations.';
+  }
+
+  Future<void> publishWebsite(WebsiteBuilderState state) async {
+    await Future.delayed(const Duration(seconds: 2));
   }
 }
 
