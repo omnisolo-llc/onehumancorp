@@ -19,9 +19,9 @@ func NewMeshAPI(mesh TeammateMesh) *MeshAPI {
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 
-	mux.HandleFunc("/api/kairos/actions/pending", api.handleGetPendingActions)
-	mux.HandleFunc("/api/kairos/actions/approve", api.handleApproveAction)
-	mux.HandleFunc("/api/kairos/actions/reject", api.handleRejectAction)
+	mux.HandleFunc("/api/kairos/actions/pending", api.HandleGetPendingActions)
+	mux.HandleFunc("/api/kairos/actions/approve", api.HandleApproveAction)
+	mux.HandleFunc("/api/kairos/actions/reject", api.HandleRejectAction)
 
 	mux.HandleFunc("/api/kairos/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/kairos/mesh/subscribe", api.HandleSubscribe)
@@ -135,13 +135,13 @@ type approvalRequest struct {
 	TaskID string `json:"task_id"`
 }
 
-func (api *MeshAPI) handleGetPendingActions(w http.ResponseWriter, r *http.Request) {
+func (api *MeshAPI) HandleGetPendingActions(w http.ResponseWriter, r *http.Request) {
 	// Dummy logic for fetching pending approvals
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`[]`))
 }
 
-func (api *MeshAPI) handleApproveAction(w http.ResponseWriter, r *http.Request) {
+func (api *MeshAPI) HandleApproveAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -158,7 +158,7 @@ func (api *MeshAPI) handleApproveAction(w http.ResponseWriter, r *http.Request) 
 	w.Write([]byte(`{"status":"approved"}`))
 }
 
-func (api *MeshAPI) handleRejectAction(w http.ResponseWriter, r *http.Request) {
+func (api *MeshAPI) HandleRejectAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
