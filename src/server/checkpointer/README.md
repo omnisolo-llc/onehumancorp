@@ -31,12 +31,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"github.com/onehumancorp/mono/src/server/checkpointer"
 )
 
 func main() {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		panic(err)
 	}

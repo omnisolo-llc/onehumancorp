@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"time"
-	"github.com/onehumancorp/mono/src/server/auth"
 
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/src/server/db"
@@ -28,13 +27,9 @@ func NewMcpSyncProxy(provider db.Provider, client *http.Client) *McpSyncProxy {
 
 func (p *McpSyncProxy) BufferToolExecution(ctx context.Context, toolName, payload string) (string, error) {
 	id := uuid.New().String()
-	tenantID := "system"
-	if claims := auth.ClaimsFromContext(ctx); claims != nil && claims.OrganizationID != "" {
-		tenantID = claims.OrganizationID
-	}
-	query := "INSERT INTO hybrid_mcp_sync_queue (id, tool_name, payload, status, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, 'PENDING', $4, $4, $5)"
+	query := "INSERT INTO hybrid_mcp_sync_queue (id, tool_name, payload, status, created_at, updated_at) VALUES ($1, $2, $3, 'PENDING', $4, $4)"
 	now := time.Now().UTC()
-	_, err := p.provider.Exec(ctx, query, id, toolName, payload, now, tenantID)
+	_, err := p.provider.Exec(ctx, query, id, toolName, payload, now)
 	if err != nil {
 		return "", fmt.Errorf("failed to buffer tool execution: %w", err)
 	}
@@ -47,11 +42,7 @@ func (p *McpSyncProxy) SyncToCloud(ctx context.Context, gatewayURL, spiffeID str
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	tenantID := "system"
-	if claims := auth.ClaimsFromContext(ctx); claims != nil && claims.OrganizationID != "" {
-		tenantID = claims.OrganizationID
-	}
-	query := "SELECT id, tool_name, payload FROM hybrid_mcp_sync_queue WHERE status = 'PENDING' AND tenant_id = $1 LIMIT 100"
+	query := "SELECT id, tool_name, payload FROM hybrid_mcp_sync_queue WHERE status = 'PENDING' LIMIT 100"
 	if !p.provider.IsSQLite() {
 		query += " FOR UPDATE SKIP LOCKED"
 	}

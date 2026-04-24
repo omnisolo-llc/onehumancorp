@@ -3,7 +3,7 @@ package orchestration
 import (
 	"context"
 	"database/sql"
-	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
 	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
 	"github.com/onehumancorp/mono/src/server/orchestration/mesh"
@@ -47,7 +47,7 @@ func TestTriggerBurst(t *testing.T) {
 	dbPath := filepath.Join(tempDir, "ohc.db")
 
 	// Create mock sqlite db
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		t.Fatalf("failed to open mock db: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestTriggerBurst(t *testing.T) {
 	}
 
 	// Verify status updated to BURSTING
-	dbCheck, _ := sql.Open("sqlite", dbPath)
+	dbCheck, _ := sql.Open("sqlite3", dbPath)
 	defer dbCheck.Close()
 	var status string
 	err = dbCheck.QueryRow("SELECT status FROM agent_missions WHERE id = 'test-burst-1'").Scan(&status)

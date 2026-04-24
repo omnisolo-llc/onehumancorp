@@ -94,6 +94,8 @@ go_library(
         "migrations/20260426000000_local_mcp_rag_tasks.go",
         "migrations/20260427000000_autodream_memories_decomposition.go",
                         "migrations/20260427020001_shared_tasks_indexes.sql",
+        "migrations/20260428000000_mcp_sync_queue_tenant_id_pg.sql",
+        "migrations/20260428000000_mcp_sync_queue_tenant_id_sqlite.sql",
         "migrations/20260428000000_kairos_shared_tasks_state_machine_pg.sql",
         "migrations/20260428000000_kairos_shared_tasks_state_machine_sqlite.sql",
         "migrations/20260429000000_kairos_approval_workflow.sql",

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"github.com/onehumancorp/mono/src/server/auth"
 
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/telemetry"
@@ -74,14 +73,9 @@ func (p *McpSyncProxy) Buffer(ctx context.Context, sessionID, capability, toolNa
 	}
 
 	start := time.Now()
-	tenantID := "system"
-	if claims := auth.ClaimsFromContext(ctx); claims != nil && claims.OrganizationID != "" {
-		tenantID = claims.OrganizationID
-	}
-
 	_, err = p.dbProvider.Exec(ctx,
-		"INSERT INTO hybrid_mcp_sync_queue (id, tool_name, arguments, status, created_at, tenant_id) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)",
-		id, toolName, string(argsBytes), "PENDING", tenantID)
+		"INSERT INTO hybrid_mcp_sync_queue (id, tool_name, arguments, status, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)",
+		id, toolName, string(argsBytes), "PENDING")
 
 	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
 	if err != nil {

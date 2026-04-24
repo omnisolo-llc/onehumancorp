@@ -8,7 +8,6 @@ import (
 	"time"
 	"bytes"
 	"net/http"
-	"github.com/onehumancorp/mono/src/server/auth"
 
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/src/server/db"
@@ -53,17 +52,13 @@ func (p *McpSyncProxy) BufferIntegrationState(ctx context.Context, toolName stri
 		return "", fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	tenantID := "system"
-	if claims := auth.ClaimsFromContext(ctx); claims != nil && claims.OrganizationID != "" {
-		tenantID = claims.OrganizationID
-	}
 	id := uuid.New().String()
 	query := `
-		INSERT INTO hybrid_mcp_sync_queue (id, tool_name, payload, status, tenant_id)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO hybrid_mcp_sync_queue (id, tool_name, payload, status)
+		VALUES ($1, $2, $3, $4)
 	`
 
-	_, err = p.dbProvider.Exec(ctx, query, id, toolName, string(payloadBytes), StatusPending, tenantID)
+	_, err = p.dbProvider.Exec(ctx, query, id, toolName, string(payloadBytes), StatusPending)
 	if err != nil {
 		return "", fmt.Errorf("failed to insert into hybrid_mcp_sync_queue: %w", err)
 	}
@@ -72,16 +67,12 @@ func (p *McpSyncProxy) BufferIntegrationState(ctx context.Context, toolName stri
 }
 
 func (p *McpSyncProxy) SyncPendingStates(ctx context.Context) error {
-	tenantID := "system"
-	if claims := auth.ClaimsFromContext(ctx); claims != nil && claims.OrganizationID != "" {
-		tenantID = claims.OrganizationID
-	}
 	query := `
 		SELECT id, tool_name, payload
 		FROM hybrid_mcp_sync_queue
-		WHERE status = $1 AND tenant_id = $2
+		WHERE status = $1
 	`
-	rows, err := p.dbProvider.Query(ctx, query, StatusPending, tenantID)
+	rows, err := p.dbProvider.Query(ctx, query, StatusPending)
 	if err != nil {
 		return fmt.Errorf("failed to query pending states: %w", err)
 	}

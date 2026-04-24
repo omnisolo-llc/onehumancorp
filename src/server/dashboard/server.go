@@ -775,7 +775,8 @@ func (s *Server) handleSyncRules(w http.ResponseWriter, r *http.Request) {
 			},
 			{
 				"table": "capability_plugins",
-				"query": "SELECT * FROM capability_plugins",
+				"query": "SELECT * FROM capability_plugins WHERE organization_id = $1 OR organization_id = 'system' OR organization_id = 'sys'",
+				"parameters": []interface{}{orgID},
 			},
 			{
 				"table":      "swarm_memory_embeddings",
