@@ -10,11 +10,15 @@ go_library(
         "semantickernel_adapter.go",
         "types.go",
         "lock.go",
+        "handoff.go",
+        "health.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/interop",
     deps = [
         "@com_github_redis_rueidis//:rueidis",
         "@com_github_google_uuid//:uuid",
+
+
     ],
     visibility = ["//visibility:public"],
 )
@@ -26,10 +30,14 @@ go_test(
         "swarm_test.go",
         "types_test.go",
         "lock_test.go",
+        "handoff_test.go",
+        "health_test.go",
     ],
     deps = [
         "@com_github_redis_rueidis//:rueidis",
         "@com_github_google_uuid//:uuid",
+
+
     ],
     embed = [":interop"],
 )

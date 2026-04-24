@@ -167,3 +167,10 @@ proto_dart_library(
     protos = ":app_proto",
     visibility = ["//visibility:public"],
 )
+
+go_proto_library_with_tags(
+    name = "common_go_proto",
+    protos = ["common.proto"],
+    importpath = "github.com/onehumancorp/mono/srcs/proto/ohc/common",
+    visibility = ["//visibility:public"],
+)
