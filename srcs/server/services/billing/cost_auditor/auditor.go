@@ -4,12 +4,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/onehumancorp/mono/srcs/server/lib/pricing/tokencalc"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"math"
 	"sync"
 )
 
 type AuditEvent struct {
 	AgentID              string
+	OrganizationID       string
+	Role                 string
+	Model                string
 	InputTokens          int
 	OutputTokens         int
 	CachedInputTokens    int
@@ -18,6 +22,9 @@ type AuditEvent struct {
 
 type ComputeEvent struct {
 	AgentID            string
+	OrganizationID     string
+	Role               string
+	Model              string
 	ComputeHours       float64
 	NetworkEgressBytes int64
 }
@@ -46,6 +53,7 @@ func (a *CostAuditor) RecordEvent(ctx context.Context, event AuditEvent) float64
 	cost := token_calculator.CalculateCost(event.InputTokens, event.OutputTokens, event.CachedInputTokens, event.LocalEmbeddingTokens, a.config)
 	a.agentCosts[event.AgentID] += cost
 	a.totalCost += cost
+	telemetry.RecordAgentCost(ctx, event.AgentID, event.OrganizationID, event.Role, event.Model, cost)
 	return cost
 }
 func (a *CostAuditor) RecordCacheHit(ctx context.Context, event AuditEvent) float64 {
@@ -55,6 +63,7 @@ func (a *CostAuditor) RecordCacheHit(ctx context.Context, event AuditEvent) floa
 	uncachedCost := token_calculator.CalculateCost(event.InputTokens+event.CachedInputTokens, event.OutputTokens, 0, event.LocalEmbeddingTokens, a.config)
 	savedCost := math.Round((uncachedCost-actualCost)*10000) / 10000
 	a.cachingSavings += savedCost
+	telemetry.RecordAgentCost(ctx, event.AgentID, event.OrganizationID, event.Role, event.Model, actualCost)
 	return savedCost
 }
 func (a *CostAuditor) GetAgentCost(agentID string) float64 {
@@ -68,11 +77,12 @@ func (a *CostAuditor) GetTotalSavings() float64 {
 	return a.cachingSavings
 }
 
-func (a *CostAuditor) RecordStorageCompression(ctx context.Context, originalBytes, compressedBytes int64) float64 {
+func (a *CostAuditor) RecordStorageCompression(ctx context.Context, organizationID string, originalBytes, compressedBytes int64) float64 {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	savings := token_calculator.CalculateStorageSavings(originalBytes, compressedBytes, a.config)
 	a.storageSavings += savings
+	telemetry.RecordStorageCost(ctx, organizationID, savings)
 	return savings
 }
 
@@ -93,6 +103,7 @@ func (a *CostAuditor) RecordComputeEvent(ctx context.Context, event ComputeEvent
 	a.totalCost += totalCost
 	a.totalComputeCost += computeCost
 	a.totalNetworkCost += networkCost
+	telemetry.RecordAgentCost(ctx, event.AgentID, event.OrganizationID, event.Role, event.Model, totalCost)
 	return totalCost
 }
 func (a *CostAuditor) GenerateReport() string {
@@ -130,4 +141,34 @@ func (a *CostAuditor) IsAgentOverBudget(agentID string) bool {
 		return false
 	}
 	return cost > budget
+}
+
+type EmailEvent struct {
+	OrganizationID string
+	EmailsSent     int
+}
+
+func (a *CostAuditor) RecordEmailEvent(ctx context.Context, event EmailEvent) float64 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	// Cost per email example: $0.001
+	cost := float64(event.EmailsSent) * 0.001
+	a.totalCost += cost
+	telemetry.RecordEmailCost(ctx, event.OrganizationID, cost)
+	return cost
+}
+
+type ApiCallEvent struct {
+	OrganizationID string
+	ApiCalls       int
+}
+
+func (a *CostAuditor) RecordApiCallEvent(ctx context.Context, event ApiCallEvent) float64 {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	// Cost per API call example: $0.0001
+	cost := float64(event.ApiCalls) * 0.0001
+	a.totalCost += cost
+	telemetry.RecordApiCallCost(ctx, event.OrganizationID, cost)
+	return cost
 }

@@ -180,11 +180,19 @@ func (h *MeshHandler) Broadcast(w http.ResponseWriter, r *http.Request) {
 		EventType string          `json:"event_type"`
 		Data      json.RawMessage `json:"data"`
 	}
-
 	var intentStr string
-
-	if err := json.Unmarshal(bodyBytes, &sipReq); err == nil && sipReq.AgentID != "" && sipReq.EventType != "" {
-		intentStr = string(bodyBytes)
+	if err := json.Unmarshal(bodyBytes, &sipReq); err == nil {
+		if sipReq.AgentID != "" && sipReq.Channel != "" && sipReq.EventType != "" && len(sipReq.Data) > 0 && string(sipReq.Data) != "null" {
+			intentStr = string(bodyBytes)
+		} else if sipReq.AgentID != "" || sipReq.Channel != "" || sipReq.EventType != "" {
+			// It looks like a SIP request but is missing required fields
+			http.Error(w, "Bad request: invalid SIP payload", http.StatusBadRequest)
+			return
+		} else if err := json.Unmarshal(bodyBytes, &req); err == nil && req.Intent != "" {
+			intentStr = req.Intent
+		} else {
+			intentStr = string(bodyBytes)
+		}
 	} else if err := json.Unmarshal(bodyBytes, &req); err == nil && req.Intent != "" {
 		intentStr = req.Intent
 	} else {

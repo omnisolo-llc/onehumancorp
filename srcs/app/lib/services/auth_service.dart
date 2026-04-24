@@ -108,7 +108,19 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
     // Attempt to restore session from local storage.
     final prefs = await ref.watch(_prefsProvider.future);
     final token = prefs.getString(_tokenKey);
-    if (token == null) return null;
+    if (token == null) {
+      if (const bool.fromEnvironment('OHC_STANDALONE', defaultValue: false)) {
+        return const AuthUser(
+          id: 'standalone_user',
+          email: 'standalone@example.com',
+          name: 'Standalone User',
+          role: 'admin',
+          organizationId: 'standalone_org',
+          token: 'standalone_token',
+        );
+      }
+      return null;
+    }
     // Validate by fetching /api/auth/me.
     final url = ref.read(backendUrlProvider);
     try {

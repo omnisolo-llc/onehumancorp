@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // LLMClient defines the interface required by AutoDreamWorker to generate embeddings.
@@ -118,24 +119,37 @@ func (w *AutoDreamWorker) ProcessCompletedTasks(ctx context.Context) {
 		memID := uuid.New().String()
 
 		// Insert into autodream_memories
-		insertQuery := `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding)
-		               VALUES ($1, $2, $3, $4, $5)`
-		_, err := w.pool.Exec(ctx, insertQuery, memID, t.OrganizationID, t.ID, summary, embStr)
-		if err != nil {
+		if w.pool.IsSQLite() {
+			insertQuery := `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding)
+						   VALUES (?, ?, ?, ?, ?)`
+			_, err := w.pool.Exec(ctx, insertQuery, memID, t.OrganizationID, t.ID, summary, embStr)
+			if err != nil {
+				slog.Error("AutoDreamWorker: failed to insert memory in SQLite", "task_id", t.ID, "error", err)
+				telemetry.RecordAutoDreamIngestionError(ctx, "AutoDreamWorker", "sqlite_insert_error")
+				continue
+			}
+		} else {
 			insertQueryPg := `INSERT INTO autodream_memories (id, organization_id, task_id, content, embedding)
-			               VALUES ($1, $2, $3, $4, $5::vector)`
+						   VALUES ($1, $2, $3, $4, $5::vector)`
 			_, errPg := w.pool.Exec(ctx, insertQueryPg, memID, t.OrganizationID, t.ID, summary, embStr)
 			if errPg != nil {
-				slog.Error("AutoDreamWorker: failed to insert memory", "task_id", t.ID, "error", errPg)
+				slog.Error("AutoDreamWorker: failed to insert memory in PostgreSQL", "task_id", t.ID, "error", errPg)
+				telemetry.RecordAutoDreamIngestionError(ctx, "AutoDreamWorker", "postgres_insert_error")
 				continue
 			}
 		}
 
 		// Mark task as auto_dreamed
 		updateTaskQuery := `UPDATE shared_tasks_decomposition SET auto_dreamed = true WHERE id = $1`
+		if w.pool.IsSQLite() {
+			updateTaskQuery = `UPDATE shared_tasks_decomposition SET auto_dreamed = true WHERE id = ?`
+		}
+
 		if _, err := w.pool.Exec(ctx, updateTaskQuery, t.ID); err != nil {
 			slog.Error("AutoDreamWorker: failed to update task auto_dreamed status", "task_id", t.ID, "error", err)
 		} else {
+			telemetry.RecordAutoDreamMemoryIngested(ctx, "AutoDreamWorker")
+			telemetry.RecordAutoDreamConsolidation(ctx, "AutoDreamWorker")
 			slog.Info("AutoDreamWorker: ingested completed task", "task_id", t.ID)
 		}
 	}
