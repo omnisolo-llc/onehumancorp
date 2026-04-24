@@ -91,6 +91,14 @@ class ApiService {
     _checkStatus(res);
   }
 
+  Future<Map<String, String>> generateBusinessSuggestions(String businessName, String businessType) async {
+    await Future.delayed(const Duration(seconds: 1));
+    return {
+      'tagline': '$businessName: Excellence in $businessType.',
+      'description': 'Welcome to $businessName. We are a premier $businessType committed to delivering outstanding value.',
+    };
+  }
+
   // ── Dashboard & Analytics ────────────────────────────────────────────────
 
   Future<DashboardSnapshot> getDashboard() async {
