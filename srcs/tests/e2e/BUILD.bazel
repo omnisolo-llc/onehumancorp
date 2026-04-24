@@ -14,6 +14,8 @@ _SHARED_SRCS = [
 
 _COMMON_DEPS = [
     "@com_github_playwright_community_playwright_go//:playwright-go",
+    "@com_github_stretchr_testify//assert",
+    "@com_github_stretchr_testify//require",
 ]
 
 _COMMON_DATA = [
@@ -50,10 +52,7 @@ go_test(
     ],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS + [
-        "@com_github_stretchr_testify//assert",
-        "@com_github_stretchr_testify//require",
-    ],
+    deps = _COMMON_DEPS,
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
@@ -237,10 +236,7 @@ go_test(
     srcs = _SHARED_SRCS + ["universal_transport_bridge_e2e_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS + [
-        "@com_github_stretchr_testify//assert",
-        "@com_github_stretchr_testify//require",
-    ],
+    deps = _COMMON_DEPS,
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
