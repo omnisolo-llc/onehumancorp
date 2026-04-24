@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
@@ -15,6 +16,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _confirmPasswordCtrl = TextEditingController();
+  bool _isSignUp = false;
   bool _loading = false;
   bool _obscurePassword = true;
   String? _error;
@@ -23,6 +27,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void dispose() {
     _usernameCtrl.dispose();
     _passwordCtrl.dispose();
+    _emailCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
     super.dispose();
   }
 
@@ -33,9 +39,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (_isSignUp) {
+        await ref.read(authStateProvider.notifier).register(_usernameCtrl.text.trim(), _emailCtrl.text.trim(), _passwordCtrl.text);
+        if (ref.read(authStateProvider).hasError) {
+          setState(() => _error = ref.read(authStateProvider).error.toString());
+          return;
+        }
+        if (mounted) {
+          GoRouter.of(context).go('/business_setup');
+        }
+      } else {
+        await ref.read(authStateProvider.notifier).login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -160,7 +175,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               style: TextButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               ),
-                              child: const Text('Cancel', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                              child: const Text('Cancel', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                             ),
                             const SizedBox(width: 12),
                             Semantics(
@@ -169,7 +184,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               child: FilledButton.icon(
                                 onPressed: () => Navigator.pop(context, controller.text),
                                 icon: const Icon(Icons.check, size: 18),
-                                label: const Text('Save', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                                label: const Text('Save', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
                                 style: FilledButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                   shape: RoundedRectangleBorder(
@@ -254,7 +269,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const Text(
                           'One Human Corp',
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'Outfit',
@@ -274,7 +289,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _usernameCtrl,
                           keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
+                            labelText: _isSignUp ? 'Username' : 'Email or Username',
                             prefixIcon: const Icon(Icons.person_outline),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -283,10 +298,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           validator:
                               (v) =>
                                   (v == null || v.trim().isEmpty)
-                                      ? 'Enter your email or username'
+                                      ? 'Enter your ${_isSignUp ? 'username' : 'email or username'}'
                                       : null,
                         ),
                         const SizedBox(height: 16),
+                        if (_isSignUp) ...[
+                          TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator:
+                                (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                        ? 'Enter your email'
+                                        : null,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         TextFormField(
                           controller: _passwordCtrl,
                           obscureText: _obscurePassword,
@@ -314,6 +348,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ? 'Enter your password'
                                       : null,
                         ),
+                        if (_isSignUp) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _confirmPasswordCtrl,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _submit(),
+                            decoration: InputDecoration(
+                              labelText: 'Confirm Password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator:
+                                (v) =>
+                                    (v != _passwordCtrl.text)
+                                        ? 'Passwords do not match'
+                                        : null,
+                          ),
+                        ],
                         if (_error != null) ...[
                           const SizedBox(height: 12),
                           Text(
@@ -329,7 +384,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 24),
                         Semantics(
                           button: true,
-                          label: 'Sign In',
+                          label: _isSignUp ? 'Sign Up' : 'Sign In',
                           child: FilledButton(
                             onPressed: _loading ? null : _submit,
                             style: FilledButton.styleFrom(
@@ -348,9 +403,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
+                                    : Text(
+                                        _isSignUp ? 'Sign Up' : 'Sign In',
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Inter',
@@ -358,7 +413,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isSignUp = !_isSignUp;
+                              _error = null;
+                            });
+                          },
+                          child: Text(
+                            _isSignUp
+                                ? 'Already have an account? Sign In'
+                                : 'Don\'t have an account? Sign Up',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         Row(
                           children: [
                             const Expanded(child: Divider()),
@@ -399,7 +472,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 : const Icon(Icons.shield_outlined),
                             label: const Text(
                               'Continue with SSO',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 fontFamily: 'Inter',

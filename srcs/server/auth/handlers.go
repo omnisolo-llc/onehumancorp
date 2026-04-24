@@ -86,6 +86,50 @@ func (h *Handlers) HandleLogin(w http.ResponseWriter, r *http.Request) {
 // Returns nothing.
 // Produces no errors.
 // Has no side effects.
+
+// HandleRegister registers a new user with the given credentials. POST /api/auth/register
+// Accepts parameters: h *Handlers (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req createUserRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	req.Email = strings.TrimSpace(req.Email)
+	if req.Username == "" || req.Password == "" || req.Email == "" {
+		jsonError(w, "username, email, and password required", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.store.CreateUser(req.Username, req.Email, req.Password, []string{RoleViewer}, "")
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	token, err := h.store.IssueToken(user)
+	if err != nil {
+		jsonError(w, "failed to issue token", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, loginResponse{
+		Token:     token,
+		User:      user.PublicView(),
+		ExpiresAt: time.Now().UTC().Add(tokenTTL),
+	})
+}
+
 func (h *Handlers) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
