@@ -57,7 +57,7 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 
 			// Start a local network proxy for this sub-agent execution
 			allowedDomains := []string{"googleapis.com", "stripe.com"} // Added defaults for essential API communication
-			proxy := harness.NewNetworkProxy(job.ID, allowedDomains)
+			proxy := harness.NewNetworkProxy("worker", []string{})
 			if err := proxy.Start(); err != nil {
 				// Fallback to no proxy or handle error
 			} else {

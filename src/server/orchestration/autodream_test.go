@@ -854,26 +854,3 @@ func TestAutoDreamWorker_IngestCompletedTasksPg(t *testing.T) {
 		t.Fatalf("IngestCompletedTasks failed: %v", err)
 	}
 }
-type mockPgProvider struct {
-	db.Provider
-}
-
-func (m mockPgProvider) IsSQLite() bool {
-	return false
-}
-
-type mockMeshTransport struct {
-	MeshTransport
-	BroadcastMeshEvents []struct {
-		Topic   string
-		Payload []byte
-	}
-}
-
-func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
-	m.BroadcastMeshEvents = append(m.BroadcastMeshEvents, struct {
-		Topic   string
-		Payload []byte
-	}{topic, payload})
-	return nil
-}
