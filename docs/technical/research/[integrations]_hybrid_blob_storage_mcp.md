@@ -10,7 +10,7 @@ Current blob storage solutions in MCP are highly fragmented. Local tools like Re
 
 ## Design Doc
 **Architecture:**
-- Add a new package `srcs/server/lib/integrations/hybrid_blob/`.
+- Add a new package `src/server/lib/integrations/hybrid_blob/`.
 - Introduce a `BlobManager` that implements the MCP Tool interface.
 - Must support a local File System driver and a cloud S3-compatible driver, dynamically choosing based on configuration or environment variables (e.g., presence of `S3_ENDPOINT`).
 
@@ -26,7 +26,7 @@ Current blob storage solutions in MCP are highly fragmented. Local tools like Re
 - Ensure strict path traversal protections for the local File System driver.
 
 ## Implementation Prompt
-"Implement the Hybrid Blob Storage MCP tool in `srcs/server/lib/integrations/hybrid_blob/`.
+"Implement the Hybrid Blob Storage MCP tool in `src/server/lib/integrations/hybrid_blob/`.
 1. Create `blob.go` defining the `BlobManager` and its MCP capabilities (`ReadBlob` and `WriteBlob`).
 2. Implement environment-agnostic logic. To determine if the backend should be S3, check for `S3_ENDPOINT` environment variable. If missing, fall back to a local temporary directory configured by the environment (do not use `.ohc/`).
 3. Implement strict path sanitization to prevent path traversal attacks in the local driver.

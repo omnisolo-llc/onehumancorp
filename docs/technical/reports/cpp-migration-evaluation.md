@@ -1,6 +1,6 @@
 # Evaluation of Migrating Backend Code from Go to C++ for Performance
 
-This document evaluates the feasibility and potential benefits of migrating the One Human Corp backend (`srcs/server`) from Go to C++ to address performance concerns.
+This document evaluates the feasibility and potential benefits of migrating the One Human Corp backend (`src/server`) from Go to C++ to address performance concerns.
 
 ## Current Architecture Context
 

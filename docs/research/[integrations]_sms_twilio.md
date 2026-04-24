@@ -60,7 +60,7 @@ sequenceDiagram
   - The business owner simply toggles "Send SMS Reminders" in their dashboard. The AI handles drafting the 160-character limit message.
 
 ## Implementation Prompt
-"Integrate Twilio for SMS notifications. Create a Go service in `srcs/server/services/sms/` that wraps the Twilio API. Ensure the service tracks delivery statuses via webhooks. Add logic to the 'Legal & Compliance' AI agent to guide US-based business owners through the required A2P 10DLC registration process to ensure compliance before enabling the feature."
+"Integrate Twilio for SMS notifications. Create a Go service in `src/server/services/sms/` that wraps the Twilio API. Ensure the service tracks delivery statuses via webhooks. Add logic to the 'Legal & Compliance' AI agent to guide US-based business owners through the required A2P 10DLC registration process to ensure compliance before enabling the feature."
 
 ## Priority
 P0

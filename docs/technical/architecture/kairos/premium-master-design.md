@@ -52,7 +52,7 @@ The autoDream system consolidates episodic agent memory into a durable vector st
 
 ### V. Teammate Mesh APIs (Realtime Coordination)
 - **Goal:** Realtime communication and synchronization layer for KAIROS features.
-- **REST APIs (`srcs/server/orchestration/mesh/`):**
+- **REST APIs (`src/server/orchestration/mesh/`):**
     - `POST /api/mesh/broadcast`: Broadcast an event payload to specific channels.
     - `GET /api/mesh/subscribe`: Upgrade to WebSocket/SSE for subscribing to agent channels.
 - **Payload Contract:** All Teammate Mesh payloads must be JSON and structured to OHC-SIP compliance:
