@@ -140,6 +140,9 @@ func TestMain(m *testing.M) {
 	// Failure is non-fatal: browser-based tests will be skipped automatically
 	// via newPage() which calls t.Skip() when bCtx is nil.
 	os.Setenv("PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS", "1")
+	if os.Getenv("PLAYWRIGHT_BROWSERS_PATH") == "" {
+		os.Setenv("PLAYWRIGHT_BROWSERS_PATH", "/tmp/pw-browsers")
+	}
 	playwrightReady := true
 	if os.Getenv("PLAYWRIGHT_SKIP_INSTALL") == "" {
 		if installErr := playwright.Install(); installErr != nil {

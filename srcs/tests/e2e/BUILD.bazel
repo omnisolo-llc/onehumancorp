@@ -33,6 +33,9 @@ _COMMON_TAGS = [
 # ── Auth CUJ ──────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_auth_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + ["auth_login_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
@@ -45,6 +48,9 @@ go_test(
 
 go_test(
     name = "e2e_hybrid_sync_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + [
         "hybrid_sync_e2e_test.go",
     ],
@@ -63,6 +69,9 @@ go_test(
 # ── Agent CUJs ────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_agents_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + [
         "agent_test.go",
         "cuj_agents_extra_test.go",
@@ -79,6 +88,9 @@ go_test(
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_dashboard_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + ["dashboard_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
@@ -92,6 +104,9 @@ go_test(
 # ── Budget ────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_budget_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + [
         "budget_test.go",
         "cuj_budget_extra_test.go",
@@ -108,6 +123,9 @@ go_test(
 # ── Business ──────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_business_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + [
         "business_test.go",
         "cuj_business_extra_test.go",
@@ -124,6 +142,9 @@ go_test(
 # ── Settings ──────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_settings_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + [
         "settings_test.go",
         "cuj_settings_extra_test.go",
@@ -140,6 +161,9 @@ go_test(
 # ── Wizard ────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_wizard_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + ["wizard_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
@@ -153,6 +177,9 @@ go_test(
 # ── Model / Provider ──────────────────────────────────────────────────────────
 go_test(
     name = "e2e_model_provider_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + ["model_provider_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
@@ -166,6 +193,9 @@ go_test(
 # ── Admin ─────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_admin_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + ["admin_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
@@ -179,6 +209,9 @@ go_test(
 # ── CUJ Audit ─────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_cuj_audit_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + ["cuj_audit_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
@@ -192,6 +225,9 @@ go_test(
 # ── CUJ Extended ──────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_cuj_extended_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + [
         "cuj_extended_test.go",
         "cuj_integration_test.go",
@@ -208,6 +244,9 @@ go_test(
 # ── CUJ Accessibility ─────────────────────────────────────────────────────────
 go_test(
     name = "e2e_cuj_accessibility_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + ["cuj_accessibility_extra_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
@@ -221,6 +260,9 @@ go_test(
 # ── Misc ──────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_misc_test",
+    exec_properties = {
+        "container-image": "docker://mcr.microsoft.com/playwright:v1.43.0-jammy",
+    },
     srcs = _SHARED_SRCS + ["misc_test.go"],
     importpath = "github.com/onehumancorp/mono/srcs/tests/e2e",
     data = _COMMON_DATA,
