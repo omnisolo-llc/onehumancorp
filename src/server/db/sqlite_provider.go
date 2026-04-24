@@ -82,6 +82,10 @@ func convertBindVars(query string) string {
 	// Map json paths `col::json->>'key'` to `json_extract(col, '$.key')`
 	resStr = jsonPathRe.ReplaceAllString(resStr, "json_extract($1, '$.$2')")
 
+	// Map pgvector `<->` to vec_distance_cosine UDF
+	vectorRe := regexp.MustCompile(`([a-zA-Z0-9_.]+)\s*<->\s*(\?[0-9]*|'[^']*'|\([^\)]+\))`)
+	resStr = vectorRe.ReplaceAllString(resStr, "vec_distance_cosine($1, $2)")
+
 	return resStr
 }
 

@@ -706,13 +706,9 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		return nil, errors.New("unauthorized: missing claims")
 	}
 
-	return tm.PeekTasksByOrg(ctx, claims.OrganizationID, limit)
-}
-
-func (tm *TaskManager) PeekTasksByOrg(ctx context.Context, orgID string, limit int) ([]*SharedTask, error) {
 	var query string
 	var args []interface{}
-	args = append(args, orgID)
+	args = append(args, claims.OrganizationID)
 
 	if tm.db.IsSQLite() {
 		query = `

@@ -331,7 +331,17 @@ func InitWithMeter(m mockableMeter) error {
 		return fmt.Errorf("meter is nil")
 	}
 
+	CapabilityViolationTotal = nil
+
 	var err error
+	CapabilityViolationTotal, err = m.Int64Counter(
+		"capability_violation_total",
+		metric.WithDescription("Total number of capability ACL violations"),
+	)
+	if err != nil {
+		return err
+	}
+
 	AutoDreamRecordsSyncedTotal, err = m.Int64Counter("autodream_records_synced_total",
 		metric.WithDescription("Total number of autodream records successfully synced"),
 	)
@@ -2203,15 +2213,6 @@ func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode st
 }
 
 var CapabilityViolationTotal metric.Int64Counter
-
-func initCapabilityMetrics(m metric.Meter) error {
-	var err error
-	CapabilityViolationTotal, err = m.Int64Counter(
-		"capability_violation_total",
-		metric.WithDescription("Total number of capability ACL violations"),
-	)
-	return err
-}
 
 // RecordCapabilityViolation increments the counter for capability ACL violations.
 func RecordCapabilityViolation(ctx context.Context, sessionID, capability string) {
