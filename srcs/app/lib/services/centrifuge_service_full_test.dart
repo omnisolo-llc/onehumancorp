@@ -190,7 +190,7 @@ void main() {
         ),
       );
 
-      await Future.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
       expect(received, hasLength(1));
       expect(received.first.body, 'Hello!');
       expect(received.first.authorName, 'Alice');
@@ -224,7 +224,7 @@ void main() {
         ),
       );
 
-      await Future.delayed(const Duration(milliseconds: 10));
+      await pumpEventQueue();
       expect(received, isEmpty);
 
       await sub.cancel();

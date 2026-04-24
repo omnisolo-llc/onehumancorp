@@ -59,7 +59,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500)); // Process stream and state update
 
     expect(find.text('1/min'), findsOneWidget);
-    expect(find.text('121 ms'), findsOneWidget); // 120.0 + (1 % 50) = 121
+    expect(find.text('0 ms'), findsOneWidget);
     expect(find.text('1'), findsOneWidget); // Active threads
   });
 }

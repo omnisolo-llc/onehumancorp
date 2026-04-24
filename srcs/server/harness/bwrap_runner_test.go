@@ -23,7 +23,7 @@ func TestBwrapRunnerArguments(t *testing.T) {
 		"--tmpfs", "/tmp",
 		"--unshare-net",
 		"--ro-bind", "/", "/",
-		"--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock",
+		"--bind-try", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock",
 		"--",
 		"bash", "-c", command,
 	}
@@ -51,7 +51,7 @@ func TestBwrapRunnerArgumentsWithSPIFFE(t *testing.T) {
 		"--tmpfs", "/tmp",
 		"--unshare-net",
 		"--ro-bind", "/", "/",
-		"--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock",
+		"--bind-try", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock",
 		"--bind", "/tmp/spire-agent/public/api.sock", "/tmp/spire-agent/public/api.sock",
 		"--setenv", "SPIFFE_ENDPOINT_SOCKET", "unix:///tmp/spire-agent/public/api.sock",
 		"--",
@@ -85,7 +85,7 @@ func TestBwrapRunnerArgumentsWithPolicy(t *testing.T) {
 		"--ro-bind", "/", "/",
 		"--bind", "/home/user", "/home/user",
 		"--ro-bind", "/etc/config", "/etc/config",
-		"--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock",
+		"--bind-try", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock",
 		"--",
 		"bash", "-c", command,
 	}

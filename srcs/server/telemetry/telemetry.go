@@ -356,6 +356,11 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	err = initCapabilityMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	sqliteThrottledRequestCounter, err = m.Int64Counter(
 		"ohc_sqlite_throttled_request_total",
 		metric.WithDescription("Total times SQLite write operations were throttled by concurrency limiter."),
@@ -2417,7 +2422,7 @@ func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode st
 
 var CapabilityViolationTotal metric.Int64Counter
 
-func initCapabilityMetrics(m metric.Meter) error {
+func initCapabilityMetrics(m mockableMeter) error {
 	var err error
 	CapabilityViolationTotal, err = m.Int64Counter(
 		"capability_violation_total",

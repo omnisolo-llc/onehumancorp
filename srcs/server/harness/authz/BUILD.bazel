@@ -8,5 +8,6 @@ go_library(
     deps = [
         "//srcs/server/db",
         "//srcs/server/db/models",
+        "//srcs/server/telemetry",
     ],
 )
