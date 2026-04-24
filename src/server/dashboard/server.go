@@ -722,6 +722,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
+	mux.HandleFunc("/api/wizard/generate_description", server.handleWizardGenerateDescription)
+	mux.HandleFunc("/api/wizard/generate_logo", server.handleWizardGenerateLogo)
 
 	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
 }
@@ -1310,48 +1312,25 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	var wg sync.WaitGroup
-	wg.Add(3)
+	agents := s.orgAgentsLocked()
 
-	var agents []orchestration.Agent
-	var meetings []orchestration.MeetingRoom
-	var costs billing.Summary
 	queue := make([]orchestration.SharedTask, 0)
 	queueLen := 0
-
-	go func() {
-		defer wg.Done()
-		agents = s.orgAgentsLocked()
-		meetings = s.orgMeetingsLocked()
-	}()
-
-	go func() {
-		defer wg.Done()
-		if s.tracker != nil {
-			costs = s.tracker.Summary(s.org.ID)
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		if s.hub != nil && s.hub.TaskManager() != nil {
-			if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
-				for _, t := range pending {
-					if t != nil {
-						queue = append(queue, *t)
-					}
+	if s.hub != nil && s.hub.TaskManager() != nil {
+		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
+			for _, t := range pending {
+				if t != nil {
+					queue = append(queue, *t)
 				}
-				queueLen = len(queue)
 			}
+			queueLen = len(queue)
 		}
-	}()
-
-	wg.Wait()
+	}
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     meetings,
-		Costs:        costs,
+		Meetings:     s.orgMeetingsLocked(),
+		Costs:        s.tracker.Summary(s.org.ID),
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
@@ -1364,7 +1343,7 @@ func (s *Server) orgAgentsLocked() []orchestration.Agent {
 	if s == nil || s.hub == nil {
 		return []orchestration.Agent{}
 	}
-	return s.hub.AgentsByOrg(s.org.ID)
+	return filterAgentsByOrg(s.hub.Agents(), s.org.ID)
 }
 
 func (s *Server) orgMeetingsLocked() []orchestration.MeetingRoom {

@@ -8,12 +8,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/widgets/swarm_observability_widget.dart';
-import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
-import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
-import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
-import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+
+
+
+
+
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -36,12 +37,7 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+        loading: () => const DashboardShimmer(),
         error:
             (e, _) => Center(
               child: SelectableText(
@@ -86,14 +82,28 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 16,
+          runSpacing: 16,
           children: [
             _SectionTitle('My Business'),
-            OutlinedButton.icon(
-              onPressed: () => context.go('/wizards/billing'),
-              icon: const Icon(Icons.credit_card),
-              label: const Text('Billing & Credits'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/wizards/website_builder'),
+                  icon: const Icon(Icons.web),
+                  label: const Text('Build My Website'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/wizards/billing'),
+                  icon: const Icon(Icons.credit_card),
+                  label: const Text('Billing & Credits'),
+                ),
+              ],
             ),
           ],
         ),
@@ -103,71 +113,31 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Active Agents',
+              label: 'AI Helpers',
               value: data.agents.where((a) => a.isRunning).length.toString(),
               icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Active Tasks',
+              label: 'Tasks in Progress',
               value: data.statuses.length.toString(),
               icon: Icons.pending_actions,
               color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
-              label: 'Scheduled Calls',
+              label: 'Upcoming Meetings',
               value: data.meetings.length.toString(),
               icon: Icons.video_call,
               color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
-              label: 'Team Members',
+              label: 'Team',
               value: data.organization.members.length.toString(),
               icon: Icons.people,
               color: Theme.of(context).colorScheme.primaryContainer,
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ],
-        ),
-
-        // --- PENDING ACTIONS BANNER ---
-        Container(
-          margin: const EdgeInsets.only(bottom: 24),
-          decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => context.go('/wizards/pending-actions'),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning_amber, color: Colors.orange),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Pending Actions", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
-                          const Text("Your AI agents have proposed high-risk actions that need your approval.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
-                        ],
-                      ),
-                    ),
-                    FilledButton(
-                      onPressed: () => context.go('/wizards/pending-actions'),
-                      style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-                      child: const Text('Review Now'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ),
         // --- UPGRADE BANNER ---
         Container(
@@ -209,20 +179,17 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         const SizedBox(height: 32),
-        _SectionTitle('System Health'),
+
         const SizedBox(height: 16),
-        _ObservabilityWidget(data: data),
+
         const SizedBox(height: 16),
-        const SwarmObservabilityWidget(),
+
         const SizedBox(height: 16),
-        const SwarmVelocityWidget(),
+
         const SizedBox(height: 16),
-        const HybridObservabilityWidget(),
+
         const SizedBox(height: 16),
-        Container(
-          key: const ValueKey('hybrid_telemetry'),
-          child: const HybridTelemetryWidget(),
-        ),
+
         const SizedBox(height: 16),
         SizedBox(
           height: 350,
@@ -234,7 +201,7 @@ class _DashboardContent extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: Text(
-                        'Proactive Task Stream',
+                        'Recent Activity',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -251,12 +218,12 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
         const SizedBox(height: 16),
-        SubAgentQueueWidget(statuses: data.statuses),
+
         const SizedBox(height: 32),
-        _SectionTitle('Company Structure'),
+        _SectionTitle('My Team'),
         const SizedBox(height: 8),
         Text(
-          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
+          'Manage your team. Hire or fire AI helpers for different jobs.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontFamily: 'Inter',

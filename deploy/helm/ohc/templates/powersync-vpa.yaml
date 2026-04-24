@@ -11,11 +11,11 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-powersync
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: powersync
-        controlledResources: ["cpu", "memory"]
+        controlledResources: ["memory"]
         minAllowed:
           cpu: {{ .Values.powersync.resources.requests.cpu }}
           memory: {{ .Values.powersync.resources.requests.memory }}
