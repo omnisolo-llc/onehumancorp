@@ -63,6 +63,7 @@ func TestMain(m *testing.M) {
 
 	// If no external server provided, start the OHC binary in standalone mode.
 	if baseURL == "" {
+		fmt.Println("e2e: starting server...")
 		ohcBin := findOhcBinary()
 		if ohcBin == "" {
 			fmt.Fprintln(os.Stderr, "e2e: ohc binary not found in runfiles; set OHC_E2E_BASE_URL to use an existing server")
@@ -99,7 +100,7 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("OHC_LOCAL_LLM_ENDPOINT=%s/api/chat", llmURL),
 			fmt.Sprintf("OHC_LOCAL_LLM_EMBED_ENDPOINT=%s/api/embeddings", llmURL),
 			"OHC_LLM_PROVIDER=ollama",
-			fmt.Sprintf("GRPC_PORT=:%d", freePort()),
+			fmt.Sprintf("GRPC_PORT=%d", freePort()),
 		)
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr
@@ -112,6 +113,7 @@ func TestMain(m *testing.M) {
 		// 120s (instead of 60s) is necessary because up to 4 test binaries
 		// run in parallel (--local_test_jobs=4), each launching an OHC
 		// process; on resource-constrained CI hosts startup can be slow.
+		fmt.Println("e2e: waiting for server to be ready...")
 		deadline := time.Now().Add(120 * time.Second)
 		ready := false
 		for time.Now().Before(deadline) {
@@ -131,6 +133,7 @@ func TestMain(m *testing.M) {
 			serverCmd.Process.Kill()
 			os.Exit(1)
 		}
+		fmt.Println("e2e: server is ready.")
 	}
 
 	// Install playwright browsers (no-op if already installed).
@@ -140,10 +143,12 @@ func TestMain(m *testing.M) {
 	os.Setenv("PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS", "1")
 	playwrightReady := true
 	if os.Getenv("PLAYWRIGHT_SKIP_INSTALL") == "" {
+		fmt.Println("e2e: installing playwright browsers...")
 		if installErr := playwright.Install(); installErr != nil {
 			fmt.Fprintf(os.Stderr, "playwright install: %v (browser tests will be skipped)\n", installErr)
 			playwrightReady = false
 		}
+		fmt.Println("e2e: playwright install done.")
 	} else {
 		fmt.Fprintln(os.Stdout, "playwright install skipped via PLAYWRIGHT_SKIP_INSTALL")
 		// If PLAYWRIGHT_BROWSERS_PATH is set, we assume it points to valid binaries.
@@ -155,6 +160,7 @@ func TestMain(m *testing.M) {
 
 	var err error
 	if playwrightReady {
+		fmt.Println("e2e: running playwright...")
 		pw, err = playwright.Run()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "playwright run fatal: %v\n", err)
@@ -167,11 +173,13 @@ func TestMain(m *testing.M) {
 			}
 			os.Exit(1)
 		}
+		fmt.Println("e2e: playwright running.")
 	}
 
 	// Use Firefox instead of Chromium for better cross-platform compatibility
 	// Firefox has fewer system library dependencies than Chromium/GTK.
 	// The hermetic playwright.Install() downloads Firefox with bundled dependencies.
+	fmt.Println("e2e: launching browser...")
 	browser, err = pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{
 		Headless: playwright.Bool(true),
 	})
@@ -192,7 +200,9 @@ func TestMain(m *testing.M) {
 			os.Exit(1)
 		}
 	}
+	fmt.Println("e2e: browser launched.")
 
+	fmt.Println("e2e: creating new context...")
 	bCtx, err = browser.NewContext(playwright.BrowserNewContextOptions{
 		BaseURL: playwright.String(baseURL),
 	})
@@ -200,8 +210,11 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "browser context fatal: %v\n", err)
 		os.Exit(1)
 	}
+	fmt.Println("e2e: context created.")
 
+	fmt.Println("e2e: running tests...")
 	code := m.Run()
+	fmt.Println("e2e: tests finished.")
 
 	_ = bCtx.Close()
 	_ = browser.Close()

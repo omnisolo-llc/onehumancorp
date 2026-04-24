@@ -720,12 +720,13 @@ def _flutter_test_impl(ctx):
     flutter_bin = flutter_toolchain.flutterinfo.tool_files[0].path
 
     # Build a mapping of relative paths to actual file objects
+    all_test_files = list(ctx.files.srcs) + list(ctx.files.data)
     test_file_mappings = [
         (
             f.short_path if package_root and f.short_path.startswith(package_root + "/") else _compute_relative_to_package(ctx, f),
             f,
         )
-        for f in ctx.files.srcs
+        for f in all_test_files
     ]
 
     prepared_workspace = ctx.actions.declare_directory(ctx.label.name + "_test_workspace")
@@ -772,7 +773,7 @@ done
     copy_script = copy_script_template
 
     ctx.actions.run_shell(
-        inputs = [library_info.workspace] + ctx.files.srcs,
+        inputs = [library_info.workspace] + all_test_files,
         outputs = [prepared_workspace],
         execution_requirements = {"no-cache": "1"},
         arguments = [
@@ -1274,6 +1275,10 @@ flutter_test = rule(
         "srcs": attr.label_list(
             allow_files = True,
             doc = "Test source files to copy into the runtime workspace.",
+        ),
+        "data": attr.label_list(
+            allow_files = True,
+            doc = "Data files for test",
         ),
         "test_files": attr.string_list(
             default = ["test/"],
