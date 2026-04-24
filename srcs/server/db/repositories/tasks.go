@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/db/models"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type TaskRepository interface {
@@ -21,6 +23,7 @@ type TaskRepository interface {
 
 type taskRepositoryImpl struct {
 	dbProvider db.Provider
+	mu         sync.Mutex
 }
 
 func NewTaskRepository(dbProvider db.Provider) TaskRepository {
@@ -88,6 +91,16 @@ func (r *taskRepositoryImpl) ClaimTask(ctx context.Context, taskID string, agent
 	// Determine if we are using PostgreSQL to append the lock clause
 	isPostgres := !r.dbProvider.IsSQLite()
 
+	if isPostgres {
+		// Postgres lock is handled via SQL Query
+	} else {
+		if !r.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "claim_task_sqlite")
+			r.mu.Lock()
+		}
+		defer r.mu.Unlock()
+	}
+
 	tx, err := r.dbProvider.Begin(ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to begin transaction: %w", err)
@@ -104,13 +117,18 @@ func (r *taskRepositoryImpl) ClaimTask(ctx context.Context, taskID string, agent
 
 	err = tx.QueryRow(ctx, selectQ, taskID).Scan(&currentStatus)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == sql.ErrNoRows || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
 			// Task not found or not pending (or locked by someone else in PG)
-			return false, nil
-		}
-		// In pgx, err isn't exactly sql.ErrNoRows for no rows, but its error string often contains "no rows"
-		// Better to just check if it's "no rows" string
-		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			// Secondary check to see if the PENDING task exists but was skipped due to lock
+			var exists bool
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM swarm_tasks WHERE id = $1 AND status = 'PENDING')", taskID).Scan(&exists)
+			if checkErr == nil && exists {
+				if isPostgres {
+					telemetry.RecordPostgresLockContention(ctx, "claim_task")
+				} else {
+					telemetry.RecordPostgresLockContention(ctx, "claim_task_sqlite")
+				}
+			}
 			return false, nil
 		}
 
