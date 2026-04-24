@@ -7,6 +7,10 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto:hub_go_proto",
+        "@com_github_nats_io_nats_go//:nats_go",
+        "@com_github_nats_io_nats_server_v2//server",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
         "@org_golang_google_protobuf//proto",
     ],
 )

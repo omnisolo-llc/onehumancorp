@@ -1,0 +1,10 @@
+<<<<<<< SEARCH
+        "@com_github_nats_io_nats_go//:nats",
+=======
+        "@com_github_nats_io_nats_go//:nats_go",
+>>>>>>> REPLACE
+<<<<<<< SEARCH
+        "@com_github_nats_io_nats_go//:nats",
+=======
+        "@com_github_nats_io_nats_go//:nats_go",
+>>>>>>> REPLACE

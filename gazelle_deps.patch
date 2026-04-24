@@ -1,0 +1,21 @@
+<<<<<<< SEARCH
+go_test(
+    name = "nats_test",
+    srcs = ["provider_test.go"],
+    embed = [":nats"],
+)
+=======
+go_test(
+    name = "nats_test",
+    srcs = ["provider_test.go"],
+    embed = [":nats"],
+    deps = [
+        "@com_github_nats_io_nats_go//:nats",
+        "@com_github_nats_io_nats_server_v2//server",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+        "//src/proto:hub_go_proto",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+>>>>>>> REPLACE
