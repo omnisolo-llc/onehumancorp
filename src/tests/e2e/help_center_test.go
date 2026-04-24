@@ -29,7 +29,7 @@ func TestHelpCenter_E2E(t *testing.T) {
 	require.NoError(t, chatButton.Click())
 
 	// Verify chat interface opens
-	require.NoError(t, page.Locator("text=Ask OHC Help").WaitFor())
+	require.NoError(t, page.Locator("text=Ask OHC Help").WaitFor(playwright.LocatorWaitForOptions{Timeout: playwright.Float(10000)}))
 
 	// Send a message
 	inputField := page.Locator("input[placeholder='Type your question...']")
