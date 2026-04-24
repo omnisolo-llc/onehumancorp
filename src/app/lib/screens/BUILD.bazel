@@ -28,6 +28,7 @@ SCREEN_SRCS = glob(
     [
         "*.dart",
         "orchestration/*.dart",
+        "help/*.dart",
     ],
     exclude = ["*_test.dart"],
 )

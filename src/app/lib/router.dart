@@ -28,6 +28,10 @@ import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
 import 'package:ohc_app/screens/website_builder_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
+import 'package:ohc_app/screens/help/help_center_screen.dart';
+import 'package:ohc_app/screens/help/release_notes_screen.dart';
+import 'package:ohc_app/widgets/ai_help_chat_fab.dart';
+
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
@@ -160,6 +164,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ScalingScreen(),
           ),
           GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/changelog',
+            builder: (context, state) => const ReleaseNotesScreen(),
+          ),
+          GoRoute(
             path: '/pipelines',
             builder: (context, state) => const PipelinesScreen(),
           ),
@@ -228,7 +240,14 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Stack(
+        children: [
+          Row(children: [_Sidebar(), Expanded(child: child)]),
+          const AiHelpChatFAB(),
+        ],
+      ),
+    );
   }
 }
 
@@ -269,6 +288,7 @@ class _Sidebar extends StatelessWidget {
           path: '/scaling',
         ),
         _NavItem(icon: Icons.alt_route, label: 'Pipelines', path: '/pipelines'),
+        _NavItem(icon: Icons.help_outline, label: 'Help', path: '/help'),
         _NavItem(
           icon: Icons.science,
           label: 'Growth Experiments',

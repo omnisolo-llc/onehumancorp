@@ -35,6 +35,12 @@ class DashboardScreen extends ConsumerWidget {
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => context.push('/help'),
+          ),
+        ],
       ),
       body: snapshot.when(
         loading: () => const DashboardShimmer(),
