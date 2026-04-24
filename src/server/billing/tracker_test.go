@@ -291,6 +291,48 @@ func TestTracker_Summary_DifferentOrgInSameShard(t *testing.T) {
 	}
 }
 
+func TestTracker_ZeroCostModel(t *testing.T) {
+	catalog := map[string]Price{
+		"zero-model": {InputPerMillionUSD: 0.0, OutputPerMillionUSD: 0.0, CachedPerMillionUSD: 0.0},
+	}
+	tracker := NewTracker(catalog)
+
+	tracker.Track(Usage{
+		OrganizationID:   "org-zero",
+		AgentID:          "agent-z",
+		Model:            "zero-model",
+		PromptTokens:     1000,
+		CompletionTokens: 500,
+		CachedTokens:     200,
+		IsAction:         true,
+	})
+
+	tracker.Track(Usage{
+		OrganizationID:   "org-zero",
+		AgentID:          "agent-z",
+		Model:            "zero-model",
+		PromptTokens:     2000,
+		CompletionTokens: 1500,
+		CachedTokens:     1000,
+		IsAction:         true,
+	})
+
+	summary := tracker.Summary("org-zero")
+	if summary.TotalCostUSD != 0.0 {
+		t.Errorf("Expected cost $0.0, got %v", summary.TotalCostUSD)
+	}
+
+	if summary.Efficiency != 2.0 {
+		t.Errorf("Expected efficiency to equal total actions (2.0) to prevent division by zero, got %v", summary.Efficiency)
+	}
+
+	if len(summary.Agents) != 1 {
+		t.Errorf("Expected 1 agent, got %d", len(summary.Agents))
+	} else if summary.Agents[0].Efficiency != 2.0 {
+		t.Errorf("Expected agent efficiency 2.0, got %v", summary.Agents[0].Efficiency)
+	}
+}
+
 func TestNewTrackerCopiesCatalog(t *testing.T) {
 	original := map[string]Price{
 		"model-a": {InputPerMillionUSD: 1.0, OutputPerMillionUSD: 2.0},

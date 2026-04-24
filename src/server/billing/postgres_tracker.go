@@ -70,6 +70,11 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		if err := rows.Scan(&a.AgentID, &a.CostUSD, &a.TokenUsed, &a.TotalActions); err != nil {
 			return Summary{}, fmt.Errorf("pg: scan agent summary: %w", err)
 		}
+		if a.CostUSD > 0 {
+			a.Efficiency = float64(a.TotalActions) / a.CostUSD
+		} else {
+			a.Efficiency = float64(a.TotalActions)
+		}
 		totalCost += a.CostUSD
 		totalTokens += a.TokenUsed
 		totalActions += a.TotalActions
@@ -80,12 +85,20 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		return Summary{}, fmt.Errorf("pg: billing summary iteration: %w", err)
 	}
 
+	efficiency := 0.0
+	if totalCost > 0 {
+		efficiency = float64(totalActions) / totalCost
+	} else {
+		efficiency = float64(totalActions)
+	}
+
 	return Summary{
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,
 		TotalTokens:         totalTokens,
 		TotalActions:        totalActions,
 		ProjectedMonthlyUSD: totalCost * 30,
+		Efficiency:          efficiency,
 		Agents:              agents,
 	}, nil
 }
