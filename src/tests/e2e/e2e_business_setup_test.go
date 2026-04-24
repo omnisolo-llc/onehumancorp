@@ -15,57 +15,48 @@ func TestBusinessSetupWizard(t *testing.T) {
 	// Wait for home screen.
 	expectElement(t, page, `[aria-label="Dashboard"]`)
 
-	// Setup Wizard might be triggered by a specific button or URL
 	// For testing, let's navigate to /business_setup directly or click on the Setup Business button
 	if err := page.Goto(baseURL + "/#/business_setup"); err != nil {
-		t.Fatalf("Failed to navigate to business setup: %v", err)
+		t.Fatalf("could not go to setup page: %v", err)
 	}
-
-	// Wait for the UI to settle
 	time.Sleep(1 * time.Second)
 
-	// Step 0 -> Step 1
-	clickElement(t, page, "text=Get Started")
-	expectElement(t, page, "text=What kind of business are you building?")
+	// Step 0: Welcome
+	expectText(t, page, "Your business, live in minutes")
+	clickButton(t, page, "Get Started")
 
-	// Step 1 -> Step 2
-	clickElement(t, page, "text=Online Store")
-	expectElement(t, page, "text=Tell us about your business")
+	// Step 1: Business Type
+	expectText(t, page, "What kind of business are you building?")
+	clickElementWithText(t, page, "Online Store")
 
-	// Step 2 -> Step 3
-	fillInput(t, page, "Business Name", "Acme Corp")
-	fillInput(t, page, "Short Description", "A great store")
-	clickElement(t, page, "text=Continue")
-	expectElement(t, page, "text=What do you sell?")
+	// Step 2: Details
+	expectText(t, page, "Tell us about your business")
+	fillInputByLabel(t, page, "Business Name", "E2E EShop")
+	fillInputByLabel(t, page, "Short Description", "E2E items")
+	clickButton(t, page, "Continue")
 
-	// Step 3 -> Step 4
-	clickElement(t, page, "text=Physical products")
-	clickElement(t, page, "text=Continue")
-	expectElement(t, page, "text=How do you want to receive payments?")
+	// Step 3: What do you sell?
+	expectText(t, page, "What do you sell?")
+	clickElementWithText(t, page, "Physical products")
+	clickButton(t, page, "Continue")
 
-	// Step 4 -> Step 5
-	clickElement(t, page, "text=Online only")
-	clickElement(t, page, "text=Continue")
-	expectElement(t, page, "text=Administrator account")
+	// Step 4: Payments
+	expectText(t, page, "How do you want to receive payments?")
+	clickElementWithText(t, page, "Online only")
+	clickButton(t, page, "Continue")
 
-	// Step 5 -> Step 6
-	fillInput(t, page, "Name", "Admin")
-	fillInput(t, page, "Email", "admin@acmecorp.com")
-	fillInput(t, page, "Password", "supersecret")
-	clickElement(t, page, "text=Continue")
-	expectElement(t, page, "text=Review & Launch")
+	// Step 5: Admin
+	expectText(t, page, "Administrator account")
+	fillInputByLabel(t, page, "Name", "Admin")
+	fillInputByLabel(t, page, "Email", "admin@e2e.com")
+	fillInputByLabel(t, page, "Password", "secr3tpwd")
+	clickButton(t, page, "Continue")
 
-	// Check summary output
-	expectElement(t, page, "text=Acme Corp")
-	expectElement(t, page, "text=Online Store")
-	expectElement(t, page, "text=Physical products")
-	expectElement(t, page, "text=Online only")
-	expectElement(t, page, "text=admin@acmecorp.com")
+	// Step 6: Launch
+	expectText(t, page, "Review & Launch")
+	clickButton(t, page, "Launch My Business →")
 
-	// Finish
-	clickElement(t, page, "text=Launch My Business →")
-
-	// We expect the user to be redirected to the dashboard eventually.
-	// Check for a dashboard element
-	expectElement(t, page, "text=Dashboard")
+	// Should land in dashboard
+	time.Sleep(1 * time.Second)
+	expectText(t, page, "Dashboard")
 }

@@ -38,7 +38,7 @@ func TestHandleWizardConfigure(t *testing.T) {
 	reqBody := wizardConfigureRequest{
 		Extras: map[string]string{
 			"company_name": "Test Company",
-			"industry":     "Tech",
+			"business_type": "Online Store",
 		},
 	}
 	body, _ := json.Marshal(reqBody)
