@@ -14,6 +14,7 @@ import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -34,6 +35,17 @@ class DashboardScreen extends ConsumerWidget {
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
         ),
+        actions: [
+          HelpTooltip(
+            tooltipKey: 'dashboard_help',
+            child: IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () {
+                context.push('/help');
+              },
+            ),
+          ),
+        ],
       ),
       body: snapshot.when(
         loading:
@@ -534,13 +546,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Increase $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: !_isScaling
-                                  ? () => _scaleTo(widget.count + 1)
-                                  : null,
-                              tooltip: 'Hire Agent',
+                            child: HelpTooltip(
+                              tooltipKey: 'dashboard_hire_agent',
+                              child: IconButton(
+                                icon: const Icon(Icons.add_circle_outline, size: 28),
+                                color: colors.primary,
+                                onPressed: !_isScaling
+                                    ? () => _scaleTo(widget.count + 1)
+                                    : null,
+                              ),
                             ),
                           ),
                             ],

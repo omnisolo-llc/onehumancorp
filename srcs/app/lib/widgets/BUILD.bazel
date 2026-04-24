@@ -51,3 +51,8 @@ alias(
     name = "sub_agent_queue_widget",
     actual = ":widgets_lib",
 )
+
+alias(
+    name = "tooltip_registry",
+    actual = ":widgets_lib",
+)

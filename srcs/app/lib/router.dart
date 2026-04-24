@@ -28,6 +28,10 @@ import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/video_tutorials_screen.dart';
+import 'package:ohc_app/screens/api_docs_screen.dart';
+import 'package:ohc_app/screens/release_notes_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
@@ -210,6 +214,22 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/video_tutorials',
+            builder: (context, state) => const VideoTutorialsScreen(),
+          ),
+          GoRoute(
+            path: '/api_docs',
+            builder: (context, state) => const ApiDocsScreen(),
+          ),
+          GoRoute(
+            path: '/release_notes',
+            builder: (context, state) => const ReleaseNotesScreen(),
+          ),
         ],
       ),
     ],
@@ -223,7 +243,17 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Row(children: [_Sidebar(), Expanded(child: child)]),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push('/chat?agent=help_agent');
+        },
+        backgroundColor: Colors.indigoAccent,
+        tooltip: 'Ask anything',
+        child: const Icon(Icons.chat_bubble_outline),
+      ),
+    );
   }
 }
 
@@ -315,6 +345,11 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.health_and_safety,
           label: 'Diagnostics',
           path: '/diagnostics',
+        ),
+        _NavItem(
+          icon: Icons.help_outline,
+          label: 'Help Center',
+          path: '/help',
         ),
         const SizedBox(height: 16),
       ],
