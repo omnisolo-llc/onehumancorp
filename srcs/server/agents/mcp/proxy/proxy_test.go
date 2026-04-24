@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -51,6 +52,8 @@ type mockDBProvider struct {
 }
 
 func (m *mockDBProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) { return nil, nil }
+
+func (m *mockDBProvider) GetDB() *sql.DB { return nil }
 
 func (m *mockDBProvider) IsSQLite() bool {
 	return true

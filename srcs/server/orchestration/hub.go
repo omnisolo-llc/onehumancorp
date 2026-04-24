@@ -66,7 +66,7 @@ func ProcessForecastTick(ctx context.Context, history map[string][]int64, getAct
 				// Tick duration is assumed to be 1 minute as set by StartTokenBurnForecaster
 				// Extrapolate to 24 hours: rate (per min) * 60 * 24
 				prediction24h := rate * 60 * 24
-				telemetry.RecordTokenBurnRatePredicted24h(ctx, orgID, prediction24h)
+				telemetry.RecordTokenBurnRateForecast(ctx, orgID, prediction24h)
 
 				// Predictive cost alerts
 				if prediction24h > 0 {

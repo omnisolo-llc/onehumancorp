@@ -223,6 +223,10 @@ func (p *SqliteProvider) Ping(ctx context.Context) error {
 	return p.db.PingContext(ctx)
 }
 
+func (p *SqliteProvider) GetDB() *sql.DB {
+	return p.db
+}
+
 // SqliteRows implements Rows using sql.Rows.
 type SqliteRows struct {
 	rows *sql.Rows

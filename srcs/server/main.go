@@ -362,7 +362,11 @@ func run(now time.Time, listen listenFunc) error {
 		hub.SetSIPDB(sipdb)
 
 		if os.Getenv("OHC_STANDALONE") == "true" {
-			telemetry.BufferMetricFunc = sipdb.BufferMetric
+			if sqlDB := sipdb.Provider().GetDB(); sqlDB != nil {
+				telemetry.InitStandaloneBuffer(sqlDB)
+			} else {
+				telemetry.BufferMetricFunc = sipdb.BufferMetric
+			}
 
 			// Setup AutoDreamSyncEngine
 			syncCloudAPI := os.Getenv("OHC_CLOUD_AUTODREAM_ENDPOINT")
@@ -375,7 +379,11 @@ func run(now time.Time, listen listenFunc) error {
 			// Background sync for standalone metrics to cloud
 			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
 			if cloudEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
-				telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, cloudEndpoint, 5*time.Minute)
+				if sqlDB := sipdb.Provider().GetDB(); sqlDB != nil {
+					go telemetry.NewSyncDaemon(sqlDB, cloudEndpoint, 5*time.Minute, 500).Start(ctx)
+				} else {
+					telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, cloudEndpoint, 5*time.Minute)
+				}
 			}
 			// Background sync for standalone missions to cloud
 			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")

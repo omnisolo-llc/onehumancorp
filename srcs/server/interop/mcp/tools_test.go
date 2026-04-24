@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 	"io/fs"
-
+	"database/sql"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 )
@@ -42,6 +42,7 @@ func (m *mockDBProviderTools) QueryRow(ctx context.Context, sql string, optionsA
 }
 func (m *mockDBProviderTools) Begin(ctx context.Context) (db.Tx, error) { return nil, nil }
 func (m *mockDBProviderTools) Close()                                     {}
+func (m *mockDBProviderTools) GetDB() *sql.DB                             { return nil }
 func (m *mockDBProviderTools) Ping(ctx context.Context) error             { return nil }
 func (m *mockDBProviderTools) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) {
 	return nil, nil

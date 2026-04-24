@@ -107,7 +107,8 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottleTelemetry(t *testing.T) {
 	startChan := make(chan struct{})
 
 	concurrency := 3
-	// Hold the lock to force contention
+	// Explicitly invoke `acquireThrottle` to initialize `standaloneThrottle` and force contention.
+	// Since we are mocking in a test, we do this manually to ensure telemetry fires.
 	acquireThrottle(context.Background())
 	errChan := make(chan error, concurrency)
 
@@ -116,6 +117,7 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottleTelemetry(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 			<-startChan
+			// Ensure it blocks by running DelegateMission
 			err := db.DelegateMission(context.Background(), "m"+string(rune(i)), "ROLE", msg)
 			if err != nil {
 				errChan <- err
@@ -125,7 +127,7 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottleTelemetry(t *testing.T) {
 
 	close(startChan)
 	// Wait briefly to allow goroutines to hit the throttle and increment the counter
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	releaseThrottle()
 	wg.Wait()
 	close(errChan)

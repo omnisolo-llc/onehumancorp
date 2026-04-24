@@ -60,21 +60,19 @@ const (
 )
 
 var (
-	standaloneThrottle     = make(chan struct{}, 1) // Throttle to 1 concurrent write in standalone mode
+	standaloneThrottle     chan struct{}
 	standaloneThrottleOnce sync.Once
 )
 
-// getThrottle conditionally acquires the semaphore if in standalone mode
+// acquireThrottle conditionally acquires the semaphore if in standalone mode
 func acquireThrottle(ctx context.Context) error {
 	standaloneThrottleOnce.Do(func() {
 		if os.Getenv("OHC_STANDALONE") == "true" {
-			// already initialized to 1
-		} else {
-			// If not standalone, make channel large enough or just ignore
+			standaloneThrottle = make(chan struct{}, 1)
 		}
 	})
 
-	if os.Getenv("OHC_STANDALONE") == "true" {
+	if os.Getenv("OHC_STANDALONE") == "true" && standaloneThrottle != nil {
 		select {
 		case standaloneThrottle <- struct{}{}:
 			return nil
@@ -91,8 +89,18 @@ func acquireThrottle(ctx context.Context) error {
 	return nil
 }
 
-func releaseThrottle() {
+// Ensure init clears sync once correctly for tests
+func ClearThrottleForTests() {
+	standaloneThrottleOnce = sync.Once{}
 	if os.Getenv("OHC_STANDALONE") == "true" {
+		standaloneThrottle = make(chan struct{}, 1)
+	} else {
+		standaloneThrottle = nil
+	}
+}
+
+func releaseThrottle() {
+	if os.Getenv("OHC_STANDALONE") == "true" && standaloneThrottle != nil {
 		select {
 		case <-standaloneThrottle:
 		default:

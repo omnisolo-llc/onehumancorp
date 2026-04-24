@@ -863,7 +863,7 @@
       },
       "targets": [
         {
-          "expr": "ohc_token_burn_rate_predicted_24h",
+          "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}} predicted 24h usage"
         }
       ],

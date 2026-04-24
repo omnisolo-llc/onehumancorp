@@ -128,6 +128,10 @@ func (p *PgProvider) Ping(ctx context.Context) error {
 	return p.pool.Ping(ctx)
 }
 
+func (p *PgProvider) GetDB() *sql.DB {
+	return nil
+}
+
 // PgRows implements Rows using pgx.Rows.
 type PgRows struct {
 	rows pgx.Rows

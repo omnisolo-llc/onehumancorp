@@ -2,6 +2,7 @@ package vectorragmcp
 
 import (
 	"context"
+	"database/sql"
 	"testing"
     "time"
 
@@ -26,6 +27,7 @@ func (m *mockProvider) SearchMemories(ctx context.Context, organizationID string
     m.queries = append(m.queries, queryText)
     return m.results, nil
 }
+func (m *mockProvider) GetDB() *sql.DB { return nil }
 
 func TestVectorRAGMCP_CallTool(t *testing.T) {
 	provider := &mockProvider{

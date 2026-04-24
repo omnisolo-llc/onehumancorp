@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"time"
 
@@ -52,6 +53,7 @@ type Provider interface {
 	IsSQLite() bool
 	AcquireTask(ctx context.Context, organizationID, agentID string) (*TaskRecord, error)
 	SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error)
+	GetDB() *sql.DB
 }
 
 // TaskRecord represents a task fetched from the queue.

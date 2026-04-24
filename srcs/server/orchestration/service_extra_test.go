@@ -325,6 +325,10 @@ func TestService_CoverageExt(t *testing.T) {
 		t.Fatalf("Failed to create centrifuge node: %v", err)
 	}
 	hub.SetCentrifugeNode(cn)
+
+	// Since we mock telemetry globally in other tests, ensure it is reinitialized/cleared to avoid stale mock conflict
+	telemetry.TokenBurnRateForecast = nil
+
 	err = hub.Publish(Message{FromAgent: "del-sender", ToAgent: "del-receiver"})
 	if err != nil {
 		t.Errorf("Publish failed: %v", err)

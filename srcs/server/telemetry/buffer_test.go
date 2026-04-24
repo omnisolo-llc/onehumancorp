@@ -327,9 +327,9 @@ func TestBufferMetricFunc(t *testing.T) {
 	}
 	called = false
 
-	RecordTokenBurnRatePredicted24h(ctx, "org1", 50.0)
+	RecordTokenBurnRateForecast(ctx, "org1", 50.0)
 	if !called {
-		t.Errorf("expected buffer call for RecordTokenBurnRatePredicted24h")
+		t.Errorf("expected buffer call for RecordTokenBurnRateForecast")
 	}
 	called = false
 

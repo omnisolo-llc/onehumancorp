@@ -387,8 +387,8 @@ func TestRecordFunctions(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
 	})
 
-	t.Run("RecordTokenBurnRatePredicted24h", func(t *testing.T) {
-		RecordTokenBurnRatePredicted24h(ctx, "acme-org", 1000.0)
+	t.Run("RecordTokenBurnRateForecast", func(t *testing.T) {
+		RecordTokenBurnRateForecast(ctx, "acme-org", 1000.0)
 	})
 
 	t.Run("RecordSwarmTaskCompleted", func(t *testing.T) {
@@ -493,10 +493,10 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 		RecordTokenBurnRate(ctx, "org-1", 15.5)
 	})
 
-	t.Run("RecordTokenBurnRatePredicted24h Uninitialized", func(t *testing.T) {
+	t.Run("RecordTokenBurnRateForecast Uninitialized", func(t *testing.T) {
 		// Reset gauge
-		TokenBurnRatePredicted24h = nil
-		RecordTokenBurnRatePredicted24h(ctx, "org-1", 15.5)
+		TokenBurnRateForecast = nil
+		RecordTokenBurnRateForecast(ctx, "org-1", 15.5)
 	})
 
 	t.Run("RecordAgentApiCall Uninitialized", func(t *testing.T) {
@@ -515,8 +515,8 @@ func TestRecordFunctionsUninitialized(t *testing.T) {
 		RecordTokenBurnRate(ctx, "acme-org", 123.45)
 	})
 
-	t.Run("RecordTokenBurnRatePredicted24h Uninitialized", func(t *testing.T) {
-		RecordTokenBurnRatePredicted24h(ctx, "acme-org", 123.45)
+	t.Run("RecordTokenBurnRateForecast Uninitialized", func(t *testing.T) {
+		RecordTokenBurnRateForecast(ctx, "acme-org", 123.45)
 	})
 
 	t.Run("RecordToolAutoCorrection Uninitialized", func(t *testing.T) {

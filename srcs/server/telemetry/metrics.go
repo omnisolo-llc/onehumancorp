@@ -5,16 +5,16 @@ import (
 )
 
 var (
-	// TokenBurnRatePredicted24h tracks the predicted token burn rate for the next 24 hours per tenant.
-	TokenBurnRatePredicted24h metric.Float64Gauge
+	// TokenBurnRateForecast tracks the predicted token burn rate for the next 24 hours per tenant.
+	TokenBurnRateForecast metric.Float64Gauge
 	// TokenBudgetAlertTotal tracks the total number of budget alerts emitted.
 	TokenBudgetAlertTotal metric.Int64Counter
 )
 
 func initForecastingMetrics(m mockableMeter) error {
 	var err error
-	TokenBurnRatePredicted24h, err = m.Float64Gauge(
-		"ohc_token_burn_rate_predicted_24h",
+	TokenBurnRateForecast, err = m.Float64Gauge(
+		"ohc_token_burn_rate_forecast",
 		metric.WithDescription("Predicted moving average of token burn rate for the next 24 hours per tenant"),
 	)
 	if err != nil {

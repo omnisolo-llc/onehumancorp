@@ -570,7 +570,7 @@ func InitWithMeter(m mockableMeter) error {
 	}
 
 	tokenBurnRateGauge, err = m.Float64Gauge(
-		"ohc_token_burn_rate_forecast",
+		"ohc_token_burn_rate",
 		metric.WithDescription("Predicted moving average of token burn rate per minute per tenant"),
 	)
 	if err != nil {
@@ -1270,8 +1270,8 @@ func LogAgentExecution(ctx context.Context, agentID, role, api, eventType, conte
 // Global buffer function pointer to inject dependency without circular imports.
 var BufferMetricFunc func(ctx context.Context, metricType string, payload string) error
 
-// RecordTokenBurnRatePredicted24h updates the forecast gauge for a tenant's predicted 24h token burn rate.
-func RecordTokenBurnRatePredicted24h(ctx context.Context, organizationID string, prediction float64) {
+// RecordTokenBurnRateForecast updates the forecast gauge for a tenant's predicted 24h token burn rate.
+func RecordTokenBurnRateForecast(ctx context.Context, organizationID string, prediction float64) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"organization_id": organizationID,
@@ -1279,10 +1279,10 @@ func RecordTokenBurnRatePredicted24h(ctx context.Context, organizationID string,
 		}
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
-		_ = BufferMetricFunc(ctx, "token_burn_rate_predicted_24h", string(payloadBytes))
+		_ = BufferMetricFunc(ctx, "token_burn_rate_forecast", string(payloadBytes))
 	}
-	if TokenBurnRatePredicted24h != nil {
-		TokenBurnRatePredicted24h.Record(ctx, prediction, metric.WithAttributes(
+	if TokenBurnRateForecast != nil {
+		TokenBurnRateForecast.Record(ctx, prediction, metric.WithAttributes(
 			attribute.String("organization_id", organizationID),
 		))
 	}

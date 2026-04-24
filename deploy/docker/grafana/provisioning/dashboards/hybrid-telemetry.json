@@ -2220,7 +2220,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Token Burn Rate Forecast (24h Extrapolation)",
+      "title": "Token Burn Rate Forecast",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -2229,7 +2229,7 @@
       },
       "targets": [
         {
-          "expr": "ohc_token_burn_rate_predicted_24h",
+          "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}} predicted 24h usage"
         }
       ],
@@ -2249,6 +2249,7 @@
           "unit": "short"
         }
       },
+      "description": "<div style=\"background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1); padding: 10px;\">Predictive cost alerts based on the Token Burn Rate Forecast.</div>",
       "transparent": true,
       "id": 44
     },

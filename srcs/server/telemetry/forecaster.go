@@ -135,8 +135,8 @@ func (f *Forecaster) recordRates(ctx context.Context, organizationID string, rat
 	// Use existing helper if it exists, otherwise use the gauge directly
 	RecordTokenBurnRate(ctx, organizationID, ratePerMin)
 
-	if TokenBurnRatePredicted24h != nil {
-		TokenBurnRatePredicted24h.Record(ctx, prediction24h, metric.WithAttributes(
+	if TokenBurnRateForecast != nil {
+		TokenBurnRateForecast.Record(ctx, prediction24h, metric.WithAttributes(
 			attribute.String("organization_id", organizationID),
 		))
 	}

@@ -14,11 +14,11 @@ func TestForecaster(t *testing.T) {
 	// Initialize metrics with a noop meter to prevent nil panic
 	meter := noop.NewMeterProvider().Meter("test")
 	var err error
-	tokenBurnRateGauge, err = meter.Float64Gauge("ohc_token_burn_rate_forecast")
+	tokenBurnRateGauge, err = meter.Float64Gauge("ohc_token_burn_rate")
 	if err != nil {
 		t.Fatalf("Failed to create gauge: %v", err)
 	}
-	TokenBurnRatePredicted24h, err = meter.Float64Gauge("ohc_token_burn_rate_predicted_24h")
+	TokenBurnRateForecast, err = meter.Float64Gauge("ohc_token_burn_rate_forecast")
 	if err != nil {
 		t.Fatalf("Failed to create gauge: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestForecaster(t *testing.T) {
 
 func TestForecaster_NoBudget(t *testing.T) {
 	meter := noop.NewMeterProvider().Meter("test")
-	TokenBurnRatePredicted24h, _ = meter.Float64Gauge("ohc_token_burn_rate_predicted_24h")
+	TokenBurnRateForecast, _ = meter.Float64Gauge("ohc_token_burn_rate_forecast")
 
 	f := NewForecaster(10*time.Millisecond, 1*time.Minute)
 	f.RecordUsage("no-budget-org", 100)

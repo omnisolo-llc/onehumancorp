@@ -2,6 +2,7 @@ package mcp
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 	"net/http"
 	"net/http/httptest"
@@ -72,6 +73,7 @@ func (m *mockDBProvider) QueryRow(ctx context.Context, sql string, optionsAndArg
     }
     return &mockRow{}
 }
+func (m *mockDBProvider) GetDB() *sql.DB { return nil }
 func (m *mockDBProvider) Begin(ctx context.Context) (db.Tx, error) { return nil, nil }
 func (m *mockDBProvider) Close() {}
 func (m *mockDBProvider) Ping(ctx context.Context) error { return nil }
