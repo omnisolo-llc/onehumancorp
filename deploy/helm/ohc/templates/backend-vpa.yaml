@@ -15,7 +15,7 @@ spec:
   resourcePolicy:
     containerPolicies:
       - containerName: backend
-        controlledResources: ["memory"]
+        controlledResources: ["cpu", "memory"]
         minAllowed:
           cpu: {{ .Values.backend.resources.requests.cpu }}
           memory: {{ .Values.backend.resources.requests.memory }}
