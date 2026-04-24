@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "profiling",
+    srcs = ["profiler.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/profiling",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "profiling_test",
+    srcs = ["profiling_test.go"],
+    embed = [":profiling"],
+)

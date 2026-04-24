@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-22
 
 ## 1. Overview
-A high-level summary of the testing strategy for the Ecosystem Interoperability feature set, validating the Universal Agent interface and native framework adapters (OpenClaw, AutoGen, CrewAI, Semantic Kernel) in `srcs/interop/`. It ensures seamless multi-agent swarm state synchronization via LangGraph checkpointers and secure MCP access.
+A high-level summary of the testing strategy for the Ecosystem Interoperability feature set, validating the Universal Agent interface and native framework adapters (OpenClaw, AutoGen, CrewAI, Semantic Kernel) in `src/interop/`. It ensures seamless multi-agent swarm state synchronization via LangGraph checkpointers and secure MCP access.
 
 ## 2. Test Strategy
 - **Unit Testing:** Focus on verifying individual adapter state mapping, message translation logic, and context summarization boundaries.
@@ -46,7 +46,7 @@ A high-level summary of the testing strategy for the Ecosystem Interoperability 
 - **Isolation**: Verify that adapter payloads do not leak sensitive state data outside of their designated `thread_id`.
 
 ## 6. Implementation Details
-- **Execution**: Run via `bazelisk test //srcs/interop/...` under the Bazel sandbox.
+- **Execution**: Run via `bazelisk test //src/interop/...` under the Bazel sandbox.
 - **Mocks**: External framework agent executions are thoroughly mocked using the existing test harness.
 - **Validation**: Strict enforcement of >95% test coverage.
 

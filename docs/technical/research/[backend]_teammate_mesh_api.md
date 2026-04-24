@@ -37,7 +37,7 @@ The Teammate Mesh ensures agents coordinate without delays. It acts as a realtim
 </div>
 
 ## Implementation Prompt
-Architect and implement the Realtime Teammate Mesh APIs in `srcs/server/orchestration/mesh/`. Expose a `POST /api/mesh/v2/broadcast` endpoint for publishing events and establish the appropriate websocket infrastructure for subscriptions. Create a hybrid transport layer that uses Redis Pub/Sub for multi-tenant deployments and falls back to an in-memory channel broker for standalone deployments. Implement appropriate authentication and authorization for the mesh channels. Include comprehensive tests for message publishing, subscription, and latency guarantees across both transport modes.
+Architect and implement the Realtime Teammate Mesh APIs in `src/server/orchestration/mesh/`. Expose a `POST /api/mesh/v2/broadcast` endpoint for publishing events and establish the appropriate websocket infrastructure for subscriptions. Create a hybrid transport layer that uses Redis Pub/Sub for multi-tenant deployments and falls back to an in-memory channel broker for standalone deployments. Implement appropriate authentication and authorization for the mesh channels. Include comprehensive tests for message publishing, subscription, and latency guarantees across both transport modes.
 
 ## Priority
 P0

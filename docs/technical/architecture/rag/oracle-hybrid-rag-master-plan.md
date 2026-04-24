@@ -37,5 +37,5 @@ graph TD
 
 ## Blueprint
 - **Phase 1-3:** Discovery, Synthesis, and Validation delegated via mission files.
-- **Phase 4:** Final implementation of the Daemon in `srcs/server/orchestration/`.
+- **Phase 4:** Final implementation of the Daemon in `src/server/orchestration/`.
 </div>

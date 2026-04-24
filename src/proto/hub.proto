@@ -1,0 +1,171 @@
+edition = "2024";
+
+package ohc.orchestration;
+
+
+option go_package = "github.com/onehumancorp/mono/src/proto;pb";
+
+message Agent {
+  string id = 1;
+  string name = 2;
+  string role = 3;
+  string organization_id = 4;
+  string status = 5;
+  string provider_type = 6;
+}
+
+message Message {
+  string id = 1;
+  string from_agent = 2;
+  string to_agent = 3;
+  string type = 4;
+  string content = 5;
+  string meeting_id = 6;
+  int64 occurred_at_unix = 7;
+}
+
+message MeetingRoom {
+  string id = 1;
+  string agenda = 2;
+  repeated string participants = 3;
+  repeated Message transcript = 4;
+}
+
+message RegisterAgentRequest {
+  Agent agent = 1;
+}
+
+message RegisterAgentResponse {
+  bool success = 1;
+}
+
+message OpenMeetingRequest {
+  string meeting_id = 1;
+  string agenda = 2;
+  repeated string participants = 3;
+}
+
+message PublishMessageRequest {
+  Message message = 1;
+}
+
+message PublishMessageResponse {
+  bool success = 1;
+}
+
+message DelegateTaskRequest {
+  string from_agent_id = 1;
+  string to_agent_id = 2;
+  Message task = 3;
+}
+
+message DelegateTaskResponse {
+  bool success = 1;
+}
+
+message SubTask {
+  string task_id = 1;
+  string target_role = 2;
+  string instruction = 3;
+  string parent_thread_id = 4;
+  string from_agent_id = 5;
+}
+
+message TokenEfficientContextSummarizationEvent {
+  string event_id = 1;
+  string agent_id = 2;
+  bytes payload = 3;
+}
+
+message ToolParameterAutoCorrectionEvent {
+  string event_id = 1;
+  string agent_id = 2;
+  bytes payload = 3;
+}
+
+message StreamMessagesRequest {
+  string agent_id = 1;
+}
+
+message ReasonRequest {
+  string prompt = 1;
+  string from_agent_id = 2;
+}
+
+message ReasonResponse {
+  string content = 1;
+}
+
+message AgentCapabilities {
+  string agent_id = 1;
+  repeated string supported_skills = 2;
+  int32 max_concurrent_tasks = 3;
+}
+
+message Query {
+  string filter = 1;
+}
+
+message EventStreamRequest {
+  string topic = 1;
+}
+
+message MeshEvent {
+  string event_id = 1;
+  string topic = 2;
+  bytes payload = 3;
+  int64 timestamp = 4;
+}
+
+message TeammateMeshEvent {
+  string agent_id = 1;
+  string action = 2;
+  string status = 3;
+  bytes payload = 4;
+}
+
+message PublishTeammateMeshEventRequest {
+  string channel = 1;
+  TeammateMeshEvent event = 2;
+}
+
+service HubService {
+  rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
+  rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
+  rpc Publish(PublishMessageRequest) returns (PublishMessageResponse);
+  rpc DelegateTask(DelegateTaskRequest) returns (DelegateTaskResponse);
+  rpc StreamMessages(StreamMessagesRequest) returns (stream Message);
+  rpc Reason(ReasonRequest) returns (ReasonResponse);
+  rpc DelegateSubTask(SubTask) returns (DelegateTaskResponse);
+  rpc AdvertiseCapabilities(AgentCapabilities) returns (PublishMessageResponse);
+  rpc DiscoverAgents(Query) returns (stream AgentCapabilities);
+  rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
+  rpc PublishTeammateMeshEvent(PublishTeammateMeshEventRequest) returns (PublishMessageResponse);
+  rpc StreamTeammateMesh(EventStreamRequest) returns (stream TeammateMeshEvent);
+}
+
+message WizardField {
+  string key = 1;
+  string label = 2;
+  string type = 3; // e.g., "text", "password", "url"
+  bool required = 4;
+  string description = 5;
+}
+
+message WizardStep {
+  string title = 1;
+  string description = 2;
+  repeated WizardField fields = 3;
+}
+
+message IntegrationMetadata {
+  string id = 1;
+  string name = 2;
+  string type = 3;      
+  string category = 4;  
+  string base_url = 5;
+  string description = 6;
+  string publisher = 7;
+  string icon = 8;
+  repeated string tags = 9;
+}

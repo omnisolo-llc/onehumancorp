@@ -1,0 +1,116 @@
+load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
+
+package(default_visibility = ["//src/app:__subpackages__"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(
+        ["*.dart"],
+        allow_empty = True,
+    ) + ["BUILD.bazel"],
+    visibility = ["//src/app:__pkg__"],
+)
+
+filegroup(
+    name = "dart_srcs",
+    srcs = glob(
+        ["*.dart"],
+        allow_empty = True,
+        exclude = ["*_test.dart"],
+    ),
+    visibility = ["//src/app:__pkg__"],
+)
+
+# All model sources in ONE library → single pub-prepare action.
+flutter_library(
+    name = "models_lib",
+    srcs = glob(
+        ["*.dart"],
+        exclude = ["*_test.dart"],
+    ),
+    data = [
+        "//src/app:app_assets",
+        "//src/app:pub_deps.json",
+    ],
+    pubspec = "//src/app:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+# Keep individual model names as aliases for any existing embed references.
+alias(
+    name = "agent_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "ai_provider_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "channel_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "dashboard_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "handoff_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "pipeline_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "security_issue_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "settings_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "skill_model",
+    actual = ":models_lib",
+)
+
+alias(
+    name = "user_model",
+    actual = ":models_lib",
+)
+
+MODEL_TESTS = glob(["*_test.dart"])
+
+[
+    flutter_test(
+        name = file.replace(".dart", ""),
+        srcs = [file],
+        embed = [":models_lib"],
+        test_files = [file],
+    )
+    for file in MODEL_TESTS
+]
+
+test_suite(
+    name = "all_tests",
+    tags = ["manual"],
+    tests = [":" + file.replace(".dart", "") for file in MODEL_TESTS],
+)
+
+flutter_test(
+    name = "coverage_test",
+    srcs = MODEL_TESTS,
+    coverage = True,
+    coverage_min = 90,
+    embed = [":models_lib"],
+    tags = ["manual"],
+    test_files = ["."],
+)

@@ -18,7 +18,7 @@ This document defines the structural and aesthetic vision for the OHC "Hybrid Ag
 
 ## Shared Task List Implementation
 - **Schema**: Tables for `shared_tasks`, `task_dependencies`, `sub_agent_queues`. Ensure `convertBindVars` is implemented for robust degraded Standalone Mode fallback (stripping clauses like `FOR UPDATE SKIP LOCKED`).
-- **Backend API**: Endpoints located in `srcs/server/api/tasks/queue.go` returning structured queueing logic and ensuring robust >95% test coverage.
+- **Backend API**: Endpoints located in `src/server/api/tasks/queue.go` returning structured queueing logic and ensuring robust >95% test coverage.
 - **UI Task List**: Built in Flutter (`apps/desktop/lib/ui/shared_task_list.dart`) explicitly using `ConsumerWidget` with Riverpod for state management. Adheres strictly to the Visual Excellence Mandate.
 
 ## Observability
