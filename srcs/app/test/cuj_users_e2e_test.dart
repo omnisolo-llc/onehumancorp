@@ -77,8 +77,22 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
+      // Wait a little extra time for the staggered animations to complete for the items
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      // Ensure there are no outstanding timers that prevent finding all items
+      // The FutureBuilder takes an extra pump to resolve correctly when we supply a mocked http response without delay
+      await tester.pumpAndSettle();
+
       expect(find.textContaining('alice'), findsWidgets);
-      expect(find.textContaining('bob'), findsWidgets);
+
+      // Bob is the 2nd item in a ListView, but might be offscreen. Let's make sure both are in the data structure and scroll to find it.
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('bob', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('Invite User FAB is present', (tester) async {
@@ -88,6 +102,11 @@ void main() {
       ).thenAnswer(
         (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
       );
+      when(
+        () => mockClient.get(Uri.parse('http://localhost/api/growth/quota'), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(jsonEncode({'used': 0, 'max': 100}), 200),
+      );
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -97,7 +116,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Invite'), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsOneWidget);
     });
 
     testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
@@ -107,6 +126,11 @@ void main() {
       ).thenAnswer(
         (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
       );
+      when(
+        () => mockClient.get(Uri.parse('http://localhost/api/growth/quota'), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(jsonEncode({'used': 0, 'max': 100}), 200),
+      );
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -116,10 +140,10 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Invite'));
+      await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
@@ -141,7 +165,39 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('admin'), findsWidgets);
+      expect(find.text('ADMIN'), findsWidgets);
+    });
+
+    testWidgets('refresh button triggers API call again', (tester) async {
+      final mockClient = MockHttpClient();
+      int apiCallCount = 0;
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async {
+        apiCallCount++;
+        return http.Response(jsonEncode(<dynamic>[]), 200);
+      });
+      when(
+        () => mockClient.get(Uri.parse('http://localhost/api/growth/quota'), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(jsonEncode({'used': 0, 'max': 100}), 200),
+      );
+      final api = ApiService(
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
+
+      await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pumpAndSettle();
+
+      // Ensure we click the specific floating action button for inviting users by finding the exact text
+      apiCallCount = 0;
+
+      await tester.tap(find.byIcon(Icons.refresh));
+      await tester.pumpAndSettle();
+
+      expect(apiCallCount, 1);
     });
 
     testWidgets('shows error message when API fails', (tester) async {

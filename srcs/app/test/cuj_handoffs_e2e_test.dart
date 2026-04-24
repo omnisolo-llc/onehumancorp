@@ -93,10 +93,14 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
+
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       await tester.pumpAndSettle();
 
-      // Intent text should be visible
-      expect(find.textContaining('Deploy to production'), findsWidgets);
+      // The text containing Intent is 'Intent: DEPLOY TO PRODUCTION' since we uppercase it
+      expect(find.textContaining('DEPLOY TO PRODUCTION', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('refresh icon button is present in AppBar', (tester) async {
@@ -143,10 +147,14 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       await tester.pumpAndSettle();
 
-      final approveBtn = find.textContaining('Approve');
+      final approveBtn = find.text('Approve');
       if (approveBtn.evaluate().isNotEmpty) {
+        await tester.ensureVisible(approveBtn.first);
         await tester.tap(approveBtn.first);
         await tester.pumpAndSettle();
 
@@ -186,10 +194,14 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       await tester.pumpAndSettle();
 
-      final rejectBtn = find.textContaining('Reject');
+      final rejectBtn = find.text('Reject');
       if (rejectBtn.evaluate().isNotEmpty) {
+        await tester.ensureVisible(rejectBtn.first);
         await tester.tap(rejectBtn.first);
         await tester.pumpAndSettle();
 

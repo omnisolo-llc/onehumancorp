@@ -51,26 +51,27 @@ void main() {
   group('CUJ: Diagnostics', () {
     testWidgets('renders health check section title', (tester) async {
       await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(find.textContaining('Day One Setup'), findsOneWidget);
     });
 
     testWidgets('shows Database connectivity status', (tester) async {
       await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       expect(find.textContaining('Database'), findsOneWidget);
     });
 
     testWidgets('Run Diagnostics button is tappable', (tester) async {
       await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final btn = find.text('Run Diagnostics');
       expect(btn, findsOneWidget);
+      await tester.ensureVisible(btn);
       await tester.tap(btn);
-      await tester.pumpAndSettle();
+      await tester.pump();
       // Screen should still be functional after tapping
       expect(find.byType(Scaffold), findsOneWidget);
     });

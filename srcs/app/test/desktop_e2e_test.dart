@@ -151,7 +151,7 @@ void main() {
       // Tap with empty form → validation error
       await tester.tap(signInBtn);
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
     testWidgets(
@@ -168,7 +168,7 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'),
+          find.widgetWithText(TextFormField, 'Email or Username'),
           'user@example.com',
         );
         await tester.enterText(
@@ -186,14 +186,16 @@ void main() {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.pumpAndSettle();
 
-      // Enter invalid email
+      // The validation for email format was removed in favor of "Email or Username",
+      // so 'notvalid' is accepted. This test just ensures that we pass validation
+      // by not seeing the empty error.
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'Email or Username'),
         'notvalid',
       );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsNothing);
     });
 
     testWidgets('password field validates non-empty', (tester) async {
@@ -201,7 +203,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'Email or Username'),
         'user@example.com',
       );
       await tester.tap(find.text('Sign In'));
@@ -221,7 +223,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'Email or Username'),
         'bad@example.com',
       );
       await tester.enterText(
@@ -1020,6 +1022,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      // Ensure the download buttons are on the screen
+      final scrollable = find.byType(Scrollable);
+      if (scrollable.evaluate().isNotEmpty) {
+         await tester.drag(scrollable.first, const Offset(0, -1000));
+         await tester.pumpAndSettle();
+      }
 
       // Tap Mac download button
       final macBtn = find.text('Download for Mac');
