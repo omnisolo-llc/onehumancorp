@@ -649,7 +649,10 @@ func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
 func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+	// The builtin agent loop now uses the Rust microservice rather than the Go implementation.
+	// RunInIsolation simply invokes the Rust agent via gRPC.
+	// Note: We ignore the transport here because the Rust agent communicates via Redis pub/sub.
+	return dispatchToBuiltinAgent(worktree, "RunInIsolation builtin invocation")
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
