@@ -1,5 +1,13 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+### Cloud Scaling Improvements
+- Standardize BuildBuddy configuration across CI and release workflows.
+
+### Privacy/Offline Improvements
+- Ensure release workflow consistency for standalone binaries.
+
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Phase 3: AutoDream Vector Data Pipelines.
