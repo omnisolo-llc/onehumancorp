@@ -98,6 +98,7 @@ struct OpenAIChoice {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct OpenAIResponseMessage {
     role: String,
     content: Option<String>,
