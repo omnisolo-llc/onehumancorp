@@ -23,11 +23,10 @@ func wrapCommandWithSandboxLinux(ctx context.Context, command string, workDir st
 	    return nil, nil, err
 	}
 
-	outerScript := fmt.Sprintf(`socat UNIX-LISTEN:%s,fork TCP:127.0.0.1:8080 &
+	outerScript := fmt.Sprintf(`socat UNIX-LISTEN:%s,fork TCP:127.0.0.1:8080 >socat.log 2>&1 &
 SOCAT_PID=$!
-bwrap --unshare-net --unshare-pid --ro-bind / / --dev /dev --proc /proc --bind %s %s --seccomp 9 -- bash -c %q
-kill $SOCAT_PID
-wait $SOCAT_PID 2>/dev/null || true`, sockPath, workDir, workDir, command)
+bwrap --unshare-net --unshare-pid --ro-bind / / --dev /dev --proc /proc --bind %s %s -- bash -c %q
+kill $SOCAT_PID`, sockPath, workDir, workDir, command)
 
 	// Use --unshare-pid so that when the outer bwrap dies, socat is cleaned up automatically.
 	cmd := exec.CommandContext(ctx, "bwrap", "--unshare-pid", "--unshare-uts", "--unshare-ipc", "--unshare-cgroup", "--proc", "/proc", "--dev", "/dev", "--bind", "/", "/", "--", "bash", "-c", outerScript)
