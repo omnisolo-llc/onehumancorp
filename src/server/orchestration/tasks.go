@@ -463,6 +463,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		}()
 	}
 
+	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, "PENDING", "IN_PROGRESS")
 	return &task, nil
 }
 
@@ -625,6 +626,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		}()
 	}
 
+	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, "IN_PROGRESS", "COMPLETED")
 	return nil
 }
 

@@ -551,3 +551,70 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 	}
 }
 // added for Sub-Agent Orchestration Queue
+
+func TestSharedTask_StateMachine(t *testing.T) {
+	ctx := context.Background()
+	provider := setupTestDB(t)
+	defer provider.Close()
+
+	hub := NewHub()
+	sm := statemachine.NewStateMachine(provider)
+	tm := NewTaskManager(provider, nil, hub, sm)
+
+	task := &SharedTask{
+		OrganizationID: "org1",
+		Title:          "State Machine Test Task",
+		Priority:       PriorityHigh,
+	}
+
+	createdTask, err := tm.CreateTask(ctx, task)
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	if createdTask.Status != "PENDING" {
+		t.Fatalf("expected PENDING, got %s", createdTask.Status)
+	}
+
+	// Fake an agent auth claims for transitions
+	ctx = auth.ContextWithClaims(ctx, &auth.Claims{
+		OrganizationID: "org1",
+		UserID:         "agent1",
+		Role:           "agent",
+	})
+
+	claimed, err := tm.ClaimTask(ctx, createdTask.ID, "spiffe://ohc/agent1")
+	if err != nil {
+		t.Fatalf("failed to claim task: %v", err)
+	}
+	if claimed.Status != "IN_PROGRESS" {
+		t.Fatalf("expected IN_PROGRESS, got %s", claimed.Status)
+	}
+
+	err = tm.ReviewTask(ctx, createdTask.ID, "spiffe://ohc/agent1")
+	if err != nil {
+		t.Fatalf("failed to review task: %v", err)
+	}
+
+	var status string
+	err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", createdTask.ID).Scan(&status)
+	if err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if status != "REVIEW" {
+		t.Fatalf("expected REVIEW, got %s", status)
+	}
+
+	err = tm.CompleteTaskWithResult(ctx, createdTask.ID, "spiffe://ohc/agent1", "done")
+	if err != nil {
+		t.Fatalf("failed to complete task: %v", err)
+	}
+
+	err = provider.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", createdTask.ID).Scan(&status)
+	if err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if status != "COMPLETED" {
+		t.Fatalf("expected COMPLETED, got %s", status)
+	}
+}
