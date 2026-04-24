@@ -109,7 +109,7 @@ func SPIFFEAuthInterceptor() grpc.UnaryServerInterceptor {
 				return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain ohc.os: %s", spiffeID)
 			}
 			agentID = parts[2]
-		} else if domain == "ohc.global" || strings.HasSuffix(domain, ".ohc.global") {
+		} else if domain == "ohc.global" || domain == "eu.ohc.global" || domain == "eu-west.ohc.global" {
 			// format: {region}.ohc.global/org/{orgID}/agent/{agentID}
 			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
 				return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain %s: %s", domain, spiffeID)
@@ -225,7 +225,7 @@ func SPIFFEStreamInterceptor() grpc.StreamServerInterceptor {
 				return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain ohc.os: %s", spiffeID)
 			}
 			agentID = parts[2]
-		} else if domain == "ohc.global" || strings.HasSuffix(domain, ".ohc.global") {
+		} else if domain == "ohc.global" || domain == "eu.ohc.global" || domain == "eu-west.ohc.global" {
 			// format: {region}.ohc.global/org/{orgID}/agent/{agentID}
 			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
 				return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain %s: %s", domain, spiffeID)

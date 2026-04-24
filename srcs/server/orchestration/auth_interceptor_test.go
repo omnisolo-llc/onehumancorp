@@ -842,6 +842,15 @@ func TestSPIFFEStreamInterceptor(t *testing.T) {
 			errMsg:      "unsupported SPIFFE trust domain",
 		},
 		{
+			name: "Unsupported Regional ohc.global Domain",
+			setupCtx: func() context.Context {
+				return mockSPIFFEContext("spiffe://us-east.ohc.global/org/org-1/agent/agent-1")
+			},
+			expectedErr: true,
+			errCode:     codes.PermissionDenied,
+			errMsg:      "unsupported SPIFFE trust domain",
+		},
+		{
 			name: "Spoofing Valid stream request",
 			setupCtx: func() context.Context {
 				return mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-1")
@@ -944,6 +953,13 @@ func TestSPIFFEAuthInterceptor_CoverageGaps(t *testing.T) {
 		{
 			name:        "Missing first slash",
 			spiffeID:    "spiffe://onehumancorp.io",
+			reqAgentID:  "agent-1",
+			expectedErr: true,
+			errCode:     codes.PermissionDenied,
+		},
+		{
+			name:        "Unsupported Regional OHC Global Domain",
+			spiffeID:    "spiffe://us-east.ohc.global/org/org-1/agent/agent-1",
 			reqAgentID:  "agent-1",
 			expectedErr: true,
 			errCode:     codes.PermissionDenied,

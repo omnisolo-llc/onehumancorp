@@ -208,7 +208,7 @@ func validateSPIFFEID(id string) error {
 	case domain == "onehumancorp.io":
 	case domain == "ohc.local":
 	case domain == "ohc.os":
-	case domain == "ohc.global", strings.HasSuffix(domain, ".ohc.global"):
+	case domain == "ohc.global", domain == "eu.ohc.global", domain == "eu-west.ohc.global":
 	default:
 		return status.Errorf(codes.PermissionDenied, "untrusted SPIFFE domain %q in %s", domain, id)
 	}
