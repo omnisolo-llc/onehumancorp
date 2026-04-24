@@ -10,7 +10,11 @@ import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
   final int step;
+  final String businessType;
   final String companyName;
+  final String description;
+  final List<String> whatDoYouSell;
+  final String paymentMethod;
   final String industry;
   final String size;
   final List<String> goals;
@@ -23,7 +27,11 @@ class BusinessSetupState {
 
   const BusinessSetupState({
     this.step = 0,
+    this.businessType = '',
     this.companyName = '',
+    this.description = '',
+    this.whatDoYouSell = const [],
+    this.paymentMethod = '',
     this.industry = '',
     this.size = 'S',
     this.goals = const [],
@@ -37,7 +45,11 @@ class BusinessSetupState {
 
   BusinessSetupState copyWith({
     int? step,
+    String? businessType,
     String? companyName,
+    String? description,
+    List<String>? whatDoYouSell,
+    String? paymentMethod,
     String? industry,
     String? size,
     List<String>? goals,
@@ -50,7 +62,11 @@ class BusinessSetupState {
   }) {
     return BusinessSetupState(
       step: step ?? this.step,
+      businessType: businessType ?? this.businessType,
       companyName: companyName ?? this.companyName,
+      description: description ?? this.description,
+      whatDoYouSell: whatDoYouSell ?? this.whatDoYouSell,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       industry: industry ?? this.industry,
       size: size ?? this.size,
       goals: goals ?? this.goals,
@@ -69,7 +85,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   BusinessSetupState build() => const BusinessSetupState();
 
   void nextStep() {
-    if (state.step < 4) {
+    if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
     }
   }
@@ -80,7 +96,19 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     }
   }
 
+  void updateBusinessType(String type) => state = state.copyWith(businessType: type);
   void updateCompany(String name) => state = state.copyWith(companyName: name);
+  void updateDescription(String desc) => state = state.copyWith(description: desc);
+  void toggleWhatDoYouSell(String item) {
+    final items = List<String>.from(state.whatDoYouSell);
+    if (items.contains(item)) {
+      items.remove(item);
+    } else {
+      items.add(item);
+    }
+    state = state.copyWith(whatDoYouSell: items);
+  }
+  void updatePaymentMethod(String method) => state = state.copyWith(paymentMethod: method);
   void updateIndustry(String val) => state = state.copyWith(industry: val);
   void updateSize(String val) => state = state.copyWith(size: val);
   void toggleGoal(String goal) {
@@ -107,10 +135,10 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
       final body = {
         'extras': {
           'company_name': state.companyName,
-          'industry': state.industry,
-          'company_size': state.size,
-          'goals': state.goals.join(','),
-          'deployment_preference': state.deployment,
+          'business_type': state.businessType,
+          'description': state.description,
+          'what_do_you_sell': state.whatDoYouSell.join(','),
+          'payment_method': state.paymentMethod,
           'admin_name': state.adminName,
           'admin_email': state.adminEmail,
         }
@@ -199,9 +227,46 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+
                           if (state.step == 0) ...[
                             const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
                           ] else if (state.step == 1) ...[
+                            const Text('What kind of business are you building?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                            const SizedBox(height: 16),
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              children: ['Online Store', 'Service Business', 'Restaurant / Food', 'Creative / Portfolio', 'Local Business', 'Other'].map((type) =>
+                                InkWell(
+                                  onTap: () => notifier.updateBusinessType(type),
+                                  child: Container(
+                                    width: 120,
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: state.businessType == type ? Colors.blueAccent.withValues(alpha: 0.3) : Colors.transparent,
+                                      border: Border.all(color: state.businessType == type ? Colors.blueAccent : Colors.white24),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Icon(
+                                          type == 'Online Store' ? Icons.storefront :
+                                          type == 'Service Business' ? Icons.handyman :
+                                          type == 'Restaurant / Food' ? Icons.restaurant :
+                                          type == 'Creative / Portfolio' ? Icons.palette :
+                                          type == 'Local Business' ? Icons.location_on : Icons.business,
+                                          color: Colors.white,
+                                          size: 32,
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(type, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontFamily: 'Inter', fontSize: 12)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ).toList(),
+                            ),
+                          ] else if (state.step == 2) ...[
                             TextField(
                               decoration: const InputDecoration(labelText: 'Company Name', labelStyle: TextStyle(color: Colors.white70)),
                               onChanged: notifier.updateCompany,
@@ -209,70 +274,35 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                             ),
                             const SizedBox(height: 16),
                             TextField(
-                              decoration: const InputDecoration(labelText: 'Industry', labelStyle: TextStyle(color: Colors.white70)),
-                              onChanged: notifier.updateIndustry,
+                              decoration: const InputDecoration(labelText: 'Short Description', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateDescription,
+                              maxLines: 3,
                               style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
                             ),
-                            const SizedBox(height: 16),
-                            DropdownButtonFormField<String>(
-                              value: state.size,
-                              decoration: const InputDecoration(labelText: 'Size', labelStyle: TextStyle(color: Colors.white70)),
-                              dropdownColor: const Color(0xFF1A1A33),
-                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-                              items: const [
-                                DropdownMenuItem(value: 'S', child: Text('Small')),
-                                DropdownMenuItem(value: 'M', child: Text('Medium')),
-                                DropdownMenuItem(value: 'L', child: Text('Large')),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) notifier.updateSize(val);
-                              },
-                            ),
-                          ] else if (state.step == 2) ...[
-                             const Text('Select Goals', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-                             ...['Support', 'Build software', 'Marketing', 'Data', 'Custom'].map((goal) => CheckboxListTile(
-                              title: Text(goal, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                              value: state.goals.contains(goal),
+                          ] else if (state.step == 3) ...[
+                             const Text('What do you sell?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                             ...['Physical products', 'Digital downloads', 'Services / appointments', 'Food & beverages', 'Subscriptions'].map((item) => CheckboxListTile(
+                              title: Text(item, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
+                              value: state.whatDoYouSell.contains(item),
                               checkColor: Colors.black,
                               activeColor: Colors.white,
                               onChanged: (bool? value) {
-                                notifier.toggleGoal(goal);
+                                notifier.toggleWhatDoYouSell(item);
                               },
                             )),
-                          ] else if (state.step == 3) ...[
-                             const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-                             if (isStandalone)
-                               Padding(
-                                 padding: const EdgeInsets.only(top: 16.0),
-                                 child: ClipRRect(
-                                   borderRadius: BorderRadius.circular(12),
-                                   child: BackdropFilter(
-                                     filter: ImageFilter.compose(outer: const ColorFilter.matrix(<double>[1.168, -0.153, -0.015, 0, 0, -0.046, 1.061, -0.015, 0, 0, -0.046, -0.152, 1.198, 0, 0, 0, 0, 0, 1, 0]), inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0)),
-                                     child: Container(
-                                       padding: const EdgeInsets.all(16),
-                                       decoration: BoxDecoration(
-                                         color: Colors.white.withOpacity(0.05),
-                                         border: Border.all(color: Colors.white.withOpacity(0.1)),
-                                       ),
-                                       child: const Text(
-                                         'Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.',
-                                         style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontSize: 16),
-                                       ),
-                                     ),
-                                   ),
-                                 ),
-                               )
-                             else
-                               ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
-                                title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-                                value: dep,
-                                groupValue: state.deployment,
-                                activeColor: Colors.blueAccent,
-                                onChanged: (String? value) {
-                                  if (value != null) notifier.updateDeployment(value);
-                                },
-                              )),
                           ] else if (state.step == 4) ...[
+                            const Text('How do you want to receive payments?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                            const SizedBox(height: 16),
+                            ...['Online only', 'In-person (POS)', 'Both', 'Skip for now'].map((method) => RadioListTile<String>(
+                              title: Text(method, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
+                              value: method,
+                              groupValue: state.paymentMethod,
+                              activeColor: Colors.blueAccent,
+                              onChanged: (String? value) {
+                                if (value != null) notifier.updatePaymentMethod(value);
+                              },
+                            )),
+                          ] else if (state.step == 5) ...[
                             TextField(
                               decoration: const InputDecoration(labelText: 'Admin Name', labelStyle: TextStyle(color: Colors.white70)),
                               onChanged: notifier.updateAdminName,
@@ -302,6 +332,13 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                                 ),
                               ),
                             ),
+                          ] else if (state.step == 6) ...[
+                            const Text('Review & Launch', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 20)),
+                            const SizedBox(height: 16),
+                            Text('Business: ${state.companyName} (${state.businessType})', style: const TextStyle(color: Colors.white70, fontFamily: 'Inter')),
+                            Text('Selling: ${state.whatDoYouSell.join(", ")}', style: const TextStyle(color: Colors.white70, fontFamily: 'Inter')),
+                            Text('Payments: ${state.paymentMethod}', style: const TextStyle(color: Colors.white70, fontFamily: 'Inter')),
+                            Text('Admin: ${state.adminEmail}', style: const TextStyle(color: Colors.white70, fontFamily: 'Inter')),
                           ],
                         ],
                       ),
@@ -320,7 +357,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                         const SizedBox(),
                       ElevatedButton(
                         onPressed: state.isLoading ? null : () {
-                          if (state.step < 4) {
+                          if (state.step < 6) {
                             notifier.nextStep();
                           } else {
                             notifier.launch(context, ref);
@@ -328,7 +365,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                         },
                         child: state.isLoading
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                            : Text(state.step == 6 ? 'Launch My Business →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
                       ),
                     ],
                   ),
