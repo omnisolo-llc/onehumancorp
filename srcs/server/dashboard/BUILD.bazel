@@ -61,6 +61,7 @@ go_test(
         "handlers_growth_test.go",
         "handlers_wizard_test.go",
         "server_missing_test.go",
+        "benchmark_test.go",
         "server_rate_limit_test.go",
         "health_test.go",
         "server_test.go",
