@@ -153,7 +153,7 @@ func TestMemoryLock_FailuresAndPaths(t *testing.T) {
 	safeKey := strings.ReplaceAll(key, "/", "_")
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 	os.Mkdir(path, 0700)
-	os.WriteFile(filepath.Join(path, "lock.data"), []byte("invalid_format"), 0600)
+	os.WriteFile(filepath.Join(path, "meta.txt"), []byte("invalid_format"), 0600)
 
 	// Attempt to lock again. Since it's invalid format, parsing expiry should fail, and we shouldn't get the lock
 	locked3, _ := lock2.Lock(ctx, key, 1*time.Second)
@@ -185,7 +185,7 @@ func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
 
 	expiry := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
 	os.Mkdir(path, 0700)
-	os.WriteFile(filepath.Join(path, "lock.data"), []byte(expiry+",old_token"), 0600)
+	os.WriteFile(filepath.Join(path, "meta.txt"), []byte(expiry+",old_token"), 0600)
 
 	// Now try to lock
 	locked, _ := lock1.Lock(ctx, key, 1*time.Second)

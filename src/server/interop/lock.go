@@ -56,7 +56,7 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 	err := os.Mkdir(path, 0700)
 	if err != nil {
 		if os.IsExist(err) {
-			content, err := os.ReadFile(filepath.Join(path, "lock.data"))
+			content, err := os.ReadFile(filepath.Join(path, "meta.txt"))
 			if err == nil {
 				parts := strings.SplitN(string(content), ",", 2)
 				if len(parts) == 2 {
@@ -84,7 +84,7 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 
 acquired:
 	expiry := time.Now().Add(ttl).Format(time.RFC3339Nano)
-	err = os.WriteFile(filepath.Join(path, "lock.data"), []byte(expiry+","+m.token), 0600)
+	err = os.WriteFile(filepath.Join(path, "meta.txt"), []byte(expiry+","+m.token), 0600)
 	if err != nil {
 		os.RemoveAll(path)
 		return false, err
@@ -104,7 +104,7 @@ func (m *memoryLock) Unlock(ctx context.Context, key string) error {
 		return nil // Lock might already be gone
 	}
 
-	content, err := os.ReadFile(filepath.Join(tempPath, "lock.data"))
+	content, err := os.ReadFile(filepath.Join(tempPath, "meta.txt"))
 	if err == nil {
 		parts := strings.SplitN(string(content), ",", 2)
 		if len(parts) == 2 && parts[1] == m.token {
