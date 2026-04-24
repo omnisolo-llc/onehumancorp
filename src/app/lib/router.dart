@@ -31,6 +31,11 @@ import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/changelog_screen.dart';
+import 'package:ohc_app/screens/help_chat_screen.dart';
+import 'package:ohc_app/widgets/help_chat_fab.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -85,6 +90,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/changelog',
+            builder: (context, state) => const ChangelogScreen(),
+          ),
+          GoRoute(
+            path: '/help-chat',
+            builder: (context, state) => const HelpChatScreen(),
+          ),
+          GoRoute(
+            path: '/api-docs',
+            builder: (context, state) => const Scaffold(body: Center(child: Text("API Documentation - Advanced Users Only", style: TextStyle(fontFamily: 'Outfit')))),
+          ),
+
           // Business setup requires authentication — moved inside the shell.
           GoRoute(
             path: '/business_setup',
@@ -223,7 +245,21 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          OhcTooltip(
+            registryKey: 'help_center',
+            child: IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () => context.go('/help'),
+            ),
+          ),
+        ],
+      ),
+      body: Row(children: [_Sidebar(), Expanded(child: child)]),
+      floatingActionButton: const HelpChatFab(),
+    );
   }
 }
 
@@ -316,6 +352,9 @@ class _Sidebar extends StatelessWidget {
           label: 'Diagnostics',
           path: '/diagnostics',
         ),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
+        _NavItem(icon: Icons.new_releases, label: "What's New", path: '/changelog'),
+        _NavItem(icon: Icons.api, label: "API Docs", path: '/api-docs'),
         const SizedBox(height: 16),
       ],
     );

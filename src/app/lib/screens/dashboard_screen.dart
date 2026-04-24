@@ -13,6 +13,8 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
+import 'package:ohc_app/widgets/interactive_walkthrough.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -30,6 +32,13 @@ class DashboardScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.school),
+            tooltip: 'Start Quick Guide',
+            onPressed: () => showDashboardWalkthrough(context),
+          ),
+        ],
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
@@ -255,8 +264,8 @@ class _ObservabilityWidget extends StatelessWidget {
 
     return Semantics(
       label: 'System Observability Panel',
-      child: Tooltip(
-        message: 'View System Health & Metrics',
+      child: OhcTooltip(
+        registryKey: 'observability_panel',
         child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
@@ -458,8 +467,8 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
+      child: OhcTooltip(
+        registryKey: 'scale_role',
         child: SizedBox(
           width: 320,
           child: GlassCard(
@@ -500,14 +509,16 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Decrease $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: widget.count > 0 && !_isScaling
-                                  ? () => _scaleTo(widget.count - 1)
-                                  : null,
-                              tooltip: 'Fire Agent',
-                            ),
+                            child: OhcTooltip(
+                                registryKey: 'decrease_agent',
+                                child: IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline, size: 28),
+                                  color: colors.primary,
+                                  onPressed: widget.count > 0 && !_isScaling
+                                      ? () => _scaleTo(widget.count - 1)
+                                      : null,
+                                ),
+                              ),
                           ),
                           SizedBox(
                             width: 32,
@@ -534,14 +545,16 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Increase $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: !_isScaling
-                                  ? () => _scaleTo(widget.count + 1)
-                                  : null,
-                              tooltip: 'Hire Agent',
-                            ),
+                            child: OhcTooltip(
+                                registryKey: 'increase_agent',
+                                child: IconButton(
+                                  icon: const Icon(Icons.add_circle_outline, size: 28),
+                                  color: colors.primary,
+                                  onPressed: !_isScaling
+                                      ? () => _scaleTo(widget.count + 1)
+                                      : null,
+                                ),
+                              ),
                           ),
                             ],
                           ),
@@ -632,8 +645,9 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
-      child: Tooltip(
-        message: 'View ${widget.label}',
+      child: OhcTooltip(
+        registryKey: 'stat_card',
+        fallbackMessage: 'View ${widget.label}',
         child: SizedBox(
           width: 200,
           child: SlideTransition(
