@@ -57,15 +57,36 @@ type Agent struct {
 
 // NewAgent creates an Agent for the given task state.
 func NewAgent(state *TaskState, cfg AgentConfig) *Agent {
+	// orgID and role would normally be injected via the broader config/context, but fallback to "default" if missing.
+	agentID := "local-agent-session" // Fallback agent ID
+	orgID := "default-org"
+	role := "SOFTWARE_ENGINEER"
+	model := os.Getenv("OHC_LOCAL_AGENT_MODEL")
+	if model == "" {
+		model = "default-model"
+	}
+
 	if cfg.LLM == nil {
 		// Attempt to wrap with cache if environment DB is available (e.g. from state context)
 		// Since NewAgent doesn't take DB directly, it will just use default base LLM.
 		// However, callers that want caching should provide it in cfg.LLM.
 		cfg.LLM = defaultLLMClient()
 	}
+
+	// Wrap LLM in CostTrackerInterceptor unconditionally to capture all executions
+	cfg.LLM = NewCostTrackerInterceptor(cfg.LLM, agentID, orgID, role, model)
+
 	if cfg.Tools == nil {
 		cfg.Tools = DefaultTools()
 	}
+
+	// Wrap Tools unconditionally
+	var wrappedTools []Tool
+	for _, t := range cfg.Tools {
+		wrappedTools = append(wrappedTools, NewToolCostTrackerInterceptor(t, agentID))
+	}
+	cfg.Tools = wrappedTools
+
 	if cfg.SystemPrompt == "" {
 		cfg.SystemPrompt = systemPrompt
 	}

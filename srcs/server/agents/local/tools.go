@@ -24,7 +24,7 @@ type Tool interface {
 // DefaultTools returns the standard tool set available to a local agent.
 // It mirrors the ASYNC_AGENT_ALLOWED_TOOLS from CC-Source.
 func DefaultTools() []Tool {
-	return []Tool{
+	tools := []Tool{
 		&bashTool{},
 		&playwrightTool{daemonURL: getDaemonURL()},
 		&fileReadTool{},
@@ -35,6 +35,8 @@ func DefaultTools() []Tool {
 		&webFetchTool{hc: &http.Client{Timeout: 30 * time.Second}},
 		&todoTool{},
 	}
+
+	return tools
 }
 
 func strArg(input map[string]interface{}, key string) string {
