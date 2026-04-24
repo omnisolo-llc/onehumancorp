@@ -38,7 +38,7 @@ func TestBridgeManager(t *testing.T) {
 
 	wsURL := "ws" + server.URL[4:]
 
-	dbProvider, _ := db.NewSqliteProvider("file::memory:?cache=shared")
+	dbProvider := db.NewSqliteProvider(nil)
 	mt := NewMemoryMeshTransport(dbProvider)
 
 	// Create a dummy CentrifugeNode for testing using the unexported fields

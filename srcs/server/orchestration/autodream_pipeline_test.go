@@ -23,7 +23,7 @@ func (m *mockEmbeddingClient) GenerateEmbedding(ctx context.Context, text string
 }
 
 func TestAutoDreamPipeline_Process(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+	provider := db.NewSqliteProvider(nil)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -108,7 +108,7 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 }
 
 func TestAutoDreamPipeline_StartStop(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+	provider := db.NewSqliteProvider(nil)
 	require.NoError(t, err)
 
 	pipeline := NewAutoDreamPipeline(provider)
@@ -180,7 +180,7 @@ func TestChunkText(t *testing.T) {
 }
 
 func TestAutoDreamPipeline_FilesMultipleChunks(t *testing.T) {
-	provider, err := db.NewSQLiteProvider(":memory:")
+	provider := db.NewSqliteProvider(nil)
 	require.NoError(t, err)
 
 	ctx := context.Background()
