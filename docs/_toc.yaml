@@ -31,8 +31,6 @@ toc:
     path: /docs/technical/walkthroughs/index.md
   - title: KAIROS Orchestrator CLI Walkthrough
     path: /docs/technical/walkthroughs/kairos_orchestrator_cli.md
-  - title: Sub-Agent Orchestration Walkthrough
-    path: /docs/walkthroughs/sub_agent_orchestration.md
   - title: Templates
     path: /docs/technical/templates/index.md
   - title: MCP Protocol

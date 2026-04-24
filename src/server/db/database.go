@@ -142,6 +142,7 @@ func New(ctx context.Context) (*DB, error) {
 				if err := os.MkdirAll(openclawDir, 0700); err != nil {
 					return nil, fmt.Errorf("db: create .ohc dir: %w", err)
 				}
+				os.Chmod(openclawDir, 0700)
 				dbPath = filepath.Join(openclawDir, "ohc_state.db")
 			}
 		} else {
@@ -261,6 +262,15 @@ func New(ctx context.Context) (*DB, error) {
 			if idx := strings.Index(basePath, "?"); idx != -1 {
 				basePath = basePath[:idx]
 			}
+
+			// Secure the directory as well, representing the local wrapper boundary
+			dirPath := filepath.Dir(basePath)
+			if info, err := os.Stat(dirPath); err == nil && info.IsDir() {
+				if err := os.Chmod(dirPath, 0700); err != nil {
+					return nil, fmt.Errorf("db: failed to set 0700 permissions on %s: %w", dirPath, err)
+				}
+			}
+
 			if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
 				if err := os.Chmod(basePath, 0600); err != nil {
 					return nil, fmt.Errorf("db: failed to set 0600 permissions on %s: %w", basePath, err)

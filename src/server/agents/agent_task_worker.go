@@ -195,7 +195,7 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 				if a.ProviderType == string(ProviderTypeBuiltin) || a.ProviderType == "" {
 					slog.Info("agent task worker: dispatching to builtin Rust agent via gRPC", "agent_id", a.ID)
 					go func(agent orchestration.Agent, payload string) {
-						if err := dispatchToBuiltinAgent(payload, fmt.Sprintf("plane issue %s", issue.ID)); err != nil {
+						if err := dispatchToBuiltinAgent(payload, fmt.Sprintf("plane issue %s", issue.ID), agent.Role); err != nil {
 							slog.Error("builtin agent dispatch error", "err", err, "agent_id", agent.ID)
 						}
 					}(a, string(payload))
@@ -215,7 +215,7 @@ func (tw *TaskWorker) processIssue(issue plane.Issue) {
 // dispatchToBuiltinAgent sends a task to the builtin Rust agent gRPC service.
 // The Rust binary must be running and reachable at OHC_AGENT_ADDRESS
 // (default: 127.0.0.1:50051). It exposes the AgentService gRPC interface.
-func dispatchToBuiltinAgent(payload, description string) error {
+func dispatchToBuiltinAgent(payload, description, role string) error {
 	address := os.Getenv("OHC_AGENT_ADDRESS")
 	if address == "" {
 		address = "127.0.0.1:50051"
@@ -231,7 +231,8 @@ func dispatchToBuiltinAgent(payload, description string) error {
 
 	var lastContent string
 	err = client.RunTask(ctx, &agentservicepb.RunTaskRequest{
-		Task: payload,
+		Task:       payload,
+		Department: role,
 	}, func(evt *agentservicepb.RunTaskEvent) {
 		if evt.Content != "" {
 			lastContent = evt.Content

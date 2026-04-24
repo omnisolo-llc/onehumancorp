@@ -35,8 +35,7 @@ func TestAutoDreamWorker(t *testing.T) {
 		agent_id TEXT NOT NULL,
 		context_data TEXT NOT NULL,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-		last_accessed TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-		organization_id TEXT DEFAULT 'system'
+		last_accessed TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	)`)
 	if err != nil {
 		t.Fatalf("failed to create agent_session_data: %v", err)

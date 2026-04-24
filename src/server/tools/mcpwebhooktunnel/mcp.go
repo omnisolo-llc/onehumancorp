@@ -3,8 +3,8 @@ package mcpwebhooktunnel
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"io"
+	"log/slog"
 	"sync"
 	"time"
 

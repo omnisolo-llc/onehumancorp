@@ -34,10 +34,10 @@ func (r *PgUsageRepository) Track(ctx context.Context, usage Usage) (Usage, erro
 	usage.OccurredAt = usage.OccurredAt.UTC()
 
 	_, err := r.pool.Exec(ctx, `
-		INSERT INTO usage_events (agent_id, agent_role, organization_id, model, prompt_tokens, completion_tokens, cached_tokens, cost_usd, occurred_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		INSERT INTO usage_events (agent_id, agent_role, organization_id, model, prompt_tokens, completion_tokens, cached_tokens, is_action, cost_usd, occurred_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		usage.AgentID, usage.AgentRole, usage.OrganizationID, usage.Model,
-		usage.PromptTokens, usage.CompletionTokens, usage.CachedTokens, usage.CostUSD, usage.OccurredAt,
+		usage.PromptTokens, usage.CompletionTokens, usage.CachedTokens, usage.IsAction, usage.CostUSD, usage.OccurredAt,
 	)
 	if err != nil {
 		return Usage{}, fmt.Errorf("pg: track usage: %w", err)
@@ -49,7 +49,8 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 	rows, err := r.pool.Query(ctx, `
 		SELECT agent_id,
 		       COALESCE(SUM(cost_usd), 0),
-		       COALESCE(SUM(prompt_tokens + completion_tokens + cached_tokens), 0)
+		       COALESCE(SUM(prompt_tokens + completion_tokens + cached_tokens), 0),
+		       COALESCE(SUM(CASE WHEN is_action THEN 1 ELSE 0 END), 0)
 		FROM usage_events
 		WHERE organization_id = $1
 		GROUP BY agent_id
@@ -62,14 +63,16 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 	var agents []AgentSummary
 	var totalCost float64
 	var totalTokens int64
+	var totalActions int64
 
 	for rows.Next() {
 		var a AgentSummary
-		if err := rows.Scan(&a.AgentID, &a.CostUSD, &a.TokenUsed); err != nil {
+		if err := rows.Scan(&a.AgentID, &a.CostUSD, &a.TokenUsed, &a.TotalActions); err != nil {
 			return Summary{}, fmt.Errorf("pg: scan agent summary: %w", err)
 		}
 		totalCost += a.CostUSD
 		totalTokens += a.TokenUsed
+		totalActions += a.TotalActions
 		agents = append(agents, a)
 	}
 
@@ -77,6 +80,7 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,
 		TotalTokens:         totalTokens,
+		TotalActions:        totalActions,
 		ProjectedMonthlyUSD: totalCost * 30,
 		Agents:              agents,
 	}, nil

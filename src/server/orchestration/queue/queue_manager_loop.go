@@ -20,7 +20,7 @@ func (q *QueueManager) StartPolling(ctx context.Context, workerID string, interv
 		case <-ticker.C:
 			// Continuously poll until queue is empty
 			for {
-				job, err := q.Acquire(ctx, workerID)
+				job, err := q.Poll(ctx, workerID)
 				if err != nil {
 					slog.Error("Failed to poll queue manager", "error", err, "worker_id", workerID)
 					break
