@@ -1,6 +1,8 @@
 package mesh
 
 import (
+	"os"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -146,6 +148,17 @@ func (s *MemoryMeshService) Subscribe(ctx context.Context) (<-chan string, error
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		isCloud := true
+		if val := os.Getenv("OHC_MULTITENANT"); val != "" {
+			isCloud = (val == "true" || val == "1")
+		}
+		if isCloud {
+			origin := r.Header.Get("Origin")
+			return origin == "" || origin == "http://localhost:3000" || origin == "https://app.onehumancorp.com" || origin == "https://www.onehumancorp.com"
+		}
+		return true
+	},
 }
 
 type MeshHandler struct {

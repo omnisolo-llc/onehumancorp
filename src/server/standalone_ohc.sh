@@ -8,9 +8,10 @@ cleanup_tmp_files() {
       # Force clean runaway tmp files more aggressively (e.g., +0 instead of +1 days)
       find "${STATE_DIR}" -name "Linear-*.tmp" -type f -delete 2>/dev/null || true
       find "${STATE_DIR}" -name "*.tmp" -type f -mmin +60 -delete 2>/dev/null || true
+      find "${STATE_DIR}" -name "*.tmp" -type f -size +100M -delete 2>/dev/null || true
 
       # Prune legacy Linear artifacts if they leak into the standalone environment
-      find "${STATE_DIR}" -name "*linear*" -type f -delete 2>/dev/null || true
+      find "${STATE_DIR}" -iname "*linear*" -delete 2>/dev/null || true
     fi
   fi
 }
@@ -210,8 +211,11 @@ stop_daemon() {
     sleep 0.25
   done
 
-  echo "warning: ohc did not stop gracefully"
-  # We do NOT remove the PID file if the process did not stop, preventing it from being orphaned and becoming a runaway.
+  echo "warning: ohc did not stop gracefully, force killing runaway process"
+  kill -9 "${pid}" 2>/dev/null || true
+  pkill -9 -P "${pid}" 2>/dev/null || true
+  rm -f "${PID_FILE}" "${LOG_FILE}"
+  cleanup_tmp_files
   return 1
 }
 

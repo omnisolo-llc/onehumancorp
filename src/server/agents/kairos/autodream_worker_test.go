@@ -39,17 +39,17 @@ func TestAutoDreamWorker(t *testing.T) {
 	}
 
 	_, err = provider.Exec(ctx, `
-		CREATE TABLE autodream_memories (
+		CREATE TABLE consolidated_memory (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
-			task_id TEXT,
+			agent_id TEXT,
 			content TEXT NOT NULL,
 			embedding TEXT,
 			source_type TEXT NOT NULL DEFAULT 'auto_dream'
 		)
 	`)
 	if err != nil {
-		t.Fatalf("failed to setup autodream_memories test table: %v", err)
+		t.Fatalf("failed to setup consolidated_memory test table: %v", err)
 	}
 
 	taskID := uuid.New().String()
@@ -80,7 +80,7 @@ func TestAutoDreamWorker(t *testing.T) {
 	}
 
 	var count int
-	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM autodream_memories WHERE task_id = $1", taskID).Scan(&count)
+	err = provider.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory").Scan(&count)
 	if err != nil {
 		t.Fatalf("failed to query memories: %v", err)
 	}
