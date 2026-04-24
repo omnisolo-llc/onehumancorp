@@ -722,8 +722,70 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
+	mux.HandleFunc("/api/business/setup/sync", server.handleBusinessSetupSync)
 
 	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
+}
+
+func (s *Server) handleBusinessSetupSync(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Step                int      `json:"step"`
+		BusinessType        string   `json:"businessType"`
+		BusinessName        string   `json:"businessName"`
+		BusinessDescription string   `json:"businessDescription"`
+		WhatYouSell         []string `json:"whatYouSell"`
+		PaymentPreference   string   `json:"paymentPreference"`
+		AdminName           string   `json:"adminName"`
+		AdminEmail          string   `json:"adminEmail"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	cfg := s.settings
+	if cfg.Extras == nil {
+		cfg.Extras = make(map[string]string)
+	}
+
+	// Persist the wizard state into the settings Extras map
+	if req.BusinessName != "" {
+		cfg.Extras["company_name"] = req.BusinessName
+		s.org.Name = req.BusinessName
+	}
+	if req.BusinessType != "" {
+		cfg.Extras["business_type"] = req.BusinessType
+	}
+	if req.BusinessDescription != "" {
+		cfg.Extras["business_description"] = req.BusinessDescription
+	}
+	if len(req.WhatYouSell) > 0 {
+		b, _ := json.Marshal(req.WhatYouSell)
+		cfg.Extras["what_you_sell"] = string(b)
+	}
+	if req.PaymentPreference != "" {
+		cfg.Extras["payment_preference"] = req.PaymentPreference
+	}
+	if req.AdminName != "" {
+		cfg.Extras["admin_name"] = req.AdminName
+	}
+	if req.AdminEmail != "" {
+		cfg.Extras["admin_email"] = req.AdminEmail
+	}
+
+	s.settings = cfg
+	s.mu.Unlock()
+
+	_ = s.hub.SettingsStore().Update(cfg)
+
+	w.WriteHeader(http.StatusOK)
 }
 
 // handleHybridHealthCheck implements a specialized health probe for hybrid-mode switching

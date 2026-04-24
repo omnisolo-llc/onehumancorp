@@ -548,6 +548,25 @@ class ApiService {
     _checkStatus(response);
   }
 
+
+  Future<void> syncWizardState(Map<String, dynamic> data) async {
+    final res = await _client.patch(
+      Uri.parse('$baseUrl/api/wizard/state/save'),
+      headers: _headers,
+      body: jsonEncode(data),
+    );
+    _checkStatus(res);
+  }
+
+  Future<void> launchWizard(Map<String, dynamic> data) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/wizard/configure'),
+      headers: _headers,
+      body: jsonEncode(data),
+    );
+    _checkStatus(res);
+  }
+
   void _checkStatus(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('API error ${res.statusCode}: ${res.body}');

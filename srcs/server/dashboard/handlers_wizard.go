@@ -25,14 +25,24 @@ type wizardSteps struct {
 // wizardConfigureRequest carries a partial or complete settings update from
 // the wizard UI.
 type wizardConfigureRequest struct {
-	ListenAddr    string                `json:"listen_addr,omitempty"`
-	DBPath        string                `json:"db_path,omitempty"`
-	PostgresURL   string                `json:"postgres_url,omitempty"`
-	RedisURL      string                `json:"redis_url,omitempty"`
-	CentrifugeURL string                `json:"centrifuge_url,omitempty"`
-	MinimaxAPIKey string                `json:"minimax_api_key,omitempty"`
-	Extras        map[string]string `json:"extras,omitempty"`
-	AiProviders   []settings.AiProvider `json:"ai_providers,omitempty"`
+	ListenAddr          string                `json:"listen_addr,omitempty"`
+	DBPath              string                `json:"db_path,omitempty"`
+	PostgresURL         string                `json:"postgres_url,omitempty"`
+	RedisURL            string                `json:"redis_url,omitempty"`
+	CentrifugeURL       string                `json:"centrifuge_url,omitempty"`
+	MinimaxAPIKey       string                `json:"minimax_api_key,omitempty"`
+	Extras              map[string]string     `json:"extras,omitempty"`
+	AiProviders         []settings.AiProvider `json:"ai_providers,omitempty"`
+
+	// New Business Setup Wizard fields
+	BusinessType        string   `json:"businessType,omitempty"`
+	BusinessName        string   `json:"businessName,omitempty"`
+	BusinessDescription string   `json:"businessDescription,omitempty"`
+	WhatYouSell         []string `json:"whatYouSell,omitempty"`
+	PaymentPreference   string   `json:"paymentPreference,omitempty"`
+	AdminName           string   `json:"adminName,omitempty"`
+	AdminEmail          string   `json:"adminEmail,omitempty"`
+	AdminPassword       string   `json:"adminPassword,omitempty"`
 }
 
 // handleWizardStatus returns a JSON summary of whether each wizard step has
@@ -106,6 +116,35 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 			s.org.Name = companyName
 		}
 	}
+
+	if cfg.Extras == nil {
+		cfg.Extras = make(map[string]string)
+	}
+
+	if req.BusinessName != "" {
+		cfg.Extras["company_name"] = req.BusinessName
+		s.org.Name = req.BusinessName
+	}
+	if req.BusinessType != "" {
+		cfg.Extras["business_type"] = req.BusinessType
+	}
+	if req.BusinessDescription != "" {
+		cfg.Extras["business_description"] = req.BusinessDescription
+	}
+	if len(req.WhatYouSell) > 0 {
+		b, _ := json.Marshal(req.WhatYouSell)
+		cfg.Extras["what_you_sell"] = string(b)
+	}
+	if req.PaymentPreference != "" {
+		cfg.Extras["payment_preference"] = req.PaymentPreference
+	}
+	if req.AdminName != "" {
+		cfg.Extras["admin_name"] = req.AdminName
+	}
+	if req.AdminEmail != "" {
+		cfg.Extras["admin_email"] = req.AdminEmail
+	}
+
 	if len(req.AiProviders) > 0 {
 		cfg.AiProviders = req.AiProviders
 	}
