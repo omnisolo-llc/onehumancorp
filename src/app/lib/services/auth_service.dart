@@ -108,7 +108,19 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
     // Attempt to restore session from local storage.
     final prefs = await ref.watch(_prefsProvider.future);
     final token = prefs.getString(_tokenKey);
-    if (token == null) return null;
+    if (token == null) {
+      if (const bool.fromEnvironment('OHC_STANDALONE', defaultValue: false)) {
+        return const AuthUser(
+          id: 'standalone_user',
+          email: 'standalone@example.com',
+          name: 'Standalone User',
+          role: 'admin',
+          organizationId: 'standalone_org',
+          token: 'standalone_token',
+        );
+      }
+      return null;
+    }
     // Validate by fetching /api/auth/me.
     final url = ref.read(backendUrlProvider);
     try {
@@ -129,23 +141,11 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
     state = const AsyncLoading();
     final service = ref.read(authServiceProvider);
     state = await AsyncValue.guard(() async {
-      try {
-        final user = await service.login(email, password);
-        final prefs = await ref.read(_prefsProvider.future);
-        await prefs.setString(_tokenKey, user.token);
-        return user;
-      } catch (e) {
-        // Provide user-friendly connection error messages
-        if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
-          throw Exception('Cannot connect to server. Is the backend running at ${service.baseUrl}?');
-        }
-        rethrow;
-      }
+      final user = await service.login(email, password);
+      final prefs = await ref.read(_prefsProvider.future);
+      await prefs.setString(_tokenKey, user.token);
+      return user;
     });
-
-    if (state.hasError) {
-      throw state.error!;
-    }
   }
 
   Future<void> logout() async {

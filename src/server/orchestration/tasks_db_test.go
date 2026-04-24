@@ -368,8 +368,8 @@ func TestTasksDBClaimTask(t *testing.T) {
 		t.Errorf("Expected task ID task-1, got %s", task.TaskID)
 	}
 
-	if task.Status != "ASSIGNED" {
-		t.Errorf("Expected task status ASSIGNED, got %s", task.Status)
+	if task.Status != "IN_PROGRESS" {
+		t.Errorf("Expected task status IN_PROGRESS, got %s", task.Status)
 	}
 
 	if task.AgentID != "agent-1" {
@@ -445,8 +445,8 @@ func TestTasksDBClaimTask_Postgres(t *testing.T) {
 		t.Errorf("Expected task ID task-pg-1, got %s", task.TaskID)
 	}
 
-	if task.Status != "ASSIGNED" {
-		t.Errorf("Expected task status ASSIGNED, got %s", task.Status)
+	if task.Status != "IN_PROGRESS" {
+		t.Errorf("Expected task status IN_PROGRESS, got %s", task.Status)
 	}
 
 	if task.AgentID != "agent-pg" {

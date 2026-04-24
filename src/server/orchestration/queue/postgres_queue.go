@@ -60,7 +60,7 @@ func (q *PostgresTaskQueue) Enqueue(ctx context.Context, job *Job) error {
 	return err
 }
 
-func (q *PostgresTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
+func (q *PostgresTaskQueue) Acquire(ctx context.Context, roles []string) (*Job, error) {
 	// Select a PENDING job. We use FOR UPDATE SKIP LOCKED
 	// Agent role is in the payload. We extract it using JSON ops ->> 'agent_role'
 
