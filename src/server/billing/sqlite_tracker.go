@@ -81,3 +81,25 @@ func (r *SqliteUsageRepository) Summary(ctx context.Context, organizationID stri
 		Agents:              agents,
 	}, nil
 }
+
+func (r *SqliteUsageRepository) ActiveOrganizations(ctx context.Context) ([]string, error) {
+	rows, err := r.pool.Query(ctx, "SELECT DISTINCT organization_id FROM usage_events WHERE organization_id IS NOT NULL AND organization_id != ''")
+	if err != nil {
+		return nil, fmt.Errorf("sqlite: active organizations: %w", err)
+	}
+	defer rows.Close()
+
+	var orgs []string
+	for rows.Next() {
+		var orgID string
+		if err := rows.Scan(&orgID); err != nil {
+			return nil, fmt.Errorf("sqlite: scan organization_id: %w", err)
+		}
+		orgs = append(orgs, orgID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("sqlite: rows error: %w", err)
+	}
+
+	return orgs, nil
+}
