@@ -110,6 +110,9 @@ var (
 	autoDreamQueryDuration metric.Float64Histogram // added for ohc_autodream_query_duration_seconds
 	meshBroadcastTotal     metric.Int64Counter
 
+	NatsMessagesPublished metric.Int64Counter
+	NatsMessagesReceived  metric.Int64Counter
+
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
 	phoneRegex = regexp.MustCompile(`(?:\+\d{1,3}[- ]?)?\b\d{3}[-.]?\d{3}[-.]?\d{4}\b`)
 	ssnRegex   = regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`)
@@ -351,6 +354,22 @@ func InitWithMeter(m mockableMeter) error {
 	requestCounter, err = m.Int64Counter(
 		"http_requests_total",
 		metric.WithDescription("Total number of HTTP requests"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	NatsMessagesPublished, err = m.Int64Counter(
+		"ohc.nats.messages_published",
+		metric.WithDescription("Total number of NATS messages published"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	NatsMessagesReceived, err = m.Int64Counter(
+		"ohc.nats.messages_received",
+		metric.WithDescription("Total number of NATS messages received"),
 	)
 	if err != nil {
 		errs = append(errs, err)

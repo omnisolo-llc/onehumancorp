@@ -8,11 +8,12 @@ proto_library(
     visibility = ["//visibility:public"],
 )
 
-go_proto_library(
+load("//bazel/rules:proto_go_grpc_library.bzl", "proto_go_grpc_library")
+
+proto_go_grpc_library(
     name = "tunnel_go_proto",
-    compilers = ["@rules_go//proto:go_grpc"],
     importpath = "github.com/onehumancorp/mono/srcs/server/integrations/mcp_webhook_tunnel",
-    proto = ":tunnel_proto",
+    protos = ["tunnel.proto"],
     visibility = ["//visibility:public"],
 )
 
