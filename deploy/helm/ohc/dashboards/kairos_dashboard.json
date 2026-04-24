@@ -1,0 +1,110 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "content": "<style>\n  * { font-family: 'Outfit', 'Inter', sans-serif; }\n  .panel-container {\n      backdrop-filter: blur(20px) saturate(200%);\n      background: rgba(255, 255, 255, 0.03) !important;\n      border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>",
+      "datasource": null,
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 10,
+      "mode": "html",
+      "options": {
+        "content": "<style>\n  * { font-family: 'Outfit', 'Inter', sans-serif; }\n  .panel-container {\n      backdrop-filter: blur(20px) saturate(200%);\n      background: rgba(255, 255, 255, 0.03) !important;\n      border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>"
+      },
+      "title": "Styles",
+      "type": "text"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 2
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(ohc_agent_task_queue_depth) by (mode)",
+          "refId": "A"
+        }
+      ],
+      "title": "Task Queue Depth",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_kairos_transitions_total[1m])) by (mode, status)",
+          "refId": "A"
+        }
+      ],
+      "title": "State Machine Transitions Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_kairos_transition_duration_seconds_sum[1m])) by (mode) / sum(rate(ohc_kairos_transition_duration_seconds_count[1m])) by (mode)",
+          "refId": "A"
+        }
+      ],
+      "title": "Transition Duration (Average)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "KAIROS Metrics Dashboard",
+  "uid": "kairos-metrics",
+  "version": 1
+}

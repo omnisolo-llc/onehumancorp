@@ -1,0 +1,181 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "content": "<style>\n  * { font-family: 'Outfit', 'Inter', sans-serif; }\n  .panel-container {\n      backdrop-filter: blur(20px) saturate(200%);\n      background: rgba(255, 255, 255, 0.03) !important;\n      border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>",
+      "datasource": null,
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 10,
+      "mode": "html",
+      "options": {
+        "content": "<style>\n  * { font-family: 'Outfit', 'Inter', sans-serif; }\n  .panel-container {\n      backdrop-filter: blur(20px) saturate(200%);\n      background: rgba(255, 255, 255, 0.03) !important;\n      border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>"
+      },
+      "title": "Styles",
+      "type": "text"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 2
+      },
+      "id": 2,
+      "panels": [],
+      "title": "Row 1: Overview",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 3
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_llm_requests_total[1m])) by (provider)",
+          "refId": "A"
+        }
+      ],
+      "title": "Total Requests by Provider",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 3
+      },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_llm_errors_total[1m])) / sum(rate(ohc_llm_requests_total[1m]))",
+          "refId": "A"
+        }
+      ],
+      "title": "Global Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "id": 8,
+      "panels": [],
+      "title": "Row 2: Latency",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "id": 12,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(ohc_llm_latency_seconds_bucket[1m])) by (le, provider))",
+          "legendFormat": "P99 {{provider}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(ohc_llm_latency_seconds_bucket[1m])) by (le, provider))",
+          "legendFormat": "P90 {{provider}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(ohc_llm_latency_seconds_bucket[1m])) by (le, provider))",
+          "legendFormat": "P50 {{provider}}",
+          "refId": "C"
+        }
+      ],
+      "title": "API Response Latencies (P50, P90, P99) by Provider",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "id": 14,
+      "panels": [],
+      "title": "Row 3: Error Rate",
+      "type": "row"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 16,
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_llm_errors_total[1m])) by (provider, status_code)",
+          "refId": "A"
+        }
+      ],
+      "title": "Error Rates by Provider and Status Code",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "LLM Provider Health",
+  "uid": "llm-provider-health",
+  "version": 1
+}
