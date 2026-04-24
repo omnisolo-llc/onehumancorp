@@ -75,6 +75,9 @@ func (r *SqliteUsageRepository) Summary(ctx context.Context, organizationID stri
 		totalActions += a.TotalActions
 		agents = append(agents, a)
 	}
+	if err := rows.Err(); err != nil {
+		return Summary{}, fmt.Errorf("sqlite: iteration error: %w", err)
+	}
 
 	if err := rows.Err(); err != nil {
 		return Summary{}, fmt.Errorf("sqlite: billing summary iteration: %w", err)
