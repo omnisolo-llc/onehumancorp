@@ -3,9 +3,10 @@ package workers
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"os"
 	"testing"
 	"time"
-	"errors"
 
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/stretchr/testify/assert"
@@ -48,14 +49,18 @@ func (m *mockTx) Rollback(ctx context.Context) error {
 	return nil
 }
 
-
 func TestCompetitorAuditWorker(t *testing.T) {
+	tempDir := t.TempDir()
+	originalWd, _ := os.Getwd()
+	os.Chdir(tempDir)
+	defer os.Chdir(originalWd)
+
 	// 1. Setup in-memory sqlite provider
 	dbConn, err := sql.Open("sqlite", ":memory:")
 	assert.NoError(t, err)
 
-    // Run migration
-    _, err = dbConn.Exec(`
+	// Run migration
+	_, err = dbConn.Exec(`
     CREATE TABLE IF NOT EXISTS competitor_metrics (
         id TEXT PRIMARY KEY,
         organization_id TEXT NOT NULL,
@@ -65,7 +70,7 @@ func TestCompetitorAuditWorker(t *testing.T) {
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );`)
-    assert.NoError(t, err)
+	assert.NoError(t, err)
 
 	pool := db.NewSqliteProvider(dbConn)
 
@@ -89,9 +94,18 @@ func TestCompetitorAuditWorker(t *testing.T) {
 		names = append(names, name)
 	}
 	assert.ElementsMatch(t, []string{"Claude Code", "OpenClaw", "Replit Agent"}, names)
+
+	// 5. Verify file creation
+	_, err = os.Stat(".agent-task/memory/competitor_audit.json")
+	assert.NoError(t, err)
 }
 
 func TestCompetitorAuditWorker_Start(t *testing.T) {
+	tempDir := t.TempDir()
+	originalWd, _ := os.Getwd()
+	os.Chdir(tempDir)
+	defer os.Chdir(originalWd)
+
 	dbConn, err := sql.Open("sqlite", ":memory:")
 	assert.NoError(t, err)
 	pool := db.NewSqliteProvider(dbConn)
@@ -115,11 +129,16 @@ func TestCompetitorAuditWorker_Start(t *testing.T) {
 }
 
 func TestCompetitorAuditWorker_StartLoop(t *testing.T) {
-    dbConn, err := sql.Open("sqlite", ":memory:")
+	tempDir := t.TempDir()
+	originalWd, _ := os.Getwd()
+	os.Chdir(tempDir)
+	defer os.Chdir(originalWd)
+
+	dbConn, err := sql.Open("sqlite", ":memory:")
 	assert.NoError(t, err)
 
-    // Run migration
-    _, err = dbConn.Exec(`
+	// Run migration
+	_, err = dbConn.Exec(`
     CREATE TABLE IF NOT EXISTS competitor_metrics (
         id TEXT PRIMARY KEY,
         organization_id TEXT NOT NULL,
@@ -129,7 +148,7 @@ func TestCompetitorAuditWorker_StartLoop(t *testing.T) {
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
     );`)
-    assert.NoError(t, err)
+	assert.NoError(t, err)
 
 	pool := db.NewSqliteProvider(dbConn)
 	worker := NewCompetitorAuditWorker(pool)
@@ -137,11 +156,11 @@ func TestCompetitorAuditWorker_StartLoop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-    go func() {
-        // give it 100ms to run
-        time.Sleep(100 * time.Millisecond)
-        cancel()
-    }()
+	go func() {
+		// give it 100ms to run
+		time.Sleep(100 * time.Millisecond)
+		cancel()
+	}()
 
 	worker.Start(ctx) // This will block for an hour if not canceled. The test ensures that cancellation unblocks it.
 }
@@ -166,4 +185,41 @@ func TestCompetitorAuditWorker_Errors(t *testing.T) {
 		worker := NewCompetitorAuditWorker(m)
 		worker.runAudit(ctx) // Should fail commit and return, logs error
 	})
+}
+
+func TestCompetitorAuditWorker_FileWriteErrors(t *testing.T) {
+	dbConn, err := sql.Open("sqlite", ":memory:")
+	assert.NoError(t, err)
+
+	_, err = dbConn.Exec(`
+    CREATE TABLE IF NOT EXISTS competitor_metrics (
+        id TEXT PRIMARY KEY,
+        organization_id TEXT NOT NULL,
+        competitor_name TEXT NOT NULL,
+        metric_type TEXT NOT NULL,
+        metric_value TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    );`)
+	assert.NoError(t, err)
+
+	pool := db.NewSqliteProvider(dbConn)
+	worker := NewCompetitorAuditWorker(pool)
+	ctx := context.Background()
+
+	tempDir := t.TempDir()
+	originalWd, _ := os.Getwd()
+	os.Chdir(tempDir)
+	defer os.Chdir(originalWd)
+
+	// Test MkdirAll error by creating a file where the directory should be
+	os.WriteFile(".agent-task", []byte("file"), 0644)
+	worker.runAudit(ctx) // Should log MkdirAll error and return
+	os.Remove(".agent-task")
+
+	// Test write file error
+	os.MkdirAll(".agent-task/memory", 0755)
+	os.MkdirAll(".agent-task/memory/competitor_audit.json", 0755) // Create a dir with the file name to force WriteFile error
+	worker.runAudit(ctx)                                          // Should log WriteFile error and return
+	os.RemoveAll(".agent-task")
 }
