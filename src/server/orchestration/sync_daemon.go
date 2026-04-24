@@ -98,6 +98,7 @@ func (d *HybridMCPRAGDaemon) processMissionsSync(ctx context.Context) bool {
 	tx, err := d.dbWrapper.Begin(ctx)
 	if err != nil {
 		slog.Error("sync_daemon: failed to begin transaction for missions", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 		return false
 	}
 	defer tx.Rollback(ctx)
@@ -109,6 +110,7 @@ func (d *HybridMCPRAGDaemon) processMissionsSync(ctx context.Context) bool {
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		slog.Error("sync_daemon: failed to query agent_missions", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 		return false
 	}
 	defer rows.Close()
@@ -149,6 +151,7 @@ func (d *HybridMCPRAGDaemon) processMissionsSync(ctx context.Context) bool {
 
 	if err := d.sendToCloud(ctx, payloads); err != nil {
 		slog.Warn("sync_daemon: failed to send agent_missions to cloud (transient)", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 		return false
 	}
 
@@ -169,18 +172,20 @@ func (d *HybridMCPRAGDaemon) processMissionsSync(ctx context.Context) bool {
 		_, err := tx.Exec(ctx, updateQuery, args...)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
+			telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 			return false
 		}
-		telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
+		telemetry.RecordSyncEscalation(ctx, "Standalone", int64(len(ids)))
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		slog.Error("sync_daemon: failed to commit missions transaction", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 		return false
 	}
 
-	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
-	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
+	telemetry.RecordSyncDaemonBatchSize(ctx, "Standalone", int64(len(payloads)))
+	telemetry.RecordSyncLatency(ctx, "Standalone", float64(time.Since(start).Milliseconds()))
 
 	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
 	return true
@@ -192,6 +197,7 @@ func (d *HybridMCPRAGDaemon) processRAGSync(ctx context.Context) bool {
 	tx, err := d.dbWrapper.Begin(ctx)
 	if err != nil {
 		slog.Error("sync_daemon: failed to begin transaction for RAG", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 		return false
 	}
 	defer tx.Rollback(ctx)
@@ -200,6 +206,7 @@ func (d *HybridMCPRAGDaemon) processRAGSync(ctx context.Context) bool {
 	rows, err := tx.Query(ctx, query)
 	if err != nil {
 		slog.Error("sync_daemon: failed to query swarm_memory_embeddings", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 		return false
 	}
 	defer rows.Close()
@@ -227,6 +234,7 @@ func (d *HybridMCPRAGDaemon) processRAGSync(ctx context.Context) bool {
 
 	if err := d.sendRAGToCloud(ctx, records); err != nil {
 		slog.Warn("sync_daemon: failed to send RAG memories to cloud (transient)", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 		return false
 	}
 
@@ -243,16 +251,18 @@ func (d *HybridMCPRAGDaemon) processRAGSync(ctx context.Context) bool {
 		_, err := tx.Exec(ctx, updateQuery, args...)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update swarm_memory_embeddings status in bulk", "error", err)
+			telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 			return false
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		slog.Error("sync_daemon: failed to commit RAG transaction", "error", err)
+		telemetry.RecordSyncDaemonError(ctx, "Standalone", err.Error())
 		return false
 	}
 
-	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
+	telemetry.RecordSyncLatency(ctx, "Standalone", float64(time.Since(start).Milliseconds()))
 	slog.Debug("sync_daemon: successfully synced swarm_memory_embeddings", "count", len(records))
 	return true
 }
@@ -262,7 +272,7 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
-	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
+	telemetry.RecordSyncPayloadSize(ctx, "Standalone", int64(len(jsonData)))
 
 	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
 	return d.postData(ctx, syncEndpoint, jsonData)

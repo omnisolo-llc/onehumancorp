@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/metric/noop"
 	"testing"
 	"time"
 	"fmt"
@@ -40,12 +41,12 @@ func TestRecordOtherMetrics(t *testing.T) {
 	RecordAutoDreamMemoryCompressed(ctx, "agent1")
 	RecordTaskQueueLength(ctx, 10)
 	RecordTaskProcessed(ctx, 5 * time.Second)
-	RecordSyncEscalation(ctx, 1)
-	RecordSyncLatency(ctx, 1.5)
-	RecordSyncPayloadSize(ctx, 100)
+	RecordSyncEscalation(ctx, "TestMode", 1)
+	RecordSyncLatency(ctx, "TestMode", 1.5)
+	RecordSyncPayloadSize(ctx, "TestMode", 100)
 	RecordSIPSyncLatency(ctx, 100*time.Millisecond)
 	RecordSIPSyncPayloadSize(ctx, 200)
-	RecordSyncDaemonBatchSize(ctx, 50)
+	RecordSyncDaemonBatchSize(ctx, "TestMode", 50)
 	RecordSwarmTaskTransition(ctx, "mission1", "open", "done")
 	RecordSwarmTaskQueueLength(ctx, 1)
 	RecordSwarmTaskProcessingLatency(ctx, 100.5)
@@ -130,10 +131,10 @@ func TestRecordOtherMetricsUninitialized(t *testing.T) {
 	RecordAutoDreamMemoryCompressed(ctx, "agent1")
 	RecordTaskQueueLength(ctx, 10)
 	RecordTaskProcessed(ctx, 5 * time.Second)
-	RecordSyncEscalation(ctx, 1)
-	RecordSyncLatency(ctx, 1.5)
-	RecordSyncPayloadSize(ctx, 100)
-	RecordSyncDaemonBatchSize(ctx, 50)
+	RecordSyncEscalation(ctx, "TestMode", 1)
+	RecordSyncLatency(ctx, "TestMode", 1.5)
+	RecordSyncPayloadSize(ctx, "TestMode", 100)
+	RecordSyncDaemonBatchSize(ctx, "TestMode", 50)
 	RecordSwarmTaskTransition(ctx, "mission1", "open", "done")
 	RecordSwarmTaskQueueLength(ctx, 1)
 	RecordSwarmTaskProcessingLatency(ctx, 100.5)
@@ -208,4 +209,25 @@ func TestRecordLocalToCloudMissionSync(t *testing.T) {
 	LocalToCloudMissionSyncCount = nil
 	defer func() { LocalToCloudMissionSyncCount = originalMetric }()
 	RecordLocalToCloudMissionSync(ctx, "mission-456")
+}
+
+
+func TestRecordSyncDaemonError(t *testing.T) {
+	ctx := context.Background()
+	mode := "Standalone"
+	errStr := "test error"
+
+	origSyncDaemonErrorTotal := SyncDaemonErrorTotal
+	defer func() {
+		SyncDaemonErrorTotal = origSyncDaemonErrorTotal
+	}()
+
+	SyncDaemonErrorTotal = nil
+	RecordSyncDaemonError(ctx, mode, errStr)
+
+	meter := noop.NewMeterProvider().Meter("test")
+	counter, _ := meter.Int64Counter("test")
+	SyncDaemonErrorTotal = counter
+
+	RecordSyncDaemonError(ctx, mode, errStr)
 }

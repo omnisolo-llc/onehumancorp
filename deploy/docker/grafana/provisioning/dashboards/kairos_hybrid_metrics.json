@@ -318,6 +318,83 @@
       "title": "Sub-Agent Task Queue Depth",
       "type": "timeseries",
       "transparent": true
+    },
+    {
+      "title": "Sync Error Rate by Mode",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "rate(ohc_sync_daemon_error_total[5m])",
+          "legendFormat": "{{mode}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        }
+      },
+      "transparent": true,
+      "description": "Rate of sync errors categorized by mode (e.g. Standalone vs Cloud), matching OHC Premium Glassmorphism guidelines."
+    },
+    {
+      "title": "Sync Latency (P95) by Mode",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(ohc_sync_latency_ms_bucket[5m])) by (le, mode))",
+          "legendFormat": "{{mode}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms"
+        }
+      },
+      "transparent": true,
+      "description": "95th percentile latency of sync operations by mode."
+    },
+    {
+      "title": "Sync Payload Size and Batch Depth",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "targets": [
+        {
+          "expr": "rate(ohc_sync_payload_size_bytes_sum[5m]) / rate(ohc_sync_payload_size_bytes_count[5m])",
+          "legendFormat": "Avg Payload Size ({{mode}})"
+        },
+        {
+          "expr": "rate(ohc_sync_daemon_batch_size_sum[5m]) / rate(ohc_sync_daemon_batch_size_count[5m])",
+          "legendFormat": "Avg Batch Depth ({{mode}})"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "axisPlacement": "auto"
+          }
+        }
+      },
+      "transparent": true,
+      "description": "Average sync payload size and batch depth categorized by mode."
     }
   ],
   "schemaVersion": 38,
