@@ -283,3 +283,49 @@ func TestRedisMeshTransport_TeammateMeshEvent(t *testing.T) {
 		t.Fatal("Timeout waiting for TeammateMeshEvent")
 	}
 }
+
+
+func TestRedisMeshTransport_PublishTeammateMeshEvent_Metrics(t *testing.T) {
+	redisClient, mock := rueidis.NewMockClient(rueidis.MockClientOption{})
+	defer redisClient.Close()
+	defer mock.Close()
+
+	rm, err := NewRedisMeshTransport("")
+	if err == nil {
+		t.Fatalf("expected error without URL")
+	}
+
+	rm = &RedisMeshTransport{client: redisClient}
+
+	mock.Expect(redisClient.B().Publish().Channel("mesh:events:teammate_mesh").Message(`{"action":"CREATE","agent_id":"test-agent","payload":{"key":"value"},"status":"PENDING"}`).Build()).WillReturn(rueidis.MockResult(rueidis.Nil))
+
+	ctx := context.Background()
+	payload := []byte(`{"key":"value"}`)
+	err = rm.PublishTeammateMeshEvent(ctx, "teammate_mesh", "test-agent", "CREATE", "PENDING", payload)
+	if err != nil {
+		t.Errorf("PublishTeammateMeshEvent error = %v", err)
+	}
+}
+
+func TestMemoryMeshTransport_PublishTeammateMeshEvent_Metrics(t *testing.T) {
+	provider := setupTestDB(t)
+	defer provider.Close()
+
+	lm := NewMemoryMeshTransport(provider)
+	ctx := context.Background()
+	payload := []byte(`{"key":"value"}`)
+
+	// Just verify no panic and runs through
+	err := lm.PublishTeammateMeshEvent(ctx, "teammate_mesh", "test-agent", "CREATE", "PENDING", payload)
+	if err != nil {
+		t.Errorf("PublishTeammateMeshEvent error = %v", err)
+	}
+
+	ch, err := lm.SubscribeTeammateMesh(ctx, "teammate_mesh")
+	if err != nil {
+		t.Errorf("SubscribeTeammateMesh error = %v", err)
+	}
+	if ch == nil {
+		t.Errorf("expected channel, got nil")
+	}
+}

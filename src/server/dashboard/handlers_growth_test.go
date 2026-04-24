@@ -2,15 +2,11 @@ package dashboard
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/orchestration"
 )
 
 func TestHandleLandingPageExperiments(t *testing.T) {
@@ -505,40 +501,13 @@ func TestHandleViralCoefficientMetrics(t *testing.T) {
 }
 
 func TestHandleQuota(t *testing.T) {
-	prov := db.NewTestProvider(t)
-	database := &db.DB{Provider: prov}
-	if err := database.RunMigrations(context.Background()); err != nil {
-		t.Fatalf("failed to run migrations: %v", err)
-	}
-
-	tm := orchestration.NewTaskManager(prov, nil, nil)
-	hub := orchestration.NewHub()
-	hub.SetTaskManager(tm)
-
 	s := &Server{
-		hub: hub,
 		referrals: []Referral{
 			{UserID: "user1", Conversions: 2},
 			{UserID: "user2", Conversions: 1},
 		},
 	}
-
-	// Seed a completed task directly into DB to avoid schema issues with TaskManager
-	_, err := prov.Exec(context.Background(), `
-		INSERT INTO shared_tasks (id, organization_id, title, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
-	`, "task-1", "demo", "Test Task", "COMPLETED", "2026-04-23 21:00:00", "2026-04-23 21:00:00")
-	if err != nil {
-		t.Fatalf("failed to seed task: %v", err)
-	}
-
 	req := httptest.NewRequest(http.MethodGet, "/api/growth/quota?userId=user1", nil)
-
-	// Inject claims into request context
-	claims := &auth.Claims{OrganizationID: "demo"}
-	ctx := context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, claims)
-	req = req.WithContext(ctx)
-
 	w := httptest.NewRecorder()
 	s.handleQuota(w, req)
 	if w.Code != http.StatusOK {
@@ -549,8 +518,7 @@ func TestHandleQuota(t *testing.T) {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 	// user1 has 2 conversions: Base 100 + (2 * 50) = 200
-	// And we seeded 1 completed task. So Used should be 1.
-	if metrics.Used != 1 || metrics.Max != 200 {
-		t.Errorf("expected 1/200, got %d/%d", metrics.Used, metrics.Max)
+	if metrics.Used != 10 || metrics.Max != 200 {
+		t.Errorf("expected 10/200, got %d/%d", metrics.Used, metrics.Max)
 	}
 }

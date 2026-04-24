@@ -19,7 +19,7 @@ type TaskQueue interface {
 	// EnqueueDelayed adds a task payload to the queue after a specific delay.
 	EnqueueDelayed(ctx context.Context, queueName string, payload map[string]interface{}, delay time.Duration) (string, error)
 	// Poll attempts to fetch a single pending task from the queue. Returns nil, nil if none found.
-	Acquire(ctx context.Context, queueName string) (*QueuedTask, error)
+	Poll(ctx context.Context, queueName string) (*QueuedTask, error)
 	// Complete marks a task as successfully processed.
 	Complete(ctx context.Context, queueName, taskID string) error
 }
@@ -93,7 +93,7 @@ func (q *RedisTaskQueue) EnqueueDelayed(ctx context.Context, queueName string, p
 	return id, nil
 }
 
-func (q *RedisTaskQueue) Acquire(ctx context.Context, queueName string) (*QueuedTask, error) {
+func (q *RedisTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTask, error) {
 	// First, check delayed set and move ready tasks to the main list.
 	// In a real system, this would be a Lua script for atomicity, but for simplicity here we do basic check and move.
 	delayedKey := queueName + ":delayed"
@@ -203,7 +203,7 @@ func (q *SQLiteTaskQueue) EnqueueDelayed(ctx context.Context, queueName string, 
 	return id, nil
 }
 
-func (q *SQLiteTaskQueue) Acquire(ctx context.Context, queueName string) (*QueuedTask, error) {
+func (q *SQLiteTaskQueue) Poll(ctx context.Context, queueName string) (*QueuedTask, error) {
 	if err := q.ensureTable(ctx); err != nil {
 		return nil, err
 	}

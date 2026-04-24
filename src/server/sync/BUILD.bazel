@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "autodream_sync.go",
         "crdt.go",
-        "mcp_sync.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/sync",
     visibility = ["//visibility:public"],
@@ -22,7 +21,6 @@ go_test(
         "autodream_sync_test.go",
         "crdt_e2e_test.go",
         "crdt_test.go",
-        "mcp_sync_test.go",
     ],
     embed = [":sync"],
     deps = [

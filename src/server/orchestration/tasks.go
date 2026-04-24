@@ -46,6 +46,10 @@ type SharedTask struct { // issue_id: 3980
 	Depth           int        `json:"depth,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+
+	ActionRisk      string     `json:"action_risk,omitempty"`
+	ApprovalStatus  string     `json:"approval_status,omitempty"`
+	ProposedContent string     `json:"proposed_content,omitempty"`
 }
 
 // TaskManager manages the shared tasks list
@@ -168,6 +172,12 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 					Status:  "PENDING",
 					TaskID:  id,
 				})
+				payloadBytes, _ := json.Marshal(map[string]interface{}{
+					"action":   "READY",
+					"agent_id": "",
+					"status":   "PENDING",
+				})
+				_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", "", "READY", "PENDING", payloadBytes)
 			} else if tm.hub != nil {
 				// Broadcast that task is now ready
 				go func(taskID string) {
@@ -219,7 +229,10 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "create_task")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -232,20 +245,20 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
-			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth, action_risk, approval_status, proposed_content)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1, '', '', '')
+			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at, COALESCE(action_risk, ''), COALESCE(approval_status, ''), COALESCE(proposed_content, '')
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
-			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth, action_risk, approval_status, proposed_content)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1, '', '', '')
+			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at, COALESCE(action_risk, ''), COALESCE(approval_status, ''), COALESCE(proposed_content, '')
 		`
 	}
 
 	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID, missionID).Scan(
-		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt, &task.ActionRisk, &task.ApprovalStatus, &task.ProposedContent,
 	)
 
 	if err != nil {
@@ -282,6 +295,17 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 			Status:  task.Status,
 			TaskID:  task.ID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":         task.ID,
+			"action":          "CREATE",
+			"agent_id":        task.AssignedAgentID,
+			"status":          task.Status,
+			"organization_id": task.OrganizationID,
+			"title":           task.Title,
+			"description":     task.Description,
+			"priority":        task.Priority,
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", task.AssignedAgentID, "CREATE", task.Status, payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -325,7 +349,10 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "claim_task_sqlite")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -451,6 +478,13 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			Status:  task.Status,
 			TaskID:  task.ID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":  task.ID,
+			"action":   "CLAIM",
+			"agent_id": agentID,
+			"status":   task.Status,
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, "CLAIM", task.Status, payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -474,7 +508,10 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "delete_task")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -506,6 +543,13 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 			Status:  "REVIEW",
 			TaskID:  taskID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":  taskID,
+			"action":   "REVIEW",
+			"agent_id": agentID,
+			"status":   "REVIEW",
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, "REVIEW", "REVIEW", payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -534,7 +578,10 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "update_task")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -613,6 +660,13 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 			Status:  "COMPLETED",
 			TaskID:  taskID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":  taskID,
+			"action":   "COMPLETE",
+			"agent_id": agentID,
+			"status":   "COMPLETED",
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, "COMPLETE", "COMPLETED", payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -755,28 +809,6 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 	return tasks, nil
 }
 
-// CountCompletedTasks returns the number of completed tasks for the organization.
-func (tm *TaskManager) CountCompletedTasks(ctx context.Context) (int, error) {
-	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil {
-		return 0, errors.New("unauthorized: missing claims")
-	}
-
-	var query string
-	if tm.db.IsSQLite() {
-		query = `SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND status = 'COMPLETED'`
-	} else {
-		query = `SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND status = 'COMPLETED'`
-	}
-
-	var count int
-	err := tm.db.QueryRow(ctx, query, claims.OrganizationID).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count completed tasks: %w", err)
-	}
-	return count, nil
-}
-
 // PollTasks attempts to claim up to `limit` PENDING tasks for the given agentID.
 // It uses row-level locking (FOR UPDATE SKIP LOCKED) in Postgres, or relies on
 // SQLite's concurrent writes lock for safe queue picking.
@@ -787,7 +819,10 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "poll_tasks")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -984,6 +1019,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				Status:  task.Status,
 				TaskID:  task.ID,
 			})
+			payloadBytes, _ := json.Marshal(map[string]interface{}{
+				"task_id":  task.ID,
+				"action":   "CLAIM",
+				"agent_id": agentID,
+				"status":   task.Status,
+			})
+			_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, "CLAIM", task.Status, payloadBytes)
 		} else if tm.hub != nil {
 			go func(t *SharedTask) {
 				payload := map[string]interface{}{
@@ -1024,13 +1066,13 @@ func (tm *TaskManager) GetTask(ctx context.Context, taskID string) (*SharedTask,
 	}
 
 	query := `
-		SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at
+		SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at, COALESCE(action_risk, ''), COALESCE(approval_status, ''), COALESCE(proposed_content, '')
 		FROM shared_tasks
 		WHERE id = $1 AND organization_id = $2
 	`
 	task := &SharedTask{}
 	err := tm.db.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
-		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.AssignedAgentID, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.AssignedAgentID, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt, &task.ActionRisk, &task.ApprovalStatus, &task.ProposedContent,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1078,7 +1120,10 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "update_task")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -1118,10 +1163,10 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 
 	query := `
 		UPDATE shared_tasks
-		SET title = $1, priority = $2, agent_id = $3, payload = $4, locked_until = $5, updated_at = CURRENT_TIMESTAMP
+		SET title = $1, priority = $2, agent_id = $3, payload = $4, locked_until = $5, action_risk = $7, approval_status = $8, proposed_content = $9, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $6
 	`
-	_, err = tx.Exec(ctx, query, task.Title, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)
+	_, err = tx.Exec(ctx, query, task.Title, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID, task.ActionRisk, task.ApprovalStatus, task.ProposedContent)
 	if err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}
@@ -1157,6 +1202,13 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 			Status:  task.Status,
 			TaskID:  task.ID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":  task.ID,
+			"action":   "UPDATE",
+			"agent_id": task.AssignedAgentID,
+			"status":   task.Status,
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", task.AssignedAgentID, "UPDATE", task.Status, payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -1180,7 +1232,10 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "delete_task")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -1225,6 +1280,11 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 			Status:  "",
 			TaskID:  taskID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id": taskID,
+			"action":  "DELETE",
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", "", "DELETE", "", payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
