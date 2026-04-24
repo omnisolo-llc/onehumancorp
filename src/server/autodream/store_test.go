@@ -323,31 +323,6 @@ func TestSQLiteVectorStore_Search_RowsErr(t *testing.T) {
 	}
 }
 
-func TestCosineSimilarity(t *testing.T) {
-	a := []float32{1, 0, 0}
-	b := []float32{0, 1, 0}
-	if cosineSimilarity(a, b) != 0 {
-		t.Errorf("expected 0")
-	}
-
-	a = []float32{1, 0, 0}
-	b = []float32{1, 0, 0}
-	if cosineSimilarity(a, b) != 1 {
-		t.Errorf("expected 1")
-	}
-
-	a = []float32{1, 0, 0}
-	b = []float32{0, 0, 0}
-	if cosineSimilarity(a, b) != 0 {
-		t.Errorf("expected 0")
-	}
-
-	a = []float32{1, 2}
-	b = []float32{1}
-	if cosineSimilarity(a, b) != 0 {
-		t.Errorf("expected 0 due to length mismatch")
-	}
-}
 
 func TestPGVectorStore_Store_InvalidMetadata(t *testing.T) {
 	store := NewPGVectorStore(&mockPGProvider{})

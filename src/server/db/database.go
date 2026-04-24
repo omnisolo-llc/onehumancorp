@@ -16,8 +16,61 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "modernc.org/sqlite"
+	"database/sql/driver"
+	"encoding/json"
+	"math"
+	"modernc.org/sqlite"
 )
+
+func init() {
+	sqlite.MustRegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+		if args[0] == nil || args[1] == nil {
+			return 1.0, nil
+		}
+
+		var aStr, bStr string
+		switch v := args[0].(type) {
+		case string:
+			aStr = v
+		case []byte:
+			aStr = string(v)
+		}
+		switch v := args[1].(type) {
+		case string:
+			bStr = v
+		case []byte:
+			bStr = string(v)
+		}
+
+		if aStr == "" || bStr == "" {
+			return 1.0, nil
+		}
+
+		var a, b []float32
+		if err := json.Unmarshal([]byte(aStr), &a); err != nil {
+			return 1.0, nil
+		}
+		if err := json.Unmarshal([]byte(bStr), &b); err != nil {
+			return 1.0, nil
+		}
+
+		if len(a) != len(b) {
+			return 1.0, nil
+		}
+
+		var dotProduct, normA, normB float64
+		for i := 0; i < len(a); i++ {
+			dotProduct += float64(a[i] * b[i])
+			normA += float64(a[i] * a[i])
+			normB += float64(b[i] * b[i])
+		}
+		if normA == 0 || normB == 0 {
+			return 1.0, nil
+		}
+		sim := dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
+		return 1.0 - sim, nil
+	})
+}
 
 var (
 	//go:embed migrations/*.sql

@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"math"
-	"sort"
 
 	"github.com/onehumancorp/mono/src/server/db"
 )
@@ -126,40 +124,25 @@ func (s *SQLiteVectorStore) Store(ctx context.Context, id string, vector []float
 	return err
 }
 
-type scoredRecord struct {
-	record *KnowledgeRecord
-	score  float32
-}
-
-func cosineSimilarity(a, b []float32) float32 {
-	if len(a) != len(b) {
-		return 0
-	}
-	var dotProduct, normA, normB float32
-	for i := range a {
-		dotProduct += a[i] * b[i]
-		normA += a[i] * a[i]
-		normB += b[i] * b[i]
-	}
-	if normA == 0 || normB == 0 {
-		return 0
-	}
-	return dotProduct / (float32(math.Sqrt(float64(normA))) * float32(math.Sqrt(float64(normB))))
-}
-
 func (s *SQLiteVectorStore) Search(ctx context.Context, vector []float32, limit int) ([]*KnowledgeRecord, error) {
-	// Fallback implementation: naive in-memory dot-product / cosine similarity
+	embBytes, err := json.Marshal(vector)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query embedding: %w", err)
+	}
+
 	query := `
 		SELECT id, content, metadata, embedding
 		FROM knowledge_base
+		ORDER BY vec_distance_cosine(embedding, $1) ASC
+		LIMIT $2
 	`
-	rows, err := s.db.Query(ctx, query)
+	rows, err := s.db.Query(ctx, query, string(embBytes), limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var allRecords []scoredRecord
+	var records []*KnowledgeRecord
 	for rows.Next() {
 		var r KnowledgeRecord
 		var metaStr sql.NullString
@@ -177,21 +160,11 @@ func (s *SQLiteVectorStore) Search(ctx context.Context, vector []float32, limit 
 				return nil, err
 			}
 		}
-		score := cosineSimilarity(vector, r.Embedding)
-		allRecords = append(allRecords, scoredRecord{record: &r, score: score})
+		records = append(records, &r)
 	}
 
 	if err := rows.Err(); err != nil {
 		return nil, err
-	}
-
-	sort.Slice(allRecords, func(i, j int) bool {
-		return allRecords[i].score > allRecords[j].score
-	})
-
-	var records []*KnowledgeRecord
-	for i := 0; i < len(allRecords) && i < limit; i++ {
-		records = append(records, allRecords[i].record)
 	}
 
 	return records, nil

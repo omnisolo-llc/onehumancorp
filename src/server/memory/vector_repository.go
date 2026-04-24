@@ -4,9 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 	"math"
-	"sort"
+	"time"
 
 	"github.com/onehumancorp/mono/src/server/db"
 )
@@ -84,14 +83,22 @@ func cosineSimilarity(a, b []float32) float64 {
 }
 
 func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID string, queryEmbedding []float32, limit int) ([]SearchResult, error) {
+	embBytes, err := json.Marshal(queryEmbedding)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query embedding: %w", err)
+	}
+
 	if r.db.IsSQLite() {
-		// SQLite fallback: fetch all and compute in memory
+		// SQLite with vec_distance_cosine
 		query := `
-			SELECT id, organization_id, memory_type, content, embedding, created_at, source_task_id
+			SELECT id, organization_id, memory_type, content, embedding, created_at, source_task_id,
+			       1 - vec_distance_cosine(embedding, $2) AS score
 			FROM autodream_memories_master
 			WHERE organization_id = $1
+			ORDER BY vec_distance_cosine(embedding, $2) ASC
+			LIMIT $3
 		`
-		rows, err := r.db.Query(ctx, query, organizationID)
+		rows, err := r.db.Query(ctx, query, organizationID, string(embBytes), limit)
 		if err != nil {
 			return nil, fmt.Errorf("failed to query memories: %w", err)
 		}
@@ -100,50 +107,33 @@ func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID st
 		var results []SearchResult
 		for rows.Next() {
 			var rec EmbeddingRecord
-			var embBytes []byte
-			var createdAtStr string
+			var score float64
 			var sourceTaskID *string
-			if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.MemoryType, &rec.Content, &embBytes, &createdAtStr, &sourceTaskID); err != nil {
-				continue
+			var embStr *string
+			var createdAtStr string
+			if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.MemoryType, &rec.Content, &embStr, &createdAtStr, &sourceTaskID, &score); err != nil {
+				return nil, fmt.Errorf("failed to scan row: %w", err)
 			}
-
 			if sourceTaskID != nil {
 				rec.SourceTaskID = *sourceTaskID
 			}
-
-			if embBytes != nil {
-				var emb []float32
-				if err := json.Unmarshal(embBytes, &emb); err == nil {
+			var emb []float32
+			if embStr != nil {
+				if err := json.Unmarshal([]byte(*embStr), &emb); err == nil {
 					rec.Embedding = emb
 				}
 			}
-
 			if t, err := time.Parse("2006-01-02 15:04:05", createdAtStr); err == nil {
 				rec.CreatedAt = t
 			} else if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
 				rec.CreatedAt = t
 			}
-
-			score := cosineSimilarity(queryEmbedding, rec.Embedding)
 			results = append(results, SearchResult{Record: &rec, Score: score})
-		}
-
-		sort.Slice(results, func(i, j int) bool {
-			return results[i].Score > results[j].Score // descending
-		})
-
-		if len(results) > limit {
-			results = results[:limit]
 		}
 		return results, nil
 	}
 
 	// PostgreSQL pgvector
-	embBytes, err := json.Marshal(queryEmbedding)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal query embedding: %w", err)
-	}
-
 	// For pgvector, we use `<->` (L2 distance), `<#>` (inner product), or `<=>` (cosine distance).
 	// We want cosine similarity, which is 1 - cosine distance.
 	// So `1 - (embedding <=> $2::vector) AS score`
@@ -168,7 +158,7 @@ func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID st
 		var score float64
 		var sourceTaskID *string
 		// pgvector returns vector as a string, but since we are using Scan, we can just receive it into a string or byte array
-		var embStr string
+		var embStr *string
 		var createdAt time.Time
 		if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.MemoryType, &rec.Content, &embStr, &createdAt, &sourceTaskID, &score); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
@@ -178,8 +168,10 @@ func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID st
 		}
 		// Unmarshal the string back to []float32
 		var emb []float32
-		if err := json.Unmarshal([]byte(embStr), &emb); err == nil {
-			rec.Embedding = emb
+		if embStr != nil {
+			if err := json.Unmarshal([]byte(*embStr), &emb); err == nil {
+				rec.Embedding = emb
+			}
 		}
 		rec.CreatedAt = createdAt
 		results = append(results, SearchResult{Record: &rec, Score: score})
