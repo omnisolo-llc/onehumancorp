@@ -56,13 +56,15 @@ type Provider interface {
 
 // TaskRecord represents a task fetched from the queue.
 type TaskRecord struct {
-	ID           string
-	ParentTaskID *string
-	AgentID      *string
-	Status       string
-	Payload      *string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID              string
+	TenantID        string
+	ParentPlanID    *string
+	Title           string
+	Status          string
+	AssignedAgentID *string
+	Payload         *string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // Rows abstracts multiple rows returned from a query.

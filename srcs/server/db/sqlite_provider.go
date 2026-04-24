@@ -144,29 +144,28 @@ func (p *SqliteProvider) AcquireTask(ctx context.Context, organizationID, agentI
 	// because SQLite Begin creates an immediate transaction lock by default or
 	// we rely on the concurrent writes lock.
 	query := `
-		UPDATE shared_tasks_decomposition
+		UPDATE shared_tasks
 		SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = (
-			SELECT id FROM shared_tasks_decomposition
-			WHERE status = 'PENDING' AND organization_id = $2
+			SELECT id FROM shared_tasks
+			WHERE status = 'PENDING' AND tenant_id = $2
 			ORDER BY created_at ASC
 			LIMIT 1
 		)
-		RETURNING id, parent_plan_id, assigned_agent_id, status, payload, created_at, updated_at
+		RETURNING id, tenant_id, parent_plan_id, title, status, assigned_agent_id, created_at, updated_at
 	`
 
 	var t TaskRecord
-	var payloadStr *string
 	var createdAtStr, updatedAtStr string
 	err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
-		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &payloadStr, &createdAtStr, &updatedAtStr,
+		&t.ID, &t.TenantID, &t.ParentPlanID, &t.Title, &t.Status, &t.AssignedAgentID, &createdAtStr, &updatedAtStr,
 	)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
 			// Memory instructions: SQLite lock contention detection parity with Postgres
 			// Secondary check to see if any PENDING tasks exist that were skipped.
 			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = 'PENDING' AND organization_id = $1)", organizationID).Scan(&exists)
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks WHERE status = 'PENDING' AND tenant_id = $1)", organizationID).Scan(&exists)
 			if checkErr == nil && exists {
 				// We found pending tasks but couldn't acquire any because they are locked.
 				// In SQLite this usually happens if another connection locked them and we timed out or missed.
@@ -180,7 +179,6 @@ func (p *SqliteProvider) AcquireTask(ctx context.Context, organizationID, agentI
 		return nil, err
 	}
 
-	t.Payload = payloadStr
 	if t.CreatedAt, err = time.Parse("2006-01-02 15:04:05", createdAtStr); err != nil {
 		// Fallback for RFC3339 which is sometimes used in tests
 		t.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)

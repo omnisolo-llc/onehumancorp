@@ -30,8 +30,8 @@ go_library(
         "migrations/20260416030000_kairos_mesh.sql",
         "migrations/011_autodream_sync.sql",
         "migrations/012_hybrid_rag_mission.sql",
-        "migrations/20260413165953_kairos_phase1_pg.sql",
-        "migrations/20260413165953_kairos_phase1_sqlite.sql",
+
+        "migrations/20260413165953_kairos_phase1.go",
         "migrations/013_shared_tasks.sql",
         "migrations/014_shared_tasks.sql",
         "migrations/014_task_dependencies.sql",

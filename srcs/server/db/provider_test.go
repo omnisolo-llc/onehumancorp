@@ -73,9 +73,9 @@ func TestProvider_AcquireTask(t *testing.T) {
 
 	// Setup SQLite table schema specific to our test
 	schema := `
-	CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+	CREATE TABLE IF NOT EXISTS shared_tasks (
 		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
+		tenant_id TEXT NOT NULL,
 		title TEXT NOT NULL,
 		description TEXT,
 		status TEXT NOT NULL DEFAULT 'PENDING',
@@ -96,7 +96,7 @@ func TestProvider_AcquireTask(t *testing.T) {
 
 	// Insert test data
 	insertQuery := `
-		INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, created_at, updated_at)
+		INSERT INTO shared_tasks (id, tenant_id, title, status, created_at, updated_at)
 		VALUES ('task-1', 'org-1', 'Task 1', 'PENDING', '2026-04-15 10:00:00', '2026-04-15 10:00:00'),
 		       ('task-2', 'org-1', 'Task 2', 'PENDING', '2026-04-15 10:01:00', '2026-04-15 10:01:00');
 	`
@@ -123,8 +123,8 @@ func TestProvider_AcquireTask(t *testing.T) {
 	if task.Status != "IN_PROGRESS" {
 		t.Errorf("Expected status IN_PROGRESS, got '%s'", task.Status)
 	}
-	if task.AgentID == nil || *task.AgentID != "agent-x" {
-		t.Errorf("Expected agent_id 'agent-x', got %v", task.AgentID)
+	if task.AssignedAgentID == nil || *task.AssignedAgentID != "agent-x" {
+		t.Errorf("Expected agent_id 'agent-x', got %v", task.AssignedAgentID)
 	}
 
 	// Acquire next task

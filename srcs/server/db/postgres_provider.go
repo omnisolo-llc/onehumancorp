@@ -69,24 +69,23 @@ func (p *PgProvider) AcquireTask(ctx context.Context, organizationID, agentID st
 	}
 	defer tx.Rollback(ctx)
 
-	// Use shared_tasks_decomposition as the master task table per memory and architecture
+	// Use shared_tasks as the master task table
 	query := `
-		UPDATE shared_tasks_decomposition
+		UPDATE shared_tasks
 		SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = NOW()
 		WHERE id = (
-			SELECT id FROM shared_tasks_decomposition
-			WHERE status = 'PENDING' AND organization_id = $2
+			SELECT id FROM shared_tasks
+			WHERE status = 'PENDING' AND tenant_id = $2
 			ORDER BY created_at ASC
 			FOR UPDATE SKIP LOCKED
 			LIMIT 1
 		)
-		RETURNING id, parent_plan_id, assigned_agent_id, status, payload, created_at, updated_at
+		RETURNING id, tenant_id, parent_plan_id, title, status, assigned_agent_id, created_at, updated_at
 	`
 
 	var t TaskRecord
-	var payloadBytes []byte
 	err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
-		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &payloadBytes, &t.CreatedAt, &t.UpdatedAt,
+		&t.ID, &t.TenantID, &t.ParentPlanID, &t.Title, &t.Status, &t.AssignedAgentID, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		// No rows is fine, but we check if it's due to lock contention
@@ -94,7 +93,7 @@ func (p *PgProvider) AcquireTask(ctx context.Context, organizationID, agentID st
 			// Memory instructions: Postgres lock contention detection for FOR UPDATE SKIP LOCKED
 			// Secondary check to see if any PENDING tasks exist that were skipped.
 			var exists bool
-			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks_decomposition WHERE status = 'PENDING' AND organization_id = $1)", organizationID).Scan(&exists)
+			checkErr := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM shared_tasks WHERE status = 'PENDING' AND tenant_id = $1)", organizationID).Scan(&exists)
 			if checkErr == nil && exists {
 				// We found pending tasks but couldn't acquire any because they are locked.
 				telemetry.RecordPostgresLockContention(ctx, "acquire_task")
@@ -104,11 +103,6 @@ func (p *PgProvider) AcquireTask(ctx context.Context, organizationID, agentID st
 		}
 		trackQuery(ctx, "AcquireTask", err, time.Since(start))
 		return nil, err
-	}
-
-	if len(payloadBytes) > 0 {
-		payloadStr := string(payloadBytes)
-		t.Payload = &payloadStr
 	}
 
 	if err := tx.Commit(ctx); err != nil {

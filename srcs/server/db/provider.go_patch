@@ -1,0 +1,23 @@
+<<<<<<< SEARCH
+type TaskRecord struct {
+	ID           string
+	ParentTaskID *string
+	AgentID      *string
+	Status       string
+	Payload      *string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+=======
+type TaskRecord struct {
+	ID              string
+	TenantID        string
+	ParentPlanID    *string
+	Title           string
+	Status          string
+	AssignedAgentID *string
+	Payload         *string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+>>>>>>> REPLACE

@@ -1,7 +1,21 @@
-1. **Implement `IsolationStrategy` interface**: Use a file editing tool (like `replace_with_git_merge_diff`) to add `IsolationStrategy` interface to `srcs/server/agents/provider.go`. The interface will have a single method `RunInIsolation(worktree string) error`.
-2. **Update `Provider` interface**: Use a file editing tool to embed the `IsolationStrategy` interface in the `Provider` interface in `srcs/server/agents/provider.go`.
-3. **Implement `RunInIsolation`**: Use a file editing tool to add `RunInIsolation(worktree string) error` to all the structs implementing `Provider` (or just to `baseProvider` and `BuiltinProvider`) in `srcs/server/agents/provider.go`. The implementation will pipe output streams directly to Redis Pub/Sub, for example: `fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)` and return `nil`.
-4. **Verify code changes**: Run `cat srcs/server/agents/provider.go` to ensure all edits were applied correctly.
-5. **Run tests**: Execute `bazelisk test //srcs/server/agents/...` to ensure all tests pass.
-6. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-7. **Submit the code**: Use the `submit` tool to commit the code, and then output a final message with a YAML block containing `issue_id: 4871`.
+1.  **Update `shared_tasks` Postgres Migration**
+    - Modify `srcs/server/db/migrations/20260413165953_kairos_phase1_pg.sql` to match the exact schema detailed in `docs/technical/features/kairos_orchestration.md` while honoring the multi-tenant architecture.
+    - Change `organization_id` to `tenant_id`.
+    - Enable Row Level Security (RLS) on the table.
+
+2.  **Update `shared_tasks` SQLite Migration**
+    - Modify `srcs/server/db/migrations/20260413165953_kairos_phase1_sqlite.sql` to match the equivalent schema for SQLite, using `tenant_id`.
+
+3.  **Update TaskRecord / Go Struct Definitions**
+    - Ensure `TaskRecord` in `srcs/server/db/provider.go` has fields matching the new schema (`TenantID`, `ParentPlanID`, `Title`, `Status`, `AssignedAgentID`, `CreatedAt`, `UpdatedAt`).
+    - Make sure `SharedTask` in `srcs/server/models/task.go` and `srcs/server/orchestration/kairos/kairos_shared_task.go` correctly map to `TenantID` instead of `OrganizationID`.
+
+4.  **Implement Unit Tests**
+    - Ensure the logic for parsing `TaskRecord` instances and `AcquireTask` matches the new schema across both `postgres_provider.go` and `sqlite_provider.go`.
+    - Add tests to `provider_test.go` checking parsing and ensuring >90% coverage for `SharedTaskRepository` and DB queries related to `shared_tasks`.
+
+5.  **Run Tests**
+    - Run `bazelisk test //...` to ensure no regressions were introduced.
+
+6.  **Complete pre-commit steps**
+    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
