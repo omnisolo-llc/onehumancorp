@@ -22,7 +22,7 @@ func TestPruneStaleMissions_StuckTransition(t *testing.T) {
 
 	sip, _ := NewSIPDBWithProvider(provider, "system")
 
-	// 1. Insert a mission that is > 1h old but < 2h old (should become FAILED)
+	// 1. Insert a mission that is > 1h old but < 2h old (should become STUCK)
 	stuckTime := time.Now().Add(-90 * time.Minute).UTC().Format("2006-01-02 15:04:05")
 	_, err := provider.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES (?, ?, ?, ?, ?, ?)",
 		"mission-stuck", "PENDING", "{}", stuckTime, stuckTime, "system")
@@ -49,8 +49,8 @@ func TestPruneStaleMissions_StuckTransition(t *testing.T) {
 	err = provider.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = ?", "mission-stuck").Scan(&status)
 	if err != nil {
 		t.Errorf("failed to query mission-stuck: %v", err)
-	} else if status != "FAILED" {
-		t.Errorf("expected status FAILED, got %s", status)
+	} else if status != "STUCK" {
+		t.Errorf("expected status STUCK, got %s", status)
 	}
 
 	// mission-fail should be deleted because it's FAILED and > 2h old
