@@ -1,6 +1,13 @@
 package db
 
 import (
+	"encoding/json"
+	"math"
+	"database/sql/driver"
+	"modernc.org/sqlite"
+)
+
+import (
 	"context"
 	"database/sql"
 	"regexp"
@@ -295,4 +302,67 @@ func (t *SqliteTx) Commit(ctx context.Context) error {
 
 func (t *SqliteTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback()
+}
+
+func init() {
+	sqlite.MustRegisterDeterministicScalarFunction(
+		"vec_distance_cosine",
+		2,
+		func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+			valA := args[0]
+			valB := args[1]
+
+			// Parse first embedding
+			strA, okA := valA.(string)
+			if !okA {
+				if bA, okB := valA.([]byte); okB {
+					strA = string(bA)
+					okA = true
+				}
+			}
+
+			// Parse second embedding
+			strB, okB := valB.(string)
+			if !okB {
+				if bB, okB2 := valB.([]byte); okB2 {
+					strB = string(bB)
+					okB = true
+				}
+			}
+
+			if !okA || !okB {
+				return 1.0, nil // Invalid types, default distance 1
+			}
+
+			var a, b []float32
+			if err := json.Unmarshal([]byte(strA), &a); err != nil {
+				return 1.0, nil
+			}
+			if err := json.Unmarshal([]byte(strB), &b); err != nil {
+				return 1.0, nil
+			}
+
+			if len(a) != len(b) || len(a) == 0 {
+				return 1.0, nil
+			}
+
+			var dotProduct float64
+			var normA float64
+			var normB float64
+
+			for i := 0; i < len(a); i++ {
+				dotProduct += float64(a[i] * b[i])
+				normA += float64(a[i] * a[i])
+				normB += float64(b[i] * b[i])
+			}
+
+			if normA == 0 || normB == 0 {
+				return 1.0, nil
+			}
+
+			similarity := dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
+			distance := 1.0 - similarity
+			return distance, nil
+		},
+	)
 }

@@ -9,6 +9,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/memory/autodream",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/db",
         "//src/server/memory",
         "//src/server/auth",
     ],
