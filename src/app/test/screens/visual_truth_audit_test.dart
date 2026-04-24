@@ -28,7 +28,8 @@ void main() {
         child: const MaterialApp(home: TaskListScreen()),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     final backdropFinder = find.byType(BackdropFilter);
     expect(backdropFinder, findsWidgets, reason: 'Expected to find BackdropFilter (via GlassCard)');

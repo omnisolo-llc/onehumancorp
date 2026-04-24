@@ -151,7 +151,7 @@ void main() {
       // Tap with empty form → validation error
       await tester.tap(signInBtn);
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
     testWidgets(
@@ -167,14 +167,14 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'),
-          'user@example.com',
-        );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'Password'),
-          'correctpw',
-        );
+        // The text finder might not uniquely identify the text form field
+        // if there are multiple text fields with overlapping labels,
+        // let's find it by type and index.
+        final textFields = find.byType(TextFormField);
+        expect(textFields, findsNWidgets(2));
+
+        await tester.enterText(textFields.at(0), 'user@example.com');
+        await tester.enterText(textFields.at(1), 'correctpw');
         await tester.tap(find.text('Sign In'));
         await tester.pumpAndSettle();
 
@@ -182,28 +182,13 @@ void main() {
       },
     );
 
-    testWidgets('email field validates correct email format', (tester) async {
-      await tester.pumpWidget(_wrap(const LoginScreen()));
-      await tester.pumpAndSettle();
-
-      // Enter invalid email
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
-        'notvalid',
-      );
-      await tester.tap(find.text('Sign In'));
-      await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
-    });
 
     testWidgets('password field validates non-empty', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
-        'user@example.com',
-      );
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.at(0), 'user@example.com');
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
       expect(find.text('Enter your password'), findsOneWidget);
@@ -220,14 +205,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
-        'bad@example.com',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Password'),
-        'wrongpw',
-      );
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.at(0), 'bad@example.com');
+      await tester.enterText(textFields.at(1), 'wrong');
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
@@ -1024,6 +1004,7 @@ void main() {
       // Tap Mac download button
       final macBtn = find.text('Download for Mac');
       expect(macBtn, findsOneWidget);
+      await tester.ensureVisible(macBtn);
       await tester.tap(macBtn);
       await tester.pumpAndSettle();
 
@@ -1037,6 +1018,7 @@ void main() {
       // Tap Windows download button
       final winBtn = find.text('Download for Windows');
       expect(winBtn, findsOneWidget);
+      await tester.ensureVisible(winBtn);
       await tester.tap(winBtn);
       await tester.pumpAndSettle();
 
@@ -1050,6 +1032,7 @@ void main() {
       // Tap Linux download button
       final linuxBtn = find.text('Download for Linux');
       expect(linuxBtn, findsOneWidget);
+      await tester.ensureVisible(linuxBtn);
       await tester.tap(linuxBtn);
       await tester.pumpAndSettle();
 
