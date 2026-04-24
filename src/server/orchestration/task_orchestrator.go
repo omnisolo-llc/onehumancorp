@@ -641,18 +641,42 @@ func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, 
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	taskID := hex.EncodeToString(b)
+
+	// Create PENDING task
 	_, err = tx.Exec(ctx, "INSERT INTO ohc_tasks (id, organization_id, title, status) VALUES ($1, $2, $3, $4)", taskID, orgID, title, "PENDING")
 	if err != nil {
 		return "", err
 	}
-	_, err = tx.Exec(ctx, "UPDATE ohc_tasks SET status = $1 WHERE id = $2", "DECOMPOSING", taskID)
+
+	tx.Commit(ctx) // Commit insertion of PENDING task
+
+	sm := NewTaskStateMachine(to.db, to.redisClient)
+
+	// Transition to DECOMPOSING
+	err = sm.TransitionState(ctx, taskID, TaskStateDecomposing)
 	if err != nil {
 		return "", err
 	}
 
-	tx.Commit(ctx)
+	// Generate sub-tasks
+	tx2, err := to.db.Begin(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer tx2.Rollback(ctx)
 
-	sm := NewTaskStateMachine(to.db, to.redisClient)
+	for i := 0; i < 3; i++ {
+		bSub := make([]byte, 16)
+		_, _ = rand.Read(bSub)
+		subID := hex.EncodeToString(bSub)
+		_, err = tx2.Exec(ctx, "INSERT INTO ohc_tasks (id, organization_id, title, parent_task_id, status) VALUES ($1, $2, $3, $4, $5)", subID, orgID, fmt.Sprintf("%s - Subtask %d", title, i+1), taskID, TaskStatePending)
+		if err != nil {
+			return "", err
+		}
+	}
+	tx2.Commit(ctx)
+
+	// Transition to EXECUTING
 	err = sm.ProcessEvent(ctx, taskID, EventDecompositionComplete)
 	if err != nil {
 		return "", err
