@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+### Cloud Scaling Improvements
+- Enhance ActiveOrganizations tracking and AI Agent Memory Consolidation.
+
+### Privacy/Offline Improvements
+- Enhance Hybrid MCP RAG Sync Daemon privacy and resolve SQLite DB lock parity issues.
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Phase 3: AutoDream Vector Data Pipelines.
