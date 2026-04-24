@@ -65,7 +65,7 @@ func TestVectorRepository(t *testing.T) {
 
 	// Test SemanticSearch (In-Memory SQLite path)
 	queryEmb := []float32{1.0, 0.0, 0.0} // Should perfectly match record1
-	results, err := repo.SemanticSearch(ctx, "test-org", queryEmb, 2)
+	results, err := repo.SemanticSearch(ctx, "test-org", queryEmb, 2, 0.0)
 	if err != nil {
 		t.Fatalf("SemanticSearch failed: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestVectorRepository(t *testing.T) {
 		t.Fatalf("UpdateRecord failed: %v", err)
 	}
 	// Verify update via semantic search
-	results2, err := repo.SemanticSearch(ctx, "test-org", queryEmb, 1)
+	results2, err := repo.SemanticSearch(ctx, "test-org", queryEmb, 1, 0.0)
 	if err != nil || len(results2) == 0 {
 		t.Fatalf("SemanticSearch failed or empty after update")
 	}
@@ -99,7 +99,7 @@ func TestVectorRepository(t *testing.T) {
 		t.Fatalf("DeleteOldMemories failed: %v", err)
 	}
 	// Verify only record1 is left
-	results3, err := repo.SemanticSearch(ctx, "test-org", queryEmb, 5)
+	results3, err := repo.SemanticSearch(ctx, "test-org", queryEmb, 5, 0.0)
 	if err != nil {
 		t.Fatalf("SemanticSearch failed: %v", err)
 	}

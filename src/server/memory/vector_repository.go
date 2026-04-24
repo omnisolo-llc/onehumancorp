@@ -83,7 +83,7 @@ func cosineSimilarity(a, b []float32) float64 {
 	return dotProduct / (math.Sqrt(normA) * math.Sqrt(normB))
 }
 
-func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID string, queryEmbedding []float32, limit int) ([]SearchResult, error) {
+func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID string, queryEmbedding []float32, limit int, minScore float64) ([]SearchResult, error) {
 	if r.db.IsSQLite() {
 		// SQLite fallback: fetch all and compute in memory
 		query := `
@@ -125,7 +125,9 @@ func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID st
 			}
 
 			score := cosineSimilarity(queryEmbedding, rec.Embedding)
-			results = append(results, SearchResult{Record: &rec, Score: score})
+			if score >= minScore {
+				results = append(results, SearchResult{Record: &rec, Score: score})
+			}
 		}
 
 		sort.Slice(results, func(i, j int) bool {
@@ -148,15 +150,17 @@ func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID st
 	// We want cosine similarity, which is 1 - cosine distance.
 	// So `1 - (embedding <=> $2::vector) AS score`
 	query := `
-		SELECT id, organization_id, memory_type, content, embedding, created_at, source_task_id,
-		       1 - (embedding <=> $2::vector) AS score
-		FROM autodream_memories_master
-		WHERE organization_id = $1
-		ORDER BY embedding <=> $2::vector
-		LIMIT $3
+		SELECT * FROM (
+			SELECT id, organization_id, memory_type, content, embedding, created_at, source_task_id,
+				   1 - (embedding <=> $2::vector) AS score
+			FROM autodream_memories_master
+			WHERE organization_id = $1
+			ORDER BY embedding <=> $2::vector
+			LIMIT $3
+		) sub WHERE score >= $4
 	`
 
-	rows, err := r.db.Query(ctx, query, organizationID, string(embBytes), limit)
+	rows, err := r.db.Query(ctx, query, organizationID, string(embBytes), limit, minScore)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query memories: %w", err)
 	}

@@ -63,7 +63,7 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	}
 
 	// Verify only 1 record exists instead of 2, due to conflict resolution merging
-	results, err := repo.SemanticSearch(ctx, claims.OrganizationID, []float32{0.1, 0.2, 0.3}, 10)
+	results, err := repo.SemanticSearch(ctx, claims.OrganizationID, []float32{0.1, 0.2, 0.3}, 10, 0.0)
 	if err != nil {
 		t.Fatalf("SemanticSearch failed: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PruneStaleContext failed: %v", err)
 	}
-	resultsAfterPrune, _ := repo.SemanticSearch(ctx, claims.OrganizationID, []float32{0.1, 0.2, 0.3}, 10)
+	resultsAfterPrune, _ := repo.SemanticSearch(ctx, claims.OrganizationID, []float32{0.1, 0.2, 0.3}, 10, 0.0)
 	if len(resultsAfterPrune) != 1 {
 		t.Errorf("expected 1 result after prune, got %d", len(resultsAfterPrune))
 	}

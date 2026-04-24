@@ -53,11 +53,11 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 	}
 
 	// Semantic Search to find existing similar memories to resolve conflicts
-	results, err := s.vectorRepo.SemanticSearch(ctx, claims.OrganizationID, embedding, 1)
+	results, err := s.vectorRepo.SemanticSearch(ctx, claims.OrganizationID, embedding, 1, 0.90)
 	if err == nil && len(results) > 0 {
 		top := results[0]
 		// If similarity > 0.90, merge to resolve conflict
-		if top.Score > 0.90 && top.Record.MemoryType == "TASK_SUMMARY" {
+		if top.Record.MemoryType == "TASK_SUMMARY" {
 			mergePrompt := fmt.Sprintf("Merge these two summaries into one cohesive memory, resolving any conflicting facts by keeping the newer information:\nOld: %s\nNew: %s", top.Record.Content, summary)
 			mergedSummary, err := s.llm.Reason(ctx, mergePrompt)
 			if err == nil {
