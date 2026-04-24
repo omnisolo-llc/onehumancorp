@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "storage",
+    srcs = ["compression.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/lib/storage",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "storage_test",
+    srcs = ["compression_test.go"],
+    embed = [":storage"],
+)

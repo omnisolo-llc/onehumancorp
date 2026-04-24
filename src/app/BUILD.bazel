@@ -122,6 +122,12 @@ flutter_library(
     ],
 )
 
+flutter_test(
+    name = "cuj_my_plan_e2e_test",
+    srcs = ["test/cuj_my_plan_e2e_test.dart"],
+    embed = [":app_lib"],
+)
+
 # ── Test-only aggregate library ───────────────────────────────────────────────
 # Provides router.dart (AppShell) + test-only deps (mocktail) for screen tests
 # that need router-level access.  Intentionally excludes main_lib to keep the
