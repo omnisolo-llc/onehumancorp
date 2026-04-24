@@ -43,7 +43,7 @@ func (w *KairosAutoDreamWorker) processCompletedTasks(ctx context.Context) error
 	}
 	defer tx.Rollback(ctx)
 
-	query := "SELECT id, title, payload FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 50"
+	query := "SELECT id, title, payload, organization_id FROM shared_tasks WHERE status = 'COMPLETED' LIMIT 50"
 
 	if !w.db.IsSQLite() {
 		query += " FOR UPDATE SKIP LOCKED"
@@ -56,15 +56,16 @@ func (w *KairosAutoDreamWorker) processCompletedTasks(ctx context.Context) error
 	defer rows.Close()
 
 	type taskData struct {
-		id      string
-		title   string
-		payload string
+		id             string
+		title          string
+		payload        string
+		organizationID string
 	}
 
 	var tasks []taskData
 	for rows.Next() {
 		var t taskData
-		if err := rows.Scan(&t.id, &t.title, &t.payload); err != nil {
+		if err := rows.Scan(&t.id, &t.title, &t.payload, &t.organizationID); err != nil {
 			return fmt.Errorf("failed to scan task data: %w", err)
 		}
 		tasks = append(tasks, t)
@@ -90,7 +91,7 @@ func (w *KairosAutoDreamWorker) processCompletedTasks(ctx context.Context) error
 			embedding = []float32{}
 		}
 
-		if err := w.storeEmbedding(ctx, tx, "system", "autodream", "task_memory", content, embedding); err != nil {
+		if err := w.storeEmbedding(ctx, tx, t.organizationID, "autodream", "task_memory", content, embedding); err != nil {
 			slog.Warn("KairosAutoDreamWorker: failed to store task memory", "task_id", t.id, "error", err)
 			continue
 		}
