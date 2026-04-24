@@ -1,3 +1,6 @@
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/release_notes_screen.dart';
+import 'package:ohc_app/widgets/help_chat_fab.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
@@ -43,6 +46,7 @@ class _GoRouterAuthNotifier extends ChangeNotifier {
     ref.listen(authStateProvider, (_, __) => notifyListeners());
   }
 }
+
 
 final routerProvider = Provider<GoRouter>((ref) {
 
@@ -210,6 +214,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/release-notes',
+            builder: (context, state) => const ReleaseNotesScreen(),
+          ),
         ],
       ),
     ],
@@ -223,7 +235,18 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Stack(
+      children: [
+        Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)])),
+        const Align(
+          alignment: Alignment.bottomRight,
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: HelpChatFab(),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -315,6 +338,16 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.health_and_safety,
           label: 'Diagnostics',
           path: '/diagnostics',
+        ),
+        _NavItem(
+          icon: Icons.help_center,
+          label: 'Help Center',
+          path: '/help',
+        ),
+        _NavItem(
+          icon: Icons.new_releases,
+          label: 'Release Notes',
+          path: '/release-notes',
         ),
         const SizedBox(height: 16),
       ],
