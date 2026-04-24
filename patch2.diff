@@ -1,0 +1,7 @@
+<<<<<<< SEARCH
+	// 1. Navigate to the dashboard (assumes login via session setup)
+	navigateTo(t, page, "/")
+=======
+	// 1. Navigate to the dashboard (assumes login via session setup)
+	loginAsAdmin(t, page)
+>>>>>>> REPLACE

@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/business_share_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -110,6 +111,12 @@ class _DashboardContent extends StatelessWidget {
               ],
             ),
           ],
+        ),
+        const SizedBox(height: 16),
+        BusinessShareWidget(
+          businessName: data.organization.name.isEmpty ? 'My Business' : data.organization.name,
+          tagline: 'Built with OHC',
+          publicLink: 'https://${data.organization.domain.isEmpty ? 'myshop' : data.organization.domain}.ohc.io',
         ),
         const SizedBox(height: 16),
         Wrap(

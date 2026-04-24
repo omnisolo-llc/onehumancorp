@@ -80,7 +80,10 @@ go_test(
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_dashboard_test",
-    srcs = _SHARED_SRCS + ["dashboard_test.go"],
+    srcs = _SHARED_SRCS + [
+        "dashboard_test.go",
+        "viral_storefront_test.go",
+    ],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
     deps = _COMMON_DEPS,

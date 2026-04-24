@@ -1,0 +1,21 @@
+<<<<<<< SEARCH
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _StatCard(
+=======
+        const SizedBox(height: 16),
+        BusinessShareWidget(
+          businessName: data.organization.name.isEmpty ? 'My Business' : data.organization.name,
+          tagline: 'Built with OHC',
+          publicLink: 'https://${data.organization.domain.isEmpty ? 'myshop' : data.organization.domain}.ohc.io',
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: [
+            _StatCard(
+>>>>>>> REPLACE

@@ -1,0 +1,30 @@
+<<<<<<< SEARCH
+package e2e
+
+import (
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/playwright-community/playwright-go"
+)
+
+// TestCUJViralStorefront verifies the end-to-end user journey for the Business Share Widget.
+func TestCUJViralStorefront(t *testing.T) {
+	setupE2E(t)
+	page, cleanup := startSession(t)
+=======
+package e2e
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/playwright-community/playwright-go"
+)
+
+// TestCUJViralStorefront verifies the end-to-end user journey for the Business Share Widget.
+func TestCUJViralStorefront(t *testing.T) {
+	setupE2EGlobal(t)
+	page, cleanup := startE2ESession(t)
+>>>>>>> REPLACE
