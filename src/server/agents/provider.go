@@ -10,10 +10,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"errors"
-	"sync"
 )
 
 // ProviderType is the unique identifier for an external agent implementation.
@@ -649,7 +649,13 @@ func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
 func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+	// Builtin agent in standalone microservice mode handles its own isolation.
+	// We dispatch via gRPC directly to the builtin Rust agent.
+	payload := fmt.Sprintf("Execute task in worktree: %s", worktree)
+	if err := dispatchToBuiltinAgent(payload, "isolated task", "Operations"); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
