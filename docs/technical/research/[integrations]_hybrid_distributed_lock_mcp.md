@@ -29,7 +29,7 @@ graph TD
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/distributed_lock/`.
+- Create a new package `src/server/lib/integrations/distributed_lock/`.
 - Introduce a `LockManager` implementing the MCP Tool interface.
 - Dynamically select the backend driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize Redis (e.g., via `go-redis` and `redislock`) to implement a distributed locking algorithm (like Redlock).
@@ -43,7 +43,7 @@ graph TD
 - Ensure `organization_id` prefixes are rigorously applied to resource keys in Cloud mode to enforce cross-tenant isolation and prevent one tenant from locking another tenant's resources.
 
 ## Implementation Prompt
-"Implement the Hybrid Distributed Lock MCP tool in `srcs/server/lib/integrations/distributed_lock/`.
+"Implement the Hybrid Distributed Lock MCP tool in `src/server/lib/integrations/distributed_lock/`.
 1. Create `lock.go` defining the `LockManager` and its MCP capabilities (`AcquireLock`, `ReleaseLock`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Redis-backed distributed lock ensuring `organization_id` is used as part of the lock key. Use a library like `bsm/redislock` or implement a standard Redlock algorithm.

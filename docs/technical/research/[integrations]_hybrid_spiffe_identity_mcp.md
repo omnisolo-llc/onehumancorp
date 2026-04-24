@@ -28,7 +28,7 @@ graph TD
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/spiffe_identity/`.
+- Create a new package `src/server/lib/integrations/spiffe_identity/`.
 - Implement an `IdentityManager` MCP Tool.
 - Determine mode via `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Integrate with `spiffe/go-spiffe/v2/workloadapi` to fetch identity documents.
@@ -39,7 +39,7 @@ graph TD
 - `GetX509Certificate(ctx context.Context) ([]byte, error)` (Returns mTLS materials).
 
 ## Implementation Prompt
-"Implement the Hybrid SPIFFE Identity MCP tool in `srcs/server/lib/integrations/spiffe_identity/`.
+"Implement the Hybrid SPIFFE Identity MCP tool in `src/server/lib/integrations/spiffe_identity/`.
 1. Create `identity.go` defining the `IdentityManager` MCP capabilities.
 2. Use `os.Getenv(\"OHC_MULTITENANT\") == \"true\"` to toggle modes.
 3. For Cloud mode, implement a client calling the SPIFFE Workload API.

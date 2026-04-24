@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "sync",
+    srcs = ["escalator.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/services/sync",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/auth",
+        "//src/server/telemetry",
+        "//src/server/orchestration",
+        "@io_opentelemetry_go_otel//:otel",
+    ],
+)
+
+go_test(
+    name = "sync_test",
+    srcs = ["escalator_test.go"],
+    embed = [":sync"],
+    deps = [
+        "//src/server/telemetry",
+    ],
+)

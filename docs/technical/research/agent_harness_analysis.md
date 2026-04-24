@@ -17,7 +17,7 @@ Currently, OHC's `bash_sandbox.go` only does rudimentary regex matching for thin
 
 ### Comparative Matrix
 
-| Feature | OHC Current State (`srcs/server/bash_sandbox/sandbox.go`) | Claude-Class State | Gap |
+| Feature | OHC Current State (`src/server/bash_sandbox/sandbox.go`) | Claude-Class State | Gap |
 |---------|------------------------------------------------------|-------------------|-----|
 | Sandboxing | Simple Regex Checks | Dynamic Sandboxing, OS-level hooks | Critical |
 | Branch Safety | Manual Git execution | `isolation: "worktree"` automated | High |
@@ -48,10 +48,10 @@ graph TD
 
 ## Implementation Prompt
 Implement the Unified Agent Worktree Harness (UAWH) for the OHC platform.
-1. Create a new `worktree_sandbox.go` inside `srcs/server/agents/harness/` that securely mounts temporary directories for agent execution context.
-2. Enhance `srcs/server/bash_sandbox/sandbox.go` to integrate with the OS-level isolation harnesses in `srcs/server/agents/harness/`, replacing simple regex checks with strict OS-level filesystem constraints where possible.
-3. Update `srcs/server/telemetry/telemetry.go` to explicitly log `SandboxWorktreeMountFailed`, `SandboxViolationDetected`, and execution timing metrics.
-4. Add comprehensive unit tests and E2E coverage for the sandbox logic in `srcs/server/bash_sandbox/sandbox_test.go` and `srcs/server/agents/harness/sandbox_test.go` to hit 100% test coverage.
+1. Create a new `worktree_sandbox.go` inside `src/server/agents/harness/` that securely mounts temporary directories for agent execution context.
+2. Enhance `src/server/bash_sandbox/sandbox.go` to integrate with the OS-level isolation harnesses in `src/server/agents/harness/`, replacing simple regex checks with strict OS-level filesystem constraints where possible.
+3. Update `src/server/telemetry/telemetry.go` to explicitly log `SandboxWorktreeMountFailed`, `SandboxViolationDetected`, and execution timing metrics.
+4. Add comprehensive unit tests and E2E coverage for the sandbox logic in `src/server/bash_sandbox/sandbox_test.go` and `src/server/agents/harness/sandbox_test.go` to hit 100% test coverage.
 
 ## Estimated Scope
 Large
