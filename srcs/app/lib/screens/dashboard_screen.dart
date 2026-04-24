@@ -8,6 +8,7 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
+import 'package:ohc_app/widgets/business_share_widget.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
@@ -212,6 +213,8 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
+        const SizedBox(height: 16),
+        BusinessShareWidget(organization: data.organization),
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),
