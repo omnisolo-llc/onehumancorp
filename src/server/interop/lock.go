@@ -1,6 +1,9 @@
 package interop
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+
 	"context"
 	"log/slog"
 	"os"
@@ -53,7 +56,8 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 		m.token = uuid.New().String()
 	}
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	hash := sha256.Sum256([]byte(key))
+	safeKey := hex.EncodeToString(hash[:])
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	err := os.Mkdir(path, 0777)
@@ -105,7 +109,8 @@ acquired:
 }
 
 func (m *memoryLock) Unlock(ctx context.Context, key string) error {
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	hash := sha256.Sum256([]byte(key))
+	safeKey := hex.EncodeToString(hash[:])
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// We must check if the lock belongs to us BEFORE attempting to steal/rename it.

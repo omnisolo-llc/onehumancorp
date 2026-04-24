@@ -1,11 +1,13 @@
 package interop
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+
 	"github.com/redis/rueidis"
 	"context"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -151,7 +153,8 @@ func TestMemoryLock_FailuresAndPaths(t *testing.T) {
 	}
 
 	// Simulate invalid file content for the lock token file by overwriting it
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	hash := sha256.Sum256([]byte(key))
+	safeKey := hex.EncodeToString(hash[:])
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 	metaPath := filepath.Join(path, "meta.txt")
 	os.WriteFile(metaPath, []byte("invalid_format"), 0666)
@@ -181,7 +184,8 @@ func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
 	key := "test_lock_key_expired"
 
 	// Create an artificially expired lock file
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	hash := sha256.Sum256([]byte(key))
+	safeKey := hex.EncodeToString(hash[:])
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 	os.Mkdir(path, 0777)
 	metaPath := filepath.Join(path, "meta.txt")
@@ -206,14 +210,14 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_coverage"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	hash := sha256.Sum256([]byte(key))
+	safeKey := hex.EncodeToString(hash[:])
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(path)
 
-	// Force os.Mkdir to fail with an error other than IsExist.
-	// We created a file, so Mkdir fails with EEXIST.
+	// We create a file so Mkdir fails with EEXIST.
 	// Then it stats the path, sees it's not a directory, deletes it, and retries Mkdir.
 	// So it should ACTUALLY ACQUIRE THE LOCK. This tests the EEXIST recovery path.
 	os.WriteFile(path, []byte("file_not_dir"), 0666)
@@ -223,7 +227,8 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 		t.Fatalf("Expected lock to recover and succeed when a file blocked the path")
 	}
 
-	os.Remove(path) // Cleanup
+
+	os.RemoveAll(path) // Cleanup
 
 	// Test unlock for non-existent file
 	err = lock1.Unlock(ctx, "non_existent_key")
@@ -234,7 +239,7 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 	// Lock it normally to test close/write errors
 	locked, err = lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
-		t.Fatalf("Failed to acquire lock")
+		t.Fatalf("Failed to acquire lock: %v", err)
 	}
 
 	// Try to unlock with a different token explicitly (simulate race condition correctly)
@@ -256,15 +261,16 @@ func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_rename_error"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	hash := sha256.Sum256([]byte(key))
+	safeKey := hex.EncodeToString(hash[:])
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(path)
 
 	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
-		t.Fatalf("Failed to acquire lock")
+		t.Fatalf("Failed to acquire lock: %v", err)
 	}
 
 	// Explicitly delete the file so rename fails in Unlock
@@ -285,15 +291,16 @@ func TestMemoryLock_IsExistError(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_is_exist"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	hash := sha256.Sum256([]byte(key))
+	safeKey := hex.EncodeToString(hash[:])
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(path)
 
 	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
-		t.Fatalf("Failed to acquire lock")
+		t.Fatalf("Failed to acquire lock: %v", err)
 	}
 
 	// Attempt to acquire the same lock -> returns os.IsExist internally but false, nil to the caller
@@ -302,7 +309,7 @@ func TestMemoryLock_IsExistError(t *testing.T) {
 		t.Fatalf("Expected lock to fail gracefully")
 	}
 
-	os.Remove(path) // Cleanup
+	os.RemoveAll(path) // Cleanup
 }
 
 func TestCloudLock(t *testing.T) {
@@ -503,7 +510,8 @@ func TestMemoryLock_FailuresAndPaths_EdgeCases2(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_failures_edges"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	hash := sha256.Sum256([]byte(key))
+	safeKey := hex.EncodeToString(hash[:])
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	os.Mkdir(path, 0700)
