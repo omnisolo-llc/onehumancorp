@@ -1,6 +1,7 @@
 package mcpwebhooktunnel
 
 import (
+	"log/slog"
 	"context"
 	"fmt"
 	"io"
@@ -102,7 +103,7 @@ func (c *LocalTunnelClient) startListener() {
 						"INSERT INTO local_webhook_events(agent_id, payload) VALUES(?, ?)",
 						c.agentID, payload.Body)
 					if err != nil {
-						fmt.Println("failed to inject webhook to sqlite bus")
+						slog.Warn("failed to inject webhook to sqlite bus")
 					}
 				}
 			}

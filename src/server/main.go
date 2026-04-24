@@ -366,7 +366,7 @@ func run(now time.Time, listen listenFunc) error {
 
 			// Setup AutoDreamSyncEngine
 			syncCloudAPI := os.Getenv("OHC_CLOUD_AUTODREAM_ENDPOINT")
-			if syncCloudAPI != "" && pool != nil {
+			if syncCloudAPI != "" && pool != nil && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
 				slog.Info("starting autodream sync engine", "endpoint", syncCloudAPI)
 				autodreamSyncEngine := sync.NewAutoDreamSyncEngine(pool, 1*time.Minute, syncCloudAPI)
 				autodreamSyncEngine.Start(ctx)
@@ -379,7 +379,7 @@ func run(now time.Time, listen listenFunc) error {
 			}
 			// Background sync for standalone missions to cloud
 			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")
-			if missionsEndpoint != "" {
+			if missionsEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
 				go func() {
 					ticker := time.NewTicker(2 * time.Second)
 					defer ticker.Stop()
@@ -401,7 +401,7 @@ func run(now time.Time, listen listenFunc) error {
 
 			// Background sync for Hybrid MCP RAG state to cloud orchestration engine
 			contextEndpoint := os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT")
-			if contextEndpoint != "" {
+			if contextEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
 
 				// Background sync for Hybrid MCP Sync via HybridSyncDaemon
 				hybridSyncDaemon := hybrid_sync.NewHybridSyncDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
