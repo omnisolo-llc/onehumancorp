@@ -142,6 +142,7 @@ func New(ctx context.Context) (*DB, error) {
 				if err := os.MkdirAll(openclawDir, 0700); err != nil {
 					return nil, fmt.Errorf("db: create .ohc dir: %w", err)
 				}
+				os.Chmod(openclawDir, 0700)
 				dbPath = filepath.Join(openclawDir, "ohc_state.db")
 			}
 		} else {
