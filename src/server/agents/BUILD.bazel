@@ -21,6 +21,8 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/agents",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/interop",
+        "@org_golang_google_protobuf//proto",
         "//src/proto:agent_go_proto",
         "//src/proto/agentservice",
         "//src/server/agents/grpc",
@@ -56,6 +58,7 @@ go_test(
     ],
     embed = [":agents"],
     deps = [
+        "//src/server/interop",
         "//src/server/integrations",
         "//src/server/agents/harness",
         "@org_modernc_sqlite//:sqlite",

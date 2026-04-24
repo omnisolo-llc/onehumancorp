@@ -8,12 +8,19 @@ package agents
 
 import (
 	"context"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"os"
+	"sync"
 	"time"
 
 	"errors"
-	"sync"
+
+	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
+	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
+	"github.com/onehumancorp/mono/src/server/interop"
 )
 
 // ProviderType is the unique identifier for an external agent implementation.
@@ -649,7 +656,53 @@ func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
 func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+	// Generate an idempotent task ID from the worktree hash or name to ensure
+	// re-running handoff doesn't create duplicates.
+	// For simplicity, we use a hash-like format based on the worktree path.
+	taskID := fmt.Sprintf("handoff-%x", md5.Sum([]byte(worktree)))
+
+	store, err := interop.NewFileHandoffStore()
+	if err != nil {
+		return fmt.Errorf("failed to initialize handoff store: %w", err)
+	}
+
+	// Create handoff notification
+	notification := &agentservicepb.TaskNotification{
+		TaskId:  taskID,
+		Status:  "RUNNING",
+		Summary: "Task handoff to Builtin agent",
+		Result:  worktree,
+	}
+
+	if err := store.WriteHandoff(ctx, taskID, notification); err != nil {
+		return fmt.Errorf("failed to write handoff: %w", err)
+	}
+
+	address := os.Getenv("OHC_AGENT_ADDRESS")
+	if address == "" {
+		address = "127.0.0.1:50051"
+	}
+	client, err := agentgrpc.NewClient(address, agentgrpc.ClientOptionsFromEnv())
+	if err != nil {
+		return fmt.Errorf("connect to builtin agent at %s: %w", address, err)
+	}
+	defer client.Close()
+
+	var lastContent string
+	err = client.RunTask(ctx, &agentservicepb.RunTaskRequest{
+		TaskId: taskID,
+		Task:   "Process worktree: " + worktree,
+	}, func(evt *agentservicepb.RunTaskEvent) {
+		if evt.Content != "" {
+			lastContent = evt.Content
+		}
+	})
+	if err != nil {
+		return fmt.Errorf("builtin agent RunTask: %w", err)
+	}
+	slog.Info("builtin agent task completed via RunInIsolation", "result_len", len(lastContent))
+
+	return nil
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────

@@ -10,9 +10,12 @@ go_library(
         "semantickernel_adapter.go",
         "types.go",
         "lock.go",
+        "handoff.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/interop",
     deps = [
+        "@org_golang_google_protobuf//proto",
+        "//src/proto/agentservice",
         "@com_github_redis_rueidis//:rueidis",
         "@com_github_google_uuid//:uuid",
     ],
@@ -26,6 +29,7 @@ go_test(
         "swarm_test.go",
         "types_test.go",
         "lock_test.go",
+        "handoff_test.go",
     ],
     deps = [
         "@com_github_redis_rueidis//:rueidis",
