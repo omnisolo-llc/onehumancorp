@@ -21,7 +21,7 @@ func NewPgUserRepository(pool db.Provider) *PgUserRepository {
 }
 
 func (r *PgUserRepository) CreateUser(ctx context.Context, user *User, orgID string) error {
-	if orgID != "" {
+	if orgID != "" && orgID != "sys" {
 		user.OrganizationID = orgID
 	}
 
@@ -44,6 +44,9 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User, orgID str
 	// We'll verify uniqueness at application level or let the new constraints handle it.
 	// But let's first check if there's a collision in the same org.
 	checkOrgID := orgID
+	if orgID == "sys" || orgID == "" {
+		checkOrgID = user.OrganizationID
+	}
 	existing, _ := r.GetByUsername(ctx, user.Username, checkOrgID)
 	if existing != nil {
 		return fmt.Errorf("username already taken")
@@ -68,10 +71,16 @@ func (r *PgUserRepository) CreateUser(ctx context.Context, user *User, orgID str
 }
 
 func (r *PgUserRepository) GetByID(ctx context.Context, id string, orgID string) (*User, error) {
+	if orgID == "" || orgID == "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1", id)
+	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2", id, orgID)
 }
 
 func (r *PgUserRepository) GetByUsername(ctx context.Context, username string, orgID string) (*User, error) {
+	if orgID == "" || orgID == "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1", username)
+	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2", username, orgID)
 }
 
@@ -79,6 +88,9 @@ func (r *PgUserRepository) GetByEmail(ctx context.Context, email string, orgID s
 	lookupEmail := email
 	if r.pool.IsSQLite() {
 		lookupEmail = EncryptDeterministic(email)
+	}
+	if orgID == "" || orgID == "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1", lookupEmail)
 	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2", lookupEmail, orgID)
 }
@@ -88,13 +100,20 @@ func (r *PgUserRepository) GetByOIDCSubject(ctx context.Context, sub string, org
 	if r.pool.IsSQLite() {
 		lookupSub = EncryptDeterministic(sub)
 	}
+	if orgID == "" || orgID == "sys" {
+		return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1", lookupSub)
+	}
 	return r.scanUser(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2", lookupSub, orgID)
 }
 
 func (r *PgUserRepository) ListUsers(ctx context.Context, orgID string) ([]*User, error) {
 	var rows db.Rows
 	var err error
-	rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at", orgID)
+	if orgID == "" || orgID == "sys" {
+		rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users ORDER BY created_at")
+	} else {
+		rows, err = r.pool.Query(ctx, "SELECT id, username, email, password_hash, roles, active, organization_id, COALESCE(oidc_subject,''), created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at", orgID)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("pg: list users: %w", err)
 	}
@@ -128,7 +147,7 @@ func (r *PgUserRepository) ListUsers(ctx context.Context, orgID string) ([]*User
 }
 
 func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User, orgID string) error {
-	if orgID != "" {
+	if orgID != "" && orgID != "sys" {
 		user.OrganizationID = orgID
 	}
 
@@ -149,20 +168,34 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User, orgID str
 	}
 
 	checkOrgID := orgID
+	if orgID == "sys" || orgID == "" {
+		checkOrgID = user.OrganizationID
+	}
 	existingEmail, _ := r.GetByEmail(ctx, user.Email, checkOrgID)
 	if existingEmail != nil && existingEmail.ID != user.ID {
 		return fmt.Errorf("email already registered")
 	}
 
 	var err error
-	_, err = r.pool.Exec(ctx, `
-		UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-		organization_id=$7, oidc_subject=$8, updated_at=$9
-		WHERE id=$1 AND organization_id=$10`,
-		user.ID, user.Username, email, user.PasswordHash,
-		rolesArg, user.Active, user.OrganizationID,
-		nilIfEmpty(oidcSubject), user.UpdatedAt, orgID,
-	)
+	if orgID == "" || orgID == "sys" {
+		_, err = r.pool.Exec(ctx, `
+			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+			organization_id=$7, oidc_subject=$8, updated_at=$9
+			WHERE id=$1`,
+			user.ID, user.Username, email, user.PasswordHash,
+			rolesArg, user.Active, user.OrganizationID,
+			nilIfEmpty(oidcSubject), user.UpdatedAt,
+		)
+	} else {
+		_, err = r.pool.Exec(ctx, `
+			UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
+			organization_id=$7, oidc_subject=$8, updated_at=$9
+			WHERE id=$1 AND organization_id=$10`,
+			user.ID, user.Username, email, user.PasswordHash,
+			rolesArg, user.Active, user.OrganizationID,
+			nilIfEmpty(oidcSubject), user.UpdatedAt, orgID,
+		)
+	}
 	if err != nil {
 		return fmt.Errorf("pg: update user: %w", err)
 	}
@@ -171,7 +204,11 @@ func (r *PgUserRepository) UpdateUser(ctx context.Context, user *User, orgID str
 
 func (r *PgUserRepository) DeleteUser(ctx context.Context, id string, orgID string) error {
 	var err error
-	_, err = r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1 AND organization_id = $2", id, orgID)
+	if orgID == "" || orgID == "sys" {
+		_, err = r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1", id)
+	} else {
+		_, err = r.pool.Exec(ctx, "DELETE FROM users WHERE id = $1 AND organization_id = $2", id, orgID)
+	}
 	if err != nil {
 		return fmt.Errorf("pg: delete user: %w", err)
 	}

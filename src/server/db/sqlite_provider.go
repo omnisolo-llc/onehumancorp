@@ -12,7 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_.]+)(?:\s*::\s*json)?\s*->>\s*'([^']+)'`)
+var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_]+)\s*::\s*json\s*->>\s*'([^']+)'`)
 
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
 type SqliteProvider struct {
