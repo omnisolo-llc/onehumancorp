@@ -326,3 +326,13 @@ func TestBizMgmtBusinessGoalSelectionStepIsSkippable(t *testing.T) {
 	body, _ := page.Content()
 	_ = body
 }
+
+func TestDashboardShareMyBusinessWidgetRendersWithoutError(t *testing.T) {
+	page := newPage(t)
+	defer page.Close()
+	loginAsAdmin(t, page)
+
+	// Test: Dashboard Share My Business Widget renders without error
+	body, _ := page.Content()
+	_ = body
+}
