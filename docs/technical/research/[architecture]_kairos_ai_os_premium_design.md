@@ -26,7 +26,7 @@ These needs must be packaged into a premium aesthetic presentation for internal 
 </div>
 
 ## Implementation Prompt
-Implement the entire KAIROS Master Execution Playbook. Set up the `shared_tasks` table and implement the DAG logic. Create the Realtime Teammate Mesh APIs under `srcs/server/orchestration/mesh/` handling pub/sub over Redis or in-memory Go channels. Build the AutoDream data pipelines, adding `consolidated_memory` schema utilizing pgvector `vector(1536)` columns with local fallback to SQLite Vector/FTS. Complete the sub-agent queue with strict token and quota checks and exponential backoff retry mechanisms. All UI interfaces associated must inherit the OHC Premium CSS tokens strictly.
+Implement the entire KAIROS Master Execution Playbook. Set up the `shared_tasks` table and implement the DAG logic. Create the Realtime Teammate Mesh APIs under `src/server/orchestration/mesh/` handling pub/sub over Redis or in-memory Go channels. Build the AutoDream data pipelines, adding `consolidated_memory` schema utilizing pgvector `vector(1536)` columns with local fallback to SQLite Vector/FTS. Complete the sub-agent queue with strict token and quota checks and exponential backoff retry mechanisms. All UI interfaces associated must inherit the OHC Premium CSS tokens strictly.
 
 ## Priority
 P0

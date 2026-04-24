@@ -8,7 +8,7 @@ Market analysis reveals that most agent frameworks treat logging as simple unstr
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/audit_log/`.
+- Create a new package `src/server/lib/integrations/audit_log/`.
 - Introduce an `AuditLogger` implementing the MCP Tool interface.
 - Dynamically select the backend driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize Postgres (or a dedicated Cloud audit logging service API) to persist events. Ensure strict multi-tenant isolation.
@@ -23,7 +23,7 @@ Market analysis reveals that most agent frameworks treat logging as simple unstr
 - Apply `RedactInterfacePII` to the `details` payload to prevent PII leakage before storage.
 
 ## Implementation Prompt
-"Implement the Hybrid Audit Log MCP tool in `srcs/server/lib/integrations/audit_log/`.
+"Implement the Hybrid Audit Log MCP tool in `src/server/lib/integrations/audit_log/`.
 1. Create `audit_log.go` defining the `AuditLogger` and its MCP capabilities (`LogEvent`, `QueryEvents`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Postgres-backed driver ensuring `organization_id` is used to partition events.

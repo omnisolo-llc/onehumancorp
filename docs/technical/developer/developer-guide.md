@@ -80,7 +80,7 @@ mono/
 │   ├── templates/           Standard templates for docs
 │   ├── system-design.md     Top-level architecture
 │   └── roadmap.md           Strategic technical roadmap
-└── srcs/
+└── src/
   ├── app/                 Flutter client for mobile, desktop, and web
   ├── proto/               Protobuf definitions
   └── server/              Go backend services and runtime entrypoint
@@ -105,10 +105,10 @@ mono/
 bazel build //...
 
 # Build just the backend binary
-bazel build //srcs/server:ohc
+bazel build //src/server:ohc
 
 # Build the Flutter web app (via Bazel)
-bazel build //srcs/app:app
+bazel build //src/app:app
 ```
 
 ### Test
@@ -118,16 +118,16 @@ bazel build //srcs/app:app
 bazel test //...
 
 # Run all Go unit tests
-bazel test //srcs/server/...
+bazel test //src/server/...
 
 # Run Flutter widget and service tests
-bazel test //srcs/app/lib/...
+bazel test //src/app/lib/...
 
 # Run Flutter desktop e2e tests
-bazel test //srcs/app:app_desktop_e2e_test
+bazel test //src/app:app_desktop_e2e_test
 
 # Run Flutter web e2e tests
-bazel test //srcs/app:app_web_e2e_test
+bazel test //src/app:app_web_e2e_test
 
 # Run deploy artefact verification
 bazel test //deploy:deploy_artifacts_test
@@ -142,16 +142,16 @@ bazel test //... --config=verbose
 bazel test //... --cache_test_results=no
 
 # Launch the local development environment (run these in separate terminals)
-bazelisk run //srcs/server:ohc
-bazelisk run //srcs/app:start
+bazelisk run //src/server:ohc
+bazelisk run //src/app:start
 
 # Launch standalone desktop mode
 bazelisk run //:desktop
 
 # Build Linux package artifacts
-bazelisk build //srcs/app:app_deb
+bazelisk build //src/app:app_deb
 # Requires rpmbuild on the host
-bazelisk build //srcs/app:app_rpm
+bazelisk build //src/app:app_rpm
 ```
 
 ### Lint / Type-check
@@ -161,7 +161,7 @@ bazelisk build //srcs/app:app_rpm
 bazel build //... --keep_going
 
 # Flutter static analysis
-cd srcs/app && flutter analyze
+cd src/app && flutter analyze
 ```
 
 ---
@@ -171,18 +171,18 @@ cd srcs/app && flutter analyze
 ### Go Unit Tests
 
 ```bash
-bazel test //srcs/server/...
+bazel test //src/server/...
 ```
 
 ### Flutter App Tests
 
 ```bash
-bazel test //srcs/app/lib/...
-bazel test //srcs/app:app_desktop_e2e_test
-bazel test //srcs/app:app_web_e2e_test
+bazel test //src/app/lib/...
+bazel test //src/app:app_desktop_e2e_test
+bazel test //src/app:app_web_e2e_test
 ```
 
-The Bazel target `//srcs/app:app_web_e2e_test` starts the backend and Flutter web app automatically, then runs Playwright against the served build artifacts.
+The Bazel target `//src/app:app_web_e2e_test` starts the backend and Flutter web app automatically, then runs Playwright against the served build artifacts.
 
 ### Kind End-to-End Test
 
@@ -249,7 +249,7 @@ docker compose -f deploy/docker-compose.yml down -v
 
 ## Environment Variables
 
-### Backend (`srcs/server`)
+### Backend (`src/server`)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -266,26 +266,26 @@ docker compose -f deploy/docker-compose.yml down -v
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FRONTEND_STATIC_DIR` | `srcs/app/build/web` | Path to compiled Flutter artifacts |
+| `FRONTEND_STATIC_DIR` | `src/app/build/web` | Path to compiled Flutter artifacts |
 
 ---
 
 ## Adding a New API Endpoint
 
-1. Add the handler function in `srcs/server/dashboard/server.go` or the relevant handler file in `srcs/server/dashboard/`
-2. Register the route in `srcs/server/dashboard/server.go`
-3. Add a unit test in `srcs/server/dashboard/server_test.go`
-4. Update the proto if a new message type is needed (`srcs/proto/`)
-5. Run `bazel test //srcs/server/...`
+1. Add the handler function in `src/server/dashboard/server.go` or the relevant handler file in `src/server/dashboard/`
+2. Register the route in `src/server/dashboard/server.go`
+3. Add a unit test in `src/server/dashboard/server_test.go`
+4. Update the proto if a new message type is needed (`src/proto/`)
+5. Run `bazel test //src/server/...`
 
 ---
 
 ## Adding a New Agent Role
 
-1. Define the role constant in `srcs/server/orchestration/service.go`
+1. Define the role constant in `src/server/orchestration/service.go`
 2. Add any role-specific behaviour to `Hub.HandleMessage`
-3. Update the default `Catalog` in `srcs/server/billing/tracker.go` if the role uses a different model
-4. Add the role to the Skill Pack defaults in `srcs/server/dashboard/server.go`
+3. Update the default `Catalog` in `src/server/billing/tracker.go` if the role uses a different model
+4. Add the role to the Skill Pack defaults in `src/server/dashboard/server.go`
 
 ---
 
@@ -304,10 +304,10 @@ No raw `npm test`, `go test`, or shell scripts are invoked directly by CI.
 ## Protobuf Code Generation
 
 ```bash
-bazel build //srcs/proto/...
+bazel build //src/proto/...
 ```
 
-Generated Go stubs land in `bazel-bin/srcs/proto/`.
+Generated Go stubs land in `bazel-bin/src/proto/`.
 
 ---
 

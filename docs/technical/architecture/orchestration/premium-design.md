@@ -48,7 +48,7 @@ sequenceDiagram
 ```
 
 ## 3. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication via Centrifuge node integration in `srcs/server/orchestration/centrifuge_hub.go` and transport components like `LocalTeammateMesh` in `srcs/server/orchestration/mesh.go`.
+Realtime communication via Centrifuge node integration in `src/server/orchestration/centrifuge_hub.go` and transport components like `LocalTeammateMesh` in `src/server/orchestration/mesh.go`.
 
 - **Cloud-Native Mode:** Uses Redis Pub/Sub (`rueidis`) to manage highly concurrent distributed queues.
 - **Standalone Mode:** Degrades gracefully to an in-memory channel broadcast to ensure low-latency IPC.
@@ -91,7 +91,7 @@ CREATE INDEX idx_autodream_memories_embedding ON autodream_memories USING ivffla
 ```
 
 ## 5. Phase 4: Sub-Agent Orchestration Queue
-Background worker system (`srcs/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
+Background worker system (`src/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
 
 ### 5.1 Sub-Agent Task Queue Payload (BullMQ / Celery)
 When KAIROS decomposes a mission, it submits jobs to a distributed background queue.
