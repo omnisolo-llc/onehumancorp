@@ -48,8 +48,15 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
-                                await Future.delayed(const Duration(seconds: 2));
-                                if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: const Text('This feature is not yet implemented. Please try again later.', style: TextStyle(fontFamily: 'Inter')),
+                                      backgroundColor: Theme.of(context).colorScheme.error,
+                                    ),
+                                  );
+                                  setState(() => _isApplying = false);
+                                }
                               },
                               child: const Text('Apply Fix'),
                             ),
@@ -89,11 +96,15 @@ class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
 
   void _startUpgrade() async {
     setState(() { _isUpgrading = true; });
-    for (int i = 1; i <= 4; i++) {
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) setState(() => _progress = i);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('This feature is not yet implemented. Please try again later.', style: TextStyle(fontFamily: 'Inter')),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      setState(() => _isUpgrading = false);
     }
-    if (mounted) setState(() { _done = true; _isUpgrading = false; });
   }
 
   @override
