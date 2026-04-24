@@ -223,7 +223,51 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth <= 768) {
+          return Scaffold(
+            drawer: _Sidebar(),
+            body: Stack(
+              children: [
+                child,
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Builder(
+                    builder: (context) {
+                      return SafeArea(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.menu),
+                            onPressed: () {
+                              Scaffold.of(context).openDrawer();
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          return Scaffold(
+            body: Row(
+              children: [
+                _Sidebar(),
+                Expanded(child: child),
+              ],
+            ),
+          );
+        }
+      },
+    );
   }
 }
 
