@@ -223,7 +223,30 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 600) {
+          return Scaffold(
+            drawer: _Sidebar(),
+            body: child,
+            floatingActionButton: Align(
+              alignment: Alignment.bottomRight,
+              child: Builder(
+                builder: (context) => FloatingActionButton(
+                  onPressed: () {
+                    Scaffold.of(context).openDrawer();
+                  },
+                  child: const Icon(Icons.menu),
+                ),
+              ),
+            ),
+          );
+        }
+        return Scaffold(
+          body: Row(children: [_Sidebar(), Expanded(child: child)]),
+        );
+      },
+    );
   }
 }
 

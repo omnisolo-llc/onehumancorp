@@ -89,7 +89,7 @@ class _DashboardContent extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _SectionTitle('My Business'),
+            const _SectionTitle('My Business'),
             OutlinedButton.icon(
               onPressed: () => context.go('/wizards/billing'),
               icon: const Icon(Icons.credit_card),
@@ -102,26 +102,32 @@ class _DashboardContent extends StatelessWidget {
           spacing: 16,
           runSpacing: 16,
           children: [
+            const _StatCard(
+              label: "Today's Sales",
+              value: "\$0.00",
+              icon: Icons.attach_money,
+              color: Colors.green,
+            ),
             _StatCard(
-              label: 'Active Agents',
+              label: 'AI Helpers',
               value: data.agents.where((a) => a.isRunning).length.toString(),
               icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Active Tasks',
+              label: 'Tasks in Progress',
               value: data.statuses.length.toString(),
               icon: Icons.pending_actions,
               color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
-              label: 'Scheduled Calls',
+              label: 'Upcoming Calls',
               value: data.meetings.length.toString(),
               icon: Icons.video_call,
               color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
-              label: 'Team Members',
+              label: 'Staff Members',
               value: data.organization.members.length.toString(),
               icon: Icons.people,
               color: Theme.of(context).colorScheme.primaryContainer,
@@ -169,7 +175,7 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         const SizedBox(height: 32),
-        _SectionTitle('System Health'),
+        const _SectionTitle('Business Pulse'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -194,7 +200,7 @@ class _DashboardContent extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: Text(
-                        'Proactive Task Stream',
+                        'Recent Activity',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -213,10 +219,10 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),
-        _SectionTitle('Company Structure'),
+        const _SectionTitle('My AI Team'),
         const SizedBox(height: 8),
         Text(
-          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
+          'Easily hire or pause your AI helpers as your business needs change.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontFamily: 'Inter',
@@ -349,7 +355,7 @@ class _StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            healthy ? 'System Nominal' : 'Degraded',
+            healthy ? 'Running Smoothly' : 'Degraded',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -634,14 +640,20 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       excludeSemantics: true,
       child: Tooltip(
         message: 'View ${widget.label}',
-        child: SizedBox(
-          width: 200,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: GlassCard(
-        child: Material(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // For 375px mobile, constraints here might be infinite if it's in a Wrap.
+            // But we use MediaQuery to safely split into 2 columns with spacing.
+            final screenWidth = MediaQuery.of(context).size.width;
+            final cardWidth = screenWidth < 600 ? (screenWidth - 48 - 16) / 2 : 200.0;
+            return SizedBox(
+              width: cardWidth,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: GlassCard(
+            child: Material(
                           color: Colors.transparent,
                           child: Semantics(
                             button: true,
@@ -681,9 +693,11 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                             ),
                           ),
                         ),
-      ),
-            ),
-          ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
