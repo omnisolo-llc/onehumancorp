@@ -10,6 +10,7 @@ import (
 
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/kairos"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -37,10 +38,14 @@ type SubAgentJob struct {
 type QueueManager struct {
 	provider db.Provider
 	mu       sync.Mutex
+	sm       *statemachine.StateMachine
 }
 
-func NewQueueManager(provider db.Provider) *QueueManager {
-	return &QueueManager{provider: provider}
+func NewQueueManager(provider db.Provider, sm *statemachine.StateMachine) *QueueManager {
+	if sm == nil {
+		sm = statemachine.NewStateMachine(provider, nil, nil)
+	}
+	return &QueueManager{provider: provider, sm: sm}
 }
 
 func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
@@ -66,14 +71,35 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 		job.UpdatedAt = now
 	}
 
-	_, err = q.provider.Exec(ctx, query,
-		job.ID, job.OrganizationID, job.ParentTaskID, string(payloadBytes),
-		"QUEUED", job.CreatedAt, job.UpdatedAt,
-	)
-	if err == nil {
-		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Inc()
+	tx, err := q.provider.Begin(ctx)
+	if err != nil {
+		return err
 	}
-	return err
+	defer tx.Rollback(ctx)
+
+	_, err = tx.Exec(ctx, query,
+		job.ID, job.OrganizationID, job.ParentTaskID, string(payloadBytes),
+		statemachine.StatePending, job.CreatedAt, job.UpdatedAt,
+	)
+	if err != nil {
+		return err
+	}
+
+	broadcastFunc, err := q.sm.TransitionWithTx(ctx, tx, job.ID, "SUB_AGENT_JOB", statemachine.StateSubAgentSpawned, "", "")
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	if broadcastFunc != nil {
+		broadcastFunc()
+	}
+
+	kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Inc()
+	return nil
 }
 
 func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJob, error) {
@@ -83,10 +109,16 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 		q.mu.Lock()
 		defer q.mu.Unlock()
 
+		tx, err := q.provider.Begin(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback(ctx)
+
 		query := `
 			SELECT id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
 			FROM sub_agent_queue
-			WHERE status = 'QUEUED'
+			WHERE status = $1
 			ORDER BY created_at ASC
 			LIMIT 1
 		`
@@ -95,28 +127,29 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 		var wID sql.NullString
 		var createdAt, updatedAt string
 
-		row := q.provider.QueryRow(ctx, query)
-		err := row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt)
+		row := tx.QueryRow(ctx, query, statemachine.StateSubAgentSpawned)
+		err = row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		} else if err != nil {
 			return nil, err
 		}
 
-		updateQuery := `
-			UPDATE sub_agent_queue
-			SET status = 'RUNNING', worker_id = $1, updated_at = $2
-			WHERE id = $3
-		`
-		_, err = q.provider.Exec(ctx, updateQuery, workerID, time.Now().Format(time.RFC3339Nano), j.ID)
+		broadcastFunc, err := q.sm.TransitionWithTx(ctx, tx, j.ID, "SUB_AGENT_JOB", statemachine.StateSubAgentExecuting, workerID, "")
 		if err != nil {
 			return nil, err
 		}
 
-		if wID.Valid {
-			j.WorkerID = &wID.String
+		if err := tx.Commit(ctx); err != nil {
+			return nil, err
 		}
-		j.Status = "RUNNING"
+
+		if broadcastFunc != nil {
+			broadcastFunc()
+		}
+
+		j.WorkerID = &workerID
+		j.Status = statemachine.StateSubAgentExecuting
 
 		if t, err := time.Parse(time.RFC3339Nano, createdAt); err == nil {
 			j.CreatedAt = t
@@ -130,25 +163,26 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 		return &j, nil
 	} else {
 		// Postgres mode
+		tx, err := q.provider.Begin(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback(ctx)
+
 		query := `
-			UPDATE sub_agent_queue
-			SET status = 'RUNNING', worker_id = $1, updated_at = $2
-			WHERE id = (
-				SELECT id
-				FROM sub_agent_queue
-				WHERE status = 'QUEUED'
-				ORDER BY created_at ASC
-				FOR UPDATE SKIP LOCKED
-				LIMIT 1
-			)
-			RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
+			SELECT id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
+			FROM sub_agent_queue
+			WHERE status = $1
+			ORDER BY created_at ASC
+			FOR UPDATE SKIP LOCKED
+			LIMIT 1
 		`
 		var j SubAgentJob
 		var payloadStr string
 		var wID sql.NullString
 		var createdAt, updatedAt time.Time
 
-		err := q.provider.QueryRow(ctx, query, workerID, time.Now()).Scan(
+		err = tx.QueryRow(ctx, query, statemachine.StateSubAgentSpawned).Scan(
 			&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt,
 		)
 
@@ -158,10 +192,21 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 			return nil, err
 		}
 
-		if wID.Valid {
-			j.WorkerID = &wID.String
+		broadcastFunc, err := q.sm.TransitionWithTx(ctx, tx, j.ID, "SUB_AGENT_JOB", statemachine.StateSubAgentExecuting, workerID, "")
+		if err != nil {
+			return nil, err
 		}
-		j.Status = "RUNNING"
+
+		if err := tx.Commit(ctx); err != nil {
+			return nil, err
+		}
+
+		if broadcastFunc != nil {
+			broadcastFunc()
+		}
+
+		j.WorkerID = &workerID
+		j.Status = statemachine.StateSubAgentExecuting
 		j.CreatedAt = createdAt
 		j.UpdatedAt = updatedAt
 

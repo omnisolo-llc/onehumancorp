@@ -25,13 +25,23 @@ func TestQueueManagerLoop(t *testing.T) {
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
+	CREATE TABLE IF NOT EXISTS state_machine_transitions (
+		id TEXT PRIMARY KEY,
+		entity_id TEXT NOT NULL,
+		entity_type TEXT NOT NULL,
+		from_state TEXT NOT NULL,
+		to_state TEXT NOT NULL,
+		agent_id TEXT,
+		reason TEXT,
+		occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	);
 	`
 	_, err := provider.Exec(ctx, schema)
 	if err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	qm := NewQueueManager(provider)
+	qm := NewQueueManager(provider, nil)
 
 	job1 := &SubAgentJob{
 		ID:             "job-1",
@@ -94,8 +104,8 @@ func TestQueueManagerLoop(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)
 	}
-	if status1 != "COMPLETED" {
-		t.Fatalf("Expected job-1 status COMPLETED, got %s", status1)
+	if status1 != "SUBAGENT_COMPLETED" {
+		t.Fatalf("Expected job-1 status SUBAGENT_COMPLETED, got %s", status1)
 	}
 
 	for i := 0; i < 20; i++ {

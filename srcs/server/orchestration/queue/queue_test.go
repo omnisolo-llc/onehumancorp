@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
@@ -120,10 +121,20 @@ func TestQueueManager(t *testing.T) {
 		organization_id TEXT NOT NULL,
 		parent_task_id TEXT NOT NULL,
 		payload JSONB,
-		status TEXT NOT NULL DEFAULT 'QUEUED',
+		status TEXT NOT NULL DEFAULT 'PENDING',
 		worker_id TEXT,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE IF NOT EXISTS state_machine_transitions (
+		id TEXT PRIMARY KEY,
+		entity_id TEXT NOT NULL,
+		entity_type TEXT NOT NULL,
+		from_state TEXT NOT NULL,
+		to_state TEXT NOT NULL,
+		agent_id TEXT,
+		reason TEXT,
+		occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
 	`
 	_, err := provider.Exec(ctx, schema)
@@ -131,7 +142,7 @@ func TestQueueManager(t *testing.T) {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	qm := NewQueueManager(provider)
+	qm := NewQueueManager(provider, nil)
 
 	job := &SubAgentJob{
 		ID:             "job-1",
@@ -156,8 +167,8 @@ func TestQueueManager(t *testing.T) {
 	if polledJob.ID != "job-1" {
 		t.Errorf("expected job ID job-1, got %s", polledJob.ID)
 	}
-	if polledJob.Status != "RUNNING" {
-		t.Errorf("expected status RUNNING, got %s", polledJob.Status)
+	if polledJob.Status != "SUBAGENT_EXECUTING" {
+		t.Errorf("expected status SUBAGENT_EXECUTING, got %s", polledJob.Status)
 	}
 
 	polledJob2, err := qm.Acquire(ctx, "worker-2")
@@ -183,10 +194,20 @@ func TestQueueManager_Postgres(t *testing.T) {
 		organization_id TEXT NOT NULL,
 		parent_task_id TEXT NOT NULL,
 		payload JSONB,
-		status TEXT NOT NULL DEFAULT 'QUEUED',
+		status TEXT NOT NULL DEFAULT 'PENDING',
 		worker_id TEXT,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+	);
+	CREATE TABLE IF NOT EXISTS state_machine_transitions (
+		id TEXT PRIMARY KEY,
+		entity_id TEXT NOT NULL,
+		entity_type TEXT NOT NULL,
+		from_state TEXT NOT NULL,
+		to_state TEXT NOT NULL,
+		agent_id TEXT,
+		reason TEXT,
+		occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
 	`
 	_, err := mockProvider.Exec(ctx, schema)
@@ -194,7 +215,7 @@ func TestQueueManager_Postgres(t *testing.T) {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	qm := NewQueueManager(mockProvider)
+	qm := NewQueueManager(mockProvider, nil)
 
 	job := &SubAgentJob{
 		ID:             "job-pg-1",
@@ -225,12 +246,36 @@ func TestQueueManager_Postgres(t *testing.T) {
 	}
 }
 
+type mockTx struct {
+	db.Tx
+}
+
+func (m *mockTx) QueryRow(ctx context.Context, query string, args ...any) db.Row {
+	query = strings.ReplaceAll(query, " FOR UPDATE", "")
+	query = strings.ReplaceAll(query, " SKIP LOCKED", "")
+	return m.Tx.QueryRow(ctx, query, args...)
+}
+
+func (m *mockTx) Exec(ctx context.Context, query string, args ...any) (int64, error) {
+	query = strings.ReplaceAll(query, " FOR UPDATE", "")
+	query = strings.ReplaceAll(query, " SKIP LOCKED", "")
+	return m.Tx.Exec(ctx, query, args...)
+}
+
 type mockPostgresProvider struct {
 	db.Provider
 }
 
 func (m *mockPostgresProvider) IsSQLite() bool {
 	return false
+}
+
+func (m *mockPostgresProvider) Begin(ctx context.Context) (db.Tx, error) {
+	tx, err := m.Provider.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &mockTx{Tx: tx}, nil
 }
 
 type mockRow struct {
@@ -248,6 +293,29 @@ func (m *mockRow) Scan(dest ...any) error {
 	return nil
 }
 
+type mockTxPoll struct {
+	db.Tx
+	err error
+	scanFunc func(dest ...any) error
+}
+
+func (m *mockTxPoll) QueryRow(ctx context.Context, query string, args ...any) db.Row {
+	// Let test provide the mock output when querying the task status
+	if strings.Contains(query, "SELECT id, organization_id") {
+		return &mockRow{err: m.err, scanFunc: m.scanFunc}
+	}
+	// For other queries (like state machine transitions), pass through to the real Tx
+	query = strings.ReplaceAll(query, " FOR UPDATE", "")
+	query = strings.ReplaceAll(query, " SKIP LOCKED", "")
+	return m.Tx.QueryRow(ctx, query, args...)
+}
+
+func (m *mockTxPoll) Exec(ctx context.Context, query string, args ...any) (int64, error) {
+	query = strings.ReplaceAll(query, " FOR UPDATE", "")
+	query = strings.ReplaceAll(query, " SKIP LOCKED", "")
+	return m.Tx.Exec(ctx, query, args...)
+}
+
 type mockPostgresProviderPoll struct {
 	db.Provider
 	err error
@@ -256,6 +324,14 @@ type mockPostgresProviderPoll struct {
 
 func (m *mockPostgresProviderPoll) IsSQLite() bool {
 	return false
+}
+
+func (m *mockPostgresProviderPoll) Begin(ctx context.Context) (db.Tx, error) {
+	tx, err := m.Provider.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &mockTxPoll{Tx: tx, err: m.err, scanFunc: m.scanFunc}, nil
 }
 
 func (m *mockPostgresProviderPoll) QueryRow(ctx context.Context, query string, args ...any) db.Row {
@@ -271,7 +347,7 @@ func TestQueueManager_Postgres_Poll_Success(t *testing.T) {
 			*dest[1].(*string) = "org"
 			*dest[2].(*string) = "task"
 			*dest[3].(*string) = `{"key":"pg-val"}`
-			*dest[4].(*string) = "RUNNING"
+			*dest[4].(*string) = "SUBAGENT_SPAWNED"
 			*dest[5].(*sql.NullString) = sql.NullString{String: "worker-1", Valid: true}
 			*dest[6].(*time.Time) = time.Now()
 			*dest[7].(*time.Time) = time.Now()
@@ -279,8 +355,33 @@ func TestQueueManager_Postgres_Poll_Success(t *testing.T) {
 		},
 	}
 
-	qm := NewQueueManager(mockProvider)
+	qm := NewQueueManager(mockProvider, nil)
 	ctx := context.Background()
+
+	// Insert mock row to satisfy TransitionWithTx looking up the existing state
+	_, _ = provider.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS sub_agent_queue (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			parent_task_id TEXT NOT NULL,
+			payload JSONB,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			worker_id TEXT,
+			created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (
+			id TEXT PRIMARY KEY,
+			entity_id TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
+			reason TEXT,
+			occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	_, _ = provider.Exec(ctx, "INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status) VALUES ('pg-id', 'org', 'task', '{}', 'SUBAGENT_SPAWNED')")
 
 	polledJob, err := qm.Acquire(ctx, "worker-1")
 	if err != nil {
@@ -301,7 +402,7 @@ func TestQueueManager_Postgres_Poll_NoRows(t *testing.T) {
 		err: sql.ErrNoRows,
 	}
 
-	qm := NewQueueManager(mockProvider)
+	qm := NewQueueManager(mockProvider, nil)
 	ctx := context.Background()
 
 	polledJob, err := qm.Acquire(ctx, "worker-1")
