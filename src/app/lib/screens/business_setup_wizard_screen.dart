@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import '../widgets/glass_card.dart';
@@ -63,18 +64,92 @@ class BusinessSetupState {
 }
 
 class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
+  bool _initialized = false;
+
   @override
-  BusinessSetupState build() => const BusinessSetupState();
+  BusinessSetupState build() {
+    if (!_initialized) {
+      _initialized = true;
+      // cannot async await in build directly, but we can call an async method
+      _loadState();
+    }
+    return const BusinessSetupState();
+  }
+
+  Future<void> _loadState() async {
+    final baseUrl = ref.read(backendUrlProvider);
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (baseUrl.isEmpty || user == null) return;
+
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/wizard/state'),
+        headers: {'Authorization': 'Bearer ${user.token}'},
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data.isNotEmpty) {
+          state = state.copyWith(
+            step: data['step'] as int?,
+            businessType: data['businessType'] as String?,
+            companyName: data['companyName'] as String?,
+            businessDescription: data['businessDescription'] as String?,
+            whatYouSell:
+                (data['whatYouSell'] as List?)
+                    ?.map((e) => e as String)
+                    .toList(),
+            paymentMethod: data['paymentMethod'] as String?,
+            adminName: data['adminName'] as String?,
+            adminEmail: data['adminEmail'] as String?,
+            adminPassword: data['adminPassword'] as String?,
+          );
+        }
+      }
+    } catch (e) {
+      // ignore errors on load
+    }
+  }
+
+  Future<void> _saveState() async {
+    final baseUrl = ref.read(backendUrlProvider);
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (baseUrl.isEmpty || user == null) return;
+
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/api/wizard/state/save'),
+        headers: {
+          'Authorization': 'Bearer ${user.token}',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({
+          'step': state.step,
+          'businessType': state.businessType,
+          'companyName': state.companyName,
+          'businessDescription': state.businessDescription,
+          'whatYouSell': state.whatYouSell,
+          'paymentMethod': state.paymentMethod,
+          'adminName': state.adminName,
+          'adminEmail': state.adminEmail,
+          'adminPassword': state.adminPassword,
+        }),
+      );
+    } catch (e) {
+      // ignore
+    }
+  }
 
   void nextStep() {
     if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
+      _saveState();
     }
   }
 
   void prevStep() {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      _saveState();
     }
   }
 
@@ -83,8 +158,40 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     nextStep();
   }
 
-  void updateCompany(String name) => state = state.copyWith(companyName: name);
-  void updateDescription(String desc) => state = state.copyWith(businessDescription: desc);
+  Timer? _debounceTimer;
+
+  void updateCompany(String name) {
+    state = state.copyWith(companyName: name);
+
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      final baseUrl = ref.read(backendUrlProvider);
+      final user = ref.read(authStateProvider).valueOrNull;
+      if (baseUrl.isEmpty || user == null || name.trim().isEmpty) return;
+
+      try {
+        final response = await http.post(
+          Uri.parse('$baseUrl/api/wizard/generate_description'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({'product_name': name}),
+        );
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          if (data['description'] != null) {
+            state = state.copyWith(businessDescription: data['description']);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+    });
+  }
+
+  void updateDescription(String desc) =>
+      state = state.copyWith(businessDescription: desc);
 
   void toggleWhatYouSell(String item) {
     final list = List<String>.from(state.whatYouSell);
@@ -96,11 +203,13 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     state = state.copyWith(whatYouSell: list);
   }
 
-  void updatePaymentMethod(String method) => state = state.copyWith(paymentMethod: method);
+  void updatePaymentMethod(String method) =>
+      state = state.copyWith(paymentMethod: method);
 
   void updateAdminName(String name) => state = state.copyWith(adminName: name);
   void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
-  void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
+  void updateAdminPassword(String val) =>
+      state = state.copyWith(adminPassword: val);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authStateProvider).valueOrNull;
@@ -118,7 +227,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
           'payment_method': state.paymentMethod,
           'admin_name': state.adminName,
           'admin_email': state.adminEmail,
-        }
+        },
       };
 
       try {
@@ -132,7 +241,10 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
         );
 
         if (res.statusCode != 200) {
-          state = state.copyWith(isLoading: false, errorMessage: 'Configuration failed: ${res.statusCode}');
+          state = state.copyWith(
+            isLoading: false,
+            errorMessage: 'Configuration failed: ${res.statusCode}',
+          );
         } else {
           state = state.copyWith(isLoading: false);
           if (context.mounted) {
@@ -143,41 +255,64 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
         state = state.copyWith(isLoading: false, errorMessage: e.toString());
       }
     } else {
-      state = state.copyWith(isLoading: false, errorMessage: 'Not authenticated');
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: 'Not authenticated',
+      );
     }
   }
 }
 
-final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSetupState>(() {
-  return BusinessSetupNotifier();
-});
+final businessSetupProvider =
+    NotifierProvider<BusinessSetupNotifier, BusinessSetupState>(() {
+      return BusinessSetupNotifier();
+    });
 
 class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
   const BusinessSetupWizardScreen({super.key});
 
   @override
-  ConsumerState<BusinessSetupWizardScreen> createState() => _BusinessSetupWizardScreenState();
+  ConsumerState<BusinessSetupWizardScreen> createState() =>
+      _BusinessSetupWizardScreenState();
 }
 
-class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
+class _BusinessSetupWizardScreenState
+    extends ConsumerState<BusinessSetupWizardScreen> {
   bool _obscurePassword = true;
+  bool _pulseUp = true;
 
   Widget _buildStep(BusinessSetupState state, BusinessSetupNotifier notifier) {
     if (state.step == 0) {
       return const Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.rocket_launch, size: 64, color: Colors.blueAccent),
+          Hero(
+            tag: 'welcome_hero',
+            child: Icon(
+              Icons.rocket_launch,
+              size: 80,
+              color: Colors.blueAccent,
+            ),
+          ),
           SizedBox(height: 24),
           Text(
             'Your business, live in minutes',
-            style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 16),
           Text(
             'No coding required. AI agents will set up your entire backend.',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.white70),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              color: Colors.white70,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -195,34 +330,68 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('What kind of business are you building?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          const Text(
+            'What kind of business are you building?',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 16),
           Wrap(
             spacing: 16,
             runSpacing: 16,
-            children: types.map((t) {
-              final isSelected = state.businessType == t['label'];
-              return InkWell(
-                onTap: () => notifier.updateBusinessType(t['label'] as String),
-                child: Container(
-                  width: 140,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: isSelected ? Colors.blueAccent.withAlpha(51) : Colors.white.withAlpha(13),
-                    border: Border.all(color: isSelected ? Colors.blueAccent : Colors.white.withAlpha(26)),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(t['icon'] as IconData, size: 32, color: isSelected ? Colors.blueAccent : Colors.white70),
-                      const SizedBox(height: 12),
-                      Text(t['label'] as String, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', color: isSelected ? Colors.white : Colors.white70, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
+            children:
+                types.map((t) {
+                  final isSelected = state.businessType == t['label'];
+                  return InkWell(
+                    onTap:
+                        () => notifier.updateBusinessType(t['label'] as String),
+                    child: Container(
+                      width: 140,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color:
+                            isSelected
+                                ? Colors.blueAccent.withAlpha(51)
+                                : Colors.white.withAlpha(13),
+                        border: Border.all(
+                          color:
+                              isSelected
+                                  ? Colors.blueAccent
+                                  : Colors.white.withAlpha(26),
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            t['icon'] as IconData,
+                            size: 32,
+                            color:
+                                isSelected ? Colors.blueAccent : Colors.white70,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            t['label'] as String,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              color: isSelected ? Colors.white : Colors.white70,
+                              fontWeight:
+                                  isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
           ),
         ],
       );
@@ -231,16 +400,34 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Tell us about your business', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          const Text(
+            'Tell us about your business',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 16),
           TextField(
-            decoration: const InputDecoration(labelText: 'Business Name', labelStyle: TextStyle(color: Colors.white70)),
-            onChanged: notifier.updateCompany,
+            decoration: const InputDecoration(
+              labelText: 'Business Name',
+              labelStyle: TextStyle(color: Colors.white70),
+            ),
+            onChanged: (val) {
+              notifier.updateCompany(val);
+            },
             style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
           ),
           const SizedBox(height: 16),
           TextField(
-            decoration: const InputDecoration(labelText: 'Short Description', labelStyle: TextStyle(color: Colors.white70)),
+            decoration: const InputDecoration(
+              labelText: 'Short Description',
+              labelStyle: TextStyle(color: Colors.white70),
+              hintText: 'AI will suggest a tagline based on name',
+              hintStyle: TextStyle(color: Colors.white30),
+            ),
             onChanged: notifier.updateDescription,
             maxLines: 3,
             style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
@@ -259,7 +446,15 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('What do you sell?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          const Text(
+            'What do you sell?',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 16),
           ...items.map((item) {
             final isSelected = state.whatYouSell.contains(item);
@@ -270,15 +465,35 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isSelected ? Colors.blueAccent.withAlpha(51) : Colors.white.withAlpha(13),
-                    border: Border.all(color: isSelected ? Colors.blueAccent : Colors.white.withAlpha(26)),
+                    color:
+                        isSelected
+                            ? Colors.blueAccent.withAlpha(51)
+                            : Colors.white.withAlpha(13),
+                    border: Border.all(
+                      color:
+                          isSelected
+                              ? Colors.blueAccent
+                              : Colors.white.withAlpha(26),
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked, color: isSelected ? Colors.blueAccent : Colors.white70),
+                      Icon(
+                        isSelected
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: isSelected ? Colors.blueAccent : Colors.white70,
+                      ),
                       const SizedBox(width: 16),
-                      Text(item, style: TextStyle(fontFamily: 'Inter', color: isSelected ? Colors.white : Colors.white70, fontSize: 16)),
+                      Text(
+                        item,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: isSelected ? Colors.white : Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -298,28 +513,63 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('How do you want to receive payments?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          const Text(
+            'How do you want to receive payments?',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 16),
           ...items.map((item) {
             final isSelected = state.paymentMethod == item['label'];
             return Padding(
               padding: const EdgeInsets.only(bottom: 12.0),
               child: InkWell(
-                onTap: () => notifier.updatePaymentMethod(item['label'] as String),
+                onTap:
+                    () => notifier.updatePaymentMethod(item['label'] as String),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isSelected ? Colors.blueAccent.withAlpha(51) : Colors.white.withAlpha(13),
-                    border: Border.all(color: isSelected ? Colors.blueAccent : Colors.white.withAlpha(26)),
+                    color:
+                        isSelected
+                            ? Colors.blueAccent.withAlpha(51)
+                            : Colors.white.withAlpha(13),
+                    border: Border.all(
+                      color:
+                          isSelected
+                              ? Colors.blueAccent
+                              : Colors.white.withAlpha(26),
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(item['label'] as String, style: TextStyle(fontFamily: 'Inter', color: isSelected ? Colors.white : Colors.white70, fontSize: 16, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        child: Text(
+                          item['label'] as String,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            color: isSelected ? Colors.white : Colors.white70,
+                            fontSize: 16,
+                            fontWeight:
+                                isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                          ),
+                        ),
                       ),
                       if ((item['time'] as String).isNotEmpty)
-                        Text(item['time'] as String, style: const TextStyle(fontFamily: 'Inter', color: Colors.greenAccent, fontSize: 12)),
+                        Text(
+                          item['time'] as String,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            color: Colors.greenAccent,
+                            fontSize: 12,
+                          ),
+                        ),
                     ],
                   ),
                 ),
@@ -333,17 +583,31 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Administrator account', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+          const Text(
+            'Administrator account',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 16),
           TextField(
-            decoration: const InputDecoration(labelText: 'Name', labelStyle: TextStyle(color: Colors.white70)),
+            decoration: const InputDecoration(
+              labelText: 'Name',
+              labelStyle: TextStyle(color: Colors.white70),
+            ),
             onChanged: notifier.updateAdminName,
             style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
           ),
           const SizedBox(height: 16),
           TextField(
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: 'Email', labelStyle: TextStyle(color: Colors.white70)),
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              labelStyle: TextStyle(color: Colors.white70),
+            ),
             onChanged: notifier.updateAdminEmail,
             style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
           ),
@@ -356,7 +620,10 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
               labelText: 'Password',
               labelStyle: const TextStyle(color: Colors.white70),
               suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility : Icons.visibility_off,
+                  color: Colors.white70,
+                ),
                 onPressed: () {
                   setState(() {
                     _obscurePassword = !_obscurePassword;
@@ -366,14 +633,20 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             ),
           ),
           if (state.adminPassword.isNotEmpty)
-             Padding(
-               padding: const EdgeInsets.only(top: 8.0),
-               child: LinearProgressIndicator(
-                 value: state.adminPassword.length / 10.0 > 1.0 ? 1.0 : state.adminPassword.length / 10.0,
-                 backgroundColor: Colors.white.withAlpha(26),
-                 color: state.adminPassword.length > 6 ? Colors.green : Colors.orange,
-               ),
-             ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: LinearProgressIndicator(
+                value:
+                    state.adminPassword.length / 10.0 > 1.0
+                        ? 1.0
+                        : state.adminPassword.length / 10.0,
+                backgroundColor: Colors.white.withAlpha(26),
+                color:
+                    state.adminPassword.length > 6
+                        ? Colors.green
+                        : Colors.orange,
+              ),
+            ),
         ],
       );
     } else {
@@ -381,7 +654,15 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Review & Launch', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 24, color: Colors.white)),
+          const Text(
+            'Review & Launch',
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 24),
           _buildSummaryRow('Business Name', state.companyName),
           _buildSummaryRow('Type', state.businessType),
@@ -401,10 +682,25 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(fontFamily: 'Inter', color: Colors.white70, fontSize: 14)),
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                color: Colors.white70,
+                fontSize: 14,
+              ),
+            ),
           ),
           Expanded(
-            child: Text(value.isEmpty ? 'Not set' : value, style: const TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
+            child: Text(
+              value.isEmpty ? 'Not set' : value,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
       ),
@@ -436,12 +732,18 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (state.errorMessage != null) ...[
-                      Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
+                      Text(
+                        state.errorMessage!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
                       const SizedBox(height: 16),
                     ],
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (Widget child, Animation<double> animation) {
+                      transitionBuilder: (
+                        Widget child,
+                        Animation<double> animation,
+                      ) {
                         return FadeTransition(opacity: animation, child: child);
                       },
                       child: Container(
@@ -455,30 +757,97 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                       children: [
                         if (state.step > 0)
                           TextButton(
-                            onPressed: state.isLoading ? null : notifier.prevStep,
-                            child: const Text('Back', style: TextStyle(fontFamily: 'Inter', color: Colors.white70)),
+                            onPressed:
+                                state.isLoading ? null : notifier.prevStep,
+                            child: const Text(
+                              'Back',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                color: Colors.white70,
+                              ),
+                            ),
                           )
                         else
                           const SizedBox(),
                         ElevatedButton(
-                          onPressed: state.isLoading ? null : () {
-                            if (state.step < 6) {
-                              notifier.nextStep();
-                            } else {
-                              notifier.launch(context, ref);
-                            }
-                          },
+                          onPressed:
+                              state.isLoading
+                                  ? null
+                                  : () {
+                                    if (state.step < 6) {
+                                      notifier.nextStep();
+                                    } else {
+                                      notifier.launch(context, ref);
+                                    }
+                                  },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: state.step == 6 ? Colors.green : Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            backgroundColor:
+                                state.step == 6
+                                    ? Colors.green
+                                    : Colors.blueAccent,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
-                          child: state.isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : Text(
-                                  state.step == 6 ? 'Launch My Business →' : (state.step == 0 ? 'Get Started' : 'Continue'),
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                                ),
+
+                          child:
+                              state.isLoading
+                                  ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                  : (state.step == 6
+                                      ? TweenAnimationBuilder<double>(
+                                        tween: Tween(
+                                          begin: _pulseUp ? 1.0 : 1.05,
+                                          end: _pulseUp ? 1.05 : 1.0,
+                                        ),
+                                        onEnd: () {
+                                          if (mounted) {
+                                            setState(() {
+                                              _pulseUp = !_pulseUp;
+                                            });
+                                          }
+                                        },
+                                        duration: const Duration(
+                                          milliseconds: 800,
+                                        ),
+                                        curve: Curves.easeInOut,
+                                        builder:
+                                            (context, scale, child) =>
+                                                Transform.scale(
+                                                  scale: scale,
+                                                  child: child,
+                                                ),
+                                        child: const Text(
+                                          'Launch My Business →',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      )
+                                      : Text(
+                                        state.step == 0
+                                            ? 'Get Started'
+                                            : 'Continue',
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      )),
                         ),
                       ],
                     ),

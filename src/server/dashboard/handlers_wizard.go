@@ -31,7 +31,7 @@ type wizardConfigureRequest struct {
 	RedisURL      string                `json:"redis_url,omitempty"`
 	CentrifugeURL string                `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string                `json:"minimax_api_key,omitempty"`
-	Extras        map[string]string `json:"extras,omitempty"`
+	Extras        map[string]string     `json:"extras,omitempty"`
 	AiProviders   []settings.AiProvider `json:"ai_providers,omitempty"`
 }
 
@@ -248,4 +248,64 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		"diagnostics": healthChecks,
 	}
 	writeJSON(w, resp)
+}
+
+// handleWizardStateSave stores the current wizard progress in settings.Extras["wizard_state"].
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Just read the whole payload as JSON to store it.
+	var state map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&state); err != nil {
+		http.Error(w, "invalid JSON payload: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	stateBytes, err := json.Marshal(state)
+	if err != nil {
+		http.Error(w, "failed to marshal state", http.StatusInternalServerError)
+		return
+	}
+
+	s.mu.Lock()
+	cfg := s.settings
+	if cfg.Extras == nil {
+		cfg.Extras = make(map[string]string)
+	}
+	cfg.Extras["wizard_state"] = string(stateBytes)
+	s.settings = cfg
+	s.mu.Unlock()
+
+	_ = s.hub.SettingsStore().Update(cfg)
+
+	writeJSON(w, map[string]string{"status": "ok"})
+}
+
+// handleWizardStateLoad retrieves the current wizard progress from settings.Extras["wizard_state"].
+func (s *Server) handleWizardStateLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	cfg := s.settings
+	s.mu.RUnlock()
+
+	stateStr := cfg.Extras["wizard_state"]
+	if stateStr == "" {
+		writeJSON(w, map[string]interface{}{})
+		return
+	}
+
+	var state map[string]interface{}
+	if err := json.Unmarshal([]byte(stateStr), &state); err != nil {
+		writeJSON(w, map[string]interface{}{})
+		return
+	}
+
+	writeJSON(w, state)
 }

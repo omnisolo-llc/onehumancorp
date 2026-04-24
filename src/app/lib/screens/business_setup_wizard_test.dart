@@ -14,32 +14,39 @@ void main() {
 
     // Step 0 -> 1
     await tester.tap(find.text('Get Started'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('What kind of business are you building?'), findsOneWidget);
 
     // Step 1 -> 2
     await tester.tap(find.text('Online Store'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Tell us about your business'), findsOneWidget);
 
     // Step 2 -> 3
     await tester.enterText(find.byType(TextField).first, 'Test Company');
     await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('What do you sell?'), findsOneWidget);
 
     // Step 3 -> 4
     await tester.tap(find.text('Physical products'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('How do you want to receive payments?'), findsOneWidget);
 
     // Step 4 -> 5
     await tester.tap(find.text('Online only'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Administrator account'), findsOneWidget);
 
     // Step 5 -> 6
@@ -47,7 +54,8 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), 'admin@test.com');
     await tester.enterText(find.byType(TextField).at(2), 'password123');
     await tester.tap(find.text('Continue'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Review & Launch'), findsOneWidget);
     expect(find.text('Launch My Business →'), findsOneWidget);
   });

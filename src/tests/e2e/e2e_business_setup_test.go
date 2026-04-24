@@ -15,13 +15,11 @@ func TestBusinessSetupWizard(t *testing.T) {
 	// Wait for home screen.
 	expectElement(t, page, `[aria-label="Dashboard"]`)
 
-	// Setup Wizard might be triggered by a specific button or URL
-	// For testing, let's navigate to /business_setup directly or click on the Setup Business button
+	// Go to business setup wizard
 	if err := page.Goto(baseURL + "/#/business_setup"); err != nil {
 		t.Fatalf("Failed to navigate to business setup: %v", err)
 	}
 
-	// Wait for the UI to settle
 	time.Sleep(1 * time.Second)
 
 	// Step 0 -> Step 1
@@ -33,9 +31,28 @@ func TestBusinessSetupWizard(t *testing.T) {
 	expectElement(t, page, "text=Tell us about your business")
 
 	// Step 2 -> Step 3
-	fillInput(t, page, "Business Name", "Acme Corp")
-	fillInput(t, page, "Short Description", "A great store")
+	fillInput(t, page, "Business Name", "Acme AI Corp")
+
+	// Wait for debounce and AI auto-suggest (500ms debounce + API time)
+	time.Sleep(1500 * time.Millisecond)
+
+	// In test mode or when no provider is strictly bound, generate_description returns
+	// "A premium, handcrafted Acme AI Corp tailored for exceptional quality and performance."
+	// Just assert that the input got filled.
+	val, err := page.InputValue("text=Short Description")
+	if err != nil || val == "" {
+		t.Fatalf("AI auto suggest failed to populate description, got: '%v'", val)
+	}
+
 	clickElement(t, page, "text=Continue")
+	expectElement(t, page, "text=What do you sell?")
+
+	// Refresh the page to test State Persist/Restore!
+	if err := page.Reload(); err != nil {
+		t.Fatalf("Failed to reload: %v", err)
+	}
+	time.Sleep(1 * time.Second)
+	// After reload, we should be right back at Step 3
 	expectElement(t, page, "text=What do you sell?")
 
 	// Step 3 -> Step 4
@@ -50,22 +67,21 @@ func TestBusinessSetupWizard(t *testing.T) {
 
 	// Step 5 -> Step 6
 	fillInput(t, page, "Name", "Admin")
-	fillInput(t, page, "Email", "admin@acmecorp.com")
-	fillInput(t, page, "Password", "supersecret")
+	fillInput(t, page, "Email", "admin@acmeai.com")
+	fillInput(t, page, "Password", "supersecret123")
 	clickElement(t, page, "text=Continue")
 	expectElement(t, page, "text=Review & Launch")
 
 	// Check summary output
-	expectElement(t, page, "text=Acme Corp")
+	expectElement(t, page, "text=Acme AI Corp")
 	expectElement(t, page, "text=Online Store")
 	expectElement(t, page, "text=Physical products")
 	expectElement(t, page, "text=Online only")
-	expectElement(t, page, "text=admin@acmecorp.com")
+	expectElement(t, page, "text=admin@acmeai.com")
 
 	// Finish
 	clickElement(t, page, "text=Launch My Business →")
 
 	// We expect the user to be redirected to the dashboard eventually.
-	// Check for a dashboard element
 	expectElement(t, page, "text=Dashboard")
 }
