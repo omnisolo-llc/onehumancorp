@@ -6,24 +6,24 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
 
 type SyncDaemon struct {
-	db          *sql.DB
-	cloudURL    string
+	db           *sql.DB
+	cloudURL     string
 	syncInterval time.Duration
-	batchSize   int
+	batchSize    int
 }
 
 func NewSyncDaemon(db *sql.DB, cloudURL string, syncInterval time.Duration, batchSize int) *SyncDaemon {
 	return &SyncDaemon{
-		db:          db,
-		cloudURL:    cloudURL,
+		db:           db,
+		cloudURL:     cloudURL,
 		syncInterval: syncInterval,
-		batchSize:   batchSize,
+		batchSize:    batchSize,
 	}
 }
 
@@ -37,7 +37,7 @@ func (d *SyncDaemon) Start(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if err := d.syncOnce(ctx); err != nil {
-				log.Printf("Telemetry sync failed: %v", err)
+				slog.Error("Telemetry sync failed", "error", err)
 			}
 		}
 	}
@@ -80,7 +80,6 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 		return fmt.Errorf("new request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
