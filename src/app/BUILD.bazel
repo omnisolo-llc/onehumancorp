@@ -55,6 +55,7 @@ filegroup(
         "//src/app/lib/screens:srcs",
         "//src/app/lib/services:srcs",
         "//src/app/lib/widgets:srcs",
+        "//src/app/test:srcs",
     ],
     visibility = ["//visibility:public"],
 )

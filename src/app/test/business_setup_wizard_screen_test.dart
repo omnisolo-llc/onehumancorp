@@ -84,9 +84,19 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 6: Review & Launch
-    expect(find.text('Review & Launch'), findsOneWidget);
-    expect(find.text('Business: Test Company'), findsOneWidget);
+    // Step 6: Template
+    expect(find.text('Template Selection'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 7: Product
+    expect(find.text('First Product / Service'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 8: Review & Launch
+    expect(find.text('Domain & Go-Live'), findsOneWidget);
+
     expect(find.text('Type: Online Store'), findsOneWidget);
     expect(find.text('Selling: Physical products'), findsOneWidget);
     expect(find.text('Payments: Online only'), findsOneWidget);

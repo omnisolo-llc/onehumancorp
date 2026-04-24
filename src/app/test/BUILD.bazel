@@ -27,6 +27,7 @@ test_suite(
         "//src/app/lib/screens:all_tests",
         "//src/app/lib/services:all_tests",
         "//src/app/lib/widgets:all_tests",
+        ":business_setup_wizard_screen_test",
     ],
 )
 
@@ -171,4 +172,21 @@ sh_binary(
         "//:node_modules/@playwright/test",
     ],
     visibility = ["//visibility:public"],
+)
+
+flutter_test(
+    name = "business_setup_wizard_screen_test",
+    srcs = ["business_setup_wizard_screen_test.dart"],
+    embed = ["//src/app:app_for_tests"],
+    test_files = ["business_setup_wizard_screen_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+filegroup(
+    name = "srcs",
+    srcs = glob(
+        ["**/*.dart", "**/*.sh"],
+        allow_empty = True,
+    ) + ["BUILD.bazel"],
+    visibility = ["//src/app:__pkg__"],
 )
