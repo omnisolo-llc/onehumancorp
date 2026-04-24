@@ -46,7 +46,7 @@ func (w *AutoDreamWorker) RunConsolidation(ctx context.Context) error {
 }
 
 func (w *AutoDreamWorker) processDBMemories(ctx context.Context) error {
-	query := "SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100"
+	query := "SELECT session_id, agent_id, context_data, organization_id FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100"
 	if !w.db.IsSQLite() {
 		query += " FOR UPDATE SKIP LOCKED"
 	}
@@ -58,15 +58,16 @@ func (w *AutoDreamWorker) processDBMemories(ctx context.Context) error {
 	defer rows.Close()
 
 	type sessionData struct {
-		sessionID string
-		agentID   string
-		context   string
+		sessionID      string
+		agentID        string
+		context        string
+		organizationID string
 	}
 
 	var sessions []sessionData
 	for rows.Next() {
 		var s sessionData
-		if err := rows.Scan(&s.sessionID, &s.agentID, &s.context); err != nil {
+		if err := rows.Scan(&s.sessionID, &s.agentID, &s.context, &s.organizationID); err != nil {
 			return fmt.Errorf("failed to scan session data: %w", err)
 		}
 		sessions = append(sessions, s)
@@ -74,7 +75,7 @@ func (w *AutoDreamWorker) processDBMemories(ctx context.Context) error {
 	rows.Close() // Close early before processing
 
 	for _, s := range sessions {
-		if err := w.embedAndStore(ctx, "system", s.agentID, "agent_session", s.context); err != nil {
+		if err := w.embedAndStore(ctx, s.organizationID, s.agentID, "agent_session", s.context); err != nil {
 			slog.Warn("AutoDreamWorker: failed to embed session", "session_id", s.sessionID, "error", err)
 			continue
 		}
@@ -119,6 +120,7 @@ func (w *AutoDreamWorker) processFSMemories(ctx context.Context) error {
 			continue
 		}
 
+		// Filesystem memories don't have an obvious org ID unless parsed from YAML. Default to system here for now.
 		if err := w.embedAndStore(ctx, "system", "fs-agent", "fs_runtime", string(content)); err != nil {
 			slog.Warn("AutoDreamWorker: failed to embed fs memory", "file", filePath, "error", err)
 			continue
