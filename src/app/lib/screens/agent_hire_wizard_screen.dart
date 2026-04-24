@@ -33,7 +33,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   bool _capOrderUpdates = false;
 
   // Resource limits state
-  double _maxSessionsPerDay = 50.0;
+  double _scheduleSliderIndex = 3.0;
   final _endpointUrlController = TextEditingController();
   final _tokenLimitController = TextEditingController();
 
@@ -95,6 +95,8 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     try {
       final api = ref.read(apiServiceProvider);
       if (api != null) {
+        double maxSessions = _scheduleSliderIndex == 1 ? 240 : _scheduleSliderIndex == 2 ? 24 : _scheduleSliderIndex == 3 ? 1 : 1/7;
+
         final caps = <String>[];
         if (_capEmailRead) caps.add('EMAIL_READ');
         if (_capMessagingSend) caps.add('MESSAGING_SEND');
@@ -182,9 +184,9 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   )
                 else
                   Semantics(
-                    label: 'Deploy the configured agent',
+                    label: 'Review & Activate',
                     child: Tooltip(
-                      message: 'Deploy agent to orchestration hub',
+                      message: 'Activate agent',
                       child: ElevatedButton(
                         onPressed: _isDeploying ? null : _handleDeploy,
                         child:
@@ -196,7 +198,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                                : const Text('Deploy Agent'),
+                                : const Text('Activate'),
                       ),
                     ),
                   ),
@@ -513,7 +515,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Step 6 — Resource Limits',
+                      'Step 6 — Schedule / Frequency',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -523,26 +525,25 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text('How much should this agent work per day?'),
+                const Text('How often should this agent work?'),
                 const SizedBox(height: 16),
                 Row(
                   children: [
                     Expanded(
                       child: Slider(
-                        value: _maxSessionsPerDay,
-                        min: 10,
-                        max: 200,
-                        divisions: 19,
-                        label: _maxSessionsPerDay.round().toString(),
-                        onChanged:
-                            (val) => setState(() => _maxSessionsPerDay = val),
+                        value: _scheduleSliderIndex,
+                        min: 1,
+                        max: 4,
+                        divisions: 3,
+                        label: _scheduleSliderIndex == 1 ? 'Real-time' : _scheduleSliderIndex == 2 ? 'Hourly' : _scheduleSliderIndex == 3 ? 'Daily' : 'Weekly',
+                        onChanged: (val) => setState(() => _scheduleSliderIndex = val),
                       ),
                     ),
-                    Text('${_maxSessionsPerDay.round()} sessions'),
+                    Text(_scheduleSliderIndex == 1 ? 'Real-time' : _scheduleSliderIndex == 2 ? 'Hourly' : _scheduleSliderIndex == 3 ? 'Daily' : 'Weekly'),
                   ],
                 ),
                 Text(
-                  'Estimated cost: \$${(_maxSessionsPerDay * 0.05).toStringAsFixed(2)} / day',
+                  'Estimated cost: \$${((_scheduleSliderIndex == 1 ? 240 : _scheduleSliderIndex == 2 ? 24 : _scheduleSliderIndex == 3 ? 1 : 1/7) * 0.05).toStringAsFixed(2)} / day',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                   ),
@@ -581,7 +582,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Step 7 — Confirm Deployment',
+                  'Step 7 — Review & Activate',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
