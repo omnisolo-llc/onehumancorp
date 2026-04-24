@@ -44,6 +44,7 @@ go_library(
         "//src/server/tools/localstatefulproxy",
         "//src/server/tools/edgeoffloadmcp",
         "//src/server/lib/integrations/hybridfsmcp",
+        "//src/server/lib/perf",
         "@io_opentelemetry_go_otel//:otel",
         "//src/server/utils",
     ],
