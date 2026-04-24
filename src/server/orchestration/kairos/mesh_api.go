@@ -7,21 +7,23 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/onehumancorp/mono/src/server/auth"
 )
 
 type MeshAPI struct {
 	mesh TeammateMesh
+	repo *SharedTaskRepo
 }
 
-func NewMeshAPI(mesh TeammateMesh) *MeshAPI {
-	return &MeshAPI{mesh: mesh}
+func NewMeshAPI(mesh TeammateMesh, repo *SharedTaskRepo) *MeshAPI {
+	return &MeshAPI{mesh: mesh, repo: repo}
 }
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 
-	mux.HandleFunc("/api/kairos/actions/pending", api.handleGetPendingActions)
-	mux.HandleFunc("/api/kairos/actions/approve", api.handleApproveAction)
-	mux.HandleFunc("/api/kairos/actions/reject", api.handleRejectAction)
+	mux.HandleFunc("/api/kairos/actions/pending", auth.RequireRole("system", api.handleGetPendingActions))
+	mux.HandleFunc("/api/kairos/actions/approve", auth.RequireRole("system", api.handleApproveAction))
+	mux.HandleFunc("/api/kairos/actions/reject", auth.RequireRole("system", api.handleRejectAction))
 
 	mux.HandleFunc("/api/kairos/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/kairos/mesh/subscribe", api.HandleSubscribe)
@@ -136,14 +138,50 @@ type approvalRequest struct {
 }
 
 func (api *MeshAPI) handleGetPendingActions(w http.ResponseWriter, r *http.Request) {
-	// Dummy logic for fetching pending approvals
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	agentID := r.URL.Query().Get("agent_id")
+	if agentID == "" {
+		http.Error(w, "missing agent_id", http.StatusBadRequest)
+		return
+	}
+
+	if api.repo == nil {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`[]`))
+		return
+	}
+
+	tasks, err := api.repo.GetPendingApprovals(r.Context(), claims.OrganizationID, agentID)
+	if err != nil {
+		http.Error(w, "failed to get pending actions", http.StatusInternalServerError)
+		return
+	}
+
+	tasksJSON, err := json.Marshal(tasks)
+	if err != nil {
+		http.Error(w, "failed to serialize tasks", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`[]`))
+	w.Write(tasksJSON)
 }
 
 func (api *MeshAPI) handleApproveAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -153,7 +191,20 @@ func (api *MeshAPI) handleApproveAction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Logic to approve action
+	if api.repo != nil {
+		if err := api.repo.UpdateApprovalStatus(r.Context(), claims.OrganizationID, req.TaskID, "Approved", "PENDING"); err != nil {
+			http.Error(w, "failed to approve action", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	ApprovalActionsTotal.WithLabelValues("approve", "unknown").Inc()
+
+	if api.mesh != nil {
+		msg, _ := json.Marshal(map[string]string{"type": "action_approved", "task_id": req.TaskID})
+		api.mesh.Publish(r.Context(), "approval_events", msg)
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"approved"}`))
 }
@@ -164,13 +215,32 @@ func (api *MeshAPI) handleRejectAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var req approvalRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
 		return
 	}
 
-	// Logic to reject action
+	if api.repo != nil {
+		if err := api.repo.UpdateApprovalStatus(r.Context(), claims.OrganizationID, req.TaskID, "Rejected", "COMPLETED"); err != nil {
+			http.Error(w, "failed to reject action", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	ApprovalActionsTotal.WithLabelValues("reject", "unknown").Inc()
+
+	if api.mesh != nil {
+		msg, _ := json.Marshal(map[string]string{"type": "action_rejected", "task_id": req.TaskID})
+		api.mesh.Publish(r.Context(), "approval_events", msg)
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"rejected"}`))
 }
