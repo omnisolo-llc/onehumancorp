@@ -4,6 +4,9 @@ import 'package:ohc_app/screens/help/changelog_screen.dart';
 import 'package:ohc_app/screens/help/api_docs_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ohc_app/screens/welcome_checklist_screen.dart';
+import 'package:ohc_app/screens/email_verification_screen.dart';
+
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
 import 'package:ohc_app/screens/login_screen.dart';
@@ -86,6 +89,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/verify_email', builder: (context, state) => const EmailVerificationScreen()),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
@@ -102,6 +106,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/diagnostics',
             builder: (context, state) => const DiagnosticsScreen(),
           ),
+          GoRoute(path: '/welcome_checklist', builder: (context, state) => const WelcomeChecklistScreen()),
           GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),

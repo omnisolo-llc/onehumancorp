@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
@@ -14,6 +15,7 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
@@ -23,6 +25,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void dispose() {
     _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -35,12 +38,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       if (_isSignUp) {
-        // Implement signup logic if authService supports it
-        // Or if authService handles creation via login, just login.
-        // As a temporary fix for OHC registration, login doubles as register for the local auth system
         await ref
             .read(authStateProvider.notifier)
-            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+            .register(_usernameCtrl.text.trim(), _emailCtrl.text.trim(), _passwordCtrl.text);
+
+        // Redirect to email verification which auto-proceeds to wizard
+        if (mounted && ref.read(authStateProvider).valueOrNull != null) {
+          context.go('/verify_email');
+        }
       } else {
         await ref
             .read(authStateProvider.notifier)
@@ -263,7 +268,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _usernameCtrl,
                           keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
+                            labelText: _isSignUp ? 'Username' : 'Email or Username',
                             prefixIcon: const Icon(Icons.person_outline),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -272,9 +277,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           validator:
                               (v) =>
                                   (v == null || v.trim().isEmpty)
-                                      ? 'Enter your email or username'
+                                      ? (_isSignUp ? 'Enter your username' : 'Enter your email or username')
                                       : null,
                         ),
+                        if (_isSignUp) ...[
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator:
+                                (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                        ? 'Enter your email'
+                                        : null,
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordCtrl,

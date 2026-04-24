@@ -42,6 +42,7 @@ dependencies:
   powersync: ^1.7.5
   path_provider: ^2.1.3
   sqlite3_flutter_libs: ^0.5.24
+  confetti: ^0.8.0
 
 dev_dependencies:
   flutter_test:

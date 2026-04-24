@@ -16,6 +16,7 @@ var publicPaths = []string{
 	"/readyz",
 	"/api/health/hybrid",
 	"/api/auth/login",
+		"/api/auth/register",
 	"/api/auth/powersync/jwks",
 	"/api/v1/scale/stream", // Manually authenticated inside handler for SSE query token bypass
 	"/landing",
