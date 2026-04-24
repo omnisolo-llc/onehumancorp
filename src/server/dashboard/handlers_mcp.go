@@ -12,8 +12,6 @@ import (
 	"context"
 
 	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/billing"
 	"github.com/onehumancorp/mono/src/server/integrations"
 	"github.com/onehumancorp/mono/src/server/interop"
 	"github.com/onehumancorp/mono/src/server/lib/integrations/hybridfsmcp"
@@ -21,7 +19,6 @@ import (
 	"github.com/onehumancorp/mono/src/server/telemetry"
 	"github.com/onehumancorp/mono/src/server/tools/blobinspector"
 	"github.com/onehumancorp/mono/src/server/tools/localstatefulproxy"
-	"github.com/onehumancorp/mono/src/server/tools/statesyncmcp"
 	"github.com/onehumancorp/mono/src/server/tools/edgeoffloadmcp"
 	"go.opentelemetry.io/otel"
 )
@@ -150,18 +147,6 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.RUnlock()
 
-	// Soft limit check for AI Actions based on Tenant Tier
-	var injectWarning string
-	if s.tracker != nil {
-		actionLimit := s.org.ActionLimit()
-		if actionLimit != -1 {
-			summary := s.tracker.Summary(s.org.ID)
-			if summary.TotalActions >= actionLimit {
-				injectWarning = fmt.Sprintf("Soft Limit Reached: You have used %d/%d AI actions on the %s tier. Please consider upgrading.", summary.TotalActions, actionLimit, s.org.Tier)
-			}
-		}
-	}
-
 	result, err := s.invokeMCPTool(r.Context(), req)
 
 	s.mu.Lock()
@@ -250,13 +235,6 @@ func (s *Server) handleMCPInvoke(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if injectWarning != "" {
-		if result == nil {
-			result = make(map[string]any)
-		}
-		result["_warning"] = injectWarning
-	}
-
 	writeJSON(w, result)
 }
 
@@ -269,17 +247,6 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 			"tool_id", req.ToolID,
 			"action", telemetry.RedactPII(req.Action),
 		)
-	}
-
-	// Always record an action for MCP tool executions, except when checking `tools/list` etc.
-	if s.tracker != nil {
-		s.tracker.Track(billing.Usage{
-			AgentID:        req.AgentID,
-			OrganizationID: s.org.ID,
-			Model:          "tool-execution", // Indicates an action
-			IsAction:       true,
-			OccurredAt:     time.Now().UTC(),
-		})
 	}
 
 	switch req.ToolID {
@@ -497,47 +464,6 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 		}
 
 		res, err := proxyTool.CallTool(ctx, req.Action, params)
-		if err != nil {
-			return nil, err
-		}
-
-		return map[string]any{
-			"result":           res,
-			"HybridEscalation": true,
-		}, nil
-
-
-	// ── State Sync MCP tool ───────────────────────────────────
-	case "statesync-mcp":
-		var isLocal bool
-
-		var dbProvider db.Provider
-		if s.hub != nil && s.hub.SIPDB() != nil {
-			dbProvider = s.hub.SIPDB().Provider()
-		}
-
-		var dbWrapper *db.DB
-		if dbProvider != nil {
-			dbWrapper = &db.DB{Provider: dbProvider}
-			if dbProvider.IsSQLite() {
-				isLocal = true
-			}
-		}
-
-		cloudURL := "https://api.onehumancorp.com"
-
-		syncProvider := statesyncmcp.NewDBStateSyncProvider(dbWrapper, cloudURL)
-		syncMcp := statesyncmcp.NewStateSyncMCP(syncProvider, isLocal)
-
-		var params map[string]interface{}
-		if err := json.Unmarshal(req.Params, &params); err != nil && len(req.Params) > 0 {
-			// If not empty and invalid JSON, fail
-			if string(req.Params) != "null" && string(req.Params) != "" {
-				return nil, fmt.Errorf("invalid statesync-mcp parameters: %w", err)
-			}
-		}
-
-		res, err := syncMcp.CallTool(ctx, req.Action, params)
 		if err != nil {
 			return nil, err
 		}
