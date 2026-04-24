@@ -32,6 +32,7 @@ import (
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/settings"
 	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server/lib/perf"
 
 	"github.com/onehumancorp/mono/src/server/utils"
 )
@@ -1312,25 +1313,47 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.orgAgentsLocked()
-
+	var agents []orchestration.Agent
+	var meetings []orchestration.MeetingRoom
+	var costs billing.Summary
 	queue := make([]orchestration.SharedTask, 0)
 	queueLen := 0
-	if s.hub != nil && s.hub.TaskManager() != nil {
-		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
-			for _, t := range pending {
-				if t != nil {
-					queue = append(queue, *t)
+
+	coord := perf.NewCoordinatorMode(4)
+	tasks := []func() error{
+		func() error {
+			agents = s.orgAgentsLocked()
+			return nil
+		},
+		func() error {
+			meetings = s.orgMeetingsLocked()
+			return nil
+		},
+		func() error {
+			costs = s.tracker.Summary(s.org.ID)
+			return nil
+		},
+		func() error {
+			if s.hub != nil && s.hub.TaskManager() != nil {
+				if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
+					for _, t := range pending {
+						if t != nil {
+							queue = append(queue, *t)
+						}
+					}
+					queueLen = len(queue)
 				}
 			}
-			queueLen = len(queue)
-		}
+			return nil
+		},
 	}
+
+	_ = coord.ExecuteParallel(context.Background(), tasks)
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.orgMeetingsLocked(),
-		Costs:        s.tracker.Summary(s.org.ID),
+		Meetings:     meetings,
+		Costs:        costs,
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
