@@ -177,19 +177,6 @@ class _DashboardContent extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 32),
-        const SizedBox(height: 32),
-
-        const SizedBox(height: 16),
-
-        const SizedBox(height: 16),
-
-        const SizedBox(height: 16),
-
-        const SizedBox(height: 16),
-
-        const SizedBox(height: 16),
-
         const SizedBox(height: 16),
         SizedBox(
           height: 350,
