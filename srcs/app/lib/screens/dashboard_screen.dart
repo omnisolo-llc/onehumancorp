@@ -7,6 +7,7 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
+import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/swarm_observability_widget.dart';
 import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
@@ -123,6 +124,60 @@ class _DashboardContent extends StatelessWidget {
               ),
             ),
           ),
+        ),
+
+
+        // Welcome Checklist
+        Builder(
+          builder: (context) {
+            final user = ref.watch(authStateProvider).valueOrNull;
+            if (user != null && user.onboardingCompleted) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: GlassCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Welcome! Here is what to do next:', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold, fontSize: 18)),
+                        const SizedBox(height: 12),
+                        CheckboxListTile(
+                          title: const Text('Business live', style: TextStyle(fontFamily: 'Inter')),
+                          value: true,
+                          onChanged: null,
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                        ),
+                        CheckboxListTile(
+                          title: const Text('Add 3 more products', style: TextStyle(fontFamily: 'Inter')),
+                          value: false,
+                          onChanged: (val) {},
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                        ),
+                        CheckboxListTile(
+                          title: const Text('Connect Instagram', style: TextStyle(fontFamily: 'Inter')),
+                          value: false,
+                          onChanged: (val) {},
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                        ),
+                        CheckboxListTile(
+                          title: const Text('Share your link with a friend', style: TextStyle(fontFamily: 'Inter')),
+                          value: false,
+                          onChanged: (val) {},
+                          controlAffinity: ListTileControlAffinity.leading,
+                          dense: true,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
         ),
 
         Row(

@@ -6,6 +6,8 @@ import (
 	"os"
 
 	"github.com/onehumancorp/mono/srcs/server/settings"
+	"github.com/onehumancorp/mono/srcs/server/auth"
+	"log/slog"
 )
 
 // wizardStatusResponse describes the current setup state of the platform.
@@ -113,6 +115,13 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 
 	_ = s.hub.SettingsStore().Update(cfg)
+
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims != nil {
+		if err := s.authStore.CompleteOnboarding(claims.Subject, claims.OrganizationID); err != nil {
+			slog.Warn("Failed to complete onboarding for user", "user_id", claims.Subject, "error", err)
+		}
+	}
 
 	steps := wizardSteps{
 		Server:     cfg.ListenAddr != "" && cfg.DBPath != "",

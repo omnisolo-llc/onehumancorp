@@ -128,6 +128,43 @@ func (h *Handlers) HandleMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, user.PublicView())
 }
 
+
+// HandleRegister allows new users to create an account for the Day One experience.  	POST /api/auth/register  {"username":"...","email":"...","password":"..."}
+// Accepts parameters: h *Handlers (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req createUserRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		jsonError(w, "username, email, and password required", http.StatusBadRequest)
+		return
+	}
+
+	// Give the initial user admin privileges so they can set up the workspace
+	req.Roles = []string{RoleAdmin}
+
+	// We pass an empty org ID, assuming CreateUser logic establishes an org if needed,
+	// or leaves it empty pending the wizard setup.
+	user, err := h.store.CreateUser(req.Username, req.Email, req.Password, req.Roles, "")
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, http.StatusCreated, user.PublicView())
+}
+
+
 // ── user management ───────────────────────────────────────────────────────────
 
 type createUserRequest struct {

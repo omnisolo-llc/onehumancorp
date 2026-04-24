@@ -7,6 +7,7 @@ class UserPublic {
   final List<String> roles;
   final bool active;
   final DateTime createdAt;
+  final bool onboardingCompleted;
 
   const UserPublic({
     required this.id,
@@ -15,6 +16,7 @@ class UserPublic {
     required this.roles,
     required this.active,
     required this.createdAt,
+    required this.onboardingCompleted,
   });
 
   factory UserPublic.fromJson(Map<String, dynamic> json) {
@@ -28,6 +30,7 @@ class UserPublic {
           json['created_at'] != null
               ? DateTime.parse(json['created_at'] as String)
               : DateTime.now(),
+      onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
     );
   }
 
@@ -38,6 +41,7 @@ class UserPublic {
     'roles': roles,
     'active': active,
     'created_at': createdAt.toIso8601String(),
+    'onboardingCompleted': onboardingCompleted,
   };
 
   /// Serializes this UserPublic to a YAML string.

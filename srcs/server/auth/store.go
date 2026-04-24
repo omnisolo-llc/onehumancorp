@@ -62,6 +62,7 @@ type User struct {
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 	OIDCSubject    string    `json:"oidcSubject,omitempty"`
+	OnboardingCompleted bool      `json:"onboardingCompleted"`
 }
 
 // UserPublic represents the sanitized, non-sensitive profile of a user suitable for external API consumption.
@@ -79,6 +80,7 @@ type UserPublic struct {
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 	OIDCSubject    string    `json:"oidcSubject,omitempty"`
+	OnboardingCompleted bool      `json:"onboardingCompleted"`
 }
 
 // PublicView returns a UserPublic with no sensitive fields.
@@ -97,6 +99,7 @@ func (u *User) PublicView() UserPublic {
 		CreatedAt:      u.CreatedAt,
 		UpdatedAt:      u.UpdatedAt,
 		OIDCSubject:    u.OIDCSubject,
+		OnboardingCompleted: u.OnboardingCompleted,
 	}
 }
 
@@ -212,6 +215,7 @@ func (s *Store) seedDefaultAdmin(now time.Time) {
 		Active:       true,
 		CreatedAt:    now,
 		UpdatedAt:    now,
+		OnboardingCompleted: false,
 	}
 
 	if s.repo != nil {
@@ -266,6 +270,7 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 			OrganizationID: orgID,
 			CreatedAt:    now,
 			UpdatedAt:    now,
+			OnboardingCompleted: false,
 		}
 		if err := s.repo.CreateUser(context.Background(), u, orgID); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
@@ -299,6 +304,7 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 		OrganizationID: orgID,
 		CreatedAt:    now,
 		UpdatedAt:    now,
+		OnboardingCompleted: false,
 	}
 	s.users[u.ID] = u
 	s.byName[tenantKey{orgID, username}] = u
@@ -627,6 +633,7 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 		OIDCSubject: sub,
 		CreatedAt:   now,
 		UpdatedAt:   now,
+		OnboardingCompleted: false,
 	}
 	s.users[u.ID] = u
 	if uname != "" {
@@ -677,6 +684,7 @@ func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername st
 		OIDCSubject: sub,
 		CreatedAt:   now,
 		UpdatedAt:   now,
+		OnboardingCompleted: false,
 	}
 
 	for attempts := 0; attempts < 2; attempts++ {
@@ -735,4 +743,28 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+// CompleteOnboarding marks the user's onboarding process as completed.
+func (s *Store) CompleteOnboarding(id, orgID string) error {
+	if s.repo != nil {
+		ctx := context.Background()
+		u, err := s.repo.GetByID(ctx, id, orgID)
+		if err != nil {
+			return err
+		}
+		u.OnboardingCompleted = true
+		u.UpdatedAt = time.Now().UTC()
+		return s.repo.UpdateUser(ctx, u, orgID)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	u, ok := s.users[id]
+	if !ok || (orgID != "" && orgID != "sys" && u.OrganizationID != orgID) {
+		return errors.New("user not found")
+	}
+	u.OnboardingCompleted = true
+	u.UpdatedAt = time.Now().UTC()
+	return nil
 }

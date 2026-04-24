@@ -76,6 +76,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         final encodedTarget = Uri.encodeComponent(state.uri.toString());
         return '/login?redirect=$encodedTarget';
       }
+      if (isLoggedIn && !(authState.valueOrNull?.onboardingCompleted ?? false) && state.matchedLocation != '/business_setup') {
+        return '/business_setup';
+      }
       if (isLoggedIn && isLoginRoute) return redirectTarget ?? '/dashboard';
       return null;
     },

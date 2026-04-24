@@ -12,6 +12,7 @@ class AuthUser {
   final String role;
   final String organizationId;
   final String token;
+  final bool onboardingCompleted;
 
   const AuthUser({
     required this.id,
@@ -20,6 +21,7 @@ class AuthUser {
     required this.role,
     required this.organizationId,
     required this.token,
+    required this.onboardingCompleted,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json, String token) {
@@ -34,6 +36,7 @@ class AuthUser {
       role: role,
       organizationId: json['organizationId'] as String? ?? json['organization_id'] as String? ?? '',
       token: token,
+      onboardingCompleted: json['onboardingCompleted'] as bool? ?? false,
     );
   }
 }
@@ -45,6 +48,20 @@ class AuthService {
 
   AuthService({required this.baseUrl, http.Client? client})
     : _client = client ?? http.Client();
+
+
+  Future<AuthUser> register(String email, String password) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': email, 'email': email, 'password': password}),
+    );
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return login(email, password);
+    }
+    throw Exception('Registration failed: ${response.statusCode}');
+  }
 
   Future<AuthUser> login(String usernameOrEmail, String password) async {
     final response = await _client.post(
@@ -123,6 +140,20 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
     } catch (_) {}
     await prefs.remove(_tokenKey);
     return null;
+  }
+
+
+  Future<void> register(String email, String password) async {
+    state = const AsyncLoading();
+    final service = ref.read(authServiceProvider);
+    state = await AsyncValue.guard(() async {
+      await service.register(email, password);
+      // login will automatically happen in service.register but we still need the state to be set
+      final user = await service.login(email, password);
+      final prefs = await ref.read(_prefsProvider.future);
+      await prefs.setString(_tokenKey, user.token);
+      return user;
+    });
   }
 
   Future<void> login(String email, String password) async {

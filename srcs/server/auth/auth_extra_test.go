@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"strings"
 )
 
 func TestHandleLogin_IssueTokenError(t *testing.T) {
@@ -218,5 +219,20 @@ func TestOIDC_ErrorPaths(t *testing.T) {
 	_, err = ValidateOIDCToken("invalid-token", OIDCConfig{Enabled: false})
 	if err == nil {
 		t.Errorf("expected error for disabled OIDC")
+	}
+}
+
+func TestHandleRegister(t *testing.T) {
+	store := NewStore()
+	handlers := NewHandlers(store)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/auth/register", handlers.HandleRegister)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(`{"username":"testuser","email":"test@example.com","password":"password123"}`))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d", rec.Code)
 	}
 }

@@ -7,6 +7,7 @@ import 'dart:ui';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/pulse_animation.dart';
 
 class BusinessSetupState {
   final bool obscurePassword;
@@ -19,10 +20,14 @@ class BusinessSetupState {
   final String adminName;
   final String adminEmail;
   final String adminPassword;
+  final String productName;
+  final String productDesc;
+  final String productPrice;
+  final String domainName;
   final bool isLoading;
   final String? errorMessage;
 
-  const BusinessSetupState({
+      const BusinessSetupState({
     this.step = 0,
     this.companyName = '',
     this.industry = '',
@@ -32,6 +37,10 @@ class BusinessSetupState {
     this.adminName = '',
     this.adminEmail = '',
     this.adminPassword = '',
+    this.productName = '',
+    this.productDesc = '',
+    this.productPrice = '',
+    this.domainName = '',
     this.isLoading = false,
     this.errorMessage,
     this.obscurePassword = true,
@@ -47,6 +56,10 @@ class BusinessSetupState {
     String? adminName,
     String? adminEmail,
     String? adminPassword,
+    String? productName,
+    String? productDesc,
+    String? productPrice,
+    String? domainName,
     bool? isLoading,
     String? errorMessage,
     bool? obscurePassword,
@@ -61,6 +74,10 @@ class BusinessSetupState {
       adminName: adminName ?? this.adminName,
       adminEmail: adminEmail ?? this.adminEmail,
       adminPassword: adminPassword ?? this.adminPassword,
+      productName: productName ?? this.productName,
+      productDesc: productDesc ?? this.productDesc,
+      productPrice: productPrice ?? this.productPrice,
+      domainName: domainName ?? this.domainName,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       obscurePassword: obscurePassword ?? this.obscurePassword,
@@ -73,7 +90,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   BusinessSetupState build() => const BusinessSetupState();
 
   void nextStep() {
-    if (state.step < 4) {
+    if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
     }
   }
@@ -102,6 +119,21 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
   void toggleObscurePassword() => state = state.copyWith(obscurePassword: !state.obscurePassword);
 
+  void updateProductName(String val) => state = state.copyWith(productName: val);
+  void updateProductDesc(String val) => state = state.copyWith(productDesc: val);
+  void updateProductPrice(String val) => state = state.copyWith(productPrice: val);
+  void updateDomainName(String val) => state = state.copyWith(domainName: val);
+
+  Future<void> generateProductDesc() async {
+    // Mock AI generation
+    state = state.copyWith(isLoading: true);
+    await Future.delayed(const Duration(milliseconds: 800));
+    final prompt = state.productName;
+    final desc = "A high-quality, premium ${prompt.isNotEmpty ? prompt : 'product'} crafted with care to deliver exceptional results and satisfaction.";
+    state = state.copyWith(productDesc: desc, isLoading: false);
+  }
+
+
   Future<void> launch(BuildContext context, WidgetRef ref) async {
     final user = ref.read(authStateProvider).valueOrNull;
     final baseUrl = ref.read(backendUrlProvider);
@@ -118,6 +150,10 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
           'deployment_preference': state.deployment,
           'admin_name': state.adminName,
           'admin_email': state.adminEmail,
+          'product_name': state.productName,
+          'product_desc': state.productDesc,
+          'product_price': state.productPrice,
+          'domain_name': state.domainName,
         }
       };
 
@@ -298,6 +334,47 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                                 ),
                               ),
                             ),
+
+                          ] else if (state.step == 5) ...[
+                            const Text('First Product / Service', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Product Name', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateProductName,
+                              controller: TextEditingController.fromValue(TextEditingValue(text: state.productName, selection: TextSelection.collapsed(offset: state.productName.length))),
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton.icon(
+                              onPressed: state.productName.isNotEmpty && !state.isLoading ? notifier.generateProductDesc : null,
+                              icon: const Icon(Icons.auto_awesome, size: 16),
+                              label: const Text('AI Auto-Generate Description'),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateProductDesc,
+                              maxLines: 3,
+                              controller: TextEditingController.fromValue(TextEditingValue(text: state.productDesc, selection: TextSelection.collapsed(offset: state.productDesc.length))),
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Price', labelStyle: TextStyle(color: Colors.white70), prefixText: '\$'),
+                              keyboardType: TextInputType.numberWithOptions(decimal: true),
+                              onChanged: notifier.updateProductPrice,
+                              controller: TextEditingController.fromValue(TextEditingValue(text: state.productPrice, selection: TextSelection.collapsed(offset: state.productPrice.length))),
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                          ] else if (state.step == 6) ...[
+                            const Text('Domain & Go-Live', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Choose your free subdomain', labelStyle: TextStyle(color: Colors.white70), suffixText: '.ohc.app', suffixStyle: TextStyle(color: Colors.white54)),
+                              onChanged: notifier.updateDomainName,
+                              controller: TextEditingController.fromValue(TextEditingValue(text: state.domainName, selection: TextSelection.collapsed(offset: state.domainName.length))),
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
                           ],
                         ],
                       ),
@@ -314,9 +391,9 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         )
                       else
                         const SizedBox(),
-                      ElevatedButton(
+                      state.step == 6 ? PulseAnimation(child: ElevatedButton(
                         onPressed: state.isLoading ? null : () {
-                          if (state.step < 4) {
+                          if (state.step < 6) {
                             notifier.nextStep();
                           } else {
                             notifier.launch(context, ref);
@@ -324,7 +401,18 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         },
                         child: state.isLoading
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                            : Text(state.step == 6 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                      ),) : ElevatedButton(
+                        onPressed: state.isLoading ? null : () {
+                          if (state.step < 6) {
+                            notifier.nextStep();
+                          } else {
+                            notifier.launch(context, ref);
+                          }
+                        },
+                        child: state.isLoading
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : Text(state.step == 6 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
                       ),
                     ],
                   ),

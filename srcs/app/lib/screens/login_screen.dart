@@ -16,6 +16,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _usernameCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
+  bool _isLogin = true;
   bool _obscurePassword = true;
   String? _error;
 
@@ -33,9 +34,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (_isLogin) {
+        await ref
+            .read(authStateProvider.notifier)
+            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      } else {
+        await ref
+            .read(authStateProvider.notifier)
+            .register(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -262,7 +269,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in to orchestrate your swarm',
+                          _isLogin ? 'Sign in to orchestrate your swarm' : 'Create an account to get started',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'Inter',
@@ -274,7 +281,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           controller: _usernameCtrl,
                           keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
+                            labelText: _isLogin ? 'Email or Username' : 'Email Address',
                             prefixIcon: const Icon(Icons.person_outline),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -329,7 +336,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 24),
                         Semantics(
                           button: true,
-                          label: 'Sign In',
+                          label: _isLogin ? 'Sign In' : 'Sign Up',
                           child: FilledButton(
                             onPressed: _loading ? null : _submit,
                             style: FilledButton.styleFrom(
@@ -348,14 +355,27 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : const Text(
-                                        'Sign In',
+                                    : Text(
+                                        _isLogin ? 'Sign In' : 'Create Account',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Inter',
                                         ),
                                       ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isLogin = !_isLogin;
+                              _error = null;
+                            });
+                          },
+                          child: Text(
+                            _isLogin ? 'Don\'t have an account? Sign Up' : 'Already have an account? Sign In',
+                            style: TextStyle(fontFamily: 'Inter', color: Theme.of(context).colorScheme.primary),
                           ),
                         ),
                         const SizedBox(height: 24),
