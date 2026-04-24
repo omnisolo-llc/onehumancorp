@@ -36,6 +36,7 @@ go_test(
     srcs = [
         "ast_pii_linter_test.go",
         "buffer_test.go",
+        "audit_guardrails_test.go",
         "buffer_pii_test.go",
         "compliance_test.go",
         "global_pii_linter_test.go",
