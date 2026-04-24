@@ -223,7 +223,93 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 768) {
+          return Scaffold(
+            body: child,
+            bottomNavigationBar: NavigationBar(
+              onDestinationSelected: (int index) {
+                switch (index) {
+                  case 0:
+                    context.go('/dashboard');
+                    break;
+                  case 1:
+                    context.go('/orchestration/tasks');
+                    break;
+                  case 2:
+                    context.go('/chat');
+                    break;
+                  case 3:
+                    // Show full menu modal
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (context) => _Sidebar(),
+                    );
+                    break;
+                }
+              },
+              selectedIndex: _calculateSelectedIndex(context),
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.dashboard),
+                  label: 'Dashboard',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.shopping_bag),
+                  label: 'Orders',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.chat),
+                  label: 'Chat',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.menu),
+                  label: 'Menu',
+                ),
+              ],
+            ),
+            floatingActionButton: FloatingActionButton.extended(
+              onPressed: () {
+                // To be implemented: add product action
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Add Product tapped')),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Product'),
+            ),
+          );
+        }
+
+        return Scaffold(
+          body: Row(
+            children: [
+              _Sidebar(),
+              Expanded(child: child),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Add Product tapped')),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add Product'),
+          ),
+        );
+      },
+    );
+  }
+
+  int _calculateSelectedIndex(BuildContext context) {
+    final String location = GoRouterState.of(context).matchedLocation;
+    if (location.startsWith('/dashboard')) return 0;
+    if (location.startsWith('/orchestration/tasks')) return 1;
+    if (location.startsWith('/chat')) return 2;
+    return 0; // Default or when in menu section
   }
 }
 

@@ -255,9 +255,7 @@ class _ObservabilityWidget extends StatelessWidget {
 
     return Semantics(
       label: 'System Observability Panel',
-      child: Tooltip(
-        message: 'View System Health & Metrics',
-        child: GlassCard(
+      child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
                 color: Colors.transparent,
@@ -458,9 +456,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
-        child: SizedBox(
+      child: SizedBox(
           width: 320,
           child: GlassCard(
         child: Padding(
@@ -628,14 +624,16 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
     final effectiveIconColor = widget.iconColor ?? widget.color;
     final colorScheme = Theme.of(context).colorScheme;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardWidth = screenWidth < 768 ? (screenWidth - 48 - 16) / 2 : 200.0;
+    final isMobile = screenWidth < 768;
+
     return Semantics(
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
-      child: Tooltip(
-        message: 'View ${widget.label}',
-        child: SizedBox(
-          width: 200,
+      child: SizedBox(
+          width: cardWidth,
           child: SlideTransition(
             position: _slideAnimation,
             child: FadeTransition(
@@ -652,16 +650,16 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                               splashColor: widget.color.withValues(alpha: 0.1),
                               highlightColor: widget.color.withValues(alpha: 0.05),
                               child: Padding(
-                                padding: const EdgeInsets.all(24),
+                                padding: EdgeInsets.all(isMobile ? 16 : 24),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(widget.icon, color: effectiveIconColor, size: 32),
-                                    const SizedBox(height: 16),
+                                    Icon(widget.icon, color: effectiveIconColor, size: isMobile ? 24 : 32),
+                                    SizedBox(height: isMobile ? 8 : 16),
                                     Text(
                                       widget.value,
                                       style: TextStyle(
-                                        fontSize: 36,
+                                        fontSize: isMobile ? 28 : 36,
                                         fontWeight: FontWeight.bold,
                                         color: effectiveIconColor,
                                         fontFamily: 'Inter',
@@ -673,6 +671,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontFamily: 'Inter',
                                         fontWeight: FontWeight.w500,
+                                        fontSize: isMobile ? 12 : 14,
                                       ),
                                     ),
                                   ],
@@ -685,7 +684,6 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
             ),
           ),
         ),
-      ),
     );
   }
 }
