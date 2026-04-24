@@ -10,6 +10,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations/ollama"
 	"github.com/onehumancorp/mono/srcs/server/integrations/powersync"
 	"github.com/onehumancorp/mono/srcs/server/integrations/restic"
+	"github.com/onehumancorp/mono/srcs/server/integrations/chromadb"
 )
 
 // IntegrationProvider represents a plugin blueprint defining how to instantiate connections.
@@ -41,6 +42,7 @@ var Catalog = []IntegrationProvider{
 	&powersync.PowerSyncIntegration{},
 	&restic.ResticIntegration{},
 	&obsidian.ObsidianIntegration{},
+	&chromadb.ChromaDBIntegration{},
 }
 
 // GetCatalog returns all available integration providers.

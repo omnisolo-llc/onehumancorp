@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "chromadb",
+    srcs = [
+        "provider.go",
+        "tools.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/integrations/chromadb",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/proto:hub_go_proto",
+        "//srcs/server/agents/mcp",
+        "//srcs/server/agents/builtin",
+        "//srcs/server/db",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "chromadb_test",
+    srcs = [
+        "provider_test.go",
+        "tools_test.go",
+    ],
+    embed = [":chromadb"],
+)
