@@ -10,10 +10,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"errors"
 	"sync"
+
+	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
+	"github.com/onehumancorp/mono/src/server/agents/grpc"
 )
 
 // ProviderType is the unique identifier for an external agent implementation.
@@ -649,7 +653,61 @@ func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
 func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+	address := os.Getenv("OHC_AGENT_ADDRESS")
+	if address == "" {
+		address = "127.0.0.1:50051"
+	}
+
+	client, err := agentgrpc.NewClient(address, agentgrpc.ClientOptionsFromEnv())
+	if err != nil {
+		return fmt.Errorf("connect to builtin agent at %s: %w", address, err)
+	}
+	defer client.Close() //nolint:errcheck
+
+	// Notify status as RUNNING
+	sandboxID := fmt.Sprintf("sandbox-%s-%d", p.Type(), time.Now().UnixNano())
+	statusMsg, _ := json.Marshal(map[string]interface{}{
+		"agent":    p.Type(),
+		"status":   "RUNNING",
+		"worktree": worktree,
+		"sandbox":  sandboxID,
+	})
+	if transport != nil {
+		if err := transport.Send(ctx, statusMsg); err != nil {
+			return err
+		}
+	}
+
+	// Dispatch task via gRPC
+	err = client.RunTask(ctx, &agentservicepb.RunTaskRequest{
+		Task: "Execute task in worktree: " + worktree,
+	}, func(evt *agentservicepb.RunTaskEvent) {
+		if transport != nil && evt.Content != "" {
+			outputMsg, _ := json.Marshal(map[string]interface{}{
+				"agent":   p.Type(),
+				"stream":  "stdout",
+				"content": evt.Content,
+			})
+			transport.Send(ctx, outputMsg)
+		}
+	})
+
+	// Notify completion or error
+	endStatus := "COMPLETED"
+	if err != nil {
+		endStatus = "FAILED"
+	}
+
+	endMsg, _ := json.Marshal(map[string]interface{}{
+		"agent":  p.Type(),
+		"status": endStatus,
+		"error":  fmt.Sprint(err),
+	})
+	if transport != nil {
+		transport.Send(ctx, endMsg)
+	}
+
+	return err
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
