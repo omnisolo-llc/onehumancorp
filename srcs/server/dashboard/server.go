@@ -319,6 +319,38 @@ type MarketplaceItem struct {
 	Tags        []string `json:"tags"`
 }
 
+// ── Help & Documentation ─────────────────────────────────────────────────────
+
+// HelpArticle represents a single searchable documentation entry.
+type HelpArticle struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	Topic   string `json:"topic"`
+}
+
+// TooltipEntry provides plain-language descriptions for UI elements.
+type TooltipEntry struct {
+	ID          string `json:"id"`
+	Description string `json:"description"`
+}
+
+// VideoTutorial represents a short instructional video for OHC features.
+type VideoTutorial struct {
+	ID        string `json:"id"`
+	Title     string `json:"title"`
+	URL       string `json:"url"`
+	Duration  string `json:"duration"`
+	Thumbnail string `json:"thumbnail"`
+}
+
+// ReleaseNote captures platform updates in a format suitable for the "What's New" section.
+type ReleaseNote struct {
+	Version string   `json:"version"`
+	Date    string   `json:"date"`
+	Changes []string `json:"changes"`
+}
+
 // ── Real-time Analytics ───────────────────────────────────────────────────────
 
 // AnalyticsSummary surfaces real-time token velocity, cost estimates, and active agent metrics directly to the executive React frontend.
@@ -638,6 +670,13 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/growth/viral-coefficient-metrics", server.handleViralCoefficientMetrics)
 	mux.HandleFunc("/api/growth/quota", server.handleQuota)
 	mux.HandleFunc("/api/growth/onboarding-metrics", server.handleOnboardingMetrics)
+
+	// Scribe Documentation & Help API
+	mux.HandleFunc("/api/help/articles", server.handleHelpArticles)
+	mux.HandleFunc("/api/help/tooltips", server.handleHelpTooltips)
+	mux.HandleFunc("/api/help/videos", server.handleHelpVideos)
+	mux.HandleFunc("/api/help/release-notes", server.handleHelpReleaseNotes)
+	mux.HandleFunc("/api/help/chat", server.handleHelpChat)
 
 	// Phase 5 - PowerSync
 	mux.HandleFunc("/api/sync_rules", server.handleSyncRules)
@@ -1516,6 +1555,141 @@ func summarizeStatuses(agents []orchestration.Agent) []statusCount {
 // ── Identity Management Handler ───────────────────────────────────────────────
 
 // ── Skill Pack Handlers ───────────────────────────────────────────────────────
+
+// ── Help & Documentation Handlers ────────────────────────────────────────────
+
+func (s *Server) handleHelpArticles(w http.ResponseWriter, r *http.Request) {
+	articles := []HelpArticle{
+		{
+			ID:      "getting-started",
+			Title:   "Getting Started with OHC",
+			Topic:   "General",
+			Content: "Welcome to OneHumanCorp! This guide will help you set up your first business in under 10 minutes. First, use the Setup Wizard to define your business type...",
+		},
+		{
+			ID:      "hiring-agents",
+			Title:   "How to Hire Your AI Workforce",
+			Topic:   "Agents",
+			Content: "OHC agents are organized into departments like Marketing, Operations, and Finance. To hire an agent, go to the Agents screen and click 'Hire Agent'...",
+		},
+		{
+			ID:      "payments-setup",
+			Title:   "Accepting Payments with Stripe",
+			Topic:   "Payments",
+			Content: "OHC integrates with Stripe to handle all your payments. You can set up your Stripe account in Settings -> Payments. Once connected, your storefront will automatically support credit cards and Apple Pay.",
+		},
+	}
+
+	query := r.URL.Query().Get("q")
+	if query != "" {
+		filtered := []HelpArticle{}
+		for _, a := range articles {
+			if strings.Contains(strings.ToLower(a.Title), strings.ToLower(query)) ||
+				strings.Contains(strings.ToLower(a.Content), strings.ToLower(query)) {
+				filtered = append(filtered, a)
+			}
+		}
+		articles = filtered
+	}
+
+	writeJSON(w, articles)
+}
+
+func (s *Server) handleHelpTooltips(w http.ResponseWriter, _ *http.Request) {
+	tooltips := map[string]TooltipEntry{
+		"active-agents-stat": {
+			ID:          "active-agents-stat",
+			Description: "The number of AI agents currently working for your business.",
+		},
+		"revenue-stat": {
+			ID:          "revenue-stat",
+			Description: "Total money earned today from all sales and bookings.",
+		},
+		"hire-agent-btn": {
+			ID:          "hire-agent-btn",
+			Description: "Add a new AI specialist to your team to handle tasks automatically.",
+		},
+		"sync-status-indicator": {
+			ID:          "sync-status-indicator",
+			Description: "Shows if your local business data is successfully backed up to the cloud.",
+		},
+	}
+	writeJSON(w, tooltips)
+}
+
+func (s *Server) handleHelpVideos(w http.ResponseWriter, _ *http.Request) {
+	videos := []VideoTutorial{
+		{
+			ID:        "intro-video",
+			Title:     "Introduction to OneHumanCorp",
+			URL:       "https://storage.googleapis.com/ohc-assets/videos/intro.mp4",
+			Duration:  "1:30",
+			Thumbnail: "https://storage.googleapis.com/ohc-assets/thumbnails/intro.jpg",
+		},
+		{
+			ID:        "setup-store",
+			Title:     "Setting up your Storefront",
+			URL:       "https://storage.googleapis.com/ohc-assets/videos/setup-store.mp4",
+			Duration:  "2:15",
+			Thumbnail: "https://storage.googleapis.com/ohc-assets/thumbnails/setup-store.jpg",
+		},
+	}
+	writeJSON(w, videos)
+}
+
+func (s *Server) handleHelpReleaseNotes(w http.ResponseWriter, _ *http.Request) {
+	notes := []ReleaseNote{
+		{
+			Version: "v2.4.0",
+			Date:    "2026-04-20",
+			Changes: []string{
+				"Added interactive Help Center to every screen.",
+				"Improved AI Agent response time by 50%.",
+				"New 'What's New' section to keep you updated.",
+				"General performance improvements for mobile devices.",
+			},
+		},
+		{
+			Version: "v2.3.5",
+			Date:    "2026-04-10",
+			Changes: []string{
+				"Fixed a bug in Stripe payment reconciliation.",
+				"Enhanced dashboard visualization for sales trends.",
+			},
+		},
+	}
+	writeJSON(w, notes)
+}
+
+func (s *Server) handleHelpChat(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	msg := strings.ToLower(req.Message)
+	var response string
+	var link string
+
+	if strings.Contains(msg, "hire") || strings.Contains(msg, "agent") {
+		response = "To hire an agent, go to the Agents screen and click the 'Hire Agent' button. You can choose from different departments like Marketing or Operations."
+		link = "/help/hiring-agents"
+	} else if strings.Contains(msg, "pay") || strings.Contains(msg, "stripe") || strings.Contains(msg, "money") {
+		response = "You can set up payments by connecting your Stripe account in the Settings menu. This allows you to accept credit cards from your customers."
+		link = "/help/payments-setup"
+	} else {
+		response = "I'm here to help! You can ask me about hiring agents, setting up payments, or managing your store. Or check out our Help Center for full guides."
+		link = "/help"
+	}
+
+	writeJSON(w, map[string]string{
+		"reply": response,
+		"link":  link,
+	})
+}
 
 // ── Snapshot Handlers ─────────────────────────────────────────────────────────
 

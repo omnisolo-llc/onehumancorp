@@ -128,6 +128,8 @@ void main() {
           overrides: [apiServiceProvider.overrideWithValue(null)],
         ),
       );
+      // Wait for timers in initState
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
       // With null API, the FutureProvider returns {} immediately (no loading).
       expect(find.byType(Scaffold), findsOneWidget);
@@ -192,6 +194,8 @@ void main() {
           overrides: [apiServiceProvider.overrideWithValue(api)],
         ),
       );
+      // Pump enough to trigger the 500ms walkthrough timer and 100ms stat card timers
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
 
       expect(find.text('3'), findsOneWidget);

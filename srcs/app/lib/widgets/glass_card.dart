@@ -7,6 +7,7 @@ class GlassCard extends StatefulWidget {
   final EdgeInsetsGeometry? margin;
   final ShapeBorder? shape;
   final Color? color;
+  final Color? borderColor;
 
   const GlassCard({
     super.key,
@@ -15,6 +16,7 @@ class GlassCard extends StatefulWidget {
     this.margin,
     this.shape,
     this.color,
+    this.borderColor,
   });
 
   @override
@@ -52,7 +54,11 @@ class _GlassCardState extends State<GlassCard> {
                 padding: widget.padding ?? const EdgeInsets.all(24),
                 decoration: BoxDecoration(
                   color: widget.color ?? Color.fromRGBO(255, 255, 255, _isHovered ? 0.08 : 0.03),
-                  border: Border.all(color: Colors.white.withValues(alpha: _isHovered ? 0.2 : 0.1)),
+                  border: Border.all(
+                    color: widget.borderColor ??
+                        Colors.white.withValues(alpha: _isHovered ? 0.2 : 0.1),
+                    width: widget.borderColor != null ? 2 : 1,
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: widget.child,

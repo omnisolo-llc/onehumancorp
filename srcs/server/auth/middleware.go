@@ -18,6 +18,7 @@ var publicPaths = []string{
 	"/api/auth/login",
 	"/api/auth/powersync/jwks",
 	"/api/v1/scale/stream", // Manually authenticated inside handler for SSE query token bypass
+	"/api/help/",           // Scribe Documentation is public
 	"/landing",
 	"/login",
 }

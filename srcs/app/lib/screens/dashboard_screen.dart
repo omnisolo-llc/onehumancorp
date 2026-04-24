@@ -14,6 +14,8 @@ import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/widgets/contextual_tooltip.dart';
+import 'package:ohc_app/widgets/interactive_walkthrough.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -21,11 +23,29 @@ final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) as
   return api.getDashboard();
 });
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  bool _showWalkthrough = false;
+  final GlobalKey _activeAgentsKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    // In a real app, check if it's the first time
+    // Use a short delay for better UX and testability
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) setState(() => _showWalkthrough = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
@@ -34,8 +54,18 @@ class DashboardScreen extends ConsumerWidget {
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => context.push('/help'),
+            tooltip: 'Open Help Center',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
-      body: snapshot.when(
+      body: Stack(
+        children: [
+          snapshot.when(
         loading:
             () => Center(
               child: CircularProgressIndicator(
@@ -49,17 +79,31 @@ class DashboardScreen extends ConsumerWidget {
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
             ),
-        data: (data) => _DashboardContent(data: data, ref: ref),
+            data: (data) => _DashboardContent(data: data, ref: ref, activeAgentsKey: _activeAgentsKey),
+          ),
+          if (_showWalkthrough)
+            InteractiveWalkthrough(
+              steps: [
+                WalkthroughStep(
+                  targetKey: _activeAgentsKey,
+                  title: 'Your AI Workforce',
+                  description: 'This stat shows how many AI agents are currently active and working for you.',
+                ),
+              ],
+              onComplete: () => setState(() => _showWalkthrough = false),
+            ),
+        ],
       ),
     );
   }
 }
 
 class _DashboardContent extends StatelessWidget {
+  final GlobalKey? activeAgentsKey;
   final DashboardSnapshot data;
   final WidgetRef ref;
 
-  const _DashboardContent({required this.data, required this.ref});
+  const _DashboardContent({super.key, required this.data, required this.ref, this.activeAgentsKey});
 
   @override
   Widget build(BuildContext context) {
@@ -141,11 +185,15 @@ class _DashboardContent extends StatelessWidget {
           spacing: 16,
           runSpacing: 16,
           children: [
-            _StatCard(
-              label: 'Active Agents',
-              value: data.agents.where((a) => a.isRunning).length.toString(),
-              icon: Icons.smart_toy,
-              color: Theme.of(context).colorScheme.primary,
+            ContextualTooltip(
+              elementId: 'active-agents-stat',
+              child: _StatCard(
+                key: activeAgentsKey,
+                label: 'Active Agents',
+                value: data.agents.where((a) => a.isRunning).length.toString(),
+                icon: Icons.smart_toy,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
             _StatCard(
               label: 'Dashboard Updates',
@@ -578,6 +626,7 @@ class _StatCard extends StatefulWidget {
   final Color? iconColor;
 
   const _StatCard({
+    super.key,
     required this.label,
     required this.value,
     required this.icon,

@@ -564,6 +564,54 @@ class ApiService {
       throw Exception('Failed to trigger hybrid sync');
     }
   }
+
+  // ── Help & Documentation ─────────────────────────────────────────────────
+
+  Future<List<dynamic>> listHelpArticles({String query = ''}) async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/help/articles?q=$query'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  Future<List<dynamic>> listHelpVideos() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/help/videos'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  Future<List<dynamic>> listReleaseNotes() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/help/release-notes'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> fetchTooltips() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/help/tooltips'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getHelpChatReply(String message) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/help/chat'),
+      headers: _headers,
+      body: jsonEncode({'message': message}),
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
 }
 
 // ── Providers ──────────────────────────────────────────────────────────────
