@@ -22,6 +22,8 @@ func TestQueueManagerLoop(t *testing.T) {
 		payload TEXT,
 		status TEXT NOT NULL DEFAULT 'QUEUED',
 		worker_id TEXT,
+		attempts INTEGER NOT NULL DEFAULT 0,
+		max_attempts INTEGER NOT NULL DEFAULT 3,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);

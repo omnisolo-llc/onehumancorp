@@ -13,10 +13,14 @@ go_library(
 
 go_test(
     name = "hybrid_sync_test",
-    srcs = ["hybrid_sync_test.go"],
+    srcs = [
+        "hybrid_sync_test.go",
+        "hybrid_sync_chaos_test.go",
+    ],
     embed = [":hybrid_sync"],
     deps = [
         "//srcs/server/db",
+        "//srcs/server/lib/resilience/chaos",
         "@org_modernc_sqlite//:sqlite",
     ],
 )

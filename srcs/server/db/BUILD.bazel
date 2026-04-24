@@ -72,6 +72,7 @@ go_library(
         "migrations/055_hub_events.sql",
         "migrations/056_langgraph_checkpoints.sql",
         "migrations/061_shared_tasks_v4.sql",
+        "migrations/062_sub_agent_queue_retries.sql",
         "migrations/20260414130500_create_autodream_memories.sql",
         "migrations/20260415123000_autodream_memories_schema.sql",
         "migrations/20260415124000_shared_tasks_master.sql",
@@ -117,9 +118,12 @@ go_test(
     srcs = [
         "database_test.go",
         "provider_test.go",
-
+        "parity_chaos_test.go",
         "swarm_tasks_migration_test.go",
     ],
     embed = [":db"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
+    deps = [
+        "//srcs/server/lib/resilience/chaos",
+        "@org_modernc_sqlite//:sqlite",
+    ],
 )

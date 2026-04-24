@@ -38,10 +38,12 @@ go_test(
         "worker_test.go",
         "job_queue_test.go",
         "kairos_queue_test.go",
+        "resilience_test.go",
     ],
     embed = [":queue"],
     deps = [
         "//srcs/server/db",
+        "//srcs/server/lib/resilience/chaos",
         "@com_github_redis_rueidis//:rueidis",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",

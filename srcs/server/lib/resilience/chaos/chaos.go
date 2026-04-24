@@ -37,6 +37,8 @@ const (
 	CorruptAgentLock
 	// CorruptMailbox corrupts the .ohc/runtime/mailbox/ directory.
 	CorruptMailbox
+	// SyncLag simulates SQL synchronization delays.
+	SyncLag
 )
 
 // String returns the string representation of ChaosMode.
@@ -54,6 +56,8 @@ func (c ChaosMode) String() string {
 		return "corrupt_agent_lock"
 	case CorruptMailbox:
 		return "corrupt_mailbox"
+	case SyncLag:
+		return "sync_lag"
 	default:
 		return "unknown"
 	}
@@ -126,6 +130,16 @@ func (i *Injector) Inject(ctx context.Context) error {
 			_ = os.WriteFile(mailboxPath+"corrupt.msg", []byte("chaos corrupted this mailbox"), 0644)
 		}
 		return &ChaosError{Message: "chaos: simulated mailbox corruption"}
+	case SyncLag:
+		i.mu.Lock()
+		delay := time.Duration(i.rand.Intn(1000)+500) * time.Millisecond
+		i.mu.Unlock()
+		select {
+		case <-time.After(delay):
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
 	return nil
 }

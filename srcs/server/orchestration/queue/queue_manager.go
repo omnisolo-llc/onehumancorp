@@ -30,6 +30,8 @@ type SubAgentJob struct {
 	Payload        map[string]interface{}
 	Status         string
 	WorkerID       *string
+	Attempts       int
+	MaxAttempts    int
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -51,11 +53,16 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 		return err
 	}
 
-	query := `
+
+	if job.MaxAttempts == 0 {
+		job.MaxAttempts = 3
+	}
+
+	insertQuery := `
 		INSERT INTO sub_agent_queue (
-			id, organization_id, parent_task_id, payload, status, created_at, updated_at
+			id, organization_id, parent_task_id, payload, status, created_at, updated_at, attempts, max_attempts
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7
+			$1, $2, $3, $4, $5, $6, $7, $8, $9
 		)
 	`
 	now := time.Now()
@@ -66,9 +73,9 @@ func (q *QueueManager) Enqueue(ctx context.Context, job *SubAgentJob) error {
 		job.UpdatedAt = now
 	}
 
-	_, err = q.provider.Exec(ctx, query,
+	_, err = q.provider.Exec(ctx, insertQuery,
 		job.ID, job.OrganizationID, job.ParentTaskID, string(payloadBytes),
-		"QUEUED", job.CreatedAt, job.UpdatedAt,
+		"QUEUED", job.CreatedAt, job.UpdatedAt, job.Attempts, job.MaxAttempts,
 	)
 	if err == nil {
 		kairos.TaskQueueDepth.With(prometheus.Labels{"mode": kairos.GetMode()}).Inc()
@@ -84,9 +91,9 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 		defer q.mu.Unlock()
 
 		query := `
-			SELECT id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
+			SELECT id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at, attempts, max_attempts
 			FROM sub_agent_queue
-			WHERE status = 'QUEUED'
+			WHERE status = 'QUEUED' AND attempts < max_attempts
 			ORDER BY created_at ASC
 			LIMIT 1
 		`
@@ -96,7 +103,7 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 		var createdAt, updatedAt string
 
 		row := q.provider.QueryRow(ctx, query)
-		err := row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt)
+		err := row.Scan(&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt, &j.Attempts, &j.MaxAttempts)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		} else if err != nil {
@@ -105,7 +112,7 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 
 		updateQuery := `
 			UPDATE sub_agent_queue
-			SET status = 'RUNNING', worker_id = $1, updated_at = $2
+			SET status = 'RUNNING', worker_id = $1, updated_at = $2, attempts = attempts + 1
 			WHERE id = $3
 		`
 		_, err = q.provider.Exec(ctx, updateQuery, workerID, time.Now().Format(time.RFC3339Nano), j.ID)
@@ -117,6 +124,7 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 			j.WorkerID = &wID.String
 		}
 		j.Status = "RUNNING"
+		j.Attempts++
 
 		if t, err := time.Parse(time.RFC3339Nano, createdAt); err == nil {
 			j.CreatedAt = t
@@ -132,16 +140,16 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 		// Postgres mode
 		query := `
 			UPDATE sub_agent_queue
-			SET status = 'RUNNING', worker_id = $1, updated_at = $2
+			SET status = 'RUNNING', worker_id = $1, updated_at = $2, attempts = attempts + 1
 			WHERE id = (
 				SELECT id
 				FROM sub_agent_queue
-				WHERE status = 'QUEUED'
+				WHERE status = 'QUEUED' AND attempts < max_attempts
 				ORDER BY created_at ASC
 				FOR UPDATE SKIP LOCKED
 				LIMIT 1
 			)
-			RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at
+			RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at, attempts, max_attempts
 		`
 		var j SubAgentJob
 		var payloadStr string
@@ -149,7 +157,7 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 		var createdAt, updatedAt time.Time
 
 		err := q.provider.QueryRow(ctx, query, workerID, time.Now()).Scan(
-			&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt,
+			&j.ID, &j.OrganizationID, &j.ParentTaskID, &payloadStr, &j.Status, &wID, &createdAt, &updatedAt, &j.Attempts, &j.MaxAttempts,
 		)
 
 		if errors.Is(err, sql.ErrNoRows) {
@@ -162,6 +170,7 @@ func (q *QueueManager) Acquire(ctx context.Context, workerID string) (*SubAgentJ
 			j.WorkerID = &wID.String
 		}
 		j.Status = "RUNNING"
+		j.Attempts++
 		j.CreatedAt = createdAt
 		j.UpdatedAt = updatedAt
 

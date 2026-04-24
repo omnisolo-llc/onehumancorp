@@ -122,6 +122,8 @@ func TestQueueManager(t *testing.T) {
 		payload JSONB,
 		status TEXT NOT NULL DEFAULT 'QUEUED',
 		worker_id TEXT,
+		attempts INTEGER NOT NULL DEFAULT 0,
+		max_attempts INTEGER NOT NULL DEFAULT 3,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
@@ -185,6 +187,8 @@ func TestQueueManager_Postgres(t *testing.T) {
 		payload JSONB,
 		status TEXT NOT NULL DEFAULT 'QUEUED',
 		worker_id TEXT,
+		attempts INTEGER NOT NULL DEFAULT 0,
+		max_attempts INTEGER NOT NULL DEFAULT 3,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 	);
@@ -275,6 +279,8 @@ func TestQueueManager_Postgres_Poll_Success(t *testing.T) {
 			*dest[5].(*sql.NullString) = sql.NullString{String: "worker-1", Valid: true}
 			*dest[6].(*time.Time) = time.Now()
 			*dest[7].(*time.Time) = time.Now()
+			*dest[8].(*int) = 1
+			*dest[9].(*int) = 3
 			return nil
 		},
 	}

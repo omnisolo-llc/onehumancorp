@@ -3,6 +3,8 @@ package mesh
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -143,6 +145,47 @@ func testPresenceRegistration(t *testing.T, mesh TeammateMesh, testName string) 
 	}
 }
 
+// Chaos: test mailbox corruption recovery
+func testMailboxChaos(t *testing.T, mesh TeammateMesh, testName string) {
+	// Only applicable for meshes that might use local storage or if we want to simulate
+	// corruption in the communication layer.
+	// For now, let's simulate a corrupted message in the system.
+	ctx := context.Background()
+	topic := "mailbox-chaos"
+
+	// Create a temporary "mailbox" directory if we're testing LocalMesh
+	tmpDir := t.TempDir()
+	mailboxPath := filepath.Join(tmpDir, ".ohc", "runtime", "mailbox")
+	_ = os.MkdirAll(mailboxPath, 0755)
+
+	// Write a corrupt file
+	corruptFile := filepath.Join(mailboxPath, "bad.msg")
+	_ = os.WriteFile(corruptFile, []byte("invalid-json"), 0644)
+
+	// Mesh should still be able to publish/subscribe
+	received := make(chan bool, 1)
+	sub, err := mesh.Subscribe(ctx, topic, func(msg []byte) {
+		received <- true
+	})
+	if err != nil {
+		t.Fatalf("[%s] Subscription failed: %v", testName, err)
+	}
+	defer sub.Close()
+
+	time.Sleep(100 * time.Millisecond)
+	err = mesh.Publish(ctx, topic, []byte(`{"status":"ok"}`))
+	if err != nil {
+		t.Fatalf("[%s] Publish failed: %v", testName, err)
+	}
+
+	select {
+	case <-received:
+		// Success
+	case <-time.After(2 * time.Second):
+		t.Errorf("[%s] Mailbox chaos: failed to receive message despite local corruption", testName)
+	}
+}
+
 func TestMeshParityChaos(t *testing.T) {
 	// Standalone / Local Mesh
 	localMesh := NewLocalMesh()
@@ -168,4 +211,7 @@ func TestMeshParityChaos(t *testing.T) {
 
 	testPresenceRegistration(t, localMesh, "LocalMesh")
 	testPresenceRegistration(t, redisMesh, "RedisMesh")
+
+	testMailboxChaos(t, localMesh, "LocalMesh")
+	testMailboxChaos(t, redisMesh, "RedisMesh")
 }
