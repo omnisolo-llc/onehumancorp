@@ -1,15 +1,12 @@
-1. **Remove `"sys"` and `""` empty org bypass in `postgres_store.go`**
-   - In `PgUserRepository`, replace `orgID == "" || orgID == "sys"` checks with exact matching where `organization_id = $1`.
-   - Update `CreateUser`, `GetByID`, `GetByUsername`, `GetByEmail`, `GetByOIDCSubject`, `ListUsers`, `UpdateUser`, `DeleteUser`.
-   - Remove branches that exclude `organization_id` from WHERE clauses when `orgID` is empty or `"sys"`. This will force all operations to explicitly scope by `orgID`.
+1. **Verify DB Migration Changes**
+   - Use `run_in_bash_session` to execute `cat srcs/server/db/migrations/20260429000000_autodream_pgvector_add_source_mission_id.go` to ensure the migration file is correct.
+   - Use `run_in_bash_session` to execute `cat srcs/server/db/BUILD.bazel` to verify the build file was updated correctly.
 
-2. **Remove `"sys"` and `""` empty org bypass in `store.go`**
-   - Similar to `postgres_store.go`, remove conditions like `orgID == "sys" || orgID == ""` which fallback to searching global state or ignore the `OrganizationID`.
-   - Update `Authenticate`, `GetUser`, `ListUsers`, `UpdateUser`, `DeleteUser` in the fallback in-memory logic.
+2. **Run the test suite**
+   - Run the test suite using `bazelisk test //srcs/server/...` to verify all changes and ensure no regressions were introduced.
 
-3. **Verify and Run Tests**
-   - Run `bazelisk test //srcs/server/auth/...` to ensure `Store` and `PgUserRepository` tests pass with proper tenant scoping.
-   - Run complete pre-commit steps to ensure no breakages in CI.
+3. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
+   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
 
-4. **Submit changes**
-   - Use the submit tool to finalize changes.
+4. **Submit the change**
+   - Submit the branch with a descriptive message.

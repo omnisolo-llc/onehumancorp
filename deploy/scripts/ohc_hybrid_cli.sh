@@ -49,9 +49,9 @@ ${DIM}[Checking Environment Configuration]${RESET}"
 ${DIM}[Checking Database Health]${RESET}"
             if ! command -v sqlite3 &> /dev/null; then
                 echo -e "${PURPLE}✗ sqlite3 is not installed. Please install it to perform the DB Health Check.${RESET}"
-            elif [ -f "$HOME/.ohc-local-data/standalone.db" ]; then
+            elif [ -f "local_standalone.db" ]; then
                 echo -e "${GREEN}✓ Standalone DB found. Checking tables...${RESET}"
-                TABLES=$(sqlite3 "$HOME/.ohc-local-data/standalone.db" ".tables")
+                TABLES=$(sqlite3 "local_standalone.db" ".tables")
                 if [ -z "$TABLES" ]; then
                      echo -e "${PURPLE}✗ Database is empty. Migrations may not have executed.${RESET}"
                 else
@@ -59,7 +59,7 @@ ${DIM}[Checking Database Health]${RESET}"
                      echo "$TABLES"
                 fi
             else
-                echo -e "${PURPLE}✗ \$HOME/.ohc-local-data/standalone.db not found.${RESET}"
+                echo -e "${PURPLE}✗ local_standalone.db not found in the current directory.${RESET}"
             fi
             ;;
         8) bash "$SCRIPT_DIR/ohc-seed-data.sh" || echo -e "${PURPLE}Data Seeder returned non-zero exit status.${RESET}" ;;

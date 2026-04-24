@@ -7,6 +7,8 @@ toc:
     path: /docs/technical/architecture/index.md
   - title: System Design
     path: /docs/technical/architecture/system-design.md
+  - title: Business Journey Architecture
+    path: /docs/research/[architecture]_business_journey.md
   - title: RAG Synthesis
     path: /docs/architecture/rag_synthesis.md
   - title: Developer Guide
@@ -24,21 +26,6 @@ toc:
   - title: NATS Hybrid Event Mesh
     path: /docs/research/[backend]_nats_hybrid_event_mesh.md
   - title: Proactive RAG MCP
-    path: /docs/technical/research/[backend]_scribe_proactive_rag_mcp.md
-  - title: Social Media ManyChat
-    path: /docs/research/[integrations]_social_media_manychat.md
-  - title: Calendar Cal.com
-    path: /docs/research/[integrations]_calendar_cal_com.md
-  - title: Email Resend
-    path: /docs/research/[integrations]_email_resend.md
-  - title: Payment MercadoPago
-    path: /docs/research/[integrations]_payment_mercadopago.md
-  - title: Shipping Shippo
-    path: /docs/research/[integrations]_shipping_shippo.md
-  - title: SMS Twilio
-    path: /docs/research/[integrations]_sms_twilio.md
-  - title: Video Zoom
-    path: /docs/research/[integrations]_video_zoom.md
     path: /docs/technical/research/[backend]_scribe_proactive_rag_mcp.md
   - title: Reports
     path: /docs/technical/reports/index.md

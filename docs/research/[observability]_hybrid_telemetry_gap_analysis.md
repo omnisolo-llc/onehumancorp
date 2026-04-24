@@ -1,35 +1,27 @@
-# Hybrid Telemetry & Observability Gap Analysis
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
-## Problem Statement
-The OHC platform operates across dual deployment modes: a multi-tenant Cloud environment (K8s, Postgres) and a Standalone mode (local SQLite). While there are isolated metrics tracking API requests, token burn rates, and KAIROS state machine transitions, there is a lack of comprehensive, mode-aware telemetry that enables direct performance and efficiency comparisons between the two environments. This visibility gap obscures latency bottlenecks in hybrid mesh communication, queue contention in standalone mode, and resource saturation across deployments, preventing swarm operators from effectively self-correcting or diagnosing mode-specific inefficiencies.
+# [observability] Hybrid Telemetry Gap Analysis & Standalone Observability Enhancements
 
-## Research Report
-- **Goal**: Perform a gap analysis of the current observability stack, identify bottlenecks between Cloud and Standalone modes, and define a roadmap for unified hybrid telemetry.
-- **Findings**:
-  1. **Incomplete Metric Tagging**: While some metrics (like `ohc_kairos_transitions_total` and `ohc_agent_task_queue_depth`) tag the deployment `mode`, many critical system metrics (e.g., in `srcs/server/telemetry/metrics.go` and `srcs/server/telemetry/rag_sync_metrics.go`) lack the deployment mode dimension.
-  2. **Dashboard Deficiencies**: Existing Grafana dashboards (e.g., `agent_audit_dashboard.json`) primarily focus on agent task status and execution but lack panels comparing Cloud vs. Standalone throughput, queue depth disparities, or hybrid network partition recovery rates.
-  3. **Queue & Lock Contention Visibility**: The system lacks detailed histograms for job queue processing time segmented by mode, making it impossible to identify if SQLite lock contention in Standalone mode is causing significant delays compared to Postgres `SKIP LOCKED` in the Cloud.
-  4. **Cost & Resource Metering**: Per-tenant cost metering (token burn rate) exists but lacks visibility into local resource usage (CPU/Memory) on Standalone desktop nodes, preventing accurate overall health assessments.
+**Title**: Implement Dashboard Visualization for Standalone Mode Database Metrics (SQLite Throttling and Retries)
 
-## Design Doc
-1. **Unified Metric Enrichment**:
-   - Introduce a global OpenTelemetry interceptor/middleware that automatically injects the `deployment_mode` attribute (derived via `kairos.GetMode()`) into all outgoing metrics, spans, and logs.
-2. **Key Metric Additions**:
-   - `ohc_queue_processing_duration_seconds` (Histogram, tags: `mode`, `queue_type`, `status`)
-   - `ohc_hybrid_sync_latency_seconds` (Histogram, tags: `direction`)
-   - `ohc_database_lock_contention_total` (Counter, tags: `mode`, `db_type`)
-3. **Dashboard Enhancements**:
-   - Create a new "Hybrid Operations Dashboard" in `srcs/server/monitoring/dashboards/` that juxtaposes Cloud vs. Standalone performance side-by-side.
-   - Include panels for: Task Queue Depth (Cloud vs. Local), Average Agent Response Latency, and Error Rate by Mode.
-4. **Architecture Integration**:
-   - Update `srcs/server/telemetry/telemetry.go` to initialize these new mode-aware metrics.
-   - Ensure the Standalone mode buffers these metrics locally and flushes them to the central observability cluster when connectivity is restored (offline-first telemetry).
+**Problem Statement**:
+While the OHC platform instruments key performance indicators for both Cloud (PostgreSQL) and Standalone (SQLite) modes, there is a critical observability gap in our Grafana dashboards. The codebase correctly records metrics such as `ohc_sqlite_throttled_request_total` and `ohc_sqlite_retry_event_total` (in `srcs/server/telemetry/telemetry.go`), which are vital for understanding database lock contention and performance in Standalone mode. However, these metrics are completely absent from the Grafana dashboards (`hybrid-telemetry.json` and `ohc-hybrid.json`). As a result, swarm operators cannot visually detect when Standalone deployments suffer from database throttling or excessive retries, hindering Swarm health assessments and bottleneck hunting in local contexts.
 
-## Implementation Prompt
-"Implement the missing Hybrid Telemetry metrics identified in the gap analysis. Update the telemetry initialization in `srcs/server/telemetry/telemetry.go` to include the `ohc_queue_processing_duration_seconds` and `ohc_database_lock_contention_total` metrics with a `mode` label. Modify the existing metric recorders (e.g., in `rag_sync_metrics.go` and `metrics.go`) to accept and log the current execution mode using `kairos.GetMode()`. Finally, add a new Grafana dashboard JSON definition at `srcs/server/monitoring/dashboards/hybrid_ops_dashboard.json` that visualizes these new metrics, comparing Cloud and Standalone throughput."
+**Research Report**:
+1. **Hybrid Telemetry Review**: An analysis of `srcs/server/telemetry/telemetry.go` revealed that OpenTelemetry instrumentation exists for tracking Swarm agent efficiency, database query performance, and network partitions. Key metrics like `ohc_sqlite_lock_contention_total` and `ohc_sqlite_retry_exhausted_total` are recorded.
+2. **Observability Gap Analysis**: A search of the Grafana dashboard configurations (`deploy/docker/grafana/provisioning/dashboards/`) showed that while some SQLite metrics are visualized (e.g., `ohc_sqlite_lock_contention_total` and `ohc_sqlite_retry_exhausted_total`), critical throughput and contention indicators are missing. Specifically, there are no panels for `ohc_sqlite_throttled_request_total` (indicating when write operations are throttled by the concurrency limiter) and `ohc_sqlite_retry_event_total` (indicating when transactions are retried due to lock errors).
+3. **Bottleneck Insights**: The omission of these metrics masks early warning signs of database performance degradation in Standalone mode. While lock contention is visualized, the upstream impact (throttling and intermediate retries) remains hidden. This obscures the difference in throughput efficiency between Cloud-native K8s execution and local SQLite environments.
+4. **Swarm Health Assessment**: The Swarm's ability to self-correct and execute efficiently in Standalone mode relies heavily on the `TaskQueue` and `SubAgentWorker` interacting with the local SQLite database. Without visibility into throttling and retries, operators cannot determine if agents are getting stuck or delayed due to local resource contention versus actual mission complexity.
 
-## Priority
-P1
+**Design Doc**:
+- **Entity Types**: Grafana Dashboard Panels, Prometheus Metrics (`ohc_sqlite_throttled_request_total`, `ohc_sqlite_retry_event_total`).
+- **Key Relationships**: The new panels should be added to the existing "Hybrid Database Telemetry" or "Standalone Mode" sections of the `hybrid-telemetry.json` and `ohc-hybrid.json` dashboards. They should correlate visually with the existing lock contention and retry exhaustion panels.
+- **Integration Points**: No new code instrumentation is needed. The integration solely involves updating the Grafana JSON models to query the existing Prometheus metrics exported by the OHC backend.
 
-## Estimated Scope
-Medium
+**Implementation Prompt**:
+Update the Grafana dashboard definitions (`deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json` and `deploy/docker/grafana/provisioning/dashboards/ohc-hybrid.json`) to include new visualization panels for `ohc_sqlite_throttled_request_total` and `ohc_sqlite_retry_event_total`. These panels should be grouped with the existing SQLite observability metrics to provide a comprehensive view of Standalone mode database health. The user-facing outcome will be that operators monitoring a Standalone deployment will immediately see if database operations are being throttled or retried excessively, enabling proactive troubleshooting of Swarm task delays. The acceptance criteria dictate that the dashboards successfully load and display time-series data for these metrics when queried.
+
+**Priority**: P1
+**Estimated Scope**: Small
+
+</div>

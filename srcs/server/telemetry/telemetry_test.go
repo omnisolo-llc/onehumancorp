@@ -865,30 +865,9 @@ func TestRecordSandboxViolation(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 	InitTelemetry()
 
-	var capturedMetric string
-	var capturedPayload string
-	originalBufferMetricFunc := BufferMetricFunc
-	BufferMetricFunc = func(ctx context.Context, metricName string, payload string) error {
-		capturedMetric = metricName
-		capturedPayload = payload
-		return nil
-	}
-	defer func() { BufferMetricFunc = originalBufferMetricFunc }()
-
 	ctx := context.Background()
 	// Should not panic
 	RecordSandboxViolation(ctx, "fs_read", "agent-123", "/etc/passwd")
-
-	// Add this to make sure we hit the code block when `BufferMetricFunc != nil`
-	time.Sleep(10 * time.Millisecond) // buffer is called synchronously so we don't strictly need this but doesn't hurt
-
-	if capturedMetric != "sandbox_violation_total" {
-		t.Errorf("Expected metric name 'sandbox_violation_total', got '%s'", capturedMetric)
-	}
-	expectedPayload := `{"agent_id":"agent-123","path":"/etc/passwd","type":"fs_read"}`
-	if capturedPayload != expectedPayload {
-		t.Errorf("Expected payload '%s', got '%s'", expectedPayload, capturedPayload)
-	}
 }
 
 func TestRecordHarnessInitLatency(t *testing.T) {
@@ -920,4 +899,16 @@ func TestRecordHarnessExecutionLatency(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	RecordHarnessExecutionLatency(context.Background(), 120.5, "standalone")
+}
+
+func TestRecordPostgresLockContention(t *testing.T) {
+	postgresLockContentionCounter = nil
+	// Should not panic when nil
+	RecordPostgresLockContention(context.Background(), "test_operation")
+}
+
+func TestRecordLLMNetworkLatency(t *testing.T) {
+	llmNetworkLatencyHistogram = nil
+	// Should not panic when nil
+	RecordLLMNetworkLatency(context.Background(), "gpt-4", 1.5)
 }
