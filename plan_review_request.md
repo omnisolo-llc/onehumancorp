@@ -1,7 +1,6 @@
-1. **Explore Codebase**: Discover the required layout and existing schemas for `shared_tasks_decomposition`.
-2. **Implement Task Decomposition Schema**: I've created the `20260429000000_shared_tasks_decomposition_table.sql` migration to properly define the PostgreSQL schema and registered it within `srcs/server/db/BUILD.bazel`.
-3. **Implement Service Logic**: I've created the `TaskDecompositionService` in `srcs/server/orchestration/tasks/service.go` containing methods to create tasks, update their status to `CLAIMED`, `DONE`, `FAILED`, and specifically pulling tasks with concurrency safely utilizing `FOR UPDATE SKIP LOCKED`.
-4. **Implement Service Tests**: Wrote comprehensive test cases in `srcs/server/orchestration/tasks/service_test.go` utilizing the test database provider, achieving 100% coverage on the new service package.
-5. **Add Package Build File**: Created `srcs/server/orchestration/tasks/BUILD.bazel` to register the new Go module.
-6. **Complete pre commit steps**: Complete pre commit steps to make sure proper testing, verifications, reviews and reflections are done.
-7. **Submit**: Once all tests pass, the repository will be correctly aligned with the specification. Output a YAML block containing `issue_id: 5926`.
+1. Use `run_in_bash_session` to append a new benchmark test inside `srcs/server/dashboard/handlers_mcp_test.go` (`BenchmarkHandleHybridSyncMissions`) via `cat << 'EOF' >> srcs/server/dashboard/handlers_mcp_test.go` to establish performance benchmarks.
+2. Use `replace_with_git_merge_diff` to modify `handleHybridSyncMissions` inside `srcs/server/dashboard/handlers_mcp.go`. The function currently loops over `payloads` twice sequentially: first to perform JSON unmarshaling and PII redaction (`telemetry.RedactInterfacePII`), and second to call `UpsertMission` on the database and publish to the Teammate Mesh. I will refactor this to use `perf.NewCoordinatorMode(4)` with `ExecuteParallel` to concurrently execute these operations in chunks across the `payloads` slice.
+3. Use `run_in_bash_session` to run `git diff srcs/server/dashboard/handlers_mcp.go` and `git diff srcs/server/dashboard/handlers_mcp_test.go` to verify changes.
+4. Use `run_in_bash_session` to run `bazelisk test //srcs/server/dashboard/... --test_arg=-test.bench=BenchmarkHandleHybridSyncMissions` and `bazelisk test //srcs/server/dashboard/...` to verify the tests pass and benchmark execution works.
+5. Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+6. Stage the modified files using `git add`, request a code review using `request_code_review`, and submit the PR using the `submit` tool.

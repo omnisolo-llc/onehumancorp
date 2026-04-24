@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"context"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
+	"github.com/onehumancorp/mono/srcs/server/lib/perf"
 	"github.com/onehumancorp/mono/srcs/server/integrations"
 	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/lib/integrations/hybridfsmcp"
@@ -696,50 +698,64 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	for i := range payloads {
-		var parsedPayload interface{}
-		if err := json.Unmarshal([]byte(payloads[i].Payload), &parsedPayload); err == nil {
-			redactedPayload := telemetry.RedactInterfacePII(parsedPayload)
-			if redactedBytes, err := json.Marshal(redactedPayload); err == nil {
-				payloads[i].Payload = string(redactedBytes)
-			}
-		}
-	}
-
 	syncedCount := 0
-	for _, p := range payloads {
-		if p.ID == "" {
-			continue // Skip invalid items
-		}
+	var mu sync.Mutex
 
-		status := p.Status
-		if status == "" {
-			status = "PENDING"
-		}
+	coordinator := perf.NewCoordinatorMode(4)
+	tasks := make([]func() error, len(payloads))
 
-		forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
-
-		// Use the UpsertMission method to store in Postgres
-		if s.hub.SIPDB() != nil {
-			err := s.hub.SIPDB().UpsertMission(ctx, p.ID, status, p.Payload, forceLocal)
-			if err != nil {
-				slog.Error("failed to upsert mission from sync daemon", "id", p.ID, "error", err)
-				// continue syncing the rest
-			} else {
-				syncedCount++
-
-				// Publish to Teammate Mesh
-				if cnNode := s.hub.CentrifugeNode(); cnNode != nil {
-					var payloadMap map[string]interface{}
-					if err := json.Unmarshal([]byte(p.Payload), &payloadMap); err != nil {
-						payloadMap = map[string]interface{}{}
-					}
-					payloadMap["status"] = status
-					cnNode.PublishTaskBroadcast(p.ID, payloadMap)
+	for i := range payloads {
+		idx := i // capture loop variable
+		tasks[i] = func() error {
+			// Phase 1: Unmarshaling and PII Redaction
+			var parsedPayload interface{}
+			if err := json.Unmarshal([]byte(payloads[idx].Payload), &parsedPayload); err == nil {
+				redactedPayload := telemetry.RedactInterfacePII(parsedPayload)
+				if redactedBytes, err := json.Marshal(redactedPayload); err == nil {
+					payloads[idx].Payload = string(redactedBytes)
 				}
 			}
+
+			// Phase 2: Database Upsert and Teammate Mesh Broadcast
+			p := payloads[idx]
+			if p.ID == "" {
+				return nil // Skip invalid items
+			}
+
+			status := p.Status
+			if status == "" {
+				status = "PENDING"
+			}
+
+			forceLocal := r.Header.Get("X-OHC-Conflict-Resolution") == "force-local"
+
+			// Use the UpsertMission method to store in Postgres
+			if s.hub.SIPDB() != nil {
+				err := s.hub.SIPDB().UpsertMission(ctx, p.ID, status, p.Payload, forceLocal)
+				if err != nil {
+					slog.Error("failed to upsert mission from sync daemon", "id", p.ID, "error", err)
+					// continue syncing the rest
+				} else {
+					mu.Lock()
+					syncedCount++
+					mu.Unlock()
+
+					// Publish to Teammate Mesh
+					if cnNode := s.hub.CentrifugeNode(); cnNode != nil {
+						var payloadMap map[string]interface{}
+						if err := json.Unmarshal([]byte(p.Payload), &payloadMap); err != nil {
+							payloadMap = map[string]interface{}{}
+						}
+						payloadMap["status"] = status
+						cnNode.PublishTaskBroadcast(p.ID, payloadMap)
+					}
+				}
+			}
+			return nil
 		}
 	}
+
+	_ = coordinator.ExecuteParallel(ctx, tasks)
 
 	writeJSON(w, map[string]interface{}{
 		"status":       "success",

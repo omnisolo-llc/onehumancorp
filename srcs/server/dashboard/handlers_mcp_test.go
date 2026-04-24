@@ -501,3 +501,30 @@ func TestHandleSyncRAG_Success(t *testing.T) {
 		t.Errorf("expected memory ID ctx-success-1, got %v", memories[0].MemoryID)
 	}
 }
+
+func BenchmarkHandleHybridSyncMissions(b *testing.B) {
+	// The existing newTestServer expects *testing.T, so we'll mock just the server
+	// for benchmarking without testing.T
+	app := &Server{
+		hub: orchestration.NewHub(),
+	}
+
+	// Create a large payload
+	var payloads []map[string]string
+	for i := 0; i < 100; i++ {
+		payloads = append(payloads, map[string]string{
+			"id":      "task-123",
+			"status":  "COMPLETED",
+			"payload": `{"test": "data", "email": "test@example.com"}`,
+		})
+	}
+	body, _ := json.Marshal(payloads)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/api/sync/missions", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		app.handleHybridSyncMissions(rec, req)
+	}
+}
