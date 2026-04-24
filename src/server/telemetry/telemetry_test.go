@@ -75,6 +75,10 @@ func TestInitTelemetry(t *testing.T) {
 		t.Error("expected AgentCostEstimateUSD to be initialized")
 	}
 
+	if MissionCostCents == nil {
+		t.Error("expected MissionCostCents to be initialized")
+	}
+
 	cleanup() // Clean up resources
 }
 

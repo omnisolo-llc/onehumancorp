@@ -47,6 +47,7 @@ var (
 	tokenUsageCounter                  metric.Int64Counter
 	AgentTokenUsageTotal               metric.Int64Counter
 	AgentCostEstimateUSD               metric.Float64Counter
+	MissionCostCents                   metric.Float64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -538,6 +539,14 @@ func InitWithMeter(m mockableMeter) error {
 	AgentCostEstimateUSD, err = m.Float64Counter(
 		"ohc_agent_cost_estimate_usd",
 		metric.WithDescription("Cumulative estimated USD cost of agent LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MissionCostCents, err = m.Float64Counter(
+		"ohc_mission_cost_cents",
+		metric.WithDescription("Cumulative estimated cents cost of agent missions"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1056,6 +1065,28 @@ func RecordAgentTokenUsage(ctx context.Context, agentID, organizationID, role, m
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "agent_token_usage", string(payloadBytes))
+	}
+}
+
+// RecordMissionCost records the estimated cents cost of an agent mission.
+func RecordMissionCost(ctx context.Context, missionID, organizationID string, cost float64) {
+	if MissionCostCents == nil {
+		return
+	}
+	MissionCostCents.Add(ctx, cost, metric.WithAttributes(
+		attribute.String("mission_id", missionID),
+		attribute.String("organization_id", organizationID),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"mission_id":      missionID,
+			"organization_id": organizationID,
+			"cost":            cost,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "mission_cost_cents", string(payloadBytes))
 	}
 }
 

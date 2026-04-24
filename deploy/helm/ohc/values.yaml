@@ -11,11 +11,11 @@ backend:
     minReplicas: 2
     maxReplicas: 20
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+
   resources:
     requests:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
     limits:
       cpu: "1000m"
       memory: "1Gi"
@@ -53,14 +53,14 @@ ohcCore:
     minReplicas: 2
     maxReplicas: 20
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+
   resources:
     requests:
       cpu: "50m"
       memory: "64Mi"
     limits:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
 
 # Redis subchart (Bitnami) – used for session caching and pub/sub
 redis:
@@ -95,11 +95,11 @@ chatwoot:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+
   resources:
     requests:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
     limits:
       cpu: "1000m"
       memory: "1Gi"
@@ -136,14 +136,14 @@ powersync:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+
   resources:
     requests:
       cpu: "50m"
-      memory: "256Mi"
+      memory: "128Mi"
     limits:
-      cpu: "250m"
-      memory: "256Mi"
+      cpu: "50m"
+      memory: "128Mi"
 
 # Kube-Prometheus-Stack for Cloud Observability
 kube-prometheus-stack:
@@ -165,4 +165,4 @@ pushgateway:
       memory: "64Mi"
     limits:
       cpu: "200m"
-      memory: "256Mi"
+      memory: "128Mi"

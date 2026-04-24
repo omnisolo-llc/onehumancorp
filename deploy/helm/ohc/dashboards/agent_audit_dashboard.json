@@ -145,6 +145,28 @@
         }
       ],
       "transparent": true
+    },
+    {
+      "id": 999,
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 24
+      },
+      "type": "stat",
+      "title": "Mission Cost (Cents)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "targets": [
+        {
+          "expr": "sum(ohc_mission_cost_cents)",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
     }
   ],
   "refresh": "5s",
