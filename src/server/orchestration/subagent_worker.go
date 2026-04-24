@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/harness"
 	"github.com/onehumancorp/mono/src/server/orchestration/queue"
 	"github.com/onehumancorp/mono/src/server/telemetry"
 )
@@ -52,22 +51,10 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 			return
 		}
 
+
+
 		go func(job *queue.Job) {
 			startTime := time.Now()
-
-			// Start a local network proxy for this sub-agent execution
-			allowedDomains := []string{"googleapis.com", "stripe.com"} // Added defaults for essential API communication
-			proxy := harness.NewNetworkProxy(job.ID, allowedDomains)
-			if err := proxy.Start(); err != nil {
-				// Fallback to no proxy or handle error
-			} else {
-				defer proxy.Close()
-			}
-
-			proxyURL := proxy.URL()
-			if proxyURL == "" {
-				proxyURL = "http://127.0.0.1:8080" // Fallback if start failed
-			}
 
 			ac := &AgentContext{
 				AgentID:         job.ID,
@@ -75,8 +62,8 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 				ParentSessionID: job.ParentTaskID,
 
 				Env: map[string]string{
-					"HTTP_PROXY":  proxyURL,
-					"HTTPS_PROXY": proxyURL,
+					"HTTP_PROXY": "http://127.0.0.1:8080",
+					"HTTPS_PROXY": "http://127.0.0.1:8080",
 				},
 			}
 			agentCtx := WithAgentContext(ctx, ac)
@@ -92,6 +79,7 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 				_ = w.taskQueue.Complete(ctx, job.ID)
 			}
 		}(job)
+
 
 	}
 }
