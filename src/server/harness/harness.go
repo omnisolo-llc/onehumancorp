@@ -1,6 +1,7 @@
 package harness
 
 import (
+	"log/slog"
 	"bytes"
 	"context"
 	"fmt"
@@ -53,7 +54,7 @@ func NewHarness(config *SandboxConfig) *Harness {
 		var err error
 		executionsTotal, err = otel.Meter("ohc.harness").Int64Counter("ohc_harness_executions_total")
 		if err != nil {
-			fmt.Printf("failed to initialize metric: %v\n", err)
+			slog.Error("failed to initialize metric", "error", err)
 		}
 	})
 	h.execTotal = executionsTotal

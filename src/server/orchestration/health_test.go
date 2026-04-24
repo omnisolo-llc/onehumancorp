@@ -18,6 +18,7 @@ func TestHybridHealthProbe(t *testing.T) {
 		Status:      "healthy",
 		DBPing:      10 * time.Millisecond,
 		SyncBacklog: 5,
+		UnsyncedMissions: 2,
 		MeshActive:  true,
 	}
 
@@ -64,21 +65,21 @@ func TestCheckHealth_SQLite(t *testing.T) {
 	defer sqliteDB.Close()
 
 	// Ensure the agent_missions table exists
-	_, err = provider.Exec(ctx, "CREATE TABLE agent_missions (status TEXT)")
+	_, err = provider.Exec(ctx, "CREATE TABLE agent_missions (status TEXT, synced_to_cloud BOOLEAN DEFAULT FALSE)")
 	if err != nil {
 		t.Fatalf("Failed to create table: %v", err)
 	}
 
 	// Insert some pending missions
-	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status) VALUES ('PENDING')")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status, synced_to_cloud) VALUES ('PENDING', false)")
 	if err != nil {
 		t.Fatalf("Failed to insert pending mission: %v", err)
 	}
-	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status) VALUES ('PENDING')")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status, synced_to_cloud) VALUES ('PENDING', false)")
 	if err != nil {
 		t.Fatalf("Failed to insert pending mission: %v", err)
 	}
-	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status) VALUES ('DONE')")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status, synced_to_cloud) VALUES ('DONE', true)")
 	if err != nil {
 		t.Fatalf("Failed to insert done mission: %v", err)
 	}
@@ -98,6 +99,10 @@ func TestCheckHealth_SQLite(t *testing.T) {
 	if probe.Mode != "standalone" {
 		t.Errorf("Expected mode 'standalone', got '%s'", probe.Mode)
 	}
+	if probe.UnsyncedMissions != 2 {
+		t.Errorf("Expected UnsyncedMissions to be 2, got %d", probe.UnsyncedMissions)
+	}
+
 	if probe.SyncBacklog != 2 {
 		t.Errorf("Expected SyncBacklog to be 2, got %d", probe.SyncBacklog)
 	}
