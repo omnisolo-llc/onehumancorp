@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"time"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // JobHandler is a function that processes a job.
@@ -31,6 +32,7 @@ func (w *Worker) Start(ctx context.Context) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -48,7 +50,11 @@ func (w *Worker) Start(ctx context.Context) {
 			}
 
 			slog.Info("Worker processing job", "job_id", job.ID)
+			start := time.Now()
 			err = w.handler(ctx, job)
+			latency := time.Since(start).Seconds() * 1000
+			telemetry.RecordSwarmTaskProcessingLatency(ctx, latency)
+
 			if err != nil {
 				slog.Error("Worker failed to process job", "job_id", job.ID, "error", err)
 				if fErr := w.queue.Fail(ctx, job.ID, err.Error()); fErr != nil {

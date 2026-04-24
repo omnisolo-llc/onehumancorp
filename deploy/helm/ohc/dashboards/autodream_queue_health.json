@@ -1,0 +1,25 @@
+{
+  "title": "AutoDream Queue Health",
+  "panels": [
+    {
+      "type": "gauge",
+      "title": "AutoDream Queue Depth",
+      "targets": [
+        {
+          "expr": "ohc_autodream_queue_depth",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Job Processing Latency",
+      "targets": [
+        {
+          "expr": "rate(ohc_autodream_job_latency_seconds_sum[5m]) / rate(ohc_autodream_job_latency_seconds_count[5m])",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    }
+  ]
+}

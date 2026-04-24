@@ -15,6 +15,7 @@ go_library(
     deps = [
         "@com_github_prometheus_client_golang//prometheus",
         "//srcs/server/db",
+        "//srcs/server/telemetry",
         "//srcs/server/lib/pricing",
         "@org_modernc_sqlite//:sqlite",
     ],
@@ -33,6 +34,7 @@ go_test(
     deps = [
         "@com_github_prometheus_client_golang//prometheus",
         "//srcs/server/db",
+        "//srcs/server/telemetry",
         "@org_modernc_sqlite//:sqlite",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",

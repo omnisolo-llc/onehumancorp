@@ -36,6 +36,7 @@ go_test(
         "queue_manager_loop_test.go",
         "queue_test.go",
         "worker_test.go",
+        "worker_extra_test.go",
         "job_queue_test.go",
         "kairos_queue_test.go",
     ],

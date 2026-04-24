@@ -108,6 +108,8 @@ var (
 
 	autoDreamSyncDuration  metric.Float64Histogram
 	autoDreamQueryDuration metric.Float64Histogram // added for ohc_autodream_query_duration_seconds
+	autoDreamQueueDepth    metric.Int64Gauge
+	autoDreamJobLatency    metric.Float64Histogram
 	meshBroadcastTotal     metric.Int64Counter
 
 	emailRegex = regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`)
@@ -852,6 +854,23 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+
+	autoDreamQueueDepth, err = m.Int64Gauge(
+		"ohc_autodream_queue_depth",
+		metric.WithDescription("Current number of pending AutoDream tasks"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	autoDreamJobLatency, err = m.Float64Histogram(
+		"ohc_autodream_job_latency_seconds",
+		metric.WithDescription("Latency of processing AutoDream tasks"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	autoDreamQueryDuration, err = m.Float64Histogram(
 		"ohc_autodream_query_duration_seconds",
 		metric.WithDescription("Latency of AutoDream query operations in seconds"),
@@ -1453,7 +1472,9 @@ func RecordSQLiteRetryEvent(ctx context.Context, operation string) {
 		return
 	}
 	sqliteRetryEventCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("deployment_mode", getDeploymentMode()),
 		attribute.String("operation", operation),
+		attribute.String("deployment_mode", getDeploymentMode()),
 	))
 }
 
@@ -1793,7 +1814,9 @@ func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
 	if swarmTaskQueueLengthGauge == nil {
 		return
 	}
-	swarmTaskQueueLengthGauge.Add(ctx, int64(delta))
+	swarmTaskQueueLengthGauge.Add(ctx, int64(delta), metric.WithAttributes(
+		attribute.String("deployment_mode", getDeploymentMode()),
+	))
 }
 
 // RecordSwarmTaskProcessingLatency records the processing time of a task.
@@ -1809,7 +1832,9 @@ func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 	if swarmTaskProcessingLatency == nil {
 		return
 	}
-	swarmTaskProcessingLatency.Record(ctx, latencyMS)
+	swarmTaskProcessingLatency.Record(ctx, latencyMS, metric.WithAttributes(
+		attribute.String("deployment_mode", getDeploymentMode()),
+	))
 }
 
 // RecordTaskEnqueued increments the counter for tasks enqueued.
@@ -1887,6 +1912,33 @@ func RecordAutoDreamSyncLatency(ctx context.Context, latency float64, mode strin
 			attribute.String("deployment_mode", mode),
 		))
 	}
+}
+
+
+// RecordAutoDreamQueueDepth records the depth of the AutoDream queue.
+func RecordAutoDreamQueueDepth(ctx context.Context, depth int, mode string) {
+	if autoDreamQueueDepth != nil {
+		autoDreamQueueDepth.Record(ctx, int64(depth), metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+// RecordAutoDreamJobLatency records the latency of processing an AutoDream task.
+func RecordAutoDreamJobLatency(ctx context.Context, latency float64, mode string) {
+	if autoDreamJobLatency != nil {
+		autoDreamJobLatency.Record(ctx, latency, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
+}
+
+func getDeploymentMode() string {
+	mode := os.Getenv("OHC_SOURCE_MODE")
+	if mode == "" {
+		mode = "standalone"
+	}
+	return mode
 }
 
 // RecordAutoDreamQueryLatency records the duration of the AutoDream RAG query.

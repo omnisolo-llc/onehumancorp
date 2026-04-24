@@ -7,8 +7,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type WorkerLLMClient interface {
@@ -46,6 +48,13 @@ func (w *AutoDreamWorker) RunConsolidation(ctx context.Context) error {
 }
 
 func (w *AutoDreamWorker) processDBMemories(ctx context.Context) error {
+	start := time.Now()
+	mode := os.Getenv("OHC_SOURCE_MODE")
+	if mode == "" {
+		mode = "standalone"
+	}
+
+
 	query := "SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100"
 	if !w.db.IsSQLite() {
 		query += " FOR UPDATE SKIP LOCKED"
@@ -73,6 +82,8 @@ func (w *AutoDreamWorker) processDBMemories(ctx context.Context) error {
 	}
 	rows.Close() // Close early before processing
 
+	// Record queue depth and latency
+
 	for _, s := range sessions {
 		if err := w.embedAndStore(ctx, "system", s.agentID, "agent_session", s.context); err != nil {
 			slog.Warn("AutoDreamWorker: failed to embed session", "session_id", s.sessionID, "error", err)
@@ -88,6 +99,14 @@ func (w *AutoDreamWorker) processDBMemories(ctx context.Context) error {
 			slog.Warn("AutoDreamWorker: failed to delete processed session", "session_id", s.sessionID, "error", err)
 		}
 	}
+
+	// Approximate queue depth by the batch size if it's 100, otherwise it's just the batch length.
+	// This avoids expensive COUNT(*). We just report the batch size as the queue depth sample.
+
+	if depth, err := w.getQueueDepth(ctx); err == nil {
+		telemetry.RecordAutoDreamQueueDepth(ctx, depth, mode)
+	}
+	telemetry.RecordAutoDreamJobLatency(ctx, time.Since(start).Seconds(), mode)
 
 	return nil
 }
@@ -160,4 +179,19 @@ func (w *AutoDreamWorker) embedAndStore(ctx context.Context, orgID, agentID, mem
 	}
 
 	return nil
+}
+
+
+func (w *AutoDreamWorker) getQueueDepth(ctx context.Context) (int, error) {
+	if w.db.IsSQLite() {
+		var count int
+		err := w.db.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data").Scan(&count)
+		return count, err
+	}
+	var count int
+	err := w.db.QueryRow(ctx, "SELECT reltuples::bigint FROM pg_class WHERE relname = 'agent_session_data'").Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }

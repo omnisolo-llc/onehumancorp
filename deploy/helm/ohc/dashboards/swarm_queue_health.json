@@ -1,0 +1,39 @@
+{
+  "title": "Swarm Health & Efficiency",
+  "panels": [
+    {
+      "type": "gauge",
+      "title": "Swarm Task Queue Depth",
+      "targets": [
+        {
+          "expr": "ohc_swarm_task_queue_length",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Swarm Job Latency Distribution",
+      "targets": [
+        {
+          "expr": "rate(ohc_swarm_task_processing_latency_ms_sum[5m]) / rate(ohc_swarm_task_processing_latency_ms_count[5m])",
+          "legendFormat": "{{deployment_mode}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Database Lock Contention vs Queue Size",
+      "targets": [
+        {
+          "expr": "rate(ohc_sqlite_retry_event_total[5m])",
+          "legendFormat": "{{deployment_mode}} Lock Retries"
+        },
+        {
+          "expr": "ohc_swarm_task_queue_length",
+          "legendFormat": "{{deployment_mode}} Queue Size"
+        }
+      ]
+    }
+  ]
+}
