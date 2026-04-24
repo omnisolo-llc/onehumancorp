@@ -189,6 +189,14 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 
 
 func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, error) {
+    if to.dbProvider.IsSQLite() {
+        if !to.mu.TryLock() {
+            telemetry.RecordSQLiteLockContention(ctx, "claim_pending_task")
+            to.mu.Lock()
+        }
+        defer to.mu.Unlock()
+    }
+
     tx, err := to.dbProvider.Begin(ctx)
     if err != nil {
         return nil, fmt.Errorf("failed to begin transaction: %w", err)
@@ -201,6 +209,15 @@ func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, 
         LIMIT 1
         FOR UPDATE SKIP LOCKED
     `
+
+    if to.dbProvider.IsSQLite() {
+        query = `
+            SELECT id FROM shared_tasks_v2
+            WHERE status = 'PENDING'
+            LIMIT 1
+        `
+    }
+
     var id string
     err = tx.QueryRow(ctx, query).Scan(&id)
     if err != nil {

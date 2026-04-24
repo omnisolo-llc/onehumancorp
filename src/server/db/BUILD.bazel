@@ -102,6 +102,7 @@ go_library(
         "migrations/20260429000000_kairos_approval_workflow.sql",
         "migrations/20260429010000_enable_rls_mcp_tables_pg.sql",
         "migrations/20260429010000_enable_rls_mcp_tables_sqlite.sql",
+        "migrations/20260429020000_enable_rls_missing_tables_pg.sql",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/db",
     visibility = ["//visibility:public"],
