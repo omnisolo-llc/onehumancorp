@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "migrations",
+    srcs = [
+        "20260424020000_mcp_audit_sync_log.go",
+        "20260425000000_autodream_memories.go",
+        "20260425010000_shared_tasks_for_kairos.go",
+        "20260426000000_autodream_agent_memories.go",
+        "20260426000000_local_mcp_rag_tasks.go",
+        "20260427000000_autodream_memories_decomposition.go",
+        "20260427010000_kairos_additional_columns.go",
+        "20260427020000_sub_agent_tasks.go",
+        "20260430000000_tenant_isolation_policies.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/db/migrations",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_pressly_goose_v3//:goose"],
+)
+
+filegroup(
+    name = "sql_migrations",
+    srcs = glob(["*.sql"]),
+    visibility = ["//visibility:public"],
+)

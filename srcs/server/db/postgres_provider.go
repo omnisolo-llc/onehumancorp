@@ -5,9 +5,10 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 // PgProvider implements the Provider interface using pgxpool.
@@ -19,9 +20,28 @@ func NewPgProvider(pool *pgxpool.Pool) *PgProvider {
 	return &PgProvider{pool: pool}
 }
 
+// WithTenant Context wraps an executing context with the requested tenant id.
+type tenantKey struct{}
+
+func ContextWithTenant(ctx context.Context, tenantID string) context.Context {
+	return context.WithValue(ctx, tenantKey{}, tenantID)
+}
+
+func TenantFromContext(ctx context.Context) string {
+	if t, ok := ctx.Value(tenantKey{}).(string); ok {
+		return t
+	}
+	return ""
+}
+
 func (p *PgProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	start := time.Now()
-	tag, err := p.pool.Exec(ctx, sql, arguments...)
+	var tag pgconn.CommandTag
+	var err error
+	if t := TenantFromContext(ctx); t != "" {
+		_, _ = p.pool.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", t)
+	}
+	tag, err = p.pool.Exec(ctx, sql, arguments...)
 	trackQuery(ctx, "Exec", err, time.Since(start))
 	if err != nil {
 		return 0, err
@@ -31,7 +51,12 @@ func (p *PgProvider) Exec(ctx context.Context, sql string, arguments ...any) (in
 
 func (p *PgProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (Rows, error) {
 	start := time.Now()
-	rows, err := p.pool.Query(ctx, sql, optionsAndArgs...)
+	var rows pgx.Rows
+	var err error
+	if t := TenantFromContext(ctx); t != "" {
+		_, _ = p.pool.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", t)
+	}
+	rows, err = p.pool.Query(ctx, sql, optionsAndArgs...)
 	trackQuery(ctx, "Query", err, time.Since(start))
 	if err != nil {
 		return nil, err
@@ -41,6 +66,9 @@ func (p *PgProvider) Query(ctx context.Context, sql string, optionsAndArgs ...an
 
 func (p *PgProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) Row {
 	start := time.Now()
+	if t := TenantFromContext(ctx); t != "" {
+		_, _ = p.pool.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", t)
+	}
 	row := p.pool.QueryRow(ctx, sql, optionsAndArgs...)
 	trackQuery(ctx, "QueryRow", nil, time.Since(start))
 	return &PgRow{row: row}
@@ -177,7 +205,12 @@ type PgTx struct {
 
 func (t *PgTx) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	start := time.Now()
-	tag, err := t.tx.Exec(ctx, sql, arguments...)
+	if tnt := TenantFromContext(ctx); tnt != "" {
+		_, _ = t.tx.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tnt)
+	}
+	var tag pgconn.CommandTag
+	var err error
+	tag, err = t.tx.Exec(ctx, sql, arguments...)
 	trackQuery(ctx, "Tx.Exec", err, time.Since(start))
 	if err != nil {
 		return 0, err
@@ -187,6 +220,9 @@ func (t *PgTx) Exec(ctx context.Context, sql string, arguments ...any) (int64, e
 
 func (t *PgTx) Query(ctx context.Context, sql string, optionsAndArgs ...any) (Rows, error) {
 	start := time.Now()
+	if tnt := TenantFromContext(ctx); tnt != "" {
+		_, _ = t.tx.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tnt)
+	}
 	rows, err := t.tx.Query(ctx, sql, optionsAndArgs...)
 	trackQuery(ctx, "Tx.Query", err, time.Since(start))
 	if err != nil {
@@ -197,6 +233,9 @@ func (t *PgTx) Query(ctx context.Context, sql string, optionsAndArgs ...any) (Ro
 
 func (t *PgTx) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) Row {
 	start := time.Now()
+	if tnt := TenantFromContext(ctx); tnt != "" {
+		_, _ = t.tx.Exec(ctx, "SELECT set_config('app.current_tenant_id', $1, true)", tnt)
+	}
 	row := t.tx.QueryRow(ctx, sql, optionsAndArgs...)
 	trackQuery(ctx, "Tx.QueryRow", nil, time.Since(start))
 	return &PgRow{row: row}

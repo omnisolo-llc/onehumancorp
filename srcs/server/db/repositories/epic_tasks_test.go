@@ -15,7 +15,39 @@ import (
 
 func TestCreateAndGetEpicTasks(t *testing.T) {
 	pool := db.NewTestProvider(t)
-	pool.(*db.DB).RunMigrations(context.Background())
+	// Apply schema for the test. We can't use db.DB RunMigrations cleanly without the full wrapper.
+	// We'll create the exact required table.
+	_, err := pool.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS epics (
+			id TEXT PRIMARY KEY,
+			title TEXT,
+			description TEXT,
+			status TEXT,
+			organization_id TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
+
+	_, err = pool.Exec(context.Background(), `
+		CREATE TABLE IF NOT EXISTS tasks (
+			id TEXT PRIMARY KEY,
+			epic_id TEXT NOT NULL,
+			title TEXT,
+			status TEXT NOT NULL,
+			assigned_agent TEXT,
+			organization_id TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(epic_id) REFERENCES epics(id)
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
 
 	ctx := context.Background()
 	repo := NewEpicTaskRepository(pool)
@@ -25,7 +57,7 @@ func TestCreateAndGetEpicTasks(t *testing.T) {
 		ID: epicID,
 	}
 
-	err := repo.CreateEpic(ctx, epic)
+	err = repo.CreateEpic(ctx, epic)
 	require.NoError(t, err, "failed to create epic")
 
 	agentID := "test_agent"

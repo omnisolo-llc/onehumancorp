@@ -835,9 +835,9 @@ func (w *AutoDreamWorker) ConsolidateEpoch(ctx context.Context) error {
 	if w.pool.IsSQLite() {
 		// SQLite fallback using recency
 		rows, errQuery = w.pool.Query(ctx, `
-			SELECT 'session-' || session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25
+			SELECT * FROM (SELECT 'session-' || session_id, context_data FROM agent_session_data ORDER BY last_accessed DESC LIMIT 25)
 			UNION ALL
-			SELECT 'task-' || id, COALESCE(payload, '{}') FROM shared_tasks_master WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25
+			SELECT * FROM (SELECT 'task-' || id, COALESCE(payload, '{}') FROM shared_tasks_master WHERE status = 'COMPLETED' ORDER BY updated_at DESC LIMIT 25)
 		`)
 	} else {
 		// Postgres mode

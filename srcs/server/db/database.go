@@ -251,6 +251,17 @@ func New(ctx context.Context) (*DB, error) {
 			return nil, fmt.Errorf("db: ping sqlite: %w", pingErr)
 		}
 
+		if _, err := sqliteDB.ExecContext(ctx, "PRAGMA secure_delete = ON;"); err != nil {
+			return nil, fmt.Errorf("db: failed to set PRAGMA secure_delete: %w", err)
+		}
+
+		if key != "transient_memory_key" && key != "standalone_ephemeral_key" {
+			_, errKey := sqliteDB.ExecContext(ctx, "PRAGMA key = '"+key+"';")
+			if errKey != nil {
+				slog.Warn("db: sqlite key pragma failed, encryption may not be active", "error", errKey)
+			}
+		}
+
 		// Hardening: SQLite 0600 file permissions
 		if dbPath != ":memory:" && !strings.Contains(dbPath, "mode=memory") {
 			basePath := dbPath
@@ -379,7 +390,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
 			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
-			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+[a-zA-Z0-9_]+\s+ON\s+[a-zA-Z0-9_]+\s+USING\s+hnsw[^;]*;`).ReplaceAllString(sqlStr, "")
+			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+[a-zA-Z0-9_]+\s+ON\s+[a-zA-Z0-9_]+\s+USING\s+(hnsw|ivfflat)[^;]*;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+idx_consolidated_memory_embedding\s+ON\s+consolidated_memory\s+USING\s+hnsw\s*\([^;]+\);`).ReplaceAllString(sqlStr, "")
 			sqlStr = strings.ReplaceAll(sqlStr, "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
 			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
@@ -414,6 +425,27 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = regexp.MustCompile(`(?i)\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b`).ReplaceAllString(sqlStr, "ADD COLUMN")
 			// SQLite does not support DROP COLUMN IF EXISTS – strip the IF EXISTS qualifier.
 			sqlStr = regexp.MustCompile(`(?i)\bDROP\s+COLUMN\s+IF\s+EXISTS\b`).ReplaceAllString(sqlStr, "DROP COLUMN")
+
+			// Remove ON CONFLICT DO NOTHING that relies on advanced Postgres syntax in standalone/sqlite mode
+			sqlStr = regexp.MustCompile(`(?is)ON\s+CONFLICT\s+DO\s+NOTHING`).ReplaceAllString(sqlStr, "")
+
+			sqlStr = regexp.MustCompile(`(?is)jsonb_array_elements_text\([^)]+\)\s+AS\s+value`).ReplaceAllString(sqlStr, "json_each(dependencies)")
+			sqlStr = regexp.MustCompile(`(?is)jsonb_agg\([^)]+\)`).ReplaceAllString(sqlStr, "json_group_array(depends_on_task_id)")
+
+			sqlStr = strings.ReplaceAll(sqlStr, "SELECT id, value", "SELECT shared_tasks.id, value")
+
+			sqlStr = strings.ReplaceAll(sqlStr, "DEFAULT '[]'::jsonb", "DEFAULT '[]'")
+
+			sqlStr = strings.ReplaceAll(sqlStr, "ON CONFLICT DO NOTHING", "")
+
+			sqlStr = regexp.MustCompile(`(?is)ALTER\s+TABLE\s+\w+\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY;?`).ReplaceAllString(sqlStr, "")
+
+			sqlStr = regexp.MustCompile(`(?is)CREATE\s+POLICY\s+[^;]+;`).ReplaceAllString(sqlStr, "")
+
+			// DO $$ ... END $$ blocks are PG-only execution blocks
+			if strings.Contains(sqlStr, "DO $$") {
+				sqlStr = ""
+			}
 		} else {
 			// Postgres mode: normalise any SQLite-specific types that leaked into
 			// migration files so that migrations are portable in both directions.

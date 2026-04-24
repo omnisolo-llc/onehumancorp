@@ -3,6 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "repositories",
     srcs = [
+        "epic_tasks.go",
         "mesh_repo.go",
         "tasks.go",
     ],
@@ -18,6 +19,7 @@ go_library(
 go_test(
     name = "repositories_test",
     srcs = [
+        "epic_tasks_test.go",
         "mesh_repo_test.go",
         "tasks_test.go",
     ],
@@ -25,6 +27,9 @@ go_test(
     deps = [
         "//srcs/server/db",
         "//srcs/server/db/models",
+        "@com_github_google_uuid//:uuid",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
         "@org_modernc_sqlite//:sqlite",
     ],
 )
