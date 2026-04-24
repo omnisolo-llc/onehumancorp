@@ -439,3 +439,83 @@ func TestHandleMCPInvoke_RateLimiting_SuccessEvent(t *testing.T) {
 
 	// This should cover lines 1005-1020 where it writes "rl-succ-..." event to hub and events.jsonl
 }
+
+func TestHandleMCPInvoke_SoftLimitExceeded(t *testing.T) {
+	org := domain.Organization{
+		ID:   "org-softlimit",
+		Tier: domain.TierFree,
+	}
+	hub := orchestration.NewHub()
+	defer hub.Close()
+	prices := map[string]billing.Price{
+		"test-model": {InputPerMillionUSD: 0.01, OutputPerMillionUSD: 0.02},
+	}
+	tracker := billing.NewTracker(prices)
+
+	app := &Server{
+		org:             org,
+		hub:             hub,
+		tracker:         tracker,
+		integReg:        integrations.NewRegistry(),
+		rateLimitStates: make(map[string]*RateLimitState),
+		dynamicMCPTools: []MCPTool{
+			{
+				ID: "custom-success-tool",
+			},
+		},
+	}
+
+	agent := orchestration.Agent{
+		ID:     "agent-success",
+		Status: orchestration.StatusActive,
+	}
+	hub.RegisterAgent(agent)
+
+	// Pre-fill tracker with enough actions to exceed limit. Free tier limit is 100.
+	for i := 0; i < 100; i++ {
+		_, _ = tracker.Track(billing.Usage{
+			OrganizationID: org.ID,
+			AgentID:        "agent-success",
+			Model:          "test-model", // Add valid model from catalog
+			IsAction:       true,
+		})
+	}
+
+	reqBody, _ := json.Marshal(map[string]interface{}{
+		"toolId":   "custom-success-tool",
+		"spiffeId": "spiffe://onehumancorp.io/agent/1",
+		"action":   "test_action",
+		"params":   json.RawMessage(`{"integrationId": "123"}`),
+		"agentId":  "agent-success",
+	})
+
+	req := httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
+	rec := httptest.NewRecorder()
+
+	// Add an active integration so the dynamic tool doesn't fail with 400 Bad Request
+	_, _ = app.integReg.Connect("github", "https://api.github.com")
+
+	// Update params to use the known active integration "github"
+	reqBody, _ = json.Marshal(map[string]interface{}{
+		"toolId":   "custom-success-tool",
+		"spiffeId": "spiffe://onehumancorp.io/agent/1",
+		"action":   "test_action",
+		"params":   json.RawMessage(`{"integrationId": "github"}`),
+		"agentId":  "agent-success",
+	})
+	req = httptest.NewRequest("POST", "/api/mcp/tools/invoke", bytes.NewReader(reqBody))
+
+	app.handleMCPInvoke(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("expected OK, got %d. Body: %s", rec.Code, rec.Body.String())
+	}
+
+	if !strings.Contains(rec.Body.String(), "_warning") {
+		t.Errorf("expected body to contain '_warning', got %s", rec.Body.String())
+	}
+
+	if !strings.Contains(rec.Body.String(), "Soft Limit Reached") {
+		t.Errorf("expected body to contain 'Soft Limit Reached', got %s", rec.Body.String())
+	}
+}

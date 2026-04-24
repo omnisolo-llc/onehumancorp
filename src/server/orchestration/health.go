@@ -45,22 +45,14 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 
 			// Get sync backlog
 			var count int
-			if h.sipDB.Provider().IsSQLite() {
-				err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'PENDING'").Scan(&count)
-			} else {
-				err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM (SELECT 1 FROM agent_missions WHERE status = 'PENDING' LIMIT 1000) AS sub").Scan(&count)
-			}
+			err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'PENDING'").Scan(&count)
 			if err == nil {
 				probe.SyncBacklog = count
 			}
 
 			// Get stuck missions
 			var stuckCount int
-			if h.sipDB.Provider().IsSQLite() {
-				err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'").Scan(&stuckCount)
-			} else {
-				err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM (SELECT 1 FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED' LIMIT 1000) AS sub").Scan(&stuckCount)
-			}
+			err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'STUCK' OR status = 'FAILED'").Scan(&stuckCount)
 			if err == nil {
 				probe.StuckMissions = stuckCount
 			}

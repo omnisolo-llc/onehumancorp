@@ -56,7 +56,7 @@ func (p *DiscoveryProxy) SearchTools(ctx context.Context, intent string) ([]Tool
 
 // searchSQLite performs a simple search against the local SQLite registry.
 func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]ToolSpec, error) {
-	slog.Info("Executing local SQLite search", "intent", intent)
+	slog.Info("Executing local SQLite search for intent", "intent", intent)
 	// In a real implementation, this would use SQLite FTS5 extension.
 	// For this mock, we just return a stub if the table doesn't exist,
 	// or perform a simple LIKE query if we setup a basic table.
@@ -77,7 +77,7 @@ func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]Too
 
 	// Insert dummy data if table is empty
 	var count int
-	err = p.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM (SELECT 1 FROM local_mcp_tools LIMIT 1) AS sub").Scan(&count)
+	err = p.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM local_mcp_tools").Scan(&count)
 	if err == nil && count == 0 {
 		_, _ = p.db.ExecContext(ctx, `
 			INSERT INTO local_mcp_tools (name, description, endpoint) VALUES
@@ -174,14 +174,14 @@ func (p *DiscoveryProxy) registerSwitchboard(ctx context.Context, spec ToolSpec)
 // RequestToolSVID requests a SPIFFE identity for the tool.
 func (p *DiscoveryProxy) RequestToolSVID(ctx context.Context, toolName string) (SVID, error) {
 	if p.isSQLite() {
-		slog.Info("Bypassing SPIRE in SQLite mode", "tool", toolName)
+		slog.Info("Bypassing SPIRE in SQLite mode for tool", "tool", toolName)
 		return SVID{
 			ID:    fmt.Sprintf("spiffe://local.standalone/tool/%s", toolName),
 			Token: "mock-local-token-12345",
 		}, nil
 	}
 
-	slog.Info("Requesting remote SPIRE SVID", "tool", toolName)
+	slog.Info("Requesting remote SPIRE SVID for tool", "tool", toolName)
 	// Simulate SPIRE request
 	return SVID{
 		ID:    fmt.Sprintf("spiffe://cloud.internal/tool/%s", toolName),

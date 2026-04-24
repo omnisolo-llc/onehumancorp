@@ -68,6 +68,51 @@ func TestTracker_Track(t *testing.T) {
 	}
 }
 
+func TestTracker_ActionsCounting(t *testing.T) {
+	catalog := map[string]Price{
+		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 5.0},
+	}
+	tracker := NewTracker(catalog)
+
+	_, _ = tracker.Track(Usage{
+		OrganizationID: "org-act",
+		AgentID:        "agent-act",
+		Model:          "test-model",
+		PromptTokens:   100,
+		IsAction:       true,
+	})
+
+	_, _ = tracker.Track(Usage{
+		OrganizationID: "org-act",
+		AgentID:        "agent-act",
+		Model:          "test-model",
+		PromptTokens:   100,
+		IsAction:       false,
+	})
+
+	_, _ = tracker.Track(Usage{
+		OrganizationID: "org-act",
+		AgentID:        "agent-act2",
+		Model:          "test-model",
+		PromptTokens:   100,
+		IsAction:       true,
+	})
+
+	summary := tracker.Summary("org-act")
+	if summary.TotalActions != 2 {
+		t.Errorf("expected 2 TotalActions, got %d", summary.TotalActions)
+	}
+
+	for _, ag := range summary.Agents {
+		if ag.AgentID == "agent-act" && ag.TotalActions != 1 {
+			t.Errorf("expected agent-act to have 1 action, got %d", ag.TotalActions)
+		}
+		if ag.AgentID == "agent-act2" && ag.TotalActions != 1 {
+			t.Errorf("expected agent-act2 to have 1 action, got %d", ag.TotalActions)
+		}
+	}
+}
+
 func TestTracker_Summary(t *testing.T) {
 	catalog := map[string]Price{
 		"test-model": {InputPerMillionUSD: 10.0, OutputPerMillionUSD: 20.0, CachedPerMillionUSD: 5.0},

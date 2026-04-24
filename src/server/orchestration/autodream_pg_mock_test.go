@@ -55,6 +55,10 @@ type mockPgTx struct {
 func (t *mockPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
 	t.provider.queries = append(t.provider.queries, sql)
 
+	if sql == "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED" {
+		return t.Tx.Exec(ctx, "SELECT 1 FROM agent_session_data WHERE session_id = ?", arguments...)
+	}
+
 	// Intercept vector insert query
 	if strings.Contains(sql, "$3::vector") {
 		sql = strings.Replace(sql, "$3::vector", "$3", 1)
@@ -102,26 +106,16 @@ func (t *mockPgTx) QueryRow(ctx context.Context, sql string, args ...interface{}
 	return t.Tx.QueryRow(ctx, sql, args...)
 }
 
-func (t *mockPgTx) QueryRow(ctx context.Context, sql string, args ...interface{}) db.Row {
-	t.provider.queries = append(t.provider.queries, sql)
-
-	if sql == "SELECT organization_id FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED" {
-		return t.Tx.QueryRow(ctx, "SELECT organization_id FROM agent_session_data WHERE session_id = ?", args...)
-	}
-
-	return t.Tx.QueryRow(ctx, sql, args...)
-}
-
 func TestAutoDreamWorker_ProcessMemories_Pg(t *testing.T) {
 	provider := setupTestDB(t)
 	setupMockMemories(t, 2)
 
 	// Pre-insert session data so lock query succeeds
-	_, err := provider.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, content TEXT, organization_id TEXT DEFAULT 'system')")
+	_, err := provider.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, content TEXT)")
 	if err != nil {
 		t.Fatalf("failed to create agent_session_data: %v", err)
 	}
-	_, err = provider.Exec(context.Background(), "INSERT INTO agent_session_data (session_id, content, organization_id) VALUES ('mission-1', 'test content', 'org-1')")
+	_, err = provider.Exec(context.Background(), "INSERT INTO agent_session_data (session_id, content) VALUES ('mission-1', 'test content')")
 	if err != nil {
 		t.Fatalf("failed to insert agent_session_data: %v", err)
 	}
@@ -151,7 +145,7 @@ func TestAutoDreamWorker_ProcessMemories_Pg_LockFailed(t *testing.T) {
 	setupMockMemories(t, 2)
 
 	// Create agent_session_data but do not insert anything
-	_, err := provider.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, content TEXT, organization_id TEXT DEFAULT 'system')")
+	_, err := provider.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, content TEXT)")
 	if err != nil {
 		t.Fatalf("failed to create agent_session_data: %v", err)
 	}
@@ -291,7 +285,7 @@ func TestAutoDreamWorkerDaemon_Coverage(t *testing.T) {
 	// Create tables without data
 	provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT, title TEXT, payload TEXT, status TEXT)")
 	provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT, title TEXT, payload TEXT, status TEXT)")
-	provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, content TEXT, organization_id TEXT DEFAULT 'system')")
+	provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, content TEXT)")
 
 	worker := NewAutoDreamWorker(provider)
 	daemon := NewAutoDreamWorkerDaemon(worker)
@@ -388,21 +382,16 @@ type lockErrorPgTx struct {
 	provider *mockPgProvider
 }
 func (t *lockErrorPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
+	if sql == "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED" {
+		return nil, fmt.Errorf("lock error")
+	}
 	return t.Tx.Exec(ctx, sql, arguments...)
 }
-func (t *lockErrorPgTx) QueryRow(ctx context.Context, sql string, args ...interface{}) db.Row {
-	if sql == "SELECT organization_id FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED" {
-		// Mock queryrow returning error
-		return &errorRow{err: fmt.Errorf("lock error")}
-	}
-	return t.Tx.QueryRow(ctx, sql, args...)
-}
-
-type errorRow struct{ err error }
-
-func (e *errorRow) Scan(dest ...any) error { return e.err }
 func (t *lockErrorPgTx) Query(ctx context.Context, sql string, args ...interface{}) (db.Rows, error) {
 	return t.Tx.Query(ctx, sql, args...)
+}
+func (t *lockErrorPgTx) QueryRow(ctx context.Context, sql string, args ...interface{}) db.Row {
+	return t.Tx.QueryRow(ctx, sql, args...)
 }
 
 type lockErrorPgProvider struct {
@@ -464,11 +453,11 @@ func TestAutoDreamWorker_ProcessMemories_InsertError(t *testing.T) {
 	setupMockMemories(t, 2)
 
 	// Pre-insert session data so lock query succeeds
-	_, err := provider.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, content TEXT, organization_id TEXT DEFAULT 'system')")
+	_, err := provider.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, content TEXT)")
 	if err != nil {
 		t.Fatalf("failed to create agent_session_data: %v", err)
 	}
-	_, err = provider.Exec(context.Background(), "INSERT INTO agent_session_data (session_id, content, organization_id) VALUES ('mission-1', 'test content', 'org-1')")
+	_, err = provider.Exec(context.Background(), "INSERT INTO agent_session_data (session_id, content) VALUES ('mission-1', 'test content')")
 
 	mockProvider := &insertErrorPgProvider{mockPgProvider{Provider: provider}}
 	worker := NewAutoDreamWorker(mockProvider)

@@ -472,3 +472,79 @@ func envBoolDefault(key string, fallback bool) bool {
 	}
 	return strings.ToLower(val) == "true" || val == "1"
 }
+
+// FileReadTool implements AgentTool for reading files.
+type FileReadTool struct {
+	Provider FileSystemProvider
+}
+
+func (t *FileReadTool) Name() string {
+	return "read_file"
+}
+
+func (t *FileReadTool) Description() string {
+	return "Reads the content of a file."
+}
+
+func (t *FileReadTool) InputSchema() json.RawMessage {
+	return json.RawMessage(`{"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}`)
+}
+
+func (t *FileReadTool) Execute(ctx context.Context, input json.RawMessage) (json.RawMessage, error) {
+	var args map[string]string
+	if err := json.Unmarshal(input, &args); err != nil {
+		return nil, err
+	}
+	path, ok := args["path"]
+	if !ok {
+		return nil, errors.New("missing path parameter")
+	}
+
+	data, err := t.Provider.ReadFile(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string]string{"content": string(data)}
+	return json.Marshal(res)
+}
+
+// FileWriteTool implements AgentTool for writing files.
+type FileWriteTool struct {
+	Provider FileSystemProvider
+}
+
+func (t *FileWriteTool) Name() string {
+	return "write_file"
+}
+
+func (t *FileWriteTool) Description() string {
+	return "Writes content to a file."
+}
+
+func (t *FileWriteTool) InputSchema() json.RawMessage {
+	return json.RawMessage(`{"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}`)
+}
+
+func (t *FileWriteTool) Execute(ctx context.Context, input json.RawMessage) (json.RawMessage, error) {
+	var args map[string]string
+	if err := json.Unmarshal(input, &args); err != nil {
+		return nil, err
+	}
+	path, ok := args["path"]
+	if !ok {
+		return nil, errors.New("missing path parameter")
+	}
+	content, ok := args["content"]
+	if !ok {
+		return nil, errors.New("missing content parameter")
+	}
+
+	err := t.Provider.WriteFile(ctx, path, []byte(content))
+	if err != nil {
+		return nil, err
+	}
+
+	res := map[string]string{"status": "success"}
+	return json.Marshal(res)
+}

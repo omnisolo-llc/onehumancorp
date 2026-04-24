@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log/slog"
 
 	"github.com/pressly/goose/v3"
 )
@@ -23,7 +22,7 @@ func upAutodreamAgentMemories(ctx context.Context, tx *sql.Tx) error {
 	_, err = tx.ExecContext(ctx, alterTasksQuery)
 	if err != nil {
 		// Log but don't fail if column already exists (sqlite compatibility)
-		slog.Info("Info: adding auto_dreamed column", "error", err)
+		fmt.Printf("Info: adding auto_dreamed column: %v\n", err)
 	}
 
 	if !isSQLite {
