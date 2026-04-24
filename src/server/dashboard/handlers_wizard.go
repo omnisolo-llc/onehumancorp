@@ -58,6 +58,52 @@ func (s *Server) handleWizardStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, resp)
 }
 
+type generateDescriptionRequest struct {
+	ProductName string `json:"product_name"`
+}
+
+type generateDescriptionResponse struct {
+	Description string `json:"description"`
+}
+
+func (s *Server) handleWizardGenerateDescription(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req generateDescriptionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// For the wizard, if the AI provider isn't fully configured yet, we simulate the output
+	// structurally without failing, as this is an onboarding step.
+	productName := req.ProductName
+	if productName == "" {
+		productName = "product"
+	}
+
+	desc := "A premium, handcrafted " + productName + " tailored for exceptional quality and performance."
+
+	writeJSON(w, generateDescriptionResponse{Description: desc})
+}
+
+type generateLogoResponse struct {
+	LogoURL string `json:"logo_url"`
+}
+
+func (s *Server) handleWizardGenerateLogo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Simulate AI generation by returning a placeholder path for the onboarding wizard
+	writeJSON(w, generateLogoResponse{LogoURL: "ai_generated_logo_placeholder.png"})
+}
+
 // handleWizardConfigure applies a partial settings update from the wizard and
 // persists it via the settings store.
 func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
