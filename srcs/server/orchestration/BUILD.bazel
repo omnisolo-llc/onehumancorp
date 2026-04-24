@@ -32,6 +32,8 @@ go_library(
         "shared_tasks.go",
         "models.go",
         "shared_task_list_repo.go",
+        "bridge_manager.go",
+
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/orchestration",
     visibility = ["//visibility:public"],
@@ -114,6 +116,8 @@ go_test(
         "chaos_thin_client_test.go",
         "sentry_chaos_test.go",
         "shared_task_list_repo_test.go",
+        "bridge_manager_test.go",
+
     ],
     embed = [":orchestration"],
     deps = [

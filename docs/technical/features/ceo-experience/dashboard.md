@@ -74,3 +74,27 @@ The dashboard must maintain a 100/100 Lighthouse score for accessibility, ensuri
 - **Context Window Bloat:** Agent memory is forcefully summarized to fit within token limits, potentially losing subtle historical nuances.
 
 </div>
+
+## 9. Bridge Status Dashboard
+The "Bridge Status" dashboard provides high-level observability into all cross-swarm Universal Mesh Bridge connections. This helps the CEO monitor active inter-organizational or standalone-to-cloud connections.
+
+<style>
+.bridge-card {
+  backdrop-filter: blur(20px) saturate(200%);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: 'Outfit', 'Inter', sans-serif;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+}
+</style>
+
+<div class="bridge-card">
+  <div style="padding: 24px;">
+    <h3 style="margin-top: 0; color: #FFFFFF;">Universal Mesh Bridge Status</h3>
+    <p style="color: #E2E8F0;">Monitor active federated swarm connections across trust boundaries.</p>
+    <ul>
+      <li><strong>Local Standalone ↔ Cloud Swarm</strong>: ACTIVE</li>
+      <li><strong>Partner Org ↔ OHC Hub</strong>: INACTIVE</li>
+    </ul>
+  </div>
+</div>
