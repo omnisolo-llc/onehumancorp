@@ -4,6 +4,7 @@ import 'package:ohc_app/screens/help/help_center_screen.dart';
 import 'package:ohc_app/screens/help/help_article_screen.dart';
 import 'package:ohc_app/screens/help/changelog_screen.dart';
 import 'package:ohc_app/screens/help/api_docs_screen.dart';
+import 'package:ohc_app/screens/help/video_tutorials_screen.dart';
 import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/tooltip_registry.dart';
 
@@ -45,6 +46,14 @@ void main() {
   testWidgets('AiHelpChatWidget renders button', (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: AiHelpChatWidget())));
     expect(find.text('Ask AI Support'), findsOneWidget);
+  });
+
+
+
+  testWidgets('VideoTutorialsScreen renders correctly', (WidgetTester tester) async {
+    await tester.pumpWidget(const MaterialApp(home: VideoTutorialsScreen()));
+    expect(find.text('Video Tutorials'), findsOneWidget);
+    expect(find.text('How to set up your store'), findsOneWidget);
   });
 
   test('TooltipRegistry returns valid strings', () {

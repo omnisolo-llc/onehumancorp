@@ -573,6 +573,14 @@ class ApiService {
     }
   }
 
+  Future<http.Response> get(String path) async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl$path'),
+      headers: _headers,
+    );
+    return res;
+  }
+
   Future<void> triggerHybridSync() async {
     final response = await _client.post(
       Uri.parse('$baseUrl/api/mcp/sync'),

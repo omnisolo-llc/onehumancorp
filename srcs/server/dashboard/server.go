@@ -562,6 +562,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	if server.serveUI {
 		mux.HandleFunc("/", server.handleApp)
 	}
+	api.NewHelpHandler().RegisterRoutes(mux)
 	mux.HandleFunc("/api/dashboard", server.handleDashboard)
 	mux.HandleFunc("/api/org", server.handleOrg)
 	mux.HandleFunc("/api/meetings", server.handleMeetings)

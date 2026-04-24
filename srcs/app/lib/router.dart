@@ -1,4 +1,5 @@
 import 'package:ohc_app/screens/help/help_center_screen.dart';
+import 'package:ohc_app/screens/help/video_tutorials_screen.dart';
 import 'package:ohc_app/screens/help/help_article_screen.dart';
 import 'package:ohc_app/screens/help/changelog_screen.dart';
 import 'package:ohc_app/screens/help/api_docs_screen.dart';
@@ -90,6 +91,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           // Business setup requires authentication — moved inside the shell.
+          GoRoute(
+            path: '/help/video-tutorials',
+            builder: (context, state) => const VideoTutorialsScreen(),
+          ),
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
