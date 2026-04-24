@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+- Scaling (Cloud): Implement Builtin Rust Agent Integration and Database Migration Stability fixes.
+- Privacy/Offline (Standalone): Enforce Tenant RLS policies across internal database storage for offline multi-user integrity.
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 - Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.
 - Privacy/Offline (Standalone): Enhance AutoDream Vector Data Pipelines for standalone privacy.

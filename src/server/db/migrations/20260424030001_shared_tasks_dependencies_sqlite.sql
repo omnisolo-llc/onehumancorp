@@ -2,6 +2,8 @@
 -- +goose StatementBegin
 ALTER TABLE shared_tasks ADD COLUMN dependencies TEXT NOT NULL DEFAULT '[]';
 
+CREATE TABLE IF NOT EXISTS task_dependencies (task_id TEXT, depends_on_task_id TEXT);
+
 WITH RECURSIVE deps AS (
     SELECT task_id, json_group_array(depends_on_task_id) as dep_arr
     FROM task_dependencies
