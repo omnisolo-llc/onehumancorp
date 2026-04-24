@@ -33,7 +33,9 @@
       },
       "options": {
         "mode": "html",
-        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .grafana-app {\n    background-color: #0b0c10 !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID ORCHESTRATION</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
+        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n  .grafana-app {\n    background-color: #0b0c10 !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID ORCHESTRATION</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>",
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "transparent": true
     },
@@ -109,7 +111,9 @@
         "tooltip": {
           "mode": "multi",
           "sort": "none"
-        }
+        },
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "targets": [
         {
@@ -201,7 +205,9 @@
         "tooltip": {
           "mode": "multi",
           "sort": "none"
-        }
+        },
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "targets": [
         {
@@ -292,7 +298,9 @@
         "tooltip": {
           "mode": "multi",
           "sort": "none"
-        }
+        },
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "targets": [
         {
