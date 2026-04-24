@@ -1,4 +1,6 @@
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
+import 'package:ohc_app/widgets/contextual_tooltip.dart';
+import 'package:ohc_app/services/tooltip_registry.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -190,7 +192,7 @@ class _DashboardContent extends StatelessWidget {
                   children: [
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                      child: Text(
+                      child: ContextualTooltip(message: TooltipRegistry.getTooltip('recent_activity'), child: Text(
                         'Recent Activity',
                         style: TextStyle(
                           fontSize: 20,
@@ -198,7 +200,7 @@ class _DashboardContent extends StatelessWidget {
                           color: Theme.of(context).colorScheme.onSurface,
                           fontFamily: 'Outfit',
                         ),
-                      ),
+                      )),
                     ),
                     const Expanded(child: TaskListView()),
                   ],

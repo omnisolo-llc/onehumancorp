@@ -34,6 +34,11 @@ import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/release_notes_screen.dart';
+import 'package:ohc_app/widgets/help_chat_fab.dart';
+import 'package:ohc_app/widgets/interactive_walkthrough.dart';
+
 
 /// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
 /// [GoRouter.refreshListenable], so the router re-evaluates its redirect
@@ -86,6 +91,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           // Business setup requires authentication — moved inside the shell.
+                    GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/changelog',
+            builder: (context, state) => const ReleaseNotesScreen(),
+          ),
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
@@ -223,7 +236,16 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return InteractiveWalkthrough(
+      child: Scaffold(
+        body: Stack(
+          children: [
+            Row(children: [_Sidebar(), Expanded(child: child)]),
+            const HelpChatFAB(),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -240,6 +262,9 @@ class _Sidebar extends StatelessWidget {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
+        const Divider(),
+                _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
+        _NavItem(icon: Icons.article, label: 'Release Notes', path: '/changelog'),
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
