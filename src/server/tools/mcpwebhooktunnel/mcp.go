@@ -102,7 +102,7 @@ func (c *LocalTunnelClient) startListener() {
 						"INSERT INTO local_webhook_events(agent_id, payload) VALUES(?, ?)",
 						c.agentID, payload.Body)
 					if err != nil {
-						fmt.Println("failed to inject webhook to sqlite bus")
+						fmt.Printf("failed to inject webhook to sqlite bus: %v\n", err)
 					}
 				}
 			}
