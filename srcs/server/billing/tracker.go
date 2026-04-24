@@ -101,11 +101,12 @@ type AgentSummary struct {
 // Produces no errors.
 // Has no side effects.
 type Summary struct {
-	OrganizationID      string         `json:"organizationId"`
-	TotalCostUSD        float64        `json:"totalCostUsd"`
-	TotalTokens         int64          `json:"totalTokens"`
-	ProjectedMonthlyUSD float64        `json:"projectedMonthlyUsd"`
-	Agents              []AgentSummary `json:"agents"`
+	OrganizationID      string             `json:"organizationId"`
+	TotalCostUSD        float64            `json:"totalCostUsd"`
+	TotalTokens         int64              `json:"totalTokens"`
+	ProjectedMonthlyUSD float64            `json:"projectedMonthlyUsd"`
+	Agents              []AgentSummary     `json:"agents"`
+	Breakdown           map[string]float64 `json:"breakdown"`
 }
 
 // ⚡ BOLT: [Global mutex contention] - Randomized Selection from Top 5
@@ -326,6 +327,7 @@ func (t *Tracker) Summary(organizationID string) Summary {
 	defer shard.mu.RUnlock()
 
 	byAgent := map[string]AgentSummary{}
+	breakdown := map[string]float64{}
 	var totalCost float64
 	var totalTokens int64
 
@@ -338,6 +340,9 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		agent.CostUSD += usage.CostUSD
 		agent.TokenUsed += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
 		byAgent[usage.AgentID] = agent
+
+		breakdown[usage.Model] += usage.CostUSD
+
 		totalCost += usage.CostUSD
 		totalTokens += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
 	}
@@ -356,6 +361,7 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		TotalTokens:         totalTokens,
 		ProjectedMonthlyUSD: totalCost * 30,
 		Agents:              agents,
+		Breakdown:           breakdown,
 	}
 }
 

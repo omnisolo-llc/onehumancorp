@@ -105,6 +105,92 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
               ),
               const SizedBox(height: 32),
 
+              // Usage per Model Chart
+              Text(
+                'Usage per Model',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              if (costs.breakdown.isNotEmpty)
+                GlassCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      children:
+                          costs.breakdown.entries.map((entry) {
+                            final modelName = entry.key;
+                            final cost = entry.value;
+                            final ratio =
+                                costs.totalCostUSD > 0
+                                    ? cost / costs.totalCostUSD
+                                    : 0.0;
+
+                            return Semantics(
+                              label:
+                                  'Usage for $modelName: ${currencyFormat.format(cost)}',
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          modelName,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        Text(currencyFormat.format(cost)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Stack(
+                                      children: [
+                                        Container(
+                                          height: 8,
+                                          width: double.infinity,
+                                          decoration: BoxDecoration(
+                                            color:
+                                                colors.surfaceContainerHighest,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
+                                          ),
+                                        ),
+                                        FractionallySizedBox(
+                                          widthFactor: ratio.clamp(0.0, 1.0),
+                                          child: Container(
+                                            height: 8,
+                                            decoration: BoxDecoration(
+                                              color: colors.secondary,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text('No model usage data available yet.'),
+                ),
+
+              const SizedBox(height: 32),
+
               // Usage per Agent Chart
               Text(
                 'Usage per Agent',

@@ -73,11 +73,32 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		agents = append(agents, a)
 	}
 
+	rows2, err := r.pool.Query(ctx, `
+		SELECT model, COALESCE(SUM(cost_usd), 0)
+		FROM usage_events
+		WHERE organization_id = $1
+		GROUP BY model`, organizationID)
+	if err != nil {
+		return Summary{}, fmt.Errorf("pg: billing breakdown: %w", err)
+	}
+	defer rows2.Close()
+
+	breakdown := make(map[string]float64)
+	for rows2.Next() {
+		var model string
+		var cost float64
+		if err := rows2.Scan(&model, &cost); err != nil {
+			return Summary{}, fmt.Errorf("pg: scan breakdown: %w", err)
+		}
+		breakdown[model] = cost
+	}
+
 	return Summary{
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,
 		TotalTokens:         totalTokens,
 		ProjectedMonthlyUSD: totalCost * 30,
 		Agents:              agents,
+		Breakdown:           breakdown,
 	}, nil
 }

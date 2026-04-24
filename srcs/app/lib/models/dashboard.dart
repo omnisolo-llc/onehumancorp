@@ -164,11 +164,13 @@ class CostSummary {
   final double totalCostUSD;
   final int totalTokens;
   final List<AgentCost> agents;
+  final Map<String, double> breakdown;
 
   const CostSummary({
     required this.totalCostUSD,
     required this.totalTokens,
     required this.agents,
+    this.breakdown = const {},
   });
 
   factory CostSummary.fromJson(Map<String, dynamic> json) {
@@ -181,6 +183,11 @@ class CostSummary {
               ?.map((e) => AgentCost.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+      breakdown:
+          (json['breakdown'] as Map<String, dynamic>?)?.map(
+            (k, v) => MapEntry(k, (v as num).toDouble()),
+          ) ??
+          const {},
     );
   }
 }

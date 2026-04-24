@@ -73,11 +73,32 @@ func (r *SqliteUsageRepository) Summary(ctx context.Context, organizationID stri
 		agents = append(agents, a)
 	}
 
+	rows2, err := r.pool.Query(ctx, `
+		SELECT model, COALESCE(SUM(cost_usd), 0)
+		FROM usage_events
+		WHERE organization_id = ?
+		GROUP BY model`, organizationID)
+	if err != nil {
+		return Summary{}, fmt.Errorf("sqlite: billing breakdown: %w", err)
+	}
+	defer rows2.Close()
+
+	breakdown := make(map[string]float64)
+	for rows2.Next() {
+		var model string
+		var cost float64
+		if err := rows2.Scan(&model, &cost); err != nil {
+			return Summary{}, fmt.Errorf("sqlite: scan breakdown: %w", err)
+		}
+		breakdown[model] = cost
+	}
+
 	return Summary{
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,
 		TotalTokens:         totalTokens,
 		ProjectedMonthlyUSD: totalCost * 30,
 		Agents:              agents,
+		Breakdown:           breakdown,
 	}, nil
 }
