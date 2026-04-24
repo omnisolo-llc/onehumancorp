@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "msgbus",
+    srcs = [
+        "bus.go",
+        "memory_bus.go",
+        "nats_bus.go",
+        "redis_bus.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/srcs/server/msgbus",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_nats_io_nats_go//:nats_go",
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
+
+go_test(
+    name = "msgbus_test",
+    srcs = ["bus_test.go"],
+    deps = [":msgbus"],
+)
