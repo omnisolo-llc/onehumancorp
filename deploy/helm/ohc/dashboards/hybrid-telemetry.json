@@ -146,7 +146,8 @@
         }
       ],
       "title": "HTTP Request Rate (Cloud vs Standalone)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -173,7 +174,8 @@
         }
       ],
       "title": "P95 Latency",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -200,7 +202,8 @@
         }
       ],
       "title": "Token Usage Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -227,7 +230,8 @@
         }
       ],
       "title": "Token Burn Rate Forecast",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -254,7 +258,8 @@
         }
       ],
       "title": "Agent API Calls Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -281,7 +286,8 @@
         }
       ],
       "title": "Agent API Error Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "title": "Teammate Mesh Broadcasts",
@@ -298,7 +304,8 @@
           "refId": "A"
         }
       ],
-      "id": 9
+      "id": 9,
+      "transparent": true
     },
     {
       "datasource": {
@@ -331,7 +338,8 @@
         }
       ],
       "title": "SQLite Lock Contention Rate",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "id": 11,
@@ -356,7 +364,8 @@
           "expr": "ohc_task_queue_length",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 12,
@@ -381,7 +390,8 @@
           "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 13,
@@ -407,7 +417,8 @@
           "legendFormat": "{{error}}",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 14,
@@ -433,7 +444,8 @@
           "legendFormat": "{{operation}}",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "datasource": {
@@ -460,7 +472,8 @@
         }
       ],
       "title": "Token Burn Rate Forecast",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -487,7 +500,8 @@
         }
       ],
       "title": "Agent State Transition Latency",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -522,7 +536,8 @@
         }
       ],
       "title": "LLM Cache Performance",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -548,7 +563,8 @@
         }
       ],
       "title": "API Rate Limits Exceeded",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -756,7 +772,8 @@
           "legendFormat": "P95 Batch Size",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 22,
@@ -774,7 +791,8 @@
           "legendFormat": "{{agent_id}} - {{trace_type}}",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 23,
@@ -792,7 +810,8 @@
           "legendFormat": "Queue Length",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 24,
@@ -850,7 +869,8 @@
         "tooltip": {
           "mode": "single"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "type": "timeseries",
@@ -902,7 +922,8 @@
           "legendFormat": "Batch Size",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 27,
@@ -920,7 +941,8 @@
           "legendFormat": "Avg Backoff Duration",
           "refId": "A"
         }
-      ]
+      ],
+      "transparent": true
     }
   ],
   "refresh": "",

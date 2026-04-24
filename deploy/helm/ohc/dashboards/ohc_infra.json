@@ -166,7 +166,8 @@
         }
       ],
       "title": "Uptime",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "refresh": "10s",
