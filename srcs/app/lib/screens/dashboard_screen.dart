@@ -171,7 +171,7 @@ class _DashboardContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 32),
-        _SectionTitle('System Status'),
+        _SectionTitle('Platform Health'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -215,7 +215,7 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),
-        _SectionTitle('Company Structure'),
+        _SectionTitle('My Team'),
         const SizedBox(height: 8),
         Text(
           'Manage your AI team. Hire or fire agents to help run your business.',
@@ -256,9 +256,9 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'System Overview Panel',
+      label: 'Business Health Panel',
       child: Tooltip(
-        message: 'View System Health & Metrics',
+        message: 'View Business Health & Metrics',
         child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
@@ -288,7 +288,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'System Overview',
+                              'Platform Health',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -306,10 +306,10 @@ class _ObservabilityWidget extends StatelessWidget {
                           runSpacing: 16.0,
                           alignment: WrapAlignment.spaceAround,
                           children: [
-                            _Metric(label: 'System Health', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Active Tasks', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Speed (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Total AI Agents', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
+                            _Metric(label: 'Business Health', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
+                            _Metric(label: 'Active Jobs', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
+                            _Metric(label: 'App Speed', value: '12ms', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'Total Helpers', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
                       ],
@@ -351,7 +351,7 @@ class _StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            healthy ? 'System Nominal' : 'Degraded',
+            healthy ? 'Healthy' : 'Issues Found',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -501,7 +501,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                         children: [
                           Semantics(
                             button: true,
-                            label: 'Decrease $formattedRole count',
+                            label: 'Decrease $formattedRole helpers',
                             child: IconButton(
                               icon: const Icon(Icons.remove_circle_outline, size: 28),
                               color: colors.primary,
@@ -535,7 +535,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           ),
                           Semantics(
                             button: true,
-                            label: 'Increase $formattedRole count',
+                            label: 'Increase $formattedRole helpers',
                             child: IconButton(
                               icon: const Icon(Icons.add_circle_outline, size: 28),
                               color: colors.primary,

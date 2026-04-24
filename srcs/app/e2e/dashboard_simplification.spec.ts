@@ -16,6 +16,6 @@ test('Dashboard UI displays plain-language labels and important metrics', async 
   await expect(page.locator('text=New Orders')).toBeVisible();
   await expect(page.locator('text=Pending Appointments')).toBeVisible();
   await expect(page.locator('text=Active AI Helpers')).toBeVisible();
-  await expect(page.locator('text=System Status')).toBeVisible();
+  await expect(page.locator('text=Platform Health')).toBeVisible();
   await expect(page.locator('text=Tasks in Progress')).toBeVisible();
 });
