@@ -1,4 +1,4 @@
-package orchestration
+package orchestration // issue_id: 4173
 
 import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
@@ -1031,66 +1031,4 @@ func (lm *MemoryMeshTransport) Publish(topic string, data []byte) error {
 
 func (lm *MemoryMeshTransport) Subscribe(topic string) (<-chan []byte, error) {
 	return lm.SubscribeMeshEvents(context.Background(), topic)
-}
-
-func (rm *RedisMeshTransport) BroadcastMessage(ctx context.Context, topic string, msg Message) error {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-	return rm.BroadcastMeshEvent(ctx, topic, data)
-}
-
-func (rm *RedisMeshTransport) SubscribeMessage(ctx context.Context, topic string) (<-chan Message, error) {
-	bytesCh, err := rm.SubscribeMeshEvents(ctx, topic)
-	if err != nil {
-		return nil, err
-	}
-
-	ch := make(chan Message, 100)
-	go func() {
-		for data := range bytesCh {
-			var msg Message
-			if err := json.Unmarshal(data, &msg); err == nil {
-				select {
-				case ch <- msg:
-				default:
-				}
-			}
-		}
-		close(ch)
-	}()
-
-	return ch, nil
-}
-
-func (lm *MemoryMeshTransport) BroadcastMessage(ctx context.Context, topic string, msg Message) error {
-	data, err := json.Marshal(msg)
-	if err != nil {
-		return err
-	}
-	return lm.BroadcastMeshEvent(ctx, topic, data)
-}
-
-func (lm *MemoryMeshTransport) SubscribeMessage(ctx context.Context, topic string) (<-chan Message, error) {
-	bytesCh, err := lm.SubscribeMeshEvents(ctx, topic)
-	if err != nil {
-		return nil, err
-	}
-
-	ch := make(chan Message, 100)
-	go func() {
-		for data := range bytesCh {
-			var msg Message
-			if err := json.Unmarshal(data, &msg); err == nil {
-				select {
-				case ch <- msg:
-				default:
-				}
-			}
-		}
-		close(ch)
-	}()
-
-	return ch, nil
 }
