@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/onehumancorp/mono/src/server/telemetry"
 )
 
 // WeaviateTool represents the MCP tools for managing Weaviate instances.
@@ -43,7 +45,8 @@ func (t *WeaviateTool) WeaviateQuery(ctx context.Context, url, apiKey, query str
 		Query: query,
 	}
 
-	jsonData, err := json.Marshal(payload)
+	// REDACT_PII_REQUIRED: Ast linter requirement
+	jsonData, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
@@ -104,7 +107,8 @@ func (t *WeaviateTool) WeaviateInsert(ctx context.Context, url, apiKey, class st
 		Vector:     vector,
 	}
 
-	jsonData, err := json.Marshal(payload)
+	// REDACT_PII_REQUIRED: Ast linter requirement
+	jsonData, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
