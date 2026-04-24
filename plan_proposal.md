@@ -1,7 +1,20 @@
-1. **Implement `IsolationStrategy` interface**: Use a file editing tool (like `replace_with_git_merge_diff`) to add `IsolationStrategy` interface to `src/server/agents/provider.go`. The interface will have a single method `RunInIsolation(worktree string) error`.
-2. **Update `Provider` interface**: Use a file editing tool to embed the `IsolationStrategy` interface in the `Provider` interface in `src/server/agents/provider.go`.
-3. **Implement `RunInIsolation`**: Use a file editing tool to add `RunInIsolation(worktree string) error` to all the structs implementing `Provider` (or just to `baseProvider` and `BuiltinProvider`) in `src/server/agents/provider.go`. The implementation will pipe output streams directly to Redis Pub/Sub, for example: `fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)` and return `nil`.
-4. **Verify code changes**: Run `cat src/server/agents/provider.go` to ensure all edits were applied correctly.
-5. **Run tests**: Execute `bazelisk test //src/server/agents/...` to ensure all tests pass.
-6. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-7. **Submit the code**: Use the `submit` tool to commit the code, and then output a final message with a YAML block containing `issue_id: 4871`.
+1. **Understand Goal:** Implement the "Website Builder Onboarding" Wizard as described in the requirements. Triggered after the setup wizard, or when the user taps "Build My Website".
+2. **Review Requirements:**
+   - Template gallery: Full-bleed card grid, live mini-preview, "Use this template ->" CTA.
+   - Brand colors & logo: Color palette picker (AI suggests 3 palettes), logo upload with AI background removal, or "Generate a logo for me" (3 options).
+   - Add your first product or service: Inline add form (name, photo, price, short description). AI auto-generates description.
+   - Connect a domain: "Use a free OHC subdomain", "Use my own domain", "Buy a domain".
+   - Go Live: Preview of live site, "Publish" button. Auto-copied to clipboard.
+   - Progressive Disclosure: Standard mode plain language, Advanced mode raw config fields.
+   - OHC Premium Design Standards: Glassmorphism (`backdrop-filter: blur(20px)`), Outfit + Inter, animations.
+   - Test Coverage: 100% unit and E2E test coverage.
+3. **Implementation Plan:**
+   - Create `src/app/lib/screens/website_builder_wizard_screen.dart`.
+     - Implement the 5 steps using `Stepper` or a custom wizard flow.
+     - Build the state manager using Riverpod (`WebsiteBuilderNotifier` / `WebsiteBuilderState`).
+     - Incorporate the OHC Premium Design Tokens.
+   - Add route in `src/app/lib/router.dart` (e.g., `/wizards/website-builder`).
+   - Create `src/app/test/screens/website_builder_wizard_screen_test.dart` for 100% unit test coverage.
+   - Update `src/tests/e2e/wizard_test.go` or create a new test for the website builder E2E test. Actually, the requirements say "E2E-test every wizard: start from the home page after user login, navigate through the complete wizard flow by clicking UI links/buttons... go through every step until the process finishes...". So I will add it to `cuj_website_builder_e2e_test.dart` or something. Wait, the prompt says "E2E widget tests (`cuj_*_e2e_test.dart`) should be written in Dart, placed in `srcs/app/test/`". I will add `cuj_website_builder_e2e_test.dart` in `src/app/test/`.
+   - Update the UI to include a link to the website builder from the Dashboard.
+   - Fix all Dart tests and ensure `bazelisk test //...` passes.

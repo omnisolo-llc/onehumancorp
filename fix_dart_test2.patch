@@ -1,0 +1,24 @@
+--- src/app/BUILD.bazel
++++ src/app/BUILD.bazel
+@@ -219,6 +219,14 @@
+     workspace_pubspec = "//:pubspec.yaml",
+ )
+
++flutter_test(
++    name = "cuj_website_builder_e2e_test",
++    srcs = ["test/cuj_website_builder_e2e_test.dart"],
++    embed = [":app_lib"],
++    test_files = ["test/cuj_website_builder_e2e_test.dart"],
++    workspace_pubspec = "//:pubspec.yaml",
++)
++
+ test_suite(
+     name = "cuj_e2e_tests",
+     tags = ["manual"],
+@@ -233,6 +241,7 @@
+         ":cuj_channels_extra_e2e_test",
+         ":cuj_scaling_e2e_test",
+         ":cuj_diagnostics_referrals_e2e_test",
++        ":cuj_website_builder_e2e_test",
+     ],
+ )
