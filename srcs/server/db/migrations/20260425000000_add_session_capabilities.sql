@@ -1,1 +1,1 @@
-ALTER TABLE agent_session_data ADD COLUMN capabilities JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE agent_session_data ADD COLUMN capabilities JSONB DEFAULT '[]';

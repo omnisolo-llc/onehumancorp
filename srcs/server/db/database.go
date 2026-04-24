@@ -277,7 +277,7 @@ func New(ctx context.Context) (*DB, error) {
 			}
 		}
 
-		slog.Info("db: connected to sqlite", "path", dbPath)
+		slog.Debug("db: connected to sqlite", "path", dbPath)
 		return &DB{Provider: NewSqliteProvider(sqliteDB)}, nil
 	}
 
@@ -291,7 +291,7 @@ func New(ctx context.Context) (*DB, error) {
 		return nil, fmt.Errorf("db: ping postgres: %w", err)
 	}
 
-	slog.Info("db: connected to postgres", "dsn", redactDSN(dsn))
+	slog.Debug("db: connected to postgres", "dsn", redactDSN(dsn))
 	return &DB{Provider: NewPgProvider(pool)}, nil
 }
 
@@ -380,6 +380,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
 			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+[a-zA-Z0-9_]+\s+ON\s+[a-zA-Z0-9_]+\s+USING\s+hnsw[^;]*;`).ReplaceAllString(sqlStr, "")
+			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+[a-zA-Z0-9_]+\s+ON\s+[a-zA-Z0-9_]+\s+USING\s+ivfflat[^;]*;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+idx_consolidated_memory_embedding\s+ON\s+consolidated_memory\s+USING\s+hnsw\s*\([^;]+\);`).ReplaceAllString(sqlStr, "")
 			sqlStr = strings.ReplaceAll(sqlStr, "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
 			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
@@ -471,7 +472,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			return fmt.Errorf("db: commit migration %s: %w", f, err)
 		}
 
-		slog.Info("db: applied migration", "file", f)
+		slog.Debug("db: applied migration", "file", f)
 	}
 
 	return nil

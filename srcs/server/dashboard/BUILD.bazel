@@ -15,6 +15,7 @@ go_library(
         "handlers_growth.go",
         "handlers_wizard.go",
         "seeder.go",
+        "handlers_mesh_extra.go",
         "server.go",
         "tenant.go",
     ],
