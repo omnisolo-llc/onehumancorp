@@ -2,24 +2,15 @@
 -- +goose StatementBegin
 ALTER TABLE shared_tasks ADD COLUMN IF NOT EXISTS dependencies JSONB NOT NULL DEFAULT '[]';
 
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT FROM information_schema.tables
-        WHERE table_schema = 'public'
-        AND table_name   = 'task_dependencies'
-    ) THEN
-        WITH deps AS (
-            SELECT task_id, jsonb_agg(depends_on_task_id) as dep_arr
-            FROM task_dependencies
-            GROUP BY task_id
-        )
-        UPDATE shared_tasks
-        SET dependencies = deps.dep_arr
-        FROM deps
-        WHERE deps.task_id::text = shared_tasks.id;
-    END IF;
-END $$;
+WITH deps AS (
+    SELECT task_id, jsonb_agg(depends_on_task_id) as dep_arr
+    FROM task_dependencies
+    GROUP BY task_id
+)
+UPDATE shared_tasks
+SET dependencies = deps.dep_arr
+FROM deps
+WHERE deps.task_id = shared_tasks.id::uuid;
 
 DROP TABLE IF EXISTS task_dependencies;
 -- +goose StatementEnd
