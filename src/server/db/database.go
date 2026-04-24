@@ -370,11 +370,6 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		if p.Provider.IsSQLite() {
-			// Skip PG specific DO blocks
-			if strings.Contains(sqlStr, "DO $$") {
-				continue
-			}
-
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.
 			// Bigserial -> INTEGER PRIMARY KEY AUTOINCREMENT
 			// TIMESTAMPTZ -> DATETIME
