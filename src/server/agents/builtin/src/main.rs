@@ -13,7 +13,7 @@ use opentelemetry::{global, KeyValue};
 use opentelemetry_sdk::{
     propagation::TraceContextPropagator,
     runtime,
-    trace::Sampler,
+    trace::{self, Sampler},
     Resource,
 };
 use opentelemetry_otlp::WithExportConfig;
@@ -103,7 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-        let con = match client.get_multiplexed_async_connection().await {
+        let mut con = match client.get_multiplexed_async_connection().await {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!("Failed to get Redis connection: {}", e);
@@ -111,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-        let pubsub_con = match client.get_async_connection().await {
+        let mut pubsub_con = match client.get_async_connection().await {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!("Failed to get Redis pubsub connection: {}", e);

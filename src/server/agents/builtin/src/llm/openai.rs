@@ -40,7 +40,7 @@ impl OpenAIClient {
 
 #[derive(Serialize)]
 struct OpenAIMessage {
-    _role: String,
+    role: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     content: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -99,7 +99,7 @@ struct OpenAIChoice {
 
 #[derive(Deserialize)]
 struct OpenAIResponseMessage {
-    _role: String,
+    role: String,
     content: Option<String>,
     tool_calls: Option<Vec<OpenAIResponseToolCall>>,
 }
@@ -132,7 +132,7 @@ impl LlmClient for OpenAIClient {
 
         if !req.system.is_empty() {
             messages.push(OpenAIMessage {
-                _role: "system".to_string(),
+                role: "system".to_string(),
                 content: Some(req.system.clone()),
                 tool_calls: None,
                 tool_call_id: None,
@@ -152,7 +152,7 @@ impl LlmClient for OpenAIClient {
                     tr.content.clone()
                 };
                 messages.push(OpenAIMessage {
-                    _role: "tool".to_string(),
+                    role: "tool".to_string(),
                     content: Some(content),
                     tool_calls: None,
                     tool_call_id: Some(tr.tool_call_id.clone()),
@@ -174,14 +174,14 @@ impl LlmClient for OpenAIClient {
                     })
                     .collect();
                 messages.push(OpenAIMessage {
-                    _role: "assistant".to_string(),
+                    role: "assistant".to_string(),
                     content: if m.content.is_empty() { None } else { Some(m.content.clone()) },
                     tool_calls: Some(calls),
                     tool_call_id: None,
                 });
             } else {
                 messages.push(OpenAIMessage {
-                    _role: m.role.to_string(),
+                    role: m.role.to_string(),
                     content: Some(m.content.clone()),
                     tool_calls: None,
                     tool_call_id: None,
