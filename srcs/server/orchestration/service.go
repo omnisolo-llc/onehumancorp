@@ -301,12 +301,6 @@ func (h *Hub) TaskManager() *TaskManager {
 	return h.taskManager
 }
 
-func (h *Hub) SetTaskManager(tm *TaskManager) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.taskManager = tm
-}
-
 // Close gracefully stops the Hub and its background workers.
 func (h *Hub) Close() {
 	if h.cancel != nil {
