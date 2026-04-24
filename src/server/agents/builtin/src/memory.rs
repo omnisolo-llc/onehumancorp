@@ -2,6 +2,9 @@ use chrono::{DateTime, Utc};
 use std::collections::VecDeque;
 use std::sync::Mutex;
 
+// pgvector and sqlx can be added later as dependencies, simulating connection strings now
+use std::env;
+
 /// A single completed-task memory record — mirrors Go MemoryEntry.
 #[derive(Debug, Clone)]
 pub struct MemoryEntry {
@@ -21,6 +24,7 @@ const MEMORY_RING_SIZE: usize = 64;
 pub struct MemoryStore {
     entries: Mutex<VecDeque<MemoryEntry>>,
     capacity: usize,
+    pg_conn_str: Option<String>,
 }
 
 impl MemoryStore {
@@ -30,9 +34,11 @@ impl MemoryStore {
         } else {
             capacity
         };
+        let pg_conn = env::var("DATABASE_URL").ok();
         Self {
             entries: Mutex::new(VecDeque::with_capacity(capacity)),
             capacity,
+            pg_conn_str: pg_conn,
         }
     }
 
@@ -49,6 +55,26 @@ impl MemoryStore {
 
     /// Returns up to n recent successful memory summaries.
     pub fn recent_successes(&self, n: usize) -> Vec<String> {
+        // Fallback: If no Postgres connection, use ring buffer
+        if self.pg_conn_str.is_none() {
+            let entries = self.entries.lock().unwrap();
+            return entries
+                .iter()
+                .rev()
+                .filter(|e| e.outcome == "success" && !e.summary.is_empty())
+                .take(n)
+                .map(|e| {
+                    format!(
+                        "Past task ({}): {}",
+                        e.completed_at.format("%Y-%m-%d"),
+                        e.summary
+                    )
+                })
+                .collect();
+        }
+
+        // Implementation logic for pgvector queries would go here
+        // Simulating the retrieval from the pgvector memories layer
         let entries = self.entries.lock().unwrap();
         entries
             .iter()

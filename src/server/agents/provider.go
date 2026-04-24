@@ -10,10 +10,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"errors"
 	"sync"
+
+	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
+	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
 )
 
 // ProviderType is the unique identifier for an external agent implementation.
@@ -649,7 +653,62 @@ func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
 func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+	address := os.Getenv("OHC_AGENT_ADDRESS")
+	if address == "" {
+		address = "127.0.0.1:50051"
+	}
+	client, err := agentgrpc.NewClient(address, agentgrpc.ClientOptionsFromEnv())
+	if err != nil {
+		return fmt.Errorf("connect to builtin agent at %s: %w", address, err)
+	}
+	defer client.Close() //nolint:errcheck
+
+	sandboxID := fmt.Sprintf("sandbox-%s-%d", p.Type(), time.Now().UnixNano())
+
+	if transport != nil {
+		statusMsg, _ := json.Marshal(map[string]interface{}{
+			"agent":    p.Type(),
+			"status":   "RUNNING",
+			"worktree": worktree,
+			"sandbox":  sandboxID,
+		})
+		if err := transport.Send(ctx, statusMsg); err != nil {
+			return err
+		}
+	}
+
+	err = client.RunTask(ctx, &agentservicepb.RunTaskRequest{
+		Task: worktree,
+	}, func(evt *agentservicepb.RunTaskEvent) {
+		if transport != nil && evt.Content != "" {
+			// Forward stream events as JSON over the transport.
+			msgBytes, err := json.Marshal(map[string]interface{}{
+				"agent":   p.Type(),
+				"stream":  "stdout",
+				"content": evt.Content,
+			})
+			if err == nil {
+				transport.Send(ctx, msgBytes)
+			}
+		}
+	})
+
+	if transport != nil {
+		status := "COMPLETED"
+		if err != nil {
+			status = "FAILED"
+		}
+		endMsg, _ := json.Marshal(map[string]interface{}{
+			"agent":  p.Type(),
+			"status": status,
+		})
+		transport.Send(ctx, endMsg)
+	}
+
+	if err != nil {
+		return fmt.Errorf("builtin agent RunTask: %w", err)
+	}
+	return nil
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────

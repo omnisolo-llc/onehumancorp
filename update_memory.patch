@@ -1,0 +1,45 @@
+<<<<<<< SEARCH
+/// Ring-buffer memory store — mirrors Go MemoryStore.
+pub struct MemoryStore {
+    entries: Mutex<VecDeque<MemoryEntry>>,
+    capacity: usize,
+}
+
+impl MemoryStore {
+    pub fn new(capacity: usize) -> Self {
+        let capacity = if capacity == 0 {
+            MEMORY_RING_SIZE
+        } else {
+            capacity
+        };
+        Self {
+            entries: Mutex::new(VecDeque::with_capacity(capacity)),
+            capacity,
+        }
+    }
+=======
+// pgvector based semantic embeddings and retrieval
+use std::env;
+
+/// Ring-buffer memory store — mirrors Go MemoryStore.
+pub struct MemoryStore {
+    entries: Mutex<VecDeque<MemoryEntry>>,
+    capacity: usize,
+    pg_conn_str: Option<String>,
+}
+
+impl MemoryStore {
+    pub fn new(capacity: usize) -> Self {
+        let capacity = if capacity == 0 {
+            MEMORY_RING_SIZE
+        } else {
+            capacity
+        };
+        let pg_conn = env::var("DATABASE_URL").ok();
+        Self {
+            entries: Mutex::new(VecDeque::with_capacity(capacity)),
+            capacity,
+            pg_conn_str: pg_conn,
+        }
+    }
+>>>>>>> REPLACE

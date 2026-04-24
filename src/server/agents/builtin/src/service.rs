@@ -254,7 +254,61 @@ impl AgentService for AgentServiceImpl {
         tokio::spawn(async move {
             let tx_clone = tx.clone();
 
+            // Setup telemetry and message bus pubsub mapping
+            let bus = crate::pubsub::SubagentBus::new();
+            let task_id_clone = task_req.task_id.clone();
+
             let mut on_event = |evt: AgentEvent| {
+                // Bridge events to the Message Bus
+                let bus_evt = match &evt {
+                    AgentEvent::RunStarted { .. } => Some(crate::pubsub::SubagentLifecycleEvent {
+                        event_type: crate::pubsub::SubagentEventType::Spawned,
+                        task_id: task_id_clone.clone(),
+                        parent_task_id: String::new(),
+                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                        notification: None,
+                    }),
+                    AgentEvent::TaskComplete { content } => Some(crate::pubsub::SubagentLifecycleEvent {
+                        event_type: crate::pubsub::SubagentEventType::Completed,
+                        task_id: task_id_clone.clone(),
+                        parent_task_id: String::new(),
+                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                        notification: Some(crate::pubsub::build_task_notification(
+                            &task_id_clone,
+                            "",
+                            "",
+                            "completed",
+                            "Task completed successfully",
+                            &content,
+                            0, // to be updated with actual progress
+                            0,
+                            0,
+                        )),
+                    }),
+                    AgentEvent::TaskError { error } => Some(crate::pubsub::SubagentLifecycleEvent {
+                        event_type: crate::pubsub::SubagentEventType::Failed,
+                        task_id: task_id_clone.clone(),
+                        parent_task_id: String::new(),
+                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                        notification: Some(crate::pubsub::build_task_notification(
+                            &task_id_clone,
+                            "",
+                            "",
+                            "failed",
+                            "Task failed",
+                            &error,
+                            0,
+                            0,
+                            0,
+                        )),
+                    }),
+                    _ => None,
+                };
+
+                if let Some(be) = bus_evt {
+                    bus.publish(be);
+                }
+
                 let pb = match evt {
                     AgentEvent::RunStarted { iteration } => RunTaskEvent {
                         r#type: EventType::RunStarted as i32,
