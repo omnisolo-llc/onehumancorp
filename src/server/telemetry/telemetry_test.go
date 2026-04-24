@@ -900,3 +900,15 @@ func TestRecordHarnessExecutionLatency(t *testing.T) {
 
 	RecordHarnessExecutionLatency(context.Background(), 120.5, "standalone")
 }
+
+func TestRecordCapabilityViolation(t *testing.T) {
+	RecordCapabilityViolation(context.Background(), "session-123", "execute-command")
+}
+
+func TestRecordTelemetryBatchSize(t *testing.T) {
+	RecordTelemetryBatchSize(context.Background(), 500)
+}
+
+func TestRecordTelemetrySyncBackoff(t *testing.T) {
+	RecordTelemetrySyncBackoff(context.Background(), 5.0)
+}
