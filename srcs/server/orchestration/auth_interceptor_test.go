@@ -36,13 +36,13 @@ func mockSPIFFEContext(spiffeID string) context.Context {
 }
 
 func TestExtractSPIFFEID_Success(t *testing.T) {
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/a1")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/a1")
 
 	id, err := ExtractSPIFFEID(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if id != "spiffe://onehumancorp.io/org-1/a1" {
+	if id != "spiffe://onehumancorp.io/org/org-1/agent/a1" {
 		t.Errorf("expected id, got %s", id)
 	}
 }
@@ -107,7 +107,7 @@ func TestSPIFFEAuthInterceptor_EscapeDoubleSlash(t *testing.T) {
 
 func TestSPIFFEAuthInterceptor_DelegateTask(t *testing.T) {
 	interceptor := SPIFFEAuthInterceptor()
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/attacker-agent")
 
 	req := pb.DelegateTaskRequest_builder{
 		FromAgentId: proto.String("target-agent"),
@@ -184,7 +184,7 @@ func TestSPIFFEAuthInterceptor_ShortPath(t *testing.T) {
 
 func TestSPIFFEAuthInterceptor_Spoofing_Publish(t *testing.T) {
 	interceptor := SPIFFEAuthInterceptor()
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/attacker-agent")
 
 	req := pb.PublishMessageRequest_builder{
 		Message: pb.Message_builder{
@@ -211,7 +211,7 @@ func TestSPIFFEAuthInterceptor_Spoofing_Publish(t *testing.T) {
 func TestSPIFFEAuthInterceptor_BoundaryEscape_Publish(t *testing.T) {
 	interceptor := SPIFFEAuthInterceptor()
 	// Malicious SPIFFE ID exploiting the old logic which just split by the last slash
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent/target-agent")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/attacker-agent/target-agent")
 
 	req := pb.PublishMessageRequest_builder{
 		Message: pb.Message_builder{
@@ -264,7 +264,7 @@ func TestSPIFFEAuthInterceptor_BoundaryEscape_OHCOSDomain(t *testing.T) {
 
 func TestSPIFFEAuthInterceptor_Spoofing_Register(t *testing.T) {
 	interceptor := SPIFFEAuthInterceptor()
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/attacker-agent")
 
 	req := pb.RegisterAgentRequest_builder{
 		Agent: pb.Agent_builder{
@@ -290,7 +290,7 @@ func TestSPIFFEAuthInterceptor_Spoofing_Register(t *testing.T) {
 
 func TestSPIFFEAuthInterceptor_Valid(t *testing.T) {
 	interceptor := SPIFFEAuthInterceptor()
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/a1")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/a1")
 
 	req := pb.PublishMessageRequest_builder{
 		Message: pb.Message_builder{
@@ -719,7 +719,7 @@ func TestSPIFFEStreamInterceptor(t *testing.T) {
 		{
 			name: "Valid onehumancorp.io Domain",
 			setupCtx: func() context.Context {
-				return mockSPIFFEContext("spiffe://onehumancorp.io/org-1/agent-1")
+				return mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/agent-1")
 			},
 			reqAgentID:  "agent-1",
 			expectedErr: false,
@@ -727,7 +727,7 @@ func TestSPIFFEStreamInterceptor(t *testing.T) {
 		{
 			name: "Boundary Escape onehumancorp.io Domain",
 			setupCtx: func() context.Context {
-				return mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker/agent-1")
+				return mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/attacker/agent-1")
 			},
 			expectedErr: true,
 			errCode:     codes.PermissionDenied,
@@ -844,7 +844,7 @@ func TestSPIFFEStreamInterceptor(t *testing.T) {
 		{
 			name: "Spoofing Valid stream request",
 			setupCtx: func() context.Context {
-				return mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-1")
+				return mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/attacker-1")
 			},
 			reqAgentID:  "agent-1",
 			expectedErr: true,
@@ -893,7 +893,7 @@ func TestRecvWrapper_RecvMsgError(t *testing.T) {
 	}
 	wrapper := &recvWrapper{
 		ServerStream: errStream,
-		spiffeID:     "spiffe://onehumancorp.io/org-1/a1",
+		spiffeID:     "spiffe://onehumancorp.io/org/org-1/agent/a1",
 		agentID:      "a1",
 	}
 
@@ -929,14 +929,14 @@ func TestSPIFFEAuthInterceptor_CoverageGaps(t *testing.T) {
 	}{
 		{
 			name:        "DotDot in path",
-			spiffeID:    "spiffe://onehumancorp.io/org-1/../agent-1",
+			spiffeID:    "spiffe://onehumancorp.io/org/org-1/agent/../agent-1",
 			reqAgentID:  "agent-1",
 			expectedErr: true,
 			errCode:     codes.PermissionDenied,
 		},
 		{
 			name:        "DoubleSlash in path",
-			spiffeID:    "spiffe://onehumancorp.io/org-1//agent-1",
+			spiffeID:    "spiffe://onehumancorp.io/org/org-1/agent//agent-1",
 			reqAgentID:  "agent-1",
 			expectedErr: true,
 			errCode:     codes.PermissionDenied,
@@ -1001,7 +1001,7 @@ func TestSPIFFEAuthInterceptor_CoverageGaps(t *testing.T) {
 
 func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Spoofing(t *testing.T) {
 	interceptor := SPIFFEAuthInterceptor()
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/attacker-agent")
 
 	req := pb.DelegateTaskRequest_builder{
 		FromAgentId: proto.String("target-agent"),
@@ -1025,7 +1025,7 @@ func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Spoofing(t *testing.T) {
 
 func TestSPIFFEAuthInterceptor_DelegateTaskRequest_Valid(t *testing.T) {
 	interceptor := SPIFFEAuthInterceptor()
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/agent-1")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/agent-1")
 
 	req := pb.DelegateTaskRequest_builder{
 		FromAgentId: proto.String("agent-1"),
@@ -1054,7 +1054,7 @@ func TestSPIFFEStreamInterceptor_CoverageGaps(t *testing.T) {
 		{
 			name: "DotDot in path stream",
 			setupCtx: func() context.Context {
-				return mockSPIFFEContext("spiffe://onehumancorp.io/org-1/../agent-1")
+				return mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/../agent-1")
 			},
 			expectedErr: true,
 			errCode:     codes.PermissionDenied,
@@ -1063,7 +1063,7 @@ func TestSPIFFEStreamInterceptor_CoverageGaps(t *testing.T) {
 		{
 			name: "DoubleSlash in path stream",
 			setupCtx: func() context.Context {
-				return mockSPIFFEContext("spiffe://onehumancorp.io/org-1//agent-1")
+				return mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent//agent-1")
 			},
 			expectedErr: true,
 			errCode:     codes.PermissionDenied,
@@ -1160,7 +1160,7 @@ func TestSPIFFEStreamInterceptor_CoverageGaps(t *testing.T) {
 
 func TestSPIFFEAuthInterceptor_SubTask_Spoofing(t *testing.T) {
 	interceptor := SPIFFEAuthInterceptor()
-	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/attacker-agent")
+	ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/attacker-agent")
 
 	req := pb.SubTask_builder{
 		TaskId:      proto.String("task-123"),

@@ -9,14 +9,14 @@ import (
 // ── NewIronClawAdapter ────────────────────────────────────────────────────────
 
 func TestNewIronClawAdapter_ValidIdentity(t *testing.T) {
-	a, err := NewIronClawAdapter("spiffe://onehumancorp.io/agent/ironclaw-1")
+	a, err := NewIronClawAdapter("spiffe://onehumancorp.io/org/org-123/agent/ironclaw-1")
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 	if a == nil {
 		t.Fatal("expected non-nil adapter")
 	}
-	if a.Identity != "spiffe://onehumancorp.io/agent/ironclaw-1" {
+	if a.Identity != "spiffe://onehumancorp.io/org/org-123/agent/ironclaw-1" {
 		t.Errorf("unexpected identity: %s", a.Identity)
 	}
 }
@@ -30,7 +30,7 @@ func TestNewIronClawAdapter_InvalidIdentity(t *testing.T) {
 		{"no-scheme", "agent/ironclaw-1"},
 		{"wrong-scheme", "http://onehumancorp.io/agent/ironclaw-1"},
 		{"untrusted-domain", "spiffe://evil.com/agent/ironclaw-1"},
-		{"missing-agent-prefix", "spiffe://onehumancorp.io/service/ironclaw-1"},
+		{"missing-agent-prefix", "spiffe://onehumancorp.io/org/org-123/service/ironclaw-1"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -45,7 +45,7 @@ func TestNewIronClawAdapter_InvalidIdentity(t *testing.T) {
 // ── SyncState ─────────────────────────────────────────────────────────────────
 
 func TestIronClawAdapter_SyncState_Basic(t *testing.T) {
-	a, err := NewIronClawAdapter("spiffe://ohc.local/agent/ironclaw-2")
+	a, err := NewIronClawAdapter("spiffe://ohc.local/org/org-123/agent/ironclaw-2")
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}
@@ -64,14 +64,14 @@ func TestIronClawAdapter_SyncState_Basic(t *testing.T) {
 }
 
 func TestIronClawAdapter_SyncState_NilState(t *testing.T) {
-	a, _ := NewIronClawAdapter("spiffe://ohc.local/agent/ironclaw-3")
+	a, _ := NewIronClawAdapter("spiffe://ohc.local/org/org-123/agent/ironclaw-3")
 	if err := a.SyncState(context.Background(), nil); err == nil {
 		t.Fatal("expected error for nil state")
 	}
 }
 
 func TestIronClawAdapter_SyncState_InitialisesNilData(t *testing.T) {
-	a, _ := NewIronClawAdapter("spiffe://ohc.local/agent/ironclaw-4")
+	a, _ := NewIronClawAdapter("spiffe://ohc.local/org/org-123/agent/ironclaw-4")
 	state := &State{ID: "s2"}
 	if err := a.SyncState(context.Background(), state); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -82,7 +82,7 @@ func TestIronClawAdapter_SyncState_InitialisesNilData(t *testing.T) {
 }
 
 func TestIronClawAdapter_SyncState_LogsCheckpoint(t *testing.T) {
-	a, _ := NewIronClawAdapter("spiffe://ohc.local/agent/ironclaw-5")
+	a, _ := NewIronClawAdapter("spiffe://ohc.local/org/org-123/agent/ironclaw-5")
 	state := &State{ID: "s3"}
 	if err := a.SyncState(context.Background(), state); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -103,7 +103,7 @@ func TestIronClawAdapter_SyncState_LogsCheckpoint(t *testing.T) {
 // ── ExecuteCommand ────────────────────────────────────────────────────────────
 
 func TestIronClawAdapter_ExecuteCommand_Basic(t *testing.T) {
-	a, _ := NewIronClawAdapter("spiffe://ohc.local/agent/ironclaw-6")
+	a, _ := NewIronClawAdapter("spiffe://ohc.local/org/org-123/agent/ironclaw-6")
 	result, err := a.ExecuteCommand(context.Background(), "scan .")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -117,7 +117,7 @@ func TestIronClawAdapter_ExecuteCommand_Basic(t *testing.T) {
 }
 
 func TestIronClawAdapter_ExecuteCommand_EmptyCmd(t *testing.T) {
-	a, _ := NewIronClawAdapter("spiffe://ohc.local/agent/ironclaw-7")
+	a, _ := NewIronClawAdapter("spiffe://ohc.local/org/org-123/agent/ironclaw-7")
 	_, err := a.ExecuteCommand(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected error for empty command")
@@ -125,7 +125,7 @@ func TestIronClawAdapter_ExecuteCommand_EmptyCmd(t *testing.T) {
 }
 
 func TestIronClawAdapter_ExecuteCommand_CancelledContext(t *testing.T) {
-	a, _ := NewIronClawAdapter("spiffe://ohc.local/agent/ironclaw-8")
+	a, _ := NewIronClawAdapter("spiffe://ohc.local/org/org-123/agent/ironclaw-8")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel immediately
 
@@ -157,7 +157,7 @@ func TestTrimSPIFFEPath(t *testing.T) {
 // ── Interface compliance ──────────────────────────────────────────────────────
 
 func TestIronClawAdapter_ImplementsUniversalAdapter(t *testing.T) {
-	a, err := NewIronClawAdapter("spiffe://onehumancorp.io/agent/ironclaw-check")
+	a, err := NewIronClawAdapter("spiffe://onehumancorp.io/org/org-123/agent/ironclaw-check")
 	if err != nil {
 		t.Fatalf("setup: %v", err)
 	}

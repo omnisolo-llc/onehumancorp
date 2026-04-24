@@ -325,12 +325,12 @@ func TestValidateSPIFFEID_EdgeCases(t *testing.T) {
 		},
 		{
 			name:    "invalid path - missing agent prefix",
-			id:      "spiffe://onehumancorp.io/user/test",
+			id:      "spiffe://onehumancorp.io/org/org-123/user/test",
 			wantErr: true,
 		},
 		{
 			name:    "valid",
-			id:      "spiffe://onehumancorp.io/agent/test",
+			id:      "spiffe://onehumancorp.io/org/org-123/agent/test",
 			wantErr: false,
 		},
 	}

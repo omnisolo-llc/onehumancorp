@@ -849,7 +849,7 @@ func TestHandleMCPRegister(t *testing.T) {
 
 	t.Run("IT-02 | Hub -> MCP Gateway | Dynamic tool registration | SPIFFE SVID validated", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"spiffeId": "spiffe://onehumancorp.io/agent/test",
+			"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/test",
 			"tool": map[string]interface{}{
 				"id":          "dynamic-tool-1",
 				"name":        "Dynamic Tool",
@@ -4021,7 +4021,7 @@ func TestHandleMCPRegister_Errors(t *testing.T) {
 
 	t.Run("Missing Tool ID and Name", func(t *testing.T) {
 		payload := map[string]interface{}{
-			"spiffeId": "spiffe://onehumancorp.io/agent/test",
+			"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/test",
 			"tool":     map[string]interface{}{},
 		}
 		body, _ := json.Marshal(payload)
@@ -4037,7 +4037,7 @@ func TestHandleMCPRegister_Errors(t *testing.T) {
 	t.Run("Update Existing Tool", func(t *testing.T) {
 		// First register
 		payload := map[string]interface{}{
-			"spiffeId": "spiffe://onehumancorp.io/agent/test",
+			"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/test",
 			"tool": map[string]interface{}{
 				"id":          "dynamic-tool-update",
 				"name":        "Dynamic Tool",

@@ -199,19 +199,32 @@ func validateSPIFFEID(id string) error {
 	if strings.Contains(trimmed, "..") || strings.Contains(trimmed, "//") {
 		return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path: %s", id)
 	}
-	parts := strings.SplitN(trimmed, "/", 6)
+	parts := strings.Split(trimmed, "/")
 	if len(parts) < 2 {
-		return status.Errorf(codes.PermissionDenied, "SPIFFE ID too short: %s", id)
+		return status.Errorf(codes.PermissionDenied, "SPIFFE ID lacks required path segments for agent identity: %s", id)
 	}
+
 	domain := parts[0]
-	switch {
-	case domain == "onehumancorp.io":
-	case domain == "ohc.local":
-	case domain == "ohc.os":
-	case domain == "ohc.global", strings.HasSuffix(domain, ".ohc.global"):
-	default:
+	if domain == "onehumancorp.io" {
+		if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+			return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain onehumancorp.io: %s", id)
+		}
+	} else if domain == "ohc.local" {
+		if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+			return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain ohc.local: %s", id)
+		}
+	} else if domain == "ohc.os" {
+		if len(parts) != 3 || parts[1] != "agent" {
+			return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain ohc.os: %s", id)
+		}
+	} else if domain == "ohc.global" || strings.HasSuffix(domain, ".ohc.global") {
+		if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+			return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain %s: %s", domain, id)
+		}
+	} else {
 		return status.Errorf(codes.PermissionDenied, "untrusted SPIFFE domain %q in %s", domain, id)
 	}
+
 	return nil
 }
 

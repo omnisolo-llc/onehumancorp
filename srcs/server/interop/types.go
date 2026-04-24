@@ -94,10 +94,31 @@ func ValidateSPIFFEID(id string) error {
 		return fmt.Errorf("untrusted SPIFFE domain: %s", u.Host)
 	}
 
-	path := strings.TrimPrefix(u.Path, "/")
-	idx := strings.IndexByte(path, '/')
-	if idx == -1 || path[:idx] != "agent" || len(path[idx+1:]) == 0 {
-		return fmt.Errorf("invalid SPIFFE ID path structure: %s", u.Path)
+	idBody := strings.TrimPrefix(id, "spiffe://")
+	parts := strings.Split(idBody, "/")
+	if len(parts) < 2 {
+		return fmt.Errorf("SPIFFE ID lacks required path segments for agent identity: %s", id)
+	}
+
+	domain := parts[0]
+	if domain == "onehumancorp.io" {
+		if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+			return fmt.Errorf("invalid SPIFFE ID path structure for domain onehumancorp.io: %s", id)
+		}
+	} else if domain == "ohc.local" {
+		if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+			return fmt.Errorf("invalid SPIFFE ID path structure for domain ohc.local: %s", id)
+		}
+	} else if domain == "ohc.os" {
+		if len(parts) != 3 || parts[1] != "agent" {
+			return fmt.Errorf("invalid SPIFFE ID path structure for domain ohc.os: %s", id)
+		}
+	} else if domain == "ohc.global" || strings.HasSuffix(domain, ".ohc.global") {
+		if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+			return fmt.Errorf("invalid SPIFFE ID path structure for domain %s: %s", domain, id)
+		}
+	} else {
+		return fmt.Errorf("unsupported SPIFFE trust domain in ID: %s", id)
 	}
 
 	return nil

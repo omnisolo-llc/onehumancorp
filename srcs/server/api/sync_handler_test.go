@@ -40,7 +40,7 @@ func TestVectorSyncHandler(t *testing.T) {
 
     req := httptest.NewRequest("POST", "/sync/vectors", bytes.NewReader(body))
 
-    ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org-1/agent-1")
+    ctx := mockSPIFFEContext("spiffe://onehumancorp.io/org/org-1/agent/agent-1")
     req = req.WithContext(ctx)
     w := httptest.NewRecorder()
     HandleVectorSync(w, req)

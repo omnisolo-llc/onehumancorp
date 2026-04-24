@@ -65,7 +65,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	})
 
 	t.Run("missing params", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy"}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "toolId": "dummy"}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -75,7 +75,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	})
 
 	t.Run("success_valid_tool_no_meeting_id", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy", "params": {"a": "b"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "toolId": "dummy", "params": {"a": "b"}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -87,7 +87,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 	t.Run("large payload", func(t *testing.T) {
 		// generate > 1MB string
 		largeStr := strings.Repeat("a", 2<<20)
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy", "params": {"a": "`+largeStr+`"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "toolId": "dummy", "params": {"a": "`+largeStr+`"}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPInvoke(w, req)
@@ -101,7 +101,7 @@ func TestHandleMCPInvokeCoverage(t *testing.T) {
 		// Register a dummy meeting
 		hub.OpenMeeting("m-1", []string{})
 
-		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId": "dummy-tool", "params": {"a": "b"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/invoke", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "toolId": "dummy-tool", "params": {"a": "b"}}`))
 		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
@@ -181,7 +181,7 @@ func TestHandleMCPRegister_Dynamic(t *testing.T) {
 	})
 
 	t.Run("missing toolId or name", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/tools/register", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "tool": {"id": ""}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/tools/register", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "tool": {"id": ""}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPRegister(w, req)
@@ -201,7 +201,7 @@ func TestHandleMCPRegister_Dynamic(t *testing.T) {
 	})
 
 	t.Run("success valid spiffe id", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/tools/register", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "tool": {"id": "my-tool", "name": "My Tool"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/tools/register", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "tool": {"id": "my-tool", "name": "My Tool"}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPRegister(w, req)
@@ -219,7 +219,7 @@ func TestHandleMCPRegister_Dynamic(t *testing.T) {
 	})
 
 	t.Run("duplicate tool registration updates existing", func(t *testing.T) {
-		req := httptest.NewRequest("POST", "/api/mcp/tools/register", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/agent/1", "tool": {"id": "my-tool", "name": "My Updated Tool"}}`))
+		req := httptest.NewRequest("POST", "/api/mcp/tools/register", strings.NewReader(`{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "tool": {"id": "my-tool", "name": "My Updated Tool"}}`))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		srv.handleMCPRegister(w, req)

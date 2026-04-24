@@ -593,8 +593,8 @@ func TestHandleMCPInvokeUnknownTool(t *testing.T) {
 	app, _, _ := newTestServer(t)
 
 	// Since we added strict validation, unknown tools should return 404
-	reqBody := `{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId":"unknown-tool",
-			"spiffeId": "spiffe://onehumancorp.io/agent/1","params":{}}`
+	reqBody := `{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "toolId":"unknown-tool",
+			"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1","params":{}}`
 	req := httptest.NewRequest(http.MethodPost, "/api/mcp/tools/invoke", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -608,8 +608,8 @@ func TestHandleMCPInvokeUnknownTool(t *testing.T) {
 func TestHandleMCPInvokeInvalidSPIFFEID(t *testing.T) {
 	app, _, _ := newTestServer(t)
 
-	reqBody := `{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId":"dummy-tool",
-			"spiffeId": "spiffe://onehumancorp.io/agent/1", "spiffeId":"spiffe://evil-hacker.com/agent/1"}`
+	reqBody := `{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "toolId":"dummy-tool",
+			"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "spiffeId":"spiffe://evil-hacker.com/agent/1"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/mcp/tools/invoke", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -625,7 +625,7 @@ func TestHandleMCPInvokeWithNilParams(t *testing.T) {
 	// Add a dummy tool to bypass the unknown tool check for testing nil params specifically
 	app.dynamicMCPTools = append(app.dynamicMCPTools, MCPTool{ID: "dummy-tool"})
 
-	reqBody := `{"spiffeId": "spiffe://onehumancorp.io/agent/1", "toolId":"dummy-tool"}`
+	reqBody := `{"spiffeId": "spiffe://onehumancorp.io/org/org-1/agent/1", "toolId":"dummy-tool"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/mcp/tools/invoke", strings.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()

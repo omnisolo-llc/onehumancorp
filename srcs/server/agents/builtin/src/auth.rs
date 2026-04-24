@@ -75,18 +75,32 @@ pub fn validate_spiffe_id(id: &str) -> Result<(), String> {
     if trimmed.contains("..") || trimmed.contains("//") {
         return Err(format!("invalid SPIFFE ID path: {}", id));
     }
-    let parts: Vec<&str> = trimmed.splitn(6, '/').collect();
+    let parts: Vec<&str> = trimmed.split('/').collect();
     if parts.len() < 2 {
-        return Err(format!("SPIFFE ID too short: {}", id));
+        return Err(format!("SPIFFE ID lacks required path segments for agent identity: {}", id));
     }
     let domain = parts[0];
-    match domain {
-        "onehumancorp.io" | "ohc.local" | "ohc.os" | "ohc.global" => {}
-        d if d.ends_with(".ohc.global") => {}
-        _ => {
-            return Err(format!("untrusted SPIFFE domain {:?} in {}", domain, id));
+
+    if domain == "onehumancorp.io" {
+        if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
+            return Err(format!("invalid SPIFFE ID path structure for domain onehumancorp.io: {}", id));
         }
+    } else if domain == "ohc.local" {
+        if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
+            return Err(format!("invalid SPIFFE ID path structure for domain ohc.local: {}", id));
+        }
+    } else if domain == "ohc.os" {
+        if parts.len() != 3 || parts[1] != "agent" {
+            return Err(format!("invalid SPIFFE ID path structure for domain ohc.os: {}", id));
+        }
+    } else if domain == "ohc.global" || domain.ends_with(".ohc.global") {
+        if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
+            return Err(format!("invalid SPIFFE ID path structure for domain {}: {}", domain, id));
+        }
+    } else {
+        return Err(format!("untrusted SPIFFE domain {:?} in {}", domain, id));
     }
+
     Ok(())
 }
 
@@ -103,9 +117,9 @@ mod tests {
 
     #[test]
     fn test_validate_spiffe_valid() {
-        assert!(validate_spiffe_id("spiffe://onehumancorp.io/agent/foo").is_ok());
-        assert!(validate_spiffe_id("spiffe://ohc.local/x").is_ok());
-        assert!(validate_spiffe_id("spiffe://ohc.global/x").is_ok());
+        assert!(validate_spiffe_id("spiffe://onehumancorp.io/org/org-123/agent/foo").is_ok());
+        assert!(validate_spiffe_id("spiffe://ohc.local/org/org-123/agent/x").is_ok());
+        assert!(validate_spiffe_id("spiffe://ohc.global/org/org-123/agent/x").is_ok());
     }
 
     #[test]

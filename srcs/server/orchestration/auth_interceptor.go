@@ -90,12 +90,12 @@ func SPIFFEAuthInterceptor() grpc.UnaryServerInterceptor {
 		var orgID string
 
 		if domain == "onehumancorp.io" {
-			// format: onehumancorp.io/{orgID}/{agentID}
-			if len(parts) != 3 {
+			// format: onehumancorp.io/org/{orgID}/agent/{agentID} (from dashboard UI logic)
+			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
 				return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain onehumancorp.io: %s", spiffeID)
 			}
-			orgID = parts[1]
-			agentID = parts[2]
+			orgID = parts[2]
+			agentID = parts[4]
 		} else if domain == "ohc.local" {
 			// format: ohc.local/org/{orgID}/agent/{agentID}
 			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
@@ -208,11 +208,11 @@ func SPIFFEStreamInterceptor() grpc.StreamServerInterceptor {
 		var agentID string
 
 		if domain == "onehumancorp.io" {
-			// format: onehumancorp.io/{orgID}/{agentID}
-			if len(parts) != 3 {
+			// format: onehumancorp.io/org/{orgID}/agent/{agentID} (from dashboard UI logic)
+			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
 				return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain onehumancorp.io: %s", spiffeID)
 			}
-			agentID = parts[2]
+			agentID = parts[4]
 		} else if domain == "ohc.local" {
 			// format: ohc.local/org/{orgID}/agent/{agentID}
 			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {

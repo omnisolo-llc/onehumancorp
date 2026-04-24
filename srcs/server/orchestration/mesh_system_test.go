@@ -35,7 +35,7 @@ func TestMemoryMeshTransport_BroadcastAndSubscribe(t *testing.T) {
 	}
 
 	task := Task{
-		AgentID: "spiffe://onehumancorp.io/agent/1",
+		AgentID: "spiffe://onehumancorp.io/org/org-1/agent/1",
 		Action:  "CREATE",
 		Status:  "PENDING",
 		TaskID:  "task-123",
