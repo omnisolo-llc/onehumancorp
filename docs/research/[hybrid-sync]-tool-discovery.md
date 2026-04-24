@@ -9,7 +9,7 @@ The OHC Hybrid Architecture currently supports Cloud-Native (PostgreSQL/Redis), 
 - **ElectricSQL / PowerSync:** Both tools provide SQLite-to-Postgres sync. PowerSync is better suited for real-time offline-first architectures.
 - **CRDTs (Conflict-Free Replicated Data Types):** Ideal for resolving merge conflicts between cloud and local states.
 - **Bismuth/CR-SQLite:** An extension for SQLite that adds CRDT support, making it possible to sync with minimal conflict.
-- **Architecture Validation:** In the `srcs/server/integrations/` directory, PowerSync, LibSQL, LiteFS, and Etcd are currently integrated to handle some hybrid tasks. However, offline-first sync (from Desktop to Cloud) needs a robust mechanism like PowerSync configured centrally. PowerSync is currently in the catalog but needs explicit orchestration.
+- **Architecture Validation:** In the `src/server/integrations/` directory, PowerSync, LibSQL, LiteFS, and Etcd are currently integrated to handle some hybrid tasks. However, offline-first sync (from Desktop to Cloud) needs a robust mechanism like PowerSync configured centrally. PowerSync is currently in the catalog but needs explicit orchestration.
 
 ## Design Doc
 1. **Architecture Update:** Enhance the current Standalone SQLite integration to act as a localized cache that connects with the PowerSync sync engine.
@@ -20,8 +20,8 @@ The OHC Hybrid Architecture currently supports Cloud-Native (PostgreSQL/Redis), 
 4. **UI Wireframes:** A "Sync Status" indicator in the main OHC dashboard (Cloud/Local).
 
 ## Implementation Prompt
-1. Add PowerSync synchronization orchestration to `srcs/server/orchestration/`.
-2. Update the `StandaloneDB` wrapper in `srcs/server/db/` to initialize local PowerSync sync rules.
+1. Add PowerSync synchronization orchestration to `src/server/orchestration/`.
+2. Update the `StandaloneDB` wrapper in `src/server/db/` to initialize local PowerSync sync rules.
 3. Ensure sync happens via `POST /api/v1/sync/push` on a background ticker.
 4. Write E2E tests validating that an offline local write eventually reaches the cloud once connectivity is restored.
 

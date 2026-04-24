@@ -10,7 +10,7 @@ The existing `design-hook-dynamic-tool-discovery.md` establishes the framework f
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/hybrid_discovery/`.
+- Create a new package `src/server/lib/integrations/hybrid_discovery/`.
 - The `DiscoveryProxy` will implement the MCP Tool interface.
 - Must dynamically choose the backend:
   - If `db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"`, it initializes the local SQLite FTS strategy.
@@ -29,7 +29,7 @@ The existing `design-hook-dynamic-tool-discovery.md` establishes the framework f
 - Ensure the Mock SVID system in SQLite Mode restricts tools to the current filesystem boundary to prevent broad privilege escalation.
 
 ## Implementation Prompt
-"Implement the Hybrid Dynamic Tool Discovery MCP tool in `srcs/server/lib/integrations/hybrid_discovery/`.
+"Implement the Hybrid Dynamic Tool Discovery MCP tool in `src/server/lib/integrations/hybrid_discovery/`.
 1. Create `discovery.go` defining the `DiscoveryProxy` and its MCP capabilities (`SearchTools` and `RequestToolSVID`).
 2. Implement driver-agnostic logic. To determine if the connection is SQLite, use: `db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"`.
 3. In SQLite mode, implement a rudimentary Full-Text Search against the local registry, returning valid `ToolSpec` definitions. Bypass SPIRE and generate a local pseudo-SVID.

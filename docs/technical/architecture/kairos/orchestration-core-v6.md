@@ -11,7 +11,7 @@ The OHC KAIROS Orchestrator provides the centralized intelligence and shared tas
 - **Standalone Mode (SQLite):** Replaces connection-level locking with application-level Go Mutexes over simple transactions to maintain data integrity locally without heavy database features.
 
 ### Schema Design
-Referencing `srcs/server/db/migrations/20260415120000_shared_tasks.sql`, the KAIROS orchestrator relies on three primary tables:
+Referencing `src/server/db/migrations/20260415120000_shared_tasks.sql`, the KAIROS orchestrator relies on three primary tables:
 1. `swarm_tasks`: Central ledger for actionable work (`status`, `priority`, `agent_id`).
 2. `task_dependencies`: Directed Acyclic Graph (DAG) edges enabling task chaining.
 3. `state_machine_transitions`: Audit log tracking state changes (`PROPOSE` -> `CRITIQUE` -> `APPROVED` -> `EXECUTE`).
@@ -25,7 +25,7 @@ Agents require low-latency coordination to process KAIROS commands synchronously
 
 ## 4. Phase 3: AutoDream Memory Consolidation Pipeline
 ### Vector Search
-Referencing `srcs/server/db/migrations/20260415123000_autodream_memories_schema.sql`, the system stores high-dimensional context.
+Referencing `src/server/db/migrations/20260415123000_autodream_memories_schema.sql`, the system stores high-dimensional context.
 - **pgvector (Postgres):** KAIROS orchestrates background sub-agents that embed recent activity logs into `vector(1536)` columns on the `autodream_memories` table.
 - **Pinecone (Optional):** Supported as an external drop-in replacement for highly scaled enterprise deployments.
 

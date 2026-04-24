@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
 ```
 
 ## 3. Phase 2: Orchestration (Teammate Mesh Architecture)
-The Teammate Mesh enables real-time communication via `srcs/server/orchestration/centrifuge_hub.go`.
+The Teammate Mesh enables real-time communication via `src/server/orchestration/centrifuge_hub.go`.
 - **Cloud-Native**: Rueidis-backed Pub/Sub.
 - **Standalone**: In-memory Go channel broadcast.
 
@@ -58,6 +58,6 @@ CREATE INDEX idx_autodream_memories_embedding ON autodream_memories USING ivffla
 ```
 
 ## 5. Phase 4: Sub-Agent Orchestration Queue
-Background worker system (`srcs/server/orchestration/queue/queue.go`) utilizing BullMQ/Celery payload structures for distributed execution.
+Background worker system (`src/server/orchestration/queue/queue.go`) utilizing BullMQ/Celery payload structures for distributed execution.
 
 </div>
