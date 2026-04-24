@@ -356,3 +356,86 @@ func TestHybridSyncDaemon_SyncLocalToCloud(t *testing.T) {
 		t.Errorf("expected rag_context %q, got %q", expectedRagContext, ragContextStr)
 	}
 }
+
+func TestHybridSyncDaemon_ProcessToolsSync(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE local_mcp_tools (
+			name TEXT,
+			description TEXT,
+			endpoint TEXT
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
+
+	_, err = sqlDB.Exec(`
+		INSERT INTO local_mcp_tools (name, description, endpoint) VALUES
+		('tool1', 'desc1', 'local://tool1'),
+		('tool2', 'desc2', 'local://tool2')
+	`)
+	if err != nil {
+		t.Fatalf("failed to insert tools: %v", err)
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+
+	var registeredTools []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/kairos/mesh/publish" && r.Method == http.MethodPost {
+			var meshPayload map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&meshPayload); err == nil {
+				if channel, ok := meshPayload["channel"].(string); ok && channel == "mcp_tool_sync" {
+					if msg, ok := meshPayload["message"].(map[string]interface{}); ok {
+						if tool, ok := msg["tool"].(map[string]interface{}); ok {
+							if name, ok := tool["name"].(string); ok {
+								registeredTools = append(registeredTools, name)
+							}
+						}
+					}
+				}
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srv.URL)
+
+	daemon.ProcessToolsSync(context.Background())
+
+	if len(registeredTools) != 2 {
+		t.Fatalf("expected 2 tools to be registered, got %d", len(registeredTools))
+	}
+
+	hasTool1 := false
+	hasTool2 := false
+	for _, tool := range registeredTools {
+		if tool == "tool1" {
+			hasTool1 = true
+		} else if tool == "tool2" {
+			hasTool2 = true
+		}
+	}
+
+	if !hasTool1 || !hasTool2 {
+		t.Fatalf("missing tool registration. Registered tools: %v", registeredTools)
+	}
+}
+
+func TestHybridSyncDaemon_ProcessToolsSync_NotSQLiteFixed(t *testing.T) {
+	dbWrapper := &db.DB{Provider: &mockNonSQLiteProviderForSync{}}
+	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, "http://localhost:8080")
+
+	// Should return early and not panic
+	daemon.ProcessToolsSync(context.Background())
+}

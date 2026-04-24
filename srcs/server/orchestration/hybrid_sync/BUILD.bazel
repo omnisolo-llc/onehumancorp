@@ -7,6 +7,8 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/db",
+        "//srcs/server/lib/integrations/hybrid_discovery",
+        "//srcs/server/orchestration",
         "//srcs/server/telemetry",
     ],
 )

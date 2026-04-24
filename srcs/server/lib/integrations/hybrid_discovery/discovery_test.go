@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/onehumancorp/mono/srcs/server/db"
 	_ "modernc.org/sqlite"
 )
 
@@ -15,13 +16,15 @@ func TestDiscoveryProxy_SQLite(t *testing.T) {
 	dbFile := "test_discovery.db"
 	defer os.Remove(dbFile)
 
-	db, err := sql.Open("sqlite", dbFile)
+	sqlDB, err := sql.Open("sqlite", dbFile)
 	if err != nil {
 		t.Fatalf("Failed to open sqlite db: %v", err)
 	}
-	defer db.Close()
+	defer sqlDB.Close()
 
-	proxy := NewDiscoveryProxy(db, "switchboard.local")
+	provider := db.NewSqliteProvider(sqlDB)
+
+	proxy := NewDiscoveryProxy(provider, "switchboard.local")
 
 	if !proxy.isSQLite() {
 		t.Errorf("Expected isSQLite() to return true")

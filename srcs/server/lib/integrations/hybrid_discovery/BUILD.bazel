@@ -6,7 +6,9 @@ go_library(
     importpath = "github.com/onehumancorp/mono/srcs/server/lib/integrations/hybrid_discovery",
     visibility = ["//visibility:public"],
     deps = [
+        "//srcs/server/db",
         "@org_modernc_sqlite//:sqlite",
+        "//srcs/server/orchestration",
     ],
 )
 
@@ -15,6 +17,8 @@ go_test(
     srcs = ["discovery_test.go", "discovery_e2e_test.go"],
     embed = [":hybrid_discovery"],
     deps = [
+        "//srcs/server/db",
         "@org_modernc_sqlite//:sqlite",
+        "//srcs/server/orchestration",
     ],
 )

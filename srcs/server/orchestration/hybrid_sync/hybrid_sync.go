@@ -53,6 +53,7 @@ func (d *HybridSyncDaemon) Start(ctx context.Context) {
 			case <-d.ticker.C:
 				d.ProcessSync(ctx)
 				d.ProcessCRDTSync(ctx)
+				d.ProcessToolsSync(ctx)
 			case <-d.quit:
 				d.ticker.Stop()
 				return
@@ -281,6 +282,66 @@ func (d *HybridSyncDaemon) ProcessCRDTSync(ctx context.Context) {
 	}
 
 	slog.Debug("hybrid_sync: successfully synced CRDT deltas", "count", len(deltas))
+}
+
+func (d *HybridSyncDaemon) ProcessToolsSync(ctx context.Context) {
+	if !d.dbWrapper.IsSQLite() || d.dbWrapper.Provider == nil {
+		return
+	}
+
+	rows, err := d.dbWrapper.Provider.Query(ctx, "SELECT name, description, endpoint FROM local_mcp_tools")
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var name, desc, endpoint string
+		if err := rows.Scan(&name, &desc, &endpoint); err != nil {
+			continue
+		}
+
+		mcpPayload := map[string]interface{}{
+			"tool": map[string]interface{}{
+				"id":          name,
+				"name":        name,
+				"description": desc,
+				"category":    "local",
+				"status":      "available",
+			},
+			"spiffeId": fmt.Sprintf("spiffe://local.standalone/tool/%s", name),
+		}
+
+		// Publish the event to the Cloud's Teammate Mesh API
+		meshPayload := map[string]interface{}{
+			"channel": "mcp_tool_sync",
+			"message": mcpPayload,
+		}
+
+		meshData, err := json.Marshal(meshPayload)
+		if err != nil {
+			continue
+		}
+
+		syncEndpoint := fmt.Sprintf("%s/api/kairos/mesh/publish", d.cloudAPIURL)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(meshData))
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		if spiffeToken := os.Getenv("SPIFFE_IDENTITY_TOKEN"); spiffeToken != "" {
+			req.Header.Set("Authorization", "Bearer "+spiffeToken)
+		}
+
+		client := &http.Client{Timeout: 10 * time.Second}
+		resp, err := client.Do(req)
+		if err == nil {
+			resp.Body.Close()
+		}
+	}
+
+	slog.Debug("hybrid_sync: successfully executed ProcessToolsSync via HTTP")
 }
 
 type AgentMission struct {

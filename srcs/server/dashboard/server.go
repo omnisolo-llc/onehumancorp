@@ -509,7 +509,13 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		server.MeshBroker = orchmesh.NewLocalMeshBroker()
 		server.TeammateMesh = meshapi.NewTeammateMesh(nil)
 	}
+
 	server.bootstrapInternalDefaultAgent()
+	// Subscribe to MCP Tool sync events from the mesh
+	if server.TeammateMesh != nil {
+		server.subscribeToMCPMesh()
+	}
+
 	// Load initial settings.
 	initialSettings := hub.SettingsStore().Get()
 	server.settings = initialSettings
@@ -853,6 +859,34 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, resp)
+}
+
+// subscribeToMCPMesh listens for MCP Tool registration events broadcast by standalone endpoints.
+func (s *Server) subscribeToMCPMesh() {
+	s.TeammateMesh.Subscribe(context.Background(), "mcp_tool_sync", func(msg meshapi.MeshMessage) {
+		if len(msg.Payload) > 0 {
+			var wrapper mcpRegisterRequest
+			if err := json.Unmarshal(msg.Payload, &wrapper); err == nil {
+				tool := wrapper.Tool
+				if tool.ID != "" {
+					// Only add if not already present
+					s.mu.Lock()
+					defer s.mu.Unlock()
+					found := false
+					for _, t := range s.dynamicMCPTools {
+						if t.ID == tool.ID {
+							found = true
+							break
+						}
+					}
+					if !found {
+						tool.Status = "available"
+						s.dynamicMCPTools = append(s.dynamicMCPTools, tool)
+					}
+				}
+			}
+		}
+	})
 }
 
 func (s *Server) bootstrapInternalDefaultAgent() {

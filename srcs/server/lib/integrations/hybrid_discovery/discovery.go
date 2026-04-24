@@ -2,18 +2,19 @@ package hybrid_discovery
 
 import (
 	"context"
-	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 
-	_ "modernc.org/sqlite" // Ensure sqlite driver is available for checks
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 // ToolSpec represents a dynamically discovered tool.
 type ToolSpec struct {
-	Name        string
-	Description string
-	Endpoint    string
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Endpoint    string `json:"endpoint"`
 }
 
 // SVID represents a SPIFFE Verifiable Identity Document mock.
@@ -24,25 +25,24 @@ type SVID struct {
 
 // DiscoveryProxy implements the MCP tool for dynamic tool discovery.
 type DiscoveryProxy struct {
-	db          *sql.DB
+	provider    db.Provider
 	switchboard string
 }
 
 // NewDiscoveryProxy creates a new DiscoveryProxy instance.
-func NewDiscoveryProxy(db *sql.DB, switchboard string) *DiscoveryProxy {
+func NewDiscoveryProxy(provider db.Provider, switchboard string) *DiscoveryProxy {
 	return &DiscoveryProxy{
-		db:          db,
+		provider:    provider,
 		switchboard: switchboard,
 	}
 }
 
 // isSQLite checks if the underlying database driver is SQLite.
 func (p *DiscoveryProxy) isSQLite() bool {
-	if p.db == nil {
+	if p.provider == nil {
 		return false
 	}
-	driverType := fmt.Sprintf("%T", p.db.Driver())
-	return driverType == "*sqlite.Driver" || driverType == "*sqlite.Driver"
+	return p.provider.IsSQLite()
 }
 
 // SearchTools searches for tools based on intent.
@@ -62,7 +62,7 @@ func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]Too
 	// or perform a simple LIKE query if we setup a basic table.
 
 	// Create a dummy table if not exists for testing purposes
-	_, err := p.db.ExecContext(ctx, `
+	_, err := p.provider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS local_mcp_tools (
 			name TEXT,
 			description TEXT,
@@ -77,19 +77,22 @@ func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]Too
 
 	// Insert dummy data if table is empty
 	var count int
-	err = p.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM local_mcp_tools").Scan(&count)
-	if err == nil && count == 0 {
-		_, _ = p.db.ExecContext(ctx, `
-			INSERT INTO local_mcp_tools (name, description, endpoint) VALUES
-			('local-calculator', 'A local calculator tool', 'local://calculator'),
-			('local-grep', 'Local file search tool', 'local://grep')
-		`)
+	row := p.provider.QueryRow(ctx, "SELECT COUNT(*) FROM local_mcp_tools")
+	if row != nil {
+		err = row.Scan(&count)
+		if err == nil && count == 0 {
+			_, _ = p.provider.Exec(ctx, `
+				INSERT INTO local_mcp_tools (name, description, endpoint) VALUES
+				('local-calculator', 'A local calculator tool', 'local://calculator'),
+				('local-grep', 'Local file search tool', 'local://grep')
+			`)
+		}
 	}
 
-	rows, err := p.db.QueryContext(ctx, `
+	rows, err := p.provider.Query(ctx, `
 		SELECT name, description, endpoint
 		FROM local_mcp_tools
-		WHERE description LIKE ? OR name LIKE ?
+		WHERE description LIKE $1 OR name LIKE $2
 	`, "%"+intent+"%", "%"+intent+"%")
 
 	if err != nil {
@@ -144,7 +147,7 @@ func (p *DiscoveryProxy) RegisterTool(ctx context.Context, spec ToolSpec) error 
 
 func (p *DiscoveryProxy) registerSQLite(ctx context.Context, spec ToolSpec) error {
 	log.Printf("Registering tool in SQLite: %s", spec.Name)
-	_, err := p.db.ExecContext(ctx, `
+	_, err := p.provider.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS local_mcp_tools (
 			name TEXT,
 			description TEXT,
@@ -155,9 +158,9 @@ func (p *DiscoveryProxy) registerSQLite(ctx context.Context, spec ToolSpec) erro
 		return fmt.Errorf("failed to ensure table exists: %w", err)
 	}
 
-	_, err = p.db.ExecContext(ctx, `
+	_, err = p.provider.Exec(ctx, `
 		INSERT INTO local_mcp_tools (name, description, endpoint)
-		VALUES (?, ?, ?)
+		VALUES ($1, $2, $3)
 	`, spec.Name, spec.Description, spec.Endpoint)
 	if err != nil {
 		return fmt.Errorf("failed to insert tool: %w", err)
@@ -187,4 +190,46 @@ func (p *DiscoveryProxy) RequestToolSVID(ctx context.Context, toolName string) (
 		ID:    fmt.Sprintf("spiffe://cloud.internal/tool/%s", toolName),
 		Token: "real-spire-jwt-token-98765",
 	}, nil
+}
+
+// SyncLocalToolsToCloud synchronizes local tool schemas to the cloud registry via the Teammate Mesh.
+func (p *DiscoveryProxy) SyncLocalToolsToCloud(ctx context.Context, mesh orchestration.MeshTransport) error {
+	if !p.isSQLite() {
+		return nil
+	}
+
+	rows, err := p.provider.Query(ctx, "SELECT name, description, endpoint FROM local_mcp_tools")
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t ToolSpec
+		if err := rows.Scan(&t.Name, &t.Description, &t.Endpoint); err != nil {
+			log.Printf("Failed to scan local tool: %v", err)
+			continue
+		}
+
+		// Publish the JSON payload mapped correctly to the Cloud Dashboard's MCPTool format
+		mcpPayload := map[string]interface{}{
+			"tool": map[string]interface{}{
+				"id":          t.Name, // use name as ID for now
+				"name":        t.Name,
+				"description": t.Description,
+				"category":    "local",
+				"status":      "available",
+			},
+			"spiffeId": fmt.Sprintf("spiffe://local.standalone/tool/%s", t.Name),
+		}
+
+		payloadBytes, err := json.Marshal(mcpPayload)
+		if err != nil {
+			log.Printf("Failed to marshal local tool: %v", err)
+			continue
+		}
+
+		mesh.PublishTeammateMeshEvent(ctx, "mcp_tool_sync", "system", "RegisterTool", "available", payloadBytes)
+	}
+	return nil
 }
