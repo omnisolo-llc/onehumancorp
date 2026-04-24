@@ -81,16 +81,12 @@ func ValidateSPIFFEID(id string) error {
 		return fmt.Errorf("invalid SPIFFE ID scheme: %s", u.Scheme)
 	}
 
-	validDomains := map[string]bool{
-		"onehumancorp.io": true,
-		"ohc.local":       true,
-		"ohc.os":          true,
-		"ohc.global":      true,
-		"eu.ohc.global":   true,
-		"eu-west.ohc.global": true,
-	}
-
-	if !validDomains[u.Host] {
+	switch {
+	case u.Host == "onehumancorp.io":
+	case u.Host == "ohc.local":
+	case u.Host == "ohc.os":
+	case u.Host == "ohc.global", strings.HasSuffix(u.Host, ".ohc.global"):
+	default:
 		return fmt.Errorf("untrusted SPIFFE domain: %s", u.Host)
 	}
 
