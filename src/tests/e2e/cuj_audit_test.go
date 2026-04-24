@@ -168,6 +168,7 @@ func TestCujAuditAllCoreRoutesAreReachable(t *testing.T) {
 		{"/settings", "Settings"},
 		{"/security", "Security"},
 		{"/integrations", "Integrations"},
+		{"/growth-experiments", "Growth Experiments"},
 	}
 
 	for _, route := range routes {
