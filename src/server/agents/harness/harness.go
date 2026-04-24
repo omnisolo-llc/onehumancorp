@@ -3,9 +3,11 @@ package harness
 import "context"
 
 type ExecutionContext struct {
-	Command      []string
-	AllowedPaths []string
-	NetworkProxy string
+	Command        []string
+	AllowedPaths   []string
+	AllowReadPaths []string
+	DenyWritePaths []string
+	NetworkProxy   string
 }
 
 type IsolationHarness interface {
