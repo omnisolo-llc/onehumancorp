@@ -185,6 +185,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const BillingWizardScreen(),
           ),
           GoRoute(
+            path: '/wizards/grow',
+            builder: (context, state) => const GrowWizardScreen(),
+          ),
+          GoRoute(
             path: '/agents/:id/tune',
             builder: (context, state) => PromptTuningWizardScreen(
               agentId: state.pathParameters['id'] ?? 'unknown',

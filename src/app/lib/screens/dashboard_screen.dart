@@ -125,6 +125,45 @@ class _DashboardContent extends StatelessWidget {
           ),
         ),
 
+                const SizedBox(height: 16),
+        Container(
+          margin: const EdgeInsets.only(bottom: 24),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => context.go('/wizards/grow'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    Icon(Icons.trending_up, color: Theme.of(context).colorScheme.tertiary),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Grow my business", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
+                          const Text("Ready to get more customers? See our top suggestions based on your business stage.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    FilledButton.tonal(
+                      onPressed: () => context.go('/wizards/grow'),
+                      child: const Text('View Suggestions'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -354,4 +355,83 @@ func TestOnboardingBackButtonIsPresentFromStep2Onward(t *testing.T) {
 	// Test: onboarding: Back button is present from step 2 onward
 	body, _ := page.Content()
 	_ = body
+}
+
+func TestGrowWizardE2E(t *testing.T) {
+	page := newPage(t)
+	defer page.Close()
+
+	loginAsAdmin(t, page)
+
+	// Navigate to Dashboard
+	targetUrl := fmt.Sprintf("%s/#/dashboard?FLUTTER_WEB_USE_SKIA=false", baseURL)
+	_, err := page.Goto(targetUrl)
+	if err != nil {
+		t.Fatalf("could not goto: %v", err)
+	}
+
+	// Wait for dashboard to load
+	if _, err := page.WaitForSelector("text='Dashboard'"); err != nil {
+		t.Fatalf("dashboard not loaded: %v", err)
+	}
+
+	// Enable semantics
+	if _, err := page.Evaluate(`() => { if (window._flutter_semantics_enable) window._flutter_semantics_enable(); }`); err != nil {
+		t.Logf("Failed to enable semantics, might not be needed")
+	}
+
+	// Wait a moment for flutter to render
+	page.WaitForTimeout(2000)
+
+	btn, err := page.QuerySelector("text='View Suggestions'")
+	if err != nil || btn == nil {
+		btn, err = page.QuerySelector("[aria-label*='View Suggestions']")
+		if err != nil || btn == nil {
+			t.Fatalf("could not find View Suggestions button: %v", err)
+		}
+	}
+
+	err = btn.Click()
+	if err != nil {
+		t.Fatalf("failed to click View Suggestions: %v", err)
+	}
+
+	// Verify we are on the Grow wizard
+	if _, err := page.WaitForSelector("text='Ready to grow?'"); err != nil {
+		t.Fatalf("Grow wizard not opened: %v", err)
+	}
+
+	// Interact with wizard: "Connect Instagram"
+	productBtn, err := page.QuerySelector("text='Connect Instagram'")
+	if err == nil && productBtn != nil {
+		productBtn.Click()
+	} else {
+		fallback, _ := page.QuerySelector("[aria-label*='Connect Instagram']")
+		if fallback != nil {
+			fallback.Click()
+		} else {
+			t.Fatalf("Could not find Connect Instagram button")
+		}
+	}
+
+	// Verify processing state
+	if _, err := page.WaitForSelector("text='Connecting Instagram...'"); err != nil {
+		t.Fatalf("Connecting Instagram state not reached: %v", err)
+	}
+
+	// Click Go to Dashboard
+	dashboardBtn, err := page.QuerySelector("text='Go to Dashboard'")
+	if err == nil && dashboardBtn != nil {
+		dashboardBtn.Click()
+	} else {
+		fallback, _ := page.QuerySelector("[aria-label*='Go to Dashboard']")
+		if fallback != nil {
+			fallback.Click()
+		} else {
+			t.Fatalf("Could not find Go to Dashboard button")
+		}
+	}
+
+
+	page.WaitForTimeout(1000)
 }

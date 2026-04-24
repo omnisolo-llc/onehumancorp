@@ -213,3 +213,132 @@ class BillingWizardScreen extends ConsumerWidget {
     );
   }
 }
+
+// --- Grow My Business Wizard ---
+class GrowWizardScreen extends ConsumerStatefulWidget {
+  const GrowWizardScreen({super.key});
+
+  @override
+  ConsumerState<GrowWizardScreen> createState() => _GrowWizardScreenState();
+}
+
+class _GrowWizardScreenState extends ConsumerState<GrowWizardScreen> {
+  int _step = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Grow my business')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Ready to grow?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 24),
+                    if (_step == 0) ...[
+                      const Text('Based on your current stage, here are our top suggestions to get more customers.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      _SuggestionCard(
+                        icon: Icons.inventory,
+                        title: 'Add 5 more products',
+                        description: 'Stores with more than 10 products get 3x more traffic.',
+                        onTap: () => setState(() => _step = 1),
+                      ),
+                      const SizedBox(height: 12),
+                      _SuggestionCard(
+                        icon: Icons.camera_alt,
+                        title: 'Connect Instagram',
+                        description: 'Let your Marketing Agent post your products automatically.',
+                        onTap: () => setState(() => _step = 2),
+                      ),
+                      const SizedBox(height: 12),
+                      _SuggestionCard(
+                        icon: Icons.email,
+                        title: 'Run your first email campaign',
+                        description: 'Reach out to your existing contacts with a special offer.',
+                        onTap: () => setState(() => _step = 3),
+                      ),
+                    ] else if (_step == 1) ...[
+                      const Text('Adding more products...', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => context.go('/dashboard'),
+                        child: const Text('Go to Dashboard'),
+                      ),
+                    ] else if (_step == 2) ...[
+                      const Text('Connecting Instagram...', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => context.go('/dashboard'),
+                        child: const Text('Go to Dashboard'),
+                      ),
+                    ] else if (_step == 3) ...[
+                      const Text('Running your first email campaign...', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => context.go('/dashboard'),
+                        child: const Text('Go to Dashboard'),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+
+  const _SuggestionCard({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit')),
+                  Text(description, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+}
