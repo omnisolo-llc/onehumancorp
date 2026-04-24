@@ -27,3 +27,6 @@ ALTER TABLE ohc_memory_embeddings RENAME COLUMN tenant_id TO organization_id;
 
 CREATE INDEX idx_autodream_memories_master_org ON autodream_memories_master(organization_id);
 CREATE INDEX idx_ohc_memory_embeddings_org ON ohc_memory_embeddings(organization_id);
+
+ALTER TABLE autodream_memories_master ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ohc_memory_embeddings ENABLE ROW LEVEL SECURITY;
