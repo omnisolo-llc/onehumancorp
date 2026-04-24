@@ -249,3 +249,62 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 	}
 	writeJSON(w, resp)
 }
+
+// handleWizardStateSave saves the current wizard progress
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
+		return
+	}
+
+	// Persist the state as JSON string in settings extras
+	stateBytes, err := json.Marshal(req)
+	if err != nil {
+		http.Error(w, "failed to serialize state", http.StatusInternalServerError)
+		return
+	}
+
+	s.mu.Lock()
+	cfg := s.settings
+	if cfg.Extras == nil {
+		cfg.Extras = make(map[string]string)
+	}
+	// Copy to avoid race when SettingsStore marshals
+	newExtras := make(map[string]string)
+	for k, v := range cfg.Extras {
+		newExtras[k] = v
+	}
+	newExtras["wizard_state"] = string(stateBytes)
+	cfg.Extras = newExtras
+	s.settings = cfg
+	s.mu.Unlock()
+
+	_ = s.hub.SettingsStore().Update(cfg)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// handleWizardStateLoad loads the current wizard progress
+func (s *Server) handleWizardStateLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	stateStr := s.settings.Extras["wizard_state"]
+	s.mu.RUnlock()
+
+	if stateStr == "" {
+		stateStr = "{}"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(stateStr))
+}

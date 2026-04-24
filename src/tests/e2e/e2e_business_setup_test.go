@@ -15,11 +15,9 @@ func TestBusinessSetupWizard(t *testing.T) {
 	// Wait for home screen.
 	expectElement(t, page, `[aria-label="Dashboard"]`)
 
-	// Setup Wizard might be triggered by a specific button or URL
-	// For testing, let's navigate to /business_setup directly or click on the Setup Business button
-	if err := page.Goto(baseURL + "/#/business_setup"); err != nil {
-		t.Fatalf("Failed to navigate to business setup: %v", err)
-	}
+	// Go to Business Setup via UI
+	// The onboarding wizard is typically triggered from a card or button on the dashboard.
+	clickElement(t, page, "text=Set up your business")
 
 	// Wait for the UI to settle
 	time.Sleep(1 * time.Second)
@@ -68,4 +66,15 @@ func TestBusinessSetupWizard(t *testing.T) {
 	// We expect the user to be redirected to the dashboard eventually.
 	// Check for a dashboard element
 	expectElement(t, page, "text=Dashboard")
+
+	// Verify backend state persists correctly (Cross-device resume behavior)
+	// Instead of a reload which would just hit /dashboard, let's navigate to /#/business_setup again to see if it remembers the state.
+	// We do it by navigating explicitly.
+	if _, err := page.Goto(baseURL + "/#/business_setup"); err != nil {
+		t.Fatalf("Failed to navigate to business setup: %v", err)
+	}
+	time.Sleep(2 * time.Second)
+
+    // Check that we are still on the final step/summary page (step 6)
+    expectElement(t, page, "text=Review & Launch")
 }

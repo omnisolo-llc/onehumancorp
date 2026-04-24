@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
+
 import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
@@ -63,14 +64,80 @@ class BusinessSetupState {
 }
 
 class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
+
+  Future<void> loadState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/api/wizard/state'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+          },
+        );
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data['step'] != null) {
+            state = state.copyWith(
+              step: data['step'],
+              businessType: data['businessType'] ?? '',
+              companyName: data['companyName'] ?? '',
+              businessDescription: data['businessDescription'] ?? '',
+              whatYouSell: List<String>.from(data['whatYouSell'] ?? []),
+              paymentMethod: data['paymentMethod'] ?? '',
+              adminName: data['adminName'] ?? '',
+              adminEmail: data['adminEmail'] ?? '',
+            );
+          }
+        }
+      } catch (e) {
+        state = state.copyWith(errorMessage: 'Failed to save progress. Check your connection.');
+      }
+    }
+  }
+
   @override
   BusinessSetupState build() => const BusinessSetupState();
+
+
+  Future<void> saveState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        await http.post(
+          Uri.parse('$baseUrl/api/wizard/state/save'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'step': state.step,
+            'businessType': state.businessType,
+            'companyName': state.companyName,
+            'businessDescription': state.businessDescription,
+            'whatYouSell': state.whatYouSell,
+            'paymentMethod': state.paymentMethod,
+            'adminName': state.adminName,
+            'adminEmail': state.adminEmail,
+          }),
+        );
+      } catch (e) {
+        state = state.copyWith(errorMessage: 'Failed to save progress. Check your connection.');
+      }
+    }
+  }
 
   void nextStep() {
     if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
+      saveState();
     }
   }
+
 
   void prevStep() {
     if (state.step > 0) {
@@ -144,6 +211,9 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
       }
     } else {
       state = state.copyWith(isLoading: false, errorMessage: 'Not authenticated');
+      if (user == null && context.mounted) {
+          context.go('/dashboard');
+      }
     }
   }
 }
@@ -161,6 +231,15 @@ class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
 
 class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(businessSetupProvider.notifier).loadState();
+    });
+  }
+
 
   Widget _buildStep(BusinessSetupState state, BusinessSetupNotifier notifier) {
     if (state.step == 0) {
