@@ -10,10 +10,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"sync"
 	"time"
 
 	"errors"
-	"sync"
 )
 
 // ProviderType is the unique identifier for an external agent implementation.
@@ -649,6 +650,15 @@ func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
 func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	// Builtin agent in standalone microservice mode handles its own isolation.
+	// We dispatch via gRPC if OHC_AGENT_ADDRESS is set.
+	if os.Getenv("OHC_AGENT_ADDRESS") != "" {
+		payload := fmt.Sprintf("Execute task in worktree: %s", worktree)
+		if err := dispatchToBuiltinAgent(payload, "isolated task", "Operations"); err != nil {
+			return err
+		}
+		return nil
+	}
 	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
 }
 
