@@ -14,7 +14,7 @@ For a comprehensive overview of how these modes interact, fall back, and synchro
 ## Conventions
 
 - Source documentation lives under `docs/`.
-- Source code lives under `srcs/`.
+- Source code lives under `src/`.
 - GitHub issues are the task source of truth.
 - Historical or superseded material belongs in `docs/archive/`.
 

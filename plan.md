@@ -8,7 +8,7 @@
    - Update `Authenticate`, `GetUser`, `ListUsers`, `UpdateUser`, `DeleteUser` in the fallback in-memory logic.
 
 3. **Verify and Run Tests**
-   - Run `bazelisk test //srcs/server/auth/...` to ensure `Store` and `PgUserRepository` tests pass with proper tenant scoping.
+   - Run `bazelisk test //src/server/auth/...` to ensure `Store` and `PgUserRepository` tests pass with proper tenant scoping.
    - Run complete pre-commit steps to ensure no breakages in CI.
 
 4. **Submit changes**

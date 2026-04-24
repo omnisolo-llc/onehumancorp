@@ -65,7 +65,7 @@ sequenceDiagram
   - A unified inbox view in the OHC mobile app where all IG/FB messages appear.
 
 ## Implementation Prompt
-"Implement the Social Media Inbox integration using ManyChat. Create a Go service in `srcs/server/services/social/` that handles the ManyChat OAuth connection, webhook registration, and incoming message parsing. Connect this service to the AI Job Queue so the Customer Success agent can automatically generate response drafts. Ensure webhook payloads can be forwarded to standalone clients via the local event bus."
+"Implement the Social Media Inbox integration using ManyChat. Create a Go service in `src/server/services/social/` that handles the ManyChat OAuth connection, webhook registration, and incoming message parsing. Connect this service to the AI Job Queue so the Customer Success agent can automatically generate response drafts. Ensure webhook payloads can be forwarded to standalone clients via the local event bus."
 
 ## Priority
 P0

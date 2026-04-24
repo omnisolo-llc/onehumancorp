@@ -46,7 +46,7 @@
 
 ## ✅ Phase 4: Final Verification
 
-*   `bazelisk test //srcs/server/orchestration:orchestration_test --config=local`
+*   `bazelisk test //src/server/orchestration:orchestration_test --config=local`
 *   **Status:** <span style="color:#00e676">**PASSED**</span>
 *   **Conclusion:** The Hybrid Agentic OS remains resilient. Fallback degrades gracefully without taking down the Host Desktop wrapper.
 

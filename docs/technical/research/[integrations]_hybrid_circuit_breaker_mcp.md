@@ -29,7 +29,7 @@ graph TD
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/circuit_breaker/`.
+- Create a new package `src/server/lib/integrations/circuit_breaker/`.
 - Introduce a `CircuitBreakerManager` implementing the MCP Tool interface.
 - Dynamically select the backend driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize Redis to implement a distributed circuit breaker state (Open, Half-Open, Closed).
@@ -43,7 +43,7 @@ graph TD
 - Ensure `organization_id` prefixes are rigorously applied to cache keys in Cloud mode to enforce cross-tenant isolation and prevent one tenant's failures from opening circuits for another.
 
 ## Implementation Prompt
-"Implement the Hybrid Circuit Breaker MCP tool in `srcs/server/lib/integrations/circuit_breaker/`.
+"Implement the Hybrid Circuit Breaker MCP tool in `src/server/lib/integrations/circuit_breaker/`.
 1. Create `circuit_breaker.go` defining the `CircuitBreakerManager` and its MCP capabilities (`ExecuteRequest`, `GetCircuitState`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Redis-backed state tracker ensuring `organization_id` is used as part of the state key.

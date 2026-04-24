@@ -63,7 +63,7 @@ sequenceDiagram
   - The business owner simply tells the AI, "Email my customers that we have a 20% sale this weekend." The AI generates the preview and sends it.
 
 ## Implementation Prompt
-"Integrate Resend for transactional and marketing emails. Create a Go service in `srcs/server/services/email/` that wraps the Resend API. Implement a webhook receiver to track email analytics (opens, bounces) and log them into the OHC-SIP database. Ensure that the AI agents can pass raw text to the service, which then injects it into pre-defined React Email (or equivalent Go HTML) templates before sending."
+"Integrate Resend for transactional and marketing emails. Create a Go service in `src/server/services/email/` that wraps the Resend API. Implement a webhook receiver to track email analytics (opens, bounces) and log them into the OHC-SIP database. Ensure that the AI agents can pass raw text to the service, which then injects it into pre-defined React Email (or equivalent Go HTML) templates before sending."
 
 ## Priority
 P1

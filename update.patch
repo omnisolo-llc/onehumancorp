@@ -1,5 +1,5 @@
---- srcs/server/orchestration/centrifuge_hub.go
-+++ srcs/server/orchestration/centrifuge_hub.go
+--- src/server/orchestration/centrifuge_hub.go
++++ src/server/orchestration/centrifuge_hub.go
 @@ -365,6 +365,6 @@
      }
 
