@@ -151,7 +151,7 @@ void main() {
       // Tap with empty form → validation error
       await tester.tap(signInBtn);
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
     testWidgets(
@@ -193,7 +193,7 @@ void main() {
       );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
     testWidgets('password field validates non-empty', (tester) async {
@@ -1024,7 +1024,9 @@ void main() {
       // Tap Mac download button
       final macBtn = find.text('Download for Mac');
       expect(macBtn, findsOneWidget);
-      await tester.tap(macBtn);
+      await tester.ensureVisible(macBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(macBtn, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // Verify API was called
@@ -1037,7 +1039,9 @@ void main() {
       // Tap Windows download button
       final winBtn = find.text('Download for Windows');
       expect(winBtn, findsOneWidget);
-      await tester.tap(winBtn);
+      await tester.ensureVisible(winBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(winBtn, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // Verify API was called
@@ -1050,7 +1054,9 @@ void main() {
       // Tap Linux download button
       final linuxBtn = find.text('Download for Linux');
       expect(linuxBtn, findsOneWidget);
-      await tester.tap(linuxBtn);
+      await tester.ensureVisible(linuxBtn);
+      await tester.pumpAndSettle();
+      await tester.tap(linuxBtn, warnIfMissed: false);
       await tester.pumpAndSettle();
 
       // Verify API was called

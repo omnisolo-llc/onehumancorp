@@ -48,8 +48,20 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
-                                await Future.delayed(const Duration(seconds: 2));
-                                if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                if (mounted) {
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+
+                                    const SnackBar(content: Text("Agent diagnostics fix is not yet implemented.")),
+
+                                  );
+
+                                  setState(() { _isApplying = false; });
+
+                                }
+
+                                return;
+
                               },
                               child: const Text('Apply Fix'),
                             ),
@@ -77,10 +89,19 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
 // --- Upgrade Wizard ---
 class UpgradeWizardScreen extends ConsumerStatefulWidget {
   const UpgradeWizardScreen({super.key});
+    if (mounted) {
 
-  @override
-  ConsumerState<UpgradeWizardScreen> createState() => _UpgradeWizardScreenState();
-}
+      ScaffoldMessenger.of(context).showSnackBar(
+
+        const SnackBar(content: Text("Platform upgrade is not yet implemented.")),
+
+      );
+
+      setState(() { _isUpgrading = false; });
+
+    }
+
+    return;
 
 class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
   int _progress = 0;

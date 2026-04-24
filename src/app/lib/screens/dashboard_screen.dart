@@ -621,11 +621,11 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Optional delay for staggered entrance animation if needed
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
+    if (mounted) {
+
+      _controller.forward();
+
+    }
   }
 
   @override

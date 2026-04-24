@@ -160,11 +160,11 @@ class _AnimatedTaskGlassCardState extends State<_AnimatedTaskGlassCard> with Sin
       curve: Curves.easeOut,
     ));
 
-    Future.delayed(Duration(milliseconds: 100 * widget.index), () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
+    if (mounted) {
+
+      _controller.forward();
+
+    }
   }
 
   @override

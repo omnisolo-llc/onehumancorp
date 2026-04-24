@@ -54,23 +54,44 @@ class Agent {
   bool get isRunning => status.toLowerCase() == 'running' || status.toUpperCase() == 'ACTIVE';
   bool get isPending => status.toLowerCase() == 'pending' || status.toUpperCase() == 'IDLE';
 
-  String get formattedRole {
+  String get formattedRole => formatRoleName(role);
+
+
+
+  static String formatRoleName(String role) {
+
     if (role.isEmpty) return role;
+
     return role
-        .replaceAll('_', ' ')
+
+        .replaceAll("_", " ")
+
         .toLowerCase()
-        .split(' ')
+
+        .split(" ")
+
         .map((word) {
-          if (word == 'ai') return 'AI';
-          if (word == 'ceo') return 'CEO';
-          if (word == 'qa') return 'QA';
-          if (word == 'cfo') return 'CFO';
-          if (word == 'seo') return 'SEO';
-          if (word == 'llm') return 'LLM';
+
+          if (word == "ai") return "AI";
+
+          if (word == "ceo") return "CEO";
+
+          if (word == "qa") return "QA";
+
+          if (word == "cfo") return "CFO";
+
+          if (word == "seo") return "SEO";
+
+          if (word == "llm") return "LLM";
+
           if (word.isEmpty) return word;
+
           return word[0].toUpperCase() + word.substring(1);
+
         })
-        .join(' ');
+
+        .join(" ");
+
   }
 }
 

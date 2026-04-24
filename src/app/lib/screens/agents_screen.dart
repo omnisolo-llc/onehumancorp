@@ -141,11 +141,11 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    Future.delayed(Duration(milliseconds: 100 * widget.index), () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
+    if (mounted) {
+
+      _controller.forward();
+
+    }
   }
 
   @override

@@ -201,9 +201,8 @@ class WebsiteBuilderNotifier extends Notifier<WebsiteBuilderState> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Website published! Link copied to clipboard.', style: TextStyle(fontFamily: 'Inter'))),
       );
-      Future.delayed(const Duration(seconds: 2), () {
-         if (context.mounted) GoRouter.of(context).go('/dashboard');
-      });
+      if (context.mounted) GoRouter.of(context).go("/dashboard");
+
     }
   }
 }

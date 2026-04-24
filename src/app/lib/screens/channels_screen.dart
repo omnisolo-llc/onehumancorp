@@ -291,11 +291,11 @@ class _ChannelCardState extends State<_ChannelCard> with SingleTickerProviderSta
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    Future.delayed(Duration(milliseconds: 100 * widget.index), () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
+    if (mounted) {
+
+      _controller.forward();
+
+    }
   }
 
   @override
