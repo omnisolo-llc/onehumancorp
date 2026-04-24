@@ -5,15 +5,16 @@ go_library(
     srcs = ["registry.go"],
     importpath = "github.com/onehumancorp/mono/src/server/tools/registry",
     visibility = ["//visibility:public"],
-    deps = [],
 )
 
 go_test(
     name = "registry_test",
-    srcs = ["registry_test.go", "e2e_test.go"],
+    srcs = [
+        "e2e_test.go",
+        "registry_test.go",
+    ],
     embed = [":registry"],
     deps = [
-        "//src/server/tools/hybridfsmcp",
         "//src/server/tools/localstatefulproxy",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",

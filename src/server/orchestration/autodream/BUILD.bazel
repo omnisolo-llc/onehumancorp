@@ -3,38 +3,36 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "autodream",
     srcs = [
+        "kairos_autodream.go",
         "metrics.go",
         "pipeline.go",
         "repository.go",
         "service.go",
         "worker.go",
-        "kairos_autodream.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/orchestration/autodream",
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_prometheus_client_golang//prometheus",
         "//src/server/db",
         "//src/server/lib/pricing",
-        "@org_modernc_sqlite//:sqlite",
+        "@com_github_prometheus_client_golang//prometheus",
     ],
 )
 
 go_test(
     name = "autodream_test",
     srcs = [
+        "kairos_autodream_test.go",
         "pipeline_test.go",
         "repository_test.go",
         "service_test.go",
         "worker_test.go",
-        "kairos_autodream_test.go",
     ],
     embed = [":autodream"],
     deps = [
-        "@com_github_prometheus_client_golang//prometheus",
         "//src/server/db",
-        "@org_modernc_sqlite//:sqlite",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )

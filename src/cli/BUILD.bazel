@@ -1,13 +1,25 @@
-load("@aspect_rules_js//js:defs.bzl", "js_library", "js_binary")
+load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library")
 
 js_library(
     name = "lib",
-    srcs = glob(["src/**/*.ts", "src/**/*.tsx"], allow_empty = True) + ["tsconfig.json", "package.json"],
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+        ],
+        allow_empty = True,
+    ) + [
+        "package.json",
+        "tsconfig.json",
+    ],
     visibility = ["//visibility:public"],
 )
 
 js_binary(
     name = "cli",
-    data = [":lib", "//:node_modules"],
+    data = [
+        ":lib",
+        "//:node_modules",
+    ],
     entry_point = "src/index.tsx",
 )

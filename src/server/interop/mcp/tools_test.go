@@ -35,10 +35,10 @@ func (m *mockDBProviderTools) Query(ctx context.Context, sql string, optionsAndA
 		return nil, fmt.Errorf("mock query error")
 	}
 	m.queryCalls++
-	return &mockRows{count: 1}, nil
+	return &toolsMockRows{count: 1}, nil
 }
 func (m *mockDBProviderTools) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
-	return &mockRow{err: m.queryRowErr}
+	return &toolsMockRow{err: m.queryRowErr}
 }
 func (m *mockDBProviderTools) Begin(ctx context.Context) (db.Tx, error) { return nil, nil }
 func (m *mockDBProviderTools) Close()                                     {}
@@ -160,8 +160,8 @@ func TestWorkspaceSyncTool_FileErrors(t *testing.T) {
 // We also need to test Rel error, but that's hard to trigger in walkdir, same with Info.
 // We can inject a fake error in a mock test by walking a custom fs? filepath.WalkDir uses real fs.
 
-type mockRow struct{ err error }
-func (m *mockRow) Scan(dest ...any) error {
+type toolsMockRow struct{ err error }
+func (m *toolsMockRow) Scan(dest ...any) error {
 	if m.err != nil { return m.err }
 	if len(dest) > 0 {
 		if strPtr, ok := dest[0].(*string); ok {
@@ -171,17 +171,17 @@ func (m *mockRow) Scan(dest ...any) error {
 	return nil
 }
 
-type mockRows struct { count int }
-func (m *mockRows) Close() {}
-func (m *mockRows) Err() error { return nil }
-func (m *mockRows) Next() bool {
+type toolsMockRows struct { count int }
+func (m *toolsMockRows) Close() {}
+func (m *toolsMockRows) Err() error { return nil }
+func (m *toolsMockRows) Next() bool {
 	if m.count > 0 {
 		m.count--
 		return true
 	}
 	return false
 }
-func (m *mockRows) Scan(dest ...any) error {
+func (m *toolsMockRows) Scan(dest ...any) error {
 	if len(dest) == 3 {
 		if idPtr, ok := dest[0].(*string); ok { *idPtr = "123e4567-e89b-12d3-a456-426614174000" }
 		if toolPtr, ok := dest[1].(*string); ok { *toolPtr = "test-tool" }
@@ -189,7 +189,7 @@ func (m *mockRows) Scan(dest ...any) error {
 	}
 	return nil
 }
-func (m *mockRows) Columns() ([]string, error) { return nil, nil }
+func (m *toolsMockRows) Columns() ([]string, error) { return nil, nil }
 // Let's replace the WalkDir completely with a custom one to hit 100% since WalkDir is hard to fail perfectly with real os.
 // Actually we have 57/61 which is 93%. I need 100% coverage unit tests in tools_test.go.
 

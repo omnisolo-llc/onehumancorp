@@ -1,0 +1,1 @@
+-- Dummy migration to satisfy Bazel //go:embed directive

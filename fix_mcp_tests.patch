@@ -1,0 +1,31 @@
+--- src/server/interop/mcp/tools_test.go
++++ src/server/interop/mcp/tools_test.go
+@@ -160,18 +160,18 @@
+	return m.err
+ }
+
+-type mockRow struct {
++type toolsMockRow struct {
+	err error
+ }
+
+-func (m mockRow) Scan(dest ...any) error {
++func (m toolsMockRow) Scan(dest ...any) error {
+	return m.err
+ }
+
+-type mockRows struct {
++type toolsMockRows struct {
+	err error
+ }
+
+-func (m mockRows) Close()              {}
+-func (m mockRows) Err() error          { return m.err }
+-func (m mockRows) Next() bool          { return false }
+-func (m mockRows) Scan(dest ...any) error { return m.err }
+-func (m mockRows) Columns() ([]string, error) { return nil, nil }
++func (m toolsMockRows) Close()              {}
++func (m toolsMockRows) Err() error          { return m.err }
++func (m toolsMockRows) Next() bool          { return false }
++func (m toolsMockRows) Scan(dest ...any) error { return m.err }
++func (m toolsMockRows) Columns() ([]string, error) { return nil, nil }
