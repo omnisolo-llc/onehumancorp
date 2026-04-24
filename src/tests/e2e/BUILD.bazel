@@ -196,10 +196,13 @@ go_test(
     srcs = _SHARED_SRCS + [
         "cuj_extended_test.go",
         "cuj_integration_test.go",
+        "cuj_experiments_test.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
+    deps = _COMMON_DEPS + [
+        "@com_github_stretchr_testify//require",
+    ],
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
