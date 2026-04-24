@@ -1271,6 +1271,26 @@ func TestUnaryAuthInterceptor_OpenMeetingRequest(t *testing.T) {
 }
 
 func TestSPIFFEAuthInterceptor_RegionalDomains(t *testing.T) {
-	// Simple test placeholder to ensure the logic exists in auth_interceptor.go
-	t.Log("Regional SPIFFE ID logic in auth_interceptor.go has suffix checks enabled")
+	interceptor := SPIFFEAuthInterceptor()
+	ctx := mockSPIFFEContext("spiffe://us-east.ohc.global/org/org-1/agent/agent-1")
+
+	info := &grpc.UnaryServerInfo{
+		FullMethod: "/hub.v1.HubService/RegisterAgent",
+	}
+
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return "success", nil
+	}
+
+	req := pb.RegisterAgentRequest_builder{
+		Agent: pb.Agent_builder{
+			Id: proto.String("agent-1"),
+			OrganizationId: proto.String("org-1"),
+		}.Build(),
+	}.Build()
+
+	_, err := interceptor(ctx, req, info, handler)
+	if err != nil {
+		t.Fatalf("expected no error for regional domain, got %v", err)
+	}
 }
