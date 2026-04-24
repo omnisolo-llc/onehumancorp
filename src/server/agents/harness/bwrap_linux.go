@@ -36,6 +36,14 @@ func (h *BwrapHarness) Execute(ctx context.Context, execCtx ExecutionContext) ([
 		args = append(args, "--bind", path, path)
 	}
 
+	for _, path := range execCtx.AllowReadPaths {
+		args = append(args, "--ro-bind", path, path)
+	}
+
+	for _, path := range execCtx.DenyWritePaths {
+		args = append(args, "--tmpfs", path)
+	}
+
 	// Append the actual command to execute
 	args = append(args, "--")
 	args = append(args, execCtx.Command...)
