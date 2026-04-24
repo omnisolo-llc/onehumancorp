@@ -116,7 +116,7 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("OHC_LOCAL_LLM_ENDPOINT=%s/api/chat", llmURL),
 			fmt.Sprintf("OHC_LOCAL_LLM_EMBED_ENDPOINT=%s/api/embeddings", llmURL),
 			"OHC_LLM_PROVIDER=ollama",
-			fmt.Sprintf("GRPC_PORT=:%d", freePort()),
+			fmt.Sprintf("GRPC_PORT=%d", freePort()),
 		)
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr
