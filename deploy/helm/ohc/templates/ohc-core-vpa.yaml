@@ -11,11 +11,11 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-ohc-core
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: ohc-core
-        controlledResources: ["cpu", "memory"]
+        controlledResources: ["memory"]
         minAllowed:
           cpu: {{ .Values.ohcCore.resources.requests.cpu }}
           memory: {{ .Values.ohcCore.resources.requests.memory }}

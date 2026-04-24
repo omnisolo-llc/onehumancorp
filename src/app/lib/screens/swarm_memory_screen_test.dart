@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
 import 'package:ohc_app/services/powersync_service.dart';
 import 'package:powersync/powersync.dart';
 
@@ -85,7 +86,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(ShimmerListTile), findsWidgets);
     });
 
     testWidgets('shows empty state for durable memory', (tester) async {
