@@ -64,10 +64,10 @@ graph TD
 
 ## Implementation Prompt
 **Task**: Build the `OHC-Harness` Core Bash Security Parsing Module
-**Context**: Replicate the bash security validations extracted from Claude Code into the OHC `srcs/` directory.
+**Context**: Replicate the bash security validations extracted from Claude Code into the OHC `src/` directory.
 
 **Steps**:
-1. Implement a Go-based `ParsedCommand` structure in `srcs/backend/harness/bash_security.go` utilizing Tree-sitter (e.g. `go-tree-sitter/bash`) to parse incoming shell commands.
+1. Implement a Go-based `ParsedCommand` structure in `src/backend/harness/bash_security.go` utilizing Tree-sitter (e.g. `go-tree-sitter/bash`) to parse incoming shell commands.
 2. Port the 20 validators from the Claude Code `bashSecurity.ts` into Go functions:
    - `ValidateJqCommand`
    - `ValidateDangerousVariables`

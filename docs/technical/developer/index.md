@@ -10,6 +10,6 @@ The developer section covers setup, workflow, and local validation.
 
 ## Expectations
 
-- Source code lives under `srcs/`.
+- Source code lives under `src/`.
 - Documentation lives under `docs/`.
 - Tasks are tracked in GitHub issues, not local mission files.

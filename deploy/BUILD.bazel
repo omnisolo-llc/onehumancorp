@@ -14,7 +14,7 @@ exports_files([
 # Package backend binary
 pkg_tar(
     name = "backend_pkg",
-    srcs = ["//srcs/server:ohc"],
+    srcs = ["//src/server:ohc"],
     package_dir = "/usr/local/bin",
 )
 
@@ -55,9 +55,9 @@ oci_push(
 pkg_tar(
     name = "agent_pkg",
     srcs = [
-        "//srcs/server:ohc",
-        "//srcs/server/agents/mcp:github",
-        "//srcs/server/ironclaw",
+        "//src/server:ohc",
+        "//src/server/agents/mcp:github",
+        "//src/server/ironclaw",
     ],
     package_dir = "/usr/local/bin",
 )
@@ -132,7 +132,7 @@ sh_test(
     ]) + [
         ":server_load",
         "//:go.mod",
-        "//srcs/server:ohc",
+        "//src/server:ohc",
     ],
     tags = [
         "large",

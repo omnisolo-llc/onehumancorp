@@ -2,8 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-build --config=buildbuddy-official
-test --config=buildbuddy-official
+build --config=buildbuddy
+test --config=buildbuddy
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -103,13 +103,13 @@ build:buildbuddy --bes_upload_mode=fully_async
 # ── Local: disable remote cache/execution ─────────────────────────────────────
 build:local --remote_cache=
 build:local --remote_executor=
+build:local --experimental_remote_downloader=
 build:local --spawn_strategy=sandboxed,local
 
 # ── Local test: run tests locally and load .env ───────────────────────────────
 # For local development/testing: loads .env and runs tests without remote execution.
 # Usage: bazel test --config=local //path/to:target
 # Or use the wrapper: ./scripts/bazel-test-local.sh //path/to:target
-test:local --config=local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────

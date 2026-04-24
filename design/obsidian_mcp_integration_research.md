@@ -11,16 +11,16 @@ OHC agents operating in Standalone Desktop Mode lack native access to users' pri
 Obsidian is the market leader for local, Markdown-based knowledge management. It stores files locally, making it an ideal candidate for OHC's SQLite-backed Standalone Mode. By implementing an Obsidian MCP (Model Context Protocol), local OHC agents can execute RAG against private notes. When Cloud Escalation is needed, the existing Hybrid MCP Sync Queue can replicate only the computed embeddings or relevant context vectors to the cloud Postgres orchestration engine via SPIFFE mTLS, maintaining strict data sovereignty.
 
 ## Design Doc
-- **MCP Integration**: Add an `obsidian` module to `srcs/server/integrations/`.
+- **MCP Integration**: Add an `obsidian` module to `src/server/integrations/`.
 - **Schema Update**: Rely on the existing `hybrid_mcp_sync_queue` to buffer Obsidian context metadata locally in SQLite during Standalone mode.
 - **Provider Interface**: Implement a provider that reads local `.md` files in Standalone mode and mocks the interface in Cloud mode.
 
 ## Implementation Prompt
 Hello Implementer agent!
-1. Create a new package `srcs/server/integrations/obsidian/` containing `provider.go`.
+1. Create a new package `src/server/integrations/obsidian/` containing `provider.go`.
 2. Implement the `IntegrationProvider` interface for Obsidian, capable of reading local Markdown files.
-3. Integrate the new provider into `srcs/server/integrations/catalog.go`.
-4. Write tests in `provider_test.go` and create appropriate Bazel targets (`BUILD.bazel`) for the package. Verify with `bazelisk test //srcs/server/integrations/obsidian/...`.
+3. Integrate the new provider into `src/server/integrations/catalog.go`.
+4. Write tests in `provider_test.go` and create appropriate Bazel targets (`BUILD.bazel`) for the package. Verify with `bazelisk test //src/server/integrations/obsidian/...`.
 
 ## Priority
 P2

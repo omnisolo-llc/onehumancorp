@@ -19,7 +19,7 @@ By introducing a Hybrid PubSub MCP, OHC agents can publish and subscribe to even
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/pubsub/`.
+- Create a new package `src/server/lib/integrations/pubsub/`.
 - Introduce a `PubSubManager` implementing the MCP Tool interface.
 - Dynamically select the backend driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize Redis Pub/Sub (e.g., via `go-redis`) to implement distributed event broadcasting.
@@ -41,7 +41,7 @@ graph TD
 - Ensure `organization_id` prefixes are strictly applied to topics in Cloud mode to enforce cross-tenant data isolation and prevent cross-talk between instances.
 
 ## Implementation Prompt
-"Implement the Hybrid PubSub MCP tool in `srcs/server/lib/integrations/pubsub/`.
+"Implement the Hybrid PubSub MCP tool in `src/server/lib/integrations/pubsub/`.
 1. Create `pubsub.go` defining the `PubSubManager` and its MCP capabilities (`Publish`, `Subscribe`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement Redis Pub/Sub integration using `go-redis`, ensuring `organization_id` is used as part of the topic key for isolation.
