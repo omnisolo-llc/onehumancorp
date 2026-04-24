@@ -665,7 +665,13 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		kairosMesh = kairos.NewTeammateMesh(nil)
 	}
 
-	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh)
+	var sharedTaskRepo *kairos.SharedTaskRepo
+	if server.dbProvider != nil {
+		sharedTaskRepo = kairos.NewSharedTaskRepo(server.dbProvider)
+	} else if hub != nil && hub.TaskManager() != nil {
+		sharedTaskRepo = kairos.NewSharedTaskRepo(hub.TaskManager().DBProvider())
+	}
+	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh, sharedTaskRepo)
 
 	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
 	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
