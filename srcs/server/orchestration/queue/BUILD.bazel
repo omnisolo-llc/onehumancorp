@@ -10,7 +10,7 @@ go_library(
         "redis_queue.go",
         "sqlite_queue.go",
         "postgres_queue.go",
-        "redis_job_queue.go",
+
         "inmem_job_queue.go",
         "worker_pool.go",
         "kairos_queue.go",

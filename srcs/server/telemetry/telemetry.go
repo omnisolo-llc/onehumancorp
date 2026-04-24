@@ -2415,36 +2415,9 @@ func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode st
 	}
 }
 
-var CapabilityViolationTotal metric.Int64Counter
 
-func initCapabilityMetrics(m metric.Meter) error {
-	var err error
-	CapabilityViolationTotal, err = m.Int64Counter(
-		"capability_violation_total",
-		metric.WithDescription("Total number of capability ACL violations"),
-	)
-	return err
-}
 
 // RecordCapabilityViolation increments the counter for capability ACL violations.
-func RecordCapabilityViolation(ctx context.Context, sessionID, capability string) {
-
-	if BufferMetricFunc != nil {
-		payloadMap := map[string]interface{}{
-			"session_id": sessionID,
-			"capability": capability,
-		}
-
-		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
-		_ = BufferMetricFunc(ctx, "capability_violation", string(payloadBytes))
-	}
-	if CapabilityViolationTotal != nil {
-		CapabilityViolationTotal.Add(ctx, 1, metric.WithAttributes(
-			attribute.String("session_id", sessionID),
-			attribute.String("capability", capability),
-		))
-	}
-}
 
 // RecordTelemetrySyncBackoff records the backoff duration for telemetry sync.
 func RecordTelemetrySyncBackoff(ctx context.Context, duration float64) {

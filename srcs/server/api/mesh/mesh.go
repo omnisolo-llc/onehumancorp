@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/auth"
-	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel"
 )
 
@@ -34,57 +33,6 @@ type MeshEvent struct {
 type TeammateMeshService interface {
 	BroadcastIntent(ctx context.Context, intent string) error
 	Subscribe(ctx context.Context) (<-chan string, error)
-}
-
-type RedisMeshService struct {
-	client  rueidis.Client
-	channel string
-}
-
-func NewRedisMeshService(client rueidis.Client, channel string) *RedisMeshService {
-	return &RedisMeshService{
-		client:  client,
-		channel: channel,
-	}
-}
-
-func (s *RedisMeshService) BroadcastIntent(ctx context.Context, intent string) error {
-	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil {
-		return errors.New("unauthorized: missing claims")
-	}
-
-	broadcastCount.Add(ctx, 1)
-
-	cmd := s.client.B().Publish().Channel(s.channel).Message(intent).Build()
-	return s.client.Do(ctx, cmd).Error()
-}
-
-func (s *RedisMeshService) Subscribe(ctx context.Context) (<-chan string, error) {
-	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil {
-		return nil, errors.New("unauthorized: missing claims")
-	}
-
-	subscribeCount.Add(ctx, 1)
-
-	out := make(chan string, 100)
-
-	go func() {
-		defer close(out)
-
-		err := s.client.Receive(ctx, s.client.B().Subscribe().Channel(s.channel).Build(), func(msg rueidis.PubSubMessage) {
-			select {
-			case out <- msg.Message:
-			case <-ctx.Done():
-			}
-		})
-		if err != nil && err != context.Canceled {
-			// In a real application, handle error logging
-		}
-	}()
-
-	return out, nil
 }
 
 type MemoryMeshService struct {

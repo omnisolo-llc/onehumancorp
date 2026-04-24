@@ -4,7 +4,7 @@ go_library(
     name = "mesh",
     srcs = [
         "broker.go",
-        "http_handler.go",
+
         "local_broker.go",
         "local_mesh.go",
         "mesh.go",

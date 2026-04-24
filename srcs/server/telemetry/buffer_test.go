@@ -297,12 +297,6 @@ func TestBufferMetricFunc(t *testing.T) {
 	}
 	called = false
 
-	RecordCapabilityViolation(ctx, "session1", "cap1")
-	if !called {
-		t.Errorf("expected buffer call for RecordCapabilityViolation")
-	}
-	called = false
-
 	RecordTelemetrySyncBackoff(ctx, 5.0)
 	if !called {
 		t.Errorf("expected buffer call for RecordTelemetrySyncBackoff")

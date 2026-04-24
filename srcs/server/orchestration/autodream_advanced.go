@@ -156,32 +156,3 @@ type AutoDreamAdvancedDaemon struct {
 	done     chan struct{}
 }
 
-func NewAutoDreamAdvancedDaemon(advanced *AutoDreamAdvanced) *AutoDreamAdvancedDaemon {
-	return &AutoDreamAdvancedDaemon{
-		advanced: advanced,
-		done:     make(chan struct{}),
-	}
-}
-
-func (d *AutoDreamAdvancedDaemon) Start(ctx context.Context) {
-	ticker := time.NewTicker(24 * time.Hour)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			d.Stop()
-			return
-		case <-d.done:
-			return
-		case <-ticker.C:
-			if err := d.advanced.PruneStaleAgentSessions(ctx); err != nil {
-				slog.Error("AutoDreamAdvancedDaemon: failed to prune sessions", "error", err)
-			}
-		}
-	}
-}
-
-func (d *AutoDreamAdvancedDaemon) Stop() {
-	close(d.done)
-}

@@ -149,7 +149,6 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 						"RecordHarnessInitLatency": true,
 						"RecordHarnessDbIoLatency": true,
 						"RecordHarnessExecutionLatency": true,
-						"RecordCapabilityViolation": true,
 						"RecordTelemetrySyncBackoff": true,
 						"RecordTelemetryBatchSize": true,
 						"RecordMessageSent": true,
