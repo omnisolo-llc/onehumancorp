@@ -87,7 +87,16 @@ func TestLocalTunnelClient(t *testing.T) {
 	defer client.Close()
 
 	// Wait for the connection to be established and registered
-	time.Sleep(200 * time.Millisecond)
+	for i := 0; i < 50; i++ {
+		res, err := client.CallTool(ctx, "get_tunnel_status", nil)
+		if err == nil {
+			if statusMap, ok := res.(map[string]interface{}); ok && statusMap["status"] == "connected" {
+				break
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	time.Sleep(100 * time.Millisecond)
 
 	tools := client.ListTools()
 	if len(tools) != 1 {
