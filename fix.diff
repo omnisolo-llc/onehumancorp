@@ -1,0 +1,10 @@
+<<<<<<< SEARCH
+proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
+use_repo(proto_deps, "google_protobuf_dart")
+=======
+proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
+use_repo(proto_deps, "google_protobuf_dart")
+
+playwright = use_extension("//bazel:playwright_browsers.bzl", "playwright_browsers")
+use_repo(playwright, "playwright_browsers")
+>>>>>>> REPLACE
