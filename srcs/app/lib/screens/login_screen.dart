@@ -17,7 +17,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
-  bool _isSignUp = false;
   String? _error;
 
   @override
@@ -34,18 +33,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      if (_isSignUp) {
-        // Implement signup logic if authService supports it
-        // Or if authService handles creation via login, just login.
-        // As a temporary fix for OHC registration, login doubles as register for the local auth system
-        await ref
-            .read(authStateProvider.notifier)
-            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
-      } else {
-        await ref
-            .read(authStateProvider.notifier)
-            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
-      }
+      await ref
+          .read(authStateProvider.notifier)
+          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -251,7 +241,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _isSignUp ? 'Create an account to launch your business' : 'Sign in to orchestrate your swarm',
+                          'Sign in to orchestrate your swarm',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'Inter',
@@ -337,31 +327,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : Text(
-                                        _isSignUp ? 'Sign Up' : 'Sign In',
-                                        style: const TextStyle(
+                                    : const Text(
+                                        'Sign In',
+                                        style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Inter',
                                         ),
                                       ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _isSignUp = !_isSignUp;
-                              _error = null;
-                            });
-                          },
-                          child: Text(
-                            _isSignUp
-                                ? 'Already have an account? Sign In'
-                                : "Don't have an account? Sign Up",
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                            ),
                           ),
                         ),
                         ],
