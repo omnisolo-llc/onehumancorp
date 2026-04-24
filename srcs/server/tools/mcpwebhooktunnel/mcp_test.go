@@ -45,7 +45,7 @@ func TestLocalTunnelClient(t *testing.T) {
 	mockTLSInfo := credentials.TLSInfo{
 		State: tls.ConnectionState{
 			PeerCertificates: []*x509.Certificate{
-				mockSpiffeCert("spiffe://onehumancorp.com/agent/" + agentID),
+				mockSpiffeCert("spiffe://onehumancorp.io/agent/" + agentID),
 			},
 		},
 	}

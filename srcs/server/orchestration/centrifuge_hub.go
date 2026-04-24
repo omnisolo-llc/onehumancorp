@@ -76,14 +76,14 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 				return nil, err
 			}
 			realNode.SetPresenceManager(presenceManager)
-			slog.Info("centrifuge: configured with Redis broker", "redis_url", redisURL)
+			slog.Debug("centrifuge: configured with Redis broker", "redis_url", redisURL)
 		} else {
 			broker, _ := centrifuge.NewMemoryBroker(realNode, centrifuge.MemoryBrokerConfig{})
 			realNode.SetBroker(broker)
 
 			presenceManager, _ := centrifuge.NewMemoryPresenceManager(realNode, centrifuge.MemoryPresenceManagerConfig{})
 			realNode.SetPresenceManager(presenceManager)
-			slog.Info("centrifuge: REDIS_URL not set, falling back to local MemoryBroker")
+			slog.Debug("centrifuge: REDIS_URL not set, falling back to local MemoryBroker")
 		}
 	}
 

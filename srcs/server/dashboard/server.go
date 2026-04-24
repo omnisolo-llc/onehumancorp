@@ -709,9 +709,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		cnNode, err := orchestration.NewCentrifugeNode()
 		if err == nil {
 			hub.SetCentrifugeNode(cnNode)
-			slog.Info("centrifuge WebSocket endpoint registered at /connection/websocket")
+			slog.Debug("centrifuge WebSocket endpoint registered at /connection/websocket")
 		} else {
-			slog.Warn("centrifuge node init failed; real-time WebSocket disabled", "error", err)
+			slog.Debug("centrifuge node init failed; real-time WebSocket disabled", "error", err)
 		}
 	}
 	if cnNode := hub.CentrifugeNode(); cnNode != nil {
@@ -843,6 +843,11 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 	if probe.StuckMissions > 0 {
 		status = "degraded"
 		details["status"] = status
+
+		// Auto-heal: Attempt to prune stuck missions immediately as part of health guardianship
+		go func() {
+			_ = s.hub.SIPDB().PruneStaleMissions(context.Background(), 0)
+		}()
 	}
 
 	resp := map[string]interface{}{

@@ -80,7 +80,7 @@ func (r *CloudRelay) ConnectStream(req *TunnelRequest, stream WebhookTunnel_Conn
 	}
 
 	// Map the agent ID to the SPIFFE ID to prevent IDOR
-	expectedSPIFFEID := fmt.Sprintf("spiffe://onehumancorp.com/agent/%s", agentID)
+	expectedSPIFFEID := fmt.Sprintf("spiffe://onehumancorp.io/agent/%s", agentID)
 	if spiffeID != expectedSPIFFEID {
 		return status.Errorf(codes.PermissionDenied, "SPIFFE ID mismatch: expected %s, got %s", expectedSPIFFEID, spiffeID)
 	}
