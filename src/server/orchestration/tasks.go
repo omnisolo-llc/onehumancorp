@@ -1270,3 +1270,7 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 }
 
 // added for Sub-Agent Orchestration Queue
+
+func (tm *TaskManager) DBProvider() db.Provider {
+	return tm.db
+}

@@ -1,5 +1,15 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Realtime Teammate Mesh APIs for Kubernetes orchestration via Redis Pub/Sub.
+- Add OpenTelemetry metrics for Agent Execution State Transition Latency.
+- Implement Draft-for-Review AI Action Approval Workflow in KAIROS.
+
+### Privacy/Offline Improvements
+- Resolve memoryLock TOCTOU race conditions in standalone implementation.
+- Introduce robust standalone offline capabilities for LocalMesh backend and SQLite timestamp handling.
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Phase 3: AutoDream Vector Data Pipelines.

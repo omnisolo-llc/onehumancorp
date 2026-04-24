@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+- Scaling (Cloud): Implement Realtime Teammate Mesh APIs for Kubernetes orchestration via Redis Pub/Sub, Add OpenTelemetry metrics for Agent Execution State Transition Latency, Implement Draft-for-Review AI Action Approval Workflow in KAIROS.
+- Privacy/Offline (Standalone): Resolve memoryLock TOCTOU race conditions in standalone implementation, Introduce robust standalone offline capabilities for LocalMesh backend and SQLite timestamp handling.
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 - Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.
 - Privacy/Offline (Standalone): Enhance AutoDream Vector Data Pipelines for standalone privacy.

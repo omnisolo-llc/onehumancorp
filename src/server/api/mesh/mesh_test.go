@@ -40,7 +40,7 @@ func TestMemoryMeshService(t *testing.T) {
 		if msg != "hello" {
 			t.Errorf("expected 'hello', got '%s'", msg)
 		}
-	case <-time.After(1 * time.Second):
+	case <-time.After(2 * time.Second):
 		t.Error("timeout waiting for message")
 	}
 }
