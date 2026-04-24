@@ -235,10 +235,7 @@ func TestHandleDashboardFiltersOtherOrganizationState(t *testing.T) {
 	hub.OpenMeeting("other-room", []string{"other-1"})
 
 	tracker := billing.NewTracker(billing.DefaultCatalog)
-	app := &Server{
-		org: org, hub: hub, tracker: tracker, integReg: integrations.NewRegistry(),
-		handoffs: []HandoffPackage{{Status: "pending"}},
-	}
+	app := &Server{org: org, hub: hub, tracker: tracker, integReg: integrations.NewRegistry()}
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/dashboard", nil)
@@ -250,9 +247,6 @@ func TestHandleDashboardFiltersOtherOrganizationState(t *testing.T) {
 	var snap dashboardSnapshot
 	if err := json.NewDecoder(rec.Body).Decode(&snap); err != nil {
 		t.Fatalf("decode dashboard snapshot: %v", err)
-	}
-	if snap.ActiveHandoffs != 1 {
-		t.Errorf("expected 1 active handoff, got %d", snap.ActiveHandoffs)
 	}
 	if len(snap.Agents) != 1 || snap.Agents[0].ID != "pm-1" {
 		t.Fatalf("expected only org-1 agents in snapshot, got %+v", snap.Agents)

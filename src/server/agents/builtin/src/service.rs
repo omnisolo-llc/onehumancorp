@@ -8,7 +8,7 @@ use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
-use crate::memory::{inject_memories_into_prompt, PgVectorMemoryStore};
+use crate::memory::{inject_memories_into_prompt, MemoryEntry, MemoryStore};
 use crate::proto::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
@@ -43,7 +43,7 @@ pub struct AgentServiceImpl {
     agent_id: String,
     cfg: AgentConfig,
     auth: AuthMode,
-    memory: Option<Arc<PgVectorMemoryStore>>,
+    memory: Arc<MemoryStore>,
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
 }
@@ -54,24 +54,8 @@ impl AgentServiceImpl {
             agent_id: agent_id.into(),
             cfg,
             auth,
-            memory: None,
+            memory: Arc::new(MemoryStore::default()),
             llm_override: None,
-        }
-    }
-
-    pub async fn init_memory(&mut self) {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
-        let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
-
-        if !db_url.is_empty() {
-            match PgVectorMemoryStore::new(&db_url, org_id).await {
-                Ok(store) => {
-                    self.memory = Some(Arc::new(store));
-                }
-                Err(e) => {
-                    tracing::error!("Failed to connect to database for memory store: {}", e);
-                }
-            }
         }
     }
 
@@ -164,17 +148,11 @@ impl AgentServiceImpl {
         }
     }
 
-    async fn build_run_config(&self, req: &RunTaskRequest, department: &str) -> AgentRunConfig {
+    fn build_run_config(&self, req: &RunTaskRequest, department: &str) -> AgentRunConfig {
         let model = if req.model.is_empty() {
             self.cfg.model.clone()
         } else {
             req.model.clone()
-        };
-
-        let memories = if let Some(store) = &self.memory {
-            store.search(vec![], 5).await.unwrap_or_default()
-        } else {
-            vec![]
         };
 
         let system = if req.system_prompt.is_empty() {
@@ -187,9 +165,9 @@ impl AgentServiceImpl {
             } else {
                 &self.cfg.system_prompt
             };
-            inject_memories_into_prompt(&memories, base_prompt)
+            inject_memories_into_prompt(&self.memory, base_prompt)
         } else {
-            inject_memories_into_prompt(&memories, &req.system_prompt)
+            inject_memories_into_prompt(&self.memory, &req.system_prompt)
         };
 
         let max_tokens = if req.max_tokens == 0 {
@@ -204,16 +182,6 @@ impl AgentServiceImpl {
             req.max_context_messages
         };
 
-        let confidence_threshold = if !department.is_empty() {
-            if let Ok(dep) = Department::from_str(department) {
-                get_department_config(dep).confidence_threshold
-            } else {
-                0.0
-            }
-        } else {
-            0.0
-        };
-
         AgentRunConfig {
             model,
             system,
@@ -221,14 +189,12 @@ impl AgentServiceImpl {
             temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
             max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
             max_task_tokens: 0,
-            confidence_threshold,
         }
     }
 }
 
 #[tonic::async_trait]
 impl AgentService for AgentServiceImpl {
-    #[tracing::instrument(skip(self, req))]
     async fn ping(&self, req: Request<PingRequest>) -> Result<Response<PingResponse>, Status> {
         self.check_auth(&req)?;
         Ok(Response::new(PingResponse {
@@ -239,7 +205,6 @@ impl AgentService for AgentServiceImpl {
 
     type RunTaskStream = ReceiverStream<Result<RunTaskEvent, Status>>;
 
-    #[tracing::instrument(skip(self, req))]
     async fn run_task(
         &self,
         req: Request<RunTaskRequest>,
@@ -248,7 +213,7 @@ impl AgentService for AgentServiceImpl {
 
         let task_req = req.into_inner();
         let llm = self.resolve_llm(&task_req.llm_provider, &task_req.model, &task_req.llm_endpoint);
-        let run_cfg = self.build_run_config(&task_req, &task_req.department).await;
+        let run_cfg = self.build_run_config(&task_req, &task_req.department);
         let task = task_req.task.clone();
         let memory = self.memory.clone();
 
@@ -342,9 +307,18 @@ impl AgentService for AgentServiceImpl {
                 .await;
 
             // Record memory entry.
-            if let (Ok(content), Some(store)) = (&result, &memory) {
-                let _ = store.write(content, vec![]).await;
-            }
+            let elapsed = start.elapsed();
+            let _progress = agent_clone.progress.as_ref();
+            let outcome = if result.is_ok() { "success" } else { "failure" };
+            memory.write(MemoryEntry {
+                task_id: format!("rust-{}", uuid::Uuid::new_v4()),
+                summary: result.as_ref().cloned().unwrap_or_default().chars().take(200).collect(),
+                tools_used: vec![],
+                outcome: outcome.to_string(),
+                duration_s: elapsed.as_secs_f64(),
+                lessons: String::new(),
+                completed_at: Utc::now(),
+            });
         });
 
         Ok(Response::new(ReceiverStream::new(rx)))
@@ -368,7 +342,6 @@ impl AgentService for AgentServiceImpl {
                 temperature: self.cfg.temperature,
                 max_iterations: 100,
                 max_task_tokens: 0,
-                confidence_threshold: 0.0,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
