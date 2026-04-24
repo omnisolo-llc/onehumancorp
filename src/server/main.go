@@ -24,7 +24,6 @@ import (
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/domain"
 	"github.com/onehumancorp/mono/src/server/integrations/chatwoot"
-	"github.com/onehumancorp/mono/src/server/memory"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/pipeline"
 	"github.com/onehumancorp/mono/src/server/scheduler"
@@ -405,9 +404,9 @@ func run(now time.Time, listen listenFunc) error {
 				hybridSyncDaemon := hybrid_sync.NewHybridSyncDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
 				hybridSyncDaemon.Start(ctx)
 
-				// Background sync for internal sync daemon for Standalone Mode RAG records and missions
-				hybridMCPDaemon := orchestration.NewHybridMCPRAGDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
-				hybridMCPDaemon.Start(ctx)
+				// Background sync for internal sync daemon for Standalone Mode RAG records
+				ragSyncDaemon := orchestration.NewRagSyncDaemon(pool, 5*time.Second, os.Getenv("OHC_CLOUD_CONTEXT_ENDPOINT"))
+				ragSyncDaemon.Start(ctx)
 
 				go func() {
 					ticker := time.NewTicker(5 * time.Second)

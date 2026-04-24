@@ -169,6 +169,12 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 					Status:  "PENDING",
 					TaskID:  id,
 				})
+				payloadBytes, _ := json.Marshal(map[string]interface{}{
+					"action":   "READY",
+					"agent_id": "",
+					"status":   "PENDING",
+				})
+				_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", "", "READY", "PENDING", payloadBytes)
 			} else if tm.hub != nil {
 				// Broadcast that task is now ready
 				go func(taskID string) {
@@ -283,6 +289,17 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 			Status:  task.Status,
 			TaskID:  task.ID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":         task.ID,
+			"action":          "CREATE",
+			"agent_id":        task.AssignedAgentID,
+			"status":          task.Status,
+			"organization_id": task.OrganizationID,
+			"title":           task.Title,
+			"description":     task.Description,
+			"priority":        task.Priority,
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", task.AssignedAgentID, "CREATE", task.Status, payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -452,6 +469,13 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 			Status:  task.Status,
 			TaskID:  task.ID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":  task.ID,
+			"action":   "CLAIM",
+			"agent_id": agentID,
+			"status":   task.Status,
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, "CLAIM", task.Status, payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -507,6 +531,13 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 			Status:  "REVIEW",
 			TaskID:  taskID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":  taskID,
+			"action":   "REVIEW",
+			"agent_id": agentID,
+			"status":   "REVIEW",
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, "REVIEW", "REVIEW", payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -609,6 +640,13 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 			Status:  "COMPLETED",
 			TaskID:  taskID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":  taskID,
+			"action":   "COMPLETE",
+			"agent_id": agentID,
+			"status":   "COMPLETED",
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, "COMPLETE", "COMPLETED", payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -958,6 +996,13 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 				Status:  task.Status,
 				TaskID:  task.ID,
 			})
+			payloadBytes, _ := json.Marshal(map[string]interface{}{
+				"task_id":  task.ID,
+				"action":   "CLAIM",
+				"agent_id": agentID,
+				"status":   task.Status,
+			})
+			_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, "CLAIM", task.Status, payloadBytes)
 		} else if tm.hub != nil {
 			go func(t *SharedTask) {
 				payload := map[string]interface{}{
@@ -1131,6 +1176,13 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 			Status:  task.Status,
 			TaskID:  task.ID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id":  task.ID,
+			"action":   "UPDATE",
+			"agent_id": task.AssignedAgentID,
+			"status":   task.Status,
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", task.AssignedAgentID, "UPDATE", task.Status, payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
@@ -1199,6 +1251,11 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 			Status:  "",
 			TaskID:  taskID,
 		})
+		payloadBytes, _ := json.Marshal(map[string]interface{}{
+			"task_id": taskID,
+			"action":  "DELETE",
+		})
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", "", "DELETE", "", payloadBytes)
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
