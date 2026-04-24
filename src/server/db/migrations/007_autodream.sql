@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS agent_session_data (
     agent_id TEXT NOT NULL,
     context_data TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    last_accessed TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    organization_id TEXT NOT NULL DEFAULT 'system'
+    last_accessed TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_agent_session_accessed ON agent_session_data(last_accessed);

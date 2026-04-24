@@ -76,13 +76,12 @@ func TestAutoDreamPipeline_Process(t *testing.T) {
 			session_id TEXT PRIMARY KEY,
 			agent_id TEXT NOT NULL,
 			context_data TEXT NOT NULL,
-			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
-			organization_id TEXT DEFAULT 'system'
+			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	require.NoError(t, err)
 
-	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed, organization_id) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'), 'org-1')")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'test context', datetime('now', '-2 hours'))")
 	require.NoError(t, err)
 
 	pipeline := NewAutoDreamPipeline(provider)

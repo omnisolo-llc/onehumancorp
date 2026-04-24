@@ -36,8 +36,7 @@ func setupKairosTestProvider(t *testing.T) db.Provider {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			payload TEXT,
-			organization_id TEXT DEFAULT 'system'
+			payload TEXT
 		)
 	`)
 	require.NoError(t, err)

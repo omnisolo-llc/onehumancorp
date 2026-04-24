@@ -301,15 +301,14 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 
 			// 3. Loading: Upsert into consolidated_memory using pgvector
 			var insertQuery string
-		orgID := "system"
 			if p.pool.IsSQLite() {
 				insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)"
 				id := fmt.Sprintf("%d", time.Now().UnixNano())
-				_, err = tx.Exec(ctx, insertQuery, id, orgID, s.AgentID, summary, embeddingStr, "session_compression")
+				_, err = tx.Exec(ctx, insertQuery, id, "system", s.AgentID, summary, embeddingStr, "session_compression")
 			} else {
 				insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)"
 				id := fmt.Sprintf("%d", time.Now().UnixNano())
-				_, err = tx.Exec(ctx, insertQuery, id, orgID, s.AgentID, summary, embeddingStr, "session_compression")
+				_, err = tx.Exec(ctx, insertQuery, id, "system", s.AgentID, summary, embeddingStr, "session_compression")
 			}
 
 			if err != nil {
@@ -390,14 +389,11 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 		cancel()
 
 		summary := "Summarized context from file " + file.Name()
-
-		orgID := "system"
-
 		if err == nil && resp.Message.Content != "" {
 			summary = resp.Message.Content
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
-			telemetry.RecordAutoDreamIngestionError(ctx, orgID, "llm_summarization_failed")
+			telemetry.RecordAutoDreamIngestionError(ctx, "system", "llm_summarization_failed")
 		}
 
 		var embeddingStr string
@@ -406,7 +402,7 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 			embedding, embedErr := p.minimaxClient.GenerateEmbedding(ctxTimeout, summary)
 			cancel()
 			if embedErr != nil {
-				telemetry.RecordAutoDreamIngestionError(ctx, orgID, "embedding_failed")
+				telemetry.RecordAutoDreamIngestionError(ctx, "system", "embedding_failed")
 			} else if len(embedding) > 0 {
 				str := fmt.Sprintf("%v", embedding)
 				str = strings.ReplaceAll(strings.Trim(str, "[]"), " ", ",")
@@ -427,22 +423,22 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 		if p.pool.IsSQLite() {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = p.pool.Exec(ctx, insertQuery, id, orgID, "system", summary, embeddingStr, "file_ingestion")
+			_, err = p.pool.Exec(ctx, insertQuery, id, "system", "system", summary, embeddingStr, "file_ingestion")
 		} else {
 			insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)"
 			id := fmt.Sprintf("%d", time.Now().UnixNano())
-			_, err = p.pool.Exec(ctx, insertQuery, id, orgID, "system", summary, embeddingStr, "file_ingestion")
+			_, err = p.pool.Exec(ctx, insertQuery, id, "system", "system", summary, embeddingStr, "file_ingestion")
 		}
 
 		if err != nil {
 			slog.Error("AutoDreamPipeline: failed to insert consolidated file memory", "error", err)
-			telemetry.RecordAutoDreamIngestionError(ctx, orgID, "db_insert_failed")
+			telemetry.RecordAutoDreamIngestionError(ctx, "system", "db_insert_failed")
 			// rename back to retry later
 			os.Rename(processingPath, filePath)
 			continue
 		}
 
-		telemetry.RecordAutoDreamMemoryIngested(ctx, orgID)
+		telemetry.RecordAutoDreamMemoryIngested(ctx, "system")
 
 		// Try to delete file
 		os.Remove(processingPath)

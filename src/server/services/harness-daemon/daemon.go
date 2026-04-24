@@ -16,14 +16,14 @@ import (
 
 // Daemon manages a persistent Chromium instance.
 type Daemon struct {
-	mu           sync.Mutex
-	pw           *playwright.Playwright
-	browser      playwright.Browser
-	context      playwright.BrowserContext
-	page         playwright.Page
-	port         int
-	server       *http.Server
-	ready        bool
+	mu      sync.Mutex
+	pw      *playwright.Playwright
+	browser playwright.Browser
+	context playwright.BrowserContext
+	page    playwright.Page
+	port    int
+	server  *http.Server
+	ready   bool
 }
 
 // CommandRequest represents an incoming command to the daemon.

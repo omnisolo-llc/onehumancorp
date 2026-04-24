@@ -14,14 +14,13 @@ func TestAutoDreamAdvanced_PruneStaleAgentSessions(t *testing.T) {
         agent_id TEXT NOT NULL,
         context_data TEXT NOT NULL,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-        last_accessed TEXT DEFAULT CURRENT_TIMESTAMP,
-        organization_id TEXT DEFAULT 'system'
+        last_accessed TEXT DEFAULT CURRENT_TIMESTAMP
     )`)
     if err != nil {
         t.Fatalf("failed to create agent_session_data: %v", err)
     }
 
-    _, err = provider.Exec(context.Background(), "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed, organization_id) VALUES ('sess-1', 'agent-1', 'data', datetime('now', '-40 days'), 'org-1')")
+    _, err = provider.Exec(context.Background(), "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('sess-1', 'agent-1', 'data', datetime('now', '-40 days'))")
     if err != nil {
         t.Fatalf("failed to insert stale session: %v", err)
     }

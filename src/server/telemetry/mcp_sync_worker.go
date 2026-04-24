@@ -64,7 +64,7 @@ func (w *McpSyncWorker) syncOnce(ctx context.Context) {
 		}
 		pendingIDs = append(pendingIDs, id)
 		// Simulate SPIFFE mTLS API Gateway Call
-		slog.Info("[McpSyncWorker] Syncing metric to Cloud MCP Gateway via SPIRE SVID", "metricName", metricName, "id", id, "value", value)
+		slog.Info("McpSyncWorker Syncing metric to Cloud MCP Gateway via SPIRE SVID", "metricName", metricName, "id", id, "value", value)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -83,5 +83,5 @@ func (w *McpSyncWorker) syncOnce(ctx context.Context) {
 			slog.Error("McpSyncWorker failed to update status", "id", id, "error", err)
 		}
 	}
-	slog.Info("[McpSyncWorker] Successfully synced metrics", "count", len(pendingIDs))
+	slog.Info("McpSyncWorker Successfully synced metrics", "count", len(pendingIDs))
 }

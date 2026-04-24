@@ -151,7 +151,7 @@ void main() {
       // Tap with empty form → validation error
       await tester.tap(signInBtn);
       await tester.pumpAndSettle();
-      expect(find.text('Enter your email or username'), findsOneWidget);
+      expect(find.text('Enter a valid email'), findsOneWidget);
     });
 
     testWidgets(
@@ -168,7 +168,7 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email or Username'),
+          find.widgetWithText(TextFormField, 'Email'),
           'user@example.com',
         );
         await tester.enterText(
@@ -188,12 +188,12 @@ void main() {
 
       // Enter invalid email
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email or Username'),
-        '',
+        find.widgetWithText(TextFormField, 'Email'),
+        'notvalid',
       );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
-      expect(find.text('Enter your email or username'), findsOneWidget);
+      expect(find.text('Enter a valid email'), findsOneWidget);
     });
 
     testWidgets('password field validates non-empty', (tester) async {
@@ -201,7 +201,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email or Username'),
+        find.widgetWithText(TextFormField, 'Email'),
         'user@example.com',
       );
       await tester.tap(find.text('Sign In'));
@@ -221,7 +221,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email or Username'),
+        find.widgetWithText(TextFormField, 'Email'),
         'bad@example.com',
       );
       await tester.enterText(
@@ -1021,11 +1021,44 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Instead of testing all clicks, just verify UI has the buttons.
-      // Testing API calls here is flaky due to scrolling and animation changes.
-      expect(find.text('Download for Mac'), findsWidgets);
-      expect(find.text('Download for Windows'), findsWidgets);
-      expect(find.text('Download for Linux'), findsWidgets);
+      // Tap Mac download button
+      final macBtn = find.text('Download for Mac');
+      expect(macBtn, findsOneWidget);
+      await tester.tap(macBtn);
+      await tester.pumpAndSettle();
+
+      // Verify API was called
+      verify(() => mockClient.post(
+        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
+        headers: any(named: 'headers'),
+        body: any(named: 'body', that: contains('Mac')),
+      )).called(1);
+
+      // Tap Windows download button
+      final winBtn = find.text('Download for Windows');
+      expect(winBtn, findsOneWidget);
+      await tester.tap(winBtn);
+      await tester.pumpAndSettle();
+
+      // Verify API was called
+      verify(() => mockClient.post(
+        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
+        headers: any(named: 'headers'),
+        body: any(named: 'body', that: contains('Windows')),
+      )).called(1);
+
+      // Tap Linux download button
+      final linuxBtn = find.text('Download for Linux');
+      expect(linuxBtn, findsOneWidget);
+      await tester.tap(linuxBtn);
+      await tester.pumpAndSettle();
+
+      // Verify API was called
+      verify(() => mockClient.post(
+        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
+        headers: any(named: 'headers'),
+        body: any(named: 'body', that: contains('Linux')),
+      )).called(1);
     });
   });
 }
