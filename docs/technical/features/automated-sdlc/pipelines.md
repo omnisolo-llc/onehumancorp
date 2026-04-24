@@ -46,7 +46,7 @@ sequenceDiagram
 
 ## 4. Cross-cutting Concerns
 ### 4.1 Security & Gating
-Pipeline execution requires a `PIPELINE_TOKEN` issued via SPIFFE. High-risk deployments (e.g., changes to `srcs/billing/`) trigger a "Critical Alert" on the CEO Dashboard, requiring 2FA or biometric sign-off.
+Pipeline execution requires a `PIPELINE_TOKEN` issued via SPIFFE. High-risk deployments (e.g., changes to `src/billing/`) trigger a "Critical Alert" on the CEO Dashboard, requiring 2FA or biometric sign-off.
 
 ### 4.2 Scalability
 CI runners are dynamically provisioned as Kubernetes `Jobs`. Build caching is handled by a local `BuildBuddy` instance to ensure sub-minute rebuild times for large monorepo changes.
@@ -64,7 +64,7 @@ CI runners are dynamically provisioned as Kubernetes `Jobs`. Build caching is ha
 - **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
-- **Code Organization:** Services located in `srcs/` and proto definitions in `srcs/proto/`.
+- **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 
 ## 8. Edge Cases
 - **Network Partitions:** Fallback to cached state and retry logic for tool calls.

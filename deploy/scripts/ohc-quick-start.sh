@@ -31,7 +31,7 @@ fi
 echo -e "${DIM}[3/4] Launching local backend...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_SOURCE_MODE=standalone
-bazelisk run //srcs/server:ohc &
+bazelisk run //src/server:ohc &
 SERVER_PID=$!
 echo -e "${GREEN}✓ Server started with PID $SERVER_PID. To stop, run: kill $SERVER_PID${RESET}"
 

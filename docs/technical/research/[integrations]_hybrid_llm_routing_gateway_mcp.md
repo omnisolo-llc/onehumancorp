@@ -31,7 +31,7 @@ graph TD;
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/llm_router/`.
+- Create a new package `src/server/lib/integrations/llm_router/`.
 - Introduce an `LLMRouterManager` implementing the MCP Tool interface.
 - Dynamically route based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize an HTTP client configured with Keep-Alive pools to connect to the internal OHC LiteLLM gateway. Enforce tenant ID propagation via headers.
@@ -46,7 +46,7 @@ graph TD;
 - Strip external API tokens from Standalone memory logs.
 
 ## Implementation Prompt
-"Implement the Hybrid LLM Routing Gateway MCP tool in `srcs/server/lib/integrations/llm_router/`.
+"Implement the Hybrid LLM Routing Gateway MCP tool in `src/server/lib/integrations/llm_router/`.
 1. Create `llm_router.go` defining the `LLMRouterManager` and its MCP capabilities (`GenerateCompletion`, `GenerateEmbeddings`).
 2. Implement dynamic routing logic based on `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud Mode, implement the HTTP client integrating with the LiteLLM gateway, ensuring tenant headers (`X-Tenant-ID`) are injected.

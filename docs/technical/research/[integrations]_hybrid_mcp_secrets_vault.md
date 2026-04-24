@@ -8,7 +8,7 @@ Market research indicates that most frameworks like CrewAI and AutoGen rely heav
 
 ## Design Doc
 **Architecture:**
-- Add a new package `srcs/server/lib/integrations/secrets_vault/`.
+- Add a new package `src/server/lib/integrations/secrets_vault/`.
 - Introduce a `VaultManager` that implements the MCP Tool interface.
 - Dynamically route based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize a Kubernetes client to fetch secrets from the agent's specific namespace.
@@ -23,7 +23,7 @@ Market research indicates that most frameworks like CrewAI and AutoGen rely heav
 - Ensure secrets are never logged or stored in LangGraph state explicitly (redact before serialization).
 
 ## Implementation Prompt
-"Implement the Hybrid MCP Secrets Vault tool in `srcs/server/lib/integrations/secrets_vault/`.
+"Implement the Hybrid MCP Secrets Vault tool in `src/server/lib/integrations/secrets_vault/`.
 1. Create `vault.go` defining the `VaultManager` and its MCP capabilities (`GetSecret` and `PutSecret`).
 2. Implement driver-agnostic logic. To determine if the connection is Cloud, use: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`. For Cloud, use standard K8s Secret APIs. For Standalone, use `github.com/zalando/go-keyring`.
 3. Ensure `GetSecret` output is wrapped in a type that triggers `RedactInterfacePII` to prevent PII leakage.

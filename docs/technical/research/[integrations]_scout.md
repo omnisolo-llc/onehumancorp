@@ -17,7 +17,7 @@ Market analysis shows that leading agentic frameworks are moving towards autonom
 - Scout must operate securely within the Agent Harness, respecting all network proxy rules and multi-tenant guardrails.
 
 **API / Integration Points:**
-- Interactions with `srcs/server/lib/integrations/hybrid_discovery/DiscoveryProxy` for tool registration.
+- Interactions with `src/server/lib/integrations/hybrid_discovery/DiscoveryProxy` for tool registration.
 - Usage of secure scraping workers for web traversal.
 
 **Security:**

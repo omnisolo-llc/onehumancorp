@@ -50,6 +50,6 @@ Based on this audit, we must implement the following missions:
 1.  **[harness] Implement KAIROS Parallel Workspace Harness via Git Worktrees**
     *   To allow true horizontal agent scaling locally, OHC must isolate agent tasks using `git worktree` under the KAIROS harness, preventing file collisions.
 2.  **[harness] Implement Read-Only Verification Agent Harness**
-    *   Create a strict capability policy where Verification agents are denied write access to `srcs/` but allowed to write ephemeral scripts to `/tmp`.
+    *   Create a strict capability policy where Verification agents are denied write access to `src/` but allowed to write ephemeral scripts to `/tmp`.
 
 </div>

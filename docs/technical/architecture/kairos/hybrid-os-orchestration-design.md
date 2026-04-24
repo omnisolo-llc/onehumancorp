@@ -86,7 +86,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
 ```
 
 ## Phase 4: Sub-Agent Orchestration Queue
-Background worker system (`srcs/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
+Background worker system (`src/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
 
 Sub-agents can be spawned by pushing a payload to the queue (e.g. BullMQ/Celery equivalents). A master loop manages a worker pool that polls the queue and isolates execution to the sub-agent environment.
 

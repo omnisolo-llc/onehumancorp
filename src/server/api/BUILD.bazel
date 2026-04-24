@@ -1,0 +1,50 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "api",
+    srcs = [
+        "growth_handler.go",
+        "mesh_handler.go",
+        "sync_crdt_handler.go",
+        "sync_escalation_handler.go",
+        "sync_handler.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/api",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/auth",
+        "//src/server/mesh",
+        "//src/server/orchestration",
+        "//src/server/orchestration/hybrid_sync",
+        "//src/server/orchestration/queue",
+        "//src/server/services/growth",
+        "//src/server/telemetry",
+        "@com_github_gorilla_websocket//:websocket",
+        "@io_opentelemetry_go_otel//:otel",
+    ],
+)
+
+go_test(
+    name = "api_test",
+    srcs = [
+        "growth_e2e_test.go",
+        "growth_handler_test.go",
+        "mesh_handler_test.go",
+        "sync_crdt_handler_test.go",
+        "sync_escalation_handler_test.go",
+        "sync_handler_test.go",
+    ],
+    embed = [":api"],
+    deps = [
+        "//src/server/auth",
+        "//src/server/db",
+        "//src/server/lib/analytics",
+        "//src/server/mesh",
+        "//src/server/orchestration",
+        "//src/server/orchestration/hybrid_sync",
+        "//src/server/services/growth",
+        "@com_github_gorilla_websocket//:websocket",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//peer",
+    ],
+)

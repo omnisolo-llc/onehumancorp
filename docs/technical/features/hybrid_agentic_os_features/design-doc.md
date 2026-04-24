@@ -21,7 +21,7 @@ One Human Corp (OHC) is building a Hybrid Agentic OS to empower a single human t
 - **Transport:** A `MeshTransport` interface abstracts the underlying message bus.
   - `RedisMeshTransport`: Uses production Redis Pub/Sub channels for multi-tenant, distributed deployments.
   - `MemoryMeshTransport`: Uses in-memory channels for standalone deployments.
-- **APIs:** Expand `srcs/proto/hub.proto` to support capabilities advertising, agent discovery, and real-time event streaming.
+- **APIs:** Expand `src/proto/hub.proto` to support capabilities advertising, agent discovery, and real-time event streaming.
 
 ### 2.3 Sub-Agent/Worker Orchestration Queue
 **Goal:** Provide scalable background queuing for spawning and managing isolated sub-agents.
@@ -38,7 +38,7 @@ One Human Corp (OHC) is building a Hybrid Agentic OS to empower a single human t
 
 **Design:**
 - **Orchestration:** A background worker (`AutoDreamPipeline`) extracts raw memory, chunks it, and feeds it into the existing `AutoDream` logic.
-- **Embeddings:** Consolidated memory is embedded using existing LLM clients (`srcs/server/agents/local/llm.go`).
+- **Embeddings:** Consolidated memory is embedded using existing LLM clients (`src/server/agents/local/llm.go`).
 - **Storage:** Embeddings are stored in a `pgvector`-enabled PostgreSQL table (`consolidated_memory`) for efficient similarity search.
 
 ## 3. Hybrid Consistency

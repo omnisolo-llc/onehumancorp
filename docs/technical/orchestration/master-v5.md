@@ -35,13 +35,13 @@ A long-term state consolidation pipeline that vectors ephemeral session logs int
 ## 2. Advanced Orchestration Logic
 
 ### 2.1 Distributed State Machine Tracking
-Every entity in KAIROS (Tasks, Missions, Sub-agents) follows a strict state transition model managed by the `StateMachine` service in `srcs/server/orchestration/statemachine/`.
+Every entity in KAIROS (Tasks, Missions, Sub-agents) follows a strict state transition model managed by the `StateMachine` service in `src/server/orchestration/statemachine/`.
 - **Transitions**: `PENDING` → `ASSIGNED` → `EXECUTING` → `REVIEW` → `SUCCESS/FAILED`.
 - **Audit Logs**: Every transition is recorded in `state_machine_transitions` with an `agent_id` and `reason` for full-spectrum observability.
 - **Consistency**: Distributed locks (Redis) or SQLite transactions prevent race conditions during state forks.
 
 ### 2.2 Sub-Agent Orchestration Queue
-For tasks requiring dynamic scaling, KAIROS implements a scalable background queue (`srcs/server/orchestration/queue/`).
+For tasks requiring dynamic scaling, KAIROS implements a scalable background queue (`src/server/orchestration/queue/`).
 - **Isolation**: Each sub-agent is spawned in an isolated environment with a narrow, task-specific context.
 - **Queuing**: Inspired by BullMQ/Celery, supporting `attempts`, `max_attempts`, and `backoff` logic.
 - **Resource Management**: Strictly enforced VRAM and token quotas per sub-agent to prevent runaway compute costs.
