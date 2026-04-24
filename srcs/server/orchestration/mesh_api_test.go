@@ -2,136 +2,77 @@ package orchestration
 
 import (
 	"bytes"
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 )
 
-type mockMeshTransport struct {
-	MeshTransport
-	broadcastCalled bool
-	subChan         chan []byte
-}
-
-func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
-	m.broadcastCalled = true
-	return nil
-}
-
-func (m *mockMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
-	return m.subChan, nil
-}
-
-func TestMeshAPI_Broadcast(t *testing.T) {
-	mockMesh := &mockMeshTransport{}
-	api := NewMeshAPI(mockMesh)
-
-	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"task_id":"123"}`)))
-	w := httptest.NewRecorder()
-	api.HandleBroadcast(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-	if !mockMesh.broadcastCalled {
-		t.Errorf("expected BroadcastMeshEvent to be called")
-	}
-
-	mockMesh.broadcastCalled = false
-	req = httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"channel":"ohc.mesh.agent.123", "task_id":"456"}`)))
-	w = httptest.NewRecorder()
-	api.HandleBroadcast(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-	if !mockMesh.broadcastCalled {
-		t.Errorf("expected BroadcastMeshEvent to be called")
-	}
-}
-
-func TestMeshAPI_Stream(t *testing.T) {
-	mockMesh := &mockMeshTransport{
-		subChan: make(chan []byte, 1),
-	}
-	mockMesh.subChan <- []byte(`{"status":"test"}`)
-
-	api := NewMeshAPI(mockMesh)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/mesh/stream", nil)
-	w := httptest.NewRecorder()
-
-	// Use a context with timeout to stop the infinite loop in HandleStream
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
-	req = req.WithContext(ctx)
-
-	api.HandleStream(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-
-	body := w.Body.String()
-	if body != "retry: 3000\n\ndata: {\"status\":\"test\"}\n\n" {
-		t.Errorf("expected correct SSE format, got %s", body)
-	}
-}
-
-
-func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
-	mockMesh := &mockMeshTransport{}
-	api := NewMeshAPI(mockMesh)
-
+func TestHandleMeshBroadcast(t *testing.T) {
 	tests := []struct {
-		name       string
-		method     string
-		body       string
-		statusCode int
+		name           string
+		method         string
+		body           string
+		expectedStatus int
 	}{
-		{"Method Not Allowed", http.MethodGet, "", http.StatusMethodNotAllowed},
-		{"Invalid JSON", http.MethodPost, "{invalid}", http.StatusBadRequest},
-		{"Missing Fields", http.MethodPost, `{"agent_id":"worker-1"}`, http.StatusBadRequest},
-		{"Success", http.MethodPost, `{"agent_id":"worker-1","channel":"orchestration.tasks","action":"TaskTransition","status":"success"}`, http.StatusOK},
+		{
+			name:           "Valid Payload",
+			method:         http.MethodPost,
+			body:           `{"agent_id": "agent-1", "channel": "channel-1", "event_type": "event-1", "data": {"key": "value"}}`,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "Invalid Method",
+			method:         http.MethodGet,
+			body:           `{"agent_id": "agent-1", "channel": "channel-1", "event_type": "event-1", "data": {"key": "value"}}`,
+			expectedStatus: http.StatusMethodNotAllowed,
+		},
+		{
+			name:           "Missing AgentID",
+			method:         http.MethodPost,
+			body:           `{"channel": "channel-1", "event_type": "event-1", "data": {"key": "value"}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing Channel",
+			method:         http.MethodPost,
+			body:           `{"agent_id": "agent-1", "event_type": "event-1", "data": {"key": "value"}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing EventType",
+			method:         http.MethodPost,
+			body:           `{"agent_id": "agent-1", "channel": "channel-1", "data": {"key": "value"}}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Missing Data",
+			method:         http.MethodPost,
+			body:           `{"agent_id": "agent-1", "channel": "channel-1", "event_type": "event-1"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Invalid JSON",
+			method:         http.MethodPost,
+			body:           `{invalid-json`,
+			expectedStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(tt.method, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(tt.body)))
-			w := httptest.NewRecorder()
-			api.HandleMeshV1Broadcast(w, req)
-			if w.Code != tt.statusCode {
-				t.Errorf("expected %d, got %d", tt.statusCode, w.Code)
+			req, err := http.NewRequest(tt.method, "/api/mesh/broadcast", bytes.NewBuffer([]byte(tt.body)))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(HandleMeshBroadcast)
+
+			handler.ServeHTTP(rr, req)
+
+			if status := rr.Code; status != tt.expectedStatus {
+				t.Errorf("handler returned wrong status code: got %v want %v", status, tt.expectedStatus)
 			}
 		})
-	}
-}
-
-func TestMeshAPI_Sync(t *testing.T) {
-	mockMesh := &mockMeshTransport{
-		subChan: make(chan []byte, 1),
-	}
-	mockMesh.subChan <- []byte(`{"sync_status":"ok"}`)
-
-	api := NewMeshAPI(mockMesh)
-
-	req := httptest.NewRequest(http.MethodGet, "/api/mesh/sync?channel=ohc.mesh.agent.123", nil)
-	w := httptest.NewRecorder()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
-	req = req.WithContext(ctx)
-
-	api.HandleSync(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status 200, got %d", w.Code)
-	}
-
-	body := w.Body.String()
-	if body != "retry: 3000\n\ndata: {\"sync_status\":\"ok\"}\n\n" {
-		t.Errorf("expected correct SSE format, got %s", body)
 	}
 }

@@ -29,6 +29,7 @@ go_library(
         "telemetry_minimax_client.go",
         "tasks.go",
         "mesh_api.go",
+        "mesh_api_test.go",
         "mesh.go",
         "shared_tasks.go",
         "models.go",
