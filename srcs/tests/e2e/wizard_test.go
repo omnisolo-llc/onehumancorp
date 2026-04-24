@@ -270,11 +270,11 @@ func TestWizardNextButtonAdvancesToADifferentStep(t *testing.T) {
 	page.WaitForSelector("text=Your AI team, ready in minutes")
 
 	// Click next
-	page.GetByText("Continue").Click()
+	page.GetByText("Start Setup").Click()
 
 	// Ensure on Step 1
-	page.WaitForSelector("text=Business Profile")
-	page.WaitForSelector("text=Company name")
+	page.WaitForSelector("text=Business Type")
+	page.WaitForSelector("text=Online Store")
 
 }
 
