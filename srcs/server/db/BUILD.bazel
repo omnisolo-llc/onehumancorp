@@ -9,6 +9,7 @@ go_library(
         "provider.go",
         "sqlite_provider.go",
         "shared_tasks_repo.go",
+        "migrations/20260429000000_shared_tasks_locked_until.go",
         "test_provider.go",
     ],
     embedsrcs = [
@@ -105,6 +106,7 @@ go_library(
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_metric//:metric",
         "@org_modernc_sqlite//:sqlite",
+        "@com_github_pressly_goose_v3//:goose",
     ],
 )
 

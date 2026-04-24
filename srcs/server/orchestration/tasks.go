@@ -436,7 +436,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	task.Status = "IN_PROGRESS"
-	telemetry.RecordSwarmTaskTransition(ctx, task.OrganizationID, "PENDING", "IN_PROGRESS")
+	telemetry.RecordSwarmTaskTransition(ctx, task.MissionID, "PENDING", "IN_PROGRESS")
 	if !task.CreatedAt.IsZero() {
 		delay := time.Since(task.CreatedAt).Seconds()
 		telemetry.RecordSubAgentQueueDelay(ctx, delay)
@@ -480,7 +480,8 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 
 	// Verify ownership first
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
+	var missionID string
+	err := tm.db.QueryRow(ctx, "SELECT status, mission_id FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus, &missionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -488,7 +489,13 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		return fmt.Errorf("failed to verify task ownership: %w", err)
 	}
 
-	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")
+	tx, err := tm.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
@@ -496,7 +503,15 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		return fmt.Errorf("failed to move task to review: %w", err)
 	}
 
-	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "REVIEW")
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	if broadcast != nil {
+		broadcast()
+	}
+
+	telemetry.RecordSwarmTaskTransition(ctx, missionID, currentStatus, "REVIEW")
 
 	// Broadcast task review
 	if tm.mesh != nil {
@@ -540,7 +555,8 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 
 	var createdAt time.Time
 	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	var missionID string
+	err := tm.db.QueryRow(ctx, "SELECT created_at, status, mission_id FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus, &missionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -581,7 +597,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		broadcast()
 	}
 
-	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
+	telemetry.RecordSwarmTaskTransition(ctx, missionID, currentStatus, "COMPLETED")
 
 	if tm.autodream != nil {
 		go func() {

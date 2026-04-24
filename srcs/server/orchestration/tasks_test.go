@@ -551,3 +551,45 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 	}
 }
 // added for Sub-Agent Orchestration Queue
+
+
+func TestSharedTask_StateMachine(t *testing.T) {
+	t.Parallel()
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+
+	ctx := taskClaimsContext()
+
+	// 1. Create task
+	task, err := tm.CreateTask(ctx, "org-1", "mission-1", "Test Task", "Description", "P0")
+	if err != nil {
+		t.Fatalf("failed to create task: %v", err)
+	}
+
+	// 2. Claim task (PENDING -> IN_PROGRESS)
+	claimed, err := tm.PollTasks(ctx, "agent-1", 1)
+	if err != nil || len(claimed) == 0 {
+		t.Fatalf("failed to claim task: %v", err)
+	}
+
+	// 3. Review task (IN_PROGRESS -> REVIEW)
+	err = tm.ReviewTask(ctx, task.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("failed to review task: %v", err)
+	}
+
+	// 4. Complete task (REVIEW -> COMPLETED)
+	err = tm.CompleteTaskWithResult(ctx, task.ID, "agent-1", "Done")
+	if err != nil {
+		t.Fatalf("failed to complete task: %v", err)
+	}
+
+	// Check final state
+	finalTask, err := tm.GetTask(ctx, task.ID)
+	if err != nil {
+		t.Fatalf("failed to get task: %v", err)
+	}
+	if finalTask.Status != "COMPLETED" {
+		t.Fatalf("expected COMPLETED, got %s", finalTask.Status)
+	}
+}
