@@ -728,6 +728,11 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 			rows.Close()
 		}
 
+		// 1b. Immediately requeue STUCK missions to prevent them from persisting
+		if _, errRequeue := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1", s.orgID); errRequeue != nil {
+			return errRequeue
+		}
+
 		// 2. Mark missions as FAILED if they exceed the absolute age threshold
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
 		rowsFail, errFail := s.db.Query(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND COALESCE(updated_at, created_at) < $1 AND organization_id = $2 RETURNING id, status, updated_at", failThreshold, s.orgID)

@@ -56,8 +56,8 @@ func TestPruneStaleMissions_StuckTransition(t *testing.T) {
 	err = provider.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = ?", "mission-stuck").Scan(&status)
 	if err != nil {
 		t.Errorf("failed to query mission-stuck: %v", err)
-	} else if status != "STUCK" {
-		t.Errorf("expected status STUCK, got %s", status)
+	} else if status != "PENDING" {
+		t.Errorf("expected status PENDING, got %s", status)
 	}
 
 	// mission-requeue should be PENDING

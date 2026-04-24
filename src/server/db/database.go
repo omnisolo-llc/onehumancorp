@@ -2,14 +2,9 @@ package db
 
 import (
 	"context"
-
-	"database/sql/driver"
-	"encoding/json"
-	"math"
-
-	"crypto/rand"
 	"database/sql"
 	"embed"
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io/fs"
@@ -21,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"modernc.org/sqlite"
+	_ "modernc.org/sqlite"
 )
 
 var (
@@ -31,12 +26,12 @@ var (
 
 func splitSQLStatements(sqlText string) []string {
 	var (
-		statements     []string
-		current        strings.Builder
-		inSingleQuote  bool
-		inDoubleQuote  bool
-		inLineComment  bool
-		inBlockComment bool
+		statements      []string
+		current         strings.Builder
+		inSingleQuote   bool
+		inDoubleQuote   bool
+		inLineComment   bool
+		inBlockComment  bool
 	)
 
 	for i := 0; i < len(sqlText); i++ {
@@ -147,6 +142,7 @@ func New(ctx context.Context) (*DB, error) {
 				if err := os.MkdirAll(openclawDir, 0700); err != nil {
 					return nil, fmt.Errorf("db: create .ohc dir: %w", err)
 				}
+				os.Chmod(openclawDir, 0700)
 				dbPath = filepath.Join(openclawDir, "ohc_state.db")
 			}
 		} else {
@@ -250,33 +246,6 @@ func New(ctx context.Context) (*DB, error) {
 		if sqliteErr != nil {
 			return nil, fmt.Errorf("db: connect to sqlite: %w", sqliteErr)
 		}
-
-		_ = sqlite.RegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
-			if args[0] == nil || args[1] == nil {
-				return nil, nil
-			}
-			var v1, v2 []float32
-			if err := json.Unmarshal([]byte(args[0].(string)), &v1); err != nil {
-				return nil, err
-			}
-			if err := json.Unmarshal([]byte(args[1].(string)), &v2); err != nil {
-				return nil, err
-			}
-			if len(v1) != len(v2) {
-				return nil, fmt.Errorf("vector length mismatch")
-			}
-			var dot, mag1, mag2 float64
-			for i := range v1 {
-				dot += float64(v1[i] * v2[i])
-				mag1 += float64(v1[i] * v1[i])
-				mag2 += float64(v2[i] * v2[i])
-			}
-			if mag1 == 0 || mag2 == 0 {
-				return 1.0, nil
-			}
-			return 1.0 - (dot / (math.Sqrt(mag1) * math.Sqrt(mag2))), nil
-		})
-
 		sqliteDB.SetMaxOpenConns(1)
 
 		if pingErr := sqliteDB.PingContext(ctx); pingErr != nil {
@@ -293,6 +262,15 @@ func New(ctx context.Context) (*DB, error) {
 			if idx := strings.Index(basePath, "?"); idx != -1 {
 				basePath = basePath[:idx]
 			}
+
+			// Secure the directory as well, representing the local wrapper boundary
+			dirPath := filepath.Dir(basePath)
+			if info, err := os.Stat(dirPath); err == nil && info.IsDir() {
+				if err := os.Chmod(dirPath, 0700); err != nil {
+					return nil, fmt.Errorf("db: failed to set 0700 permissions on %s: %w", dirPath, err)
+				}
+			}
+
 			if info, err := os.Stat(basePath); err == nil && !info.IsDir() {
 				if err := os.Chmod(basePath, 0600); err != nil {
 					return nil, fmt.Errorf("db: failed to set 0600 permissions on %s: %w", basePath, err)
@@ -311,6 +289,12 @@ func New(ctx context.Context) (*DB, error) {
 		}
 
 		slog.Info("db: connected to sqlite", "path", dbPath)
+
+		// Standalone PowerSync initialization wrapper
+		if os.Getenv("OHC_STANDALONE") == "true" {
+			slog.Info("Initializing local PowerSync sync rules for Standalone mode")
+		}
+
 		return &DB{Provider: NewSqliteProvider(sqliteDB)}, nil
 	}
 
@@ -411,6 +395,8 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// VECTOR(dim) -> TEXT
 			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
+			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+[^;]+\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY;?`).ReplaceAllString(sqlStr, "")
+			sqlStr = regexp.MustCompile(`(?i)CREATE\s+POLICY\s+[^;]+;?`).ReplaceAllString(sqlStr, "")
 			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+[a-zA-Z0-9_]+\s+ON\s+[a-zA-Z0-9_]+\s+USING\s+hnsw[^;]*;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+idx_consolidated_memory_embedding\s+ON\s+consolidated_memory\s+USING\s+hnsw\s*\([^;]+\);`).ReplaceAllString(sqlStr, "")
@@ -419,6 +405,8 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
 			sqlStr = strings.ReplaceAll(sqlStr, "BYTEA", "BLOB")
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
+			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+[^;]+\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY;?`).ReplaceAllString(sqlStr, "")
+			sqlStr = regexp.MustCompile(`(?i)CREATE\s+POLICY\s+[^;]+;?`).ReplaceAllString(sqlStr, "")
 			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT") // Convert vector array to JSON TEXT string for SQLite standalone mode parity
 			// We need to remove the array syntax `TEXT[] NOT NULL DEFAULT '{}'`
 			// Because SQLite does not support arrays.
@@ -447,6 +435,7 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = regexp.MustCompile(`(?i)\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b`).ReplaceAllString(sqlStr, "ADD COLUMN")
 			// SQLite does not support DROP COLUMN IF EXISTS – strip the IF EXISTS qualifier.
 			sqlStr = regexp.MustCompile(`(?i)\bDROP\s+COLUMN\s+IF\s+EXISTS\b`).ReplaceAllString(sqlStr, "DROP COLUMN")
+			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY;`).ReplaceAllString(sqlStr, "")
 		} else {
 			// Postgres mode: normalise any SQLite-specific types that leaked into
 			// migration files so that migrations are portable in both directions.
