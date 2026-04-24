@@ -1341,7 +1341,7 @@ func (s *Server) orgAgentsLocked() []orchestration.Agent {
 	if s == nil || s.hub == nil {
 		return []orchestration.Agent{}
 	}
-	return s.hub.AgentsByOrg(s.org.ID)
+	return filterAgentsByOrg(s.hub.Agents(), s.org.ID)
 }
 
 func (s *Server) orgMeetingsLocked() []orchestration.MeetingRoom {
