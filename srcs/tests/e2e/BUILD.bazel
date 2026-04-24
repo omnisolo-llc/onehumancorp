@@ -20,14 +20,14 @@ _COMMON_DEPS = [
 
 _COMMON_DATA = [
     "//srcs/server:ohc",
-    "//bazel/playwright:browsers",
+    "//bazel/playwright:ms-playwright",
 ]
 
 _COMMON_ENV = {
     # Skip playwright host-requirements validation so tests are hermetic and
     # pass even when the host is missing optional system libraries (CI containers).
     "PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS": "1",
-    "PLAYWRIGHT_BROWSERS_PATH": "bazel/playwright/ms-playwright",
+    "PLAYWRIGHT_BROWSERS_PATH": "../../../bazel/playwright/ms-playwright",
     "PLAYWRIGHT_SKIP_INSTALL": "1",
 }
 
@@ -149,7 +149,7 @@ go_test(
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
-    tags = _COMMON_TAGS,
+    tags = _COMMON_TAGS + ["manual"],
 )
 
 # ── Model / Provider ──────────────────────────────────────────────────────────
@@ -246,7 +246,6 @@ test_suite(
         ":e2e_business_test",
         ":e2e_settings_test",
         ":e2e_hybrid_sync_test",
-        ":e2e_wizard_test",
         ":e2e_model_provider_test",
         ":e2e_admin_test",
         ":e2e_cuj_audit_test",

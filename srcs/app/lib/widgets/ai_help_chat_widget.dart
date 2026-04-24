@@ -80,9 +80,7 @@ class _ChatBottomSheet extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.send),
                   color: Theme.of(context).colorScheme.primary,
-                  onPressed: () {
-                    // Send message to AI Help Agent
-                  },
+                  onPressed: null, // Not implemented yet
                 ),
               ],
             ),
