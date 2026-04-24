@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +14,6 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
-import 'package:ohc_app/widgets/active_agent_trace_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -36,7 +36,8 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
-      body: snapshot.when(
+            floatingActionButton: const AiHelpChatWidget(),
+body: snapshot.when(
         loading:
             () => Center(
               child: CircularProgressIndicator(
@@ -45,7 +46,7 @@ class DashboardScreen extends ConsumerWidget {
             ),
         error:
             (e, _) => Center(
-              child: Text(
+              child: SelectableText(
                 'Error: $e',
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
@@ -143,34 +144,38 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Active Agents',
+              label: 'Today\'s Sales',
+              value: '\$0.00',
+              icon: Icons.attach_money,
+              color: Theme.of(context).colorScheme.primary,
+              onTap: () => context.go('/cost'),
+            ),
+            _StatCard(
+              label: 'New Orders',
+              value: data.statuses.length.toString(),
+              icon: Icons.shopping_bag,
+              color: Theme.of(context).colorScheme.secondary,
+              onTap: () => context.go('/orchestration/tasks'),
+            ),
+            _StatCard(
+              label: 'Pending Appointments',
+              value: data.meetings.length.toString(),
+              icon: Icons.calendar_today,
+              color: Theme.of(context).colorScheme.tertiary,
+              onTap: () => context.go('/meetings'),
+            ),
+            _StatCard(
+              label: 'Active AI Helpers',
               value: data.agents.where((a) => a.isRunning).length.toString(),
               icon: Icons.smart_toy,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            _StatCard(
-              label: 'Dashboard Updates',
-              value: data.statuses.length.toString(),
-              icon: Icons.pending_actions,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            _StatCard(
-              label: 'Open Meetings',
-              value: data.meetings.length.toString(),
-              icon: Icons.video_call,
-              color: Theme.of(context).colorScheme.tertiary,
-            ),
-            _StatCard(
-              label: 'Total Org Members',
-              value: data.organization.members.length.toString(),
-              icon: Icons.people,
               color: Theme.of(context).colorScheme.primaryContainer,
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
+              onTap: () => context.go('/agents'),
             ),
           ],
         ),
         const SizedBox(height: 32),
-        _SectionTitle('System Observability'),
+        _SectionTitle('System Status'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -195,7 +200,7 @@ class _DashboardContent extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: Text(
-                        'Proactive Task Stream',
+                        'Tasks in Progress',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -212,14 +217,12 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
         const SizedBox(height: 16),
-        ActiveAgentTraceWidget(activeAgents: data.agents),
-        const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),
         Text(
-          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
+          'Manage your AI team. Hire or fire agents to help run your business.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontFamily: 'Inter',
@@ -257,7 +260,7 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'System Observability Panel',
+      label: 'System Overview Panel',
       child: Tooltip(
         message: 'View System Health & Metrics',
         child: GlassCard(
@@ -289,7 +292,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'Full-Spectrum Telemetry',
+                              'System Overview',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -307,10 +310,10 @@ class _ObservabilityWidget extends StatelessWidget {
                           runSpacing: 16.0,
                           alignment: WrapAlignment.spaceAround,
                           children: [
-                            _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
+                            _Metric(label: 'System Health', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
+                            _Metric(label: 'Active Tasks', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
+                            _Metric(label: 'Speed (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'Total AI Agents', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
                       ],
@@ -579,6 +582,7 @@ class _StatCard extends StatefulWidget {
   final IconData icon;
   final Color color;
   final Color? iconColor;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.label,
@@ -586,6 +590,7 @@ class _StatCard extends StatefulWidget {
     required this.icon,
     required this.color,
     this.iconColor,
+    this.onTap,
   });
 
   @override
@@ -613,11 +618,9 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Optional delay for staggered entrance animation if needed
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) {
-        _controller.forward();
-      }
-    });
+    if (mounted) {
+      _controller.forward();
+    }
   }
 
   @override
@@ -650,7 +653,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                             button: true,
                             label: '${widget.label}: ${widget.value} action',
                             child: InkWell(
-                              onTap: () {},
+                              onTap: widget.onTap,
                               borderRadius: BorderRadius.circular(16),
                               splashColor: widget.color.withValues(alpha: 0.1),
                               highlightColor: widget.color.withValues(alpha: 0.05),

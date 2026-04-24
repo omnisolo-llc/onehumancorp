@@ -533,15 +533,8 @@ func (s *SIPDB) UpsertMission(ctx context.Context, missionID, status, payload st
 	var oldStatus string
 
 	// Telemetry extraction
-	if sc, ok := GetSubagentContext(ctx); ok {
-		slog.InfoContext(ctx, "UpsertMission with subagent context", "agent_id", sc.AgentID, "mission_id", missionID, "priority", sc.Priority)
-		telemetry.RecordAgentExecutionTrace(ctx, sc.AgentID, "upsert_mission_subagent")
-	} else if tc, ok := GetTeammateAgentContext(ctx); ok {
-		slog.InfoContext(ctx, "UpsertMission with teammate context", "agent_id", tc.AgentID, "mission_id", missionID, "team_id", tc.TeamID)
-		telemetry.RecordAgentExecutionTrace(ctx, tc.AgentID, "upsert_mission_teammate")
-	} else if ac, ok := GetAgentContext(ctx); ok {
+	if ac, ok := GetAgentContext(ctx); ok {
 		slog.InfoContext(ctx, "UpsertMission with context", "agent_id", ac.AgentID, "mission_id", missionID)
-		telemetry.RecordAgentExecutionTrace(ctx, ac.AgentID, "upsert_mission_base")
 	}
 
 	err := withSipRetry(ctx, func() error {
@@ -639,7 +632,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		s.groundingOnce.Do(func() {
 			var combinedGrounding strings.Builder
 
-			for _, filename := range []string{"AGENTS.md", "CLAUDE_OHC.md"} {
+			for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {
 				path := filepath.Join(s.ContextRoot, filename)
 
 				// Stat the file first to distinguish between missing vs permissions/errors
@@ -660,7 +653,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 			}
 
 			if combinedGrounding.Len() > 0 {
-				s.cachedGrounding = "\n\n[SYSTEM GROUNDING]\n" + strings.TrimSpace(combinedGrounding.String())
+				s.cachedGrounding = "\n\n[SYSTEM GROUNDING]:\n" + strings.TrimSpace(combinedGrounding.String())
 			}
 		})
 

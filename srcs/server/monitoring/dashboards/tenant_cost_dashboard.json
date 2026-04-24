@@ -1,0 +1,45 @@
+{
+  "title": "Tenant Cost Visibility",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "LLM Token Cost Estimate (USD)",
+      "targets": [
+        {
+          "expr": "sum by(organization_id) (rate(ohc_agent_cost_estimate_usd[5m]))",
+          "legendFormat": "{{organization_id}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Storage Cost Estimate (USD)",
+      "targets": [
+        {
+          "expr": "sum by(organization_id) (rate(ohc_storage_cost_estimate_usd[5m]))",
+          "legendFormat": "{{organization_id}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Email Cost Estimate (USD)",
+      "targets": [
+        {
+          "expr": "sum by(organization_id) (rate(ohc_email_cost_estimate_usd[5m]))",
+          "legendFormat": "{{organization_id}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "API Call Cost Estimate (USD)",
+      "targets": [
+        {
+          "expr": "sum by(organization_id) (rate(ohc_api_call_cost_estimate_usd[5m]))",
+          "legendFormat": "{{organization_id}}"
+        }
+      ]
+    }
+  ]
+}

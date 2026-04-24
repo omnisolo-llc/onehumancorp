@@ -5,12 +5,48 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 )
 
+var gzipWriterPool = sync.Pool{
+	New: func() interface{} {
+		return gzip.NewWriter(io.Discard)
+	},
+}
+
 type gzipResponseWriter struct {
-	io.Writer
 	http.ResponseWriter
-	wroteHeader bool
+	gz             *gzip.Writer
+	wroteHeader    bool
+	shouldCompress bool
+}
+
+func isCompressible(contentType string) bool {
+	if idx := strings.Index(contentType, ";"); idx != -1 {
+		contentType = contentType[:idx]
+	}
+	contentType = strings.TrimSpace(contentType)
+
+	if strings.HasPrefix(contentType, "text/") {
+		return true
+	}
+
+	switch contentType {
+	case "application/json",
+		"application/javascript",
+		"application/x-javascript",
+		"application/xml",
+		"application/xhtml+xml",
+		"application/rss+xml",
+		"application/atom+xml",
+		"application/vnd.ms-fontobject",
+		"application/x-font-ttf",
+		"application/x-font-opentype",
+		"application/x-font-truetype",
+		"image/svg+xml":
+		return true
+	}
+	return false
 }
 
 func (w *gzipResponseWriter) WriteHeader(statusCode int) {
@@ -19,36 +55,54 @@ func (w *gzipResponseWriter) WriteHeader(statusCode int) {
 	}
 	w.wroteHeader = true
 
-	// Do not compress responses that must not have a body
-	if statusCode == http.StatusNoContent || statusCode == http.StatusNotModified || statusCode < 200 {
-		w.Header().Del("Content-Encoding")
+	// Do not compress responses that must not have a body,
+	// or if the content is already encoded.
+	if statusCode == http.StatusNoContent || statusCode == http.StatusNotModified || statusCode < 200 || w.Header().Get("Content-Encoding") != "" {
+		w.shouldCompress = false
 	} else {
-		// If we are compressing, the content length will change
-		w.Header().Del("Content-Length")
+		contentType := w.Header().Get("Content-Type")
+		if contentType == "" {
+			// If not set before WriteHeader, assume we might compress if the content is text
+			// But usually it's set by standard library sniffing in Write().
+			// If explicitly called without Content-Type, we will not compress to be safe,
+			// or we can allow it. It's safer not to compress if unknown.
+			w.shouldCompress = false
+		} else {
+			if isCompressible(contentType) {
+				w.shouldCompress = true
+				w.Header().Set("Content-Encoding", "gzip")
+				w.Header().Del("Content-Length")
+			} else {
+				w.shouldCompress = false
+			}
+		}
 	}
+
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 	if !w.wroteHeader {
+		if w.Header().Get("Content-Type") == "" {
+			w.Header().Set("Content-Type", http.DetectContentType(b))
+		}
 		w.WriteHeader(http.StatusOK)
 	}
 
-	// Sniff content type before compressing if not set
-	if w.Header().Get("Content-Type") == "" {
-		w.Header().Set("Content-Type", http.DetectContentType(b))
+	if w.shouldCompress {
+		if w.gz == nil {
+			w.gz = gzipWriterPool.Get().(*gzip.Writer)
+			w.gz.Reset(w.ResponseWriter)
+		}
+		return w.gz.Write(b)
 	}
 
-	if w.Header().Get("Content-Encoding") == "gzip" {
-		return w.Writer.Write(b)
-	}
-	// Fallback to normal write if compression was disabled (e.g. for 204)
 	return w.ResponseWriter.Write(b)
 }
 
 func (w *gzipResponseWriter) Flush() {
-	if f, ok := w.Writer.(*gzip.Writer); ok {
-		f.Flush()
+	if w.gz != nil {
+		w.gz.Flush()
 	}
 	if f, ok := w.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
@@ -69,14 +123,19 @@ func GzipMiddleware(next http.Handler) http.Handler {
 		}
 
 		w.Header().Add("Vary", "Accept-Encoding")
-		w.Header().Set("Content-Encoding", "gzip")
 
-		gz := gzip.NewWriter(w)
-		gzw := &gzipResponseWriter{Writer: gz, ResponseWriter: w}
+		gzw := &gzipResponseWriter{ResponseWriter: w}
 
 		defer func() {
-			if gzw.Header().Get("Content-Encoding") == "gzip" {
-				gz.Close()
+			if gzw.gz != nil {
+				gzw.gz.Close()
+				gzipWriterPool.Put(gzw.gz)
+			} else if gzw.shouldCompress {
+				// If shouldCompress is true but Write was never called, we must still write a valid empty gzip payload
+				gzw.gz = gzipWriterPool.Get().(*gzip.Writer)
+				gzw.gz.Reset(w)
+				gzw.gz.Close()
+				gzipWriterPool.Put(gzw.gz)
 			}
 		}()
 

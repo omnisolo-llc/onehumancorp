@@ -7,6 +7,7 @@ go_library(
         "agent_task_worker.go",
         "autodream.go",
         "inprocess_transport.go",
+        "local_provider.go",
         "memory.go",
         "provider.go",
         "redis_transport.go",
@@ -21,7 +22,7 @@ go_library(
         "//srcs/server/db",
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
-        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_redis_rueidis//:rueidis",
     ],
 )
 
@@ -37,6 +38,7 @@ go_test(
         "memory_test.go",
         "provider_test.go",
         "redis_transport_test.go",
+        "resilient_provider_test.go",
     ],
     embed = [":agents"],
     deps = [
@@ -45,7 +47,7 @@ go_test(
         "//srcs/server/integrations/plane",
         "//srcs/server/orchestration",
         "@com_github_alicebob_miniredis_v2//:miniredis",
-        "@com_github_redis_go_redis_v9//:go-redis",
+        "@com_github_redis_rueidis//:rueidis",
         "@org_modernc_sqlite//:sqlite",
     ],
 )

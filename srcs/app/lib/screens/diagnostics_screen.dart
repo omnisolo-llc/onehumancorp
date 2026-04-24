@@ -4,16 +4,18 @@ import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
 
+final _diagnosticsDashboardProvider = FutureProvider.autoDispose<DashboardSnapshot?>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  if (api == null) return null;
+  return api.getDashboard();
+});
+
 class DiagnosticsScreen extends ConsumerWidget {
   const DiagnosticsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dashboardAsync = ref.watch(FutureProvider((ref) async {
-      final api = ref.read(apiServiceProvider);
-      if (api == null) return null;
-      return api.getDashboard();
-    }));
+    final dashboardAsync = ref.watch(_diagnosticsDashboardProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -90,11 +92,11 @@ class DiagnosticsScreen extends ConsumerWidget {
                         );
                       },
                       loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (err, stack) => Text('Error loading health: $err', style: const TextStyle(color: Colors.redAccent)),
+                      error: (err, stack) => SelectableText('Error loading health: $err', style: const TextStyle(color: Colors.redAccent)),
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () => ref.invalidate(_diagnosticsDashboardProvider),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),

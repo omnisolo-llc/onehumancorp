@@ -581,7 +581,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		broadcast()
 	}
 
-	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "DONE")
+	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
 
 	if tm.autodream != nil {
 		go func() {
@@ -610,7 +610,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		_ = tm.mesh.BroadcastTask(ctx, Task{
 			AgentID: agentID,
 			Action:  "COMPLETE",
-			Status:  "DONE",
+			Status:  "COMPLETED",
 			TaskID:  taskID,
 		})
 	} else if tm.hub != nil {
@@ -619,7 +619,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 				"task_id":  taskID,
 				"action":   "COMPLETE",
 				"agent_id": agentID,
-				"status":   "DONE",
+				"status":   "COMPLETED",
 			}
 			tm.hub.PublishTaskBroadcast(taskID, payload)
 		}()
@@ -753,6 +753,28 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
+}
+
+// CountCompletedTasks returns the number of completed tasks for the organization.
+func (tm *TaskManager) CountCompletedTasks(ctx context.Context) (int, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return 0, errors.New("unauthorized: missing claims")
+	}
+
+	var query string
+	if tm.db.IsSQLite() {
+		query = `SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND status = 'COMPLETED'`
+	} else {
+		query = `SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND status = 'COMPLETED'`
+	}
+
+	var count int
+	err := tm.db.QueryRow(ctx, query, claims.OrganizationID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to count completed tasks: %w", err)
+	}
+	return count, nil
 }
 
 // PollTasks attempts to claim up to `limit` PENDING tasks for the given agentID.

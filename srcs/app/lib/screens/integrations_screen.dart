@@ -288,21 +288,17 @@ class _MCPToolTile extends StatelessWidget {
       excludeSemantics: true,
       child: GlassCard(
         margin: const EdgeInsets.only(bottom: 12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {},
-          child: ListTile(
-            leading: const Icon(Icons.build_circle_outlined),
-            title: Text(name),
-            subtitle: Text(
-              description,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: OutlinedButton(
-              onPressed: () {}, // Invoke dialog
-              child: const Text('Invoke'),
-            ),
+        child: ListTile(
+          leading: const Icon(Icons.build_circle_outlined),
+          title: Text(name),
+          subtitle: Text(
+            description,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          trailing: const OutlinedButton(
+            onPressed: null, // Invoke dialog not implemented
+            child: Text('Invoke'),
           ),
         ),
       ),
