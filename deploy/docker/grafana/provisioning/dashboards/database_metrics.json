@@ -1,0 +1,45 @@
+{
+  "title": "Database Metrics",
+  "uid": "database-metrics",
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "options": {
+        "mode": "html",
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Total Query Latency P99",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "{{operation}} P99",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "{{operation}} P90",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "{{operation}} P50",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Rate by Operation",
+      "targets": [
+        {
+          "expr": "sum(rate(db_client_operation_errors_total[5m])) by (operation)",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

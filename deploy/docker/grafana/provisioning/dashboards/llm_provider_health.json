@@ -1,0 +1,45 @@
+{
+  "title": "LLM Provider Health",
+  "uid": "llm-provider-health",
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "options": {
+        "mode": "html",
+        "content": "<style> * { font-family: 'Outfit', 'Inter', sans-serif; } .panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; } </style>"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "P50, P90, P99 API response latencies per provider",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(ohc_llm_network_latency_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} P99",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(ohc_llm_network_latency_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} P90",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(ohc_llm_network_latency_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} P50",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Total requests by provider",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_llm_network_latency_seconds_count[5m])) by (model)",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

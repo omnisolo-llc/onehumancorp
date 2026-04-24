@@ -1,0 +1,34 @@
+{
+  "title": "Agent API Errors",
+  "uid": "agent-api-errors",
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "options": {
+        "mode": "html",
+        "content": "<style>\n  .grafana-app {\n      backdrop-filter: blur(20px) saturate(200%) !important;\n      background: rgba(255, 255, 255, 0.03) !important;\n      font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Total Errors",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_agent_api_errors_total[1m])) by (api, role)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "barchart",
+      "title": "Errors by Agent",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_agent_api_errors_total[1m])) by (agent_id)",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}
