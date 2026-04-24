@@ -134,12 +134,7 @@ func (f *Forecaster) calculateAndRecordRates(ctx context.Context) {
 func (f *Forecaster) recordRates(ctx context.Context, organizationID string, ratePerMin float64, prediction24h float64) {
 	// Use existing helper if it exists, otherwise use the gauge directly
 	RecordTokenBurnRate(ctx, organizationID, ratePerMin)
-
-	if TokenBurnRatePredicted24h != nil {
-		TokenBurnRatePredicted24h.Record(ctx, prediction24h, metric.WithAttributes(
-			attribute.String("organization_id", organizationID),
-		))
-	}
+	RecordTokenBurnRatePredicted24h(ctx, organizationID, prediction24h)
 }
 
 func (f *Forecaster) checkBudget(ctx context.Context, organizationID string, prediction24h float64) {

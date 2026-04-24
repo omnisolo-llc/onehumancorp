@@ -5,7 +5,7 @@ import (
 
 	"crypto/sha256"
 	"encoding/hex"
-	"log/slog"
+	"log"
 	"sync"
 	"time"
 )
@@ -142,7 +142,7 @@ func (c *CompressedEmbeddingCache) Get(prompt string) (string, bool) {
 
 	decompressed, err := DecompressLossless(entry.Response)
 	if err != nil {
-		slog.Error("Failed to decompress cached response", "error", err)
+		log.Printf("Failed to decompress cached response: %v", err)
 		return "", false
 	}
 
@@ -156,7 +156,7 @@ func (c *CompressedEmbeddingCache) Set(prompt, response string) {
 
 	compressed, err := CompressLossless(response)
 	if err != nil {
-		slog.Error("Failed to compress cache response", "error", err)
+		log.Printf("Failed to compress cache response: %v", err)
 		return
 	}
 
