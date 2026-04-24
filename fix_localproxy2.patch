@@ -1,0 +1,11 @@
+--- src/server/tools/localstatefulproxy/mcp.go
++++ src/server/tools/localstatefulproxy/mcp.go
+@@ -4,7 +4,7 @@
+	"context"
+	"encoding/json"
+	"fmt"
+-	"log"
++	"log/slog"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+ )
