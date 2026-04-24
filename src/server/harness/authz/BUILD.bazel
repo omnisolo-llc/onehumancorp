@@ -1,10 +1,20 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "authz",
     srcs = ["authorizer.go"],
     importpath = "github.com/onehumancorp/mono/src/server/harness/authz",
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/db",
+        "//src/server/db/models",
+    ],
+)
+
+go_test(
+    name = "authz_test",
+    srcs = ["authorizer_test.go"],
+    embed = [":authz"],
     deps = [
         "//src/server/db",
         "//src/server/db/models",
