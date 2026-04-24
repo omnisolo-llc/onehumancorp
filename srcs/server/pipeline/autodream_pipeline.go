@@ -18,6 +18,7 @@ import (
 
 // AutoDreamPipeline orchestrates the background processing of agent memories.
 // It extracts raw memory, consolidates it, embeds it via LLM clients, and loads it into pgvector for long-term memory consolidation.
+// Note: This implements the autoDream Data Pipelines.
 type AutoDreamPipeline struct {
 	pool          db.Provider
 	worker        *orchestration.AutoDreamWorker
