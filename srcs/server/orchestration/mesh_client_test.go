@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"context"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"

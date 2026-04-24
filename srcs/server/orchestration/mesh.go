@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"google.golang.org/protobuf/proto"
 	"log/slog"
 	"net/http"
 
@@ -217,8 +218,8 @@ type AgentCapabilities struct {
 type TeammateMesh interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
-	BroadcastCoordination(ctx context.Context, msg MeshMessage) error
-	SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error)
+	BroadcastCoordination(ctx context.Context, msg *pb.MeshMessage) error
+	SubscribeCoordination(ctx context.Context) (<-chan *pb.MeshMessage, error)
 }
 
 type RedisTeammateMesh struct {
@@ -307,7 +308,7 @@ func (rm *RedisMeshTransport) SubscribeTeammateMesh(ctx context.Context, channel
 	return rm.SubscribeMeshEvents(ctx, channel)
 }
 
-func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg *pb.MeshMessage) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
 
@@ -315,10 +316,10 @@ func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg Mes
 		telemetry.RecordMeshBroadcast(ctx, "coordination")
 	}
 
-	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
+	if err := interop.ValidateSPIFFEID(msg.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
-	data, err := json.Marshal(msg)
+	data, err := proto.Marshal(msg)
 	if err != nil {
 		return err
 	}
@@ -328,18 +329,18 @@ func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg Mes
 	})
 }
 
-func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan *pb.MeshMessage, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeCoordination", time.Since(start)) }()
 
-	ch := make(chan MeshMessage, 100)
+	ch := make(chan *pb.MeshMessage, 100)
 
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:coordination").Build(), func(msg rueidis.PubSubMessage) {
-			var m MeshMessage
-			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
+			var m pb.MeshMessage
+			if err := proto.Unmarshal([]byte(msg.Message), &m); err == nil {
 				select {
-				case ch <- m:
+				case ch <- &m:
 				default:
 					slog.Warn("RedisMeshTransport.SubscribeCoordination channel full, dropping message")
 				}
@@ -487,11 +488,11 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 	return ch, nil
 }
 
-func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
-	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
+func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg *pb.MeshMessage) error {
+	if err := interop.ValidateSPIFFEID(msg.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
-	data, err := json.Marshal(msg)
+	data, err := proto.Marshal(msg)
 	if err != nil {
 		return err
 	}
@@ -501,15 +502,15 @@ func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg Mesh
 	})
 }
 
-func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
-	ch := make(chan MeshMessage, 100)
+func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan *pb.MeshMessage, error) {
+	ch := make(chan *pb.MeshMessage, 100)
 
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:coordination").Build(), func(msg rueidis.PubSubMessage) {
-			var m MeshMessage
-			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
+			var m pb.MeshMessage
+			if err := proto.Unmarshal([]byte(msg.Message), &m); err == nil {
 				select {
-				case ch <- m:
+				case ch <- &m:
 				default:
 					slog.Warn("RedisTeammateMesh.SubscribeCoordination channel full, dropping message")
 				}
@@ -531,8 +532,8 @@ type MemoryMeshTransport struct {
 	persist        []chan Task
 	mu             []sync.RWMutex
 	subs           []map[chan Task]struct{}
-	coordBroadcast []chan MeshMessage
-	coordSubs      []map[chan MeshMessage]struct{}
+	coordBroadcast []chan *pb.MeshMessage
+	coordSubs      []map[chan *pb.MeshMessage]struct{}
 	coordMu        []sync.RWMutex
 
 	capsBroadcast []chan pb.AgentCapabilities
@@ -552,8 +553,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		persist:         make([]chan Task, numShards),
 		mu:              make([]sync.RWMutex, numShards),
 		subs:            make([]map[chan Task]struct{}, numShards),
-		coordBroadcast:  make([]chan MeshMessage, numShards),
-		coordSubs:       make([]map[chan MeshMessage]struct{}, numShards),
+		coordBroadcast:  make([]chan *pb.MeshMessage, numShards),
+		coordSubs:       make([]map[chan *pb.MeshMessage]struct{}, numShards),
 		coordMu:         make([]sync.RWMutex, numShards),
 		capsBroadcast:   make([]chan pb.AgentCapabilities, numShards),
 		capsSubs:        make([]map[chan pb.AgentCapabilities]struct{}, numShards),
@@ -569,8 +570,8 @@ func NewMemoryMeshTransport(provider db.Provider) *MemoryMeshTransport {
 		lm.broadcast[i] = make(chan Task, 10000)
 		lm.persist[i] = make(chan Task, 10000)
 		lm.subs[i] = make(map[chan Task]struct{})
-		lm.coordBroadcast[i] = make(chan MeshMessage, 10000)
-		lm.coordSubs[i] = make(map[chan MeshMessage]struct{})
+		lm.coordBroadcast[i] = make(chan *pb.MeshMessage, 10000)
+		lm.coordSubs[i] = make(map[chan *pb.MeshMessage]struct{})
 		lm.capsBroadcast[i] = make(chan pb.AgentCapabilities, 10000)
 		lm.capsSubs[i] = make(map[chan pb.AgentCapabilities]struct{})
 
@@ -712,7 +713,7 @@ func (lm *MemoryMeshTransport) run(shardIdx int) {
 	}
 }
 
-func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
+func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg *pb.MeshMessage) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
 
@@ -720,10 +721,10 @@ func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg Me
 		telemetry.RecordMeshBroadcast(ctx, "coordination")
 	}
 
-	if err := interop.ValidateSPIFFEID(msg.AgentID); err != nil {
+	if err := interop.ValidateSPIFFEID(msg.GetAgentId()); err != nil {
 		return fmt.Errorf("invalid SPIFFE ID: %w", err)
 	}
-	shardIdx := lm.getShard(msg.AgentID)
+	shardIdx := lm.getShard(msg.GetAgentId())
 
 	// Use backoff retry for coord broadcast channel
 	err := meshWithRetry(ctx, 3, func() error {
@@ -741,11 +742,11 @@ func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg Me
 	return nil
 }
 
-func (lm *MemoryMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan MeshMessage, error) {
+func (lm *MemoryMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan *pb.MeshMessage, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeCoordination", time.Since(start)) }()
 
-	ch := make(chan MeshMessage, 100)
+	ch := make(chan *pb.MeshMessage, 100)
 
 	for i := 0; i < numShards; i++ {
 		lm.coordMu[i].Lock()

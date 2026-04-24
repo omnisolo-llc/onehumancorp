@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"context"
 	"fmt"
 	"os"
@@ -34,7 +36,7 @@ func TestSIPDB_ChaosMesh(t *testing.T) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				msg := MeshMessage{
+				msg := &pb.MeshMessage{
 					SenderID:  fmt.Sprintf("agent-%d", idx),
 					Role:      "TEST",
 					Content:   "Stress mesh message",

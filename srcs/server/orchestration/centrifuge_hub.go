@@ -13,6 +13,7 @@
 package orchestration
 
 import (
+	"time"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -149,10 +150,10 @@ func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
 			for msg := range ch {
 				cm := Message{
 					ID:         "coord",
-					FromAgent:  msg.AgentID,
+					FromAgent:  msg.GetAgentId(),
 					Type:       "coordination",
-					Content:    msg.Content,
-					OccurredAt: msg.Timestamp,
+					Content:    msg.GetContent(),
+					OccurredAt: time.Now(),
 				}
 				cn.PublishCoordinationMessage(cm)
 			}

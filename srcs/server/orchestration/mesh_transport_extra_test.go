@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
+
     "context"
     "testing"
     "time"

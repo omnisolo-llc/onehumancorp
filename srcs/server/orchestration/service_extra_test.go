@@ -1,13 +1,14 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"

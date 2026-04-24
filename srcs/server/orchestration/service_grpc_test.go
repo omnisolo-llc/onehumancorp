@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"context"
 	"errors"
 	"net/http"
@@ -8,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"

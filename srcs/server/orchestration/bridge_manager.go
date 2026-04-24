@@ -39,6 +39,13 @@ func NewBridgeManager(node *CentrifugeNode, topic string, localOrgID string) *Br
 }
 
 func (bm *BridgeManager) Connect(ctx context.Context, remoteURL string, remoteOrgID string, tlsConfig *tls.Config) error {
+	// Synchronize state before establishing the bridge connection
+	if bm.node != nil {
+		if err := HandoffState(ctx, "cloud", nil, bm.node.mutexProvider); err != nil {
+			slog.Warn("Failed to synchronize state during handoff", "err", err)
+		}
+	}
+
 	dialer := websocket.Dialer{
 		TLSClientConfig: tlsConfig,
 	}

@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -8,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"

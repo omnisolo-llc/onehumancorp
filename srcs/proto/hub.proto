@@ -24,6 +24,16 @@ message Message {
   int64 occurred_at_unix = 7;
 }
 
+message MeshMessage {
+  string agent_id = 1;
+  string action = 2;
+  string status = 3;
+  string sender_id = 4;
+  string role = 5;
+  string content = 6;
+  int64 timestamp_unix = 7;
+}
+
 message MeetingRoom {
   string id = 1;
   string agenda = 2;

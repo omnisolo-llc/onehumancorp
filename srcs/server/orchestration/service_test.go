@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"bytes"
 	"context"
 	"database/sql"
@@ -12,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"google.golang.org/grpc"

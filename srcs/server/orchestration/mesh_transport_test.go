@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"context"
 	"encoding/json"
 	"testing"
@@ -50,7 +52,7 @@ func TestMemoryMeshTransport_Capabilities(t *testing.T) {
 
 	select {
 	case receivedCaps := <-capsChan:
-		assert.Equal(t, caps.AgentID, receivedCaps.AgentID)
+		assert.Equal(t, caps.AgentId, receivedCaps.AgentId)
 		assert.Equal(t, caps.SupportedSkills, receivedCaps.SupportedSkills)
 		assert.Equal(t, caps.MaxConcurrentTasks, receivedCaps.MaxConcurrentTasks)
 	case <-time.After(2 * time.Second):

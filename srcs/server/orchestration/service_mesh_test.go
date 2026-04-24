@@ -1,12 +1,13 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"context"
 	"errors"
 	"testing"
 	"time"
 
-	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"google.golang.org/grpc/metadata"
 )
 

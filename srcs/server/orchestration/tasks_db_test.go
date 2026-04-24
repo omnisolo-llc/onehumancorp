@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+
     "context"
     "strings"
     "testing"
@@ -372,8 +373,8 @@ func TestTasksDBClaimTask(t *testing.T) {
 		t.Errorf("Expected task status ASSIGNED, got %s", task.Status)
 	}
 
-	if task.AgentID != "agent-1" {
-		t.Errorf("Expected task agent ID agent-1, got %s", task.AgentID)
+	if task.AgentId != "agent-1" {
+		t.Errorf("Expected task agent ID agent-1, got %s", task.AgentId)
 	}
 
 	// Verify DB state
@@ -449,8 +450,8 @@ func TestTasksDBClaimTask_Postgres(t *testing.T) {
 		t.Errorf("Expected task status ASSIGNED, got %s", task.Status)
 	}
 
-	if task.AgentID != "agent-pg" {
-		t.Errorf("Expected task agent ID agent-pg, got %s", task.AgentID)
+	if task.AgentId != "agent-pg" {
+		t.Errorf("Expected task agent ID agent-pg, got %s", task.AgentId)
 	}
 
 	// Verify DB state

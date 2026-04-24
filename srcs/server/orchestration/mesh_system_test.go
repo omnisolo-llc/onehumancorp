@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"context"
 	"testing"
 	"time"
@@ -50,8 +52,8 @@ func TestMemoryMeshTransport_BroadcastAndSubscribe(t *testing.T) {
 		if received.TaskID != task.TaskID {
 			t.Errorf("expected task ID %s, got %s", task.TaskID, received.TaskID)
 		}
-		if received.AgentID != task.AgentID {
-			t.Errorf("expected agent ID %s, got %s", task.AgentID, received.AgentID)
+		if received.AgentId != task.AgentId {
+			t.Errorf("expected agent ID %s, got %s", task.AgentId, received.AgentId)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for broadcasted task")

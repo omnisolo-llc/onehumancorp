@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
 	"context"
 	"crypto/rand"
 	"database/sql"

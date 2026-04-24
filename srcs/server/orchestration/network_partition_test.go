@@ -1,6 +1,7 @@
 package orchestration
 
 import (
+
 	"context"
 	"fmt"
 	"path/filepath"
@@ -41,7 +42,7 @@ func TestSIPDB_NetworkPartition(t *testing.T) {
 
 			// Note: If mesh is nil due to init failure, we simulate that part of the system failing
 			if mesh != nil {
-				msg := MeshMessage{
+				msg := &pb.MeshMessage{
 					SenderID:  fmt.Sprintf("agent-%d", idx),
 					Role:      "TEST",
 					Content:   "Network partition message",

@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	pb "github.com/onehumancorp/mono/srcs/proto"
+
 	"context"
 	"testing"
 	"time"
@@ -32,7 +34,7 @@ func TestV2TeammateMesh(t *testing.T) {
 	assert.ErrorContains(t, err, "not implemented")
 
 	// BroadcastCoordination
-	err = mesh.BroadcastCoordination(ctx, MeshMessage{
+	err = mesh.BroadcastCoordination(ctx, &pb.MeshMessage{
 		AgentID:   "agent-z",
 		Content:   "sync",
 		Timestamp: time.Now(),
@@ -49,6 +51,6 @@ func TestV2TeammateMesh_NilHub(t *testing.T) {
 	err := mesh.BroadcastTask(context.Background(), Task{TaskID: "1"})
 	assert.ErrorContains(t, err, "CentrifugeNode is nil")
 
-	err = mesh.BroadcastCoordination(context.Background(), MeshMessage{})
+	err = mesh.BroadcastCoordination(context.Background(), &pb.MeshMessage{})
 	assert.ErrorContains(t, err, "CentrifugeNode is nil")
 }
