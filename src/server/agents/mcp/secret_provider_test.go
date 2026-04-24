@@ -1,7 +1,5 @@
 package mcp
 
-// Tests for the Hybrid Secrets Management MCP Proxy and provider factory.
-
 import (
 	"context"
 	"testing"

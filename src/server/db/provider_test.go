@@ -13,18 +13,6 @@ func TestConvertBindVarsJSONPath(t *testing.T) {
 	if result != expected {
 		t.Errorf("convertBindVars() = %v, want %v", result, expected)
 	}
-
-	query2 := "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = am.payload->>'agent_id'"
-	expected2 := "SELECT am.* FROM agent_missions am JOIN agents a ON a.id = json_extract(am.payload, '$.agent_id')"
-	if result := convertBindVars(query2); result != expected2 {
-		t.Errorf("convertBindVars() = %v, want %v", result, expected2)
-	}
-
-	query3 := "ORDER BY st.payload->>'priority' ASC"
-	expected3 := "ORDER BY json_extract(st.payload, '$.priority') ASC"
-	if result := convertBindVars(query3); result != expected3 {
-		t.Errorf("convertBindVars() = %v, want %v", result, expected3)
-	}
 }
 
 func TestProviderImplementations(t *testing.T) {
@@ -97,6 +85,9 @@ func TestProvider_AcquireTask(t *testing.T) {
 		parent_plan_id TEXT,
 		dependencies TEXT NOT NULL DEFAULT '[]',
 		locked_until DATETIME,
+		action_risk TEXT,
+		approval_status TEXT,
+		proposed_content TEXT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`

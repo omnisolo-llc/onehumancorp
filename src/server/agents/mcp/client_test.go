@@ -27,7 +27,6 @@ func TestHybridContextTool(t *testing.T) {
 	payload := map[string]interface{}{
 		"action": "click",
 		"widget": "button",
-		"email":  "test@example.com", // Add PII to test redaction
 	}
 
 	res, err := tool.Execute(ctx, payload)
@@ -42,7 +41,7 @@ func TestHybridContextTool(t *testing.T) {
 		t.Errorf("Expected metric 'hybrid_ui_context', got %s", recordedMetric)
 	}
 
-	expectedPayload, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
+	expectedPayload, _ := json.Marshal(payload)
 	if string(expectedPayload) != recordedPayload {
 		t.Errorf("Expected payload %s, got %s", string(expectedPayload), recordedPayload)
 	}

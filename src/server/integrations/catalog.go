@@ -4,7 +4,6 @@ import (
 	pb "github.com/onehumancorp/mono/src/proto"
 	"github.com/onehumancorp/mono/src/server/integrations/etcd"
 	"github.com/onehumancorp/mono/src/server/integrations/libsql"
-	"github.com/onehumancorp/mono/src/server/integrations/atlas"
 	"github.com/onehumancorp/mono/src/server/integrations/litefs"
 	"github.com/onehumancorp/mono/src/server/integrations/obsidian"
 	"github.com/onehumancorp/mono/src/server/integrations/ollama"
@@ -33,7 +32,6 @@ var Catalog = []IntegrationProvider{
 	&JiraIntegration{},
 	&PlaneIntegration{},
 	&GitHubIssuesIntegration{},
-	&atlas.AtlasIntegration{},
 	&litefs.LiteFSIntegration{},
 	&libsql.LibSQLIntegration{},
 	&etcd.EtcdIntegration{},

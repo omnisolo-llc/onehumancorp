@@ -46,6 +46,10 @@ type SharedTask struct { // issue_id: 3980
 	Depth           int        `json:"depth,omitempty"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+
+	ActionRisk      string     `json:"action_risk,omitempty"`
+	ApprovalStatus  string     `json:"approval_status,omitempty"`
+	ProposedContent string     `json:"proposed_content,omitempty"`
 }
 
 // TaskManager manages the shared tasks list
@@ -232,20 +236,20 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
-			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth, action_risk, approval_status, proposed_content)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1, '', '', '')
+			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at, COALESCE(action_risk, ''), COALESCE(approval_status, ''), COALESCE(proposed_content, '')
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
-			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth, action_risk, approval_status, proposed_content)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1, '', '', '')
+			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at, COALESCE(action_risk, ''), COALESCE(approval_status, ''), COALESCE(proposed_content, '')
 		`
 	}
 
 	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID, missionID).Scan(
-		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt, &task.ActionRisk, &task.ApprovalStatus, &task.ProposedContent,
 	)
 
 	if err != nil {
@@ -380,7 +384,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to check pending task: %w", queryErr)
 	}
 
-	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", statemachine.StateInProgress, agentID, "Claimed task")
+	targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", statemachine.StateInProgress, agentID, "Claimed task")
 	if err != nil {
 		return nil, fmt.Errorf("failed to transition state: %w", err)
 	}
@@ -431,8 +435,8 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	if broadcastFunc != nil {
-		broadcastFunc()
+	if targetStateTransitionFn != nil {
+		targetStateTransitionFn()
 	}
 
 	task.Status = "IN_PROGRESS"
@@ -562,7 +566,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	defer tx.Rollback(ctx)
 
 	_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = NULL WHERE id = $1", taskID)
-	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
+	targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
@@ -577,8 +581,8 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit completed task: %w", err)
 	}
-	if broadcast != nil {
-		broadcast()
+	if targetStateTransitionFn != nil {
+		targetStateTransitionFn()
 	}
 
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
@@ -700,9 +704,13 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		return nil, errors.New("unauthorized: missing claims")
 	}
 
+	return tm.PeekTasksByOrg(ctx, claims.OrganizationID, limit)
+}
+
+func (tm *TaskManager) PeekTasksByOrg(ctx context.Context, orgID string, limit int) ([]*SharedTask, error) {
 	var query string
 	var args []interface{}
-	args = append(args, claims.OrganizationID)
+	args = append(args, orgID)
 
 	if tm.db.IsSQLite() {
 		query = `
@@ -753,28 +761,6 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
-}
-
-// CountCompletedTasks returns the number of completed tasks for the organization.
-func (tm *TaskManager) CountCompletedTasks(ctx context.Context) (int, error) {
-	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil {
-		return 0, errors.New("unauthorized: missing claims")
-	}
-
-	var query string
-	if tm.db.IsSQLite() {
-		query = `SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND status = 'COMPLETED'`
-	} else {
-		query = `SELECT COUNT(*) FROM shared_tasks WHERE organization_id = $1 AND status = 'COMPLETED'`
-	}
-
-	var count int
-	err := tm.db.QueryRow(ctx, query, claims.OrganizationID).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("failed to count completed tasks: %w", err)
-	}
-	return count, nil
 }
 
 // PollTasks attempts to claim up to `limit` PENDING tasks for the given agentID.
@@ -835,11 +821,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 		for _, id := range taskIDs {
 			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
-			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
+			targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
 			}
-			broadcastFuncs = append(broadcastFuncs, broadcastFunc)
+			broadcastFuncs = append(broadcastFuncs, targetStateTransitionFn)
 
 			// Fetch updated task data
 			readQuery := `
@@ -900,11 +886,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 		for _, id := range taskIDs {
 			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
-			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
+			targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
 			}
-			broadcastFuncs = append(broadcastFuncs, broadcastFunc)
+			broadcastFuncs = append(broadcastFuncs, targetStateTransitionFn)
 
 			// Fetch updated task data
 			readQuery := `
@@ -1024,13 +1010,13 @@ func (tm *TaskManager) GetTask(ctx context.Context, taskID string) (*SharedTask,
 	}
 
 	query := `
-		SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at
+		SELECT id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(agent_id, ''), locked_until, created_at, updated_at, COALESCE(action_risk, ''), COALESCE(approval_status, ''), COALESCE(proposed_content, '')
 		FROM shared_tasks
 		WHERE id = $1 AND organization_id = $2
 	`
 	task := &SharedTask{}
 	err := tm.db.QueryRow(ctx, query, taskID, claims.OrganizationID).Scan(
-		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.AssignedAgentID, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt,
+		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.AssignedAgentID, &task.LockedUntil, &task.CreatedAt, &task.UpdatedAt, &task.ActionRisk, &task.ApprovalStatus, &task.ProposedContent,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1118,15 +1104,15 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 
 	query := `
 		UPDATE shared_tasks
-		SET title = $1, priority = $2, agent_id = $3, payload = $4, locked_until = $5, updated_at = CURRENT_TIMESTAMP
+		SET title = $1, priority = $2, agent_id = $3, payload = $4, locked_until = $5, action_risk = $7, approval_status = $8, proposed_content = $9, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $6
 	`
-	_, err = tx.Exec(ctx, query, task.Title, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID)
+	_, err = tx.Exec(ctx, query, task.Title, task.Priority, task.AssignedAgentID, task.Payload, task.LockedUntil, task.ID, task.ActionRisk, task.ApprovalStatus, task.ProposedContent)
 	if err != nil {
 		return fmt.Errorf("failed to update task: %w", err)
 	}
 
-	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, task.ID, "SHARED_TASK", task.Status, task.AssignedAgentID, "Task updated via UpdateTask")
+	targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, task.ID, "SHARED_TASK", task.Status, task.AssignedAgentID, "Task updated via UpdateTask")
 	if err != nil {
 		return fmt.Errorf("failed to transition state: %w", err)
 	}
@@ -1145,8 +1131,8 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	if broadcastFunc != nil {
-		broadcastFunc()
+	if targetStateTransitionFn != nil {
+		targetStateTransitionFn()
 	}
 
 	// Broadcast update
@@ -1284,3 +1270,7 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 }
 
 // added for Sub-Agent Orchestration Queue
+
+func (tm *TaskManager) DBProvider() db.Provider {
+	return tm.db
+}

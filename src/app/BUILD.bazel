@@ -8,13 +8,14 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 APP_PACKAGE_NAME = "ohc-desktop"
 
-APP_PACKAGE_VERSION = "0.4.2"
+APP_PACKAGE_VERSION = "0.4.5"
 
 exports_files([
     "pubspec.yaml",
     "pub_deps.json",
     "standalone_linux_launcher.sh",
-    "lib/router_test.dart",
+    "test/linux_package_structure_test.sh",
+    "test/standalone_e2e_test.sh",
 ])
 
 # ── App assets (logo, images, etc.) ──────────────────────────────────────────
@@ -143,7 +144,14 @@ flutter_library(
 
 # (Individual tests are now in lib/*/BUILD.bazel)
 
-
+test_suite(
+    name = "flutter_unit_tests",
+    tests = [
+        "//src/app/lib/models:all_tests",
+        "//src/app/lib/screens:all_tests",
+        "//src/app/lib/services:all_tests",
+    ],
+)
 
 test_suite(
     name = "flutter_coverage_tests",
@@ -158,7 +166,125 @@ test_suite(
 # Verifies all expected source files are present in the app tree.
 # Always runs; no Flutter SDK needed.
 
+sh_test(
+    name = "app_layout_test",
+    srcs = ["test/flutter_layout_test.sh"],
+    data = [":srcs"],
+)
 
+flutter_test(
+    name = "app_desktop_e2e_test",
+    srcs = ["test/desktop_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/desktop_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+# ── CUJ e2e Flutter test targets ─────────────────────────────────────────────
+# Each target covers one critical user journey (CUJ) to enable fine-grained
+# caching: a code change in one feature only invalidates the related target.
+
+flutter_test(
+    name = "cuj_auth_e2e_test",
+    srcs = ["test/cuj_auth_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_auth_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_agents_hire_e2e_test",
+    srcs = ["test/cuj_agents_hire_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_agents_hire_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_cost_e2e_test",
+    srcs = ["test/cuj_cost_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_cost_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_handoffs_e2e_test",
+    srcs = ["test/cuj_handoffs_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_handoffs_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_pipelines_e2e_test",
+    srcs = ["test/cuj_pipelines_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_pipelines_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_users_e2e_test",
+    srcs = ["test/cuj_users_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_users_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_integrations_e2e_test",
+    srcs = ["test/cuj_integrations_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_integrations_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_channels_extra_e2e_test",
+    srcs = ["test/cuj_channels_extra_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_channels_extra_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_scaling_e2e_test",
+    srcs = ["test/cuj_scaling_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_scaling_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_diagnostics_referrals_e2e_test",
+    srcs = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
+    embed = [":app_lib"],
+    tags = ["manual"],
+    test_files = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+test_suite(
+    name = "cuj_e2e_tests",
+    tags = ["manual"],
+    tests = [
+        ":cuj_auth_e2e_test",
+        ":cuj_agents_hire_e2e_test",
+        ":cuj_cost_e2e_test",
+        ":cuj_handoffs_e2e_test",
+        ":cuj_pipelines_e2e_test",
+        ":cuj_users_e2e_test",
+        ":cuj_integrations_e2e_test",
+        ":cuj_channels_extra_e2e_test",
+        ":cuj_scaling_e2e_test",
+        ":cuj_diagnostics_referrals_e2e_test",
+    ],
+)
 
 # ── Flutter web app build ─────────────────────────────────────────────────────
 # Builds the Flutter app for the web platform.  The resulting artifacts are used
@@ -198,7 +324,22 @@ flutter_app(
 
 # ── Local Development targets ─────────────────────────────────────────────────
 
+sh_binary(
+    name = "start",
+    srcs = ["test/start_web.sh"],
+    data = [":app"],
+    visibility = ["//visibility:public"],
+)
 
+sh_binary(
+    name = "capture_screenshots",
+    srcs = ["test/capture_screenshots.sh"],
+    data = [
+        ":app",
+        "//:node_modules/@playwright/test",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 pkg_files(
     name = "app_workspace_files",
@@ -280,5 +421,3 @@ pkg_rpm(
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )
-
-

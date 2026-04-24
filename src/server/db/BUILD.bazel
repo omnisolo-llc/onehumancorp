@@ -27,8 +27,6 @@ go_library(
         "migrations/20260426010000_ultraplan_votes.sql",
         "migrations/20260427014004_create_shared_tasks_schema.sql",
         "migrations/20260416040000_shared_tasks_v2.sql",
-        "migrations/20260416060000_autodream_vector_pipeline_pg.sql",
-        "migrations/20260416060000_autodream_vector_pipeline_sqlite.sql",
         "migrations/20260416030000_kairos_mesh.sql",
         "migrations/011_autodream_sync.sql",
         "migrations/012_hybrid_rag_mission.sql",
@@ -72,13 +70,13 @@ go_library(
         "migrations/055_hub_events.sql",
         "migrations/056_langgraph_checkpoints.sql",
         "migrations/061_shared_tasks_v4.sql",
+        "migrations/062_billing_actions.sql",
         "migrations/20260414130500_create_autodream_memories.sql",
         "migrations/20260415123000_autodream_memories_schema.sql",
         "migrations/20260415124000_shared_tasks_master.sql",
         "migrations/20260415124100_autodream_memories_master.sql",
         "migrations/20260416000000_shared_tasks_decomposition_pg.sql",
         "migrations/20260416000000_shared_tasks_decomposition_sqlite.sql",
-        "migrations/20260429000000_shared_tasks_decomposition_table.sql",
         "migrations/20260416020000_hybrid_mcp_sync_queue.sql",
         "migrations/058_autodream_sync.sql",
         "migrations/20260421000000_swarm_tasks_and_state_machine_pg.sql",
@@ -98,11 +96,13 @@ go_library(
                         "migrations/20260427020001_shared_tasks_indexes.sql",
         "migrations/20260428000000_kairos_shared_tasks_state_machine_pg.sql",
         "migrations/20260428000000_kairos_shared_tasks_state_machine_sqlite.sql",
+        "migrations/20260429000000_kairos_approval_workflow.sql",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/db",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/telemetry",
+        "@com_github_google_uuid//:uuid",
         "@com_github_jackc_pgx_v5//:pgx",
         "@com_github_jackc_pgx_v5//pgxpool",
         "@io_opentelemetry_go_otel//:otel",
@@ -117,9 +117,11 @@ go_test(
     srcs = [
         "database_test.go",
         "provider_test.go",
-
         "swarm_tasks_migration_test.go",
     ],
     embed = [":db"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+        "@org_modernc_sqlite//:sqlite"
+    ],
 )

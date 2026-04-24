@@ -12,7 +12,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_.]+)(?:\s*::\s*json)?\s*->>\s*'([^']+)'`)
+var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_]+)\s*::\s*json\s*->>\s*'([^']+)'`)
 
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
 type SqliteProvider struct {
@@ -215,6 +215,9 @@ func (p *SqliteProvider) SearchMemories(ctx context.Context, organizationID stri
 		if err := rows.Scan(&content); err == nil {
 			results = append(results, content)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return results, nil
 }

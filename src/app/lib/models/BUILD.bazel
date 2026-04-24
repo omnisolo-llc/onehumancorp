@@ -89,22 +89,20 @@ alias(
 
 MODEL_TESTS = glob(["*_test.dart"])
 
-[flutter_test(
-    name = test_file[:-5],
-    srcs = [test_file],
-    embed = [":models_lib"],
-    test_files = [test_file],
-) for test_file in MODEL_TESTS]
-
-test_suite(
-    name = "models_test",
-    tests = [test_file[:-5] for test_file in MODEL_TESTS],
-)
+[
+    flutter_test(
+        name = file.replace(".dart", ""),
+        srcs = [file],
+        embed = [":models_lib"],
+        test_files = [file],
+    )
+    for file in MODEL_TESTS
+]
 
 test_suite(
     name = "all_tests",
     tags = ["manual"],
-    tests = [":models_test"],
+    tests = [":" + file.replace(".dart", "") for file in MODEL_TESTS],
 )
 
 flutter_test(

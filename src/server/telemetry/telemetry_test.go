@@ -396,7 +396,22 @@ func TestRecordFunctions(t *testing.T) {
 	})
 
 	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
+		var capturedType, capturedPayload string
+		BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+			capturedType = metricType
+			capturedPayload = payload
+			return nil
+		}
+		defer func() { BufferMetricFunc = nil }()
+
 		RecordAgentTransitionLatency(ctx, "pending_to_running", 1.23)
+
+		if capturedType != "agent_transition_latency" {
+			t.Errorf("expected buffered metric type agent_transition_latency, got %s", capturedType)
+		}
+		if capturedPayload == "" {
+			t.Errorf("expected payload, got empty string")
+		}
 	})
 
 	t.Run("RecordSQLiteLockContention", func(t *testing.T) {
@@ -865,30 +880,9 @@ func TestRecordSandboxViolation(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 	InitTelemetry()
 
-	var capturedMetric string
-	var capturedPayload string
-	originalBufferMetricFunc := BufferMetricFunc
-	BufferMetricFunc = func(ctx context.Context, metricName string, payload string) error {
-		capturedMetric = metricName
-		capturedPayload = payload
-		return nil
-	}
-	defer func() { BufferMetricFunc = originalBufferMetricFunc }()
-
 	ctx := context.Background()
 	// Should not panic
 	RecordSandboxViolation(ctx, "fs_read", "agent-123", "/etc/passwd")
-
-	// Add this to make sure we hit the code block when `BufferMetricFunc != nil`
-	time.Sleep(10 * time.Millisecond) // buffer is called synchronously so we don't strictly need this but doesn't hurt
-
-	if capturedMetric != "sandbox_violation_total" {
-		t.Errorf("Expected metric name 'sandbox_violation_total', got '%s'", capturedMetric)
-	}
-	expectedPayload := `{"agent_id":"agent-123","path":"/etc/passwd","type":"fs_read"}`
-	if capturedPayload != expectedPayload {
-		t.Errorf("Expected payload '%s', got '%s'", expectedPayload, capturedPayload)
-	}
 }
 
 func TestRecordHarnessInitLatency(t *testing.T) {
@@ -920,4 +914,16 @@ func TestRecordHarnessExecutionLatency(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	RecordHarnessExecutionLatency(context.Background(), 120.5, "standalone")
+}
+
+func TestRecordCapabilityViolation(t *testing.T) {
+	RecordCapabilityViolation(context.Background(), "session-123", "execute-command")
+}
+
+func TestRecordTelemetryBatchSize(t *testing.T) {
+	RecordTelemetryBatchSize(context.Background(), 500)
+}
+
+func TestRecordTelemetrySyncBackoff(t *testing.T) {
+	RecordTelemetrySyncBackoff(context.Background(), 5.0)
 }

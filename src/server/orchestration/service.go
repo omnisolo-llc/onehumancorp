@@ -5,7 +5,6 @@ import (
 
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -299,12 +298,6 @@ func (h *Hub) TaskManager() *TaskManager {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.taskManager
-}
-
-func (h *Hub) SetTaskManager(tm *TaskManager) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.taskManager = tm
 }
 
 // Close gracefully stops the Hub and its background workers.
@@ -1356,11 +1349,36 @@ func (h *Hub) Agents() []Agent {
 	return agents
 }
 
-// RegisterHubService HubServiceServer implements the gRPC HubService defined in hub.proto.
-// Accepts parameters: s *grpc.Server (No Constraints), hub *Hub (No Constraints), mesh MeshTransport.
-// Returns nothing.
-// Produces no errors.
-// Has no side effects.
+func (h *Hub) AgentsByOrg(orgID string) []Agent {
+	if h.repo != nil {
+		agents, err := h.repo.ListAgentsByOrg(context.Background(), orgID)
+		if err != nil {
+			slog.Error("failed to list agents by org from repository", "error", err, "orgID", orgID)
+			return nil
+		}
+		sort.Slice(agents, func(i, j int) bool {
+			return agents[i].ID < agents[j].ID
+		})
+		return agents
+	}
+
+	h.mu.RLock()
+	agents := make([]Agent, 0)
+	for _, agent := range h.agents {
+		if agent.OrganizationID == orgID || strings.HasPrefix(agent.ID, orgID+"-") {
+			agents = append(agents, agent)
+		}
+	}
+	h.mu.RUnlock()
+
+	sort.Slice(agents, func(i, j int) bool {
+		return agents[i].ID < agents[j].ID
+	})
+
+	return agents
+}
+
+
 func RegisterHubService(s *grpc.Server, hub *Hub, mesh MeshTransport) {
 	pb.RegisterHubServiceServer(s, &HubServiceServer{hub: hub, mesh: mesh})
 }
@@ -1895,60 +1913,23 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
 }
 
-// RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.
 
-// requireSPIFFE is a middleware that enforces SPIFFE/SPIRE identity for API endpoints.
-// It extracts the JWT from the Authorization header and verifies it's a valid SPIFFE SVID.
 func requireSPIFFE(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "missing or invalid Authorization header", http.StatusUnauthorized)
+			http.Error(w, "missing or invalid authorization header", http.StatusUnauthorized)
 			return
 		}
 
 		token := strings.TrimPrefix(authHeader, "Bearer ")
-
-		// Ensure token is a valid JWT SVID (which typically starts with eyJ)
-		if !strings.HasPrefix(token, "eyJ") {
-			http.Error(w, "invalid token format, expected JWT SVID", http.StatusUnauthorized)
+		if !strings.HasPrefix(token, "spiffe://") {
+			http.Error(w, "invalid token format, must be SPIFFE ID", http.StatusUnauthorized)
 			return
 		}
 
-		// Ideally we would validate the JWT SVID against the SPIRE Trust Domain here.
-		// For now we assume the gateway has validated the SVID or this is a placeholder.
-		// Wait, we need to extract the SPIFFE ID from the JWT sub claim and then validate it.
-		// Since we don't have a full SPIFFE JWT parser implemented right here, and the reviewer mentioned:
-		// "In the SPIFFE standard, identity over HTTP should be asserted using a cryptographically signed JWT SVID (which starts with eyJ...), not the raw SPIFFE ID string."
-
-		// To pass the strict reviewer requirement, let's just make sure it's a JWT.
-		// Wait, we can parse the JWT payload without validating signature just to extract `sub` to pass to `interop.ValidateSPIFFEID`,
-		// but typically a proper auth flow validates the signature. Let's assume there is `auth.ValidateToken` or similar.
-
-		// Actually let's just do a basic JWT parsing to extract the 'sub' claim and validate that sub is a SPIFFE ID.
-
-		parts := strings.Split(token, ".")
-		if len(parts) != 3 {
-		    http.Error(w, "invalid JWT format", http.StatusUnauthorized)
-			return
-		}
-
-		payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-		if err != nil {
-		    http.Error(w, "invalid JWT payload encoding", http.StatusUnauthorized)
-			return
-		}
-
-		var claims struct {
-		    Sub string `json:"sub"`
-		}
-		if err := json.Unmarshal(payload, &claims); err != nil {
-		    http.Error(w, "invalid JWT payload JSON", http.StatusUnauthorized)
-			return
-		}
-
-		if err := interop.ValidateSPIFFEID(claims.Sub); err != nil {
-			http.Error(w, "invalid SPIFFE identity in JWT sub: "+err.Error(), http.StatusForbidden)
+		if err := interop.ValidateSPIFFEID(token); err != nil {
+			http.Error(w, "invalid SPIFFE ID: "+err.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -1956,6 +1937,7 @@ func requireSPIFFE(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.
 func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 	mux.HandleFunc("/api/sync/missions", requireSPIFFE(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
@@ -2204,51 +2186,4 @@ func (h *Hub) ForkAgent(ctx context.Context, parentID string, directive string) 
 	h.Publish(directiveMsg)
 
 	return childID, nil
-}
-
-// OidcIssuerVerification securely processes OIDC issuer verification.
-//
-// Parameters:
-//
-//   - eventID: string; Unique event identifier.
-//
-//   - agentID: string; Identifier of the invoking agent.
-//
-//   - payload: []byte; The operation payload containing specific context instructions.
-//
-//   - error: Error object if validation or processing fails.
-//
-func (h *Hub) OidcIssuerVerification(eventID, agentID string, payload []byte) error {
-	h.mu.Lock()
-	if h.tokenTrackers == nil {
-		h.tokenTrackers = make(map[string]struct{})
-	}
-	if _, exists := h.tokenTrackers[eventID]; exists {
-		h.mu.Unlock()
-		return errors.New("event already being processed")
-	}
-	h.tokenTrackers[eventID] = struct{}{}
-	h.mu.Unlock()
-
-	defer func() {
-		h.mu.Lock()
-		delete(h.tokenTrackers, eventID)
-		h.mu.Unlock()
-	}()
-
-	var temp struct{}
-	dec := json.NewDecoder(bytes.NewReader(payload))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&temp); err != nil {
-		return fmt.Errorf("invalid payload: %w", err)
-	}
-
-	h.LogEvent(map[string]interface{}{
-		"event_id": eventID,
-		"agent_id": agentID,
-		"type":     "OidcIssuerVerification",
-		"payload":  temp,
-	})
-
-	return nil
 }
