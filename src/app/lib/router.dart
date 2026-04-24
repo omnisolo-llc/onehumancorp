@@ -1,3 +1,9 @@
+import 'package:ohc_app/widgets/in_app_help_overlay.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/help_chat_screen.dart';
+import 'package:ohc_app/screens/whats_new_screen.dart';
+import 'package:ohc_app/screens/api_docs_screen.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
@@ -81,10 +87,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/help/chat',
+            builder: (context, state) => const HelpChatScreen(),
+          ),
+          GoRoute(
+            path: '/whats-new',
+            builder: (context, state) => const WhatsNewScreen(),
+          ),
+          GoRoute(
+            path: '/api-docs',
+            builder: (context, state) => const ApiDocsScreen(),
+          ),
+
       GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
-        builder: (context, state, child) => AppShell(child: child),
+        builder: (context, state, child) => InAppHelpOverlay(child: AppShell(child: child)),
         routes: [
           // Business setup requires authentication — moved inside the shell.
           GoRoute(
@@ -303,6 +326,8 @@ class _Sidebar extends StatelessWidget {
         _NavItem(icon: Icons.extension, label: 'Skills', path: '/skills'),
         _NavItem(icon: Icons.security, label: 'Security', path: '/security'),
         _NavItem(icon: Icons.terminal, label: 'Logs', path: '/logs'),
+                _NavItem(icon: Icons.new_releases, label: 'What\'s New', path: '/whats-new'),
+        _NavItem(icon: Icons.api, label: 'API Docs', path: '/api-docs'),
         const SizedBox(height: 8),
         _NavItem(icon: Icons.settings, label: 'Settings', path: '/settings'),
         _NavItem(

@@ -1,35 +1,74 @@
 # Problem Description
+The goal is to implement documentation-critical features for the OneHumanCorp Small Business App, creating help content, interactive guides, and in-app assistance for non-technical small business owners.
 
-The problem requests replacing the current `Business Setup Wizard` logic with a simplified version.
-The new wizard should have:
-1. **Welcome screen**: Beautiful hero animation, one-line value proposition ("Your business, live in minutes").
-2. **Business type**: Single-tap selection from friendly categories with large icons: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other. No dropdowns.
-3. **Business name & description**: Large-input text fields. AI auto-suggests a tagline and short description based on the business name. User can accept or edit.
-4. **What do you sell?**: Multi-select tiles: "Physical products", "Digital downloads", "Services / appointments", "Food & beverages", "Subscriptions". Friendly labels only.
-5. **How do you want to receive payments?**: Card tiles — Online only, In-person (POS), Both, Skip for now. Show estimated time to first payment next to each.
-6. **Administrator account**: Name, email, password (strength meter), optional SSO (Google / Apple). No username, no security questions.
-7. **Review & Launch**: Summary card with a pulsing "Launch My Business →" CTA. Clicking it provisions the tenant, selects a starter website template, pre-seeds AI agents, and lands the user in the dashboard with a "Your business is setting up…" animated progress overlay.
+Requirements from the prompt:
+1. **In-App Help Center**: Searchable help portal accessed via "?" button in every major screen. Articles by topic. Mobile friendly.
+2. **Contextual Tooltips**: Tooltips for non-obvious UI elements. Max 2 sentences, plain language. Implement a `tooltip_registry.dart` so agents can add/update tooltips without touching UI code.
+3. **Interactive Walkthroughs**: Step-by-step in-app tours. Overlay highlight + speech bubble system (no popups/modals).
+4. **AI-Powered Help Chat**: Floating "Ask anything" chat button on every page. Routes to a Help Agent using help center content as context. "Read the full article →" links.
+5. **Video Tutorials**: Embed short video tutorials for top 10 tasks. Metadata in backend, mobile portrait-optimized player.
+6. **API Documentation**: Interactive API reference for Advanced users (e.g., Swagger UI).
+7. **Release Notes & Changelog**: "What's New" section in the app showing recent updates with screenshots. Link to full changelog.
 
 # Proposed Plan
 
-1. **Update Frontend UI & State**
-   - Refactor `src/app/lib/screens/business_setup_wizard_screen.dart` to match the 7 new steps (Welcome, Business type, Business name & description, What do you sell, Payment preference, Administrator account, Review & Launch).
-   - Use `AnimatedSwitcher` to animate between the steps.
-   - Use `GlassCard` and OHC Premium Tokens (Glassmorphism, `Outfit`/`Inter` fonts) for styling.
-   - Update `BusinessSetupState` to store fields like `businessType`, `businessDescription`, `whatYouSell`, `paymentMethod`, etc.
-   - Make all screens responsive (down to 375px) without horizontal scrolling.
+1. **Tooltip Registry**:
+   - Create `src/app/lib/widgets/tooltip_registry.dart` with a map of tooltip keys to text.
+   - Use `read_file` to verify `src/app/lib/widgets/tooltip_registry.dart` is correctly created.
 
-2. **Backend API updates**
-   - To resume state, the system currently expects a `wizardConfigureRequest` to handle configuring. But the wizard state needs an endpoint `/api/wizard/state/save`? Wait, the problem says "All wizard state must be persisted to the OHC backend so resuming from another device works seamlessly. Implement backend API endpoints if they do not already exist."
-   - The backend `dashboard` server handles wizard config currently. I will add `handleWizardStateSave`, `handleWizardStateLoad` to `src/server/dashboard/handlers_wizard.go` and wire them up in `src/server/dashboard/server.go`.
-   - Add a `handleWizardStateSave` handler which accepts a JSON payload of the wizard state and stores it in memory (or Redis, though `dashboard` server is simpler, I'll store it in a `wizardState` map in `Server`). Or wait, `Server` has `settings.Extras`. We can just store wizard progress in `settings.Extras`. Let's just create a quick endpoint for `state/save` and `state` (load).
+2. **OhcTooltip Component**:
+   - Create `src/app/lib/widgets/ohc_tooltip.dart` for the `OhcTooltip` widget.
+   - Use `read_file` to verify `src/app/lib/widgets/ohc_tooltip.dart` is correctly created.
 
-3. **Cleanup unused code**
-   - Delete `src/server/lib/features/onboarding/business_setup_wizard.dart` and `business_setup_wizard_test.dart` as they are Flutter UI mockups misplaced in the `server` tree and unused. Or I will just replace `src/app/lib/screens/business_setup_wizard_screen.dart` and delete the server ones.
+3. **Apply Tooltips**:
+   - Modify `src/app/lib/screens/dashboard_screen.dart` to apply `OhcTooltip` to the 'AI Helpers' section.
+   - Modify `src/app/lib/screens/agents_screen.dart` to apply `OhcTooltip` to the 'Help me fix this' button.
+   - Verify changes using `cat` or `read_file`.
 
-4. **Testing**
-   - Write unit tests for `src/app/lib/screens/business_setup_wizard_screen.dart` (if needed, replace existing tests like `wizard_screen_test.dart` or add `business_setup_wizard_test.dart` in `src/app/lib/screens/`).
-   - Write Go E2E tests for the flow in `src/tests/e2e/e2e_business_setup_test.go`. The test must start from home page after login, navigate the wizard, select options, and assert the final API call or UI state.
+4. **Global In-App Help Overlay**:
+   - Create `src/app/lib/widgets/in_app_help_overlay.dart` to wrap `AppShell` with a floating action button linking to the Help Center and Chat.
+   - Use `read_file` to verify `src/app/lib/widgets/in_app_help_overlay.dart` is created.
+   - Modify `src/app/lib/router.dart` to wrap `AppShell(child: child)` with `InAppHelpOverlay(child: AppShell(child: child))`. Add the `/help`, `/help/chat`, `/api-docs` and `/whats-new` routes to the router.
+   - Use `read_file` on `src/app/lib/router.dart` to confirm the new routes and `InAppHelpOverlay` wrapper were added correctly.
 
-5. **Pre-commit checks**
-   - Call `pre_commit_instructions` and follow the required validation, verification, formatting, and tests (`bazelisk test //...`).
+5. **Help Center Screen**:
+   - Create `src/app/lib/screens/help_center_screen.dart` to serve as the main searchable portal.
+   - Use `read_file` to verify `src/app/lib/screens/help_center_screen.dart`.
+
+6. **Help Chat Screen**:
+   - Create `src/app/lib/screens/help_chat_screen.dart` linking to `/api/help/chat`.
+   - Use `read_file` to verify `src/app/lib/screens/help_chat_screen.dart`.
+
+7. **Interactive Walkthroughs**:
+   - Create `src/app/lib/widgets/walkthrough_overlay.dart`. Implement a `WalkthroughOverlay` widget that accepts a target `GlobalKey` and displays a text bubble with navigation controls.
+   - Use `read_file` to verify `src/app/lib/widgets/walkthrough_overlay.dart`.
+
+8. **Video Tutorials & Help Widget**:
+   - Create `src/app/lib/widgets/video_tutorial_list.dart` integrated into `HelpCenterScreen` reading from `/api/tutorials/videos`.
+   - Use `read_file` to verify `src/app/lib/widgets/video_tutorial_list.dart`.
+
+9. **Release Notes UI**:
+   - Create `src/app/lib/screens/whats_new_screen.dart` calling the `/api/changelog` endpoint to display recent updates.
+   - Use `read_file` to verify `src/app/lib/screens/whats_new_screen.dart`.
+
+10. **API Documentation UI**:
+    - Create `src/app/lib/screens/api_docs_screen.dart` using a `ListView` of `ExpansionTile` widgets to display mocked API endpoint details.
+    - Use `read_file` to verify `src/app/lib/screens/api_docs_screen.dart`.
+
+11. **Backend Handlers (Help)**:
+    - Create `src/server/dashboard/handlers_help.go` implementing `/api/help/chat`, `/api/changelog`, and `/api/tutorials/videos` handlers.
+    - Use `read_file` to verify `src/server/dashboard/handlers_help.go`.
+
+12. **Register Backend Handlers**:
+    - Modify `src/server/dashboard/server.go` to add `mux.HandleFunc` registrations for `/api/help/chat`, `/api/changelog`, and `/api/tutorials/videos` right next to the wizard endpoints.
+    - Verify with `cat src/server/dashboard/server.go`.
+
+13. **E2E Test File**:
+    - Create `src/app/e2e/help_center.spec.ts`. Write tests to: Navigate to the homepage, click the '?' button, and assert that the Help Center modal/screen renders successfully. Interact with the chat.
+    - Use `read_file` to verify `src/app/e2e/help_center.spec.ts`.
+
+14. **Run Tests**:
+    - Run the test suite using `bazelisk test //...` to verify all changes and ensure no regressions were introduced.
+
+15. **Pre-commit**:
+    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.

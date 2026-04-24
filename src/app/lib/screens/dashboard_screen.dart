@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/ohc_tooltip.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -582,6 +583,7 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _StatCard extends StatefulWidget {
+  final String? tooltipKey;
   final String label;
   final String value;
   final IconData icon;
@@ -589,6 +591,7 @@ class _StatCard extends StatefulWidget {
   final Color? iconColor;
 
   const _StatCard({
+    this.tooltipKey,
     required this.label,
     required this.value,
     required this.icon,
@@ -639,7 +642,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
     final effectiveIconColor = widget.iconColor ?? widget.color;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Semantics(
+    final cardWidget = Semantics(
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
@@ -698,5 +701,6 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
         ),
       ),
     );
-  }
+
+    return widget.tooltipKey != null ? OhcTooltip(tooltipKey: widget.tooltipKey!, child: cardWidget) : cardWidget;}
 }

@@ -719,6 +719,12 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	}
 
 	// Config wizard API endpoints.
+
+	// Help & Documentation API endpoints.
+	mux.HandleFunc("/api/help/chat", server.handleHelpChat)
+	mux.HandleFunc("/api/changelog", server.handleChangelog)
+	mux.HandleFunc("/api/tutorials/videos", server.handleTutorialsVideos)
+
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
