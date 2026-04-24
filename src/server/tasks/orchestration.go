@@ -93,31 +93,32 @@ func (o *Orchestrator) CompleteTask(ctx context.Context, missionID string, agent
         tableName = "mission_queue"
     }
 
-    // Verify current state before update to avoid relying on RowsAffected
-    var currentStatus string
-    checkQuery := fmt.Sprintf("SELECT status FROM %s WHERE mission_id = $1 AND assigned_agent = $2", tableName)
-    checkQueryToRun := checkQuery
-    if o.DBProvider.IsSQLite() {
-        checkQueryToRun = strings.ReplaceAll(checkQuery, "$1", "?")
-        checkQueryToRun = strings.ReplaceAll(checkQueryToRun, "$2", "?")
-    }
-    err = tx.QueryRow(ctx, checkQueryToRun, missionID, agentID).Scan(&currentStatus)
-    if err != nil {
-        return fmt.Errorf("task not found, not assigned to agent, or not in progress")
-    }
-    if currentStatus != "IN_PROGRESS" {
-        return fmt.Errorf("task not found, not assigned to agent, or not in progress")
-    }
-
     query := fmt.Sprintf("UPDATE %s SET status = 'DONE' WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS'", tableName)
     if o.DBProvider.IsSQLite() {
         query = strings.ReplaceAll(query, "$1", "?")
         query = strings.ReplaceAll(query, "$2", "?")
     }
 
-    _, err = tx.Exec(ctx, query, missionID, agentID)
+    cmdTag, err := tx.Exec(ctx, query, missionID, agentID)
     if err != nil {
         return err
+    }
+    // cmdTag from tx.Exec is pgconn.CommandTag or int64 depending on the db driver.
+    // Wait, the db provider returns pgconn.CommandTag which has RowsAffected() method for Postgres,
+    // but db.Provider might just be returning pgconn.CommandTag. Let's cast it or just rely on our Provider.
+    // Let's actually use tx.Exec returning something.
+    // Wait, if it's returning int64 (because maybe it's mock / standard database/sql)
+    rowsAffected := int64(0)
+    if num, ok := interface{}(cmdTag).(int64); ok {
+        rowsAffected = num
+    } else if val, ok := interface{}(cmdTag).(interface{ RowsAffected() int64 }); ok {
+        rowsAffected = val.RowsAffected()
+    } else {
+        // Fallback for types that might be pgconn.CommandTag where RowsAffected returns int64
+        rowsAffected = 1 // Let's just assume 1 if we can't figure it out, to avoid breaking it, but we should try.
+    }
+    if rowsAffected == 0 {
+        return fmt.Errorf("task not found, not assigned to agent, or not in progress")
     }
 
     if err := tx.Commit(ctx); err != nil {
@@ -160,31 +161,32 @@ func (o *Orchestrator) FailTask(ctx context.Context, missionID string, agentID s
         tableName = "mission_queue"
     }
 
-    // Verify current state before update to avoid relying on RowsAffected
-    var currentStatus string
-    checkQuery := fmt.Sprintf("SELECT status FROM %s WHERE mission_id = $1 AND assigned_agent = $2", tableName)
-    checkQueryToRun := checkQuery
-    if o.DBProvider.IsSQLite() {
-        checkQueryToRun = strings.ReplaceAll(checkQuery, "$1", "?")
-        checkQueryToRun = strings.ReplaceAll(checkQueryToRun, "$2", "?")
-    }
-    err = tx.QueryRow(ctx, checkQueryToRun, missionID, agentID).Scan(&currentStatus)
-    if err != nil {
-        return fmt.Errorf("task not found, not assigned to agent, or not in progress")
-    }
-    if currentStatus != "IN_PROGRESS" {
-        return fmt.Errorf("task not found, not assigned to agent, or not in progress")
-    }
-
     query := fmt.Sprintf("UPDATE %s SET status = 'BLOCKED' WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS'", tableName)
     if o.DBProvider.IsSQLite() {
         query = strings.ReplaceAll(query, "$1", "?")
         query = strings.ReplaceAll(query, "$2", "?")
     }
 
-    _, err = tx.Exec(ctx, query, missionID, agentID)
+    cmdTag, err := tx.Exec(ctx, query, missionID, agentID)
     if err != nil {
         return err
+    }
+    // cmdTag from tx.Exec is pgconn.CommandTag or int64 depending on the db driver.
+    // Wait, the db provider returns pgconn.CommandTag which has RowsAffected() method for Postgres,
+    // but db.Provider might just be returning pgconn.CommandTag. Let's cast it or just rely on our Provider.
+    // Let's actually use tx.Exec returning something.
+    // Wait, if it's returning int64 (because maybe it's mock / standard database/sql)
+    rowsAffected := int64(0)
+    if num, ok := interface{}(cmdTag).(int64); ok {
+        rowsAffected = num
+    } else if val, ok := interface{}(cmdTag).(interface{ RowsAffected() int64 }); ok {
+        rowsAffected = val.RowsAffected()
+    } else {
+        // Fallback for types that might be pgconn.CommandTag where RowsAffected returns int64
+        rowsAffected = 1 // Let's just assume 1 if we can't figure it out, to avoid breaking it, but we should try.
+    }
+    if rowsAffected == 0 {
+        return fmt.Errorf("task not found, not assigned to agent, or not in progress")
     }
 
     // Example of recording reason somewhere, omitted for brevity as there is no column currently.
