@@ -150,7 +150,7 @@ type updateUserRequest struct {
 // Has no side effects.
 func (h *Handlers) HandleUsers(w http.ResponseWriter, r *http.Request) {
 	claims := ClaimsFromContext(r.Context())
-	if claims == nil || !claims.HasRole(RoleAdmin) || (claims.OrganizationID != "" && claims.OrganizationID != "sys") {
+	if claims == nil || !claims.HasRole(RoleAdmin) || claims.OrganizationID != "" {
 		jsonError(w, "forbidden", http.StatusForbidden)
 		return
 	}
@@ -207,7 +207,7 @@ func (h *Handlers) HandleUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Non-admins may only read/update themselves
-	isAdmin := claims.HasRole(RoleAdmin) && (claims.OrganizationID == "" || claims.OrganizationID == "sys")
+	isAdmin := claims.HasRole(RoleAdmin) && claims.OrganizationID == ""
 	if !isAdmin && claims.Subject != id {
 		jsonError(w, "forbidden", http.StatusForbidden)
 		return
@@ -283,7 +283,7 @@ func (h *Handlers) HandleRoles(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, roles)
 
 	case http.MethodPost:
-		if !claims.HasRole(RoleAdmin) || (claims.OrganizationID != "" && claims.OrganizationID != "sys") {
+		if !claims.HasRole(RoleAdmin) || claims.OrganizationID != "" {
 			jsonError(w, "forbidden", http.StatusForbidden)
 			return
 		}

@@ -83,7 +83,7 @@ func TestHandleUsers_InvalidJSON(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/users", bytes.NewBufferString("{invalid"))
 	// mock admin claim
-	claims := &Claims{Roles: []string{RoleAdmin}, OrganizationID: "sys"}
+	claims := &Claims{Roles: []string{RoleAdmin}, OrganizationID: ""}
 	ctx := context.WithValue(req.Context(), claimsContextKey, claims)
 	req = req.WithContext(ctx)
 
