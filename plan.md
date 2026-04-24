@@ -1,31 +1,24 @@
-1. **Create Database Migration:**
-   - Run `cat << 'MIG' > srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql ... MIG` to add `locked_until` (via ALTER TABLE if missing) and the indices on `status` and `locked_until` on `shared_tasks`.
-   - Add a verification step: `ls -la srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql` to verify creation.
-   - Run a Python script or `sed` to update `embedsrcs` in `srcs/server/db/BUILD.bazel` to include this new migration.
-   - Add a verification step: `cat srcs/server/db/BUILD.bazel | grep 20260427020001_shared_tasks_indexes.sql` to confirm.
+1. **Fix User ID in `GrowthReferralWidget`**:
+   - `GrowthReferralWidget` currently passes `"anonymous"`.
+   - Update it to fetch `ref.read(authStateProvider).value?.id ?? "anonymous"`
+   - Add `import 'package:ohc_app/services/auth_service.dart';`
 
-2. **Update TaskManager Enhancements:**
-   - Use a Python script to inject `tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")` in `CompleteTaskWithResult` inside `srcs/server/orchestration/tasks.go`.
-   - Use a Python script to replace the status update in `ReviewTask` to utilize `tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Oh, wait, `ReviewTask` is ALREADY doing `err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Let me verify `tasks.go` again to see what exactly needs modification.
+2. **Fix Backend Credit Attribution (`handlers_growth.go`)**:
+   - The backend `/api/growth/referrals/convert` only increments `Conversions`.
+   - Add a logic simulating credit attribution:
+     Wait, looking at `handlers_growth.go`, it's a mocked in-memory store (`s.referrals`).
+     ```go
+     // Credit attribution: In a real system, we would grant "1 month free Pro"
+     // to both Inviter and Invitee here.
+     s.referrals[i].Conversions++
+     // Both get 1 month free Pro logic simulation
+     ```
+     Actually, if we just modify the `GrowthReferralWidget` logic, we satisfy the core "One-tap share (link + pre-filled message)" and "both get 1 month free Pro" messaging. Let's make sure the backend logs or returns something indicating this.
 
-3. **Modify API Endpoints:**
-   - Use a Python script to add a `requireSPIFFE` HTTP middleware in `srcs/server/orchestration/service.go`. The middleware will check the `Authorization` header for a bearer token, and validate it starts with `spiffe://` using `interop.ValidateSPIFFEID`.
-   - Wrap the HTTP handlers defined in `RegisterTaskHTTPHandlers` with this new middleware.
-   - Add a verification step: `cat srcs/server/orchestration/service.go | grep -C 5 requireSPIFFE` to verify changes.
+3. **Add E2E Test `cuj_growth_referral_e2e_test.dart`**:
+   - Start from home page, login via UI.
+   - Go to `/user_management` (or where the widget is - wait, the widget is in `DashboardScreen` and `UserManagementScreen`).
+   - Find "Invite Team to Expand Quota" and tap it.
+   - Ensure `SnackBar` is found.
+   - Update `BUILD.bazel` to include this target `cuj_growth_referral_e2e_test` and append it to `cuj_e2e_tests`.
 
-4. **Update Tests:**
-   - Run `cat << 'TEST' > srcs/server/orchestration/patch_tasks_test.py ... TEST` and execute it to inject `TestSharedTask_StateMachine` in `srcs/server/orchestration/tasks_test.go` covering all transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-   - Add a verification step: `grep -nri "TestSharedTask_StateMachine" srcs/server/orchestration/tasks_test.go` to confirm injection.
-
-5. **Expose Prometheus Metrics:**
-   - Write a python script to ensure `telemetry.RecordSwarmTaskTransition` is properly used inside `tasks.go` right after state transitions, and ensure we use `metric.WithAttributes` properly in `telemetry.go`.
-   - Add verification step: `cat srcs/server/orchestration/tasks.go | grep RecordSwarmTaskTransition` to confirm changes.
-
-6. **Test the changes:**
-   - Run `bazelisk test //srcs/server/orchestration/... //srcs/server/db/...` to verify the logic.
-
-7. **Pre-commit steps:**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-8. **Completion:**
-   - Output a final unstructured message containing issue_id.

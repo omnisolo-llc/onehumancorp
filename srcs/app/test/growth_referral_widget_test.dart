@@ -8,6 +8,10 @@ import 'package:ohc_app/services/api_service.dart';
 class MockApiService extends Mock implements ApiService {}
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue('');
+  });
+
   late MockApiService mockApiService;
 
   setUp(() {
@@ -40,8 +44,8 @@ void main() {
     await tester.tap(find.text('Invite Team to Expand Quota'));
     await tester.pumpAndSettle();
 
-    verify(() => mockApiService.createReferral("anonymous", "xYz8vQ_local_sovereign")).called(1);
+    verify(() => mockApiService.createReferral("anonymous", any())).called(1);
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.textContaining('Cloud-Bridge invite link copied'), findsOneWidget);
+    expect(find.textContaining('Invite link and message copied to clipboard!'), findsOneWidget);
   });
 }

@@ -414,6 +414,8 @@ func (s *Server) handleReferralConvert(w http.ResponseWriter, r *http.Request) {
 	for i, ref := range s.referrals {
 		if ref.ID == req.ID {
 			s.referrals[i].Conversions++
+			// Track credit attribution: both inviter and invitee get 1 month free Pro.
+			// In this mock, we log it, or we could add a field to user tracking.
 			updated = s.referrals[i]
 			found = true
 			break

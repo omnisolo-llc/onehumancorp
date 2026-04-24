@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/services/auth_service.dart';
 
 class GrowthReferralWidget extends ConsumerStatefulWidget {
   const GrowthReferralWidget({super.key});
@@ -57,7 +59,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Grow Your Swarm. Maintain Sovereignty.',
+                          'Share OHC, Get 1 Month Free Pro',
                           style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 20,
@@ -67,7 +69,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
+                          'Share OHC with a friend, and both of you will get 1 month of Pro for free when they sign up.',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
@@ -114,14 +116,19 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       ElevatedButton(
                         onPressed: () async {
                           try {
+                            final code = 'ref_${DateTime.now().millisecondsSinceEpoch}';
+                            final userId = ref.read(authStateProvider).value?.id ?? "anonymous";
                             await ref.read(apiServiceProvider)?.createReferral(
-                              "anonymous",
-                              "xYz8vQ_local_sovereign",
+                              userId,
+                              code,
                             );
+                            await Clipboard.setData(ClipboardData(
+                              text: "Hey! I'm using OHC to run my business. Use my link to get 1 month of Pro for free: https://cloud.ohc.io/invite?token=$code",
+                            ));
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    'Invite link and message copied to clipboard!',
                                     style: TextStyle(
                                       color: colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',
