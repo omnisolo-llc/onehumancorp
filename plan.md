@@ -1,35 +1,20 @@
-# Problem Description
-
-The problem requests replacing the current `Business Setup Wizard` logic with a simplified version.
-The new wizard should have:
-1. **Welcome screen**: Beautiful hero animation, one-line value proposition ("Your business, live in minutes").
-2. **Business type**: Single-tap selection from friendly categories with large icons: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other. No dropdowns.
-3. **Business name & description**: Large-input text fields. AI auto-suggests a tagline and short description based on the business name. User can accept or edit.
-4. **What do you sell?**: Multi-select tiles: "Physical products", "Digital downloads", "Services / appointments", "Food & beverages", "Subscriptions". Friendly labels only.
-5. **How do you want to receive payments?**: Card tiles — Online only, In-person (POS), Both, Skip for now. Show estimated time to first payment next to each.
-6. **Administrator account**: Name, email, password (strength meter), optional SSO (Google / Apple). No username, no security questions.
-7. **Review & Launch**: Summary card with a pulsing "Launch My Business →" CTA. Clicking it provisions the tenant, selects a starter website template, pre-seeds AI agents, and lands the user in the dashboard with a "Your business is setting up…" animated progress overlay.
-
-# Proposed Plan
-
-1. **Update Frontend UI & State**
-   - Refactor `src/app/lib/screens/business_setup_wizard_screen.dart` to match the 7 new steps (Welcome, Business type, Business name & description, What do you sell, Payment preference, Administrator account, Review & Launch).
-   - Use `AnimatedSwitcher` to animate between the steps.
-   - Use `GlassCard` and OHC Premium Tokens (Glassmorphism, `Outfit`/`Inter` fonts) for styling.
-   - Update `BusinessSetupState` to store fields like `businessType`, `businessDescription`, `whatYouSell`, `paymentMethod`, etc.
-   - Make all screens responsive (down to 375px) without horizontal scrolling.
-
-2. **Backend API updates**
-   - To resume state, the system currently expects a `wizardConfigureRequest` to handle configuring. But the wizard state needs an endpoint `/api/wizard/state/save`? Wait, the problem says "All wizard state must be persisted to the OHC backend so resuming from another device works seamlessly. Implement backend API endpoints if they do not already exist."
-   - The backend `dashboard` server handles wizard config currently. I will add `handleWizardStateSave`, `handleWizardStateLoad` to `src/server/dashboard/handlers_wizard.go` and wire them up in `src/server/dashboard/server.go`.
-   - Add a `handleWizardStateSave` handler which accepts a JSON payload of the wizard state and stores it in memory (or Redis, though `dashboard` server is simpler, I'll store it in a `wizardState` map in `Server`). Or wait, `Server` has `settings.Extras`. We can just store wizard progress in `settings.Extras`. Let's just create a quick endpoint for `state/save` and `state` (load).
-
-3. **Cleanup unused code**
-   - Delete `src/server/lib/features/onboarding/business_setup_wizard.dart` and `business_setup_wizard_test.dart` as they are Flutter UI mockups misplaced in the `server` tree and unused. Or I will just replace `src/app/lib/screens/business_setup_wizard_screen.dart` and delete the server ones.
-
-4. **Testing**
-   - Write unit tests for `src/app/lib/screens/business_setup_wizard_screen.dart` (if needed, replace existing tests like `wizard_screen_test.dart` or add `business_setup_wizard_test.dart` in `src/app/lib/screens/`).
-   - Write Go E2E tests for the flow in `src/tests/e2e/e2e_business_setup_test.go`. The test must start from home page after login, navigate the wizard, select options, and assert the final API call or UI state.
-
-5. **Pre-commit checks**
-   - Call `pre_commit_instructions` and follow the required validation, verification, formatting, and tests (`bazelisk test //...`).
+1. **Explore & Analyze Onboarding Flow Requirements**: Understand the required changes based on the user instruction. The user instruction mentions "Sign-Up & Account Creation" as step 1. The instruction says: "Frictionless registration — email + password, or one-tap Google / Apple SSO. Email verification with a prominent 'Resend' link. Auto-redirect to the business setup wizard on first login." We will build the email + password flow with simulated SSO and email verification states.
+2. **Backend: Add `/api/auth/register` Endpoint**:
+   - Create a `HandleRegister` method in `src/server/auth/handlers.go`.
+   - Update `src/server/dashboard/server.go` to route POST `/api/auth/register` to `HandleRegister`.
+   - The handler should call `store.CreateUser` with `RoleAdmin`.
+   - If successful, it should immediately issue a JWT token like the `login` endpoint, so the user is logged in automatically.
+3. **Frontend: Update `AuthService`**:
+   - Add `register(String email, String password)` to `AuthService` and `AuthNotifier` in `src/app/lib/services/auth_service.dart`.
+4. **Frontend: Create `SignUpScreen`**:
+   - Create `src/app/lib/screens/signup_screen.dart` to allow users to sign up. Modeled after `login_screen.dart`.
+   - Handle the API call to `/api/auth/register`.
+   - Add UI states for "Email verification" (simulate sending the email and a "Resend" button, but for this non-blocking flow, proceed on successful backend creation).
+5. **Frontend: Update Routing & Auth Flow**:
+   - Update `src/app/lib/router.dart` to include `/signup`.
+   - Ensure a "Create an account" link is on the `LoginScreen`.
+   - Add logic so new users go to `/business_setup` instead of `/dashboard`. (To do this simply, `/signup` can push to `/business_setup` on success).
+6. **E2E Testing**:
+   - Create `src/app/e2e/signup_ux.spec.ts` to test the end-to-end signup flow.
+   - Run tests to verify the UI.
+7. **Pre-commit Checks**: Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.

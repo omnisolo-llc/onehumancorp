@@ -64,17 +64,83 @@ class BusinessSetupState {
 
 class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
-  BusinessSetupState build() => const BusinessSetupState();
+  BusinessSetupState build() {
+    // Attempt cross-device resume from backend config
+    _loadStateFromBackend();
+    return const BusinessSetupState();
+  }
+
+  Future<void> _loadStateFromBackend() async {
+    try {
+      final user = ref.read(authStateProvider).valueOrNull;
+      final baseUrl = ref.read(backendUrlProvider);
+      if (user != null && baseUrl.isNotEmpty) {
+        final res = await http.get(
+          Uri.parse('$baseUrl/api/wizard/status'),
+          headers: {'Authorization': 'Bearer ${user.token}'},
+        );
+        if (res.statusCode == 200) {
+          final json = jsonDecode(res.body);
+          if (json['extras'] != null) {
+            final extras = json['extras'] as Map<String, dynamic>;
+            state = state.copyWith(
+              businessType: extras['business_type'] ?? state.businessType,
+              companyName: extras['company_name'] ?? state.companyName,
+              businessDescription: extras['business_description'] ?? state.businessDescription,
+              whatYouSell: (extras['what_you_sell'] as String?)?.split(',').where((s) => s.isNotEmpty).toList() ?? state.whatYouSell,
+              paymentMethod: extras['payment_method'] ?? state.paymentMethod,
+              adminName: extras['admin_name'] ?? state.adminName,
+              adminEmail: extras['admin_email'] ?? state.adminEmail,
+            );
+            if (extras['business_setup_step'] != null) {
+              state = state.copyWith(step: int.tryParse(extras['business_setup_step'].toString()) ?? state.step);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveStateToBackend() async {
+    try {
+      final user = ref.read(authStateProvider).valueOrNull;
+      final baseUrl = ref.read(backendUrlProvider);
+      if (user != null && baseUrl.isNotEmpty) {
+        final body = {
+          'extras': {
+            'business_type': state.businessType,
+            'company_name': state.companyName,
+            'business_description': state.businessDescription,
+            'what_you_sell': state.whatYouSell.join(','),
+            'payment_method': state.paymentMethod,
+            'admin_name': state.adminName,
+            'admin_email': state.adminEmail,
+            'business_setup_step': state.step.toString(),
+          }
+        };
+        await http.post(
+          Uri.parse('$baseUrl/api/wizard/configure'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        );
+      }
+    } catch (_) {}
+  }
 
   void nextStep() {
     if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
+      _saveStateToBackend();
     }
   }
 
   void prevStep() {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      _saveStateToBackend();
     }
   }
 

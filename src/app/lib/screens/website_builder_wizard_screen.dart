@@ -71,17 +71,84 @@ class WebsiteBuilderState {
 
 class WebsiteBuilderNotifier extends Notifier<WebsiteBuilderState> {
   @override
-  WebsiteBuilderState build() => const WebsiteBuilderState();
+  WebsiteBuilderState build() {
+    _loadStateFromBackend();
+    return const WebsiteBuilderState();
+  }
+
+  Future<void> _loadStateFromBackend() async {
+    try {
+      final user = ref.read(authStateProvider).valueOrNull;
+      final baseUrl = ref.read(backendUrlProvider);
+      if (user != null && baseUrl.isNotEmpty) {
+        final res = await http.get(
+          Uri.parse('$baseUrl/api/wizard/status'),
+          headers: {'Authorization': 'Bearer ${user.token}'},
+        );
+        if (res.statusCode == 200) {
+          final json = jsonDecode(res.body);
+          if (json['extras'] != null) {
+            final extras = json['extras'] as Map<String, dynamic>;
+            state = state.copyWith(
+              template: extras['website_template'] ?? state.template,
+              brandColor: extras['website_brand_color'] ?? state.brandColor,
+              logo: extras['website_logo'] ?? state.logo,
+              productName: extras['website_first_product_name'] ?? state.productName,
+              productPrice: extras['website_first_product_price'] ?? state.productPrice,
+              productDescription: extras['website_first_product_description'] ?? state.productDescription,
+              productPhoto: extras['website_first_product_photo'] ?? state.productPhoto,
+              domainChoice: extras['website_domain_choice'] ?? state.domainChoice,
+            );
+            if (extras['website_builder_step'] != null) {
+              state = state.copyWith(step: int.tryParse(extras['website_builder_step'].toString()) ?? state.step);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveStateToBackend() async {
+    try {
+      final user = ref.read(authStateProvider).valueOrNull;
+      final baseUrl = ref.read(backendUrlProvider);
+      if (user != null && baseUrl.isNotEmpty) {
+        final body = {
+          'extras': {
+            'website_template': state.template,
+            'website_brand_color': state.brandColor,
+            'website_logo': state.logo,
+            'website_first_product_name': state.productName,
+            'website_first_product_price': state.productPrice,
+            'website_first_product_description': state.productDescription,
+            'website_first_product_photo': state.productPhoto,
+            'website_domain_choice': state.domainChoice,
+            'website_builder_step': state.step.toString(),
+          }
+        };
+        await http.post(
+          Uri.parse('$baseUrl/api/wizard/configure'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        );
+      }
+    } catch (_) {}
+  }
 
   void nextStep() {
     if (state.step < 4) {
       state = state.copyWith(step: state.step + 1);
+      _saveStateToBackend();
     }
   }
 
   void prevStep() {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      _saveStateToBackend();
     }
   }
 
