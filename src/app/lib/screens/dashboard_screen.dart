@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/help/tooltip_registry.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -29,7 +30,7 @@ class DashboardScreen extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: OhcTooltip(message: TooltipRegistry.get('dashboard_title'), child: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold))),
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
@@ -128,6 +129,46 @@ class _DashboardContent extends StatelessWidget {
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ],
+        ),
+
+        // --- PENDING ACTIONS BANNER ---
+        Container(
+          margin: const EdgeInsets.only(bottom: 24),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => context.go('/wizards/pending-actions'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_amber, color: Colors.orange),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Pending Actions", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
+                          const Text("Your AI agents have proposed high-risk actions that need your approval.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    FilledButton(
+                      onPressed: () => context.go('/wizards/pending-actions'),
+                      style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                      child: const Text('Review Now'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
         // --- UPGRADE BANNER ---
         Container(
@@ -500,13 +541,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Decrease $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: widget.count > 0 && !_isScaling
-                                  ? () => _scaleTo(widget.count - 1)
-                                  : null,
-                              tooltip: 'Fire Agent',
+                            child: OhcTooltip(
+                              message: TooltipRegistry.get('dashboard_fire'),
+                              child: IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, size: 28),
+                                color: colors.primary,
+                                onPressed: widget.count > 0 && !_isScaling
+                                    ? () => _scaleTo(widget.count - 1)
+                                    : null,
+                              ),
                             ),
                           ),
                           SizedBox(
@@ -534,13 +577,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Increase $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: !_isScaling
-                                  ? () => _scaleTo(widget.count + 1)
-                                  : null,
-                              tooltip: 'Hire Agent',
+                            child: OhcTooltip(
+                              message: TooltipRegistry.get('dashboard_hire'),
+                              child: IconButton(
+                                icon: const Icon(Icons.add_circle_outline, size: 28),
+                                color: colors.primary,
+                                onPressed: !_isScaling
+                                    ? () => _scaleTo(widget.count + 1)
+                                    : null,
+                              ),
                             ),
                           ),
                             ],

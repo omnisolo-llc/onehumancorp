@@ -1,24 +1,21 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03);">
+# Hybrid MCP RAG Protocol - Phase 2 (Synthesis)
 
-# Hybrid MCP RAG Protocol - Synthesis
+## 1. Overview
+This document specifies the technical design for the Local-to-Cloud Context Synchronizer, allowing the Standalone Agent to delegate complex tasks to the Cloud via the `agent_missions` table.
 
-## Introduction
-This document defines the schema and Go interface requirements for bridging the Local SQLite state with the Cloud PostgreSQL state.
-
-## Schema Requirements
-The `agent_missions` table in the SQLite daemon must be augmented with additional columns to facilitate synchronization.
+## 2. DB Schema Definition (SQLite)
+To support task escalation, we need to extend the local `agent_missions` SQLite table. This tracks the synchronization state of tasks delegated to the cloud.
 
 ```sql
--- SQLite Schema additions for Standalone Agent
-ALTER TABLE agent_missions ADD COLUMN synced_to_cloud BOOLEAN DEFAULT FALSE;
-ALTER TABLE agent_missions ADD COLUMN cloud_mission_id TEXT;
-ALTER TABLE agent_missions ADD COLUMN sync_error TEXT;
-ALTER TABLE agent_missions ADD COLUMN last_synced_at TIMESTAMP;
+-- Migration: Add cloud sync columns to agent_missions
+ALTER TABLE agent_missions ADD COLUMN cloud_sync_status VARCHAR(50) DEFAULT 'LOCAL_ONLY';
+ALTER TABLE agent_missions ADD COLUMN cloud_mission_id TEXT UNIQUE;
+ALTER TABLE agent_missions ADD COLUMN sync_error_details TEXT;
+ALTER TABLE agent_missions ADD COLUMN last_sync_attempt_at TIMESTAMP;
 ```
 
-These fields allow the daemon to track which tasks have been escalated, track errors, and receive the ID returned from the Cloud.
-
-## Go Interfaces
+## 3. Go Interfaces for Synchronizer
+The local daemon requires interfaces to manage the sync lifecycle between SQLite and the Cloud REST API.
 
 ```go
 package sync
@@ -28,75 +25,78 @@ import (
 	"time"
 )
 
-// MissionPayload defines the structure of the task payload
-type MissionPayload struct {
-	Role    string `json:"role"`
-	Task    string `json:"task"`
-	Context string `json:"context,omitempty"`
+// MissionContext defines the payload structure for injecting tasks.
+type MissionContext struct {
+	Role         string            `json:"role"`
+	Task         string            `json:"task"`
+	ContextData  string            `json:"context_data,omitempty"`
+	Dependencies map[string]string `json:"dependencies,omitempty"`
 }
 
-// LocalMission represents a row in the local agent_missions table
-type LocalMission struct {
-	ID             string
-	Status         string
-	Payload        MissionPayload
-	CreatedAt      time.Time
-	SyncedToCloud  bool
-	CloudMissionID string
-	SyncError      string
-	LastSyncedAt   time.Time
+// LocalAgentMission maps to a row in the agent_missions table.
+type LocalAgentMission struct {
+	ID                  string
+	Status              string
+	Payload             MissionContext
+	CreatedAt           time.Time
+	CloudSyncStatus     string
+	CloudMissionID      *string
+	SyncErrorDetails    *string
+	LastSyncAttemptAt   *time.Time
 }
 
-// CloudSynchronizer handles pushing local missions to the cloud and pulling updates
-type CloudSynchronizer interface {
-	// PushPendingMissions finds tasks marked for escalation and sends them to the cloud
-	PushPendingMissions(ctx context.Context) error
+// CloudMissionSynchronizer manages the background synchronization protocol.
+type CloudMissionSynchronizer interface {
+	// EscalatePendingTasks scans agent_missions for tasks requiring cloud escalation
+	// and pushes them to the Cloud REST endpoint.
+	EscalatePendingTasks(ctx context.Context) error
 
-	// PullMissionUpdates polls the cloud for updates to previously escalated tasks
-	PullMissionUpdates(ctx context.Context) error
+	// SyncTaskStatus polls the Cloud for status updates on escalated tasks
+	// and updates the local agent_missions table accordingly.
+	SyncTaskStatus(ctx context.Context) error
 }
 
-// LocalRepository defines the interface for interacting with the local SQLite agent_missions table
-type LocalRepository interface {
-	GetPendingSync(ctx context.Context, limit int) ([]LocalMission, error)
-	MarkSynced(ctx context.Context, localID string, cloudID string) error
-	MarkSyncError(ctx context.Context, localID string, syncError string) error
-	GetActiveEscalations(ctx context.Context) ([]LocalMission, error)
-	UpdateLocalStatus(ctx context.Context, localID string, newStatus string) error
+// MissionRepository provides CRUD operations for agent_missions.
+type MissionRepository interface {
+	GetPendingEscalations(ctx context.Context, batchSize int) ([]LocalAgentMission, error)
+	UpdateSyncState(ctx context.Context, localID string, cloudID string, status string) error
+	RecordSyncError(ctx context.Context, localID string, err string) error
 }
 ```
 
-## API Contract (Cloud REST Endpoint)
-The Local Synchronizer will communicate with the Cloud via REST.
+## 4. API Contract (Cloud REST Endpoint)
+The Local Synchronizer pushes tasks to the Cloud using the following REST API contract.
 
-**Endpoint:** `POST /api/v1/missions/escalate`
+### 4.1 Escalate Mission
+**Endpoint:** `POST /api/v2/missions/escalate`
 **Request Payload:**
 ```json
 {
-  "local_id": "m-local-uuid",
-  "payload": {
+  "local_mission_id": "uuid-local-1234",
+  "mission_context": {
     "role": "data_analysis",
-    "task": "Compute embeddings for local dump",
-    "context": "<sanitized context payload>"
+    "task": "Compute RAG embeddings for offline dataset",
+    "context_data": "<base64_encoded_dump>"
   }
 }
 ```
 
-**Response Payload:**
+**Response Payload (Success):**
 ```json
 {
-  "cloud_id": "m-cloud-uuid",
-  "status": "ACCEPTED"
+  "cloud_mission_id": "uuid-cloud-5678",
+  "status": "QUEUED"
 }
 ```
 
-**Endpoint:** `GET /api/v1/missions/{cloud_id}/status`
+### 4.2 Poll Mission Status
+**Endpoint:** `GET /api/v2/missions/{cloud_mission_id}/status`
 **Response Payload:**
 ```json
 {
-  "cloud_id": "m-cloud-uuid",
-  "status": "DONE",
-  "result": "<computed result from k8s pod>"
+  "cloud_mission_id": "uuid-cloud-5678",
+  "status": "COMPLETED",
+  "result_artifact_url": "https://storage.onehumancorp.com/results/uuid-cloud-5678.zip",
+  "completed_at": "2026-04-13T22:00:00Z"
 }
 ```
-</div>
