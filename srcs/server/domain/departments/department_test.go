@@ -75,12 +75,8 @@ func TestAgentDepartmentIntegration(t *testing.T) {
 	hub := &MockHub{}
 
 	// Initialize Departments
-	opsDept := &OperationsDepartment{
-		BaseDepartment: NewBaseDepartment("ops-1", DepartmentOperations, memoryLayer, reviewCenter, "agent-manager"),
-	}
-	csDept := &CustomerSuccessDepartment{
-		BaseDepartment: NewBaseDepartment("cs-1", DepartmentSuccess, memoryLayer, reviewCenter, "agent-ambassador"),
-	}
+	opsDept := CreateDepartment("ops-1", DepartmentOperations, memoryLayer, reviewCenter, "agent-manager")
+	csDept := CreateDepartment("cs-1", DepartmentSuccess, memoryLayer, reviewCenter, "agent-ambassador")
 
 	opsDept.Start(ctx, hub)
 	csDept.Start(ctx, hub)

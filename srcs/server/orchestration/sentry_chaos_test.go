@@ -3,6 +3,7 @@ package orchestration
 import (
 	"context"
 	"fmt"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"os"
 	"path/filepath"
 	"testing"
@@ -103,4 +104,89 @@ func TestSentry_TeamMesh_Corruption(t *testing.T) {
 	worker.ingestAgentMemories(ctx)
 
 	t.Log("Successfully verified ML-Resilience: AutoDreamWorker gracefully handled degraded IO without panic.")
+}
+
+// TestSwarmTaskBurstMetrics verifies that high-throughput Swarm tasks
+// correctly emit deployment-mode-aware metrics in both Cloud and Standalone modes.
+func TestSwarmTaskBurstMetrics(t *testing.T) {
+	// Temporarily override the metric functions for verification
+	originalFunc := telemetry.BufferMetricFunc
+	defer func() { telemetry.BufferMetricFunc = originalFunc }()
+
+	var metrics []string
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		metrics = append(metrics, metricType)
+		return nil
+	}
+
+	t.Run("Standalone Swarm Burst Metrics", func(t *testing.T) {
+		t.Setenv("OHC_MULTITENANT", "false")
+		metrics = []string{} // Reset
+
+		ctx := context.Background()
+		// Simulate swarm operations
+		telemetry.RecordSwarmTaskQueueLength(ctx, 10, getDeploymentMode())
+		telemetry.RecordSwarmTaskProcessingLatency(ctx, 45.2, getDeploymentMode())
+		telemetry.RecordSQLiteRetryEvent(ctx, "update_task", getDeploymentMode())
+
+		foundQueue := false
+		foundLatency := false
+		foundContention := false
+		for _, m := range metrics {
+			if m == "swarm_task_queue_length" {
+				foundQueue = true
+			}
+			if m == "swarm_task_processing_latency" {
+				foundLatency = true
+			}
+			if m == "sqlite_retry_event" {
+				foundContention = true
+			}
+		}
+
+		if !foundQueue {
+			t.Error("Missing swarm_task_queue_length metric in standalone mode")
+		}
+		if !foundLatency {
+			t.Error("Missing swarm_task_processing_latency metric in standalone mode")
+		}
+		if !foundContention {
+			t.Error("Missing sqlite_retry_event metric in standalone mode")
+		}
+	})
+
+	t.Run("Cloud Swarm Burst Metrics", func(t *testing.T) {
+		t.Setenv("OHC_MULTITENANT", "true")
+		metrics = []string{} // Reset
+
+		ctx := context.Background()
+		telemetry.RecordSwarmTaskQueueLength(ctx, 5, getDeploymentMode())
+		telemetry.RecordSwarmTaskProcessingLatency(ctx, 12.5, getDeploymentMode())
+		telemetry.RecordTaskClaimContention(ctx, getDeploymentMode())
+
+		foundQueue := false
+		foundLatency := false
+		foundContention := false
+		for _, m := range metrics {
+			if m == "swarm_task_queue_length" {
+				foundQueue = true
+			}
+			if m == "swarm_task_processing_latency" {
+				foundLatency = true
+			}
+			if m == "task_claim_contention" {
+				foundContention = true
+			}
+		}
+
+		if !foundQueue {
+			t.Error("Missing swarm_task_queue_length metric in cloud mode")
+		}
+		if !foundLatency {
+			t.Error("Missing swarm_task_processing_latency metric in cloud mode")
+		}
+		if !foundContention {
+			t.Error("Missing task_claim_contention metric in cloud mode")
+		}
+	})
 }

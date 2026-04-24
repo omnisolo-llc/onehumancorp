@@ -119,7 +119,7 @@ func withSipRetry(ctx context.Context, op func() error) error {
 
 		if err != nil && (strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY")) {
 			telemetry.RecordSQLiteLockContention(ctx, "exec/query")
-			telemetry.RecordSQLiteRetryEvent(ctx, "retry")
+			telemetry.RecordSQLiteRetryEvent(ctx, "retry", getDeploymentMode())
 		}
 
 		// Optimization: Avoid long exponential backoff retries when the DB connection is explicitly closed,
@@ -1470,4 +1470,11 @@ func (s *SIPDB) invalidateCache(ctx context.Context, key string) {
 		s.localCache.Delete(key)
 		s.cacheExpirations.Delete(key)
 	}
+}
+
+func getDeploymentMode() string {
+	if os.Getenv("OHC_MULTITENANT") == "true" {
+		return "cloud"
+	}
+	return "standalone"
 }

@@ -1,0 +1,35 @@
+{
+  "title": "Swarm Health & Efficiency",
+  "panels": [
+    {
+      "title": "Task Queue Depth (Cloud vs Standalone)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (deployment_mode) (ohc_swarm_task_queue_length)"
+        }
+      ]
+    },
+    {
+      "title": "Swarm Job Processing Latency Distribution",
+      "type": "heatmap",
+      "targets": [
+        {
+          "expr": "rate(ohc_swarm_task_processing_latency_ms_bucket[5m])"
+        }
+      ]
+    },
+    {
+      "title": "Database Lock Contention (SQLite vs Postgres)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum by (deployment_mode) (rate(ohc_sqlite_retry_event_total[5m]))"
+        },
+        {
+          "expr": "sum by (deployment_mode) (rate(ohc_task_claim_contention_total[5m]))"
+        }
+      ]
+    }
+  ]
+}

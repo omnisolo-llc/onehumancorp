@@ -272,7 +272,7 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	}
 
 	// Record +1 delta to the queue length gauge.
-	telemetry.RecordSwarmTaskQueueLength(ctx, 1)
+	telemetry.RecordSwarmTaskQueueLength(ctx, 1, getDeploymentMode())
 
 	// Broadcast task creation
 	if tm.mesh != nil {
@@ -549,7 +549,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
-	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
+	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS, getDeploymentMode())
 
 	if currentStatus == statemachine.StateCompleted {
 		return errors.New("task already completed")
@@ -950,7 +950,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	// Record -N delta to the queue length gauge for every successfully claimed task.
 	if len(claimedTasks) > 0 {
-		telemetry.RecordSwarmTaskQueueLength(ctx, -len(claimedTasks))
+		telemetry.RecordSwarmTaskQueueLength(ctx, -len(claimedTasks), getDeploymentMode())
 	}
 
 	for _, task := range claimedTasks {

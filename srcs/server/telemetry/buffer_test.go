@@ -99,7 +99,7 @@ func TestBufferMetricFunc(t *testing.T) {
 	}
 	called = false
 
-	RecordSQLiteRetryEvent(ctx, "write")
+	RecordSQLiteRetryEvent(ctx, "write", "standalone")
 	if !called {
 		t.Errorf("expected buffer call")
 	}
@@ -129,13 +129,13 @@ func TestBufferMetricFunc(t *testing.T) {
 	}
 	called = false
 
-	RecordSwarmTaskQueueLength(ctx, 3)
+	RecordSwarmTaskQueueLength(ctx, 3, "standalone")
 	if !called {
 		t.Errorf("expected buffer call")
 	}
 	called = false
 
-	RecordSwarmTaskProcessingLatency(ctx, 150)
+	RecordSwarmTaskProcessingLatency(ctx, 150, "standalone")
 	if !called {
 		t.Errorf("expected buffer call")
 	}

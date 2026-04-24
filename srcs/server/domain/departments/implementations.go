@@ -5,21 +5,22 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"github.com/onehumancorp/mono/srcs/server/orchestration"
 )
 
 var tracer = otel.Tracer("onehumancorp/mono/srcs/server/domain/departments")
 
 // BaseDepartment provides common functionality for departments.
 type BaseDepartment struct {
-	id         string
-	deptType   DepartmentType
-	hub        HubPublisher
-	memory     MemoryLayer
-	reviewCtr  ReviewCenterLayer
-	agentID    string
+	id        string
+	deptType  DepartmentType
+	hub       HubPublisher
+	memory    MemoryLayer
+	reviewCtr ReviewCenterLayer
+	agentID   string
 }
 
 func NewBaseDepartment(id string, deptType DepartmentType, memory MemoryLayer, reviewCtr ReviewCenterLayer, agentID string) *BaseDepartment {
@@ -135,4 +136,50 @@ func (d *CustomerSuccessDepartment) HandleEvent(ctx context.Context, event orche
 		return d.EmitDraftAction(ctx, draft)
 	}
 	return nil
+}
+
+// BusinessAdvisoryDepartment handles business health context.
+type BusinessAdvisoryDepartment struct {
+	*BaseDepartment
+}
+
+func (d *BusinessAdvisoryDepartment) RetrieveMemoryContext(ctx context.Context, query string) (*MemoryContext, error) {
+	ctx, span := tracer.Start(ctx, "BusinessAdvisoryDepartment.RetrieveMemoryContext")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("query", query))
+
+	// Delegate to base memory layer
+	baseCtx, err := d.memory.Retrieve(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	queueLen := telemetry.GetSwarmTaskQueueLength()
+	queueContext := fmt.Sprintf("\nCurrent Swarm Queue Length: %d", queueLen)
+
+	if baseCtx == nil {
+		baseCtx = &MemoryContext{
+			Context: queueContext,
+		}
+	} else {
+		baseCtx.Context += queueContext
+	}
+
+	return baseCtx, nil
+}
+
+// CreateDepartment is a factory function to instantiate the correct department based on type.
+func CreateDepartment(id string, deptType DepartmentType, memory MemoryLayer, reviewCtr ReviewCenterLayer, agentID string) Department {
+	base := NewBaseDepartment(id, deptType, memory, reviewCtr, agentID)
+	switch deptType {
+	case DepartmentOperations:
+		return &OperationsDepartment{BaseDepartment: base}
+	case DepartmentSuccess:
+		return &CustomerSuccessDepartment{BaseDepartment: base}
+	case DepartmentAdvisory:
+		return &BusinessAdvisoryDepartment{BaseDepartment: base}
+	default:
+		return base
+	}
 }

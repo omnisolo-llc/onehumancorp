@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,6 +23,7 @@ import (
 )
 
 var (
+	currentSwarmTaskQueueLength      atomic.Int64
 	IdentityVerificationSuccessTotal metric.Int64Counter
 	IdentityVerificationFailureTotal metric.Int64Counter
 	SyncConflictsResolvedTotal       metric.Int64Counter
@@ -1440,7 +1442,7 @@ func RecordSQLiteThrottledRequest(ctx context.Context, operation string) {
 }
 
 // RecordSQLiteRetryEvent increments the counter when a database request executes a retry backoff.
-func RecordSQLiteRetryEvent(ctx context.Context, operation string) {
+func RecordSQLiteRetryEvent(ctx context.Context, operation string, mode string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"operation": operation,
@@ -1454,6 +1456,7 @@ func RecordSQLiteRetryEvent(ctx context.Context, operation string) {
 	}
 	sqliteRetryEventCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("operation", operation),
+		attribute.String("deployment_mode", mode),
 	))
 }
 
@@ -1781,7 +1784,8 @@ func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus 
 }
 
 // RecordSwarmTaskQueueLength adds a delta to the current queue length gauge.
-func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
+func RecordSwarmTaskQueueLength(ctx context.Context, delta int, mode string) {
+	currentSwarmTaskQueueLength.Add(int64(delta))
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"delta": delta,
@@ -1793,11 +1797,11 @@ func RecordSwarmTaskQueueLength(ctx context.Context, delta int) {
 	if swarmTaskQueueLengthGauge == nil {
 		return
 	}
-	swarmTaskQueueLengthGauge.Add(ctx, int64(delta))
+	swarmTaskQueueLengthGauge.Add(ctx, int64(delta), metric.WithAttributes(attribute.String("deployment_mode", mode)))
 }
 
 // RecordSwarmTaskProcessingLatency records the processing time of a task.
-func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
+func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64, mode string) {
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"latency_ms": latencyMS,
@@ -1809,7 +1813,7 @@ func RecordSwarmTaskProcessingLatency(ctx context.Context, latencyMS float64) {
 	if swarmTaskProcessingLatency == nil {
 		return
 	}
-	swarmTaskProcessingLatency.Record(ctx, latencyMS)
+	swarmTaskProcessingLatency.Record(ctx, latencyMS, metric.WithAttributes(attribute.String("deployment_mode", mode)))
 }
 
 // RecordTaskEnqueued increments the counter for tasks enqueued.
@@ -2247,7 +2251,7 @@ func RecordTaskClaimContention(ctx context.Context, mode string) {
 		return
 	}
 	TaskClaimContentionTotal.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("mode", mode),
+		attribute.String("deployment_mode", mode),
 	))
 }
 
@@ -2480,7 +2484,6 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 	TelemetryBatchSizeGauge.Record(ctx, size)
 }
 
-
 // RecordStorageCost records the estimated USD cost of storage operations.
 func RecordStorageCost(ctx context.Context, organizationID string, cost float64) {
 	if StorageCostEstimateUSD == nil {
@@ -2539,4 +2542,9 @@ func RecordApiCallCost(ctx context.Context, organizationID string, cost float64)
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "api_call_cost", string(payloadBytes))
 	}
+}
+
+// GetSwarmTaskQueueLength returns the current tracked swarm queue length.
+func GetSwarmTaskQueueLength() int64 {
+	return currentSwarmTaskQueueLength.Load()
 }

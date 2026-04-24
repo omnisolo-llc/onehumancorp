@@ -2,10 +2,10 @@ package telemetry
 
 import (
 	"context"
-	"testing"
-	"time"
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
+	"testing"
+	"time"
 )
 
 func TestPushMetrics(t *testing.T) {
@@ -39,7 +39,7 @@ func TestRecordOtherMetrics(t *testing.T) {
 	RecordAutoDreamMemoryIngested(ctx, "agent1")
 	RecordAutoDreamMemoryCompressed(ctx, "agent1")
 	RecordTaskQueueLength(ctx, 10)
-	RecordTaskProcessed(ctx, 5 * time.Second)
+	RecordTaskProcessed(ctx, 5*time.Second)
 	RecordSyncEscalation(ctx, 1)
 	RecordSyncLatency(ctx, 1.5)
 	RecordSyncPayloadSize(ctx, 100)
@@ -47,8 +47,8 @@ func TestRecordOtherMetrics(t *testing.T) {
 	RecordSIPSyncPayloadSize(ctx, 200)
 	RecordSyncDaemonBatchSize(ctx, 50)
 	RecordSwarmTaskTransition(ctx, "mission1", "open", "done")
-	RecordSwarmTaskQueueLength(ctx, 1)
-	RecordSwarmTaskProcessingLatency(ctx, 100.5)
+	RecordSwarmTaskQueueLength(ctx, 1, "standalone")
+	RecordSwarmTaskProcessingLatency(ctx, 100.5, "standalone")
 	RecordTaskEnqueued(ctx, "task1")
 	RecordTaskFailed(ctx, "task1", "err1")
 	RecordCacheMiss(ctx, "op1", "type1")
@@ -129,14 +129,14 @@ func TestRecordOtherMetricsUninitialized(t *testing.T) {
 	RecordAutoDreamMemoryIngested(ctx, "agent1")
 	RecordAutoDreamMemoryCompressed(ctx, "agent1")
 	RecordTaskQueueLength(ctx, 10)
-	RecordTaskProcessed(ctx, 5 * time.Second)
+	RecordTaskProcessed(ctx, 5*time.Second)
 	RecordSyncEscalation(ctx, 1)
 	RecordSyncLatency(ctx, 1.5)
 	RecordSyncPayloadSize(ctx, 100)
 	RecordSyncDaemonBatchSize(ctx, 50)
 	RecordSwarmTaskTransition(ctx, "mission1", "open", "done")
-	RecordSwarmTaskQueueLength(ctx, 1)
-	RecordSwarmTaskProcessingLatency(ctx, 100.5)
+	RecordSwarmTaskQueueLength(ctx, 1, "standalone")
+	RecordSwarmTaskProcessingLatency(ctx, 100.5, "standalone")
 	RecordTaskEnqueued(ctx, "task1")
 	RecordTaskFailed(ctx, "task1", "err1")
 	RecordCacheMiss(ctx, "op1", "type1")
@@ -178,7 +178,6 @@ func TestMinimaxMetricsUninitialized(t *testing.T) {
 func TestRecordAgentExecutionTrace(t *testing.T) {
 	// Enable metrics for this test
 	t.Setenv("OHC_TELEMETRY_ENABLED", "true")
-
 
 	InitWithMeter(meter)
 

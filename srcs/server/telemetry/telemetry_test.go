@@ -412,9 +412,8 @@ func TestRecordFunctions(t *testing.T) {
 	})
 
 	t.Run("RecordSQLiteRetryEvent", func(t *testing.T) {
-		RecordSQLiteRetryEvent(ctx, "query")
+		RecordSQLiteRetryEvent(ctx, "query", "standalone")
 	})
-
 
 	t.Run("RecordToolAutoCorrection", func(t *testing.T) {
 		RecordToolAutoCorrection(ctx, "agent-1", "developer", true)
@@ -849,7 +848,6 @@ func TestInitTelemetry_StandaloneOptIn_EnvVar(t *testing.T) {
 	}
 	cleanup()
 }
-
 
 func TestRecordBubblewrapMetrics(t *testing.T) {
 	// Initialize a dummy context
