@@ -1,16 +1,16 @@
 package orchestration
 
-
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	pb "github.com/onehumancorp/mono/srcs/proto"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"google.golang.org/protobuf/proto"
 )
-
 
 type MeshAPI struct {
 	meshTransport MeshTransport
@@ -23,6 +23,7 @@ func NewMeshAPI(mt MeshTransport) *MeshAPI {
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/mesh/broadcast", api.HandleBroadcast)
 	mux.HandleFunc("/api/v1/mesh/broadcast", api.HandleMeshV1Broadcast)
+	mux.HandleFunc("/api/mesh/v2/broadcast", api.HandleMeshV2Broadcast)
 	mux.HandleFunc("/api/mesh/stream", api.HandleStream)
 	mux.HandleFunc("/api/mesh/sync", api.HandleSync)
 	mux.HandleFunc("/api/mesh/publish", api.HandlePublish)
@@ -85,8 +86,6 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We pass the request context here, so that when the client disconnects,
-	// the underlying SubscribeMeshEvents handles the cleanup (which we verified it does via <-ctx.Done())
 	ch, err := api.meshTransport.SubscribeMeshEvents(r.Context(), "tasks")
 	if err != nil {
 		http.Error(w, "Failed to subscribe", http.StatusInternalServerError)
@@ -110,7 +109,6 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 		select {
 		case msg, ok := <-ch:
 			if !ok {
-				// channel closed, meaning underlying context is done or error occurred
 				return
 			}
 			w.Write([]byte("data: "))
@@ -118,7 +116,6 @@ func (api *MeshAPI) HandleStream(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("\n\n"))
 			flusher.Flush()
 		case <-r.Context().Done():
-			// Explicitly return on context cancellation just in case.
 			return
 		}
 	}
@@ -163,7 +160,6 @@ func (api *MeshAPI) HandlePublish(w http.ResponseWriter, r *http.Request) {
 func (api *MeshAPI) HandleConnect(w http.ResponseWriter, r *http.Request) {
 	api.HandleStream(w, r)
 }
-
 
 func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
@@ -220,6 +216,48 @@ func (api *MeshAPI) HandleMeshV1Broadcast(w http.ResponseWriter, r *http.Request
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"success"}`))
+}
+
+func (api *MeshAPI) HandleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleMeshV2Broadcast", time.Since(start)) }()
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(r.Context(), "events")
+	} else {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	bodyBytes, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1024*1024))
+	if err != nil {
+		http.Error(w, "payload too large", http.StatusBadRequest)
+		return
+	}
+
+	var req pb.PublishTeammateMeshEventRequest
+	if err := proto.Unmarshal(bodyBytes, &req); err != nil {
+		http.Error(w, "invalid protobuf payload", http.StatusBadRequest)
+		return
+	}
+
+	if req.GetChannel() == "" {
+		http.Error(w, "invalid channel", http.StatusBadRequest)
+		return
+	}
+
+	// Forward the entire request transparently utilizing wire protobufs
+	if err := api.meshTransport.BroadcastMeshEvent(context.Background(), req.GetChannel(), bodyBytes); err != nil {
+		http.Error(w, "failed to broadcast", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 func (api *MeshAPI) HandleSync(w http.ResponseWriter, r *http.Request) {
