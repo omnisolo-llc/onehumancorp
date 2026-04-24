@@ -48,4 +48,31 @@ func TestCapabilityAuthorizer_Authorize(t *testing.T) {
 	if len(violations) != 3 {
 		t.Errorf("Expected 3 violations, got %d", len(violations))
 	}
+
+	// Test wildcard allowed capability
+	profileWildcardAllow := CapabilityProfile{
+		AllowedCapabilities: []string{"*"},
+	}
+	authorizer.SetProfile("session-wildcard-allow", profileWildcardAllow)
+	err = authorizer.Authorize(ctx, "session-wildcard-allow", "anything", "any-tool")
+	if err != nil {
+		t.Errorf("Expected allowed capability for wildcard, got error: %v", err)
+	}
+
+	// Test wildcard denied capability
+	profileWildcardDeny := CapabilityProfile{
+		AllowedCapabilities: []string{"read"},
+		DeniedCapabilities:  []string{"*"},
+	}
+	authorizer.SetProfile("session-wildcard-deny", profileWildcardDeny)
+	err = authorizer.Authorize(ctx, "session-wildcard-deny", "read", "read-tool")
+	if err == nil {
+		t.Error("Expected error for explicitly denied wildcard capability, got nil")
+	}
+
+	// Test nil store initialization
+	authorizerNilStore := NewCapabilityAuthorizer(nil)
+	if authorizerNilStore.violationStore == nil {
+		t.Error("Expected default violation store to be created, got nil")
+	}
 }
