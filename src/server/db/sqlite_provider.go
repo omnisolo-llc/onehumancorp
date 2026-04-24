@@ -3,77 +3,16 @@ package db
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
-	"encoding/json"
-	"fmt"
-	"math"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/telemetry"
 
-	"modernc.org/sqlite"
+	_ "modernc.org/sqlite"
 )
 
 var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_]+)\s*::\s*json\s*->>\s*'([^']+)'`)
-
-func init() {
-	sqlite.MustRegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
-		if args[0] == nil || args[1] == nil {
-			return nil, nil
-		}
-
-		// SQLite driver might pass strings as []byte
-		var bytes1, bytes2 []byte
-
-		switch v := args[0].(type) {
-		case string:
-			bytes1 = []byte(v)
-		case []byte:
-			bytes1 = v
-		default:
-			return nil, fmt.Errorf("first argument must be string or bytes")
-		}
-
-		switch v := args[1].(type) {
-		case string:
-			bytes2 = []byte(v)
-		case []byte:
-			bytes2 = v
-		default:
-			return nil, fmt.Errorf("second argument must be string or bytes")
-		}
-
-		var v1, v2 []float32
-		if err := json.Unmarshal(bytes1, &v1); err != nil {
-			return nil, fmt.Errorf("failed to parse first vector: %w", err)
-		}
-		if err := json.Unmarshal(bytes2, &v2); err != nil {
-			return nil, fmt.Errorf("failed to parse second vector: %w", err)
-		}
-
-		if len(v1) != len(v2) || len(v1) == 0 {
-			return nil, fmt.Errorf("vectors must have the same non-zero dimensions")
-		}
-
-		var dot, mag1, mag2 float64
-		for i := range v1 {
-			f1 := float64(v1[i])
-			f2 := float64(v2[i])
-			dot += f1 * f2
-			mag1 += f1 * f1
-			mag2 += f2 * f2
-		}
-
-		if mag1 == 0 || mag2 == 0 {
-			return 0.0, nil
-		}
-
-		cosineSimilarity := dot / (math.Sqrt(mag1) * math.Sqrt(mag2))
-		return 1.0 - cosineSimilarity, nil
-	})
-}
 
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
 type SqliteProvider struct {

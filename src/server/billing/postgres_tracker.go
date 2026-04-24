@@ -76,10 +76,6 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		agents = append(agents, a)
 	}
 
-	if err := rows.Err(); err != nil {
-		return Summary{}, fmt.Errorf("pg: billing summary iteration: %w", err)
-	}
-
 	return Summary{
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,

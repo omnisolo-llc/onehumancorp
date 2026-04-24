@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/db"
@@ -153,18 +154,19 @@ func (d *HybridMCPRAGDaemon) processMissionsSync(ctx context.Context) bool {
 
 	// Mark as synced
 	if len(ids) > 0 {
-		idList := ""
+		placeholders := make([]string, len(ids))
+		args := make([]interface{}, len(ids))
 		for i, id := range ids {
-			if i > 0 {
-				idList += ","
-			}
-			idList += fmt.Sprintf("'%s'", id)
+			placeholders[i] = "?"
+			args[i] = id
 		}
-		updateQuery := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
+
+		val := "true"
 		if d.dbWrapper.IsSQLite() {
-			updateQuery = fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id IN (%s)", idList)
+			val = "1"
 		}
-		_, err := tx.Exec(ctx, updateQuery)
+		updateQuery := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = %s WHERE id IN (%s)", val, strings.Join(placeholders, ","))
+		_, err := tx.Exec(ctx, updateQuery, args...)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
 			return false
@@ -230,15 +232,15 @@ func (d *HybridMCPRAGDaemon) processRAGSync(ctx context.Context) bool {
 
 	// Mark as synced
 	if len(ids) > 0 {
-		idList := ""
+		placeholders := make([]string, len(ids))
+		args := make([]interface{}, len(ids))
 		for i, id := range ids {
-			if i > 0 {
-				idList += ","
-			}
-			idList += fmt.Sprintf("'%s'", id)
+			placeholders[i] = "?"
+			args[i] = id
 		}
-		updateQuery := fmt.Sprintf("UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_at = CURRENT_TIMESTAMP WHERE memory_id IN (%s)", idList)
-		_, err := tx.Exec(ctx, updateQuery)
+
+		updateQuery := fmt.Sprintf("UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_at = CURRENT_TIMESTAMP WHERE memory_id IN (%s)", strings.Join(placeholders, ","))
+		_, err := tx.Exec(ctx, updateQuery, args...)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update swarm_memory_embeddings status in bulk", "error", err)
 			return false
