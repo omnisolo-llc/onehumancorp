@@ -134,7 +134,6 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 						"RecordSubAgentFailure": true,
 						"RecordIdentityVerification": true,
 						"RecordSyncConflictResolved": true,
-						"RecordOmniContextBytes": true,
 						"RecordRagEscalation": true,
 						"RecordAutodreamIngestionError": true,
 						"RecordAutodreamCompressionError": true,

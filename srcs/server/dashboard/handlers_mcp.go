@@ -624,7 +624,7 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// If context isn't a direct top level key, marshal the whole sanitized payload as the context
-		sanitizedBytes, _ := json.Marshal(payload)
+		sanitizedBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 		contextStr = string(sanitizedBytes)
 	}
 
@@ -791,7 +791,7 @@ func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
 			contextStr = string(marshaled)
 		}
 	} else {
-		sanitizedBytes, _ := json.Marshal(payload)
+		sanitizedBytes, _ := json.Marshal(telemetry.RedactInterfacePII(payload))
 		contextStr = string(sanitizedBytes)
 	}
 

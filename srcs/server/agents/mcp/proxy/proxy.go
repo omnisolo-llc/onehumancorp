@@ -130,7 +130,7 @@ func (p *McpSyncProxy) Sync(ctx context.Context) (int, error) {
 			"arguments": argsMap,
 		}
 
-		payloadBytes, err := json.Marshal(payload)
+		payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 		if err != nil {
 			continue
 		}

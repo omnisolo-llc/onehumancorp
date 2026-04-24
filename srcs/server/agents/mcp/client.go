@@ -84,7 +84,7 @@ func (t *LocalFSSyncTool) Execute(ctx context.Context, payload map[string]interf
         return nil, errors.New("sandbox violation: path must start with .agent-task/")
     }
 
-    payloadBytes, err := json.Marshal(payload)
+    payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
     if err != nil {
         return nil, err
     }
