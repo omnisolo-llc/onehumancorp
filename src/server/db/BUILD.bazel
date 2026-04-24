@@ -10,6 +10,7 @@ go_library(
         "sqlite_provider.go",
         "shared_tasks_repo.go",
         "test_provider.go",
+        "migrations/20260430000000_autodream_sync_daemon.go",
     ],
     embedsrcs = [
         "migrations/001_users.sql",
@@ -106,6 +107,7 @@ go_library(
         "@com_github_google_uuid//:uuid",
         "@com_github_jackc_pgx_v5//:pgx",
         "@com_github_jackc_pgx_v5//pgxpool",
+        "@com_github_pressly_goose_v3//:goose",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel_metric//:metric",
