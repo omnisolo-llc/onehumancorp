@@ -59,15 +59,19 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/quota')) {
+          return http.Response(jsonEncode({'used': 5, 'max': 10}), 200);
+        }
+        return http.Response(
           jsonEncode([
             _fakeUser('u1', 'alice', admin: true),
             _fakeUser('u2', 'bob'),
           ]),
           200,
-        ),
-      );
+        );
+      });
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -77,17 +81,21 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('alice'), findsWidgets);
-      expect(find.textContaining('bob'), findsWidgets);
+      expect(find.textContaining('alice', skipOffstage: false), findsWidgets);
+      expect(find.textContaining('bob', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('Invite User FAB is present', (tester) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/quota')) {
+          return http.Response(jsonEncode({'used': 5, 'max': 10}), 200);
+        }
+        return http.Response(jsonEncode(<dynamic>[]), 200);
+      });
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -104,9 +112,13 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/quota')) {
+          return http.Response(jsonEncode({'used': 5, 'max': 10}), 200);
+        }
+        return http.Response(jsonEncode(<dynamic>[]), 200);
+      });
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -119,19 +131,23 @@ void main() {
       await tester.tap(find.text('Invite User'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/quota')) {
+          return http.Response(jsonEncode({'used': 5, 'max': 10}), 200);
+        }
+        return http.Response(
           jsonEncode([_fakeUser('u1', 'adminuser', admin: true)]),
           200,
-        ),
-      );
+        );
+      });
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -148,9 +164,13 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response('Server Error', 500),
-      );
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/quota')) {
+          return http.Response(jsonEncode({'used': 5, 'max': 10}), 200);
+        }
+        return http.Response('Server Error', 500);
+      });
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
