@@ -1,10 +1,6 @@
 package orchestration
 
 import (
-	"github.com/onehumancorp/mono/src/server/auth"
-	"os"
-	"path/filepath"
-
 	"github.com/onehumancorp/mono/src/server/telemetry"
 
 	"context"
@@ -260,7 +256,7 @@ func (rm *RedisMeshTransport) BroadcastTask(ctx context.Context, task Task) erro
 	if err != nil {
 		return err
 	}
-	cmd := rm.client.B().Publish().Channel(getMeshChannel(ctx, "tasks")).Message(string(data)).Build()
+	cmd := rm.client.B().Publish().Channel("mesh:tasks").Message(string(data)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
@@ -273,7 +269,7 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 	ch := make(chan Task, 100)
 
 	go func() {
-		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(getMeshChannel(ctx, "tasks")).Build(), func(msg rueidis.PubSubMessage) {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:tasks").Build(), func(msg rueidis.PubSubMessage) {
 			var t Task
 			if err := json.Unmarshal([]byte(msg.Message), &t); err == nil {
 				select {
@@ -326,7 +322,7 @@ func (rm *RedisMeshTransport) BroadcastCoordination(ctx context.Context, msg Mes
 	if err != nil {
 		return err
 	}
-	cmd := rm.client.B().Publish().Channel(getMeshChannel(ctx, "coordination")).Message(string(data)).Build()
+	cmd := rm.client.B().Publish().Channel("mesh:coordination").Message(string(data)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
@@ -339,7 +335,7 @@ func (rm *RedisMeshTransport) SubscribeCoordination(ctx context.Context) (<-chan
 	ch := make(chan MeshMessage, 100)
 
 	go func() {
-		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(getMeshChannel(ctx, "coordination")).Build(), func(msg rueidis.PubSubMessage) {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:coordination").Build(), func(msg rueidis.PubSubMessage) {
 			var m MeshMessage
 			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
 				select {
@@ -410,7 +406,7 @@ func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic stri
 		telemetry.RecordMeshBroadcast(ctx, "events")
 	}
 
-	cmd := rm.client.B().Publish().Channel(getMeshChannel(ctx, "events:"+topic)).Message(string(payload)).Build()
+	cmd := rm.client.B().Publish().Channel("mesh:events:" + topic).Message(string(payload)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
@@ -422,7 +418,7 @@ func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic str
 
 	ch := make(chan []byte, 100)
 	go func() {
-		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(getMeshChannel(ctx, "events:"+topic)).Build(), func(msg rueidis.PubSubMessage) {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:events:"+topic).Build(), func(msg rueidis.PubSubMessage) {
 			select {
 			case ch <- []byte(msg.Message):
 			default:
@@ -463,7 +459,7 @@ func (rm *RedisTeammateMesh) BroadcastTask(ctx context.Context, task Task) error
 	if err != nil {
 		return err
 	}
-	cmd := rm.client.B().Publish().Channel(getMeshChannel(ctx, "tasks")).Message(string(data)).Build()
+	cmd := rm.client.B().Publish().Channel("mesh:tasks").Message(string(data)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
@@ -473,7 +469,7 @@ func (rm *RedisTeammateMesh) SubscribeTasks(ctx context.Context) (<-chan Task, e
 	ch := make(chan Task, 100)
 
 	go func() {
-		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(getMeshChannel(ctx, "tasks")).Build(), func(msg rueidis.PubSubMessage) {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:tasks").Build(), func(msg rueidis.PubSubMessage) {
 			var t Task
 			if err := json.Unmarshal([]byte(msg.Message), &t); err == nil {
 				select {
@@ -499,7 +495,7 @@ func (rm *RedisTeammateMesh) BroadcastCoordination(ctx context.Context, msg Mesh
 	if err != nil {
 		return err
 	}
-	cmd := rm.client.B().Publish().Channel(getMeshChannel(ctx, "coordination")).Message(string(data)).Build()
+	cmd := rm.client.B().Publish().Channel("mesh:coordination").Message(string(data)).Build()
 	return meshWithRetry(ctx, 3, func() error {
 		return rm.client.Do(ctx, cmd).Error()
 	})
@@ -509,7 +505,7 @@ func (rm *RedisTeammateMesh) SubscribeCoordination(ctx context.Context) (<-chan 
 	ch := make(chan MeshMessage, 100)
 
 	go func() {
-		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel(getMeshChannel(ctx, "coordination")).Build(), func(msg rueidis.PubSubMessage) {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:coordination").Build(), func(msg rueidis.PubSubMessage) {
 			var m MeshMessage
 			if err := json.Unmarshal([]byte(msg.Message), &m); err == nil {
 				select {
@@ -696,15 +692,6 @@ func (lm *MemoryMeshTransport) PublishTeammateMeshEvent(ctx context.Context, cha
 	if err != nil {
 		return err
 	}
-
-	mockPath := ".agent-task/memory/mesh_mock.log"
-	os.MkdirAll(filepath.Dir(mockPath), 0755)
-	f, err2 := os.OpenFile(mockPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err2 == nil {
-		defer f.Close()
-		f.WriteString(string(data) + "\n")
-	}
-
 	return lm.BroadcastMeshEvent(ctx, channel, data)
 }
 
@@ -728,15 +715,6 @@ func (lm *MemoryMeshTransport) run(shardIdx int) {
 func (lm *MemoryMeshTransport) BroadcastCoordination(ctx context.Context, msg MeshMessage) error {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "BroadcastCoordination", time.Since(start)) }()
-
-	mockPath := ".agent-task/memory/mesh_mock.log"
-	os.MkdirAll(filepath.Dir(mockPath), 0755)
-	f, err2 := os.OpenFile(mockPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err2 == nil {
-		defer f.Close()
-		data, _ := json.Marshal(msg)
-		f.WriteString(string(data) + "\n")
-	}
 
 	if telemetry.BufferMetricFunc == nil {
 		telemetry.RecordMeshBroadcast(ctx, "coordination")
@@ -1053,12 +1031,4 @@ func (lm *MemoryMeshTransport) Publish(topic string, data []byte) error {
 
 func (lm *MemoryMeshTransport) Subscribe(topic string) (<-chan []byte, error) {
 	return lm.SubscribeMeshEvents(context.Background(), topic)
-}
-
-func getMeshChannel(ctx context.Context, base string) string {
-	orgID := auth.OrganizationIDFromContext(ctx)
-	if orgID != "" {
-		return "mesh:" + orgID + ":" + base
-	}
-	return "mesh:" + base
 }
