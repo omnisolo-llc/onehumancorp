@@ -95,6 +95,7 @@ var (
 	SyncPayloadSize              metric.Int64Histogram
 	RateLimitExceededCount       metric.Int64Counter
 	syncDaemonBatchSize          metric.Int64Histogram
+	SyncDaemonErrorTotal         metric.Int64Counter
 	LocalToCloudMissionSyncCount metric.Int64Counter
 
 	sqliteLockContentionCounter   metric.Int64Counter
@@ -455,6 +456,14 @@ func InitWithMeter(m mockableMeter) error {
 	SyncEscalationsCount, err = m.Int64Counter(
 		"ohc_sync_escalations_count",
 		metric.WithDescription("Total successfully synced missions with CLOUD_ESCALATION status"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncDaemonErrorTotal, err = m.Int64Counter(
+		"ohc_sync_daemon_errors_total",
+		metric.WithDescription("Total number of sync failures by the SyncDaemon"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1628,11 +1637,11 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
-func RecordSyncEscalation(ctx context.Context, count int64) {
+func RecordSyncEscalation(ctx context.Context, count int64, mode string) {
 	if SyncEscalationsCount == nil {
 		return
 	}
-	SyncEscalationsCount.Add(ctx, count)
+	SyncEscalationsCount.Add(ctx, count, metric.WithAttributes(attribute.String("mode", mode)))
 }
 
 // RecordLocalToCloudMissionSync records a local-to-cloud mission synchronization.
@@ -1655,27 +1664,35 @@ func RecordLocalToCloudMissionSync(ctx context.Context, missionID string) {
 }
 
 // RecordSyncLatency records the latency of the sync process.
-func RecordSyncLatency(ctx context.Context, latency float64) {
+func RecordSyncLatency(ctx context.Context, latency float64, mode string) {
 	if SyncLatency == nil {
 		return
 	}
-	SyncLatency.Record(ctx, latency)
+	SyncLatency.Record(ctx, latency, metric.WithAttributes(attribute.String("mode", mode)))
 }
 
 // RecordSyncPayloadSize records the size of the sync payload.
-func RecordSyncPayloadSize(ctx context.Context, size int64) {
+func RecordSyncPayloadSize(ctx context.Context, size int64, mode string) {
 	if SyncPayloadSize == nil {
 		return
 	}
-	SyncPayloadSize.Record(ctx, size)
+	SyncPayloadSize.Record(ctx, size, metric.WithAttributes(attribute.String("mode", mode)))
 }
 
 // RecordSyncDaemonBatchSize records the batch size processed by SyncDaemon.
-func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
+func RecordSyncDaemonBatchSize(ctx context.Context, size int64, mode string) {
 	if syncDaemonBatchSize == nil {
 		return
 	}
-	syncDaemonBatchSize.Record(ctx, size)
+	syncDaemonBatchSize.Record(ctx, size, metric.WithAttributes(attribute.String("mode", mode)))
+}
+
+// RecordSyncDaemonError records a failure by the SyncDaemon.
+func RecordSyncDaemonError(ctx context.Context, mode string) {
+	if SyncDaemonErrorTotal == nil {
+		return
+	}
+	SyncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode)))
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
