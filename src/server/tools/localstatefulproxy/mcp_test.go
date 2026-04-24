@@ -41,8 +41,6 @@ func TestProxyTool_Info(t *testing.T) {
 }
 
 func TestProxyTool_Execute_Success(t *testing.T) {
-	// Use the underlying ProxyTool instead of an AgentProxyTool
-	// since we want to test ProxyTool itself here directly.
 	tool := NewProxyTool()
 	ctx := context.Background()
 
