@@ -220,7 +220,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   borderRadius: BorderRadius.circular(24),
                   child: BackdropFilter(
                     filter: ImageFilter.compose(
-                      outer: ColorFilter.matrix(const <double>[
+                      outer: const ColorFilter.matrix(<double>[
                         1.787, -0.715, -0.072, 0, 0,
                         -0.213, 1.285, -0.072, 0, 0,
                         -0.213, -0.715, 1.928, 0, 0,
@@ -416,6 +416,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               ),
                             ],
                           ),
+                        ),
                         ),
                       ),
                     ),
