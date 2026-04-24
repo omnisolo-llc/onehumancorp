@@ -12,8 +12,8 @@ import (
 )
 
 func TestMemoryLock(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	lock, err := NewDistributedLock()
 	if err != nil {
@@ -70,7 +70,7 @@ func TestMemoryLock(t *testing.T) {
 func TestNewDistributedLockFallback(t *testing.T) {
 	// Set invalid REDIS_URL to trigger fallback
 	os.Setenv("REDIS_URL", "invalid_url")
-	os.Unsetenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_MULTITENANT")
 	defer os.Unsetenv("REDIS_URL")
 
 	lock, err := NewDistributedLock()
@@ -84,8 +84,8 @@ func TestNewDistributedLockFallback(t *testing.T) {
 }
 
 func TestMemoryLock_UnlockRaceConditionAndFailures(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	lock1, _ := NewDistributedLock()
 	lock2, _ := NewDistributedLock() // Simulate another process
@@ -128,8 +128,8 @@ func TestMemoryLock_UnlockRaceConditionAndFailures(t *testing.T) {
 }
 
 func TestMemoryLock_FailuresAndPaths(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	lock1, _ := NewDistributedLock()
 
@@ -167,12 +167,12 @@ func TestMemoryLock_FailuresAndPaths(t *testing.T) {
 	}
 
 	// Since lock wasn't deleted by unlock (because of format mismatch), we delete it manually
-	os.Remove(path)
+	os.RemoveAll(path)
 }
 
 func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	lock1, _ := NewDistributedLock()
 	ctx := context.Background()
@@ -183,7 +183,8 @@ func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	expiry := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
-	os.WriteFile(path, []byte(expiry+",old_token"), 0666)
+	os.Mkdir(path, 0777)
+	os.WriteFile(filepath.Join(path, "meta.txt"), []byte(expiry+",old_token"), 0666)
 
 	// Now try to lock
 	locked, _ := lock1.Lock(ctx, key, 1*time.Second)
@@ -195,8 +196,8 @@ func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
 }
 
 func TestMemoryLock_CoveragePaths(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	lock1, _ := NewDistributedLock()
 	ctx := context.Background()
@@ -243,8 +244,8 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 }
 
 func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	lock1, _ := NewDistributedLock()
 	ctx := context.Background()
@@ -262,7 +263,7 @@ func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
 	}
 
 	// Explicitly delete the file so rename fails in Unlock
-	os.Remove(path)
+	os.RemoveAll(path)
 
 	// Unlock should gracefully handle the rename failure
 	err = lock1.Unlock(ctx, key)
@@ -272,8 +273,8 @@ func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
 }
 
 func TestMemoryLock_IsExistError(t *testing.T) {
-	os.Setenv("OHC_STANDALONE", "true")
-	defer os.Unsetenv("OHC_STANDALONE")
+	os.Setenv("OHC_MULTITENANT", "false")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	lock1, _ := NewDistributedLock()
 	ctx := context.Background()
@@ -307,9 +308,9 @@ func TestCloudLock(t *testing.T) {
 	defer s.Close()
 
 	os.Setenv("REDIS_URL", "redis://"+s.Addr())
-	os.Setenv("OHC_STANDALONE", "false")
+	os.Setenv("OHC_MULTITENANT", "true")
 	defer os.Unsetenv("REDIS_URL")
-	defer os.Unsetenv("OHC_STANDALONE")
+	defer os.Unsetenv("OHC_MULTITENANT")
 
 	lock, err := NewDistributedLock()
 	if err != nil {

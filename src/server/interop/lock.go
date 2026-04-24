@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+
+	"github.com/onehumancorp/mono/src/server/utils"
 	"strings"
 	"time"
 
@@ -21,7 +23,7 @@ type DistributedLock interface {
 // NewDistributedLock returns a new DistributedLock depending on the execution mode.
 func NewDistributedLock() (DistributedLock, error) {
 	redisURL := os.Getenv("REDIS_URL")
-	if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+	if redisURL != "" && utils.EnvBoolDefault("OHC_MULTITENANT", true) {
 		opts, err := rueidis.ParseURL(redisURL)
 		if err != nil {
 			slog.Warn("failed to parse REDIS_URL, falling back to memory lock", "error", err)
@@ -45,35 +47,36 @@ type memoryLock struct {
 	token string
 }
 
+
+
 func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
 	if m.token == "" {
 		m.token = uuid.New().String()
 	}
 
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	lockDir := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	metaPath := filepath.Join(lockDir, "meta.txt")
 
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	err := os.Mkdir(lockDir, 0777)
 	if err != nil {
 		if os.IsExist(err) {
-			content, err := os.ReadFile(path)
+			content, err := os.ReadFile(metaPath)
 			if err == nil {
 				parts := strings.SplitN(string(content), ",", 2)
 				if len(parts) == 2 {
 					expiryTime, parseErr := time.Parse(time.RFC3339Nano, parts[0])
 					if parseErr == nil && time.Now().After(expiryTime) {
-						// Expired lock found. To avoid TOCTOU, we don't just blindly remove.
-						// We check the token.
-						// We do not remove it if it has been updated. (token=parts[1])
-						// We just delete it and retry.
-						// Wait, if it has expired, anyone could be trying to delete it.
-						// To be safer, we can try to delete it. If it fails, that's fine.
-						os.Remove(path)
-						file, err = os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
-						if err != nil {
-							return false, nil
+						trashDir := lockDir + "_" + uuid.New().String() + ".trash"
+						renameErr := os.Rename(lockDir, trashDir)
+						if renameErr == nil {
+							os.RemoveAll(trashDir)
+							err = os.Mkdir(lockDir, 0777)
+							if err == nil {
+								goto acquired
+							}
+							return false, err
 						}
-						goto acquired
 					}
 				}
 			}
@@ -83,11 +86,10 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 	}
 
 acquired:
-	defer file.Close()
 	expiry := time.Now().Add(ttl).Format(time.RFC3339Nano)
-	_, err = file.WriteString(expiry + "," + m.token)
+	err = os.WriteFile(metaPath, []byte(expiry+","+m.token), 0666)
 	if err != nil {
-		os.Remove(path)
+		os.RemoveAll(lockDir)
 		return false, err
 	}
 
@@ -96,26 +98,23 @@ acquired:
 
 func (m *memoryLock) Unlock(ctx context.Context, key string) error {
 	safeKey := strings.ReplaceAll(key, "/", "_")
-	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	lockDir := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
-	// TOCTOU mitigation: rename the file to a temp file, read it, if valid, delete it. If invalid, rename it back.
-	// Wait, rename on Windows/Linux is atomic.
-	tempPath := path + "_" + uuid.New().String() + ".tmp"
-	err := os.Rename(path, tempPath)
+	tempDir := lockDir + "_" + uuid.New().String() + ".tmp"
+	err := os.Rename(lockDir, tempDir)
 	if err != nil {
-		return nil // File might already be gone
+		return nil
 	}
 
-	content, err := os.ReadFile(tempPath)
+	content, err := os.ReadFile(filepath.Join(tempDir, "meta.txt"))
 	if err == nil {
 		parts := strings.SplitN(string(content), ",", 2)
 		if len(parts) == 2 && parts[1] == m.token {
-			return os.Remove(tempPath)
+			return os.RemoveAll(tempDir)
 		}
 	}
 
-	// If not our lock, put it back
-	os.Rename(tempPath, path)
+	os.Rename(tempDir, lockDir)
 	return nil
 }
 

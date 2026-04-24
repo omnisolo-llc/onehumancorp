@@ -4,10 +4,10 @@ go_library(
     name = "growth_legacy",
     srcs = [
         "ab.go",
-        "referral.go",
-        "team_service.go",
         "quota_service.go",
+        "referral.go",
         "referrals_repo.go",
+        "team_service.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/services/growth_legacy",
     visibility = ["//visibility:public"],
@@ -21,10 +21,10 @@ go_test(
     name = "growth_legacy_test",
     srcs = [
         "ab_test_test.go",
-        "referral_test.go",
-        "team_service_test.go",
         "quota_service_test.go",
+        "referral_test.go",
         "referrals_repo_test.go",
+        "team_service_test.go",
     ],
     embed = [":growth_legacy"],
     deps = [

@@ -7,6 +7,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/onehumancorp/mono/src/server/utils"
+
 	"github.com/redis/rueidis"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -24,7 +26,7 @@ type TeammateMesh interface {
 // Otherwise, it returns an in-memory mesh.
 func NewTeammateMesh() (TeammateMesh, error) {
 	redisURL := os.Getenv("REDIS_URL")
-	if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+	if redisURL != "" && utils.EnvBoolDefault("OHC_MULTITENANT", true) {
 		opts, err := rueidis.ParseURL(redisURL)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse REDIS_URL: %w", err)

@@ -24,5 +24,6 @@ go_test(
     embed = [":proxy"],
     deps = [
         "//src/server/db",
+        "//src/server/telemetry",
     ],
 )
