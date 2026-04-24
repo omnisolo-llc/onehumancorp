@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 	"fmt"
+	"encoding/json"
 
-	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/memory"
+	"github.com/onehumancorp/mono/srcs/server/auth"
+	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/memory"
 )
 
 type mockRow struct {
@@ -34,8 +35,6 @@ func (r *mockRow) Scan(dest ...any) error {
 	return nil
 }
 func (r *mockRow) Close() {}
-func (r *mockRow) Err() error { return nil }
-func (r *mockRow) Columns() ([]string, error) { return nil, nil }
 
 type mockDbProvider struct {
 	queryCalled bool
@@ -44,7 +43,11 @@ type mockDbProvider struct {
 	failScan    bool
 	failJSON    bool
 }
-func (m *mockDbProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
+func (m *mockDbProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (interface{
+	Next() bool
+	Scan(dest ...any) error
+	Close()
+}, error) {
 	m.queryCalled = true
 	if m.failQuery {
 		return nil, fmt.Errorf("query failed")
@@ -65,7 +68,7 @@ func (m *mockDbProvider) Exec(ctx context.Context, sql string, arguments ...any)
 	}
 	return 1, nil
 }
-func (m *mockDbProvider) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) {
+func (m *mockDbProvider) AcquireTask(ctx context.Context, agentRole string) (*db.TaskRow, error) {
 	return nil, nil
 }
 func (m *mockDbProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
@@ -78,10 +81,6 @@ func (m *mockDbProvider) Close() {}
 func (m *mockDbProvider) Ping(ctx context.Context) error { return nil }
 func (m *mockDbProvider) GetDB() interface{} { return nil }
 func (m *mockDbProvider) Dialect() string { return "sqlite" }
-func (m *mockDbProvider) IsSQLite() bool { return true }
-func (m *mockDbProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) {
-	return nil, nil
-}
 
 
 type mockRowFailScan struct {
@@ -98,8 +97,6 @@ func (r *mockRowFailScan) Scan(dest ...any) error {
 	return fmt.Errorf("scan failed")
 }
 func (r *mockRowFailScan) Close() {}
-func (r *mockRowFailScan) Err() error { return nil }
-func (r *mockRowFailScan) Columns() ([]string, error) { return nil, nil }
 
 type mockRowFailJSON struct {
 	id string
@@ -122,8 +119,6 @@ func (r *mockRowFailJSON) Scan(dest ...any) error {
 	return nil
 }
 func (r *mockRowFailJSON) Close() {}
-func (r *mockRowFailJSON) Err() error { return nil }
-func (r *mockRowFailJSON) Columns() ([]string, error) { return nil, nil }
 
 type myMockLLM struct {
 	failReason bool
@@ -150,13 +145,6 @@ type mockDbExecFailing struct {
 }
 func (m *mockDbExecFailing) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	return 0, fmt.Errorf("forced exec error")
-}
-func (m *mockDbExecFailing) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) {
-	return nil, nil
-}
-func (m *mockDbExecFailing) IsSQLite() bool { return true }
-func (m *mockDbExecFailing) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) {
-	return nil, nil
 }
 
 func TestConsolidator_ProcessMemoryFile(t *testing.T) {

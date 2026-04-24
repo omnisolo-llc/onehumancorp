@@ -9,12 +9,9 @@ import (
 	"encoding/json"
 
 	"github.com/fsnotify/fsnotify"
-	"log/slog"
-
-	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/memory"
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/srcs/server/auth"
+	"github.com/onehumancorp/mono/srcs/server/memory"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,14 +20,18 @@ var _ MemoryConsolidator = (*Consolidator)(nil)
 
 // MemoryFile represents the structure of the YAML memory files
 type MemoryFile struct {
-	TaskID    string `yaml:"task_id"`
-	AgentRole string `yaml:"agent_role"`
-	Content   string `yaml:"content"`
+	TaskID    string \`yaml:"task_id"\`
+	AgentRole string \`yaml:"agent_role"\`
+	Content   string \`yaml:"content"\`
 }
 
 // PushDBProvider defines the query operations required to run the PushToCloud sync
 type PushDBProvider interface {
-	Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error)
+	Query(ctx context.Context, sql string, optionsAndArgs ...any) (interface{
+		Next() bool
+		Scan(dest ...any) error
+		Close()
+	}, error)
 	Exec(ctx context.Context, sql string, arguments ...any) (int64, error)
 }
 
@@ -147,7 +148,7 @@ func (c *Consolidator) StartWatcher(ctx context.Context) error {
 				if event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Write == fsnotify.Write {
 					if filepath.Ext(event.Name) == ".yml" || filepath.Ext(event.Name) == ".yaml" {
 						if err := c.processMemoryFile(ctx, event.Name); err != nil {
-							slog.Error("Error processing memory file", "file", event.Name, "error", err)
+							fmt.Printf("Error processing memory file %s: %v\n", event.Name, err)
 						}
 					}
 				}
@@ -155,7 +156,7 @@ func (c *Consolidator) StartWatcher(ctx context.Context) error {
 				if !ok {
 					return
 				}
-				slog.Error("Watcher error", "error", err)
+				fmt.Printf("Watcher error: %v\n", err)
 			}
 		}
 	}()
@@ -223,7 +224,7 @@ func (c *Consolidator) PushToCloud(ctx context.Context, dbProvider PushDBProvide
 	}
 
 	// Fetch unsynced records from consolidated_memory
-	query := `SELECT id, organization_id, memory_type, content, embedding, created_at, source_task_id FROM consolidated_memory WHERE synced_to_cloud = false`
+	query := \`SELECT id, organization_id, memory_type, content, embedding, created_at, source_task_id FROM consolidated_memory WHERE synced_to_cloud = false\`
 
 	rows, err := dbProvider.Query(ctx, query)
 	if err != nil {
@@ -240,13 +241,13 @@ func (c *Consolidator) PushToCloud(ctx context.Context, dbProvider PushDBProvide
 		var embeddingJSON []byte
 		var createdAt time.Time
 		if err := rows.Scan(&id, &orgID, &memType, &content, &embeddingJSON, &createdAt, &sourceTaskID); err != nil {
-			slog.Error("Error scanning row", "error", err)
+			fmt.Printf("Error scanning row: %v\n", err)
 			continue
 		}
 
 		var embedding []float32
 		if err := json.Unmarshal(embeddingJSON, &embedding); err != nil {
-			slog.Error("Error unmarshaling embedding", "error", err)
+			fmt.Printf("Error unmarshaling embedding: %v\n", err)
 			continue
 		}
 
@@ -257,15 +258,10 @@ func (c *Consolidator) PushToCloud(ctx context.Context, dbProvider PushDBProvide
 		syncedCount++
 	}
 
-	if err := rows.Err(); err != nil {
-		slog.Error("Error iterating rows", "error", err)
-		return fmt.Errorf("error iterating over records: %w", err)
-	}
-
 	for _, id := range idsToUpdate {
 		_, err := dbProvider.Exec(ctx, "UPDATE consolidated_memory SET synced_to_cloud = true WHERE id = $1", id)
 		if err != nil {
-			slog.Error("Error marking record as synced", "record_id", id, "error", err)
+			fmt.Printf("Error marking record %s as synced: %v\n", id, err)
 		}
 	}
 
