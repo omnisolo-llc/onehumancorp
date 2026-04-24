@@ -46,8 +46,54 @@ find_web_artifacts() {
 	return 1
 }
 
+find_backend_bin() {
+	local root="${1}"
+	local candidate
+
+	for candidate in \
+		"src/server/ohc" \
+		"src/server/ohc_/ohc" \
+		"mono/src/server/ohc" \
+		"mono/src/server/ohc_/ohc" \
+		"_main/src/server/ohc" \
+		"_main/src/server/ohc_/ohc" \
+		"__main__/src/server/ohc" \
+		"__main__/src/server/ohc_/ohc"; do
+		if [[ -x "${root}/${candidate}" ]]; then
+			printf '%s\n' "${root}/${candidate}"
+			return 0
+		fi
+	done
+
+	return 1
+}
+
 runfiles_root="$(find_runfiles_root || true)"
 web_artifacts=""
+
+# ── Backend setup ────────────────────────────────────────────────────────────
+
+if [[ -n "${runfiles_root}" ]]; then
+	backend_bin="$(find_backend_bin "${runfiles_root}" || true)"
+	if [[ -n "${backend_bin}" ]]; then
+		echo "Starting backend server: ${backend_bin}"
+		# Run backend in background on port 18789 (default for Flutter app)
+		export PORT=18789
+		"${backend_bin}" > /tmp/ohc_backend.log 2>&1 &
+		backend_pid=$!
+		
+		# Ensure backend is killed when this script exits
+		trap 'echo "Stopping backend..."; kill "${backend_pid}" 2>/dev/null || true' EXIT
+		
+		echo "Backend started (PID: ${backend_pid}). Logs: /tmp/ohc_backend.log"
+		# Wait a bit for backend to initialize
+		sleep 2
+	else
+		echo "WARNING: could not locate backend 'ohc' in runfiles. Login might not work." >&2
+	fi
+fi
+
+# ── Web artifacts setup ──────────────────────────────────────────────────────
 
 workspace_web_bundle="${workspace_root}/src/app/build/web"
 if is_complete_web_bundle "${workspace_web_bundle}"; then
