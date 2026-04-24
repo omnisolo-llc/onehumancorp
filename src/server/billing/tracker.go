@@ -96,6 +96,7 @@ type AgentSummary struct {
 	CostUSD      float64 `json:"costUsd"`
 	TokenUsed    int64   `json:"tokenUsed"`
 	TotalActions int64   `json:"totalActions"`
+	Efficiency   float64 `json:"efficiency"`
 }
 
 // Summary aggregates the total infrastructure spend, overall token count, and per-agent metrics for a specific organization.
@@ -353,6 +354,11 @@ func (t *Tracker) Summary(organizationID string) Summary {
 
 	agents := make([]AgentSummary, 0, len(byAgent))
 	for _, summary := range byAgent {
+		if summary.CostUSD > 0 {
+			summary.Efficiency = float64(summary.TotalActions) / summary.CostUSD
+		} else {
+			summary.Efficiency = 0.0
+		}
 		agents = append(agents, summary)
 	}
 	sort.Slice(agents, func(i, j int) bool {

@@ -73,6 +73,11 @@ func (r *SqliteUsageRepository) Summary(ctx context.Context, organizationID stri
 		totalCost += a.CostUSD
 		totalTokens += a.TokenUsed
 		totalActions += a.TotalActions
+		if a.CostUSD > 0 {
+			a.Efficiency = float64(a.TotalActions) / a.CostUSD
+		} else {
+			a.Efficiency = 0.0
+		}
 		agents = append(agents, a)
 	}
 

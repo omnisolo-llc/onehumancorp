@@ -189,11 +189,13 @@ class AgentCost {
   final String agentId;
   final double costUSD;
   final int tokenUsed;
+  final double efficiency;
 
   const AgentCost({
     required this.agentId,
     required this.costUSD,
     required this.tokenUsed,
+    this.efficiency = 0.0,
   });
 
   factory AgentCost.fromJson(Map<String, dynamic> json) {
@@ -201,6 +203,7 @@ class AgentCost {
       agentId: json['agentID'] ?? json['agent_id'] ?? '',
       costUSD: (json['costUSD'] ?? json['cost_usd'] ?? 0.0).toDouble(),
       tokenUsed: json['tokenUsed'] ?? json['token_used'] ?? 0,
+      efficiency: (json['efficiency'] ?? 0.0).toDouble(),
     );
   }
 }

@@ -197,6 +197,14 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
                                       color: colors.onSurfaceVariant,
                                     ),
                                   ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Efficiency: ${agentCost.efficiency.toStringAsFixed(2)} actions/USD',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),

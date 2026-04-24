@@ -368,3 +368,29 @@ func TestSummaryProjectedMonthlyUSD(t *testing.T) {
 		t.Errorf("Expected projected monthly %v, got %v", expectedProjected, summary.ProjectedMonthlyUSD)
 	}
 }
+
+func TestTracker_ZeroCostModelEfficiency(t *testing.T) {
+	catalog := map[string]Price{
+		"zero-model": {InputPerMillionUSD: 0.0, OutputPerMillionUSD: 0.0, CachedPerMillionUSD: 0.0},
+	}
+	tracker := NewTracker(catalog)
+
+	tracker.Track(Usage{
+		OrganizationID:   "org-zero",
+		AgentID:          "agent-zero",
+		Model:            "zero-model",
+		PromptTokens:     1000000,
+		CompletionTokens: 1000000,
+		IsAction:         true,
+	})
+
+	summary := tracker.Summary("org-zero")
+
+	if len(summary.Agents) != 1 {
+		t.Fatalf("Expected 1 agent, got %d", len(summary.Agents))
+	}
+
+	if summary.Agents[0].Efficiency != 0.0 {
+		t.Errorf("Expected 0.0 efficiency for zero cost model, got %v", summary.Agents[0].Efficiency)
+	}
+}

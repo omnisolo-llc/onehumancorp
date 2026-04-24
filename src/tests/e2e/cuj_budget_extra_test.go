@@ -3,7 +3,12 @@
 
 package e2e
 
-import "testing"
+import (
+	"testing"
+	"time"
+
+	playwright "github.com/playwright-community/playwright-go"
+)
 
 // ── Budget & billing – extra tests (25) ──────────────────────────────────────
 
@@ -205,4 +210,26 @@ func TestBudgetExtraBudgetSaveButtonIsEnabledAfterChange(t *testing.T) {
 	loginAsAdmin(t, page)
 	body, _ := page.Content()
 	_ = body
+}
+
+func TestCUJ_CostDashboard_Efficiency(t *testing.T) {
+	if baseURL == "" {
+		t.Skip("OHC_E2E_BASE_URL not set")
+	}
+
+	page := newPage(t)
+	defer page.Close()
+
+	loginAsAdmin(t, page)
+
+	if _, err := page.Goto(baseURL + "/costs"); err != nil {
+		t.Fatalf("could not goto /costs: %v", err)
+	}
+
+	time.Sleep(2 * time.Second)
+
+	efficiencyText := page.Locator("text=actions/USD").First()
+	if err := efficiencyText.WaitFor(playwright.LocatorWaitForOptions{State: playwright.WaitForSelectorStateVisible, Timeout: playwright.Float(5000)}); err != nil {
+		t.Fatalf("could not find efficiency text on cost dashboard: %v", err)
+	}
 }
