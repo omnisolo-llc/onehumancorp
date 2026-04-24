@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 
 void main() {
   testWidgets('AiHelpChatWidget renders FAB', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      const ProviderScope(
+        child: MaterialApp(
         home: Scaffold(
           body: Stack(
             children: [
@@ -13,6 +15,7 @@ void main() {
             ],
           ),
         ),
+      ),
       ),
     );
 
@@ -22,7 +25,8 @@ void main() {
 
   testWidgets('AiHelpChatWidget opens bottom sheet on tap', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      const ProviderScope(
+        child: MaterialApp(
         home: Scaffold(
           body: Stack(
             children: [
@@ -30,6 +34,7 @@ void main() {
             ],
           ),
         ),
+      ),
       ),
     );
 
@@ -42,7 +47,8 @@ void main() {
 
   testWidgets('AiHelpChatWidget close button closes bottom sheet', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      const ProviderScope(
+        child: MaterialApp(
         home: Scaffold(
           body: Stack(
             children: [
@@ -50,6 +56,7 @@ void main() {
             ],
           ),
         ),
+      ),
       ),
     );
 
@@ -64,9 +71,10 @@ void main() {
     expect(find.text('AI Support Agent'), findsNothing);
   });
 
-  testWidgets('AiHelpChatWidget send button is disabled', (WidgetTester tester) async {
+  testWidgets('AiHelpChatWidget send button is active when enabled', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      const ProviderScope(
+        child: MaterialApp(
         home: Scaffold(
           body: Stack(
             children: [
@@ -74,6 +82,7 @@ void main() {
             ],
           ),
         ),
+      ),
       ),
     );
 
@@ -88,6 +97,6 @@ void main() {
       matching: find.byType(IconButton),
     ));
 
-    expect(iconButton.onPressed, isNull);
+    expect(iconButton.onPressed, isNotNull);
   });
 }

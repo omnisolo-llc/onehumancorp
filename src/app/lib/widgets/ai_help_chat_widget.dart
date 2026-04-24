@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/tier.dart';
+import 'upgrade_bottom_sheet.dart';
 
 class AiHelpChatWidget extends StatelessWidget {
   const AiHelpChatWidget({super.key});
@@ -20,11 +23,14 @@ class AiHelpChatWidget extends StatelessWidget {
   }
 }
 
-class _ChatBottomSheet extends StatelessWidget {
+class _ChatBottomSheet extends ConsumerWidget {
   const _ChatBottomSheet();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tierState = ref.watch(tierProvider);
+    final limitExceeded = tierState.aiActionsUsed >= tierState.aiActionsLimit;
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.8,
       decoration: BoxDecoration(
@@ -63,27 +69,67 @@ class _ChatBottomSheet extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Type your question...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
+            child: limitExceeded
+                ? Column(
+                    children: [
+                      const Text(
+                        'AI replies limit reached for the Free plan.',
+                        style: TextStyle(color: Colors.redAccent, fontFamily: 'Inter', fontSize: 12),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              decoration: InputDecoration(
+                                hintText: 'Manual reply mode...',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context); // Close chat
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => const UpgradeBottomSheet(limitReason: 'ai_actions'),
+                              );
+                            },
+                            child: const Text('Upgrade to restore AI replies', style: TextStyle(fontSize: 12)),
+                          )
+                        ],
+                      )
+                    ],
+                  )
+                : Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Type your question...',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.send),
+                        color: Theme.of(context).colorScheme.primary,
+                        onPressed: () {
+                          ref.read(tierProvider.notifier).addAiAction();
+                        },
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  color: Theme.of(context).colorScheme.primary,
-                  onPressed: null, // Not implemented yet
-                ),
-              ],
-            ),
           ),
         ],
       ),
