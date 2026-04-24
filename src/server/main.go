@@ -317,7 +317,7 @@ func run(now time.Time, listen listenFunc) error {
 		// Setup Semantic Distillation Worker
 		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
 
-		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil)
+		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil, "")
 		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver, adConsolidator)
 		// Run distillation as a background job
 		go func() {
