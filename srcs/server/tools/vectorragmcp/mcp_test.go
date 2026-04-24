@@ -22,6 +22,7 @@ func (m *mockProvider) Close() {}
 func (m *mockProvider) Ping(ctx context.Context) error { return nil }
 func (m *mockProvider) IsSQLite() bool { return m.isSQLite }
 func (m *mockProvider) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) { return nil, nil }
+func (m *mockProvider) EstimateRowCount(ctx context.Context, tableName string) (int64, error) { return 0, nil }
 func (m *mockProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) {
     m.queries = append(m.queries, queryText)
     return m.results, nil

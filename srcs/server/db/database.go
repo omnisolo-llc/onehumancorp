@@ -299,6 +299,10 @@ func New(ctx context.Context) (*DB, error) {
 // lexicographically.  Each migration is run inside a transaction.
 // A simple `schema_migrations` table tracks which files have already been
 // applied.
+func (p *DB) EstimateRowCount(ctx context.Context, tableName string) (int64, error) {
+	return p.Provider.EstimateRowCount(ctx, tableName)
+}
+
 func (p *DB) RunMigrations(ctx context.Context) error {
 	// Execute CREATE EXTENSION for PostgreSQL only
 	if !p.Provider.IsSQLite() {

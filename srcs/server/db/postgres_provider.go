@@ -128,6 +128,15 @@ func (p *PgProvider) Ping(ctx context.Context) error {
 	return p.pool.Ping(ctx)
 }
 
+func (p *PgProvider) EstimateRowCount(ctx context.Context, tableName string) (int64, error) {
+	var count int64
+	err := p.QueryRow(ctx, "SELECT reltuples::bigint FROM pg_class WHERE relname = $1", tableName).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // PgRows implements Rows using pgx.Rows.
 type PgRows struct {
 	rows pgx.Rows

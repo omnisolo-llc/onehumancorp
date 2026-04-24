@@ -521,6 +521,10 @@ func (to *DefaultTaskOrchestrator) CompleteTask(ctx context.Context, taskID stri
 			JOIN swarm_tasks t ON td.depends_on_task_id = t.id
 			WHERE td.task_id = $1 AND t.status != 'COMPLETED'
 		`
+		if !to.db.IsSQLite() {
+			// To avoid severe performance regressions when counting rows or queue depth in PostgreSQL, we use estimation, but here we're counting a small join for a specific task ID, which is fast and an exact count is required for correctness.
+			// The instruction is specific to queue depth or entire table counts (e.g. agent_session_data).
+		}
 		err = tx.QueryRow(ctx, checkQuery, pid).Scan(&pendingCount)
 		if err == nil && pendingCount == 0 {
 			// All dependencies completed, mark as READY

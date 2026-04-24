@@ -223,6 +223,18 @@ func (p *SqliteProvider) Ping(ctx context.Context) error {
 	return p.db.PingContext(ctx)
 }
 
+func (p *SqliteProvider) EstimateRowCount(ctx context.Context, tableName string) (int64, error) {
+	var count int64
+	// SQLite is fast enough that COUNT(*) is acceptable.
+	// Ensure the table name is properly quoted to prevent SQL injection.
+	query := "SELECT COUNT(*) FROM \"" + strings.ReplaceAll(tableName, "\"", "\"\"") + "\""
+	err := p.QueryRow(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 // SqliteRows implements Rows using sql.Rows.
 type SqliteRows struct {
 	rows *sql.Rows

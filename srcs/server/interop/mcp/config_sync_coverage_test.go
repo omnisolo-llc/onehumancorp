@@ -49,6 +49,10 @@ func (m *mockDBProvider_FailExec) Exec(ctx context.Context, sql string, argument
 	return 0, context.DeadlineExceeded
 }
 
+func (m *mockDBProvider_FailExec) EstimateRowCount(ctx context.Context, tableName string) (int64, error) {
+	return 0, nil
+}
+
 func TestConfigSyncTool_Execute_BufferError(t *testing.T) {
 	ctx := context.Background()
 	mockDB := &mockDBProvider_FailExec{}

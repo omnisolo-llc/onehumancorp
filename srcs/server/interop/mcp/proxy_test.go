@@ -79,6 +79,7 @@ func (m *mockDBProvider) SearchMemories(ctx context.Context, organizationID stri
 
 func (m *mockDBProvider) IsSQLite() bool { return true }
 func (m *mockDBProvider) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) { return nil, nil }
+func (m *mockDBProvider) EstimateRowCount(ctx context.Context, tableName string) (int64, error) { return 0, nil }
 
 
 func TestMcpSyncProxy_BufferIntegrationState(t *testing.T) {

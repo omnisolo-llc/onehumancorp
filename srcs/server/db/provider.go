@@ -52,6 +52,7 @@ type Provider interface {
 	IsSQLite() bool
 	AcquireTask(ctx context.Context, organizationID, agentID string) (*TaskRecord, error)
 	SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error)
+	EstimateRowCount(ctx context.Context, tableName string) (int64, error)
 }
 
 // TaskRecord represents a task fetched from the queue.

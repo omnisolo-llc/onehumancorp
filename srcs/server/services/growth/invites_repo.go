@@ -50,14 +50,11 @@ func (r *InviteRepository) GetTeamInvitesCount(ctx context.Context, teamID strin
 }
 
 func (r *InviteRepository) GetTotalInvitesCount(ctx context.Context) (int, error) {
-	query := `SELECT COUNT(*) FROM team_invites`
-	var count int
-	row := r.db.QueryRow(ctx, query)
-	err := row.Scan(&count)
+	est, err := r.db.EstimateRowCount(ctx, "team_invites")
 	if err != nil {
 		return 0, fmt.Errorf("failed to get total invites count: %w", err)
 	}
-	return count, nil
+	return int(est), nil
 }
 
 func (r *InviteRepository) CreateInvites(ctx context.Context, invites []*TeamInvite) error {

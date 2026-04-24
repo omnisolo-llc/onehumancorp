@@ -51,6 +51,7 @@ func (m *mockDBProviderTools) IsSQLite() bool { return true }
 func (m *mockDBProviderTools) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) {
 	return nil, nil
 }
+func (m *mockDBProviderTools) EstimateRowCount(ctx context.Context, tableName string) (int64, error) { return 0, nil }
 
 
 func TestWorkspaceSyncTool_Execute(t *testing.T) {

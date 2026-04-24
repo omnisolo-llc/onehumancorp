@@ -77,6 +77,7 @@ func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]Too
 
 	// Insert dummy data if table is empty
 	var count int
+	// Local discovery uses SQLite internally, COUNT(*) is acceptable.
 	err = p.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM local_mcp_tools").Scan(&count)
 	if err == nil && count == 0 {
 		_, _ = p.db.ExecContext(ctx, `
