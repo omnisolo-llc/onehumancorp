@@ -216,6 +216,9 @@ func (p *SqliteProvider) SearchMemories(ctx context.Context, organizationID stri
 			results = append(results, content)
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return results, nil
 }
 
