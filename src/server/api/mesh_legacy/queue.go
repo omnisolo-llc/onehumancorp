@@ -144,17 +144,23 @@ func (q *QueueOrchestrator) CompleteSubTask(ctx context.Context, taskID, workerI
 			WHERE id = $1 AND worker_id = $2 AND status = 'IN_PROGRESS'
 		`
 	}
-	res, err := q.db.ExecContext(ctx, query, taskID, workerID)
+	// Verify current state before update to avoid relying on RowsAffected
+	var currentStatus string
+	checkQuery := "SELECT status FROM sub_agent_queue WHERE id = $1 AND worker_id = $2"
+	if !q.isSQLite {
+		checkQuery = "SELECT status FROM ohc_tasks.sub_agent_queue WHERE id = $1 AND worker_id = $2"
+	}
+	err := q.db.QueryRowContext(ctx, checkQuery, taskID, workerID).Scan(&currentStatus)
 	if err != nil {
-		return fmt.Errorf("failed to complete sub-task: %w", err)
+		return fmt.Errorf("sub-task not found, not in progress, or not assigned to worker")
+	}
+	if currentStatus != "IN_PROGRESS" {
+		return fmt.Errorf("sub-task not found, not in progress, or not assigned to worker")
 	}
 
-	rows, err := res.RowsAffected()
+	_, err = q.db.ExecContext(ctx, query, taskID, workerID)
 	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("sub-task not found, not in progress, or not assigned to worker")
+		return fmt.Errorf("failed to complete sub-task: %w", err)
 	}
 
 	return nil
@@ -215,17 +221,23 @@ func CompleteMission(ctx context.Context, db *sql.DB, missionID, agentID string)
 			WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS'
 		`
 	}
-	res, err := db.ExecContext(ctx, query, missionID, agentID)
+	// Verify current state before update to avoid relying on RowsAffected
+	var currentStatus string
+	checkQuery := "SELECT status FROM mission_queue WHERE mission_id = $1 AND assigned_agent = $2"
+	if !isSQLite {
+		checkQuery = "SELECT status FROM ohc_tasks.mission_queue WHERE mission_id = $1 AND assigned_agent = $2"
+	}
+	err := db.QueryRowContext(ctx, checkQuery, missionID, agentID).Scan(&currentStatus)
 	if err != nil {
-		return fmt.Errorf("failed to complete mission: %w", err)
+		return fmt.Errorf("mission not found, not in progress, or not assigned to agent")
+	}
+	if currentStatus != "IN_PROGRESS" {
+		return fmt.Errorf("mission not found, not in progress, or not assigned to agent")
 	}
 
-	rows, err := res.RowsAffected()
+	_, err = db.ExecContext(ctx, query, missionID, agentID)
 	if err != nil {
-		return fmt.Errorf("failed to check rows affected: %w", err)
-	}
-	if rows == 0 {
-		return fmt.Errorf("mission not found, not in progress, or not assigned to agent")
+		return fmt.Errorf("failed to complete mission: %w", err)
 	}
 
 	return nil
