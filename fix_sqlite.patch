@@ -1,0 +1,60 @@
+--- src/server/db/sqlite_provider.go
++++ src/server/db/sqlite_provider.go
+@@ -3,6 +3,8 @@
+ import (
+	"context"
+	"database/sql"
++	"encoding/json"
++	"math"
+	"regexp"
+	"strings"
+	"time"
+@@ -10,8 +12,47 @@
+	"github.com/onehumancorp/mono/src/server/telemetry"
+
+	"modernc.org/sqlite"
++	"modernc.org/sqlite/lib"
+ )
+
++func init() {
++	sqlite.MustRegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *sqlite.FunctionContext, args []sqlite.Value) (sqlite.Value, error) {
++		s1 := args[0].Text()
++		s2 := args[1].Text()
++
++		var v1 []float32
++		var v2 []float32
++
++		if err := json.Unmarshal([]byte(s1), &v1); err != nil {
++			return sqlite.Value{}, err
++		}
++		if err := json.Unmarshal([]byte(s2), &v2); err != nil {
++			return sqlite.Value{}, err
++		}
++
++		if len(v1) != len(v2) || len(v1) == 0 {
++			return sqlite.Value{}, nil
++		}
++
++		var dot, norm1, norm2 float64
++		for i := 0; i < len(v1); i++ {
++			f1 := float64(v1[i])
++			f2 := float64(v2[i])
++			dot += f1 * f2
++			norm1 += f1 * f1
++			norm2 += f2 * f2
++		}
++
++		if norm1 == 0 || norm2 == 0 {
++			return sqlite.Value{}, nil
++		}
++
++		similarity := dot / (math.Sqrt(norm1) * math.Sqrt(norm2))
++		distance := 1.0 - similarity
++
++		return sqlite.NewValueFloat64(distance), nil
++	})
++}
++
+ var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_]+)\s*::\s*json\s*->>\s*'([^']+)'`)
+
+ // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.

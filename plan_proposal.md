@@ -1,7 +1,26 @@
-1. **Implement `IsolationStrategy` interface**: Use a file editing tool (like `replace_with_git_merge_diff`) to add `IsolationStrategy` interface to `src/server/agents/provider.go`. The interface will have a single method `RunInIsolation(worktree string) error`.
-2. **Update `Provider` interface**: Use a file editing tool to embed the `IsolationStrategy` interface in the `Provider` interface in `src/server/agents/provider.go`.
-3. **Implement `RunInIsolation`**: Use a file editing tool to add `RunInIsolation(worktree string) error` to all the structs implementing `Provider` (or just to `baseProvider` and `BuiltinProvider`) in `src/server/agents/provider.go`. The implementation will pipe output streams directly to Redis Pub/Sub, for example: `fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)` and return `nil`.
-4. **Verify code changes**: Run `cat src/server/agents/provider.go` to ensure all edits were applied correctly.
-5. **Run tests**: Execute `bazelisk test //src/server/agents/...` to ensure all tests pass.
-6. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-7. **Submit the code**: Use the `submit` tool to commit the code, and then output a final message with a YAML block containing `issue_id: 4871`.
+# Architecture & Plan
+
+1. **Design and Implement Persistent Memory Layer (`SemanticSearch`)**
+   - Update `src/server/memory/vector_repository.go` to fully implement `SemanticSearch`.
+   - The method needs to be aware of the database type. `db.Provider` has an `IsSQLite()` method.
+   - For PostgreSQL, use the pgvector extension: `ORDER BY embedding <-> $2::vector ASC`. Format the query embeddings correctly.
+   - For SQLite, fallback to full-text or simply latest retrieval (since cosine distance UDFs are tricky in this setup and we're missing C extensions, we will gracefully degrade to `ORDER BY created_at DESC`).
+   - Write tests for `SemanticSearch` in a new `src/server/memory/vector_repository_test.go`.
+
+2. **Design and Implement Stale Context Pruning**
+   - Add a `Prune(ctx context.Context, organizationID string, olderThan time.Time) error` method to `VectorRepository`.
+   - This method will run a `DELETE FROM autodream_memories_master WHERE organization_id = $1 AND created_at < $2`.
+   - In `src/server/memory/autodream/service.go`, add a background cleanup mechanism or a method that can be invoked periodically to prune memories older than e.g. 6 months. Actually, we will add a `PruneStaleMemories` function to `Service`.
+
+3. **Design and Implement Conflict Resolution**
+   - When a new memory is being inserted (e.g. "Maya's cake price is $55"), we first `SemanticSearch` for similar recent memories. If a highly similar memory exists and they conflict, we should resolve it. But LLM is needed for this.
+   - A simpler approach requested: Detect when the same fact is stored and resolve by recency (overwrite/update the old fact).
+   - We will add `UpsertWithConflictResolution` to `autodream.Service`. It uses `SemanticSearch` to find similar existing records. It passes them to the LLM to identify conflicts. If conflicts exist, the LLM generates a consolidated memory, we prune the old conflicting records, and insert the new one.
+   - We will implement this in `src/server/memory/autodream/service.go` by updating `Consolidate`. The LLM prompt can be updated to include previous relevant context, or a new `ResolveConflicts` step can be added.
+
+4. **Add Tests**
+   - Provide 100% test coverage for `src/server/memory/vector_repository.go`.
+   - Write a mock LLM test for conflict resolution in `src/server/memory/autodream/service_test.go`.
+
+5. **Pre Commit Steps**
+   - Complete pre-commit steps to make sure proper testing, verifications, reviews, and reflections are done.

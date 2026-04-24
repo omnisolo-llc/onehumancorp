@@ -20,7 +20,7 @@ type mockLLM struct {
 func (m *mockLLM) Reason(ctx context.Context, prompt string) (string, error) {
 	m.reasonCount++
 	if m.conflictMode && m.reasonCount > 1 {
-		return `{"consolidated_memory": "Resolved summary", "conflicting_ids": ["task-123-summary"]}`, nil
+		return `{"consolidated_memory": "Resolved summary", "conflicting_ids": ["mem-1"]}`, nil
 	}
 	return "Mock summary", nil
 }

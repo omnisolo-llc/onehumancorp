@@ -319,6 +319,21 @@ func run(now time.Time, listen listenFunc) error {
 
 		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil)
 		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver, adConsolidator)
+
+		// Run background pruning
+		go func() {
+			ticker := time.NewTicker(24 * time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					_ = adConsolidator.PruneStaleMemories(context.Background(), "system", time.Now().Add(-180*24*time.Hour))
+				}
+			}
+		}()
+
 		// Run distillation as a background job
 		go func() {
 			ticker := time.NewTicker(1 * time.Hour)

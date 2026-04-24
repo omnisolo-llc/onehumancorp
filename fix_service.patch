@@ -1,0 +1,8 @@
+--- src/server/memory/autodream/service.go
++++ src/server/memory/autodream/service.go
+@@ -3,6 +3,7 @@
+ import (
+	"context"
++	"encoding/json"
+	"fmt"
+	"time"
