@@ -236,9 +236,9 @@ func New(ctx context.Context) (*DB, error) {
 			}
 		}
 		if !strings.Contains(sqliteDSN, "?") {
-			sqliteDSN += "?_pragma=key('" + key + "')"
+			sqliteDSN += "?_pragma=key(" + key + ")"
 		} else {
-			sqliteDSN += "&_pragma=key('" + key + "')"
+			sqliteDSN += "&_pragma=key(" + key + ")"
 		}
 
 		sqliteDB, sqliteErr := sql.Open("sqlite", sqliteDSN)

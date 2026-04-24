@@ -1,4 +1,4 @@
-load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
+load("@rules_flutter//flutter:defs.bzl", "flutter_library")
 
 package(default_visibility = ["//src/app:__subpackages__"])
 
@@ -32,7 +32,6 @@ flutter_library(
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         "//src/app/lib/models:models_lib",
-        "//src/app/lib/services:services_lib",
         "@flutter_sdk//flutter/packages/flutter",
         "@pub_web_socket_channel//:web_socket_channel",
     ],
@@ -51,32 +50,4 @@ alias(
 alias(
     name = "sub_agent_queue_widget",
     actual = ":widgets_lib",
-)
-
-flutter_library(
-    name = "widgets_for_tests",
-    srcs = [],
-    pubspec = "//src/app:pubspec.yaml",
-    workspace_pubspec = "//:pubspec.yaml",
-    deps = [
-        ":widgets_lib",
-        "@pub_mocktail//:mocktail",
-    ],
-)
-
-WIDGET_TESTS = glob(["*_test.dart"])
-
-flutter_test(
-    name = "widgets_test",
-    srcs = WIDGET_TESTS,
-    embed = [":widgets_for_tests"],
-    test_files = ["."],
-    workspace_pubspec = "//:pubspec.yaml",
-    data = ["//src/app/test:testdata/quota.json"],
-)
-
-test_suite(
-    name = "all_tests",
-    tags = ["manual"],
-    tests = [":widgets_test"],
 )

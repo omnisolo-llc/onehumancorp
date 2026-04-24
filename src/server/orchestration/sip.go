@@ -632,7 +632,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 		s.groundingOnce.Do(func() {
 			var combinedGrounding strings.Builder
 
-			for _, filename := range []string{"AGENTS.md", "CLAUDE.md"} {
+			for _, filename := range []string{"AGENTS.md", "CLAUDE_OHC.md"} {
 				path := filepath.Join(s.ContextRoot, filename)
 
 				// Stat the file first to distinguish between missing vs permissions/errors
@@ -653,7 +653,7 @@ func (s *SIPDB) DelegateMission(ctx context.Context, missionID, role string, tas
 			}
 
 			if combinedGrounding.Len() > 0 {
-				s.cachedGrounding = "\n\n[SYSTEM GROUNDING]:\n" + strings.TrimSpace(combinedGrounding.String())
+				s.cachedGrounding = "\n\n[SYSTEM GROUNDING]\n" + strings.TrimSpace(combinedGrounding.String())
 			}
 		})
 

@@ -1,8 +1,3 @@
-import 'package:ohc_app/screens/help/help_center_screen.dart';
-import 'package:ohc_app/screens/help/help_article_screen.dart';
-import 'package:ohc_app/screens/help/changelog_screen.dart';
-import 'package:ohc_app/screens/help/api_docs_screen.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
@@ -19,7 +14,7 @@ import 'package:ohc_app/screens/logs_screen.dart';
 import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/service_screen.dart';
-
+import 'package:ohc_app/screens/wizard_screen.dart';
 import 'package:ohc_app/screens/diagnostics_screen.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
@@ -38,6 +33,7 @@ import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/widgets/health_banner.dart';
 import 'package:flutter/material.dart';
 
 /// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
@@ -47,50 +43,6 @@ class _GoRouterAuthNotifier extends ChangeNotifier {
   _GoRouterAuthNotifier(Ref ref) {
     ref.listen(authStateProvider, (_, __) => notifyListeners());
   }
-}
-
-const bool isStandalone = bool.fromEnvironment('OHC_STANDALONE', defaultValue: false);
-
-String computeInitialLocation({bool? isWeb, bool? isStandaloneOverride}) {
-  final web = isWeb ?? kIsWeb;
-  final standalone = isStandaloneOverride ?? isStandalone;
-  if (web) return '/landing';
-  if (standalone) return '/dashboard';
-  return '/login';
-}
-
-String? computeRedirect({
-  required String matchedLocation,
-  required bool isLoggedIn,
-  required bool isWeb,
-  required bool isStandaloneOverride,
-  required String? redirectTarget,
-  required String fullPath,
-}) {
-  if (isWeb) {
-    if (matchedLocation != '/landing') {
-      return '/landing';
-    }
-    return null;
-  }
-
-  if (isStandaloneOverride) {
-    if (matchedLocation == '/landing' || matchedLocation == '/login') {
-      return '/dashboard';
-    }
-    return null;
-  }
-
-  final isLoginRoute = matchedLocation == '/login';
-
-  if (!isLoggedIn && !isLoginRoute) {
-    final encodedTarget = Uri.encodeComponent(fullPath);
-    return '/login?redirect=$encodedTarget';
-  }
-  if (isLoggedIn && (isLoginRoute || matchedLocation == '/landing')) {
-    return redirectTarget ?? '/dashboard';
-  }
-  return null;
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -107,24 +59,26 @@ final routerProvider = Provider<GoRouter>((ref) {
   }
 
   return GoRouter(
-    initialLocation: computeInitialLocation(),
+    initialLocation: '/landing',
     refreshListenable: _GoRouterAuthNotifier(ref),
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
+      // Don't redirect while auth state is still loading (avoids navigation
+      // resets during login/logout transitions).
       if (authState.isLoading) return null;
 
       final isLoggedIn = authState.valueOrNull != null;
-      final matchedLocation = state.matchedLocation;
+      final isLoginRoute = state.matchedLocation == '/login';
+      final isLandingRoute = state.matchedLocation == '/landing';
       final redirectTarget = safeRedirectTarget(state.uri.queryParameters['redirect']);
 
-      return computeRedirect(
-        matchedLocation: matchedLocation,
-        isLoggedIn: isLoggedIn,
-        isWeb: kIsWeb,
-        isStandaloneOverride: isStandalone,
-        redirectTarget: redirectTarget,
-        fullPath: state.uri.toString(),
-      );
+      // Allow these public routes without authentication.
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) {
+        final encodedTarget = Uri.encodeComponent(state.uri.toString());
+        return '/login?redirect=$encodedTarget';
+      }
+      if (isLoggedIn && isLoginRoute) return redirectTarget ?? '/dashboard';
+      return null;
     },
     routes: [
       GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
@@ -191,7 +145,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/wizard',
-            builder: (context, state) => const BusinessSetupWizardScreen(),
+            builder: (context, state) => const SetupWizardScreen(),
           ),
           GoRoute(
             path: '/handoffs',
@@ -257,24 +211,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
-          GoRoute(
-            path: '/help',
-            builder: (context, state) => const HelpCenterScreen(),
-          ),
-          GoRoute(
-            path: '/help/article/:id',
-            builder: (context, state) => HelpArticleScreen(
-              articleId: state.pathParameters['id'] ?? 'unknown',
-            ),
-          ),
-          GoRoute(
-            path: '/help/api-docs',
-            builder: (context, state) => const ApiDocsScreen(),
-          ),
-          GoRoute(
-            path: '/help/changelog',
-            builder: (context, state) => const ChangelogScreen(),
-          ),
         ],
       ),
     ],
@@ -288,7 +224,16 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Column(
+        children: [
+          const HealthBanner(),
+          Expanded(
+            child: Row(children: [_Sidebar(), Expanded(child: child)]),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -375,8 +320,6 @@ class _Sidebar extends StatelessWidget {
           label: 'Setup Wizard',
           path: '/wizard',
         ),
-        const SizedBox(height: 16),
-        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
         const SizedBox(height: 16),
         _NavItem(
           icon: Icons.health_and_safety,
