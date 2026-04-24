@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "rate_limiter",
+    srcs = ["rate_limiter.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/lib/integrations/rate_limiter",
+    visibility = ["//visibility:public"],
+    deps = ["@com_github_redis_rueidis//:rueidis"],
+)

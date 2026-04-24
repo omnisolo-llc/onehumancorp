@@ -7,6 +7,7 @@ go_library(
         "repository.go",
         "sqlite_tracker.go",
         "tracker.go",
+        "tiers.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/billing",
     visibility = ["//visibility:public"],
