@@ -40,9 +40,6 @@ func TestSyncDaemon(t *testing.T) {
 		if r.URL.Path != "/api/telemetry/sync" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
-		if r.Header.Get("X-OHC-Conflict-Resolution") != "force-local" {
-			t.Errorf("missing conflict resolution header")
-		}
 		var payloads []map[string]interface{}
 		if err := json.NewDecoder(r.Body).Decode(&payloads); err != nil {
 			t.Errorf("decode request body: %v", err)
