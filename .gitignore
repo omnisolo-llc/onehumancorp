@@ -93,10 +93,10 @@ node_modules/
 Chart.lock
 /.claude-code
 /.claude
-/.agent-task
 
 # Rust build artifacts
 /target/
+/.agent-task
 site/
 
 # Android/Flutter local properties (auto-generated, machine-specific)

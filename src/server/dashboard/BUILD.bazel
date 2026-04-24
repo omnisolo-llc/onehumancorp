@@ -21,6 +21,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/dashboard",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/lib/perf",
         "//src/server/db",
         "//src/server/api/mesh_legacy:mesh",
         "//src/server/orchestration/kairos",
@@ -42,6 +43,7 @@ go_library(
         "//src/server/telemetry",
         "//src/server/tools/blobinspector",
         "//src/server/tools/localstatefulproxy",
+        "//src/server/tools/searchmcp",
         "//src/server/tools/edgeoffloadmcp",
         "//src/server/lib/integrations/hybridfsmcp",
         "@io_opentelemetry_go_otel//:otel",

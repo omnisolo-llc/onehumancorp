@@ -61,7 +61,7 @@ func IsTelemetryMCPBridgeRegistered(endpoint string) bool {
 type HybridContextTool struct{}
 
 func (t *HybridContextTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
-	payloadBytes, err := json.Marshal(payload)
+	payloadBytes, err := json.Marshal(telemetry.RedactInterfacePII(payload))
 	if err != nil {
 		return nil, err
 	}

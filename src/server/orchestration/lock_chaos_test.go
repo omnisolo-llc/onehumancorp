@@ -64,7 +64,6 @@ func TestLock_ContentionResilience(t *testing.T) {
 		}
 	})
 
-
 	t.Run("Simulate .agent-lock File Contention", func(t *testing.T) {
 		lockFile := filepath.Join(lockDir, "mission_1.lock")
 		err := os.WriteFile(lockFile, []byte("locked"), 0644)
@@ -79,13 +78,19 @@ func TestLock_ContentionResilience(t *testing.T) {
 		}
 		defer os.Chmod(lockFile, 0644)
 
-		// Test logic that would attempt to acquire this lock
-		// For now we just verify that we can detect the "busy" state
-		_, err = os.OpenFile(lockFile, os.O_WRONLY, 0666)
+		err = withSipRetry(context.Background(), func() error {
+			f, err := os.OpenFile(lockFile, os.O_WRONLY, 0666)
+			if err != nil {
+				return err
+			}
+			f.Close()
+			return nil
+		})
+
 		if err == nil {
 			t.Errorf("Expected error opening read-only lock file for writing, got nil")
 		} else {
-			t.Logf("Detected lock contention: %v", err)
+			t.Logf("Detected lock contention, safely returned: %v", err)
 		}
 	})
 }

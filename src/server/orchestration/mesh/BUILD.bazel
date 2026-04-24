@@ -29,6 +29,7 @@ go_test(
         "broker_test.go",
         "mesh_test.go",
         "mesh_coordinator_test.go",
+        "mesh_chaos_test.go",
     ],
     embed = [":mesh"],
     deps = [
