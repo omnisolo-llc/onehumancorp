@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/settings"
 )
 
@@ -31,7 +32,7 @@ type wizardConfigureRequest struct {
 	RedisURL      string                `json:"redis_url,omitempty"`
 	CentrifugeURL string                `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string                `json:"minimax_api_key,omitempty"`
-	Extras        map[string]string `json:"extras,omitempty"`
+	Extras        map[string]string     `json:"extras,omitempty"`
 	AiProviders   []settings.AiProvider `json:"ai_providers,omitempty"`
 }
 
@@ -248,4 +249,91 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		"diagnostics": healthChecks,
 	}
 	writeJSON(w, resp)
+}
+
+// wizardDraftRequest carries the UI state of the wizard.
+type wizardDraftRequest struct {
+	State map[string]interface{} `json:"state"`
+}
+
+type wizardDraftResponse struct {
+	State map[string]interface{} `json:"state"`
+}
+
+func (s *Server) handleWizardDraftSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.ClaimsFromContext(r.Context())
+	userID := claims.Subject
+	tenantID := claims.OrganizationID
+	if userID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if tenantID == "" {
+		tenantID = "system"
+	}
+
+	var req wizardDraftRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	stateJSON, err := json.Marshal(req.State)
+	if err != nil {
+		http.Error(w, "failed to marshal state", http.StatusInternalServerError)
+		return
+	}
+
+	db := s.dbProvider
+	if db != nil {
+		_, err := db.Exec(r.Context(), "INSERT INTO wizard_drafts (user_id, tenant_id, state) VALUES ($1, $2, $3) ON CONFLICT(user_id) DO UPDATE SET state = excluded.state, updated_at = CURRENT_TIMESTAMP", userID, tenantID, string(stateJSON))
+		if err != nil {
+			http.Error(w, "failed to save draft: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		http.Error(w, "database unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleWizardDraftLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.ClaimsFromContext(r.Context())
+	userID := claims.Subject
+	tenantID := claims.OrganizationID
+	if userID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	if tenantID == "" {
+		tenantID = "system"
+	}
+
+	db := s.dbProvider
+	var stateJSON string
+	if db != nil {
+		err := db.QueryRow(r.Context(), "SELECT state FROM wizard_drafts WHERE user_id = $1 AND tenant_id = $2", userID, tenantID).Scan(&stateJSON)
+		if err != nil {
+			stateJSON = "{}" // Default empty state if not found
+		}
+	} else {
+		stateJSON = "{}"
+	}
+
+	var state map[string]interface{}
+	_ = json.Unmarshal([]byte(stateJSON), &state)
+
+	writeJSON(w, wizardDraftResponse{State: state})
 }
