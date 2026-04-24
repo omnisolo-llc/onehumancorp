@@ -325,7 +325,10 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "task_manager_claim")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -474,7 +477,10 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "task_manager_review")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -534,7 +540,10 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "task_manager_complete")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -765,7 +774,10 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "task_manager_poll")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -1056,7 +1068,10 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "task_manager_update")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -1158,7 +1173,10 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "task_manager_delete")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 

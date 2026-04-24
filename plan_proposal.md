@@ -1,7 +1,26 @@
-1. **Implement `IsolationStrategy` interface**: Use a file editing tool (like `replace_with_git_merge_diff`) to add `IsolationStrategy` interface to `src/server/agents/provider.go`. The interface will have a single method `RunInIsolation(worktree string) error`.
-2. **Update `Provider` interface**: Use a file editing tool to embed the `IsolationStrategy` interface in the `Provider` interface in `src/server/agents/provider.go`.
-3. **Implement `RunInIsolation`**: Use a file editing tool to add `RunInIsolation(worktree string) error` to all the structs implementing `Provider` (or just to `baseProvider` and `BuiltinProvider`) in `src/server/agents/provider.go`. The implementation will pipe output streams directly to Redis Pub/Sub, for example: `fmt.Printf("Redis Pub/Sub: agent %s running in worktree %s\n", p.Type(), worktree)` and return `nil`.
-4. **Verify code changes**: Run `cat src/server/agents/provider.go` to ensure all edits were applied correctly.
-5. **Run tests**: Execute `bazelisk test //src/server/agents/...` to ensure all tests pass.
-6. **Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.**
-7. **Submit the code**: Use the `submit` tool to commit the code, and then output a final message with a YAML block containing `issue_id: 4871`.
+1. **Analyze Parity:** Find all places doing `FOR UPDATE SKIP LOCKED` or mimicking it in SQLite that don't have the `mu.TryLock` contention logic.
+2. **Update `TaskManager` (`src/server/orchestration/tasks.go`)**:
+   - `ClaimTask`, `PollTasks`, `PeekTasks` (wait, does peek need lock? maybe not), `CompleteTaskWithResult`, `ReviewTask`, `UpdateTask`, `DeleteTask` use `tm.mu.Lock()`. Change them to:
+     ```go
+     if tm.db.IsSQLite() {
+         if !tm.mu.TryLock() {
+             telemetry.RecordPostgresLockContention(ctx, "task_manager_...")
+             tm.mu.Lock()
+         }
+         defer tm.mu.Unlock()
+     }
+     ```
+3. **Update `TaskQueueService` (`src/server/orchestration/queue/kairos_queue.go`)**:
+   - Add `mu sync.Mutex` to `TaskQueueService`.
+   - In `claimTaskSQLite`, use the mutex block with telemetry: `telemetry.RecordPostgresLockContention(ctx, "kairos_queue_claim")`.
+4. **Update `CloudStateManager` (`src/server/orchestration/state/cloud_state_manager.go`)**:
+   - Add `mu sync.Mutex` to `CloudStateManager`.
+   - In `ClaimTask`, use the mutex block with telemetry: `telemetry.RecordPostgresLockContention(ctx, "cloud_state_manager_claim")`.
+5. **Update `StandaloneStateManager` (`src/server/orchestration/state/standalone_state_manager.go`)**:
+   - Update `ClaimTask` and `TransitionState` and `MarkTaskCompleted` which currently do `m.mu.Lock()` to do the `TryLock()` and record contention: `telemetry.RecordPostgresLockContention(ctx, "standalone_state_manager_...")`.
+6. **Update `SharedTaskListRepo` (`src/server/orchestration/shared_task_list_repo.go`)**:
+   - Add `mu sync.Mutex` to `SharedTaskListRepo`.
+   - In `getNextAvailableTaskSQLite`, use the mutex block with telemetry: `telemetry.RecordPostgresLockContention(ctx, "shared_task_list_repo_claim")`.
+7. **Verify Tests**: Run `bazelisk test //src/server/orchestration/...`.
+8. **Pre-commit**: Complete pre-commit.
+9. **Submit**: Output YAML with `issue_id: 4871`.

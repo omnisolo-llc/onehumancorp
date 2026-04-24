@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"sync"
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,6 +14,7 @@ import (
 
 type SharedTaskListRepo struct {
 	dbProvider db.Provider
+	mu sync.Mutex
 }
 
 func NewSharedTaskListRepo(dbProvider db.Provider) *SharedTaskListRepo {
@@ -85,6 +88,12 @@ func (r *SharedTaskListRepo) GetNextAvailableTask(ctx context.Context, agentID s
 }
 
 func (r *SharedTaskListRepo) getNextAvailableTaskSQLite(ctx context.Context, agentID string) (*SharedTaskListTask, error) {
+	if !r.mu.TryLock() {
+		telemetry.RecordPostgresLockContention(ctx, "shared_task_list_repo_claim")
+		r.mu.Lock()
+	}
+	defer r.mu.Unlock()
+
 	tx, err := r.dbProvider.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)

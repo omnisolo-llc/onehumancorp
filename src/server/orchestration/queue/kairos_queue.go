@@ -1,6 +1,8 @@
 package queue
 
 import (
+	"sync"
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"database/sql"
 	"errors"
@@ -25,6 +27,7 @@ type SharedTask struct {
 
 type TaskQueueService struct {
 	db db.Provider
+	mu sync.Mutex
 }
 
 func NewTaskQueueService(dbProvider db.Provider) *TaskQueueService {
@@ -141,6 +144,12 @@ func (s *TaskQueueService) claimTaskPG(ctx context.Context, agentID string) (*Sh
 }
 
 func (s *TaskQueueService) claimTaskSQLite(ctx context.Context, agentID string) (*SharedTask, error) {
+	if !s.mu.TryLock() {
+		telemetry.RecordPostgresLockContention(ctx, "kairos_queue_claim")
+		s.mu.Lock()
+	}
+	defer s.mu.Unlock()
+
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err

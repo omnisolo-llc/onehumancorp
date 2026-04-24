@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,7 +23,10 @@ func NewStandaloneStateManager(provider db.Provider) *StandaloneStateManager {
 }
 
 func (m *StandaloneStateManager) TransitionState(ctx context.Context, taskID, agentID, fromState, toState, reason string) error {
-	m.mu.Lock()
+	if !m.mu.TryLock() {
+		telemetry.RecordPostgresLockContention(ctx, "standalone_state_manager_transition")
+		m.mu.Lock()
+	}
 	defer m.mu.Unlock()
 
 	tx, err := m.dbProvider.Begin(ctx)
@@ -85,7 +89,10 @@ func (m *StandaloneStateManager) TransitionState(ctx context.Context, taskID, ag
 }
 
 func (m *StandaloneStateManager) ClaimTask(ctx context.Context, agentID string) (*Task, error) {
-	m.mu.Lock()
+	if !m.mu.TryLock() {
+		telemetry.RecordPostgresLockContention(ctx, "standalone_state_manager_claim")
+		m.mu.Lock()
+	}
 	defer m.mu.Unlock()
 
 	tx, err := m.dbProvider.Begin(ctx)
@@ -125,7 +132,10 @@ func (m *StandaloneStateManager) ClaimTask(ctx context.Context, agentID string) 
 }
 
 func (m *StandaloneStateManager) MarkTaskCompleted(ctx context.Context, taskID string) error {
-	m.mu.Lock()
+	if !m.mu.TryLock() {
+		telemetry.RecordPostgresLockContention(ctx, "standalone_state_manager_mark_completed")
+		m.mu.Lock()
+	}
 	defer m.mu.Unlock()
 
 	tx, err := m.dbProvider.Begin(ctx)

@@ -1,6 +1,8 @@
 package state
 
 import (
+	"sync"
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,6 +15,7 @@ import (
 type CloudStateManager struct {
 	dbProvider  db.Provider
 	redisClient rueidis.Client
+	mu sync.Mutex
 }
 
 func NewCloudStateManager(provider db.Provider, redisClient rueidis.Client) *CloudStateManager {
@@ -119,6 +122,14 @@ func (m *CloudStateManager) TransitionState(ctx context.Context, taskID, agentID
 }
 
 func (m *CloudStateManager) ClaimTask(ctx context.Context, agentID string) (*Task, error) {
+	if m.dbProvider.IsSQLite() {
+		if !m.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "cloud_state_manager_claim")
+			m.mu.Lock()
+		}
+		defer m.mu.Unlock()
+	}
+
 	tx, err := m.dbProvider.Begin(ctx)
 	if err != nil {
 		return nil, err
