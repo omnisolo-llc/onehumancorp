@@ -347,27 +347,9 @@ func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 
 // getMissionUpdatedAt fetches the updated_at or created_at timestamp for a mission.
 func (s *SIPDB) getMissionUpdatedAt(ctx context.Context, missionID string) (time.Time, error) {
-	var updatedAt interface{}
+	var updatedAt time.Time
 	err := s.db.QueryRow(ctx, "SELECT COALESCE(updated_at, created_at) FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&updatedAt)
-	if err != nil {
-		return time.Time{}, err
-	}
-	switch v := updatedAt.(type) {
-	case time.Time:
-		return v, nil
-	case string:
-		// Try parsing common SQLite datetime format
-		if t, err := time.Parse("2006-01-02 15:04:05", v); err == nil {
-			return t, nil
-		}
-		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
-			return t, nil
-		}
-		if t, err := time.Parse(time.RFC3339, v); err == nil {
-			return t, nil
-		}
-	}
-	return time.Time{}, fmt.Errorf("unknown type for timestamp")
+	return updatedAt, err
 }
 
 // GetPendingMissions proactively seeks tasks assigned to the role.
@@ -744,11 +726,6 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 				}
 			}
 			rows.Close()
-		}
-
-		// 1b. Immediately requeue STUCK missions to prevent them from persisting
-		if _, errRequeue := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1", s.orgID); errRequeue != nil {
-			return errRequeue
 		}
 
 		// 2. Mark missions as FAILED if they exceed the absolute age threshold

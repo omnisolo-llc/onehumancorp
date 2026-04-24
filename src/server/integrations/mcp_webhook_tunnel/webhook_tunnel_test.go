@@ -89,7 +89,7 @@ func TestCloudRelay_RegisterAndForward(t *testing.T) {
 	defer client.Close()
 
 	// Wait for the connection to be established and registered
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
 	// Simulate an external webhook hitting the CloudRelay HTTP endpoint
 	reqBody := []byte(`{"event":"order_created"}`)
@@ -104,7 +104,7 @@ func TestCloudRelay_RegisterAndForward(t *testing.T) {
 	}
 
 	// Allow the stream to receive the payload
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
 	count := client.GetReceivedCount()
 	if count != 1 {
