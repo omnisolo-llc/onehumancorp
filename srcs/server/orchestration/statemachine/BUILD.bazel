@@ -20,7 +20,5 @@ go_test(
     deps = [
         "//srcs/server/db",
         "@org_modernc_sqlite//:sqlite",
-        "@com_github_alicebob_miniredis_v2//:miniredis",
-        "@com_github_redis_rueidis//:rueidis",
     ],
 )

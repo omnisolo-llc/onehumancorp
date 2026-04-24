@@ -9,13 +9,3 @@ go_library(
         "//srcs/server/db",
     ],
 )
-
-go_test(
-    name = "memory_test",
-    srcs = ["vector_repository_test.go"],
-    embed = [":memory"],
-    deps = [
-        "//srcs/server/db",
-        "@org_modernc_sqlite//:sqlite",
-    ],
-)

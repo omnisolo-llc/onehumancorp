@@ -548,25 +548,6 @@ class ApiService {
     _checkStatus(response);
   }
 
-  Future<Map<String, String>> generateReferralLink(String userId) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/api/growth/referral'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'user_id': userId,
-      }),
-    );
-    _checkStatus(response);
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return {
-      'link': data['link'] as String,
-      'pre_filled_message': data['pre_filled_message'] as String,
-    };
-  }
-
   void _checkStatus(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw Exception('API error ${res.statusCode}: ${res.body}');

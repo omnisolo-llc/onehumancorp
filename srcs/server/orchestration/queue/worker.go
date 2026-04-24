@@ -36,7 +36,7 @@ func (w *Worker) Start(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			job, err := w.queue.Acquire(ctx, w.roles)
+			job, err := w.queue.Dequeue(ctx, w.roles)
 			if err != nil {
 				slog.Error("Worker failed to dequeue job", "error", err)
 				continue
