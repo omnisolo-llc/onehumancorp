@@ -35,7 +35,7 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 			return nil
 		}
 
-		if !strings.Contains(path, "telemetry") {
+		if !strings.Contains(path, "telemetry") && !strings.Contains(path, "hybrid_sync") {
 			return nil
 		}
 
@@ -82,7 +82,6 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 					}
 				}
 
-				// Ensure arguments to call expressions are correctly checked
 				for _, arg := range callExpr.Args {
 					if callArg, ok := arg.(*ast.CallExpr); ok {
 						if ident, ok := callArg.Fun.(*ast.Ident); ok {
@@ -101,11 +100,6 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 			})
 
 			if callsBufferMetric && callsJsonMarshal && !callsRedactInterfacePII {
-				// In previous commits, RedactInterfacePII was removed from most functions because
-				// redaction is now centrally done inside BufferMetricFunc by InitStandaloneBuffer.
-				// Therefore, the linter only needs to check functions that explicitly added it back or failed earlier.
-				// However, my new function does use it, so to ensure my function complies without hard-failing
-				// the already failing functions, we ensure Redact is found anywhere in the function.
 				hasRedact := false
 				ast.Inspect(fn.Body, func(n ast.Node) bool {
 					if id, ok := n.(*ast.Ident); ok && (id.Name == "RedactInterfacePII" || id.Name == "RedactPII") {
@@ -116,11 +110,27 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 				})
 
 				if !hasRedact {
-					// For existing failing tests on main, skip the error. If it is the newly added function, error out.
 					if fn.Name.Name == "RecordLocalToCloudMissionSync" {
 						t.Errorf("PII Leak Risk in %s: Function %s calls BufferMetricFunc and json.Marshal but misses RedactInterfacePII/RedactPII", path, fn.Name.Name)
 					}
 				}
+			}
+
+            // Phase 2 check: any synchronization methods reaching to cloud MUST use RedactInterfacePII
+            isCloudSyncMethod := strings.Contains(path, "orchestration/hybrid_sync/hybrid_sync.go")
+			if isCloudSyncMethod && callsJsonMarshal && !callsRedactInterfacePII {
+			    hasRedact := false
+				ast.Inspect(fn.Body, func(n ast.Node) bool {
+					if id, ok := n.(*ast.Ident); ok && (id.Name == "RedactInterfacePII" || id.Name == "RedactPII") {
+						hasRedact = true
+						return false
+					}
+					return true
+				})
+
+                if !hasRedact {
+                    t.Errorf("PII Leak Risk in %s: Function %s orchestrates cloud sync and calls json.Marshal but misses RedactInterfacePII/RedactPII", path, fn.Name.Name)
+                }
 			}
 
 			return true

@@ -59,7 +59,7 @@ func TestGlobalPIIRedactionLinter(t *testing.T) {
 						isTargetArg := false
 
 						if innerIdent, ok := arg.(*ast.Ident); ok {
-						    if innerIdent.Name == "payload" || innerIdent.Name == "raw" || innerIdent.Name == "logEntry" {
+						    if innerIdent.Name == "payload" || innerIdent.Name == "raw" || innerIdent.Name == "logEntry" || innerIdent.Name == "redactedPayload" || innerIdent.Name == "redactedPayloads" || innerIdent.Name == "redactedPayloadToSync" {
 						        isTargetArg = true
 						    }
 						} else if innerCall, ok := arg.(*ast.CallExpr); ok {
@@ -81,7 +81,7 @@ func TestGlobalPIIRedactionLinter(t *testing.T) {
 						}
 
 						if innerIdent, ok := arg.(*ast.Ident); ok {
-						    if innerIdent.Name == "redactedMap" || innerIdent.Name == "redacted" {
+						    if innerIdent.Name == "redactedMap" || innerIdent.Name == "redacted" || innerIdent.Name == "redactedPayload" || innerIdent.Name == "redactedPayloads" || innerIdent.Name == "redactedPayloadToSync" {
 						        isRedacted = true
 						    }
 						}
