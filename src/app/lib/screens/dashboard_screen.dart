@@ -125,14 +125,25 @@ class _DashboardContent extends StatelessWidget {
           ),
         ),
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            _SectionTitle('Overview'),
-            OutlinedButton.icon(
-              onPressed: () => context.go('/wizards/billing'),
-              icon: const Icon(Icons.credit_card),
-              label: const Text('Billing & Credits'),
+            const _SectionTitle('Overview'),
+            Wrap(
+              spacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/wizards/grow'),
+                  icon: const Icon(Icons.trending_up),
+                  label: const Text('Grow my business'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/wizards/billing'),
+                  icon: const Icon(Icons.credit_card),
+                  label: const Text('Billing & Credits'),
+                ),
+              ],
             ),
           ],
         ),

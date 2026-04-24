@@ -177,6 +177,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/wizards/grow',
+            builder: (context, state) => const GrowMyBusinessWizardScreen(),
+          ),
+          GoRoute(
             path: '/wizards/upgrade',
             builder: (context, state) => const UpgradeWizardScreen(),
           ),

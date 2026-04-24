@@ -74,6 +74,108 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
   }
 }
 
+// --- Grow My Business Wizard ---
+class GrowMyBusinessWizardScreen extends ConsumerStatefulWidget {
+  const GrowMyBusinessWizardScreen({super.key});
+
+  @override
+  ConsumerState<GrowMyBusinessWizardScreen> createState() => _GrowMyBusinessWizardScreenState();
+}
+
+class _GrowMyBusinessWizardScreenState extends ConsumerState<GrowMyBusinessWizardScreen> {
+  int _step = 0;
+  bool _isProcessing = false;
+  bool _done = false;
+  String _actionResult = '';
+
+  void _applyAction(String action) async {
+    setState(() { _isProcessing = true; });
+    await Future.delayed(const Duration(seconds: 1));
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _actionResult = 'Successfully applied: $action';
+        _done = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Grow My Business')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Let\'s grow your business 🚀', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 24),
+                    if (_step == 0) ...[
+                      const Text('Based on your current stage, we recommend adding more products to your catalog to attract a wider audience.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => setState(() => _step = 1),
+                        child: const Text('See Suggestions'),
+                      ),
+                    ] else if (_step == 1 && !_isProcessing && !_done) ...[
+                      const Text('Suggested Next Steps:', style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        leading: const Icon(Icons.add_shopping_cart, color: Colors.blueAccent),
+                        title: const Text('Add 5 more products', style: TextStyle(fontFamily: 'Inter')),
+                        trailing: ElevatedButton(
+                          onPressed: () => _applyAction('Add 5 more products'),
+                          child: const Text('Do it'),
+                        ),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.camera_alt, color: Colors.pinkAccent),
+                        title: const Text('Connect Instagram', style: TextStyle(fontFamily: 'Inter')),
+                        trailing: ElevatedButton(
+                          onPressed: () => _applyAction('Connect Instagram'),
+                          child: const Text('Connect'),
+                        ),
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.email, color: Colors.orangeAccent),
+                        title: const Text('Run your first email campaign', style: TextStyle(fontFamily: 'Inter')),
+                        trailing: ElevatedButton(
+                          onPressed: () => _applyAction('Run email campaign'),
+                          child: const Text('Start'),
+                        ),
+                      ),
+                    ] else if (_isProcessing) ...[
+                      const Center(child: CircularProgressIndicator()),
+                      const SizedBox(height: 16),
+                      const Text('Working on it...', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter')),
+                    ] else if (_done) ...[
+                      const Icon(Icons.check_circle, color: Colors.green, size: 64),
+                      const SizedBox(height: 16),
+                      Text(_actionResult, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => context.go('/dashboard'),
+                        child: const Text('Back to Dashboard'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // --- Upgrade Wizard ---
 class UpgradeWizardScreen extends ConsumerStatefulWidget {
   const UpgradeWizardScreen({super.key});
