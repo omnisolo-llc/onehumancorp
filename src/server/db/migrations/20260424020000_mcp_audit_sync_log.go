@@ -14,11 +14,20 @@ func init() {
 func upMCPAuditSyncLog(ctx context.Context, tx *sql.Tx) error {
 	// Let's create a generic table or use a single migration to avoid goose crashing due to identical timestamp
 	// Check for sqlite
-	isSqlite := false
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT check_sqlite"); err != nil {
+		return err
+	}
 	var version string
 	err := tx.QueryRowContext(ctx, "select sqlite_version()").Scan(&version)
-	if err == nil {
-		isSqlite = true
+	isSqlite := err == nil
+	if !isSqlite {
+		if _, err := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT check_sqlite"); err != nil {
+			return err
+		}
+	} else {
+		if _, err := tx.ExecContext(ctx, "RELEASE SAVEPOINT check_sqlite"); err != nil {
+			return err
+		}
 	}
 
 	var query string

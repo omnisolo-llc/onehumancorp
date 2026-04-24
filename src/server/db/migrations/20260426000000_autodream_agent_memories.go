@@ -13,9 +13,21 @@ func init() {
 }
 
 func upAutodreamAgentMemories(ctx context.Context, tx *sql.Tx) error {
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT check_sqlite"); err != nil {
+		return err
+	}
 	var sqliteVersion string
 	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
 	isSQLite := err == nil
+	if !isSQLite {
+		if _, err := tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT check_sqlite"); err != nil {
+			return err
+		}
+	} else {
+		if _, err := tx.ExecContext(ctx, "RELEASE SAVEPOINT check_sqlite"); err != nil {
+			return err
+		}
+	}
 
 	// Add auto_dreamed column to tasks
 	alterTasksQuery := "ALTER TABLE tasks ADD COLUMN auto_dreamed BOOLEAN DEFAULT false;"
