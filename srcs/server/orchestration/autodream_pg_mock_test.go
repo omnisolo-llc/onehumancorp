@@ -213,7 +213,7 @@ func TestAutoDreamWorker_SearchMemories_Pg(t *testing.T) {
 		}
 	}
 
-	results, err := worker.SearchMemories(ctx, "[]", 2)
+	results, err := worker.SearchMemories(ctx, "org-1", "[]", 2)
 	if err != nil {
 		t.Fatalf("SearchMemories failed: %v", err)
 	}

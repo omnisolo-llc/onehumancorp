@@ -1301,15 +1301,16 @@ func (w *AutoDreamWorker) ingestTasksFromTable(ctx context.Context, tableName st
 }
 
 // SearchMemories queries the autodream_memories vector database.
-func (w *AutoDreamWorker) SearchMemories(ctx context.Context, embedding string, limit int) ([]TruthSearchResult, error) {
+func (w *AutoDreamWorker) SearchMemories(ctx context.Context, organizationID string, embedding string, limit int) ([]TruthSearchResult, error) {
 	if w.pool.IsSQLite() {
 		query := `
 			SELECT id, content, 0 as distance
 			FROM autodream_memories
+			WHERE organization_id = $2
 			ORDER BY created_at DESC
 			LIMIT $1
 		`
-		rows, err := w.pool.Query(ctx, query, limit)
+		rows, err := w.pool.Query(ctx, query, limit, organizationID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to search memories with SQLite fallback: %w", err)
 		}
@@ -1327,12 +1328,13 @@ func (w *AutoDreamWorker) SearchMemories(ctx context.Context, embedding string, 
 	}
 
 	query := `
-		SELECT id, content, embedding <=> $1::vector as distance
+		SELECT id, content, embedding <=> $2::vector as distance
 		FROM autodream_memories
+		WHERE organization_id = $1
 		ORDER BY distance ASC
-		LIMIT $2
+		LIMIT $3
 	`
-	rows, err := w.pool.Query(ctx, query, embedding, limit)
+	rows, err := w.pool.Query(ctx, query, organizationID, embedding, limit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search memories with pgvector: %w", err)
 	}

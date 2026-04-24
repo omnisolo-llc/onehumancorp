@@ -785,15 +785,15 @@ func TestAutoDreamWorker_SearchMemories(t *testing.T) {
 
 	// Insert test memories
 	for i := 0; i < 3; i++ {
-		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, embedding, created_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)",
-			fmt.Sprintf("mem-search-%d", i), fmt.Sprintf("test content %d", i), "[0.0,0.0,0.0]")
+		_, err := provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, embedding, organization_id, created_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+			fmt.Sprintf("mem-search-%d", i), fmt.Sprintf("test content %d", i), "[0.0,0.0,0.0]", "org1")
 		if err != nil {
 			t.Fatalf("failed to insert mock memory for search: %v", err)
 		}
 	}
 
 	// In SQLite mode, it falls back to recency-based returning 3 results.
-	results, err := worker.SearchMemories(ctx, "[0.0,0.0,0.0]", 2)
+	results, err := worker.SearchMemories(ctx, "org1", "[0.0,0.0,0.0]", 2)
 	if err != nil {
 		t.Fatalf("SearchMemories failed: %v", err)
 	}

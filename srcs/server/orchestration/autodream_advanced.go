@@ -35,16 +35,16 @@ func (a *AutoDreamAdvanced) PruneStaleAgentSessions(ctx context.Context) error {
     return nil
 }
 
-func (a *AutoDreamAdvanced) ResolveConflicts(ctx context.Context, memoryID string) error {
+func (a *AutoDreamAdvanced) ResolveConflicts(ctx context.Context, organizationID string, memoryID string) error {
     var query string
     if a.pool.IsSQLite() {
-        query = `SELECT id, content FROM autodream_memories WHERE id != $1 LIMIT 5`
+        query = `SELECT id, content FROM autodream_memories WHERE id != $1 AND organization_id = $2 LIMIT 5`
     } else {
         // Find close neighbors to check for conflicts
-        query = `SELECT id, content FROM autodream_memories WHERE id != $1 ORDER BY embedding <-> (SELECT embedding FROM autodream_memories WHERE id = $1) ASC LIMIT 5`
+        query = `SELECT id, content FROM autodream_memories WHERE id != $1 AND organization_id = $2 ORDER BY embedding <-> (SELECT embedding FROM autodream_memories WHERE id = $1 AND organization_id = $2) ASC LIMIT 5`
     }
 
-    rows, err := a.pool.Query(ctx, query, memoryID)
+    rows, err := a.pool.Query(ctx, query, memoryID, organizationID)
     if err != nil {
         return err
     }

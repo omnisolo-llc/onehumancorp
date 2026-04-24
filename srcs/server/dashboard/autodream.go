@@ -130,7 +130,7 @@ func (s *Server) handleAutoDreamQuery(w http.ResponseWriter, r *http.Request) {
 	}
 
 	worker := orchestration.NewAutoDreamWorker(s.hub.SIPDB().Provider())
-	results, err := worker.SearchMemories(r.Context(), embedding, req.Limit)
+	results, err := worker.SearchMemories(r.Context(), claims.OrganizationID, embedding, req.Limit)
 	if err != nil {
 		http.Error(w, "failed to search AutoDream memories: "+err.Error(), http.StatusInternalServerError)
 		return
