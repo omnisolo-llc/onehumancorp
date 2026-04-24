@@ -34,7 +34,7 @@ func TestHelpCenterCUJ(t *testing.T) {
 	})
 
 	// Search for an article
-	err = page.GetByRole("textbox").First().Fill("Instagram", playwright.LocatorFillOptions{
+	err = page.Locator("input").First().Fill("Instagram", playwright.LocatorFillOptions{
 		Timeout: playwright.Float(5000),
 	})
 	require.NoError(t, err)
@@ -45,7 +45,7 @@ func TestHelpCenterCUJ(t *testing.T) {
 	})
 
 	// Clear search
-	err = page.GetByRole("textbox").First().Fill("", playwright.LocatorFillOptions{
+	err = page.Locator("input").First().Fill("", playwright.LocatorFillOptions{
 		Timeout: playwright.Float(5000),
 	})
 	require.NoError(t, err)
