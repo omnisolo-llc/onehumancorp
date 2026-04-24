@@ -223,7 +223,7 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 		t.Fatalf("Expected lock to recover and succeed when a file blocked the path")
 	}
 
-	os.Remove(path) // Cleanup
+	os.RemoveAll(path) // Cleanup directory not file
 
 	// Test unlock for non-existent file
 	err = lock1.Unlock(ctx, "non_existent_key")

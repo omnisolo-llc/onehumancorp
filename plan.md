@@ -1,22 +1,26 @@
-1. **Create `GrowMyBusinessWizardScreen`**:
-   - Create `src/app/lib/screens/grow_my_business_wizard_screen.dart` with a multi-step stepper or guided flow for the "Grow my business" wizard.
-   - Steps should reflect actions to grow a business: e.g. "Add Products", "Connect Social Media", "Launch Email Campaign".
+1. **Implement In-App Help Center**:
+   - Create a `HelpCenterScreen` in `src/app/lib/screens/help_center_screen.dart` with searchable topics (Getting Started, My Store, Payments, etc.) and quick links to API docs and Release Notes.
 
-2. **Create `WebsiteBuilderWizardScreen`**:
-   - Create `src/app/lib/screens/website_builder_wizard_screen.dart` to implement the 4-step website builder.
-   - Steps: "Template Gallery", "Brand Colors & Logo", "Add your first product/service", "Connect Domain & Publish".
+2. **Implement AI Help Chat**:
+   - Add a floating action button on the `DashboardScreen` for "AI Help Chat".
+   - The button should open a chat interface `HelpChatOverlay` that answers questions.
 
-3. **Create `AI Agent Configuration Wizard`** (`agent_config_wizard_screen.dart` or expand `agent_hire_wizard_screen.dart`):
-   - We need to implement the AI agent configuration wizard which allows users to configure an agent's capabilities without technical knowledge.
+3. **Contextual Tooltips System**:
+   - Implement a tooltip registry `src/app/lib/services/tooltip_service.dart` to manage text content.
+   - Add a `TooltipWrapper` widget that displays tooltips (hover on desktop, long-press on mobile) for key non-obvious UI elements.
 
-4. **Update `router.dart`**:
-   - Add routes for `/wizards/grow`, `/wizards/website`, `/wizards/agent_config`, etc.
+4. **Interactive Walkthroughs**:
+   - Create step-by-step guides using `src/app/lib/widgets/walkthrough_overlay.dart`. This should be an overlay highlight + speech bubble system.
 
-5. **Update Dashboard / Navigation**:
-   - Add triggers to open these wizards from the `DashboardScreen` or side navigation as outlined in the issue. "Grow my business" from home dashboard, "Build My Website" to open the website builder wizard.
+5. **Release Notes & Changelog**:
+   - Implement a Release Notes screen parsing standard changelogs to show recent updates.
 
-6. **Add Tests**:
-   - Add E2E and widget tests for the new wizards ensuring 100% test coverage. E2E tests must follow the exact flow starting from the dashboard.
+6. **Update `router.dart`**:
+   - Add routes for `/help`, `/help/api`, `/help/release-notes`.
+   - Update sidebar navigation to include "Help Center".
 
-7. **Pre Commit Steps**:
+7. **Ensure E2E tests pass**:
+   - Once implemented, verify the existing E2E tests (`help_center_test.go`) pass properly.
+
+8. **Pre Commit Steps**:
    - Run `pre_commit_instructions` tool to complete pre-commit checks.
