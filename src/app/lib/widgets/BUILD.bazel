@@ -1,11 +1,11 @@
-load("@rules_flutter//flutter:defs.bzl", "flutter_library")
+load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
 
 package(default_visibility = ["//src/app:__subpackages__"])
 
 filegroup(
     name = "srcs",
     srcs = glob(
-        ["*.dart"],
+        ["*.dart", "help/*.dart"],
         allow_empty = True,
     ) + ["BUILD.bazel"],
     visibility = ["//src/app:__pkg__"],
@@ -14,7 +14,7 @@ filegroup(
 filegroup(
     name = "dart_srcs",
     srcs = glob(
-        ["*.dart"],
+        ["*.dart", "help/*.dart"],
         allow_empty = True,
         exclude = ["*_test.dart"],
     ),
@@ -25,7 +25,7 @@ filegroup(
 flutter_library(
     name = "widgets_lib",
     srcs = glob(
-        ["*.dart"],
+        ["*.dart", "help/*.dart"],
         exclude = ["*_test.dart"],
     ),
     pubspec = "//src/app:pubspec.yaml",
@@ -50,4 +50,24 @@ alias(
 alias(
     name = "sub_agent_queue_widget",
     actual = ":widgets_lib",
+)
+
+
+WIDGET_TESTS = glob(["**/*_test.dart"])
+
+[
+    flutter_test(
+        name = file.replace(".dart", "").replace("/", "_"),
+        srcs = [file],
+        embed = ["//src/app:app_for_tests"],
+        test_files = [file],
+        workspace_pubspec = "//:pubspec.yaml",
+    )
+    for file in WIDGET_TESTS
+]
+
+test_suite(
+    name = "all_tests",
+    tags = ["manual"],
+    tests = [":" + file.replace(".dart", "").replace("/", "_") for file in WIDGET_TESTS],
 )
