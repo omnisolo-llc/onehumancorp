@@ -1,5 +1,5 @@
 bazel/rules/flutter
-src/frontend/node_modules
+srcs/frontend/node_modules
 bazel/rules/flutter/e2e
 bazel/rules/flutter/bazel-bin
 bazel/rules/flutter/bazel-out
