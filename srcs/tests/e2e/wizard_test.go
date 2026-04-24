@@ -332,32 +332,38 @@ func TestWizardAllStepsCanBeReachedWithoutAJsException(t *testing.T) {
 	page.WaitForSelector("text=Business Setup")
 
 	// Step 0 -> Step 1
-	page.GetByText("Continue").First().Click()
-	page.WaitForSelector("text=Business Profile")
+	page.GetByText("Start Setup").First().Click()
+	page.WaitForSelector("text=Business Type")
 
 	// Fill out Step 1
-	page.Locator("input[type='text']").First().Fill("My Playwright Company")
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Online Store").Click()
+	page.GetByText("Next").First().Click()
 
 	// Step 2
-	page.WaitForSelector("text=Goal Selection")
-	page.GetByText("Continue").First().Click()
+	page.WaitForSelector("text=Business Details")
+	page.Locator("input[type='text']").First().Fill("My Playwright Company")
+	page.GetByText("Next").First().Click()
 
 	// Step 3
-	page.WaitForSelector("text=Deployment")
-	page.GetByText("Continue").First().Click()
+	page.WaitForSelector("text=What do you sell?")
+	page.GetByText("Physical products").Click()
+	page.GetByText("Next").First().Click()
 
 	// Step 4
-	page.WaitForSelector("text=Admin Account")
+	page.WaitForSelector("text=How do you want to receive payments?")
+	page.GetByText("Online only").Click()
+	page.GetByText("Next").First().Click()
+
+	// Step 5
+	page.WaitForSelector("text=Administrator Account")
 	inputs := page.Locator("input[type='text']")
 	inputs.Nth(0).Fill("Playwright Admin")
-	inputs.Nth(1).Fill("playwright@example.com")
+	page.Locator("input[type='email']").Fill("playwright@example.com")
 	page.Locator("input[type='password']").Fill("secret")
-	page.GetByText("Continue").First().Click()
+	page.GetByText("Next").First().Click()
 
-	// Step 5 Review
-	page.WaitForSelector("text=Review & Launch")
-	page.WaitForSelector("text=My Playwright Company")
+	// Step 6 Launch
+	page.WaitForSelector("text=Ready to Launch")
 
 }
 
