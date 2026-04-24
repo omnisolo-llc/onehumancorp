@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -200,10 +201,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       floatingActionButton: Semantics(
         label: 'Remote Connection Settings',
         button: true,
-        child: FloatingActionButton(
-          onPressed: () => _showSettings(context),
-          tooltip: 'Connection Settings',
-          child: const Icon(Icons.settings),
+        child: RegisteredTooltip(
+          tooltipKey: 'login_connection_settings',
+          child: FloatingActionButton(
+            onPressed: () => _showSettings(context),
+            child: const Icon(Icons.settings),
+          ),
         ),
       ),
       body: Center(
@@ -295,14 +298,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           decoration: InputDecoration(
                             labelText: 'Password',
                             prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
-                              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
+                            suffixIcon: RegisteredTooltip(
+                              tooltipKey: _obscurePassword ? 'login_show_password' : 'login_hide_password',
+                              child: IconButton(
+                                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
                             ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),

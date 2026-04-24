@@ -31,7 +31,9 @@ import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
 
+import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -97,6 +99,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/diagnostics',
             builder: (context, state) => const DiagnosticsScreen(),
+          ),
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
           ),
           GoRoute(
             path: '/dashboard',
@@ -223,7 +229,10 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Row(children: [_Sidebar(), Expanded(child: child)]),
+      floatingActionButton: const AiHelpChatWidget(),
+    );
   }
 }
 
@@ -242,6 +251,7 @@ class _Sidebar extends StatelessWidget {
         ),
         const Divider(),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(
           icon: Icons.checklist,

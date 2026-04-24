@@ -13,6 +13,7 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -458,8 +459,8 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
+      child: RegisteredTooltip(
+        tooltipKey: 'dashboard_scale_role',
         child: SizedBox(
           width: 320,
           child: GlassCard(
@@ -500,13 +501,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Decrease $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: widget.count > 0 && !_isScaling
-                                  ? () => _scaleTo(widget.count - 1)
-                                  : null,
-                              tooltip: 'Fire Agent',
+                            child: RegisteredTooltip(
+                              tooltipKey: 'dashboard_decrease_agent',
+                              child: IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, size: 28),
+                                color: colors.primary,
+                                onPressed: widget.count > 0 && !_isScaling
+                                    ? () => _scaleTo(widget.count - 1)
+                                    : null,
+                              ),
                             ),
                           ),
                           SizedBox(
@@ -534,13 +537,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Increase $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: !_isScaling
-                                  ? () => _scaleTo(widget.count + 1)
-                                  : null,
-                              tooltip: 'Hire Agent',
+                            child: RegisteredTooltip(
+                              tooltipKey: 'dashboard_increase_agent',
+                              child: IconButton(
+                                icon: const Icon(Icons.add_circle_outline, size: 28),
+                                color: colors.primary,
+                                onPressed: !_isScaling
+                                    ? () => _scaleTo(widget.count + 1)
+                                    : null,
+                              ),
                             ),
                           ),
                             ],
@@ -632,8 +637,8 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
-      child: Tooltip(
-        message: 'View ${widget.label}',
+      child: RegisteredTooltip(
+        tooltipKey: 'dashboard_stat_card',
         child: SizedBox(
           width: 200,
           child: SlideTransition(
