@@ -48,6 +48,7 @@ func (m *mockDBProviderTools) SearchMemories(ctx context.Context, organizationID
 }
 
 func (m *mockDBProviderTools) IsSQLite() bool { return true }
+func (m *mockDBProviderTools) ClaimTask(ctx context.Context, taskID string) error { return nil }
 func (m *mockDBProviderTools) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) {
 	return nil, nil
 }

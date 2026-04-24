@@ -17,7 +17,7 @@ func setupTestDependencies(t *testing.T) (*growth.InviteTracker, *growth.ViralLo
 	ctx := context.Background()
 	t.Setenv("DATABASE_URL", "sqlite://:memory:")
 
-	database, err := db.New(ctx)
+	database, err := db.New(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to connect to memory db: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestGrowthHandler_HandleInvite(t *testing.T) {
 		// Create a handler with a broken DB connection to simulate error
 		ctx := context.Background()
 		t.Setenv("DATABASE_URL", "sqlite://:memory:")
-		database, err := db.New(ctx)
+		database, err := db.New(ctx, nil)
 		if err != nil {
 			t.Fatalf("failed to connect to memory db: %v", err)
 		}
@@ -189,7 +189,7 @@ func TestGrowthHandler_HandleAcceptInvite(t *testing.T) {
 		// Create a handler with a broken DB connection to simulate error
 		ctx := context.Background()
 		t.Setenv("DATABASE_URL", "sqlite://:memory:")
-		database, err := db.New(ctx)
+		database, err := db.New(ctx, nil)
 		if err != nil {
 			t.Fatalf("failed to connect to memory db: %v", err)
 		}

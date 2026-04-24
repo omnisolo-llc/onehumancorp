@@ -17,6 +17,7 @@ type MockProvider struct {
 	BeginFunc    func(ctx context.Context) (db.Tx, error)
 }
 
+func (m *MockProvider) ClaimTask(ctx context.Context, taskID string) error { return nil }
 func (m *MockProvider) IsSQLite() bool {
 	if m.IsSQLiteFunc != nil {
 		return m.IsSQLiteFunc()

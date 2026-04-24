@@ -13,7 +13,7 @@ func TestInviteTracker(t *testing.T) {
 
 	os.Setenv("DATABASE_URL", "sqlite://:memory:")
 
-	database, err := db.New(ctx)
+	database, err := db.New(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to connect to memory db: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestRecordInvites(t *testing.T) {
 
 	os.Setenv("DATABASE_URL", "sqlite://:memory:")
 
-	database, err := db.New(ctx)
+	database, err := db.New(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to connect to memory db: %v", err)
 	}

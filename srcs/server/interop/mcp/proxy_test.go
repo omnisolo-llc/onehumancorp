@@ -78,6 +78,7 @@ func (m *mockDBProvider) Ping(ctx context.Context) error { return nil }
 func (m *mockDBProvider) SearchMemories(ctx context.Context, organizationID string, queryText string, limit int) ([]string, error) { return nil, nil }
 
 func (m *mockDBProvider) IsSQLite() bool { return true }
+func (m *mockDBProvider) ClaimTask(ctx context.Context, taskID string) error { return nil }
 func (m *mockDBProvider) AcquireTask(ctx context.Context, organizationID, agentID string) (*db.TaskRecord, error) { return nil, nil }
 
 

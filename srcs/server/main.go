@@ -215,7 +215,14 @@ func run(now time.Time, listen listenFunc) error {
 	multiTenant := envBoolDefault("OHC_MULTITENANT", false)
 	headless := envBoolDefault("OHC_HEADLESS", false) || !envBoolDefault("OHC_SERVE_UI", true)
 
-	pool, err := db.New(ctx)
+	var redisClient rueidis.Client
+	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
+		if opts, err := rueidis.ParseURL(redisURL); err == nil {
+			redisClient, _ = rueidis.NewClient(opts)
+		}
+	}
+
+	pool, err := db.New(ctx, redisClient)
 	if err != nil {
 		return err
 	}
@@ -303,12 +310,6 @@ func run(now time.Time, listen listenFunc) error {
 	}
 
 	// Initialize Rueidis client if REDIS_URL is provided
-	var redisClient rueidis.Client
-	if redisURL := os.Getenv("REDIS_URL"); redisURL != "" {
-		if opts, err := rueidis.ParseURL(redisURL); err == nil {
-			redisClient, _ = rueidis.NewClient(opts)
-		}
-	}
 
 	var autodreamWorker *orchestration.AutoDreamWorker
 	if pool != nil {

@@ -24,7 +24,7 @@ func TestAutoDreamSyncEngine_ProcessForecastTick(t *testing.T) {
 	// 1. Setup InMemory SQLite DB
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
 	ctx := context.Background()
-	dbWrapper, err := db.New(ctx)
+	dbWrapper, err := db.New(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -130,7 +130,7 @@ func TestAutoDreamSyncEngine_syncAgentMissions_PIIRedaction(t *testing.T) {
 	// 1. Setup InMemory SQLite DB
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
 	ctx := context.Background()
-	dbWrapper, err := db.New(ctx)
+	dbWrapper, err := db.New(ctx, nil)
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}

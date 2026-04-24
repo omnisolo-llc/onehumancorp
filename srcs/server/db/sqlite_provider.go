@@ -296,3 +296,15 @@ func (t *SqliteTx) Commit(ctx context.Context) error {
 func (t *SqliteTx) Rollback(ctx context.Context) error {
 	return t.tx.Rollback()
 }
+
+func (p *SqliteProvider) ClaimTask(ctx context.Context, taskID string) error {
+	query := `UPDATE shared_task_list_tasks SET status = 'IN_PROGRESS', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'PENDING'`
+	result, err := p.Exec(ctx, query, taskID)
+	if err != nil {
+		return err
+	}
+	if result == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}

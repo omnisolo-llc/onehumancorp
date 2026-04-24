@@ -8,15 +8,17 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/rueidis"
 )
 
 // PgProvider implements the Provider interface using pgxpool.
 type PgProvider struct {
 	pool *pgxpool.Pool
+	redisClient rueidis.Client
 }
 
-func NewPgProvider(pool *pgxpool.Pool) *PgProvider {
-	return &PgProvider{pool: pool}
+func NewPgProvider(pool *pgxpool.Pool, redisClient rueidis.Client) *PgProvider {
+	return &PgProvider{pool: pool, redisClient: redisClient}
 }
 
 func (p *PgProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
@@ -236,4 +238,31 @@ func (p *PgProvider) SearchMemories(ctx context.Context, organizationID string, 
 		}
 	}
 	return results, nil
+}
+
+func (p *PgProvider) ClaimTask(ctx context.Context, taskID string) error {
+	if p.redisClient != nil {
+		lockKey := "ohc:lock:task:" + taskID
+		cmd := p.redisClient.B().Set().Key(lockKey).Value("locked").Nx().Ex(30 * time.Second).Build()
+		if err := p.redisClient.Do(ctx, cmd).Error(); err != nil {
+			return err
+		}
+	}
+
+	query := `
+		UPDATE shared_task_list_tasks
+		SET status = 'IN_PROGRESS', updated_at = NOW()
+		WHERE id = (
+			SELECT id FROM shared_task_list_tasks
+			WHERE id = $1 AND status = 'PENDING'
+			FOR UPDATE SKIP LOCKED
+		)`
+	result, err := p.Exec(ctx, query, taskID)
+	if err != nil {
+		return err
+	}
+	if result == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

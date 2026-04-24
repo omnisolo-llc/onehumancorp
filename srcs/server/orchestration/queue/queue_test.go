@@ -230,6 +230,7 @@ type mockPostgresProvider struct {
 }
 
 func (m *mockPostgresProvider) IsSQLite() bool {
+func (m *mockPostgresProvider) ClaimTask(ctx context.Context, taskID string) error { return nil }
 	return false
 }
 

@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/rueidis"
 	_ "modernc.org/sqlite"
 )
 
@@ -122,7 +123,7 @@ type DB struct {
 // If DATABASE_URL is empty, it defaults to a local SQLite database in ~/.openclaw/ohc_state.db.
 // If DATABASE_URL starts with sqlite:// it uses SQLite.
 // Otherwise it assumes PostgreSQL.
-func New(ctx context.Context) (*DB, error) {
+func New(ctx context.Context, redisClient rueidis.Client) (*DB, error) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" || strings.HasPrefix(dsn, "sqlite://") {
 		var dbPath string
@@ -292,7 +293,7 @@ func New(ctx context.Context) (*DB, error) {
 	}
 
 	slog.Info("db: connected to postgres", "dsn", redactDSN(dsn))
-	return &DB{Provider: NewPgProvider(pool)}, nil
+	return &DB{Provider: NewPgProvider(pool, redisClient)}, nil
 }
 
 // RunMigrations executes all embedded SQL migrations, sorted

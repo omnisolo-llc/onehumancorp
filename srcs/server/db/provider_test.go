@@ -48,7 +48,7 @@ func TestStandaloneFallback(t *testing.T) {
 	// Use an in-memory SQLite database to avoid creating files on disk.
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
 
-	db, err := New(context.Background())
+	db, err := New(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize standalone db: %v", err)
 	}
@@ -62,7 +62,7 @@ func TestStandaloneFallback(t *testing.T) {
 func TestProvider_AcquireTask(t *testing.T) {
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
 
-	dbp, err := New(context.Background())
+	dbp, err := New(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize standalone db: %v", err)
 	}
@@ -146,5 +146,62 @@ func TestProvider_AcquireTask(t *testing.T) {
 	}
 	if task3 != nil {
 		t.Errorf("Expected nil task, got %v", task3.ID)
+	}
+}
+
+func TestProvider_ClaimTask(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
+
+	dbp, err := New(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("Failed to initialize standalone db: %v", err)
+	}
+	defer dbp.Close()
+
+	provider := dbp.Provider
+	ctx := context.Background()
+
+	// Setup SQLite table schema specific to our test
+	schema := `
+	CREATE TABLE IF NOT EXISTS shared_task_list_tasks (
+		id TEXT PRIMARY KEY,
+		epic_id TEXT,
+		title TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'PENDING',
+		payload JSON,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		locked_by TEXT,
+		locked_at DATETIME
+	);`
+
+	_, err = provider.Exec(ctx, schema)
+	if err != nil {
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+
+	// Insert test data
+	insertQuery := `
+		INSERT INTO shared_task_list_tasks (id, title, status)
+		VALUES ('task-1', 'Task 1', 'PENDING');
+	`
+	_, err = provider.Exec(ctx, insertQuery)
+	if err != nil {
+		t.Fatalf("Failed to insert test tasks: %v", err)
+	}
+
+	err = provider.ClaimTask(ctx, "task-1")
+	if err != nil {
+		t.Fatalf("Failed to claim task: %v", err)
+	}
+
+	err = provider.ClaimTask(ctx, "task-1")
+	if err == nil {
+		t.Fatalf("Expected error when claiming already claimed task, got nil")
+	}
+
+	err = provider.ClaimTask(ctx, "non-existent-task")
+	if err == nil {
+		t.Fatalf("Expected error when claiming non-existent task, got nil")
 	}
 }

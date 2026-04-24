@@ -17,6 +17,7 @@ type mockPgProvider struct {
 }
 
 func (m *mockPgProvider) IsSQLite() bool {
+func (m *mockPgProvider) ClaimTask(ctx context.Context, taskID string) error { return nil }
 	return false
 }
 

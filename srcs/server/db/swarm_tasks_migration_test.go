@@ -9,7 +9,7 @@ func TestSwarmTasksAndStateMachineMigrations(t *testing.T) {
 	// Use an in-memory SQLite database to test degradation logic
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
 
-	db, err := New(context.Background())
+	db, err := New(context.Background(), nil)
 	if err != nil {
 		t.Fatalf("Failed to initialize standalone db: %v", err)
 	}

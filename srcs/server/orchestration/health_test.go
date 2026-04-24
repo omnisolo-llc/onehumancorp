@@ -153,6 +153,7 @@ func (m *mockProvider) Ping(ctx context.Context) error {
 }
 
 func (m *mockProvider) IsSQLite() bool {
+func (m *mockProvider) ClaimTask(ctx context.Context, taskID string) error { return nil }
 	return m.isSqlite
 }
 
