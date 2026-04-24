@@ -59,11 +59,15 @@ func (r *SqliteHubRepository) GetAgent(ctx context.Context, id string) (Agent, b
 }
 
 func (r *SqliteHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
+	return r.ListAgentsByOrg(ctx, r.orgID)
+}
+
+func (r *SqliteHubRepository) ListAgentsByOrg(ctx context.Context, orgID string) ([]Agent, error) {
 	query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents"
 	var args []any
-	if r.orgID != "" {
+	if orgID != "" {
 		query += " WHERE organization_id = ?"
-		args = append(args, r.orgID)
+		args = append(args, orgID)
 	}
 	query += " ORDER BY id"
 
@@ -82,9 +86,6 @@ func (r *SqliteHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 		}
 		a.Status = Status(status)
 		agents = append(agents, a)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 	return agents, nil
 }
@@ -211,9 +212,6 @@ func (r *SqliteHubRepository) PopMessages(ctx context.Context, agentID string) (
 		}
 		temp = append(temp, r)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
 
 	// Sort by seq to maintain order since DELETE ... RETURNING does not guarantee order
 	sort.Slice(temp, func(i, j int) bool {
@@ -258,9 +256,6 @@ func (r *SqliteHubRepository) PeekMessages(ctx context.Context, agentID string) 
 			return nil, fmt.Errorf("sqlite: scan message: %w", err)
 		}
 		msgs = append(msgs, m)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 	return msgs, nil
 }
@@ -316,9 +311,6 @@ func (r *SqliteHubRepository) GetMeeting(ctx context.Context, id string) (Meetin
 		m.MeetingID = id
 		room.Transcript = append(room.Transcript, m)
 	}
-	if err := rows.Err(); err != nil {
-		return MeetingRoom{}, false, err
-	}
 	return room, true, nil
 }
 
@@ -365,9 +357,6 @@ func (r *SqliteHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, 
 		}
 		_ = json.Unmarshal([]byte(participantsJSON), &room.Participants)
 		rooms = append(rooms, room)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 	return rooms, nil
 }
