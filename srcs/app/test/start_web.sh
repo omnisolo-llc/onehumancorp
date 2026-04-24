@@ -82,25 +82,6 @@ if ! is_complete_web_bundle "${web_artifacts}"; then
 	exit 1
 fi
 
-backend_bin=""
-for candidate in "_main/srcs/server/ohc_/ohc" "__main__/srcs/server/ohc_/ohc" "mono/srcs/server/ohc_/ohc"; do
-	if [[ -n "${runfiles_root}" && -f "${runfiles_root}/${candidate}" ]]; then
-		backend_bin="${runfiles_root}/${candidate}"
-		break
-	fi
-done
-
-if [[ -n "${backend_bin}" ]]; then
-	echo "Starting backend server from ${backend_bin}..."
-	"${backend_bin}" &
-	backend_pid=$!
-	echo "Backend started with PID ${backend_pid}"
-	trap 'kill ${backend_pid} 2>/dev/null || true' EXIT
-else
-	echo "WARNING: could not locate Bazel-built backend binary in runfiles." >&2
-	echo "Login might fail if backend is not running on port 8080." >&2
-fi
-
 echo "Serving Bazel-built Flutter app from ${web_artifacts}"
 echo "URL: http://127.0.0.1:${port}"
 exec python3 -m http.server "${port}" --directory "${web_artifacts}"

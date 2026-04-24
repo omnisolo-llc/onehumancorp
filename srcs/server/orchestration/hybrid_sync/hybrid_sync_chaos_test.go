@@ -3,6 +3,7 @@ package hybrid_sync
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -67,8 +68,11 @@ func TestHybridSyncDaemon_Chaos(t *testing.T) {
 		t.Fatalf("failed to query db: %v", err)
 	}
 
-	// If sync failed, escalation_required should still be true (or at least not false if we didn't reach the update)
-	// The current implementation marks it false only AFTER successful sendToCloud.
+	var parsed map[string]interface{}
+	json.Unmarshal([]byte(contextData), &parsed)
+	if req, ok := parsed["escalation_required"].(bool); !ok || !req {
+		t.Errorf("expected escalation_required to remain true after failed sync, context: %s", contextData)
+	}
 
 	// Now remove chaos and sync again
 	inj = chaos.NewInjector(chaos.NoChaos, 0)
@@ -78,8 +82,10 @@ func TestHybridSyncDaemon_Chaos(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to query db: %v", err)
 	}
-	if contextData == "" {
-		t.Fatal("context data is empty")
+
+	json.Unmarshal([]byte(contextData), &parsed)
+	if req, ok := parsed["escalation_required"].(bool); ok && req {
+		t.Errorf("expected escalation_required to be false after successful sync, context: %s", contextData)
 	}
 }
 

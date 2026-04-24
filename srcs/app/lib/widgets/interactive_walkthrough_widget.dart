@@ -15,10 +15,10 @@ class InteractiveWalkthrough extends StatefulWidget {
   const InteractiveWalkthrough({super.key, required this.steps, required this.child});
 
   @override
-  State<InteractiveWalkthrough> createState() => InteractiveWalkthroughState();
+  State<InteractiveWalkthrough> createState() => _InteractiveWalkthroughState();
 }
 
-class InteractiveWalkthroughState extends State<InteractiveWalkthrough> {
+class _InteractiveWalkthroughState extends State<InteractiveWalkthrough> {
   int _currentStepIndex = -1;
 
   void startWalkthrough() {

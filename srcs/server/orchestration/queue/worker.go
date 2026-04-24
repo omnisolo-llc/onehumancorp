@@ -48,7 +48,12 @@ func (w *Worker) Start(ctx context.Context) {
 			}
 
 			slog.Info("Worker processing job", "job_id", job.ID)
-			err = w.handler(ctx, job)
+
+			// AI agent jobs must have a 60-second timeout
+			handlerCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+			err = w.handler(handlerCtx, job)
+			cancel()
+
 			if err != nil {
 				slog.Error("Worker failed to process job", "job_id", job.ID, "error", err)
 				if fErr := w.queue.Fail(ctx, job.ID, err.Error()); fErr != nil {

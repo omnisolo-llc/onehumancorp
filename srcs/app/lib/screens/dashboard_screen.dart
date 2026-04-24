@@ -148,21 +148,18 @@ class _DashboardContent extends StatelessWidget {
               value: '\$0.00',
               icon: Icons.attach_money,
               color: Theme.of(context).colorScheme.primary,
-              onTap: () => context.go('/cost'),
             ),
             _StatCard(
               label: 'New Orders',
               value: data.statuses.length.toString(),
               icon: Icons.shopping_bag,
               color: Theme.of(context).colorScheme.secondary,
-              onTap: () => context.go('/orchestration/tasks'),
             ),
             _StatCard(
               label: 'Pending Appointments',
               value: data.meetings.length.toString(),
               icon: Icons.calendar_today,
               color: Theme.of(context).colorScheme.tertiary,
-              onTap: () => context.go('/meetings'),
             ),
             _StatCard(
               label: 'Active AI Helpers',
@@ -170,7 +167,6 @@ class _DashboardContent extends StatelessWidget {
               icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primaryContainer,
               iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
-              onTap: () => context.go('/agents'),
             ),
           ],
         ),
@@ -582,7 +578,6 @@ class _StatCard extends StatefulWidget {
   final IconData icon;
   final Color color;
   final Color? iconColor;
-  final VoidCallback? onTap;
 
   const _StatCard({
     required this.label,
@@ -590,7 +585,6 @@ class _StatCard extends StatefulWidget {
     required this.icon,
     required this.color,
     this.iconColor,
-    this.onTap,
   });
 
   @override
@@ -653,7 +647,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
                             button: true,
                             label: '${widget.label}: ${widget.value} action',
                             child: InkWell(
-                              onTap: widget.onTap,
+                              onTap: () {},
                               borderRadius: BorderRadius.circular(16),
                               splashColor: widget.color.withValues(alpha: 0.1),
                               highlightColor: widget.color.withValues(alpha: 0.05),
