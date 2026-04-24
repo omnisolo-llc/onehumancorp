@@ -31,7 +31,7 @@ type wizardConfigureRequest struct {
 	RedisURL      string                `json:"redis_url,omitempty"`
 	CentrifugeURL string                `json:"centrifuge_url,omitempty"`
 	MinimaxAPIKey string                `json:"minimax_api_key,omitempty"`
-	Extras        map[string]string `json:"extras,omitempty"`
+	Extras        map[string]string     `json:"extras,omitempty"`
 	AiProviders   []settings.AiProvider `json:"ai_providers,omitempty"`
 }
 
@@ -202,4 +202,62 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		"diagnostics": healthChecks,
 	}
 	writeJSON(w, resp)
+}
+
+// handleWizardState returns the current saved state of the wizard.
+func (s *Server) handleWizardState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	s.mu.RLock()
+	stateStr := s.settings.Extras["wizard_state"]
+	s.mu.RUnlock()
+
+	if stateStr == "" {
+		writeJSON(w, map[string]interface{}{})
+		return
+	}
+
+	var state map[string]interface{}
+	if err := json.Unmarshal([]byte(stateStr), &state); err != nil {
+		writeJSON(w, map[string]interface{}{})
+		return
+	}
+	writeJSON(w, state)
+}
+
+// handleWizardStateSave saves the current state of the wizard.
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	stateBytes, err := json.Marshal(req)
+	if err != nil {
+		http.Error(w, "failed to marshal state", http.StatusInternalServerError)
+		return
+	}
+
+	s.mu.Lock()
+	if s.settings.Extras == nil {
+		s.settings.Extras = make(map[string]string)
+	}
+	s.settings.Extras["wizard_state"] = string(stateBytes)
+	cfg := s.settings
+	s.mu.Unlock()
+
+	if err := s.hub.SettingsStore().Update(cfg); err != nil {
+		http.Error(w, "failed to save settings", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]interface{}{"status": "ok"})
 }

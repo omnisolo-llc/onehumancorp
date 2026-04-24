@@ -18,11 +18,11 @@ import (
 	"github.com/onehumancorp/mono/src/server/api"
 	"github.com/onehumancorp/mono/src/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/src/server/api/mesh_legacy"
-	"github.com/onehumancorp/mono/src/server/orchestration/kairos"
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/billing"
 	"github.com/onehumancorp/mono/src/server/domain"
 	"github.com/onehumancorp/mono/src/server/integrations"
+	"github.com/onehumancorp/mono/src/server/orchestration/kairos"
 	orchmesh "github.com/onehumancorp/mono/src/server/orchestration/mesh"
 	"github.com/onehumancorp/mono/src/server/services/growth"
 	"github.com/redis/go-redis/v9"
@@ -647,8 +647,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	// Teammate Mesh APIs
 
-
-
 	var kairosMesh kairos.TeammateMesh
 	kairosMode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
@@ -669,8 +667,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 
 	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
 	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
-
-
 
 	mux.Handle("/api/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
 	mux.Handle("/api/v1/mesh/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshBroadcast)))
@@ -721,6 +717,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	// Config wizard API endpoints.
 	mux.HandleFunc("/api/wizard/status", server.handleWizardStatus)
 	mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)
+	mux.HandleFunc("/api/wizard/state", server.handleWizardState)
+	mux.HandleFunc("/api/wizard/state/save", server.handleWizardStateSave)
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
 
 	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
