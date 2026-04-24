@@ -15,6 +15,8 @@ type HybridHealthProbe struct {
 	DBPing         time.Duration `json:"db_ping"`
 	SyncBacklog    int           `json:"sync_backlog"`
 	StuckMissions  int           `json:"stuck_missions"`
+	RunningMissions int          `json:"running_missions"`
+	SyncLagged     bool          `json:"sync_lagged"`
 	LastSyncTime   time.Time     `json:"last_sync_time"`
 	MeshActive     bool          `json:"mesh_active"`
 	CloudConnected bool          `json:"cloud_connected"`
@@ -57,11 +59,21 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 				probe.StuckMissions = stuckCount
 			}
 
+			// Get running missions
+			var runningCount int
+			err = h.sipDB.Provider().QueryRow(ctx, "SELECT COUNT(*) FROM agent_missions WHERE status = 'RUNNING'").Scan(&runningCount)
+			if err == nil {
+				probe.RunningMissions = runningCount
+			}
+
 			// Get last sync time
 			var lastSync sql.NullTime
 			err = h.sipDB.Provider().QueryRow(ctx, "SELECT MAX(updated_at) FROM agent_missions WHERE status = 'SYNCED'").Scan(&lastSync)
 			if err == nil && lastSync.Valid {
 				probe.LastSyncTime = lastSync.Time
+				if time.Since(lastSync.Time) > 5*time.Minute {
+					probe.SyncLagged = true
+				}
 			}
 		}
 	} else {

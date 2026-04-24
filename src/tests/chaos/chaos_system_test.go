@@ -89,3 +89,19 @@ func TestChaosSystem_CorruptMailbox(t *testing.T) {
 		t.Fatalf("expected ChaosError, got %T", err)
 	}
 }
+
+func TestChaosSystem_SyncLag(t *testing.T) {
+	injector := chaos.NewInjector(chaos.SyncLag, 123)
+
+	start := time.Now()
+	err := injector.Inject(context.Background())
+	duration := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if duration < 1000*time.Millisecond || duration > 3000*time.Millisecond {
+		t.Fatalf("expected duration between 1000ms and 3000ms, got %v", duration)
+	}
+}

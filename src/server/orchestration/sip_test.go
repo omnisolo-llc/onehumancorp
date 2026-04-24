@@ -322,6 +322,52 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 	}
 }
 
+func TestSIPDB_PruneStaleMissions_StagnantRunning(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_stagnant_running.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create test DB: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	// 1. RUNNING and old (should become STUCK)
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('running-stale', 'RUNNING', '{}', datetime('now', '-2 hours'))")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. RUNNING and new (should remain RUNNING)
+	_, err = db.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at) VALUES ('running-new', 'RUNNING', '{}', datetime('now'))")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Prune missions older than 24 hours (threshold for deletion),
+	// but the 1 hour threshold for STUCK transition is hardcoded in the method.
+	err = db.PruneStaleMissions(ctx, 24*time.Hour)
+	if err != nil {
+		t.Fatalf("Failed to prune stale missions: %v", err)
+	}
+
+	var status string
+	err = db.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'running-stale'").Scan(&status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != "STUCK" {
+		t.Errorf("Expected status STUCK for stale running mission, got %s", status)
+	}
+
+	err = db.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'running-new'").Scan(&status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != "RUNNING" {
+		t.Errorf("Expected status RUNNING for new running mission, got %s", status)
+	}
+}
 
 func TestSIPDB_PruneTelemetryBuffer(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")

@@ -148,7 +148,7 @@ func (d *HybridMCPRAGDaemon) processMissionsSync(ctx context.Context) bool {
 	}
 
 	if err := d.sendToCloud(ctx, payloads); err != nil {
-		slog.Warn("sync_daemon: failed to send agent_missions to cloud (transient)", "error", err)
+		slog.Debug("sync_daemon: failed to send agent_missions to cloud (transient)", "error", err)
 		return false
 	}
 
@@ -226,7 +226,7 @@ func (d *HybridMCPRAGDaemon) processRAGSync(ctx context.Context) bool {
 	}
 
 	if err := d.sendRAGToCloud(ctx, records); err != nil {
-		slog.Warn("sync_daemon: failed to send RAG memories to cloud (transient)", "error", err)
+		slog.Debug("sync_daemon: failed to send RAG memories to cloud (transient)", "error", err)
 		return false
 	}
 

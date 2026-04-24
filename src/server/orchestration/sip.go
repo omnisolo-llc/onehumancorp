@@ -715,8 +715,8 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		stuckThreshold := time.Now().Add(-1 * time.Hour).UTC().Format("2006-01-02 15:04:05")
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
-		// 1. Mark stagnant PENDING missions as STUCK after 1 hour to trigger triage visibility
-		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
+		// 1. Mark stagnant PENDING or RUNNING missions as STUCK after 1 hour to trigger triage visibility
+		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'RUNNING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
 		if err == nil {
 			for rows.Next() {
 				var id, prevStatus string

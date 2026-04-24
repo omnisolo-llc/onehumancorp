@@ -28,7 +28,7 @@ func (m *mockPgProvider) Begin(ctx context.Context) (db.Tx, error) {
 	return &mockPgTx{Tx: tx, provider: m}, nil
 }
 
-func (m *mockPgProvider) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
+func (m *mockPgProvider) Exec(ctx context.Context, sql string, arguments ...interface{}) (int64, error) {
 	m.queries = append(m.queries, sql)
 	m.execCount++
 	return m.Provider.Exec(ctx, sql, arguments...)
@@ -52,7 +52,7 @@ type mockPgTx struct {
 	provider *mockPgProvider
 }
 
-func (t *mockPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
+func (t *mockPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (int64, error) {
 	t.provider.queries = append(t.provider.queries, sql)
 
 	if sql == "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED" {
@@ -381,7 +381,7 @@ type lockErrorPgTx struct {
 	db.Tx
 	provider *mockPgProvider
 }
-func (t *lockErrorPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
+func (t *lockErrorPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (int64, error) {
 	if sql == "SELECT 1 FROM agent_session_data WHERE session_id = $1 FOR UPDATE SKIP LOCKED" {
 		return nil, fmt.Errorf("lock error")
 	}
@@ -430,7 +430,7 @@ func TestAutoDreamWorker_ProcessMemories_LockError(t *testing.T) {
 type insertErrorPgTx struct {
 	*mockPgTx
 }
-func (t *insertErrorPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (db.Result, error) {
+func (t *insertErrorPgTx) Exec(ctx context.Context, sql string, arguments ...interface{}) (int64, error) {
 	if strings.Contains(sql, "INSERT INTO autodream_memories") {
 		return nil, fmt.Errorf("insert error")
 	}
