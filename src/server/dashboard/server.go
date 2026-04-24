@@ -724,6 +724,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/wizard/onboarding_verify", server.handleWizardOnboardingVerify)
 	mux.HandleFunc("/api/wizard/generate_description", server.handleWizardGenerateDescription)
 	mux.HandleFunc("/api/wizard/generate_logo", server.handleWizardGenerateLogo)
+	mux.HandleFunc("/api/wizard/state", server.handleWizardStateLoad)
+	mux.HandleFunc("/api/wizard/state/save", server.handleWizardStateSave)
 
 	return utils.GzipMiddleware(telemetry.Middleware(auth.Middleware(store)(mux)))
 }
