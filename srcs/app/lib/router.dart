@@ -31,6 +31,7 @@ import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/orchestration/action_review_center_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
@@ -89,6 +90,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
+          ),
+          GoRoute(
+            path: '/orchestration/action_review',
+            builder: (context, state) => const ActionReviewCenterScreen(),
           ),
           GoRoute(
             path: '/orchestration/tasks',
@@ -247,6 +252,11 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.checklist,
           label: 'Shared Tasks',
           path: '/orchestration/tasks',
+        ),
+        _NavItem(
+          icon: Icons.fact_check,
+          label: 'Action Review',
+          path: '/orchestration/action_review',
         ),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
         _NavItem(icon: Icons.sync, label: 'AutoDream Sync', path: '/autodream-sync'),

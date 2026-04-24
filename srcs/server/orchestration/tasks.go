@@ -17,6 +17,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
+	"github.com/onehumancorp/mono/srcs/server/orchestration/departments"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -59,6 +60,7 @@ type TaskManager struct {
 	mu           sync.Mutex // For Standalone mode SQLite locking
 	autodream    autodream.MemoryConsolidator
 	mesh         MeshTransport
+	departments  *departments.Manager
 }
 
 // NewTaskManager creates a new TaskManager.
@@ -73,7 +75,16 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.Memo
 		hub:          hub,
 		stateMachine: statemachine.NewStateMachine(provider, broadcast, nil),
 		autodream:    ad,
+		departments:  departments.NewManager(),
 	}
+
+	tm.departments.RegisterDepartment("Operations", &departments.BuiltinDepartment{Name: "Operations"})
+	tm.departments.RegisterDepartment("Marketing", &departments.BuiltinDepartment{Name: "Marketing"})
+	tm.departments.RegisterDepartment("Sales", &departments.BuiltinDepartment{Name: "Sales"})
+	tm.departments.RegisterDepartment("Customer Success", &departments.BuiltinDepartment{Name: "Customer Success"})
+	tm.departments.RegisterDepartment("Finance", &departments.BuiltinDepartment{Name: "Finance"})
+	tm.departments.RegisterDepartment("Legal", &departments.BuiltinDepartment{Name: "Legal"})
+	tm.departments.RegisterDepartment("Advisory", &departments.BuiltinDepartment{Name: "Advisory"})
 
 	if envBoolDefault("OHC_MULTITENANT", true) {
 		redisURL := os.Getenv("REDIS_URL")
