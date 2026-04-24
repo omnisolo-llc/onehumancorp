@@ -14,7 +14,6 @@ type Result struct {
 }
 
 // AgentHarness defines the interface for executing agent commands.
-// It explicitly handles execution within a sandboxed environment.
 type AgentHarness interface {
 	Execute(ctx context.Context, command string) (Result, error)
 }
@@ -61,16 +60,4 @@ func (r *Registry) GetManager(name string) (SandboxManager, error) {
 		return nil, fmt.Errorf("harness %q is not a SandboxManager", name)
 	}
 	return manager, nil
-}
-
-// List returns a list of all registered harness names.
-func (r *Registry) List() []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	names := make([]string, 0, len(r.harnesses))
-	for name := range r.harnesses {
-		names = append(names, name)
-	}
-	return names
 }

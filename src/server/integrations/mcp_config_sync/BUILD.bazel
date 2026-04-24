@@ -6,8 +6,12 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/integrations/mcp_config_sync",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/auth",
+        "//src/server/db",
+        "//src/server/agents/builtin",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
+        "@in_gopkg_yaml_v3//:yaml_v3",
     ],
 )
 
@@ -16,6 +20,10 @@ go_test(
     srcs = ["tool_test.go"],
     embed = [":mcp_config_sync"],
     deps = [
-        "@com_github_mattn_go_sqlite3//:go-sqlite3",
+        "//src/server/auth",
+        "//src/server/db",
+        "//src/server/agents/builtin",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
     ],
 )

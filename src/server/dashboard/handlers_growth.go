@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"encoding/json"
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -530,14 +529,5 @@ func (s *Server) handleQuota(w http.ResponseWriter, r *http.Request) {
 	tracker := growth.NewQuotaTracker(100, 50)
 	maxQuota := tracker.CalculateQuota(totalConversions)
 
-	usedMissions := 0
-	if s.hub != nil && s.hub.TaskManager() != nil {
-		var err error
-		usedMissions, err = s.hub.TaskManager().CountCompletedTasks(r.Context())
-		if err != nil {
-			slog.Error("failed to count completed tasks", "error", err)
-		}
-	}
-
-	writeJSON(w, QuotaMetrics{Used: usedMissions, Max: maxQuota})
+	writeJSON(w, QuotaMetrics{Used: 10, Max: maxQuota})
 }

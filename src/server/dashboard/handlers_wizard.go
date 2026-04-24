@@ -105,8 +105,6 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 		if companyName, ok := req.Extras["company_name"]; ok {
 			s.org.Name = companyName
 		}
-        // Validating and storing other fields isn't strictly necessary since they are mapped into cfg.Extras,
-        // but as requested, they are now parsed and correctly stored in the Extras map dynamically above.
 	}
 	if len(req.AiProviders) > 0 {
 		cfg.AiProviders = req.AiProviders
@@ -203,6 +201,5 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		"mode":        mode,
 		"diagnostics": diagnostics,
 	}
-
 	writeJSON(w, resp)
 }
