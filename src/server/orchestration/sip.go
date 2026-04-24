@@ -25,6 +25,8 @@ import (
 )
 
 var (
+	sipMu sync.Mutex
+
 	sipMeter          = otel.Meter("github.com/onehumancorp/mono/src/server/orchestration")
 	sipTracer         = otel.Tracer("github.com/onehumancorp/mono/src/server/orchestration")
 	syncMissionsOk, _ = sipMeter.Int64Counter(
@@ -361,6 +363,14 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	var missions []Message
 	err := withSipRetry(ctx, func() error {
 		missions = nil
+
+		if s.db.IsSQLite() {
+			if !sipMu.TryLock() {
+				telemetry.RecordPostgresLockContention(ctx, "GetPendingMissions")
+				sipMu.Lock()
+			}
+			defer sipMu.Unlock()
+		}
 
 		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
 		var rows db.Rows
@@ -1003,6 +1013,15 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string, 
 
 	err := withSipRetry(ctx, func() error {
 		records = nil
+
+		if s.db.IsSQLite() {
+			if !sipMu.TryLock() {
+				telemetry.RecordPostgresLockContention(ctx, "SyncBufferedMetrics")
+				sipMu.Lock()
+			}
+			defer sipMu.Unlock()
+		}
+
 		query := fmt.Sprintf("SELECT id, metric_type, payload FROM telemetry_buffer WHERE organization_id = $1 ORDER BY id ASC LIMIT %d", batchSize)
 		if !s.db.IsSQLite() {
 			query += " FOR UPDATE SKIP LOCKED"
@@ -1133,6 +1152,13 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 	var syncedCount int
 
 	err := withSipRetry(ctx, func() error {
+		if s.db.IsSQLite() {
+			if !sipMu.TryLock() {
+				telemetry.RecordPostgresLockContention(ctx, "SyncContextSync")
+				sipMu.Lock()
+			}
+			defer sipMu.Unlock()
+		}
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
 			return err
@@ -1272,6 +1298,13 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 	var syncedCount int
 
 	err := withSipRetry(ctx, func() error {
+		if s.db.IsSQLite() {
+			if !sipMu.TryLock() {
+				telemetry.RecordPostgresLockContention(ctx, "SyncMissions")
+				sipMu.Lock()
+			}
+			defer sipMu.Unlock()
+		}
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
 			return err

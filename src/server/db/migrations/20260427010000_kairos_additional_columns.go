@@ -55,10 +55,7 @@ func upKairosAdditionalColumns20260427010000(ctx context.Context, tx *sql.Tx) er
 			return err
 		}
 
-		_, err = tx.ExecContext(ctx, `
-			ALTER TABLE agent_mesh_messages ENABLE ROW LEVEL SECURITY;
-		`)
-		return err
+		return nil
 	}
 
 	// SQLite migrations
