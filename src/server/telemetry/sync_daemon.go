@@ -80,7 +80,6 @@ func (d *SyncDaemon) syncOnce(ctx context.Context) error {
 		return fmt.Errorf("new request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-OHC-Conflict-Resolution", "force-local")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
