@@ -30,7 +30,8 @@ type ReferralRequest struct {
 }
 
 type ReferralResponse struct {
-	Link string `json:"link"`
+	Link             string `json:"link"`
+	PreFilledMessage string `json:"pre_filled_message"`
 }
 
 func ReferralHandler(w http.ResponseWriter, r *http.Request) {
@@ -51,7 +52,12 @@ func ReferralHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := ReferralResponse{Link: link}
+	preFilled := fmt.Sprintf("Share OHC with a friend, both get 1 month free Pro! Join here: %s", link)
+
+	resp := ReferralResponse{
+		Link:             link,
+		PreFilledMessage: preFilled,
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }

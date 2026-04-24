@@ -60,7 +60,7 @@ func (r *BwrapRunner) GetBwrapArgs(command string, policy *Policy) []string {
 	}
 
 	// Using socat Unix Socket proxy to strictly control network egress
-	args = append(args, "--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock")
+	args = append(args, "--bind-try", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock")
 
 	// Provide SPIFFE identity to the sandbox by mounting the Workload API socket
 	if spiffeSocket := os.Getenv("SPIFFE_ENDPOINT_SOCKET"); spiffeSocket != "" {
