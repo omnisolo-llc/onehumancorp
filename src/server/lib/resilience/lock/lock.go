@@ -2,10 +2,12 @@ package lock
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/src/server/db"
 )
@@ -59,15 +61,17 @@ func (p *DatabaseLockProvider) trySQLiteLock(ctx context.Context, key string, tt
 			token = excluded.token,
 			expires_at = excluded.expires_at
 		WHERE distributed_locks.expires_at < ?
+		RETURNING token
 	`
 
-	rowsAffected, err := p.db.Exec(ctx, query, key, token, expiresAt, now)
+	var returnedToken string
+	row := p.db.QueryRow(ctx, query, key, token, expiresAt, now)
+	err := row.Scan(&returnedToken)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			return false, nil, nil
+		}
 		return false, nil, fmt.Errorf("failed to acquire sqlite lock: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return false, nil, nil
 	}
 
 	unlock := func(unlockCtx context.Context) error {
@@ -91,15 +95,17 @@ func (p *DatabaseLockProvider) tryPostgresLock(ctx context.Context, key string, 
 			token = EXCLUDED.token,
 			expires_at = EXCLUDED.expires_at
 		WHERE distributed_locks.expires_at < CURRENT_TIMESTAMP
+		RETURNING token
 	`, ttlSeconds)
 
-	rowsAffected, err := p.db.Exec(ctx, query, key, token)
+	var returnedToken string
+	row := p.db.QueryRow(ctx, query, key, token)
+	err := row.Scan(&returnedToken)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
+			return false, nil, nil
+		}
 		return false, nil, fmt.Errorf("failed to acquire postgres lock: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return false, nil, nil
 	}
 
 	unlock := func(unlockCtx context.Context) error {
