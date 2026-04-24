@@ -93,6 +93,7 @@ node_modules/
 Chart.lock
 /.claude-code
 /.claude
+/.agent-task
 
 # Rust build artifacts
 /target/
