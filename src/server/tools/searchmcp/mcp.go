@@ -1,6 +1,7 @@
 package searchmcp
 
 import (
+	"github.com/onehumancorp/mono/src/server/utils"
 	"context"
 	"encoding/json"
 	"errors"
@@ -190,7 +191,7 @@ func envBoolDefault(key string, fallback bool) bool {
 
 // NewProviderFactory returns a SearchProvider based on environment configuration.
 func NewProviderFactory(provider db.Provider) SearchProvider {
-	if !envBoolDefault("OHC_STANDALONE", false) {
+	if utils.EnvBoolDefault("OHC_MULTITENANT", true) {
 		return NewCloudSearchProvider(provider)
 	}
 	return NewLocalSearchProvider(provider)

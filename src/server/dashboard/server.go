@@ -398,27 +398,13 @@ var statusOrder = []orchestration.Status{
 	orchestration.StatusInMeeting,
 }
 
-func envBoolDefault(key string, fallback bool) bool {
-	value, ok := os.LookupEnv(key)
-	if !ok {
-		return fallback
-	}
 
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "1", "true", "yes", "on":
-		return true
-	case "0", "false", "no", "off":
-		return false
-	default:
-		return fallback
-	}
-}
 
 func shouldServeUI() bool {
-	if envBoolDefault("OHC_HEADLESS", false) {
+	if utils.EnvBoolDefault("OHC_HEADLESS", false) {
 		return false
 	}
-	return envBoolDefault("OHC_SERVE_UI", true)
+	return utils.EnvBoolDefault("OHC_SERVE_UI", true)
 }
 
 // NewServer initializes a new Dashboard HTTP handler that routes all API and frontend requests.

@@ -213,18 +213,18 @@ func TestHybridSearchMCP(t *testing.T) {
 func TestNewProviderFactory(t *testing.T) {
 	mp := &mockProvider{}
 
-	os.Setenv("OHC_STANDALONE", "true")
+	os.Setenv("OHC_MULTITENANT", "false")
 	p := NewProviderFactory(mp)
 	if reflect.TypeOf(p) != reflect.TypeOf(&LocalSearchProvider{}) {
 		t.Fatalf("expected LocalSearchProvider, got %T", p)
 	}
 
-	os.Setenv("OHC_STANDALONE", "false")
+	os.Setenv("OHC_MULTITENANT", "true")
 	p = NewProviderFactory(mp)
 	if reflect.TypeOf(p) != reflect.TypeOf(&CloudSearchProvider{}) {
 		t.Fatalf("expected CloudSearchProvider, got %T", p)
 	}
-	os.Unsetenv("OHC_STANDALONE")
+	os.Unsetenv("OHC_MULTITENANT")
 }
 
 func TestHybridSearchMCP_Errors(t *testing.T) {

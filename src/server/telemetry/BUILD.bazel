@@ -18,6 +18,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/telemetry",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/utils",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_golang//prometheus/push",
         "@com_github_prometheus_client_golang//prometheus/promauto",
@@ -52,6 +53,7 @@ go_test(
     embed = [":telemetry"],
     data = ["telemetry.go"],
     deps = [
+        "//src/server/utils",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_prometheus_client_golang//prometheus/push",
         "@io_opentelemetry_go_otel_metric//:metric",

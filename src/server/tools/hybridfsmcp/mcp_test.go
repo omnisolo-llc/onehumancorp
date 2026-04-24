@@ -193,7 +193,7 @@ func TestNewProviderFactory(t *testing.T) {
 
 
 	t.Setenv("OHC_MULTITENANT", "true")
-	t.Setenv("OHC_STANDALONE", "true")
+	t.Setenv("OHC_MULTITENANT", "false")
 	provider, err = NewProviderFactory("/tmp")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -212,7 +212,7 @@ func TestNewProviderFactory(t *testing.T) {
 	}
 
 	t.Setenv("OHC_MULTITENANT", "true")
-	t.Setenv("OHC_STANDALONE", "false")
+	t.Setenv("OHC_MULTITENANT", "true")
 	t.Setenv("S3_ENDPOINT", "")
 	_, err = NewProviderFactory("/tmp")
 	if err == nil {

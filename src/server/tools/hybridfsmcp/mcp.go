@@ -437,7 +437,7 @@ func (w *RealS3ClientWrapper) ListObjects(ctx context.Context, bucketName string
 
 // NewProviderFactory returns a FileSystemProvider based on environment configuration.
 func NewProviderFactory(baseDir string) (FileSystemProvider, error) {
-	if envBoolDefault("OHC_MULTITENANT", false) && !envBoolDefault("OHC_STANDALONE", false) {
+	if utils.EnvBoolDefault("OHC_MULTITENANT", false) && utils.EnvBoolDefault("OHC_MULTITENANT", true) {
 		endpoint := os.Getenv("S3_ENDPOINT")
 		accessKey := os.Getenv("S3_ACCESS_KEY")
 		secretKey := os.Getenv("S3_SECRET_KEY")
@@ -453,7 +453,7 @@ func NewProviderFactory(baseDir string) (FileSystemProvider, error) {
 		// Initialize minio client object.
 		minioClient, err := minio.New(endpoint, &minio.Options{
 			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
-			Secure: envBoolDefault("S3_SECURE", true),
+			Secure: utils.EnvBoolDefault("S3_SECURE", true),
 		})
 		if err != nil {
 			return nil, err

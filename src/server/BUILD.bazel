@@ -7,6 +7,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server",
     visibility = ["//visibility:private"],
     deps = [
+        "//src/server/utils",
         "//src/server/auth",
         "//src/server/billing",
         "//src/server/dashboard",

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/onehumancorp/mono/src/server/utils"
 	"context"
 	"fmt"
 	"log/slog"
@@ -58,21 +59,7 @@ func getValueOrDefault(key, fallback string) string {
 	return fallback
 }
 
-func envBoolDefault(key string, fallback bool) bool {
-	value, ok := os.LookupEnv(key)
-	if !ok {
-		return fallback
-	}
 
-	switch value {
-	case "1", "true", "TRUE", "yes", "YES", "on", "ON":
-		return true
-	case "0", "false", "FALSE", "no", "NO", "off", "OFF":
-		return false
-	default:
-		return fallback
-	}
-}
 
 func newHubAndTracker(pool *db.DB, orgID string) (*orchestration.Hub, *billing.Tracker) {
 	if pool != nil {
@@ -212,8 +199,8 @@ func newDemoHandler(now time.Time, hub *orchestration.Hub, tracker *billing.Trac
 func run(now time.Time, listen listenFunc) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	multiTenant := envBoolDefault("OHC_MULTITENANT", false)
-	headless := envBoolDefault("OHC_HEADLESS", false) || !envBoolDefault("OHC_SERVE_UI", true)
+	multiTenant := utils.EnvBoolDefault("OHC_MULTITENANT", false)
+	headless := utils.EnvBoolDefault("OHC_HEADLESS", false) || !utils.EnvBoolDefault("OHC_SERVE_UI", true)
 
 	pool, err := db.New(ctx)
 	if err != nil {
@@ -374,7 +361,7 @@ func run(now time.Time, listen listenFunc) error {
 
 			// Background sync for standalone metrics to cloud
 			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
-			if cloudEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
+			if cloudEndpoint != "" && utils.EnvBoolDefault("OHC_TELEMETRY_ENABLED", false) {
 				telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, cloudEndpoint, 5*time.Minute)
 			}
 			// Background sync for standalone missions to cloud

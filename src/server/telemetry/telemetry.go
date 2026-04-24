@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"github.com/onehumancorp/mono/src/server/utils"
 	"reflect"
 	"context"
 	"encoding/json"
@@ -274,7 +275,7 @@ func RedactInterfacePII(val interface{}) interface{} {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitTelemetry() (func(), error) {
-	if (!envBoolDefault("OHC_MULTITENANT", true) || os.Getenv("OHC_STANDALONE") == "true") && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
+	if (!utils.EnvBoolDefault("OHC_MULTITENANT", true) || os.Getenv("OHC_STANDALONE") == "true") && os.Getenv("OHC_TELEMETRY_ENABLED") != "true" {
 		// Enforce user data privacy and local sovereignty in Standalone Mode.
 		// Exporter is strictly opt-in and disabled by default.
 		BufferMetricFunc = nil // Disable local buffer when opt-out
@@ -1891,14 +1892,7 @@ func RecordDeliberationPhaseDuration(ctx context.Context, planID, phase string, 
 	))
 }
 
-// envBoolDefault returns the boolean value of an environment variable, or a fallback if not set.
-func envBoolDefault(key string, fallback bool) bool {
-	val := os.Getenv(key)
-	if val == "" {
-		return fallback
-	}
-	return val == "true"
-}
+
 
 // RecordAgentExecutionTrace increments the global counter for agent execution traces.
 //
