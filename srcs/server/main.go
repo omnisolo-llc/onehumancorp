@@ -346,6 +346,9 @@ func run(now time.Time, listen listenFunc) error {
 
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
+
+		autodreamDaemon := memory.NewAutoDreamDaemon(pool.Provider)
+		go autodreamDaemon.Start(ctx)
 	}
 
 	// Run Token Burn Rate Forecasting Engine
