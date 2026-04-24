@@ -2,6 +2,7 @@ package harness
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -29,6 +30,36 @@ func TestBwrapRunnerArguments(t *testing.T) {
 
 	if !reflect.DeepEqual(args, expectedArgs) {
 		t.Errorf("GetBwrapArgs() = %v, want %v", args, expectedArgs)
+	}
+}
+
+func TestBwrapRunnerArgumentsWithSPIFFE(t *testing.T) {
+	os.Setenv("SPIFFE_ENDPOINT_SOCKET", "unix:///tmp/spire-agent/public/api.sock")
+	defer os.Unsetenv("SPIFFE_ENDPOINT_SOCKET")
+
+	runner := NewBwrapRunner(nil)
+	command := `echo "hello world"`
+	args := runner.GetBwrapArgs(command, nil)
+
+	expectedArgs := []string{
+		"--unshare-pid",
+		"--unshare-uts",
+		"--unshare-ipc",
+		"--unshare-cgroup",
+		"--proc", "/proc",
+		"--dev", "/dev",
+		"--tmpfs", "/tmp",
+		"--unshare-net",
+		"--ro-bind", "/", "/",
+		"--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock",
+		"--bind", "/tmp/spire-agent/public/api.sock", "/tmp/spire-agent/public/api.sock",
+		"--setenv", "SPIFFE_ENDPOINT_SOCKET", "unix:///tmp/spire-agent/public/api.sock",
+		"--",
+		"bash", "-c", command,
+	}
+
+	if !reflect.DeepEqual(args, expectedArgs) {
+		t.Errorf("GetBwrapArgs() with SPIFFE = %v, want %v", args, expectedArgs)
 	}
 }
 
