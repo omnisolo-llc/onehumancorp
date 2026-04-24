@@ -11,6 +11,9 @@ go_library(
     deps = [
         "//src/server/memory",
         "//src/server/auth",
+        "//src/server/telemetry",
+        "@com_github_fsnotify_fsnotify//:fsnotify",
+        "@in_gopkg_yaml_v3//:yaml_v3",
     ],
 )
 
