@@ -327,10 +327,7 @@ flutter_app(
 sh_binary(
     name = "start",
     srcs = ["test/start_web.sh"],
-    data = [
-        ":app",
-        "//src/server:ohc",
-    ],
+    data = [":app"],
     visibility = ["//visibility:public"],
 )
 
