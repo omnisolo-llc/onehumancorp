@@ -11,6 +11,7 @@ import (
 // BwrapRunner executes commands inside a bubblewrap sandbox.
 type BwrapRunner struct {
 	validator *ASTValidator
+	ProxySock string
 }
 
 // NewBwrapRunner creates a new BwrapRunner.
@@ -20,6 +21,7 @@ func NewBwrapRunner(validator *ASTValidator) *BwrapRunner {
 	}
 	return &BwrapRunner{
 		validator: validator,
+		ProxySock: "/var/run/ohc_proxy.sock",
 	}
 }
 
@@ -58,7 +60,9 @@ func (r *BwrapRunner) GetBwrapArgs(command string, policy *Policy) []string {
 	}
 
 	// Using socat Unix Socket proxy to strictly control network egress
-	args = append(args, "--bind", "/var/run/ohc_proxy.sock", "/var/run/ohc_proxy.sock")
+	if r.ProxySock != "" {
+		args = append(args, "--bind", r.ProxySock, r.ProxySock)
+	}
 	args = append(args, "--", "bash", "-c", command)
 
 	return args
