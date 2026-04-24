@@ -35,9 +35,9 @@ void main() {
 
     expect(find.text('Free Tier Quota'), findsOneWidget);
     expect(find.text('10 / 100 missions used'), findsOneWidget);
-    expect(find.text('Invite Team to Expand Quota'), findsOneWidget);
+    expect(find.text('Share OHC (1 Month Free Pro)'), findsOneWidget);
 
-    await tester.tap(find.text('Invite Team to Expand Quota'));
+    await tester.tap(find.text('Share OHC (1 Month Free Pro)'));
     await tester.pumpAndSettle();
 
     verify(() => mockApiService.createReferral("anonymous", "xYz8vQ_local_sovereign")).called(1);

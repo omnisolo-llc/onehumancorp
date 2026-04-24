@@ -121,7 +121,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    'Cloud-Bridge invite link copied: Hey! I\'m running my business on OHC. Use my link to get 1 month free Pro, and I get one too! https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
                                     style: TextStyle(
                                       color: colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',
@@ -143,7 +143,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                             }
                           }
                         },
-                        child: const Text('Invite Team to Expand Quota', style: TextStyle(fontFamily: 'Outfit')),
+                        child: const Text('Share OHC (1 Month Free Pro)', style: TextStyle(fontFamily: 'Outfit')),
                       ),
                     ],
                   ),

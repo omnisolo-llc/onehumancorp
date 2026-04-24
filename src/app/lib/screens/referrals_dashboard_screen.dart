@@ -134,6 +134,7 @@ class _ReferralCard extends StatelessWidget {
                   children: [
                     _StatColumn(label: 'Clicks', value: '${referral['clicks']}'),
                     _StatColumn(label: 'Conversions', value: '${referral['conversions']}'),
+                    _StatColumn(label: 'Credits', value: '${referral['credits'] ?? 0}'),
                   ],
                 ),
                 const SizedBox(height: 16),
