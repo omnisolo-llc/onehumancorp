@@ -5,12 +5,14 @@ go_library(
     srcs = [
         "pipeline.go",
         "service.go",
+        "job_handlers.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/memory/autodream",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server/memory",
         "//src/server/auth",
+        "//src/server/memory",
+        "//src/server/orchestration/queue",
     ],
 )
 
@@ -19,9 +21,9 @@ go_test(
     srcs = ["service_test.go"],
     embed = [":autodream"],
     deps = [
+        "//src/server/auth",
         "//src/server/db",
         "//src/server/memory",
-        "//src/server/auth",
         "@org_modernc_sqlite//:sqlite",
     ],
 )

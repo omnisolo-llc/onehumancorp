@@ -12,7 +12,10 @@ go_library(
 
 go_test(
     name = "hybrid_discovery_test",
-    srcs = ["discovery_test.go", "discovery_e2e_test.go"],
+    srcs = [
+        "discovery_e2e_test.go",
+        "discovery_test.go",
+    ],
     embed = [":hybrid_discovery"],
     deps = [
         "@org_modernc_sqlite//:sqlite",

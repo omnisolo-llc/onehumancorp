@@ -1,11 +1,25 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "models",
     srcs = [
+        "model.go",
+        "predefined.go",
+        "store.go",
         "sync_log.go",
         "task.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/models",
     visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/billing",
+        "//src/server/domain",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "models_test",
+    srcs = ["models_test.go"],
+    deps = [":models"],
 )

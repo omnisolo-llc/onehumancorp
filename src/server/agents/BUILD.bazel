@@ -16,12 +16,12 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/agents",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server/telemetry",
-        "//src/server/agents/grpc",
         "//src/proto/agentservice",
+        "//src/server/agents/grpc",
         "//src/server/db",
         "//src/server/integrations/plane",
         "//src/server/orchestration",
+        "//src/server/telemetry",
         "@com_github_redis_go_redis_v9//:go-redis",
     ],
 )
@@ -34,6 +34,7 @@ go_test(
         "agents_test.go",
         "autodream_test.go",
         "coverage_test.go",
+        "executor_test.go",
         "inprocess_transport_test.go",
         "memory_test.go",
         "provider_test.go",
@@ -42,6 +43,7 @@ go_test(
     ],
     embed = [":agents"],
     deps = [
+        "//src/server/agents/harness",
         "//src/server/db",
         "//src/server/integrations",
         "//src/server/integrations/plane",

@@ -46,3 +46,18 @@ go_test(
         "@org_golang_google_grpc//credentials/insecure",
     ],
 )
+
+go_test(
+    name = "builtin_rust_integration_test_test",
+    srcs = [
+        "helpers_test.go",
+        "ping_test.go",
+        "runtask_test.go",
+        "subagent_test.go",
+    ],
+    deps = [
+        "//src/proto/agentservice",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials/insecure",
+    ],
+)

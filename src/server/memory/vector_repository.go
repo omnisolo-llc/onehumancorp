@@ -88,8 +88,25 @@ func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID st
 	var records []*EmbeddingRecord
 	for rows.Next() {
 		var rec EmbeddingRecord
-		if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.MemoryType, &rec.Content, &rec.CreatedAt); err != nil {
+		var rawCreatedAt interface{}
+		if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.MemoryType, &rec.Content, &rawCreatedAt); err != nil {
 			return nil, err
+		}
+
+		switch v := rawCreatedAt.(type) {
+		case time.Time:
+			rec.CreatedAt = v
+		case string:
+			if parsed, err := time.Parse("2006-01-02 15:04:05", v); err == nil {
+				rec.CreatedAt = parsed
+			} else if parsed, err := time.Parse("2006-01-02 15:04:05-07:00", v); err == nil {
+				rec.CreatedAt = parsed
+			} else if parsed, err := time.Parse(time.RFC3339, v); err == nil {
+				rec.CreatedAt = parsed
+			} else {
+				// Fallback, if parsing fails, we could just log or keep zero value
+				rec.CreatedAt = time.Time{}
+			}
 		}
 		records = append(records, &rec)
 	}
@@ -97,22 +114,26 @@ func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID st
 }
 
 type Conflict struct {
-	ID1      string
-	ID2      string
-	Content1 string
-	Content2 string
+	ID1         string
+	ID2         string
+	Content1    string
+	Content2    string
+	SourceType1 string
+	SourceType2 string
+	CreatedAt1  time.Time
+	CreatedAt2  time.Time
 }
 
 func (r *VectorRepository) FindConflicts(ctx context.Context, organizationID string, threshold float64) ([]Conflict, error) {
 	query := `
-		SELECT a.id, b.id, a.content, b.content
+		SELECT a.id, b.id, a.content, b.content, a.source_type, b.source_type, a.created_at, b.created_at
 		FROM consolidated_memory a
 		JOIN consolidated_memory b ON a.id < b.id AND a.organization_id = b.organization_id
 		WHERE a.organization_id = $1 AND (a.embedding <-> b.embedding) < $2
 	`
 	if r.db.IsSQLite() {
 		query = `
-			SELECT a.id, b.id, a.content, b.content
+			SELECT a.id, b.id, a.content, b.content, a.source_type, b.source_type, a.created_at, b.created_at
 			FROM consolidated_memory a
 			JOIN consolidated_memory b ON a.id < b.id AND a.organization_id = b.organization_id
 			WHERE a.organization_id = $1 AND vec_distance_cosine(a.embedding, b.embedding) < $2
@@ -128,12 +149,33 @@ func (r *VectorRepository) FindConflicts(ctx context.Context, organizationID str
 	var conflicts []Conflict
 	for rows.Next() {
 		var c Conflict
-		if err := rows.Scan(&c.ID1, &c.ID2, &c.Content1, &c.Content2); err != nil {
+		var rawCreatedAt1, rawCreatedAt2 interface{}
+		if err := rows.Scan(&c.ID1, &c.ID2, &c.Content1, &c.Content2, &c.SourceType1, &c.SourceType2, &rawCreatedAt1, &rawCreatedAt2); err != nil {
 			return nil, err
 		}
+
+		c.CreatedAt1 = parseSQLiteTimeFallback(rawCreatedAt1)
+		c.CreatedAt2 = parseSQLiteTimeFallback(rawCreatedAt2)
+
 		conflicts = append(conflicts, c)
 	}
 	return conflicts, nil
+}
+
+func parseSQLiteTimeFallback(raw interface{}) time.Time {
+	switch v := raw.(type) {
+	case time.Time:
+		return v
+	case string:
+		if parsed, err := time.Parse("2006-01-02 15:04:05", v); err == nil {
+			return parsed
+		} else if parsed, err := time.Parse("2006-01-02 15:04:05-07:00", v); err == nil {
+			return parsed
+		} else if parsed, err := time.Parse(time.RFC3339, v); err == nil {
+			return parsed
+		}
+	}
+	return time.Time{}
 }
 
 func (r *VectorRepository) DeleteMemories(ctx context.Context, ids []string) error {
@@ -151,6 +193,7 @@ func (r *VectorRepository) DeleteMemories(ctx context.Context, ids []string) err
 }
 
 func (r *VectorRepository) PruneOlderThan(ctx context.Context, organizationID string, cutoff time.Time) error {
-	_, err := r.db.Exec(ctx, "DELETE FROM consolidated_memory WHERE organization_id = $1 AND created_at < $2", organizationID, cutoff)
+	// Conservative pruning: keep contexts from owner overrides or permanently marked facts.
+	_, err := r.db.Exec(ctx, "DELETE FROM consolidated_memory WHERE organization_id = $1 AND created_at < $2 AND source_type NOT IN ('owner_override', 'permanent')", organizationID, cutoff)
 	return err
 }

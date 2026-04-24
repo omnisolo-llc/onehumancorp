@@ -8,7 +8,7 @@ go_library(
     deps = [
         "//src/server/db",
         "//src/server/integrations/mcp_webhook_tunnel",
-        "@@gazelle++go_deps+org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//:grpc",
     ],
 )
 
@@ -19,10 +19,10 @@ go_test(
         ":mcpwebhooktunnel",
         "//src/server/db",
         "//src/server/integrations/mcp_webhook_tunnel",
-        "@@gazelle++go_deps+org_golang_google_grpc//:grpc",
-        "@@gazelle++go_deps+org_golang_google_grpc//credentials",
-        "@@gazelle++go_deps+org_golang_google_grpc//credentials/insecure",
-        "@@gazelle++go_deps+org_golang_google_grpc//peer",
-        "@@gazelle++go_deps+org_golang_google_grpc//test/bufconn",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//credentials/insecure",
+        "@org_golang_google_grpc//peer",
+        "@org_golang_google_grpc//test/bufconn",
     ],
 )

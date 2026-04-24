@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 
 go_library(
     name = "harnessdaemon",
@@ -19,12 +19,9 @@ go_test(
     ],
 )
 
-
-load("@rules_go//go:def.bzl", "go_binary")
-
 go_binary(
     name = "harness-daemon",
     srcs = ["main.go"],
-    deps = [":harnessdaemon"],
     visibility = ["//visibility:public"],
+    deps = [":harnessdaemon"],
 )

@@ -80,7 +80,35 @@ func (s *Service) ResolveConflicts(ctx context.Context, organizationID string) e
 	}
 
 	for _, c := range conflicts {
-		// Synthesize
+		// Automatic Resolution Logic based on Source Reliability or Recency
+
+		// 1. Source Reliability (Owner Override wins)
+		var loserID string
+		if c.SourceType1 == "owner_override" && c.SourceType2 != "owner_override" {
+			loserID = c.ID2 // Delete the loser
+			_ = s.vectorRepo.DeleteMemories(ctx, []string{loserID})
+			continue
+		} else if c.SourceType2 == "owner_override" && c.SourceType1 != "owner_override" {
+			loserID = c.ID1
+			_ = s.vectorRepo.DeleteMemories(ctx, []string{loserID})
+			continue
+		}
+
+		// 2. Recency (If > 24 hours apart, newest wins)
+		timeDiff := c.CreatedAt1.Sub(c.CreatedAt2)
+		if timeDiff < 0 {
+			timeDiff = -timeDiff
+		}
+		if timeDiff > 24*time.Hour {
+			if c.CreatedAt1.After(c.CreatedAt2) {
+				_ = s.vectorRepo.DeleteMemories(ctx, []string{c.ID2})
+			} else {
+				_ = s.vectorRepo.DeleteMemories(ctx, []string{c.ID1})
+			}
+			continue
+		}
+
+		// 3. Fallback: LLM Synthesizes the conflict
 		prompt := fmt.Sprintf("Merge these two related or conflicting facts into one clear fact:\n1. %s\n2. %s", c.Content1, c.Content2)
 		merged, err := s.llm.Reason(ctx, prompt)
 		if err != nil {
@@ -113,5 +141,25 @@ func (s *Service) ResolveConflicts(ctx context.Context, organizationID string) e
 
 func (s *Service) PruneStaleContext(ctx context.Context, organizationID string, olderThan time.Duration) error {
 	cutoff := time.Now().Add(-olderThan)
+	// Conservative pruning implemented inside VectorRepository.PruneOlderThan
 	return s.vectorRepo.PruneOlderThan(ctx, organizationID, cutoff)
+}
+
+// CrossDepartmentShare allows explicit sharing of memories between different AI agents/departments
+func (s *Service) CrossDepartmentShare(ctx context.Context, organizationID string, fromDept string, toDept string, queryEmbedding []float32, limit int) ([]*memory.EmbeddingRecord, error) {
+	// Search context written by the originating department
+	records, err := s.vectorRepo.SemanticSearch(ctx, organizationID, queryEmbedding, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	var shared []*memory.EmbeddingRecord
+	for _, r := range records {
+		if r.MemoryType == fromDept {
+			// Tag memory for the target department implicitly by returning it
+			// Alternatively, we could persist a copy, but returning it suffices for sharing context.
+			shared = append(shared, r)
+		}
+	}
+	return shared, nil
 }

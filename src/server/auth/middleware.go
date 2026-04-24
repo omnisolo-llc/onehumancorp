@@ -162,3 +162,8 @@ func OrganizationIDFromContext(ctx context.Context) string {
 // Produces no errors.
 // Has no side effects.
 const ClaimsContextKeyForTest = claimsContextKey
+
+// ContextWithClaims injects claims into a given context.
+func ContextWithClaims(ctx context.Context, claims *Claims) context.Context {
+	return context.WithValue(ctx, claimsContextKey, claims)
+}

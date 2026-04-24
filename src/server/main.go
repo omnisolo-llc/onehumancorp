@@ -318,6 +318,21 @@ func run(now time.Time, listen listenFunc) error {
 		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
 
 		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil)
+
+		// Setup and register AutoDream Memory Queue Workers
+		var tq queue.TaskQueue
+		if redisClient == nil {
+			tq = queue.NewSQLiteTaskQueue(pool.Provider)
+		} else {
+			tq = queue.NewPostgresTaskQueue(pool.Provider)
+		}
+
+		pruneWorker := queue.NewWorker(tq, []string{"autodream_prune"}, autodream.PruneJobHandler(adConsolidator))
+		go pruneWorker.Start(ctx)
+
+		resolveWorker := queue.NewWorker(tq, []string{"autodream_resolve"}, autodream.ResolveJobHandler(adConsolidator))
+		go resolveWorker.Start(ctx)
+
 		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver, adConsolidator)
 		// Run distillation as a background job
 		go func() {
