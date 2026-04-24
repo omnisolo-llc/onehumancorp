@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"strings"
 
 	"github.com/pressly/goose/v3"
 )
@@ -49,7 +50,10 @@ func upAutodreamMemoriesMaster(ctx context.Context, tx *sql.Tx) error {
 
 	if !isSQLite {
 		if _, err := tx.ExecContext(ctx, "ALTER TABLE autodream_memories_master ENABLE ROW LEVEL SECURITY;"); err != nil {
-			return err
+			// ignore error if not postgres
+			if !strings.Contains(err.Error(), "ENABLE") {
+			    return err
+            }
 		}
 	}
 
