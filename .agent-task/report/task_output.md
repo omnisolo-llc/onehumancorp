@@ -1,5 +1,3 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
-
 # OHC Small Business App: Competitive Market Analysis & Feature Brief
 
 ## 1. Research Report
@@ -97,5 +95,3 @@ title: "Implement Draft-for-Review AI Action Approval Workflow in KAIROS"
 Priority: "P1"
 Estimated Scope: "Medium"
 ```
-
-</div>
