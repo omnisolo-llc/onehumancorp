@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"github.com/onehumancorp/mono/src/server/auth"
+	"github.com/onehumancorp/mono/src/server/db"
+	"context"
 
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/settings"
@@ -171,4 +174,49 @@ func TestHandleWizardOnboardingVerify(t *testing.T) {
 			t.Errorf("Expected mode to be standalone, got %v", responseMap["mode"])
 		}
 	})
+}
+
+func TestHandleWizardDraft(t *testing.T) {
+	store := db.NewTestProvider(t)
+
+	s := &Server{
+		dbProvider: store,
+	}
+
+	// Insert a test user
+	_, err := store.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT)")
+	if err != nil {
+		t.Fatalf("Failed to create user table: %v", err)
+	}
+	_, err = store.Exec(context.Background(), "INSERT INTO users (id, email) VALUES ('user1', 'test@test.com')")
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
+	_, err = store.Exec(context.Background(), "CREATE TABLE IF NOT EXISTS wizard_drafts (user_id TEXT PRIMARY KEY, draft_state TEXT, updated_at TIMESTAMP)")
+	if err != nil {
+		t.Fatalf("Failed to create draft table: %v", err)
+	}
+
+	// Save draft test
+	saveReq, _ := http.NewRequest(http.MethodPost, "/api/wizard/draft", bytes.NewBuffer([]byte(`{"step": 1}`)))
+	saveReq = saveReq.WithContext(context.WithValue(saveReq.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{Subject: "user1"}))
+	saveRr := httptest.NewRecorder()
+	s.handleWizardSaveDraft(saveRr, saveReq)
+
+	if saveRr.Code != http.StatusOK {
+		t.Errorf("Expected status OK, got %v", saveRr.Code)
+	}
+
+	// Get draft test
+	getReq, _ := http.NewRequest(http.MethodGet, "/api/wizard/draft", nil)
+	getReq = getReq.WithContext(context.WithValue(getReq.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{Subject: "user1"}))
+	getRr := httptest.NewRecorder()
+	s.handleWizardGetDraft(getRr, getReq)
+
+	if getRr.Code != http.StatusOK {
+		t.Errorf("Expected status OK, got %v", getRr.Code)
+	}
+	if getRr.Body.String() != `{"step": 1}` {
+		t.Errorf("Expected body to be {\"step\": 1}, got %v", getRr.Body.String())
+	}
 }

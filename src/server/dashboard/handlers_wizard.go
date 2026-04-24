@@ -1,8 +1,11 @@
 package dashboard
 
 import (
+	"database/sql"
+	"io"
 	"encoding/json"
 	"net/http"
+	"github.com/onehumancorp/mono/src/server/auth"
 	"os"
 
 	"github.com/onehumancorp/mono/src/server/settings"
@@ -248,4 +251,62 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		"diagnostics": healthChecks,
 	}
 	writeJSON(w, resp)
+}
+
+func (s *Server) handleWizardGetDraft(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodGet {
+        http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+    claims := auth.ClaimsFromContext(r.Context())
+    if claims == nil || claims.Subject == "" {
+        http.Error(w, "unauthorized", http.StatusUnauthorized)
+        return
+    }
+
+    var draftState string
+    err := s.dbProvider.QueryRow(r.Context(), "SELECT draft_state FROM wizard_drafts WHERE user_id = $1", claims.Subject).Scan(&draftState)
+    if err != nil {
+        if err.Error() == "sql: no rows in result set" || err == sql.ErrNoRows {
+            w.Header().Set("Content-Type", "application/json")
+            w.Write([]byte("{}"))
+            return
+        }
+        http.Error(w, "failed to get draft state", http.StatusInternalServerError)
+        return
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    w.Write([]byte(draftState))
+}
+
+func (s *Server) handleWizardSaveDraft(w http.ResponseWriter, r *http.Request) {
+    if r.Method != http.MethodPost {
+        http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+        return
+    }
+    claims := auth.ClaimsFromContext(r.Context())
+    if claims == nil || claims.Subject == "" {
+        http.Error(w, "unauthorized", http.StatusUnauthorized)
+        return
+    }
+
+    bodyBytes, err := io.ReadAll(r.Body)
+    if err != nil {
+        http.Error(w, "invalid payload", http.StatusBadRequest)
+        return
+    }
+
+    _, err = s.dbProvider.Exec(r.Context(), `
+        INSERT INTO wizard_drafts (user_id, draft_state, updated_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) DO UPDATE SET draft_state = EXCLUDED.draft_state, updated_at = EXCLUDED.updated_at
+    `, claims.Subject, string(bodyBytes))
+
+    if err != nil {
+        http.Error(w, "failed to save draft", http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
 }
