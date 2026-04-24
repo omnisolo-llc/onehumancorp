@@ -11,6 +11,7 @@ import (
     "github.com/onehumancorp/mono/src/server/auth"
     "github.com/onehumancorp/mono/src/server/db"
     "github.com/onehumancorp/mono/src/server/memory/autodream"
+	"github.com/onehumancorp/mono/src/server/models"
 	"github.com/onehumancorp/mono/src/server/telemetry"
 )
 
@@ -455,7 +456,7 @@ func (to *TasksDB) TransitionTask(ctx context.Context, taskID, agentID, fromStat
 	return tx.Commit(ctx)
 }
 
-func (to *TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) ([]Task, error) {
+func (to *TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) ([]models.Task, error) {
 	query := `
 		SELECT id, status, assigned_agent_id, action_risk, approval_status, proposed_content, created_at, updated_at
 		FROM shared_tasks
@@ -467,9 +468,9 @@ func (to *TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) ([
 	}
 	defer rows.Close()
 
-	var tasks []Task
+	var tasks []models.Task
 	for rows.Next() {
-		var t Task
+		var t models.Task
 		var risk, status, content *string
 		if err := rows.Scan(&t.ID, &t.Status, &t.AssignedAgentID, &risk, &status, &content, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err

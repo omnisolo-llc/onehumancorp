@@ -26,6 +26,8 @@ go_library(
         "sync_daemon.go",
         "telemetry_minimax_client.go",
         "tasks.go",
+        "tasks_db.go",
+        "tasks_store.go",
         "mesh_api.go",
         "mesh.go",
         "shared_tasks.go",
@@ -70,6 +72,7 @@ go_library(
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
             "//src/server/lib/resilience",
+        "//src/server/models",
 ],
 )
 
