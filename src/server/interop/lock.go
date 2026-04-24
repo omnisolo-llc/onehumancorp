@@ -71,7 +71,7 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 					expiryTime, parseErr := time.Parse(time.RFC3339Nano, parts[0])
 					if parseErr == nil && time.Now().After(expiryTime) {
 						// Expired lock found. To avoid TOCTOU, we steal it using rename.
-						stealPath := path + "_steal_" + uuid.New().String()
+						stealPath := path + "_steal_" + m.token
 						err = os.Rename(path, stealPath)
 						if err == nil {
 							os.RemoveAll(stealPath)
@@ -92,8 +92,17 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 acquired:
 	expiry := time.Now().Add(ttl).Format(time.RFC3339Nano)
 	metaPath := filepath.Join(path, "meta.txt")
-	err = os.WriteFile(metaPath, []byte(expiry+","+m.token), 0666)
+
+	// Atomic write
+	tmpMetaPath := metaPath + "_" + m.token + ".tmp"
+	err = os.WriteFile(tmpMetaPath, []byte(expiry+","+m.token), 0666)
 	if err != nil {
+		os.RemoveAll(path)
+		return false, err
+	}
+	err = os.Rename(tmpMetaPath, metaPath)
+	if err != nil {
+		os.Remove(tmpMetaPath)
 		os.RemoveAll(path)
 		return false, err
 	}
@@ -119,7 +128,7 @@ func (m *memoryLock) Unlock(ctx context.Context, key string) error {
 	}
 
 	// It's our lock, so we can safely try to rename it away.
-	tempPath := path + "_" + uuid.New().String() + ".tmp"
+	tempPath := path + "_" + m.token + ".tmp"
 	err = os.Rename(path, tempPath)
 	if err != nil {
 		return nil // File might already be gone
