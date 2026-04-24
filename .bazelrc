@@ -31,7 +31,7 @@ test --build_tests_only
 test --test_timeout=300,600,900,1800
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
 # Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
-test --local_test_jobs=16
+test --local_test_jobs=4
 # Allow up to 200 parallel remote build actions during tests.
 test --jobs=200
 
@@ -118,6 +118,3 @@ build:android --platforms=@platforms//os:android
 build:ios --platforms=@platforms//os:ios
 build:macos --platforms=@platforms//os:macos
 build:windows --platforms=@platforms//os:windows
-
-# Enable local disk cache
-build --disk_cache=~/.cache/bazel/cache/disk
