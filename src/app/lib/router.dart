@@ -288,7 +288,67 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    final width = MediaQuery.of(context).size.width;
+    final isMobile = width < 768;
+
+    if (!isMobile) {
+      return Scaffold(
+        body: Row(children: [_Sidebar(), Expanded(child: child)]),
+      );
+    }
+
+    final current = GoRouterState.of(context).matchedLocation;
+    int selectedIndex = 0;
+    if (current.startsWith('/dashboard')) selectedIndex = 0;
+    else if (current.startsWith('/orchestration/tasks')) selectedIndex = 1;
+    else if (current.startsWith('/chat')) selectedIndex = 2;
+    else if (current.startsWith('/referrals')) selectedIndex = 3;
+
+    return Scaffold(
+      body: child,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.go('/wizard'),
+        tooltip: 'Add Product or Service',
+        child: const Icon(Icons.add),
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: (index) {
+          switch (index) {
+            case 0:
+              context.go('/dashboard');
+              break;
+            case 1:
+              context.go('/orchestration/tasks');
+              break;
+            case 2:
+              context.go('/chat');
+              break;
+            case 3:
+              context.go('/referrals');
+              break;
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart),
+            label: 'Analytics',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.list_alt),
+            label: 'Orders',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.chat),
+            label: 'Messages',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.share),
+            label: 'Share Store',
+          ),
+        ],
+      ),
+    );
   }
 }
 
