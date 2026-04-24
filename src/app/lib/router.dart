@@ -25,7 +25,6 @@ import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
-import 'package:ohc_app/screens/website_builder_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
@@ -199,10 +198,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const BillingWizardScreen(),
           ),
           GoRoute(
-            path: '/wizards/website_builder',
-            builder: (context, state) => const WebsiteBuilderWizardScreen(),
-          ),
-          GoRoute(
             path: '/agents/:id/tune',
             builder: (context, state) => PromptTuningWizardScreen(
               agentId: state.pathParameters['id'] ?? 'unknown',
@@ -268,10 +263,7 @@ class _Sidebar extends StatelessWidget {
           ),
         ),
         const Divider(),
-                _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
-        _NavItem(icon: Icons.article, label: 'Release Notes', path: '/changelog'),
-        const Divider(),
-        _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+                _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(
           icon: Icons.checklist,
@@ -346,6 +338,9 @@ class _Sidebar extends StatelessWidget {
           label: 'Diagnostics',
           path: '/diagnostics',
         ),
+        const SizedBox(height: 16),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
+        _NavItem(icon: Icons.article, label: 'Release Notes', path: '/changelog'),
         const SizedBox(height: 16),
       ],
     );
