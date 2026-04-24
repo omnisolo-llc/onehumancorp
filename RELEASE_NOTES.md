@@ -1,5 +1,10 @@
 # Release Notes
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+- Scaling (Cloud): Remove Memory Scaling from HPA, Ensure rows.Err() is checked in HubRepository, Implement Sub-Agent Orchestration Queue for KAIROS.
+- Privacy/Offline (Standalone): Add test coverage for CapabilityAuthorizer.
+
+
 
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 - Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.
