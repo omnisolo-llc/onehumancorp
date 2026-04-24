@@ -31,6 +31,12 @@ import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
+
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/video_tutorials_screen.dart';
+import 'package:ohc_app/screens/release_notes_screen.dart';
+import 'package:ohc_app/screens/api_docs_screen.dart';
+
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
@@ -215,6 +221,24 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/help/videos',
+            builder: (context, state) => const VideoTutorialsScreen(),
+          ),
+          GoRoute(
+            path: '/help/release_notes',
+            builder: (context, state) => const ReleaseNotesScreen(),
+          ),
+          GoRoute(
+            path: '/help/api_docs',
+            builder: (context, state) => const ApiDocsScreen(),
+          ),
+
         ],
       ),
     ],
