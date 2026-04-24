@@ -16,6 +16,8 @@ pub mod toolsearch;
 pub mod task;
 pub mod agent_tool;
 pub mod sleep;
+pub mod marketing;
+pub mod finance;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -83,6 +85,8 @@ pub fn all_tools(
         task::task_list_tool(task_store.clone()),
         task::task_update_tool(task_store.clone()),
         sleep::sleep_tool(),
+        marketing::qr_generate_tool(),
+        finance::finance_report_tool(),
         agent_tool::agent_stop_tool(),
         agent_tool::agent_status_tool(),
         agent_tool::agent_tool(),
