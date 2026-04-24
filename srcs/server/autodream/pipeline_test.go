@@ -231,3 +231,131 @@ func TestAutoDreamPipeline_ProcessCompletedTasks_EmptyContent(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
+
+func TestAutoDreamPipeline_ProcessCompletedSwarmTasks(t *testing.T) {
+	pool := setupTestDB(t)
+	ctx := context.Background()
+
+	// Ensure tables exist
+	_, err := pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS swarm_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			payload TEXT,
+			status TEXT NOT NULL
+		)
+	`)
+	assert.NoError(t, err)
+
+	_, err = pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS consolidated_memory (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			agent_id TEXT,
+			content TEXT NOT NULL,
+			embedding TEXT,
+			source_type TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	assert.NoError(t, err)
+
+	// Insert test data
+	_, err = pool.Exec(ctx, `
+		INSERT INTO swarm_tasks (id, organization_id, title, payload, status)
+		VALUES ('swarm-1', 'org-1', 'Test Swarm Task', '{"key":"value"}', 'COMPLETED')
+	`)
+	assert.NoError(t, err)
+
+	pipeline := NewAutoDreamPipeline(pool, &MockLLMClient{})
+
+	err = pipeline.ProcessCompletedSwarmTasks(ctx)
+	assert.NoError(t, err)
+
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_type = 'swarm_task'").Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// Verify swarm_tasks status updated to ARCHIVED
+	var status string
+	err = pool.QueryRow(ctx, "SELECT status FROM swarm_tasks WHERE id = 'swarm-1'").Scan(&status)
+	assert.NoError(t, err)
+	assert.Equal(t, "ARCHIVED", status)
+}
+
+type mockTxProvider struct {
+	db.Provider
+	beginErr error
+}
+
+func (m *mockTxProvider) Begin(ctx context.Context) (db.Tx, error) {
+	return nil, m.beginErr
+}
+
+func TestAutoDreamPipeline_ProcessCompletedSwarmTasks_Errors(t *testing.T) {
+	mockDB := &mockTxProvider{beginErr: errors.New("begin error")}
+	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{})
+	err := pipeline.ProcessCompletedSwarmTasks(context.Background())
+	assert.Error(t, err)
+}
+
+func TestAutoDreamPipeline_ProcessSessionLogs(t *testing.T) {
+	pool := setupTestDB(t)
+	ctx := context.Background()
+
+	// Ensure tables exist
+	_, err := pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS agent_session_data (
+			session_id TEXT PRIMARY KEY,
+			agent_id TEXT NOT NULL,
+			context_data TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	assert.NoError(t, err)
+
+	_, err = pool.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS consolidated_memory (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			agent_id TEXT,
+			content TEXT NOT NULL,
+			embedding TEXT,
+			source_type TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	assert.NoError(t, err)
+
+	// Insert test data
+	_, err = pool.Exec(ctx, `
+		INSERT INTO agent_session_data (session_id, agent_id, context_data)
+		VALUES ('session-1', 'agent-1', 'This is a test session log content.')
+	`)
+	assert.NoError(t, err)
+
+	pipeline := NewAutoDreamPipeline(pool, &MockLLMClient{})
+
+	err = pipeline.ProcessSessionLogs(ctx)
+	assert.NoError(t, err)
+
+	var count int
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM consolidated_memory WHERE source_type = 'session_log'").Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, count)
+
+	// Verify session deleted
+	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM agent_session_data WHERE session_id = 'session-1'").Scan(&count)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, count)
+}
+
+func TestAutoDreamPipeline_ProcessSessionLogs_Errors(t *testing.T) {
+	mockDB := &mockTxProvider{beginErr: errors.New("begin error")}
+	pipeline := NewAutoDreamPipeline(mockDB, &MockEmbeddingClient{})
+	err := pipeline.ProcessSessionLogs(context.Background())
+	assert.Error(t, err)
+}
