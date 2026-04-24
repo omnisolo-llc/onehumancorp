@@ -89,13 +89,13 @@ func TestHandleWizardOnboardingVerify(t *testing.T) {
 			t.Errorf("Expected status 200, got %v", rr.Code)
 		}
 
-		var resp map[string]interface{}
-		if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		var responseMap map[string]interface{}
+		if err := json.Unmarshal(rr.Body.Bytes(), &responseMap); err != nil {
 			t.Fatalf("Failed to parse response: %v", err)
 		}
 
-		if resp["status"] != "degraded" {
-			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		if responseMap["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", responseMap["status"])
 		}
 	})
 
@@ -109,11 +109,11 @@ func TestHandleWizardOnboardingVerify(t *testing.T) {
 		rr := httptest.NewRecorder()
 		s.handleWizardOnboardingVerify(rr, req)
 
-		var resp map[string]interface{}
-		json.Unmarshal(rr.Body.Bytes(), &resp)
+		var responseMap map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &responseMap)
 
-		if resp["status"] != "degraded" {
-			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		if responseMap["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", responseMap["status"])
 		}
 	})
 
@@ -127,11 +127,11 @@ func TestHandleWizardOnboardingVerify(t *testing.T) {
 		rr := httptest.NewRecorder()
 		s.handleWizardOnboardingVerify(rr, req)
 
-		var resp map[string]interface{}
-		json.Unmarshal(rr.Body.Bytes(), &resp)
+		var responseMap map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &responseMap)
 
-		if resp["status"] != "degraded" {
-			t.Errorf("Expected status to be degraded, got %v", resp["status"])
+		if responseMap["status"] != "degraded" {
+			t.Errorf("Expected status to be degraded, got %v", responseMap["status"])
 		}
 	})
 
@@ -145,11 +145,11 @@ func TestHandleWizardOnboardingVerify(t *testing.T) {
 		rr := httptest.NewRecorder()
 		s.handleWizardOnboardingVerify(rr, req)
 
-		var resp map[string]interface{}
-		json.Unmarshal(rr.Body.Bytes(), &resp)
+		var responseMap map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &responseMap)
 
-		if resp["status"] != "healthy" {
-			t.Errorf("Expected status to be healthy, got %v", resp["status"])
+		if responseMap["status"] != "healthy" {
+			t.Errorf("Expected status to be healthy, got %v", responseMap["status"])
 		}
 	})
 
@@ -161,14 +161,14 @@ func TestHandleWizardOnboardingVerify(t *testing.T) {
 		rr := httptest.NewRecorder()
 		s.handleWizardOnboardingVerify(rr, req)
 
-		var resp map[string]interface{}
-		json.Unmarshal(rr.Body.Bytes(), &resp)
+		var responseMap map[string]interface{}
+		json.Unmarshal(rr.Body.Bytes(), &responseMap)
 
-		if resp["status"] != "healthy" {
-			t.Errorf("Expected status to be healthy, got %v", resp["status"])
+		if responseMap["status"] != "healthy" {
+			t.Errorf("Expected status to be healthy, got %v", responseMap["status"])
 		}
-		if resp["mode"] != "standalone" {
-			t.Errorf("Expected mode to be standalone, got %v", resp["mode"])
+		if responseMap["mode"] != "standalone" {
+			t.Errorf("Expected mode to be standalone, got %v", responseMap["mode"])
 		}
 	})
 }
