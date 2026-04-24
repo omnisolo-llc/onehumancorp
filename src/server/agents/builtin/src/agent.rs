@@ -68,6 +68,31 @@ impl AgentProgress {
     }
 }
 
+
+/// Applies JetBrains Observation Masking.
+/// Hides the raw output of old tools from the prompt, but keeps the `tool_calls` themselves visible.
+pub fn apply_observation_masking(messages: &[Message]) -> Vec<Message> {
+    let mut masked_messages = messages.to_vec();
+    let tool_msg_indices: Vec<usize> = masked_messages
+        .iter()
+        .enumerate()
+        .filter(|(_, m)| m.role == Role::Tool)
+        .map(|(i, _)| i)
+        .collect();
+
+    if tool_msg_indices.len() > 1 {
+        // Mask all but the last one
+        for &idx in tool_msg_indices.iter().take(tool_msg_indices.len() - 1) {
+            for tr in &mut masked_messages[idx].tool_results {
+                if !tr.content.is_empty() {
+                    tr.content = "[Observation masked for context limit]".to_string();
+                }
+            }
+        }
+    }
+    masked_messages
+}
+
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
 pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
@@ -120,10 +145,13 @@ impl Agent {
                 message_count: messages.len(),
             });
 
+            // Apply Context Management: JetBrains Observation Masking
+            let masked_messages = apply_observation_masking(&messages);
+
             let req = ChatRequest {
                 model: cfg.model.clone(),
                 system: cfg.system.clone(),
-                messages: messages.clone(),
+                messages: masked_messages,
                 tools: tool_defs.clone(),
                 max_tokens: cfg.max_tokens,
                 temperature: cfg.temperature,
@@ -248,5 +276,70 @@ impl Agent {
             .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
 
         tool.execute.execute(tc.arguments.clone()).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_apply_observation_masking() {
+        let messages = vec![
+            Message::user("Hello"),
+            Message {
+                role: Role::Tool,
+                content: "".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![
+                    ToolResult {
+                        tool_call_id: "call_1".to_string(),
+                        content: "Large observation 1".to_string(),
+                        error: "".to_string(),
+                    }
+                ],
+            },
+            Message::user("Next step"),
+            Message {
+                role: Role::Tool,
+                content: "".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![
+                    ToolResult {
+                        tool_call_id: "call_2".to_string(),
+                        content: "Large observation 2".to_string(),
+                        error: "".to_string(),
+                    }
+                ],
+            },
+            Message::user("Final step"),
+            Message {
+                role: Role::Tool,
+                content: "".to_string(),
+                tool_calls: vec![],
+                tool_results: vec![
+                    ToolResult {
+                        tool_call_id: "call_3".to_string(),
+                        content: "Recent observation".to_string(),
+                        error: "".to_string(),
+                    }
+                ],
+            },
+        ];
+
+        let masked_messages = apply_observation_masking(&messages);
+
+        assert_eq!(
+            masked_messages[1].tool_results[0].content,
+            "[Observation masked for context limit]"
+        );
+        assert_eq!(
+            masked_messages[3].tool_results[0].content,
+            "[Observation masked for context limit]"
+        );
+        assert_eq!(
+            masked_messages[5].tool_results[0].content,
+            "Recent observation"
+        );
     }
 }
