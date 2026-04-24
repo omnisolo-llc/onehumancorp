@@ -15,7 +15,6 @@ go_library(
         "//src/server/integrations/etcd",
         "//src/server/integrations/obsidian",
         "//src/server/integrations/ollama",
-        "//src/server/integrations/mercadopago",
         "//src/server/integrations/powersync",
         "//src/server/integrations/restic",
         "//src/proto:hub_go_proto",
