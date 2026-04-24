@@ -331,7 +331,17 @@ func InitWithMeter(m mockableMeter) error {
 		return fmt.Errorf("meter is nil")
 	}
 
+	CapabilityViolationTotal = nil
+
 	var err error
+	CapabilityViolationTotal, err = m.Int64Counter(
+		"capability_violation_total",
+		metric.WithDescription("Total number of capability ACL violations"),
+	)
+	if err != nil {
+		return err
+	}
+
 	AutoDreamRecordsSyncedTotal, err = m.Int64Counter("autodream_records_synced_total",
 		metric.WithDescription("Total number of autodream records successfully synced"),
 	)
@@ -2142,6 +2152,15 @@ func RecordBubblewrapViolation(ctx context.Context) {
 
 // RecordHarnessInitLatency records the latency of harness initialization.
 func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"deployment_mode": mode,
+			"latency": latency,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "harness_init_latency", string(payloadBytes))
+	}
 	if HarnessInitLatency != nil {
 		HarnessInitLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
@@ -2151,6 +2170,15 @@ func RecordHarnessInitLatency(ctx context.Context, latency float64, mode string)
 
 // RecordHarnessDbIoLatency records the latency of harness database I/O.
 func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"deployment_mode": mode,
+			"latency": latency,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "harness_db_io_latency", string(payloadBytes))
+	}
 	if HarnessDbIoLatency != nil {
 		HarnessDbIoLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
@@ -2160,6 +2188,15 @@ func RecordHarnessDbIoLatency(ctx context.Context, latency float64, mode string)
 
 // RecordHarnessExecutionLatency records the latency of harness execution.
 func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"deployment_mode": mode,
+			"latency": latency,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "harness_execution_latency", string(payloadBytes))
+	}
 	if HarnessExecutionLatency != nil {
 		HarnessExecutionLatency.Record(ctx, latency, metric.WithAttributes(
 			attribute.String("deployment_mode", mode),
@@ -2169,17 +2206,17 @@ func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode st
 
 var CapabilityViolationTotal metric.Int64Counter
 
-func initCapabilityMetrics(m metric.Meter) error {
-	var err error
-	CapabilityViolationTotal, err = m.Int64Counter(
-		"capability_violation_total",
-		metric.WithDescription("Total number of capability ACL violations"),
-	)
-	return err
-}
-
 // RecordCapabilityViolation increments the counter for capability ACL violations.
 func RecordCapabilityViolation(ctx context.Context, sessionID, capability string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"session_id": sessionID,
+			"capability": capability,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "capability_violation_total", string(payloadBytes))
+	}
 	if CapabilityViolationTotal != nil {
 		CapabilityViolationTotal.Add(ctx, 1, metric.WithAttributes(
 			attribute.String("session_id", sessionID),
