@@ -192,14 +192,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               agentId: state.pathParameters['id'] ?? 'unknown',
             ),
           ),
-
-          GoRoute(
-            path: '/wizards/pending-actions',
-            builder: (context, state) => const ReviewPendingActionsWizardScreen(),
-          ),
           GoRoute(
             path: '/wizards/upgrade',
-
             builder: (context, state) => const UpgradeWizardScreen(),
           ),
           GoRoute(
