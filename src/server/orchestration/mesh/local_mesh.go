@@ -2,6 +2,9 @@ package mesh
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
 	"sync"
 	"time"
 )
@@ -21,18 +24,23 @@ func (s *localSubscription) Close() error {
 	return nil
 }
 
+type localLockInfo struct {
+	expiry time.Time
+	token  string
+}
+
 type LocalMesh struct {
 	mu          sync.RWMutex
 	subscribers map[string]map[*localSubscription]struct{}
 	locks       sync.Mutex
-	activeLocks map[string]time.Time
+	activeLocks map[string]localLockInfo
 	presences   map[string]AgentPresence
 }
 
 func NewLocalMesh() *LocalMesh {
 	return &LocalMesh{
 		subscribers: make(map[string]map[*localSubscription]struct{}),
-		activeLocks: make(map[string]time.Time),
+		activeLocks: make(map[string]localLockInfo),
 		presences:   make(map[string]AgentPresence),
 	}
 }
@@ -102,24 +110,48 @@ func (m *LocalMesh) unsubscribe(topic string, sub *localSubscription) {
 	}
 }
 
-func (m *LocalMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
+func generateToken() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func (m *LocalMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (string, bool, error) {
 	m.locks.Lock()
 	defer m.locks.Unlock()
 
 	now := time.Now()
-	if expiry, ok := m.activeLocks[key]; ok {
-		if now.Before(expiry) {
-			return false, nil // Lock is held
+	if info, ok := m.activeLocks[key]; ok {
+		if now.Before(info.expiry) {
+			return "", false, nil // Lock is held
 		}
 	}
 
-	m.activeLocks[key] = now.Add(ttl)
-	return true, nil
+	token, err := generateToken()
+	if err != nil {
+		return "", false, err
+	}
+	m.activeLocks[key] = localLockInfo{
+		expiry: now.Add(ttl),
+		token:  token,
+	}
+	return token, true, nil
 }
 
-func (m *LocalMesh) ReleaseLock(ctx context.Context, key string) error {
+func (m *LocalMesh) ReleaseLock(ctx context.Context, key string, token string) error {
 	m.locks.Lock()
 	defer m.locks.Unlock()
+
+	info, ok := m.activeLocks[key]
+	if !ok {
+		return errors.New("lock not found or expired")
+	}
+
+	if info.token != token {
+		return errors.New("invalid token")
+	}
 
 	delete(m.activeLocks, key)
 	return nil

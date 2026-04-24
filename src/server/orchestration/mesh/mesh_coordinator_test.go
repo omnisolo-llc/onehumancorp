@@ -28,11 +28,11 @@ func (m *MockTeammateMesh) Subscribe(ctx context.Context, topic string, handler 
 	return nil, nil
 }
 
-func (m *MockTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
-	return true, nil
+func (m *MockTeammateMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (string, bool, error) {
+	return "mock-token", true, nil
 }
 
-func (m *MockTeammateMesh) ReleaseLock(ctx context.Context, key string) error {
+func (m *MockTeammateMesh) ReleaseLock(ctx context.Context, key string, token string) error {
 	return nil
 }
 
