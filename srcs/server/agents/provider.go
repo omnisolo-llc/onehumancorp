@@ -10,6 +10,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	agentservicepb "github.com/onehumancorp/mono/srcs/proto/agentservice"
+	agentgrpc "github.com/onehumancorp/mono/srcs/server/agents/grpc"
+	"os"
 	"time"
 
 	"errors"
@@ -153,7 +156,6 @@ func (b *baseProvider) load() Credentials {
 	return b.cred
 }
 
-
 // executeInIsolation handles the shared process sandboxing and telemetry tracking per subagent invocation.
 // It syncs subagent statuses and errors dynamically via the Teammate Mesh API (Redis Pub/Sub).
 func executeInIsolation(ctx context.Context, agentType string, worktree string, transport Transport) error {
@@ -196,7 +198,6 @@ func executeInIsolation(ctx context.Context, agentType string, worktree string, 
 
 	return nil
 }
-
 
 // ── Claude (Anthropic) ────────────────────────────────────────────────────────
 
@@ -649,6 +650,47 @@ func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
 func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	// Delegate to Rust gRPC agent for true isolation and full features
+	address := os.Getenv("OHC_AGENT_ADDRESS")
+	if address == "" {
+		address = "127.0.0.1:50051"
+	}
+
+	client, err := agentgrpc.NewClient(address, agentgrpc.ClientOptionsFromEnv())
+	if err != nil {
+		return fmt.Errorf("connect to builtin agent at %s: %w", address, err)
+	}
+	defer client.Close()
+
+	var lastContent string
+	err = client.RunTask(ctx, &agentservicepb.RunTaskRequest{
+		Task: "Execute isolated task in " + worktree,
+	}, func(evt *agentservicepb.RunTaskEvent) {
+		if evt.Content != "" {
+			lastContent = evt.Content
+		}
+		if transport != nil {
+			msg, _ := json.Marshal(map[string]interface{}{
+				"agent":   "builtin",
+				"stream":  "stdout",
+				"content": evt.Content,
+			})
+			transport.Send(ctx, msg)
+		}
+	})
+
+	if err != nil {
+		return fmt.Errorf("builtin agent RunTask: %w", err)
+	}
+
+	if transport != nil {
+		endMsg, _ := json.Marshal(map[string]interface{}{
+			"agent":  "builtin",
+			"status": "COMPLETED",
+			"result": lastContent,
+		})
+		transport.Send(ctx, endMsg)
+	}
 	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
 }
 
