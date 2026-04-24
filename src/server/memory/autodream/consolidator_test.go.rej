@@ -1,0 +1,12 @@
+--- src/server/memory/autodream/consolidator_test.go
++++ src/server/memory/autodream/consolidator_test.go
+@@ -68,9 +68,6 @@
+	}
+	return 1, nil
+ }
+-func (m *mockDbProvider) AcquireTask(ctx context.Context, agentRole string) (*db.TaskRow, error) {
+-	return nil, nil
+-}
+ func (m *mockDbProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
+	return nil
+ }

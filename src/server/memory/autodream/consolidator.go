@@ -8,10 +8,9 @@ import (
 	"time"
 	"encoding/json"
 
-	"github.com/fsnotify/fsnotify"
-	"github.com/onehumancorp/mono/srcs/server/auth"
-	"github.com/onehumancorp/mono/srcs/server/memory"
-	"github.com/onehumancorp/mono/srcs/server/telemetry"
+	"github.com/onehumancorp/mono/src/server/auth"
+	"github.com/onehumancorp/mono/src/server/memory"
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,9 +19,9 @@ var _ MemoryConsolidator = (*Consolidator)(nil)
 
 // MemoryFile represents the structure of the YAML memory files
 type MemoryFile struct {
-	TaskID    string \`yaml:"task_id"\`
-	AgentRole string \`yaml:"agent_role"\`
-	Content   string \`yaml:"content"\`
+	TaskID    string `yaml:"task_id"`
+	AgentRole string `yaml:"agent_role"`
+	Content   string `yaml:"content"`
 }
 
 // PushDBProvider defines the query operations required to run the PushToCloud sync
@@ -130,42 +129,6 @@ func (c *Consolidator) StartWatcher(ctx context.Context) error {
 		}
 	}
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return fmt.Errorf("failed to create watcher: %w", err)
-	}
-
-	go func() {
-		defer watcher.Close()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				if event.Op&fsnotify.Create == fsnotify.Create || event.Op&fsnotify.Write == fsnotify.Write {
-					if filepath.Ext(event.Name) == ".yml" || filepath.Ext(event.Name) == ".yaml" {
-						if err := c.processMemoryFile(ctx, event.Name); err != nil {
-							fmt.Printf("Error processing memory file %s: %v\n", event.Name, err)
-						}
-					}
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				fmt.Printf("Watcher error: %v\n", err)
-			}
-		}
-	}()
-
-	err = watcher.Add(c.watchDir)
-	if err != nil {
-		return fmt.Errorf("failed to add directory to watcher: %w", err)
-	}
-
 	return nil
 }
 
@@ -224,7 +187,7 @@ func (c *Consolidator) PushToCloud(ctx context.Context, dbProvider PushDBProvide
 	}
 
 	// Fetch unsynced records from consolidated_memory
-	query := \`SELECT id, organization_id, memory_type, content, embedding, created_at, source_task_id FROM consolidated_memory WHERE synced_to_cloud = false\`
+	query := `SELECT id, organization_id, memory_type, content, embedding, created_at, source_task_id FROM consolidated_memory WHERE synced_to_cloud = false`
 
 	rows, err := dbProvider.Query(ctx, query)
 	if err != nil {

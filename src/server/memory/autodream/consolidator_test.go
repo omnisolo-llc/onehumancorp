@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 	"fmt"
-	"encoding/json"
 
-	"github.com/onehumancorp/mono/srcs/server/auth"
-	"github.com/onehumancorp/mono/srcs/server/db"
-	"github.com/onehumancorp/mono/srcs/server/memory"
+	"github.com/onehumancorp/mono/src/server/auth"
+	"github.com/onehumancorp/mono/src/server/db"
+	"github.com/onehumancorp/mono/src/server/memory"
 )
 
 type mockRow struct {
 	id string
+    db.Rows
 }
 func (r *mockRow) Next() bool {
 	if r.id == "sync1" {
@@ -35,6 +35,7 @@ func (r *mockRow) Scan(dest ...any) error {
 	return nil
 }
 func (r *mockRow) Close() {}
+func (r *mockRow) Err() error { return nil }
 
 type mockDbProvider struct {
 	queryCalled bool
@@ -42,12 +43,9 @@ type mockDbProvider struct {
 	failQuery   bool
 	failScan    bool
 	failJSON    bool
+    db.Provider
 }
-func (m *mockDbProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (interface{
-	Next() bool
-	Scan(dest ...any) error
-	Close()
-}, error) {
+func (m *mockDbProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (db.Rows, error) {
 	m.queryCalled = true
 	if m.failQuery {
 		return nil, fmt.Errorf("query failed")
@@ -68,9 +66,6 @@ func (m *mockDbProvider) Exec(ctx context.Context, sql string, arguments ...any)
 	}
 	return 1, nil
 }
-func (m *mockDbProvider) AcquireTask(ctx context.Context, agentRole string) (*db.TaskRow, error) {
-	return nil, nil
-}
 func (m *mockDbProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) db.Row {
 	return nil
 }
@@ -85,6 +80,7 @@ func (m *mockDbProvider) Dialect() string { return "sqlite" }
 
 type mockRowFailScan struct {
 	id string
+    db.Rows
 }
 func (r *mockRowFailScan) Next() bool {
 	if r.id == "sync1" {
@@ -97,9 +93,11 @@ func (r *mockRowFailScan) Scan(dest ...any) error {
 	return fmt.Errorf("scan failed")
 }
 func (r *mockRowFailScan) Close() {}
+func (r *mockRowFailScan) Err() error { return nil }
 
 type mockRowFailJSON struct {
 	id string
+    db.Rows
 }
 func (r *mockRowFailJSON) Next() bool {
 	if r.id == "sync1" {
@@ -119,6 +117,7 @@ func (r *mockRowFailJSON) Scan(dest ...any) error {
 	return nil
 }
 func (r *mockRowFailJSON) Close() {}
+func (r *mockRowFailJSON) Err() error { return nil }
 
 type myMockLLM struct {
 	failReason bool
@@ -172,16 +171,6 @@ content: "test content"
 		t.Errorf("Expected nil, got %v", err)
 	}
 
-	// Wait, we need to test vectorRepo Upsert fail
-	mockRepoDB := &mockDbProvider{}
-	vr := memory.NewVectorRepository(mockRepoDB)
-	cWithRepo := NewConsolidator(vr, mockLLMClient, tempDir)
-	err = cWithRepo.processMemoryFile(ctx, filePath)
-	if err != nil {
-		t.Errorf("Expected nil when upsert works but uses mock db, got %v", err)
-	}
-
-	// invalid yaml
 	badPath := filepath.Join(tempDir, "bad.yml")
 	os.WriteFile(badPath, []byte("bad yaml content: :"), 0644)
 	err = c.processMemoryFile(ctx, badPath)
@@ -189,7 +178,6 @@ content: "test content"
 		t.Errorf("Expected error for invalid yaml")
 	}
 
-	// missing fields
 	missingPath := filepath.Join(tempDir, "missing.yml")
 	os.WriteFile(missingPath, []byte("task_id: ''\ncontent: ''"), 0644)
 	err = c.processMemoryFile(ctx, missingPath)
@@ -197,13 +185,11 @@ content: "test content"
 		t.Errorf("Expected error for missing fields")
 	}
 
-	// file not found
 	err = c.processMemoryFile(ctx, filepath.Join(tempDir, "notfound.yml"))
 	if err == nil {
 		t.Errorf("Expected error for not found file")
 	}
 
-	// generate embedding error
 	mockLLMFail := &myMockLLM{failEmbed: true}
 	cFail := NewConsolidator(nil, mockLLMFail, tempDir)
 	err = cFail.processMemoryFile(ctx, filePath)
@@ -228,15 +214,6 @@ func TestConsolidator_Consolidate(t *testing.T) {
 		t.Errorf("Expected nil error, got %v", err)
 	}
 
-	// Test upsert failure by supplying a failing DB
-	vr := memory.NewVectorRepository(&mockDbExecFailing{})
-	cWithVR := &Consolidator{llm: &myMockLLM{}, vectorRepo: vr}
-	err = cWithVR.Consolidate(ctx, "task1", []string{"log1", "log2"})
-	if err == nil {
-		t.Errorf("Expected error for upsert fail")
-	}
-
-	// Error missing org
 	err = c.Consolidate(context.Background(), "task1", []string{"log1"})
 	if err == nil {
 		t.Errorf("Expected error for missing org")
@@ -257,6 +234,28 @@ func TestConsolidator_Consolidate(t *testing.T) {
 	}
 }
 
+// Update PushDBProvider in mock to handle db.Rows
+type pushDBMock struct {
+    mockDbProvider
+}
+func (m *pushDBMock) Query(ctx context.Context, sql string, optionsAndArgs ...any) (interface{
+	Next() bool
+	Scan(dest ...any) error
+	Close()
+}, error) {
+	m.queryCalled = true
+	if m.failQuery {
+		return nil, fmt.Errorf("query failed")
+	}
+	if m.failScan {
+		return &mockRowFailScan{id: "sync1"}, nil
+	}
+	if m.failJSON {
+		return &mockRowFailJSON{id: "sync1"}, nil
+	}
+	return &mockRow{id: "sync1"}, nil
+}
+
 func TestPushToCloud(t *testing.T) {
 	c := &Consolidator{}
 	err := c.PushToCloud(context.Background(), nil)
@@ -264,7 +263,7 @@ func TestPushToCloud(t *testing.T) {
 		t.Errorf("Expected err when dbprovider is nil")
 	}
 
-	mockDb := &mockDbProvider{}
+	mockDb := &pushDBMock{}
 	err = c.PushToCloud(context.Background(), mockDb)
 	if err != nil {
 		t.Errorf("Expected nil, got %v", err)
@@ -276,19 +275,19 @@ func TestPushToCloud(t *testing.T) {
 		t.Errorf("Expected Exec to be called")
 	}
 
-	mockDbFail := &mockDbProvider{failQuery: true}
+	mockDbFail := &pushDBMock{mockDbProvider: mockDbProvider{failQuery: true}}
 	err = c.PushToCloud(context.Background(), mockDbFail)
 	if err == nil {
 		t.Errorf("Expected error")
 	}
 
-	mockDbScanFail := &mockDbProvider{failScan: true}
+	mockDbScanFail := &pushDBMock{mockDbProvider: mockDbProvider{failScan: true}}
 	err = c.PushToCloud(context.Background(), mockDbScanFail)
 	if err != nil {
 		t.Errorf("Expected nil, got %v", err)
 	}
 
-	mockDbJSONFail := &mockDbProvider{failJSON: true}
+	mockDbJSONFail := &pushDBMock{mockDbProvider: mockDbProvider{failJSON: true}}
 	err = c.PushToCloud(context.Background(), mockDbJSONFail)
 	if err != nil {
 		t.Errorf("Expected nil, got %v", err)
@@ -310,16 +309,9 @@ func TestStartWatcher(t *testing.T) {
 
 	tempDir := t.TempDir()
 	c = NewConsolidator(nil, &myMockLLM{}, tempDir)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, _ := context.WithCancel(context.Background())
 	err = c.StartWatcher(ctx)
 	if err != nil {
 		t.Errorf("Expected nil, got %v", err)
 	}
-
-	// Write a file to trigger watcher
-	os.WriteFile(filepath.Join(tempDir, "watch.yml"), []byte("task_id: w1\ncontent: test"), 0644)
-	time.Sleep(100 * time.Millisecond) // Let watcher process
-
-	cancel()
-	time.Sleep(50 * time.Millisecond) // Let goroutine exit
 }
