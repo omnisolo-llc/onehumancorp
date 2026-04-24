@@ -146,3 +146,100 @@ func TestMeshHandler_Subscribe(t *testing.T) {
 		}
 	})
 }
+
+type failingReader struct{}
+
+func (f failingReader) Read(p []byte) (n int, err error) {
+	return 0, fmt.Errorf("simulated read error")
+}
+
+func TestMeshHandler_Broadcast_ReadError(t *testing.T) {
+	transport := mesh.NewMemoryTransport()
+	handler := NewMeshHandler(transport)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/mesh/broadcast", failingReader{})
+	w := httptest.NewRecorder()
+
+	handler.Broadcast(w, req)
+
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status Bad Request, got %d", w.Result().StatusCode)
+	}
+}
+
+func TestMeshHandler_Subscribe_UpgradeError(t *testing.T) {
+	transport := mesh.NewMemoryTransport()
+	handler := NewMeshHandler(transport)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/mesh/subscribe?channel=test", nil)
+	w := httptest.NewRecorder()
+
+	handler.Subscribe(w, req)
+
+	if w.Result().StatusCode != http.StatusBadRequest {
+		t.Errorf("Expected status Bad Request due to failed upgrade, got %d", w.Result().StatusCode)
+	}
+}
+
+type mockClosingTransport struct {
+	mesh.MeshTransport
+}
+
+func (m *mockClosingTransport) Publish(ctx context.Context, channel string, payload []byte) error {
+	return nil
+}
+
+func (m *mockClosingTransport) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
+	ch := make(chan []byte)
+	close(ch)
+	return ch, nil
+}
+
+func TestMeshHandler_Subscribe_ChannelClosed(t *testing.T) {
+	transport := &mockClosingTransport{}
+	handler := NewMeshHandler(transport)
+
+	server := httptest.NewServer(http.HandlerFunc(handler.Subscribe))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "?channel=test"
+	ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Could not open websocket connection: %v", err)
+	}
+	defer ws.Close()
+
+	time.Sleep(50 * time.Millisecond)
+}
+
+type mockWriteErrorTransport struct {
+	mesh.MeshTransport
+}
+
+func (m *mockWriteErrorTransport) Publish(ctx context.Context, channel string, payload []byte) error {
+	return nil
+}
+
+func (m *mockWriteErrorTransport) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
+	ch := make(chan []byte, 1)
+	ch <- []byte("msg")
+	return ch, nil
+}
+
+func TestMeshHandler_Subscribe_WriteError_Mocked(t *testing.T) {
+	transport := &mockWriteErrorTransport{}
+	handler := NewMeshHandler(transport)
+
+	server := httptest.NewServer(http.HandlerFunc(handler.Subscribe))
+	defer server.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "?channel=test"
+	ws, _, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	if err != nil {
+		t.Fatalf("Could not open websocket connection: %v", err)
+	}
+
+	ws.Close()
+
+	time.Sleep(50 * time.Millisecond)
+}

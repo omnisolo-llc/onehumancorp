@@ -172,3 +172,75 @@ func TestRedisTransport(t *testing.T) {
 		}
 	})
 }
+
+func TestMemoryTransport_ChannelFull(t *testing.T) {
+	ctx := context.Background()
+	transport := NewMemoryTransport()
+	channel := "full_channel"
+
+	// Subscribe but do not read
+	sub, _ := transport.Subscribe(ctx, channel)
+
+	// Fill the channel (capacity is 100)
+	for i := 0; i < 100; i++ {
+		_ = transport.Publish(ctx, channel, []byte("msg"))
+	}
+
+	// This publish hits the default non-blocking branch because channel is full
+	err := transport.Publish(ctx, channel, []byte("dropped"))
+	if err != nil {
+		t.Fatalf("Expected nil error when channel is full, got %v", err)
+	}
+
+	// Drain channel
+	for i := 0; i < 100; i++ {
+		<-sub
+	}
+}
+
+func TestRedisTransport_ReceiveContextCanceledWithoutSelect(t *testing.T) {
+	s, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("failed to start miniredis: %v", err)
+	}
+	defer s.Close()
+
+	client, _ := rueidis.NewClient(rueidis.ClientOption{
+		InitAddress:  []string{s.Addr()},
+		DisableCache: true,
+	})
+	defer client.Close()
+
+	transport := NewRedisTransport(client)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	channel := "test_channel_recv_cancel_noselect"
+
+	sub, _ := transport.Subscribe(ctx, channel)
+
+	time.Sleep(50 * time.Millisecond)
+
+	pubClient, _ := rueidis.NewClient(rueidis.ClientOption{
+		InitAddress:  []string{s.Addr()},
+		DisableCache: true,
+	})
+	defer pubClient.Close()
+	pubTransport := NewRedisTransport(pubClient)
+
+	// Fill up channel
+	for i := 0; i < 100; i++ {
+		_ = pubTransport.Publish(context.Background(), channel, []byte("msg"))
+	}
+	time.Sleep(50 * time.Millisecond)
+
+	cancel()
+	time.Sleep(50 * time.Millisecond)
+
+	// This publish hits client.Receive callback while context is canceled
+	_ = pubTransport.Publish(context.Background(), channel, []byte("dropped_msg"))
+	time.Sleep(50 * time.Millisecond)
+
+	for i := 0; i < 100; i++ {
+		<-sub
+	}
+}
