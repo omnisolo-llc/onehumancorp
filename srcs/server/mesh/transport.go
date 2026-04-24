@@ -2,6 +2,9 @@ package mesh
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
+	"os"
 	"sync"
 
 	"github.com/redis/rueidis"
@@ -101,4 +104,26 @@ func (r *RedisTransport) Subscribe(ctx context.Context, channel string) (<-chan 
 	}()
 
 	return ch, nil
+}
+
+// NewMeshTransport returns a new MeshTransport depending on the execution mode.
+// If REDIS_URL is present and OHC_STANDALONE is not true, it returns a cloud transport (Redis).
+// Otherwise, it returns a local memory transport.
+func NewMeshTransport() (MeshTransport, error) {
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
+		opts, err := rueidis.ParseURL(redisURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse REDIS_URL: %w", err)
+		}
+		c, err := rueidis.NewClient(opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to redis: %w", err)
+		}
+		slog.Info("MeshTransport initialized in Cloud mode (Redis)")
+		return NewRedisTransport(c), nil
+	}
+
+	slog.Info("MeshTransport initialized in Standalone mode (In-Memory)")
+	return NewMemoryTransport(), nil
 }

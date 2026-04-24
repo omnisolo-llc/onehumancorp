@@ -11,8 +11,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/onehumancorp/mono/srcs/server/sync"
+	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/hybrid_sync"
+	"github.com/onehumancorp/mono/srcs/server/sync"
 	"github.com/redis/rueidis"
 
 	"google.golang.org/grpc"
@@ -542,6 +543,38 @@ func run(now time.Time, listen listenFunc) error {
 	// The Rust binary connects to the gRPC server and self-registers.
 	grpcAddress := getEnvOrDefault("GRPC_PORT", ":9090")
 	grpcEndpoint := "http://localhost" + grpcAddress
+	handoff, err := interop.NewStateHandoff()
+
+	if err == nil {
+
+		// Example of wiring: load pending handoffs on startup to resume missions if switching from Standalone/Cloud.
+
+		pending, _ := handoff.LoadPendingHandoffs()
+
+		if len(pending) > 0 {
+
+			slog.Info("Loaded pending handoffs", "count", len(pending))
+			for _, notif := range pending {
+
+				msg := orchestration.Message{ID: notif.TaskId, FromAgent: "handoff", ToAgent: "hub", Type: orchestration.EventTask, Content: "resume", OccurredAt: time.Now().UTC()}
+				pubErr := hub.Publish(msg)
+				if pubErr == nil {
+					handoff.MarkHandoffComplete(notif.TaskId)
+					slog.Info("Resumed and cleared handoff task", "task_id", notif.TaskId)
+				} else {
+					slog.Warn("Failed to publish handoff task to hub", "task_id", notif.TaskId, "error", pubErr)
+				}
+
+			}
+
+		}
+
+	} else {
+
+		slog.Warn("Failed to initialize state handoff", "error", err)
+
+	}
+
 	startBuiltinAgentProcess(ctx, grpcEndpoint)
 	httpAddress := getEnvOrDefault("PORT", defaultAddress)
 

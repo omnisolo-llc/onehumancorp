@@ -19,6 +19,7 @@ go_library(
         "//srcs/server/scheduler",
         "//srcs/server/settings",
         "//srcs/server/sync",
+        "//srcs/server/interop",
         "//srcs/server/telemetry",
         "//srcs/server/integrations/mcp_sync",
         "//srcs/server/workers",
