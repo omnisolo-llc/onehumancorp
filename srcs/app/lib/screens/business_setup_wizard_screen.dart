@@ -9,31 +9,29 @@ import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
 
 class BusinessSetupState {
+  final bool obscurePassword;
   final int step;
-  final String businessType;
   final String companyName;
-  final String description;
-  final List<String> whatYouSell;
-  final String payments;
-  final String template;
-  final String firstProductName;
-  final String firstProductPrice;
-  final String domain;
+  final String industry;
+  final String size;
+  final List<String> goals;
+  final String deployment;
+  final String adminName;
+  final String adminEmail;
+  final String adminPassword;
   final bool isLoading;
   final String? errorMessage;
-  final bool obscurePassword;
 
   const BusinessSetupState({
     this.step = 0,
-    this.businessType = '',
     this.companyName = '',
-    this.description = '',
-    this.whatYouSell = const [],
-    this.payments = '',
-    this.template = '',
-    this.firstProductName = '',
-    this.firstProductPrice = '',
-    this.domain = '',
+    this.industry = '',
+    this.size = 'S',
+    this.goals = const [],
+    this.deployment = 'Cloud',
+    this.adminName = '',
+    this.adminEmail = '',
+    this.adminPassword = '',
     this.isLoading = false,
     this.errorMessage,
     this.obscurePassword = true,
@@ -41,30 +39,28 @@ class BusinessSetupState {
 
   BusinessSetupState copyWith({
     int? step,
-    String? businessType,
     String? companyName,
-    String? description,
-    List<String>? whatYouSell,
-    String? payments,
-    String? template,
-    String? firstProductName,
-    String? firstProductPrice,
-    String? domain,
+    String? industry,
+    String? size,
+    List<String>? goals,
+    String? deployment,
+    String? adminName,
+    String? adminEmail,
+    String? adminPassword,
     bool? isLoading,
     String? errorMessage,
     bool? obscurePassword,
   }) {
     return BusinessSetupState(
       step: step ?? this.step,
-      businessType: businessType ?? this.businessType,
       companyName: companyName ?? this.companyName,
-      description: description ?? this.description,
-      whatYouSell: whatYouSell ?? this.whatYouSell,
-      payments: payments ?? this.payments,
-      template: template ?? this.template,
-      firstProductName: firstProductName ?? this.firstProductName,
-      firstProductPrice: firstProductPrice ?? this.firstProductPrice,
-      domain: domain ?? this.domain,
+      industry: industry ?? this.industry,
+      size: size ?? this.size,
+      goals: goals ?? this.goals,
+      deployment: deployment ?? this.deployment,
+      adminName: adminName ?? this.adminName,
+      adminEmail: adminEmail ?? this.adminEmail,
+      adminPassword: adminPassword ?? this.adminPassword,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
       obscurePassword: obscurePassword ?? this.obscurePassword,
@@ -77,7 +73,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   BusinessSetupState build() => const BusinessSetupState();
 
   void nextStep() {
-    if (state.step < 7) {
+    if (state.step < 4) {
       state = state.copyWith(step: state.step + 1);
     }
   }
@@ -88,34 +84,22 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     }
   }
 
-  void updateBusinessType(String val) => state = state.copyWith(businessType: val);
   void updateCompany(String name) => state = state.copyWith(companyName: name);
-  void updateDescription(String val) => state = state.copyWith(description: val);
-  void toggleWhatYouSell(String val) {
-    final list = List<String>.from(state.whatYouSell);
-    if (list.contains(val)) {
-      list.remove(val);
+  void updateIndustry(String val) => state = state.copyWith(industry: val);
+  void updateSize(String val) => state = state.copyWith(size: val);
+  void toggleGoal(String goal) {
+    final goals = List<String>.from(state.goals);
+    if (goals.contains(goal)) {
+      goals.remove(goal);
     } else {
-      list.add(val);
+      goals.add(goal);
     }
-    state = state.copyWith(whatYouSell: list);
+    state = state.copyWith(goals: goals);
   }
-  void updatePayments(String val) => state = state.copyWith(payments: val);
-  void updateTemplate(String template) {
-    state = state.copyWith(template: template);
-  }
-
-  void updateFirstProductName(String name) {
-    state = state.copyWith(firstProductName: name);
-  }
-
-  void updateFirstProductPrice(String price) {
-    state = state.copyWith(firstProductPrice: price);
-  }
-
-  void updateDomain(String domain) {
-    state = state.copyWith(domain: domain);
-  }
+  void updateDeployment(String val) => state = state.copyWith(deployment: val);
+  void updateAdminName(String name) => state = state.copyWith(adminName: name);
+  void updateAdminEmail(String val) => state = state.copyWith(adminEmail: val);
+  void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
   void toggleObscurePassword() => state = state.copyWith(obscurePassword: !state.obscurePassword);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
@@ -127,13 +111,13 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     if (user != null && baseUrl.isNotEmpty) {
       final body = {
         'extras': {
-          'business_type': state.businessType,
           'company_name': state.companyName,
-          'description': state.description,
-          'what_you_sell': state.whatYouSell.join(','),
-          'payments': state.payments,
-          'template': state.template,
-          'domain': state.domain,
+          'industry': state.industry,
+          'company_size': state.size,
+          'goals': state.goals.join(','),
+          'deployment_preference': state.deployment,
+          'admin_name': state.adminName,
+          'admin_email': state.adminEmail,
         }
       };
 
@@ -172,229 +156,12 @@ final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSe
 class BusinessSetupWizardScreen extends ConsumerWidget {
   const BusinessSetupWizardScreen({super.key});
 
-  Widget _buildStepZero() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: const [
-        Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
-        SizedBox(height: 8),
-        Text('Your business, live in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white70, fontSize: 14)),
-      ],
-    );
-  }
-
-  Widget _buildStepOne(BusinessSetupState state, BusinessSetupNotifier notifier) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('Business type', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: ['Online Store', 'Service Business', 'Restaurant / Food', 'Creative / Portfolio', 'Local Business', 'Other'].map((type) {
-            final isSelected = state.businessType == type;
-            return ChoiceChip(
-              label: Text(type, style: const TextStyle(fontFamily: 'Inter')),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) notifier.updateBusinessType(type);
-              },
-              selectedColor: Colors.blueAccent,
-              backgroundColor: const Color(0xFF1A1A33),
-              labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.white70),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepTwo(BusinessSetupState state, BusinessSetupNotifier notifier) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TextField(
-          decoration: const InputDecoration(labelText: 'Business name', labelStyle: TextStyle(color: Colors.white70)),
-          onChanged: notifier.updateCompany,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          decoration: const InputDecoration(labelText: 'Description', labelStyle: TextStyle(color: Colors.white70)),
-          onChanged: notifier.updateDescription,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepThree(BusinessSetupState state, BusinessSetupNotifier notifier) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('What do you sell?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-        ...['Physical products', 'Digital downloads', 'Services / appointments', 'Food & beverages', 'Subscriptions'].map((item) => CheckboxListTile(
-          title: Text(item, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-          value: state.whatYouSell.contains(item),
-          checkColor: Colors.black,
-          activeColor: Colors.white,
-          onChanged: (bool? value) {
-            notifier.toggleWhatYouSell(item);
-          },
-        )),
-      ],
-    );
-  }
-
-  Widget _buildStepFour(BusinessSetupState state, BusinessSetupNotifier notifier) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('How do you want to receive payments?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
-        ...['Online only', 'In-person (POS)', 'Both', 'Skip for now'].map((dep) => RadioListTile<String>(
-          title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
-          value: dep,
-          groupValue: state.payments,
-          activeColor: Colors.blueAccent,
-          onChanged: (String? value) {
-            if (value != null) notifier.updatePayments(value);
-          },
-        )),
-      ],
-    );
-  }
-
-  Widget _buildStepFive(BusinessSetupState state, BusinessSetupNotifier notifier) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('Template Selection', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-        const SizedBox(height: 16),
-        const Text('Live Preview', style: TextStyle(color: Colors.white70)),
-        const SizedBox(height: 16),
-        Container(
-          height: 150,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white10,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              state.companyName.isEmpty ? 'Your Business' : state.companyName,
-              style: TextStyle(
-                fontFamily: state.template == 'Modern' ? 'Inter' : 'Outfit',
-                fontSize: 24,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: ['Modern', 'Classic', 'Playful', 'Minimal'].map((type) {
-            final isSelected = state.template == type;
-            return ChoiceChip(
-              label: Text(type, style: const TextStyle(fontFamily: 'Inter')),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) notifier.updateTemplate(type);
-              },
-              selectedColor: Colors.blueAccent,
-              backgroundColor: const Color(0xFF1A1A33),
-              labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.white70),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepSix(BusinessSetupState state, BusinessSetupNotifier notifier) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('First Product / Service', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-        const SizedBox(height: 16),
-        Container(
-          height: 100,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white10,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white24, style: BorderStyle.solid),
-          ),
-          child: const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.camera_alt, color: Colors.white70, size: 32),
-                SizedBox(height: 4),
-                Text('Tap to upload photo', style: TextStyle(color: Colors.white70, fontSize: 12)),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          decoration: const InputDecoration(labelText: 'Product / Service Name', labelStyle: TextStyle(color: Colors.white70)),
-          onChanged: notifier.updateFirstProductName,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          decoration: const InputDecoration(labelText: 'Price', prefixText: '\$ ', labelStyle: TextStyle(color: Colors.white70)),
-          keyboardType: TextInputType.number,
-          onChanged: notifier.updateFirstProductPrice,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepSeven(BusinessSetupState state, BusinessSetupNotifier notifier) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Text('Domain & Go-Live', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-        const SizedBox(height: 16),
-        TextField(
-          decoration: const InputDecoration(labelText: 'Subdomain', suffixText: '.ohc.app', labelStyle: TextStyle(color: Colors.white70)),
-          onChanged: notifier.updateDomain,
-          style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
-        ),
-        const SizedBox(height: 24),
-        GlassCard(
-          color: Colors.white.withOpacity(0.05),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Summary', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 8),
-                Text('Name: ${state.companyName}', style: const TextStyle(color: Colors.white70)),
-                Text('Type: ${state.businessType}', style: const TextStyle(color: Colors.white70)),
-                Text('Selling: ${state.whatYouSell.join(", ")}', style: const TextStyle(color: Colors.white70)),
-                Text('Payments: ${state.payments}', style: const TextStyle(color: Colors.white70)),
-                Text('Template: ${state.template}', style: const TextStyle(color: Colors.white70)),
-                Text('Domain: ${state.domain.isEmpty ? "yourdomain" : state.domain}.ohc.app', style: const TextStyle(color: Colors.white70)),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(businessSetupProvider);
     final notifier = ref.read(businessSetupProvider.notifier);
+    final clientSettings = ref.watch(clientSettingsProvider).valueOrNull;
+    final isStandalone = clientSettings?.standaloneMode ?? false;
 
     return Scaffold(
       body: Container(
@@ -427,19 +194,113 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                     },
                     child: Container(
                       key: ValueKey<int>(state.step),
-                      child: () {
-                        switch (state.step) {
-                          case 0: return _buildStepZero();
-                          case 1: return _buildStepOne(state, notifier);
-                          case 2: return _buildStepTwo(state, notifier);
-                          case 3: return _buildStepThree(state, notifier);
-                          case 4: return _buildStepFour(state, notifier);
-                          case 5: return _buildStepFive(state, notifier);
-                          case 6: return _buildStepSix(state, notifier);
-                          case 7: return _buildStepSeven(state, notifier);
-                          default: return const SizedBox();
-                        }
-                      }(),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (state.step == 0) ...[
+                            const Text('Welcome! Your AI team, ready in minutes.', style: TextStyle(fontFamily: 'Inter', color: Colors.white, fontSize: 16)),
+                          ] else if (state.step == 1) ...[
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Company Name', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateCompany,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Industry', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateIndustry,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            DropdownButtonFormField<String>(
+                              value: state.size,
+                              decoration: const InputDecoration(labelText: 'Size', labelStyle: TextStyle(color: Colors.white70)),
+                              dropdownColor: const Color(0xFF1A1A33),
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                              items: const [
+                                DropdownMenuItem(value: 'S', child: Text('Small')),
+                                DropdownMenuItem(value: 'M', child: Text('Medium')),
+                                DropdownMenuItem(value: 'L', child: Text('Large')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) notifier.updateSize(val);
+                              },
+                            ),
+                          ] else if (state.step == 2) ...[
+                             const Text('Select Goals', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                             ...['Support', 'Build software', 'Marketing', 'Data', 'Custom'].map((goal) => CheckboxListTile(
+                              title: Text(goal, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
+                              value: state.goals.contains(goal),
+                              checkColor: Colors.black,
+                              activeColor: Colors.white,
+                              onChanged: (bool? value) {
+                                notifier.toggleGoal(goal);
+                              },
+                            )),
+                          ] else if (state.step == 3) ...[
+                             const Text('Deployment Preference', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Colors.white)),
+                             if (isStandalone)
+                               Padding(
+                                 padding: const EdgeInsets.only(top: 16.0),
+                                 child: ClipRRect(
+                                   borderRadius: BorderRadius.circular(12),
+                                   child: BackdropFilter(
+                                     filter: ImageFilter.compose(outer: const ColorFilter.matrix(<double>[1.168, -0.153, -0.015, 0, 0, -0.046, 1.061, -0.015, 0, 0, -0.046, -0.152, 1.198, 0, 0, 0, 0, 0, 1, 0]), inner: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0)),
+                                     child: Container(
+                                       padding: const EdgeInsets.all(16),
+                                       decoration: BoxDecoration(
+                                         color: Colors.white.withOpacity(0.05),
+                                         border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                       ),
+                                       child: const Text(
+                                         'Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.',
+                                         style: TextStyle(fontFamily: 'Outfit', color: Colors.white, fontSize: 16),
+                                       ),
+                                     ),
+                                   ),
+                                 ),
+                               )
+                             else
+                               ...['Cloud', 'Desktop', 'Mobile-only'].map((dep) => RadioListTile<String>(
+                                title: Text(dep, style: const TextStyle(fontFamily: 'Inter', color: Colors.white)),
+                                value: dep,
+                                groupValue: state.deployment,
+                                activeColor: Colors.blueAccent,
+                                onChanged: (String? value) {
+                                  if (value != null) notifier.updateDeployment(value);
+                                },
+                              )),
+                          ] else if (state.step == 4) ...[
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Admin Name', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateAdminName,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              decoration: const InputDecoration(labelText: 'Admin Email', labelStyle: TextStyle(color: Colors.white70)),
+                              onChanged: notifier.updateAdminEmail,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                            ),
+                            const SizedBox(height: 16),
+                            TextField(
+                              obscureText: state.obscurePassword,
+                              onChanged: notifier.updateAdminPassword,
+                              style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+                              decoration: InputDecoration(
+                                labelText: 'Admin Password',
+                                labelStyle: const TextStyle(color: Colors.white70),
+                                suffixIcon: IconButton(
+                                  icon: Icon(state.obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.white70),
+                                  onPressed: () {
+                                    notifier.toggleObscurePassword();
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -455,7 +316,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         const SizedBox(),
                       ElevatedButton(
                         onPressed: state.isLoading ? null : () {
-                          if (state.step < 7) {
+                          if (state.step < 4) {
                             notifier.nextStep();
                           } else {
                             notifier.launch(context, ref);
@@ -463,7 +324,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
                         },
                         child: state.isLoading
                             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : Text(state.step == 7 ? 'Launch My Business →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
+                            : Text(state.step == 4 ? 'Launch My AI Team →' : 'Next', style: const TextStyle(fontFamily: 'Inter')),
                       ),
                     ],
                   ),
