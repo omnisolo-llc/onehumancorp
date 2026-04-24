@@ -56,3 +56,4 @@ else
     echo -e "${DIM}Response: ${BODY}${RESET}"
 fi
 echo ""
+# Trivial comment to generate diff
