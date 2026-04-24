@@ -21,7 +21,5 @@ rust_library(
         "@crates//:chrono",
         "@crates//:uuid",
         "@crates//:glob",
-        "@crates//:tracing",
-        "@crates//:qrcode",
     ],
 )
