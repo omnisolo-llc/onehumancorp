@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
-
+	"time"
 
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/db/models"
@@ -22,6 +22,7 @@ type mockRows struct {
 	data      [][]interface{}
 	currIndex int
 	err       error
+	scanErr   error
 }
 
 func (m *mockRows) Next() bool {
@@ -33,6 +34,9 @@ func (m *mockRows) Next() bool {
 }
 
 func (m *mockRows) Scan(dest ...interface{}) error {
+	if m.scanErr != nil {
+		return m.scanErr
+	}
 	row := m.data[m.currIndex-1]
 	for i, d := range dest {
 		switch ptr := d.(type) {
@@ -49,6 +53,7 @@ func (m *mockRows) Err() error { return m.err }
 type mockRow struct {
 	db.Row
 }
+
 func (m *mockRow) Scan(dest ...any) error { return nil }
 
 type MockDBProvider struct {
@@ -144,11 +149,38 @@ func TestMeshRepository_GetMissionDependencies(t *testing.T) {
 		t.Fatalf("unexpected deps: %v", deps)
 	}
 
+	// Test SQLite case
+	mockDB.isSQLite = true
+	mockDB.rows.currIndex = 0
+	deps, err = repo.GetMissionDependencies(context.Background(), "mission1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(deps) != 2 {
+		t.Fatalf("expected 2 deps, got %d", len(deps))
+	}
+
 	// Test error case
 	mockDB.queryErr = errors.New("db error")
 	_, err = repo.GetMissionDependencies(context.Background(), "mission1")
 	if err == nil {
 		t.Fatalf("expected error, got nil")
+	}
+
+	// Test scan error case
+	mockDB.queryErr = nil
+	mockDB.rows.scanErr = errors.New("scan error")
+	_, err = repo.GetMissionDependencies(context.Background(), "mission1")
+	if err == nil {
+		t.Fatalf("expected scan error, got nil")
+	}
+
+	// Test rows error case
+	mockDB.rows.scanErr = nil
+	mockDB.rows.err = errors.New("rows error")
+	_, err = repo.GetMissionDependencies(context.Background(), "mission1")
+	if err == nil {
+		t.Fatalf("expected rows error, got nil")
 	}
 }
 
@@ -165,6 +197,20 @@ func TestMeshRepository_InsertAutodreamVector(t *testing.T) {
 	}
 
 	err := repo.InsertAutodreamVector(context.Background(), vector)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Test with zero time
+	vector.CreatedAt = time.Time{}
+	err = repo.InsertAutodreamVector(context.Background(), vector)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Test SQLite fallback
+	mockDB.isSQLite = true
+	err = repo.InsertAutodreamVector(context.Background(), vector)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
