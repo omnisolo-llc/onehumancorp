@@ -37,6 +37,14 @@ func (a *AutoDreamAdvanced) PruneStaleAgentSessions(ctx context.Context) error {
 
 func (a *AutoDreamAdvanced) ResolveConflicts(ctx context.Context, memoryID string) error {
     var query string
+    var orgID string
+
+    // Fetch the original memory's organization_id to use it when replacing
+    err := a.pool.QueryRow(ctx, `SELECT organization_id FROM autodream_memories WHERE id = $1`, memoryID).Scan(&orgID)
+    if err != nil {
+        orgID = "system" // fallback
+    }
+
     if a.pool.IsSQLite() {
         query = `SELECT id, content FROM autodream_memories WHERE id != $1 LIMIT 5`
     } else {
@@ -67,7 +75,7 @@ func (a *AutoDreamAdvanced) ResolveConflicts(ctx context.Context, memoryID strin
 
         // Since we don't have a completion method on MinimaxClient interface right now,
         // we'll just inject the merged truth and delete the old ones.
-        err := a.InjectTruth(ctx, "system", "auto-dream-resolver", resolvedContent)
+        err := a.InjectTruth(ctx, orgID, "auto-dream-resolver", resolvedContent)
         if err != nil {
              return fmt.Errorf("failed to inject resolved truth: %w", err)
         }
