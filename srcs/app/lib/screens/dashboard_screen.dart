@@ -15,7 +15,9 @@ import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
-final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
+final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((
+  ref,
+) async {
   final api = ref.watch(apiServiceProvider);
   if (api == null) throw Exception('API not available');
   return api.getDashboard();
@@ -29,26 +31,30 @@ class DashboardScreen extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold),
+        ),
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
         ),
       ),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
+        ),
+        error: (e, _) => Center(
+          child: SelectableText(
+            'Error: $e',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+              fontFamily: 'Inter',
             ),
-        error:
-            (e, _) => Center(
-              child: SelectableText(
-                'Error: $e',
-                style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
-              ),
-            ),
+          ),
+        ),
         data: (data) => _DashboardContent(data: data, ref: ref),
       ),
     );
@@ -92,7 +98,11 @@ class _DashboardContent extends StatelessWidget {
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+            border: Border.all(
+              color: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.3),
+            ),
           ),
           child: Material(
             color: Colors.transparent,
@@ -100,17 +110,33 @@ class _DashboardContent extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               onTap: () => context.go('/wizards/upgrade'),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
                 child: Row(
                   children: [
-                    Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
+                    Icon(
+                      Icons.auto_awesome,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("What's new ✨", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
-                          const Text("OHC v2.4 is available. Upgrade now for 2x faster orchestration.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                          Text(
+                            "What's new ✨",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Outfit',
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          const Text(
+                            "OHC v2.4 is available. Upgrade now for 2x faster orchestration.",
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 13),
+                          ),
                         ],
                       ),
                     ),
@@ -142,29 +168,28 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
+              label: 'Today\'s Sales',
+              value: '\$0',
+              icon: Icons.attach_money,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            _StatCard(
               label: 'Active Agents',
               value: data.agents.where((a) => a.isRunning).length.toString(),
               icon: Icons.smart_toy,
-              color: Theme.of(context).colorScheme.primary,
+              color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
               label: 'Dashboard Updates',
               value: data.statuses.length.toString(),
               icon: Icons.pending_actions,
-              color: Theme.of(context).colorScheme.secondary,
+              color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
               label: 'Open Meetings',
               value: data.meetings.length.toString(),
               icon: Icons.video_call,
-              color: Theme.of(context).colorScheme.tertiary,
-            ),
-            _StatCard(
-              label: 'Total Org Members',
-              value: data.organization.members.length.toString(),
-              icon: Icons.people,
-              color: Theme.of(context).colorScheme.primaryContainer,
-              iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
+              color: Theme.of(context).colorScheme.error,
             ),
           ],
         ),
@@ -189,23 +214,23 @@ class _DashboardContent extends StatelessWidget {
           child: GlassCard(
             padding: EdgeInsets.zero,
             child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-                      child: Text(
-                        'Proactive Task Stream',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontFamily: 'Outfit',
-                        ),
-                      ),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                  child: Text(
+                    'Proactive Task Stream',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontFamily: 'Outfit',
                     ),
-                    const Expanded(child: TaskListView()),
-                  ],
+                  ),
                 ),
+                const Expanded(child: TaskListView()),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -218,9 +243,9 @@ class _DashboardContent extends StatelessWidget {
         Text(
           'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontFamily: 'Inter',
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontFamily: 'Inter',
+          ),
         ),
         const SizedBox(height: 16),
         Wrap(
@@ -228,11 +253,7 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: roleList.map((role) {
             final count = data.agents.where((a) => a.role == role).length;
-            return _RoleScaleCard(
-              role: role,
-              count: count,
-              ref: ref,
-            );
+            return _RoleScaleCard(role: role, count: count, ref: ref);
           }).toList(),
         ),
       ],
@@ -251,71 +272,99 @@ class _ObservabilityWidget extends StatelessWidget {
 
     final activeMissions = data.statuses.length; // Approximate from statuses
     final totalAgents = data.agents.length;
-    final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
+    final healthScore = totalAgents > 0
+        ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100)
+              .round()
+        : 100;
 
     return Semantics(
       label: 'System Observability Panel',
       child: Tooltip(
         message: 'View System Health & Metrics',
         child: GlassCard(
-            padding: EdgeInsets.zero,
-            child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    // Tap interaction for delight
-                  },
-                  borderRadius: BorderRadius.circular(24),
-                  splashColor: colors.primary.withValues(alpha: 0.1),
-                  highlightColor: colors.primary.withValues(alpha: 0.05),
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          padding: EdgeInsets.zero,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                // Tap interaction for delight
+              },
+              borderRadius: BorderRadius.circular(24),
+              splashColor: colors.primary.withValues(alpha: 0.1),
+              highlightColor: colors.primary.withValues(alpha: 0.05),
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: colors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.monitor_heart, color: colors.primary, size: 28),
-                            ),
-                            const SizedBox(width: 16),
-                            Text(
-                              'Full-Spectrum Telemetry',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: colors.onSurface,
-                                fontFamily: 'Outfit',
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            _StatusBadge(healthy: healthScore >= 80),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: colors.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.monitor_heart,
+                            color: colors.primary,
+                            size: 28,
+                          ),
                         ),
-                        const SizedBox(height: 32),
-                        Wrap(
-                          spacing: 16.0,
-                          runSpacing: 16.0,
-                          alignment: WrapAlignment.spaceAround,
-                          children: [
-                            _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
-                            _Metric(label: 'Active Missions', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Latency (Avg)', value: '12ms', color: colors.tertiary, icon: Icons.speed),
-                            _Metric(label: 'Active Pods', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.dns, iconColor: colors.onPrimaryContainer),
-                          ],
+                        const SizedBox(width: 16),
+                        Text(
+                          'Full-Spectrum Telemetry',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: colors.onSurface,
+                            fontFamily: 'Outfit',
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        _StatusBadge(healthy: healthScore >= 80),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    Wrap(
+                      spacing: 16.0,
+                      runSpacing: 16.0,
+                      alignment: WrapAlignment.spaceAround,
+                      children: [
+                        _Metric(
+                          label: 'Health Score',
+                          value: '$healthScore%',
+                          color: colors.primary,
+                          icon: Icons.health_and_safety,
+                        ),
+                        _Metric(
+                          label: 'Active Missions',
+                          value: '$activeMissions',
+                          color: colors.secondary,
+                          icon: Icons.rocket_launch,
+                        ),
+                        _Metric(
+                          label: 'Latency (Avg)',
+                          value: '12ms',
+                          color: colors.tertiary,
+                          icon: Icons.speed,
+                        ),
+                        _Metric(
+                          label: 'Active Pods',
+                          value: '$totalAgents',
+                          color: colors.primaryContainer,
+                          icon: Icons.dns,
+                          iconColor: colors.onPrimaryContainer,
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
               ),
+            ),
           ),
+        ),
       ),
     );
   }
@@ -342,10 +391,7 @@ class _StatusBadge extends StatelessWidget {
           Container(
             width: 10,
             height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
           Text(
@@ -370,7 +416,13 @@ class _Metric extends StatelessWidget {
   final IconData icon;
   final Color? iconColor;
 
-  const _Metric({required this.label, required this.value, required this.color, required this.icon, this.iconColor});
+  const _Metric({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.icon,
+    this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -435,7 +487,10 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to scale ${widget.role}: $e', style: const TextStyle(fontFamily: 'Inter')),
+            content: Text(
+              'Failed to scale ${widget.role}: $e',
+              style: const TextStyle(fontFamily: 'Inter'),
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -450,105 +505,104 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final formattedRole = widget.role.replaceAll('_', ' ').split(' ').map((word) {
-      if (word.isEmpty) return '';
-      if (word.toUpperCase() == 'AI') return 'AI';
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    final formattedRole = widget.role
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return '';
+          if (word.toUpperCase() == 'AI') return 'AI';
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
-        child: SizedBox(
-          width: 320,
-          child: GlassCard(
-        child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  formattedRole,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    fontFamily: 'Outfit',
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: colors.onSurfaceVariant,
-                                    fontFamily: 'Inter',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Semantics(
-                            button: true,
-                            label: 'Decrease $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: widget.count > 0 && !_isScaling
-                                  ? () => _scaleTo(widget.count - 1)
-                                  : null,
-                              tooltip: 'Fire Agent',
-                            ),
-                          ),
-                          SizedBox(
-                            width: 32,
-                            child: Center(
-                              child: _isScaling
-                                  ? SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: colors.primary,
-                                      ),
-                                    )
-                                  : Text(
-                                      '${widget.count}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          Semantics(
-                            button: true,
-                            label: 'Increase $formattedRole count',
-                            child: IconButton(
-                              icon: const Icon(Icons.add_circle_outline, size: 28),
-                              color: colors.primary,
-                              onPressed: !_isScaling
-                                  ? () => _scaleTo(widget.count + 1)
-                                  : null,
-                              tooltip: 'Hire Agent',
-                            ),
-                          ),
-                            ],
-                          ),
-                        ],
+      child: SizedBox(
+        width: 320,
+        child: GlassCard(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        formattedRole,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          fontFamily: 'Outfit',
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: colors.onSurfaceVariant,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Semantics(
+                      button: true,
+                      label: 'Decrease $formattedRole count',
+                      child: IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, size: 28),
+                        color: colors.primary,
+                        onPressed: widget.count > 0 && !_isScaling
+                            ? () => _scaleTo(widget.count - 1)
+                            : null,
                       ),
                     ),
-      ),
+                    SizedBox(
+                      width: 32,
+                      child: Center(
+                        child: _isScaling
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colors.primary,
+                                ),
+                              )
+                            : Text(
+                                '${widget.count}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                      ),
+                    ),
+                    Semantics(
+                      button: true,
+                      label: 'Increase $formattedRole count',
+                      child: IconButton(
+                        icon: const Icon(Icons.add_circle_outline, size: 28),
+                        color: colors.primary,
+                        onPressed: !_isScaling
+                            ? () => _scaleTo(widget.count + 1)
+                            : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -563,9 +617,10 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: Theme.of(
-        context,
-      ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+        fontWeight: FontWeight.bold,
+        fontFamily: 'Outfit',
+      ),
     );
   }
 }
@@ -589,7 +644,8 @@ class _StatCard extends StatefulWidget {
   State<_StatCard> createState() => _StatCardState();
 }
 
-class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixin {
+class _StatCardState extends State<_StatCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -606,8 +662,10 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       begin: const Offset(0, 0.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     // Optional delay for staggered entrance animation if needed
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -632,56 +690,58 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
-      child: Tooltip(
-        message: 'View ${widget.label}',
-        child: SizedBox(
-          width: 200,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: GlassCard(
-        child: Material(
-                          color: Colors.transparent,
-                          child: Semantics(
-                            button: true,
-                            label: '${widget.label}: ${widget.value} action',
-                            child: InkWell(
-                              onTap: () {},
-                              borderRadius: BorderRadius.circular(16),
-                              splashColor: widget.color.withValues(alpha: 0.1),
-                              highlightColor: widget.color.withValues(alpha: 0.05),
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Icon(widget.icon, color: effectiveIconColor, size: 32),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      widget.value,
-                                      style: TextStyle(
-                                        fontSize: 36,
-                                        fontWeight: FontWeight.bold,
-                                        color: effectiveIconColor,
-                                        fontFamily: 'Inter',
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      widget.label,
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+      child: SizedBox(
+        width: 200,
+        child: SlideTransition(
+          position: _slideAnimation,
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: GlassCard(
+              child: Material(
+                color: Colors.transparent,
+                child: Semantics(
+                  button: true,
+                  label: '${widget.label}: ${widget.value} action',
+                  child: InkWell(
+                    onTap: () {},
+                    borderRadius: BorderRadius.circular(16),
+                    splashColor: widget.color.withValues(alpha: 0.1),
+                    highlightColor: widget.color.withValues(alpha: 0.05),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            widget.icon,
+                            color: effectiveIconColor,
+                            size: 32,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            widget.value,
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              color: effectiveIconColor,
+                              fontFamily: 'Inter',
                             ),
                           ),
-                        ),
-      ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.label,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w500,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
