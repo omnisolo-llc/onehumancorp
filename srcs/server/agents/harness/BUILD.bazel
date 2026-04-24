@@ -8,11 +8,13 @@ go_library(
         "sandbox_darwin.go",
         "fallback.go",
         "interceptor.go",
+        "policy_engine.go",
     ],
     importpath = "github.com/onehumancorp/mono/srcs/server/agents/harness",
     visibility = ["//visibility:public"],
     deps = [
         "//srcs/server/telemetry",
+        "//srcs/server/db",
         "@com_github_smacker_go_tree_sitter//:go-tree-sitter",
         "@com_github_smacker_go_tree_sitter//bash",
     ],
@@ -26,6 +28,10 @@ go_test(
         "sandbox_test.go",
         "fallback_test.go",
         "interceptor_test.go",
+        "policy_engine_test.go",
     ],
     embed = [":harness"],
+    deps = [
+        "//srcs/server/db",
+    ]
 )
