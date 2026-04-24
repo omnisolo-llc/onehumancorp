@@ -144,10 +144,7 @@ go_test(
     srcs = _SHARED_SRCS + ["wizard_test.go"],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS + [
-        "@com_github_stretchr_testify//assert",
-        "@com_github_stretchr_testify//require",
-    ],
+    deps = _COMMON_DEPS,
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
@@ -225,12 +222,10 @@ go_test(
 # ── Misc ──────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_misc_test",
-    srcs = _SHARED_SRCS + ["misc_test.go", "help_center_test.go"],
+    srcs = _SHARED_SRCS + ["misc_test.go"],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS + [
-        "@com_github_stretchr_testify//require",
-    ],
+    deps = _COMMON_DEPS,
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
