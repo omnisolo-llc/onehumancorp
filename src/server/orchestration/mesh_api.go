@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/telemetry"
 	pb "github.com/onehumancorp/mono/src/proto"
 )
@@ -14,14 +15,19 @@ import (
 
 type MeshAPI struct {
 	meshTransport MeshTransport
+	authStore     *auth.Store
 }
 
-func NewMeshAPI(mt MeshTransport) *MeshAPI {
-	return &MeshAPI{meshTransport: mt}
+func NewMeshAPI(mt MeshTransport, authStore *auth.Store) *MeshAPI {
+	return &MeshAPI{meshTransport: mt, authStore: authStore}
 }
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/api/mesh/broadcast", api.HandleBroadcast)
+	if api.authStore != nil {
+		mux.Handle("/api/mesh/broadcast", auth.Middleware(api.authStore)(http.HandlerFunc(api.HandleBroadcast)))
+	} else {
+		mux.HandleFunc("/api/mesh/broadcast", api.HandleBroadcast)
+	}
 	mux.HandleFunc("/api/v1/mesh/broadcast", api.HandleMeshV1Broadcast)
 	mux.HandleFunc("/api/mesh/stream", api.HandleStream)
 	mux.HandleFunc("/api/mesh/sync", api.HandleSync)

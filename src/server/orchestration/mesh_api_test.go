@@ -26,7 +26,7 @@ func (m *mockMeshApiTransport) SubscribeMeshEvents(ctx context.Context, topic st
 
 func TestMeshAPI_Broadcast(t *testing.T) {
 	mockMesh := &mockMeshApiTransport{}
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"task_id":"123"}`)))
 	w := httptest.NewRecorder()
@@ -58,7 +58,7 @@ func TestMeshAPI_Stream(t *testing.T) {
 	}
 	mockMesh.subChan <- []byte(`{"status":"test"}`)
 
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/mesh/stream", nil)
 	w := httptest.NewRecorder()
@@ -83,7 +83,7 @@ func TestMeshAPI_Stream(t *testing.T) {
 
 func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
 	mockMesh := &mockMeshApiTransport{}
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	tests := []struct {
 		name       string
@@ -115,7 +115,7 @@ func TestMeshAPI_Sync(t *testing.T) {
 	}
 	mockMesh.subChan <- []byte(`{"sync_status":"ok"}`)
 
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/mesh/sync?channel=ohc.mesh.agent.123", nil)
 	w := httptest.NewRecorder()
