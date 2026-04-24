@@ -7,7 +7,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"sync"
+
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type SharedTask struct {
@@ -25,6 +28,7 @@ type SharedTask struct {
 
 type TaskQueueService struct {
 	db db.Provider
+	mu sync.Mutex
 }
 
 func NewTaskQueueService(dbProvider db.Provider) *TaskQueueService {
@@ -141,6 +145,12 @@ func (s *TaskQueueService) claimTaskPG(ctx context.Context, agentID string) (*Sh
 }
 
 func (s *TaskQueueService) claimTaskSQLite(ctx context.Context, agentID string) (*SharedTask, error) {
+	if !s.mu.TryLock() {
+		telemetry.RecordPostgresLockContention(ctx, "claim_task_sqlite")
+		s.mu.Lock()
+	}
+	defer s.mu.Unlock()
+
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err

@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/db/models"
+	"github.com/onehumancorp/mono/srcs/server/telemetry"
 )
 
 type TaskRepository interface {
@@ -21,6 +23,7 @@ type TaskRepository interface {
 
 type taskRepositoryImpl struct {
 	dbProvider db.Provider
+	mu         sync.Mutex
 }
 
 func NewTaskRepository(dbProvider db.Provider) TaskRepository {
@@ -87,6 +90,14 @@ func (r *taskRepositoryImpl) GetPendingTasks(ctx context.Context) ([]*models.Swa
 func (r *taskRepositoryImpl) ClaimTask(ctx context.Context, taskID string, agentID string) (bool, error) {
 	// Determine if we are using PostgreSQL to append the lock clause
 	isPostgres := !r.dbProvider.IsSQLite()
+
+	if !isPostgres {
+		if !r.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "claim_task_sqlite")
+			r.mu.Lock()
+		}
+		defer r.mu.Unlock()
+	}
 
 	tx, err := r.dbProvider.Begin(ctx)
 	if err != nil {

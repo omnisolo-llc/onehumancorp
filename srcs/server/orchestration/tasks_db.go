@@ -54,7 +54,7 @@ func (to *SharedTaskOrchestrator) insertTransition(ctx context.Context, tx db.Tx
     return err
 }
 
-func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*Task, error) {
+func (to *SharedTaskOrchestrator) ClaimTaskV2(ctx context.Context, agentID string) (*Task, error) {
     claims := auth.ClaimsFromContext(ctx)
     if claims == nil {
         return nil, errors.New("unauthorized: missing claims")
@@ -219,7 +219,12 @@ func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, 
     return &Task{TaskID: id, Status: "IN_PROGRESS"}, nil
 }
 
-func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
+func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string) (*SharedTaskDB, error) {
+	claims := auth.ClaimsFromContext(ctx)
+	if claims == nil {
+		return nil, errors.New("unauthorized: missing claims")
+	}
+	orgID := claims.OrganizationID
     if to.dbProvider.IsSQLite() {
         if !to.mu.TryLock() {
             telemetry.RecordPostgresLockContention(ctx, "claim_task_v4")
