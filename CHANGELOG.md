@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+### Cloud Scaling Improvements
+- Fix failing registry tests in integrations service.
+
+### Privacy/Offline Improvements
+- Fix failing registry tests in integrations service for standalone environment.
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Phase 3: AutoDream Vector Data Pipelines.
