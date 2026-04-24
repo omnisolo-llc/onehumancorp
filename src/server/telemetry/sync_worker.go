@@ -64,7 +64,7 @@ func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, endpoint string, in
 
 					if syncedCount > 0 {
 						slog.Debug("Successfully synced standalone metrics to cloud", "count", syncedCount)
-						RecordSyncDaemonBatchSize(ctx, int64(syncedCount), "Standalone")
+						RecordSyncDaemonBatchSize(ctx, int64(syncedCount))
 					}
 					if int64(syncedCount) < currentBatchSize {
 						break

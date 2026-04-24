@@ -36,20 +36,20 @@ func TestAutoDreamPruneSessions(t *testing.T) {
 	newTime := time.Now().Add(-1 * time.Hour).UTC().Format("2006-01-02 15:04:05")
 
 	if pool.Provider.IsSQLite() {
-		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed, organization_id) VALUES ('s1', 'a1', 'c1', ?, 'org-1')", oldTime)
+		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'c1', ?)", oldTime)
 		if err != nil {
 			t.Fatalf("failed to insert: %v", err)
 		}
-		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed, organization_id) VALUES ('s2', 'a1', 'c2', ?, 'org-1')", newTime)
+		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s2', 'a1', 'c2', ?)", newTime)
 		if err != nil {
 			t.Fatalf("failed to insert: %v", err)
 		}
 	} else {
-		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed, organization_id) VALUES ('s1', 'a1', 'c1', $1, 'org-1')", oldTime)
+		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'a1', 'c1', $1)", oldTime)
 		if err != nil {
 			t.Fatalf("failed to insert: %v", err)
 		}
-		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed, organization_id) VALUES ('s2', 'a1', 'c2', $1, 'org-1')", newTime)
+		_, err = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s2', 'a1', 'c2', $1)", newTime)
 		if err != nil {
 			t.Fatalf("failed to insert: %v", err)
 		}
@@ -139,8 +139,7 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 			agent_id TEXT NOT NULL,
 			context_data TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
-			organization_id TEXT DEFAULT 'system'
+			last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -150,15 +149,14 @@ func TestAutoDreamWorker_SessionCompression(t *testing.T) {
 		CREATE TABLE IF NOT EXISTS autodream_memories (
 			id TEXT PRIMARY KEY,
 			content TEXT NOT NULL,
-			source_mission_id TEXT,
-			organization_id TEXT DEFAULT 'system'
+			source_mission_id TEXT
 		)
 	`)
 	if err != nil {
 		t.Fatalf("failed to create autodream_memories: %v", err)
 	}
 
-	_, err = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, organization_id) VALUES ('sess-1', 'agent-1', 'test context', 'org-1')")
+	_, err = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data) VALUES ('sess-1', 'agent-1', 'test context')")
 	if err != nil {
 		t.Fatalf("failed to insert mock session: %v", err)
 	}
@@ -253,7 +251,7 @@ func TestAutoDreamWorker_PipelinesCoverage(t *testing.T) {
 
 	// Add test data for compressSessionContexts
 	oldTime := time.Now().Add(-10 * time.Minute).UTC().Format("2006-01-02 15:04:05")
-	_, _ = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed, organization_id) VALUES ('s_context_1', 'agent', 'ctx', ?, 'org-1')", oldTime)
+	_, _ = pool.Provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s_context_1', 'agent', 'ctx', ?)", oldTime)
 	worker.compressSessionContexts(ctx)
 
 	// Wait for background routine in pruneStaleSessions
@@ -549,19 +547,6 @@ func setupTestDB(t *testing.T) db.Provider {
 		t.Fatalf("failed to create autodream_memories table: %v", err)
 	}
 
-	query = `CREATE TABLE IF NOT EXISTS agent_session_data (
-		session_id TEXT PRIMARY KEY,
-		agent_id TEXT NOT NULL,
-		context_data TEXT NOT NULL,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP,
-		organization_id TEXT DEFAULT 'system'
-	);`
-	_, err = provider.Exec(context.Background(), query)
-	if err != nil {
-		t.Fatalf("failed to create agent_session_data table: %v", err)
-	}
-
 	return provider
 }
 
@@ -576,7 +561,6 @@ func setupMockMemories(t *testing.T, count int) string {
 		memFile := MemoryFile{
 			AgentSessionData: "mock session data " + fmt.Sprint(i),
 			Content:          "mock content " + fmt.Sprint(i),
-			OrganizationID:   "org-1",
 		}
 		data, _ := yaml.Marshal(&memFile)
 		filePath := filepath.Join(dir, fmt.Sprintf("test_memory_%d.yml", i))
@@ -750,18 +734,18 @@ func TestAutoDreamWorker_IngestCompletedTasks(t *testing.T) {
 	ctx := context.Background()
 
 	// Ensure table exists for test
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT, organization_id TEXT DEFAULT 'system')")
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT, organization_id TEXT DEFAULT 'system')")
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
 
 	// Insert test tasks
-	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, payload, status, organization_id) VALUES (?, ?, ?, ?, ?)",
-		"st-1", "Test Task 1", "{}", "COMPLETED", "org-1")
+	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, payload, status) VALUES (?, ?, ?, ?)",
+		"st-1", "Test Task 1", "{}", "COMPLETED")
 	if err != nil {
 		t.Fatalf("failed to insert test shared task: %v", err)
 	}
 
-	_, err = provider.Exec(ctx, "INSERT INTO swarm_tasks (id, title, payload, status, organization_id) VALUES (?, ?, ?, ?, ?)",
-		"sw-1", "Swarm Task 1", "{}", "COMPLETED", "org-1")
+	_, err = provider.Exec(ctx, "INSERT INTO swarm_tasks (id, title, payload, status) VALUES (?, ?, ?, ?)",
+		"sw-1", "Swarm Task 1", "{}", "COMPLETED")
 	if err != nil {
 		t.Fatalf("failed to insert test swarm task: %v", err)
 	}
@@ -825,7 +809,7 @@ func TestAutoDreamWorker_ConsolidateMemoriesPg(t *testing.T) {
 	ctx := context.Background()
 
 	// Ensure required table exists
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, agent_id TEXT, context_data TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')")
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, agent_id TEXT, context_data TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, last_accessed DATETIME DEFAULT CURRENT_TIMESTAMP)")
 
 	// Clean up table for isolated test
 	provider.Exec(ctx, "DELETE FROM autodream_memories")
@@ -853,12 +837,12 @@ func TestAutoDreamWorker_IngestCompletedTasksPg(t *testing.T) {
 	ctx := context.Background()
 
 	// Ensure table exists for test
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT, organization_id TEXT DEFAULT 'system')")
-	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT, organization_id TEXT DEFAULT 'system')")
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
+	_, _ = provider.Exec(ctx, "CREATE TABLE IF NOT EXISTS swarm_tasks (id TEXT PRIMARY KEY, title TEXT, payload TEXT, status TEXT)")
 
 	// Insert test tasks
-	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, payload, status, organization_id) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
-		"st-1-pg", "Test Task 1", "{}", "COMPLETED", "org-1")
+	_, err := provider.Exec(ctx, "INSERT INTO shared_tasks (id, title, payload, status) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+		"st-1-pg", "Test Task 1", "{}", "COMPLETED")
 	if err != nil {
 		t.Fatalf("failed to insert test shared task: %v", err)
 	}
