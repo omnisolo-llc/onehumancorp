@@ -41,7 +41,6 @@ var Catalog = []IntegrationProvider{
 	&powersync.PowerSyncIntegration{},
 	&restic.ResticIntegration{},
 	&obsidian.ObsidianIntegration{},
-	&MercadoPagoIntegration{},
 }
 
 // GetCatalog returns all available integration providers.
