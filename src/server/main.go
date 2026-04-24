@@ -344,6 +344,15 @@ func run(now time.Time, listen listenFunc) error {
 		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider)
 		go competitorAuditWorker.Start(ctx)
 
+
+		var client orchestration.EmbeddingClient
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		if minimaxKey != "" {
+			client = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), pool.Provider, nil)
+		}
+		autodreamSyncDaemon := orchestration.NewAutoDreamSyncDaemon(pool.Provider, client)
+		go autodreamSyncDaemon.Start(ctx)
+
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
 	}
