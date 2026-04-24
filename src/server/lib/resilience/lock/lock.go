@@ -91,17 +91,15 @@ func (p *DatabaseLockProvider) tryPostgresLock(ctx context.Context, key string, 
 			token = EXCLUDED.token,
 			expires_at = EXCLUDED.expires_at
 		WHERE distributed_locks.expires_at < CURRENT_TIMESTAMP
-		RETURNING key
 	`, ttlSeconds)
 
-	var returnedKey string
-	row := p.db.QueryRow(ctx, query, key, token)
-	err := row.Scan(&returnedKey)
+	rowsAffected, err := p.db.Exec(ctx, query, key, token)
 	if err != nil {
-		if err.Error() == "no rows in result set" || err.Error() == "sql: no rows in result set" {
-			return false, nil, nil
-		}
 		return false, nil, fmt.Errorf("failed to acquire postgres lock: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return false, nil, nil
 	}
 
 	unlock := func(unlockCtx context.Context) error {
