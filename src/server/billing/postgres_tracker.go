@@ -80,9 +80,6 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		totalActions += a.TotalActions
 		agents = append(agents, a)
 	}
-	if err := rows.Err(); err != nil {
-		return Summary{}, fmt.Errorf("pg: iteration error: %w", err)
-	}
 
 	efficiency := 0.0
 	if totalCost > 0 {
@@ -100,25 +97,4 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		Efficiency:          efficiency,
 		Agents:              agents,
 	}, nil
-}
-
-func (r *PgUsageRepository) ActiveOrganizations(ctx context.Context) ([]string, error) {
-	rows, err := r.pool.Query(ctx, `SELECT DISTINCT organization_id FROM usage_events ORDER BY organization_id`)
-	if err != nil {
-		return nil, fmt.Errorf("pg: active organizations: %w", err)
-	}
-	defer rows.Close()
-
-	var orgs []string
-	for rows.Next() {
-		var org string
-		if err := rows.Scan(&org); err != nil {
-			return nil, fmt.Errorf("pg: scan active organization: %w", err)
-		}
-		orgs = append(orgs, org)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("pg: active organizations iteration: %w", err)
-	}
-	return orgs, nil
 }
