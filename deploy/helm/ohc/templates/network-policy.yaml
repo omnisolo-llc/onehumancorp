@@ -23,9 +23,21 @@ spec:
           port: {{ .Values.backend.service.port }}
   egress:
     - to:
-        - namespaceSelector:
+        - podSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              app: {{ .Release.Name }}-ohc-core
+    - to:
+        - podSelector:
+            matchLabels:
+              app: {{ .Release.Name }}-chatwoot
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
     - to:
         - namespaceSelector:
             matchLabels:
