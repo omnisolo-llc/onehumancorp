@@ -66,6 +66,7 @@ go_test(
         "server_test.go",
         "tenant_test.go",
         "kairos_mesh_e2e_test.go",
+        "benchmark_dashboard_test.go",
     ],
     embed = [":dashboard"],
     deps = [

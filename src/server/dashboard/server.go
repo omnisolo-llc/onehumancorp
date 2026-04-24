@@ -1310,25 +1310,54 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.orgAgentsLocked()
+	var wg sync.WaitGroup
+	wg.Add(3)
 
-	queue := make([]orchestration.SharedTask, 0)
-	queueLen := 0
-	if s.hub != nil && s.hub.TaskManager() != nil {
-		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
-			for _, t := range pending {
-				if t != nil {
-					queue = append(queue, *t)
+	var agents []orchestration.Agent
+	var meetings []orchestration.MeetingRoom
+	var queue []orchestration.SharedTask
+	var queueLen int
+	var costs billing.Summary
+
+	// 1. Fetch agents and meetings (meetings depend on agents)
+	go func() {
+		defer wg.Done()
+		agents = s.orgAgentsLocked()
+		meetings = s.orgMeetingsLockedWithAgents(agents)
+	}()
+
+	// 2. Fetch task queue
+	go func() {
+		defer wg.Done()
+		queue = make([]orchestration.SharedTask, 0)
+		if s.hub != nil && s.hub.TaskManager() != nil {
+			if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
+				for _, t := range pending {
+					if t != nil {
+						queue = append(queue, *t)
+					}
 				}
+				queueLen = len(queue)
 			}
-			queueLen = len(queue)
 		}
-	}
+	}()
+
+	// 3. Fetch costs
+	go func() {
+		defer wg.Done()
+		if s.tracker != nil {
+			costs = s.tracker.Summary(s.org.ID)
+		} else {
+			costs = billing.Summary{OrganizationID: s.org.ID}
+		}
+	}()
+
+	wg.Wait()
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.orgMeetingsLocked(),
-		Costs:        s.tracker.Summary(s.org.ID),
+		Meetings:     meetings,
+		Costs:        costs,
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
@@ -1345,14 +1374,21 @@ func (s *Server) orgAgentsLocked() []orchestration.Agent {
 }
 
 func (s *Server) orgMeetingsLocked() []orchestration.MeetingRoom {
+	return s.orgMeetingsLockedWithAgents(s.orgAgentsLocked())
+}
+
+func (s *Server) orgMeetingsLockedWithAgents(agents []orchestration.Agent) []orchestration.MeetingRoom {
 	if s == nil || s.hub == nil {
 		return []orchestration.MeetingRoom{}
 	}
-	return filterMeetingsByAgentIDs(s.hub.Meetings(), s.orgAgentIndexLocked())
+	return filterMeetingsByAgentIDs(s.hub.Meetings(), s.orgAgentIndexWithAgents(agents))
 }
 
 func (s *Server) orgAgentIndexLocked() map[string]struct{} {
-	agents := s.orgAgentsLocked()
+	return s.orgAgentIndexWithAgents(s.orgAgentsLocked())
+}
+
+func (s *Server) orgAgentIndexWithAgents(agents []orchestration.Agent) map[string]struct{} {
 	index := make(map[string]struct{}, len(agents))
 	for _, agent := range agents {
 		index[agent.ID] = struct{}{}
