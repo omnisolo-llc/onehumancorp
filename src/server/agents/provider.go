@@ -10,10 +10,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"sync"
 	"time"
 
 	"errors"
-	"sync"
 )
 
 // ProviderType is the unique identifier for an external agent implementation.
@@ -158,31 +159,31 @@ func (b *baseProvider) load() Credentials {
 // It syncs subagent statuses and errors dynamically via the Teammate Mesh API (Redis Pub/Sub).
 func executeInIsolation(ctx context.Context, agentType string, worktree string, transport Transport) error {
 	// 1. Process Sandboxing & Temporary Worktrees
-	sandboxID := fmt.Sprintf("sandbox-%s-%d", agentType, time.Now().UnixNano())
+	isolationSandboxID := fmt.Sprintf("sandbox-%s-%d", agentType, time.Now().UnixNano())
 
 	// 2. Dynamic status syncing to Teammate Mesh API via Redis Pub/Sub
-	statusMsg, _ := json.Marshal(map[string]interface{}{
+	isolationStatusMsg, _ := json.Marshal(map[string]interface{}{
 		"agent":    agentType,
 		"status":   "RUNNING",
 		"worktree": worktree,
-		"sandbox":  sandboxID,
+		"sandbox":  isolationSandboxID,
 	})
 
 	if transport != nil {
-		if err := transport.Send(ctx, statusMsg); err != nil {
+		if err := transport.Send(ctx, isolationStatusMsg); err != nil {
 			return err
 		}
 	}
 
 	// Simulating process sandbox stream piping...
-	outputMsg, _ := json.Marshal(map[string]interface{}{
+	isolationOutputMsg, _ := json.Marshal(map[string]interface{}{
 		"agent":   agentType,
 		"stream":  "stdout",
 		"content": "Execution started in isolated worktree " + worktree,
 	})
 
 	if transport != nil {
-		transport.Send(ctx, outputMsg)
+		transport.Send(ctx, isolationOutputMsg)
 	}
 
 	endMsg, _ := json.Marshal(map[string]interface{}{
@@ -649,6 +650,15 @@ func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
 func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	// Builtin agent in standalone microservice mode handles its own isolation.
+	// We dispatch via gRPC if OHC_AGENT_ADDRESS is set.
+	if os.Getenv("OHC_AGENT_ADDRESS") != "" {
+		payload := fmt.Sprintf("Execute task in worktree: %s", worktree)
+		if err := dispatchToBuiltinAgent(payload, "isolated task", "Operations"); err != nil {
+			return err
+		}
+		return nil
+	}
 	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
 }
 

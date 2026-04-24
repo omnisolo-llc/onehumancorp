@@ -57,7 +57,7 @@ go_library(
         "migrations/040_kairos_mesh_and_autodream.sql",
         "migrations/041_shared_tasks_schema.sql",
         "migrations/031_agent_missions_updated_at.sql",
-        "migrations/032_hybrid_rag_sync.sql",
+        "migrations/032_hybrid_sync_metadata.sql",
         "migrations/032_telemetry_mesh.sql",
         "migrations/033_kairos_shared_tasks.sql", # issue_id: 3980
         "migrations/034_kairos_sub_agent_queue.sql", # issue_id: 4240
@@ -70,6 +70,7 @@ go_library(
         "migrations/055_hub_events.sql",
         "migrations/056_langgraph_checkpoints.sql",
         "migrations/061_shared_tasks_v4.sql",
+        "migrations/062_billing_actions.sql",
         "migrations/20260414130500_create_autodream_memories.sql",
         "migrations/20260415123000_autodream_memories_schema.sql",
         "migrations/20260415124000_shared_tasks_master.sql",
@@ -92,8 +93,10 @@ go_library(
         "migrations/20260425000000_autodream_memories.go",
         "migrations/20260426000000_local_mcp_rag_tasks.go",
         "migrations/20260427000000_autodream_memories_decomposition.go",
-                        "migrations/20260428000000_kairos_shared_tasks_state_machine_pg.sql",
+                        "migrations/20260427020001_shared_tasks_indexes.sql",
+        "migrations/20260428000000_kairos_shared_tasks_state_machine_pg.sql",
         "migrations/20260428000000_kairos_shared_tasks_state_machine_sqlite.sql",
+        "migrations/20260429000000_kairos_approval_workflow.sql",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/db",
     visibility = ["//visibility:public"],

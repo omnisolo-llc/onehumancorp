@@ -63,11 +63,23 @@ futures = "0.3"
 # URL encoding for web search
 urlencoding = "2"
 
+# QR code generation
+qrcode = { version = "0.14", default-features = false }
+
 # Recursive async fn support
 async-recursion = "1"
 
 # Time utilities
 chrono = { version = "0.4", features = ["serde"] }
+
+# Database (pgvector / memory)
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+
+# Observability
+opentelemetry = { version = "0.27", features = ["metrics", "trace"] }
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.28"
 
 [build-dependencies]
 tonic-build = "0.12"

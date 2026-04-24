@@ -8,7 +8,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 APP_PACKAGE_NAME = "ohc-desktop"
 
-APP_PACKAGE_VERSION = "0.4.2"
+APP_PACKAGE_VERSION = "0.4.5"
 
 exports_files([
     "pubspec.yaml",
@@ -327,10 +327,7 @@ flutter_app(
 sh_binary(
     name = "start",
     srcs = ["test/start_web.sh"],
-    data = [
-        ":app",
-        "//src/server:ohc",
-    ],
+    data = [":app"],
     visibility = ["//visibility:public"],
 )
 

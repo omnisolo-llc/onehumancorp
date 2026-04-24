@@ -97,7 +97,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Invite'), findsOneWidget);
+      expect(find.text('Invite User'), findsOneWidget);
     });
 
     testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
@@ -116,7 +116,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Invite'));
+      await tester.tap(find.text('Invite User'));
       await tester.pumpAndSettle();
 
       expect(find.byType(AlertDialog), findsOneWidget);
