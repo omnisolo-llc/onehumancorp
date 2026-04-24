@@ -77,7 +77,10 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
+      await tester.binding.setSurfaceSize(const Size(1440, 900));
+      await tester.pumpAndSettle();
       expect(find.textContaining('alice'), findsWidgets);
+
       expect(find.textContaining('bob'), findsWidgets);
     });
 
@@ -116,10 +119,11 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
+
       await tester.tap(find.text('Invite User'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {

@@ -2,9 +2,14 @@ package db
 
 import (
 	"context"
+
+	"database/sql/driver"
+	"encoding/json"
+	"math"
+
+	"crypto/rand"
 	"database/sql"
 	"embed"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io/fs"
@@ -16,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
 )
 
 var (
@@ -26,12 +31,12 @@ var (
 
 func splitSQLStatements(sqlText string) []string {
 	var (
-		statements      []string
-		current         strings.Builder
-		inSingleQuote   bool
-		inDoubleQuote   bool
-		inLineComment   bool
-		inBlockComment  bool
+		statements     []string
+		current        strings.Builder
+		inSingleQuote  bool
+		inDoubleQuote  bool
+		inLineComment  bool
+		inBlockComment bool
 	)
 
 	for i := 0; i < len(sqlText); i++ {
@@ -245,6 +250,33 @@ func New(ctx context.Context) (*DB, error) {
 		if sqliteErr != nil {
 			return nil, fmt.Errorf("db: connect to sqlite: %w", sqliteErr)
 		}
+
+		_ = sqlite.RegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+			if args[0] == nil || args[1] == nil {
+				return nil, nil
+			}
+			var v1, v2 []float32
+			if err := json.Unmarshal([]byte(args[0].(string)), &v1); err != nil {
+				return nil, err
+			}
+			if err := json.Unmarshal([]byte(args[1].(string)), &v2); err != nil {
+				return nil, err
+			}
+			if len(v1) != len(v2) {
+				return nil, fmt.Errorf("vector length mismatch")
+			}
+			var dot, mag1, mag2 float64
+			for i := range v1 {
+				dot += float64(v1[i] * v2[i])
+				mag1 += float64(v1[i] * v1[i])
+				mag2 += float64(v2[i] * v2[i])
+			}
+			if mag1 == 0 || mag2 == 0 {
+				return 1.0, nil
+			}
+			return 1.0 - (dot / (math.Sqrt(mag1) * math.Sqrt(mag2))), nil
+		})
+
 		sqliteDB.SetMaxOpenConns(1)
 
 		if pingErr := sqliteDB.PingContext(ctx); pingErr != nil {
@@ -370,6 +402,11 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 
 		// If using sqlite, we might need to replace pg-specific types or handle syntax
 		if p.Provider.IsSQLite() {
+			// Skip PG specific DO blocks
+			if strings.Contains(sqlStr, "DO $$") {
+				continue
+			}
+
 			// Simple replacements for basic SQLite compatibility if needed, though most standard SQL works.
 			// Bigserial -> INTEGER PRIMARY KEY AUTOINCREMENT
 			// TIMESTAMPTZ -> DATETIME
@@ -415,6 +452,8 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = regexp.MustCompile(`(?i)\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b`).ReplaceAllString(sqlStr, "ADD COLUMN")
 			// SQLite does not support DROP COLUMN IF EXISTS – strip the IF EXISTS qualifier.
 			sqlStr = regexp.MustCompile(`(?i)\bDROP\s+COLUMN\s+IF\s+EXISTS\b`).ReplaceAllString(sqlStr, "DROP COLUMN")
+			sqlStr = regexp.MustCompile(`(?i).*ENABLE\s+ROW\s+LEVEL\s+SECURITY.*`).ReplaceAllString(sqlStr, "")
+			sqlStr = regexp.MustCompile(`(?i).*CREATE\s+POLICY.*`).ReplaceAllString(sqlStr, "")
 		} else {
 			// Postgres mode: normalise any SQLite-specific types that leaked into
 			// migration files so that migrations are portable in both directions.

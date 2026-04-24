@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "nats",
+    srcs = ["provider.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/integrations/nats",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:hub_go_proto",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "nats_test",
+    srcs = ["provider_test.go"],
+    embed = [":nats"],
+)

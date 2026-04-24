@@ -57,13 +57,13 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 
 	// 4. Persist
 	record := &memory.EmbeddingRecord{
-		ID:           taskID + "-summary", // Simplification
-		OrganizationID: claims.OrganizationID,           // Secure isolation
-		MemoryType:   "TASK_SUMMARY",
-		Content:      summary,
-		Embedding:    embedding,
-		CreatedAt:    time.Now(),
-		SourceTaskID: taskID,
+		ID:             taskID + "-summary",   // Simplification
+		OrganizationID: claims.OrganizationID, // Secure isolation
+		MemoryType:     "TASK_SUMMARY",
+		Content:        summary,
+		Embedding:      embedding,
+		CreatedAt:      time.Now(),
+		SourceTaskID:   taskID,
 	}
 
 	if err := s.vectorRepo.Upsert(ctx, record); err != nil {
@@ -71,4 +71,47 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 	}
 
 	return nil
+}
+
+func (s *Service) ResolveConflicts(ctx context.Context, organizationID string) error {
+	conflicts, err := s.vectorRepo.FindConflicts(ctx, organizationID, 0.05)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range conflicts {
+		// Synthesize
+		prompt := fmt.Sprintf("Merge these two related or conflicting facts into one clear fact:\n1. %s\n2. %s", c.Content1, c.Content2)
+		merged, err := s.llm.Reason(ctx, prompt)
+		if err != nil {
+			continue
+		}
+
+		// Delete both
+		if err := s.vectorRepo.DeleteMemories(ctx, []string{c.ID1, c.ID2}); err != nil {
+			continue
+		}
+
+		emb, err := s.llm.GenerateEmbedding(ctx, merged)
+		if err != nil {
+			continue
+		}
+
+		record := &memory.EmbeddingRecord{
+			ID:             c.ID1 + "-merged",
+			OrganizationID: organizationID,
+			MemoryType:     "MERGED_SUMMARY",
+			Content:        merged,
+			Embedding:      emb,
+			CreatedAt:      time.Now(),
+		}
+		_ = s.vectorRepo.Upsert(ctx, record)
+	}
+
+	return nil
+}
+
+func (s *Service) PruneStaleContext(ctx context.Context, organizationID string, olderThan time.Duration) error {
+	cutoff := time.Now().Add(-olderThan)
+	return s.vectorRepo.PruneOlderThan(ctx, organizationID, cutoff)
 }

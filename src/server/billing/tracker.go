@@ -1,9 +1,10 @@
 package billing
 
 import (
+	"log/slog"
 	"context"
 	"errors"
-	"log/slog"
+
 	"sort"
 	"sync"
 	"time"
@@ -80,6 +81,7 @@ type Usage struct {
 	PromptTokens     int64     `json:"promptTokens"`
 	CompletionTokens int64     `json:"completionTokens"`
 	CachedTokens     int64     `json:"cachedTokens"`
+	IsAction         bool      `json:"isAction"`
 	OccurredAt       time.Time `json:"occurredAt"`
 	CostUSD          float64   `json:"costUsd"`
 }
@@ -90,9 +92,10 @@ type Usage struct {
 // Produces no errors.
 // Has no side effects.
 type AgentSummary struct {
-	AgentID   string  `json:"agentId"`
-	CostUSD   float64 `json:"costUsd"`
-	TokenUsed int64   `json:"tokenUsed"`
+	AgentID      string  `json:"agentId"`
+	CostUSD      float64 `json:"costUsd"`
+	TokenUsed    int64   `json:"tokenUsed"`
+	TotalActions int64   `json:"totalActions"`
 }
 
 // Summary aggregates the total infrastructure spend, overall token count, and per-agent metrics for a specific organization.
@@ -104,6 +107,7 @@ type Summary struct {
 	OrganizationID      string         `json:"organizationId"`
 	TotalCostUSD        float64        `json:"totalCostUsd"`
 	TotalTokens         int64          `json:"totalTokens"`
+	TotalActions        int64          `json:"totalActions"`
 	ProjectedMonthlyUSD float64        `json:"projectedMonthlyUsd"`
 	Agents              []AgentSummary `json:"agents"`
 }
@@ -299,6 +303,7 @@ func (t *Tracker) Track(usage Usage) (Usage, error) {
 	// Record unified agent metrics
 	telemetry.RecordAgentTokenUsage(ctx, usage.AgentID, usage.OrganizationID, usage.AgentRole, usage.Model, usage.PromptTokens+usage.CompletionTokens+usage.CachedTokens)
 	telemetry.RecordAgentCost(ctx, usage.AgentID, usage.OrganizationID, usage.AgentRole, usage.Model, usage.CostUSD)
+	telemetry.RecordMissionCostCents(ctx, usage.AgentID, usage.OrganizationID, usage.AgentRole, usage.Model, usage.CostUSD*100.0)
 
 	return usage, nil
 }
@@ -328,6 +333,7 @@ func (t *Tracker) Summary(organizationID string) Summary {
 	byAgent := map[string]AgentSummary{}
 	var totalCost float64
 	var totalTokens int64
+	var totalActions int64
 
 	for _, usage := range shard.usages {
 		if usage.OrganizationID != organizationID {
@@ -337,6 +343,10 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		agent.AgentID = usage.AgentID
 		agent.CostUSD += usage.CostUSD
 		agent.TokenUsed += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
+		if usage.IsAction {
+			agent.TotalActions++
+			totalActions++
+		}
 		byAgent[usage.AgentID] = agent
 		totalCost += usage.CostUSD
 		totalTokens += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
@@ -354,6 +364,7 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,
 		TotalTokens:         totalTokens,
+		TotalActions:        totalActions,
 		ProjectedMonthlyUSD: totalCost * 30,
 		Agents:              agents,
 	}
@@ -362,13 +373,15 @@ func (t *Tracker) Summary(organizationID string) Summary {
 // ActiveOrganizations returns a list of unique organization IDs that have recorded usage.
 func (t *Tracker) ActiveOrganizations(ctx context.Context) []string {
 	if t.repo != nil {
-		// If using DB repository, this might be a more complex query.
-		// Since we only really need active ones for reporting, and right now repo isn't fully mocked for this method:
-		// We can return a default set or add a query if needed. Assuming in-memory for typical demo uses or basic repo fallbacks.
-		// Note: The system design implies "demo" and maybe "default" are usually hardcoded or retrieved from auth.
-		// For robustness, returning "demo" when repo is nil is okay, but let's implement the memory version properly.
-		// To avoid changing UsageRepository interface, we can just return a basic slice.
-		return []string{"demo", "default"}
+		orgs, err := t.repo.ActiveOrganizations(ctx)
+		if err != nil {
+			slog.Error("failed to load active organizations from repository", "error", err)
+			return []string{"demo", "default"}
+		}
+		if len(orgs) == 0 {
+			return []string{"demo", "default"}
+		}
+		return orgs
 	}
 
 	orgsMap := make(map[string]struct{})

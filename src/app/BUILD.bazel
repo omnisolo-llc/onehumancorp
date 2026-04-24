@@ -150,6 +150,7 @@ test_suite(
         "//src/app/lib/models:all_tests",
         "//src/app/lib/screens:all_tests",
         "//src/app/lib/services:all_tests",
+        ":website_builder_wizard_screen_test",
     ],
 )
 
@@ -266,6 +267,14 @@ flutter_test(
     embed = [":app_lib"],
     tags = ["manual"],
     test_files = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "website_builder_wizard_screen_test",
+    srcs = ["test/website_builder_wizard_screen_test.dart"],
+    embed = ["//src/app/lib/screens:screens_for_tests"],
+    test_files = ["test/website_builder_wizard_screen_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
 

@@ -47,6 +47,7 @@ var (
 	tokenUsageCounter                  metric.Int64Counter
 	AgentTokenUsageTotal               metric.Int64Counter
 	AgentCostEstimateUSD               metric.Float64Counter
+	MissionCostCents                   metric.Float64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -538,6 +539,14 @@ func InitWithMeter(m mockableMeter) error {
 	AgentCostEstimateUSD, err = m.Float64Counter(
 		"ohc_agent_cost_estimate_usd",
 		metric.WithDescription("Cumulative estimated USD cost of agent LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MissionCostCents, err = m.Float64Counter(
+		"ohc_mission_cost_cents",
+		metric.WithDescription("Core observability metric for calculating Return on Agent (ROA) in cents"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1836,7 +1845,12 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 // RecordQueueLength correctly applies PII redaction before JSON marshaling.
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		payloadMap := map[string]interface{}{
+			"delta": delta,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", string(payloadBytes))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
@@ -2239,4 +2253,30 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	TelemetryBatchSizeGauge.Record(ctx, size)
+}
+
+// RecordMissionCostCents records the estimated cost in cents of a mission.
+func RecordMissionCostCents(ctx context.Context, agentID, organizationID, role, model string, costCents float64) {
+	if MissionCostCents == nil {
+		return
+	}
+	MissionCostCents.Add(ctx, costCents, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("organization_id", organizationID),
+		attribute.String("role", role),
+		attribute.String("model", model),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":        agentID,
+			"organization_id": organizationID,
+			"role":            role,
+			"model":           model,
+			"cost_cents":      costCents,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "mission_cost_cents", string(payloadBytes))
+	}
 }

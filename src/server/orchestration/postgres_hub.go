@@ -150,6 +150,9 @@ func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
 			a.Status = Status(status)
 			agents = append(agents, a)
 		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
 		return nil
 	})
 
@@ -289,6 +292,9 @@ func (r *PgHubRepository) PopMessages(ctx context.Context, agentID string) ([]Me
 			}
 			temp = append(temp, r)
 		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
 
 		// Sort by seq to maintain order since DELETE ... RETURNING does not guarantee order
 		sort.Slice(temp, func(i, j int) bool {
@@ -338,6 +344,9 @@ func (r *PgHubRepository) PeekMessages(ctx context.Context, agentID string) ([]M
 				return fmt.Errorf("pg: scan message: %w", err)
 			}
 			msgs = append(msgs, m)
+		}
+		if err := rows.Err(); err != nil {
+			return err
 		}
 		return nil
 	})
@@ -402,6 +411,9 @@ func (r *PgHubRepository) GetMeeting(ctx context.Context, id string) (MeetingRoo
 			m.MeetingID = id
 			room.Transcript = append(room.Transcript, m)
 		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
 		return nil
 	})
 
@@ -460,6 +472,9 @@ func (r *PgHubRepository) ListMeetings(ctx context.Context) ([]MeetingRoom, erro
 			}
 			_ = json.Unmarshal([]byte(participantsJSON), &room.Participants)
 			rooms = append(rooms, room)
+		}
+		if err := rows.Err(); err != nil {
+			return err
 		}
 		return nil
 	})

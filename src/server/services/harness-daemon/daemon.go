@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -103,10 +103,9 @@ func (d *Daemon) Start() error {
 
 	d.ready = true
 	go func() {
-		slog.Info("Harness Daemon listening", "port", d.port)
+		log.Printf("Harness Daemon listening on :%d", d.port)
 		if err := d.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("Server failed", "error", err)
-			os.Exit(1)
+			log.Fatalf("Server failed: %v", err)
 		}
 	}()
 
@@ -123,18 +122,18 @@ func (d *Daemon) Stop() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := d.server.Shutdown(ctx); err != nil {
-			slog.Error("Failed to shutdown HTTP server", "error", err)
+			log.Printf("Failed to shutdown HTTP server: %v", err)
 		}
 	}
 
 	if d.browser != nil {
 		if err := d.browser.Close(); err != nil {
-			slog.Error("Failed to close browser", "error", err)
+			log.Printf("Failed to close browser: %v", err)
 		}
 	}
 	if d.pw != nil {
 		if err := d.pw.Stop(); err != nil {
-			slog.Error("Failed to stop playwright", "error", err)
+			log.Printf("Failed to stop playwright: %v", err)
 		}
 	}
 

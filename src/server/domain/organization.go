@@ -153,6 +153,15 @@ type RoleProfile struct {
 	ContextInputs []string `json:"contextInputs"`
 }
 
+// Tier represents the billing and quota limits level of an organization.
+type Tier string
+
+const (
+	TierFree    Tier = "Free"
+	TierStarter Tier = "Starter"
+	TierPro     Tier = "Pro"
+)
+
 // Organization represents the top-level structural entity, maintaining the hierarchy of members, active roles, and cross-team workflows.
 // Accepts no parameters.
 // Returns nothing.
@@ -163,9 +172,25 @@ type Organization struct {
 	Name         string        `json:"name"`
 	Domain       string        `json:"domain"`
 	CEOID        string        `json:"ceoId"`
+	Tier         Tier          `json:"tier"`
 	CreatedAt    time.Time     `json:"createdAt"`
 	Members      []Member      `json:"members"`
 	RoleProfiles []RoleProfile `json:"roleProfiles"`
+}
+
+// ActionLimit returns the hard limit on monthly AI actions based on the organization's tier.
+// Returns -1 for unlimited.
+func (o Organization) ActionLimit() int64 {
+	switch o.Tier {
+	case TierStarter:
+		return 1000
+	case TierPro:
+		return -1 // Unlimited
+	case TierFree:
+		fallthrough
+	default:
+		return 100 // Default to Free tier limits if unspecified
+	}
 }
 
 // NewSoftwareCompany constructs a pre-configured engineering organisation with standard tech roles.
@@ -201,6 +226,7 @@ func NewSoftwareCompany(id, name, ceoName string, now time.Time) Organization {
 		Name:         name,
 		Domain:       "software_company",
 		CEOID:        ceoID,
+		Tier:         TierFree,
 		CreatedAt:    now.UTC(),
 		Members:      members,
 		RoleProfiles: defaultSoftwareCompanyRoleProfiles(),
@@ -424,6 +450,7 @@ func NewDigitalMarketingAgency(id, name, ceoName string, now time.Time) Organiza
 		Name:         name,
 		Domain:       "digital_marketing_agency",
 		CEOID:        ceoID,
+		Tier:         TierFree,
 		CreatedAt:    now.UTC(),
 		Members:      members,
 		RoleProfiles: defaultDigitalMarketingRoleProfiles(),
@@ -513,6 +540,7 @@ func NewAccountingFirm(id, name, ceoName string, now time.Time) Organization {
 		Name:         name,
 		Domain:       "accounting_firm",
 		CEOID:        ceoID,
+		Tier:         TierFree,
 		CreatedAt:    now.UTC(),
 		Members:      members,
 		RoleProfiles: defaultAccountingRoleProfiles(),

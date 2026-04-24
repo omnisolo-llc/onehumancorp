@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
+	"log"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -53,7 +53,7 @@ func (p *ProxyTool) CallTool(ctx context.Context, toolName string, arguments map
 
 	// In a real implementation, this would relay the command via OHC-SIP to the local standalone instance.
 	// For now, we simulate the execution and log the action.
-	slog.Info("[LocalStatefulProxy] Proxying command to context", "command", command, "contextID", contextID)
+	log.Printf("[LocalStatefulProxy] Proxying command '%s' to context '%s'\n", command, contextID)
 
 	// Simulate successful response
 	responseData := map[string]string{
@@ -98,7 +98,7 @@ func (p *ProxyTool) Execute(ctx context.Context, args map[string]interface{}) (*
 
 	// In a real implementation, this would relay the command via OHC-SIP to the local standalone instance.
 	// For now, we simulate the execution and log the action.
-	slog.Info("[LocalStatefulProxy] Proxying command to context", "command", command, "contextID", contextID)
+	log.Printf("[LocalStatefulProxy] Proxying command '%s' to context '%s'\n", command, contextID)
 
 	// Simulate successful response
 	responseData := map[string]string{
