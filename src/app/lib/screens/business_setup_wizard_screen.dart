@@ -160,7 +160,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     state = state.copyWith(isLoading: false);
 
     if (context.mounted) {
-      context.go('/dashboard');
+      context.go('/website-builder');
     }
   }
 }
