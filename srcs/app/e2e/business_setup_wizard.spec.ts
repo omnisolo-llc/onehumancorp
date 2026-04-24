@@ -11,43 +11,39 @@ test.describe('Business Setup Wizard E2E', () => {
     try {
         await page.goto('/');
 
-        // Ensure we are on the first step
-        await expect(page.locator('text=Business Setup')).toBeVisible();
-        await expect(page.locator('text=Welcome! Your AI team, ready in minutes.')).toBeVisible();
+        // Go to wizard
+        await page.goto('/#/wizard');
 
-        // Step 0 -> Step 1
+        // Step 0: Welcome
+        await expect(page.locator('text=What do you do?')).toBeVisible();
+        await page.fill('input:below(:text("Business Name"))', 'Maya Cakes');
         await page.click('text=Next');
 
-        // Step 1: Business Type
-        await expect(page.locator('text=Business type')).toBeVisible();
-        await page.click('text=Online Store');
+        // Step 1: Template Selection
+        await expect(page.locator('text=Choose a Template')).toBeVisible();
+        await page.click('text=Modern Minimal');
         await page.click('text=Next');
 
-        // Step 2: Business Name & Description
-        await expect(page.locator('text=Business name')).toBeVisible();
-        await page.fill('text=Business name', 'Maya Cakes');
-        await page.fill('text=Description', 'Custom cakes and more');
+        // Step 2: First Product Add
+        await expect(page.locator('text=Add your first product or service')).toBeVisible();
+        await page.fill('input:below(:text("Item Name"))', 'Chocolate Cake');
         await page.click('text=Next');
 
-        // Step 3: What do you sell?
-        await expect(page.locator('text=What do you sell?')).toBeVisible();
-        await page.click('text=Physical products');
+        // Step 3: Domain Selection
+        await expect(page.locator('text=Your unique link')).toBeVisible();
+        await page.fill('input:below(:text("Storefront Link"))', 'mayacakes.ohc.app');
         await page.click('text=Next');
 
-        // Step 4: Payments
-        await expect(page.locator('text=How do you want to receive payments?')).toBeVisible();
-        await page.click('text=Online only');
+        // Step 4: Admin Account
+        await expect(page.locator('text=Create Admin Account')).toBeVisible();
+        await page.fill('input:below(:text("Your Name"))', 'Maya');
         await page.click('text=Next');
 
-        // Step 5: Administrator Account
-        await expect(page.locator('text=Admin Name')).toBeVisible();
-        await page.fill('text=Admin Name', 'Maya');
-        // Using nth(1) because 'Admin Email' might match label and placeholder similarly
-        await page.getByLabel('Admin Email').fill('maya@example.com');
-        await page.getByLabel('Admin Password').fill('securepassword123');
+        // Step 5: Review & Launch
+        await expect(page.locator('text=Ready to launch!')).toBeVisible();
 
         // Launch
-        await page.click('text=Launch My Business →');
+        await page.click('text=Publish Business 🎉');
 
         // Should navigate to dashboard eventually. Check for dashboard navigation or text.
         await expect(page).toHaveURL(/\/dashboard/);

@@ -137,6 +137,72 @@ func hasEnabledProvider(providers []settings.AiProvider) bool {
 	return false
 }
 
+// handleWizardStateSave saves the state of the wizard for cross-device resume.
+// In a real multi-tenant application, we use the SettingsStore per tenant
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// For a multi-tenant cross-device resume, we should store the progress in the user's settings.
+	// As this is a pre-authentication step in some cases or post-auth in others,
+	// we will merge it into the Server's tenant settings using KAIROS SettingsStore.
+
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	cfg := s.settings
+	if cfg.Extras == nil {
+		cfg.Extras = make(map[string]string)
+	}
+
+	// Serialize the wizard state into a JSON string to fit in Extras
+	b, err := json.Marshal(req)
+	if err == nil {
+		cfg.Extras["wizard_state_resume"] = string(b)
+	}
+	s.settings = cfg
+	s.mu.Unlock()
+
+	if s.hub != nil && s.hub.SettingsStore() != nil {
+		_ = s.hub.SettingsStore().Update(cfg)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "saved"})
+}
+
+// handleWizardStateLoad retrieves the wizard state for cross-device resume
+func (s *Server) handleWizardStateLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	cfg := s.settings
+	s.mu.RUnlock()
+
+	var state map[string]interface{}
+	if val, ok := cfg.Extras["wizard_state_resume"]; ok {
+		_ = json.Unmarshal([]byte(val), &state)
+	}
+
+	if state == nil {
+		state = make(map[string]interface{})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(state)
+}
+
 // handleWizardOnboardingVerify performs a diagnostic verification of env vars
 // and connection requirements for Day One onboarding.
 func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Request) {

@@ -88,6 +88,40 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+        // --- POST-ONBOARDING CHECKLIST & AI ADVISORY ---
+        if (true) // In a real app, this would read from user settings or local storage
+          Container(
+            margin: const EdgeInsets.only(bottom: 24),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.indigo.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.indigo.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.lightbulb, color: Colors.amberAccent),
+                    SizedBox(width: 8),
+                    Text('Business Advisory (AI)', style: TextStyle(fontFamily: 'Outfit', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amberAccent)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Welcome to your dashboard! Your Marketing AI is currently generating your storefront. Let\'s finish setting things up:',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                _ChecklistItem(title: 'Business Live', isDone: true),
+                _ChecklistItem(title: 'Add 3 more products', isDone: false),
+                _ChecklistItem(title: 'Connect Instagram', isDone: false),
+                _ChecklistItem(title: 'Share your link with a friend', isDone: false),
+              ],
+            ),
+          ),
+
         // --- UPGRADE BANNER ---
         Container(
           margin: const EdgeInsets.only(bottom: 24),
@@ -568,6 +602,32 @@ class _SectionTitle extends StatelessWidget {
       style: Theme.of(
         context,
       ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+    );
+  }
+}
+
+class _ChecklistItem extends StatelessWidget {
+  final String title;
+  final bool isDone;
+
+  const _ChecklistItem({required this.title, required this.isDone});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(isDone ? Icons.check_circle : Icons.radio_button_unchecked,
+               color: isDone ? Colors.greenAccent : Colors.white54, size: 20),
+          const SizedBox(width: 8),
+          Text(title, style: TextStyle(
+            fontFamily: 'Inter',
+            color: isDone ? Colors.white70 : Colors.white,
+            decoration: isDone ? TextDecoration.lineThrough : null,
+          )),
+        ],
+      ),
     );
   }
 }
