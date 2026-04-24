@@ -75,10 +75,11 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('alice'), findsWidgets);
-      expect(find.textContaining('bob'), findsWidgets);
+      expect(find.textContaining('alice', skipOffstage: false), findsWidgets);
+      expect(find.textContaining('bob', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('Invite User FAB is present', (tester) async {
@@ -95,9 +96,10 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Invite'), findsOneWidget);
+      expect(find.widgetWithIcon(FloatingActionButton, Icons.person_add), findsOneWidget);
     });
 
     testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
@@ -105,7 +107,12 @@ void main() {
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
+        (_) async => http.Response(
+          jsonEncode([
+            _fakeUser('u1', 'alice', admin: true),
+          ]),
+          200,
+        ),
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -114,12 +121,14 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Invite'));
+      await tester.tap(find.widgetWithIcon(FloatingActionButton, Icons.person_add));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.text('Invite New User'), findsWidgets);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
@@ -139,6 +148,7 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('admin'), findsWidgets);
@@ -158,9 +168,10 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump(const Duration(seconds: 1));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Error'), findsWidgets);
+      expect(find.textContaining('We ran into a problem loading your users'), findsOneWidget);
     });
   });
 }

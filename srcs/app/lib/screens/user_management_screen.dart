@@ -110,7 +110,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return const Center(child: Text('We ran into a problem loading your users. Please try again.'));
           }
 
           final users = snapshot.data ?? [];

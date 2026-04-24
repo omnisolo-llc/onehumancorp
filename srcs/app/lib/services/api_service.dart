@@ -441,7 +441,7 @@ class ApiService {
     req.headers.addAll(_headers);
     final res = await _client.send(req);
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('API error ${res.statusCode}');
+      throw Exception('Network connection issue. Please try again later.');
     }
 
     await for (final chunk in res.stream.transform(utf8.decoder)) {
@@ -550,7 +550,7 @@ class ApiService {
 
   void _checkStatus(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {
-      throw Exception('API error ${res.statusCode}: ${res.body}');
+      throw Exception('Network connection issue. Please try again later.');
     }
   }
 

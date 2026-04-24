@@ -47,7 +47,7 @@ body: snapshot.when(
         error:
             (e, _) => Center(
               child: SelectableText(
-                'Error: $e',
+                'We ran into a problem loading your dashboard. Please try again or check your connection.',
                 style: TextStyle(color: Theme.of(context).colorScheme.error, fontFamily: 'Inter'),
               ),
             ),
@@ -437,7 +437,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to scale ${widget.role}: $e', style: const TextStyle(fontFamily: 'Inter')),
+            content: Text('Could not update your ${widget.role} helpers. Please try again.', style: const TextStyle(fontFamily: 'Inter')),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
