@@ -118,6 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return;
             }
         };
+
         if let Err(e) = pubsub.subscribe("agent_jobs").await {
             tracing::error!("Failed to subscribe to 'agent_jobs': {}", e);
             return;

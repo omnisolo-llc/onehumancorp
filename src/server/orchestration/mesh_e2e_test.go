@@ -1,8 +1,6 @@
 package orchestration
 
 import (
-	"github.com/onehumancorp/mono/src/server/auth"
-
 	"bytes"
 	"context"
 	"encoding/json"
@@ -17,7 +15,7 @@ import (
 
 func TestMeshAPI_E2E(t *testing.T) {
 	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
-	ctx, cancel := context.WithTimeout(context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	provider := db.NewTestProvider(t)
@@ -40,6 +38,7 @@ func TestMeshAPI_E2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create schema: %v", err)
 	}
+
 
 	meshTransport := NewMemoryMeshTransport(provider)
 	api := NewMeshAPI(meshTransport)

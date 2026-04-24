@@ -1,8 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:ohc_app/screens/help/help_center_screen.dart';
-import 'package:ohc_app/screens/help/api_docs_screen.dart';
-import 'package:ohc_app/screens/help/changelog_screen.dart';
-import 'package:ohc_app/widgets/help/ai_help_chat.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
@@ -90,18 +86,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           // Business setup requires authentication — moved inside the shell.
-                    GoRoute(
-            path: '/help',
-            builder: (context, state) => const HelpCenterScreen(),
-          ),
-          GoRoute(
-            path: '/help/api',
-            builder: (context, state) => const ApiDocsScreen(),
-          ),
-          GoRoute(
-            path: '/help/changelog',
-            builder: (context, state) => const ChangelogScreen(),
-          ),
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
@@ -192,14 +176,8 @@ final routerProvider = Provider<GoRouter>((ref) {
               agentId: state.pathParameters['id'] ?? 'unknown',
             ),
           ),
-
-          GoRoute(
-            path: '/wizards/pending-actions',
-            builder: (context, state) => const ReviewPendingActionsWizardScreen(),
-          ),
           GoRoute(
             path: '/wizards/upgrade',
-
             builder: (context, state) => const UpgradeWizardScreen(),
           ),
           GoRoute(
@@ -245,7 +223,51 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Stack(children: [Row(children: [_Sidebar(), Expanded(child: child)]), const AiHelpChat()]));
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth <= 768) {
+          return Scaffold(
+            drawer: _Sidebar(),
+            body: Stack(
+              children: [
+                child,
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Builder(
+                    builder: (context) {
+                      return SafeArea(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.menu),
+                            onPressed: () {
+                              Scaffold.of(context).openDrawer();
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          return Scaffold(
+            body: Row(
+              children: [
+                _Sidebar(),
+                Expanded(child: child),
+              ],
+            ),
+          );
+        }
+      },
+    );
   }
 }
 
@@ -321,7 +343,6 @@ class _Sidebar extends StatelessWidget {
         _NavItem(icon: Icons.security, label: 'Security', path: '/security'),
         _NavItem(icon: Icons.terminal, label: 'Logs', path: '/logs'),
         const SizedBox(height: 8),
-        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
         _NavItem(icon: Icons.settings, label: 'Settings', path: '/settings'),
         _NavItem(
           icon: Icons.computer,

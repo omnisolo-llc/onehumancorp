@@ -20,17 +20,9 @@ spec:
           port: {{ .Values.ohcCore.service.port }}
   egress:
     - to:
-        - podSelector:
+        - namespaceSelector:
             matchLabels:
-              app: {{ .Release.Name }}-backend
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: postgresql
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: redis
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
             matchLabels:

@@ -1,8 +1,6 @@
 package orchestration
 
 import (
-	"github.com/onehumancorp/mono/src/server/auth"
-
 	"bytes"
 	"context"
 	"net/http"
@@ -32,7 +30,6 @@ func TestMeshAPI_Broadcast(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"task_id":"123"}`)))
 	w := httptest.NewRecorder()
-	req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}))
 	api.HandleBroadcast(w, req)
 
 	if w.Code != http.StatusOK {
@@ -45,7 +42,6 @@ func TestMeshAPI_Broadcast(t *testing.T) {
 	mockMesh.broadcastCalled = false
 	req = httptest.NewRequest(http.MethodPost, "/api/mesh/broadcast", bytes.NewBuffer([]byte(`{"channel":"ohc.mesh.agent.123", "task_id":"456"}`)))
 	w = httptest.NewRecorder()
-	req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}))
 	api.HandleBroadcast(w, req)
 
 	if w.Code != http.StatusOK {
@@ -72,7 +68,6 @@ func TestMeshAPI_Stream(t *testing.T) {
 	defer cancel()
 	req = req.WithContext(ctx)
 
-	req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}))
 	api.HandleStream(w, req)
 
 	if w.Code != http.StatusOK {
@@ -84,6 +79,7 @@ func TestMeshAPI_Stream(t *testing.T) {
 		t.Errorf("expected correct SSE format, got %s", body)
 	}
 }
+
 
 func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
 	mockMesh := &mockMeshApiTransport{}
@@ -105,7 +101,6 @@ func TestMeshAPI_HandleMeshV1Broadcast(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(tt.method, "/api/v1/mesh/broadcast", bytes.NewBuffer([]byte(tt.body)))
 			w := httptest.NewRecorder()
-			req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}))
 			api.HandleMeshV1Broadcast(w, req)
 			if w.Code != tt.statusCode {
 				t.Errorf("expected %d, got %d", tt.statusCode, w.Code)
@@ -129,7 +124,6 @@ func TestMeshAPI_Sync(t *testing.T) {
 	defer cancel()
 	req = req.WithContext(ctx)
 
-	req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: "test-org"}))
 	api.HandleSync(w, req)
 
 	if w.Code != http.StatusOK {

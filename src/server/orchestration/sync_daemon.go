@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/db"
@@ -20,12 +19,6 @@ type SyncDaemonPayload struct {
 	ID      string `json:"id"`
 	Status  string `json:"status"`
 	Payload string `json:"payload"`
-}
-
-type RagSyncRecord struct {
-	ID      string `json:"id"`
-	Context string `json:"context"`
-	Status  string `json:"status"`
 }
 
 type HybridMCPRAGDaemon struct {
@@ -85,24 +78,16 @@ func (d *HybridMCPRAGDaemon) ProcessSync(ctx context.Context) bool {
 	if !d.dbWrapper.IsSQLite() {
 		return false
 	}
-
-	missionsProcessed := d.processMissionsSync(ctx)
-	ragProcessed := d.processRAGSync(ctx)
-
-	return missionsProcessed || ragProcessed
-}
-
-func (d *HybridMCPRAGDaemon) processMissionsSync(ctx context.Context) bool {
 	start := time.Now()
 
 	tx, err := d.dbWrapper.Begin(ctx)
 	if err != nil {
-		slog.Error("sync_daemon: failed to begin transaction for missions", "error", err)
+		slog.Error("sync_daemon: failed to begin transaction", "error", err)
 		return false
 	}
 	defer tx.Rollback(ctx)
 
-	query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100"
+		query := "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100"
 	if d.dbWrapper.IsSQLite() {
 		query = "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = 0 AND status = 'CLOUD_ESCALATION' LIMIT 100"
 	}
@@ -154,106 +139,36 @@ func (d *HybridMCPRAGDaemon) processMissionsSync(ctx context.Context) bool {
 
 	// Mark as synced
 	if len(ids) > 0 {
-		placeholders := make([]string, len(ids))
-		args := make([]interface{}, len(ids))
+		idList := ""
 		for i, id := range ids {
-			placeholders[i] = "?"
-			args[i] = id
+			if i > 0 {
+				idList += ","
+			}
+			idList += fmt.Sprintf("'%s'", id)
 		}
-
-		val := "true"
+		updateQuery := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = true WHERE id IN (%s)", idList)
 		if d.dbWrapper.IsSQLite() {
-			val = "1"
+			updateQuery = fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = 1 WHERE id IN (%s)", idList)
 		}
-		updateQuery := fmt.Sprintf("UPDATE agent_missions SET synced_to_cloud = %s WHERE id IN (%s)", val, strings.Join(placeholders, ","))
-		_, err := tx.Exec(ctx, updateQuery, args...)
+		_, err := tx.Exec(ctx, updateQuery)
 		if err != nil {
 			slog.Error("sync_daemon: failed to update agent_missions status in bulk", "error", err)
 			return false
+		} else {
+			telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
 		}
-		telemetry.RecordSyncEscalation(ctx, int64(len(ids)))
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		slog.Error("sync_daemon: failed to commit missions transaction", "error", err)
+		slog.Error("sync_daemon: failed to commit transaction", "error", err)
 		return false
 	}
 
 	telemetry.RecordSyncDaemonBatchSize(ctx, int64(len(payloads)))
+
 	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
 
 	slog.Debug("sync_daemon: successfully synced agent_missions", "count", len(payloads))
-	return true
-}
-
-func (d *HybridMCPRAGDaemon) processRAGSync(ctx context.Context) bool {
-	start := time.Now()
-
-	tx, err := d.dbWrapper.Begin(ctx)
-	if err != nil {
-		slog.Error("sync_daemon: failed to begin transaction for RAG", "error", err)
-		return false
-	}
-	defer tx.Rollback(ctx)
-
-	query := "SELECT memory_id, context FROM swarm_memory_embeddings WHERE sync_status = 'pending' LIMIT 100"
-	rows, err := tx.Query(ctx, query)
-	if err != nil {
-		slog.Error("sync_daemon: failed to query swarm_memory_embeddings", "error", err)
-		return false
-	}
-	defer rows.Close()
-
-	var records []RagSyncRecord
-	var ids []string
-
-	for rows.Next() {
-		var id, contextData string
-		if err := rows.Scan(&id, &contextData); err != nil {
-			slog.Error("sync_daemon: failed to scan swarm_memory_embeddings", "error", err)
-			continue
-		}
-		records = append(records, RagSyncRecord{
-			ID:      id,
-			Context: contextData,
-			Status:  "synced",
-		})
-		ids = append(ids, id)
-	}
-
-	if len(records) == 0 {
-		return false
-	}
-
-	if err := d.sendRAGToCloud(ctx, records); err != nil {
-		slog.Warn("sync_daemon: failed to send RAG memories to cloud (transient)", "error", err)
-		return false
-	}
-
-	// Mark as synced
-	if len(ids) > 0 {
-		placeholders := make([]string, len(ids))
-		args := make([]interface{}, len(ids))
-		for i, id := range ids {
-			placeholders[i] = "?"
-			args[i] = id
-		}
-
-		updateQuery := fmt.Sprintf("UPDATE swarm_memory_embeddings SET sync_status = 'synced', last_sync_at = CURRENT_TIMESTAMP WHERE memory_id IN (%s)", strings.Join(placeholders, ","))
-		_, err := tx.Exec(ctx, updateQuery, args...)
-		if err != nil {
-			slog.Error("sync_daemon: failed to update swarm_memory_embeddings status in bulk", "error", err)
-			return false
-		}
-	}
-
-	if err := tx.Commit(ctx); err != nil {
-		slog.Error("sync_daemon: failed to commit RAG transaction", "error", err)
-		return false
-	}
-
-	telemetry.RecordSyncLatency(ctx, float64(time.Since(start).Milliseconds()))
-	slog.Debug("sync_daemon: successfully synced swarm_memory_embeddings", "count", len(records))
 	return true
 }
 
@@ -265,22 +180,8 @@ func (d *HybridMCPRAGDaemon) sendToCloud(ctx context.Context, payloads []SyncDae
 	telemetry.RecordSyncPayloadSize(ctx, int64(len(jsonData)))
 
 	syncEndpoint := fmt.Sprintf("%s/api/sync/missions", d.cloudAPIURL)
-	return d.postData(ctx, syncEndpoint, jsonData)
-}
 
-func (d *HybridMCPRAGDaemon) sendRAGToCloud(ctx context.Context, records []RagSyncRecord) error {
-	payload := map[string]interface{}{"records": records}
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("marshal RAG records: %w", err)
-	}
-
-	syncEndpoint := fmt.Sprintf("%s/api/mcp/rag/sync", d.cloudAPIURL)
-	return d.postData(ctx, syncEndpoint, jsonData)
-}
-
-func (d *HybridMCPRAGDaemon) postData(ctx context.Context, endpoint string, jsonData []byte) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, syncEndpoint, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("create request: %w", err)
 	}

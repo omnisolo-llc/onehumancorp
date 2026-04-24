@@ -25,10 +25,6 @@ if [ ! -f .env ]; then
   echo "OHC_MULTITENANT=false" >> .env
   echo "OHC_HEADLESS=false" >> .env
   echo "OHC_SOURCE_MODE=standalone" >> .env
-  echo "GOMAXPROCS=2" >> .env
-  echo "GOMEMLIMIT=256MiB" >> .env
-  echo "GOGC=50" >> .env
-  echo "LOG_FORMAT=text" >> .env
   chmod 0600 .env
 fi
 

@@ -23,21 +23,9 @@ spec:
           port: {{ .Values.backend.service.port }}
   egress:
     - to:
-        - podSelector:
+        - namespaceSelector:
             matchLabels:
-              app: {{ .Release.Name }}-ohc-core
-    - to:
-        - podSelector:
-            matchLabels:
-              app: {{ .Release.Name }}-chatwoot
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: postgresql
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: redis
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
             matchLabels:
@@ -56,13 +44,3 @@ spec:
               - 192.168.0.0/16
               - 169.254.169.254/32
 {{- end }}
-
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ .Release.Name }}-default-deny
-spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress

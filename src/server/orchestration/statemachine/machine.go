@@ -37,6 +37,7 @@ var ValidTransitions = map[string][]string{
 	StateExecuting:         {StateReview, StateSuccess, StateTerminatedError},
 	StateWaitingDelegation: {StateExecuting, StateTerminatedError},
 	StateReview:            {StateCompleted, StateSuccess, StateTerminatedError, StateExecuting, StateInProgress},
+	StateCompleted:         {"CONSOLIDATED"},
 }
 
 // StateMachine manages state transitions for entities

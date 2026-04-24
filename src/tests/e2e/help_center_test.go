@@ -19,6 +19,12 @@ func TestHelpCenter_E2E(t *testing.T) {
 	// Wait for dashboard to load
 	require.NoError(t, page.Locator("text=Dashboard").First().WaitFor())
 
+	// Dismiss "A new version is available!" if present
+	updateToast := page.Locator("text=A new version is available!")
+	if count, _ := updateToast.Count(); count > 0 {
+		updateToast.Locator("button").Click()
+	}
+
 	// Verify AI Help Chat button is visible
 	chatButton := page.Locator("[key='ai_help_chat_button']")
 	require.NoError(t, chatButton.WaitFor(playwright.LocatorWaitForOptions{

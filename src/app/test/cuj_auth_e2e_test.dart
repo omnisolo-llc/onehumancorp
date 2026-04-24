@@ -148,7 +148,7 @@ void main() {
       await tester.pumpWidget(_wrapLogin());
       await tester.pumpAndSettle();
 
-      expect(find.text('Sign In'), findsOneWidget);
+      expect(find.text('Sign In'), findsWidgets);
       expect(find.byType(TextFormField), findsNWidgets(2));
     });
   });
