@@ -64,7 +64,7 @@ sequenceDiagram
   - Customers see a native-feeling booking widget on the business website.
 
 ## Implementation Prompt
-"Integrate Cal.com API into OHC. Create a Go service in `srcs/server/services/scheduling/` that utilizes the Cal.com Platform API to create booking links and sync availability. Implement a webhook handler that listens for `booking.created` events and publishes an internal Teammate Mesh event so the Operations and Finance AI agents can process the appointment and send deposit invoices. Ensure compatibility with both Cloud and Standalone modes."
+"Integrate Cal.com API into OHC. Create a Go service in `src/server/services/scheduling/` that utilizes the Cal.com Platform API to create booking links and sync availability. Implement a webhook handler that listens for `booking.created` events and publishes an internal Teammate Mesh event so the Operations and Finance AI agents can process the appointment and send deposit invoices. Ensure compatibility with both Cloud and Standalone modes."
 
 ## Priority
 P0

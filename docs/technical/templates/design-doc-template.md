@@ -29,7 +29,7 @@ A technical summary of the problem space, the proposed solution, and the overall
 [Describe columns, indexes, and relationships]
 #### Protobuf Definitions
 ```protobuf
-[Include relevant snippets from srcs/proto/]
+[Include relevant snippets from src/proto/]
 ```
 
 ### 3.3 API Design

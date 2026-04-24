@@ -63,7 +63,7 @@ sequenceDiagram
   - OHC Dashboard shows a "Fulfill Order" screen. The owner taps a button, and the label is generated and sent to their mobile printer.
 
 ## Implementation Prompt
-"Integrate the Shippo API to handle shipping logistics. Create a Go service in `srcs/server/services/logistics/` that supports address validation, rate fetching, and label creation. Connect this service to the Operations AI Agent so that when an order is marked 'Ready', the agent automatically purchases the label and emails the tracking number to the customer."
+"Integrate the Shippo API to handle shipping logistics. Create a Go service in `src/server/services/logistics/` that supports address validation, rate fetching, and label creation. Connect this service to the Operations AI Agent so that when an order is marked 'Ready', the agent automatically purchases the label and emails the tracking number to the customer."
 
 ## Priority
 P1

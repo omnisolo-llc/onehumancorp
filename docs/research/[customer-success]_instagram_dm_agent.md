@@ -38,7 +38,7 @@ graph TD;
 ## Design Doc
 
 ### High-Level Architecture
-1.  **Webhook Ingestion:** A new or expanded webhook handler in `srcs/server/` to receive Instagram Graph API messages.
+1.  **Webhook Ingestion:** A new or expanded webhook handler in `src/server/` to receive Instagram Graph API messages.
 2.  **Agent Invocation:** The webhook triggers the Customer Success Agent, passing the conversation history and user query.
 3.  **Knowledge Retrieval:** The agent uses RAG to query the business's pgvector knowledge base (pricing, vegan options, delivery radii).
 4.  **Response Generation & Delivery:** The agent formats a conversational response, suggesting links to the OHC storefront if appropriate, and sends it back via the Instagram API.

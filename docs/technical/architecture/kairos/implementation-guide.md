@@ -40,7 +40,7 @@ sequenceDiagram
 ```
 
 ## 2. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication via Centrifuge node integration in `srcs/server/orchestration/centrifuge_hub.go` and transport components like `LocalTeammateMesh` in `srcs/server/orchestration/mesh.go`.
+Realtime communication via Centrifuge node integration in `src/server/orchestration/centrifuge_hub.go` and transport components like `LocalTeammateMesh` in `src/server/orchestration/mesh.go`.
 
 - **Cloud-Native Mode:** Uses Redis Pub/Sub (`rueidis`) to manage highly concurrent distributed queues.
 - **Standalone Mode:** Degrades gracefully to an in-memory channel broadcast to ensure low-latency IPC.
@@ -49,7 +49,7 @@ Realtime communication via Centrifuge node integration in `srcs/server/orchestra
 Background workers consolidate `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `autodream_memories` table, granting the swarm exact semantic search capabilities.
 
 ## 4. Phase 4: Sub-Agent Orchestration Queue
-Background worker system (`srcs/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
+Background worker system (`src/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
 
 ## 5. Visual Excellence Mandate
 All associated UI components must represent the OHC "Premium Feel".
