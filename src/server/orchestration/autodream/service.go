@@ -68,8 +68,8 @@ func (s *Consolidator) ProcessCompletedTasks(ctx context.Context) error {
 		if err != nil {
 			slog.Warn("Consolidator: failed to process memory", "task_id", t.ID, "error", err)
 		} else {
-            // Depending on architecture, we might want to mark it as processed, but for simplicity of the prompt,
-            // we will just vectorize it. If this runs often it might duplicate, but we just implement what is required.
+			// Depending on architecture, we might want to mark it as processed, but for simplicity of the prompt,
+			// we will just vectorize it. If this runs often it might duplicate, but we just implement what is required.
 			slog.Info("Consolidator: memory consolidated successfully", "task_id", t.ID)
 		}
 	}

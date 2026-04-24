@@ -3,10 +3,11 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
-	"github.com/google/uuid"
 	"fmt"
 	"log/slog"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/redis/rueidis"

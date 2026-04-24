@@ -42,24 +42,24 @@ func NewDistributedLock() (DistributedLock, error) {
 }
 
 type lockEntry struct {
-    expiry time.Time
-    token string
+	expiry time.Time
+	token  string
 }
 
 // memoryLock provides a local in-memory lock implementation.
 type memoryLock struct {
 	mu    sync.Mutex
 	locks map[string]lockEntry
-    token string
+	token string
 }
 
 func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-    if m.token == "" {
-        m.token = uuid.New().String()
-    }
+	if m.token == "" {
+		m.token = uuid.New().String()
+	}
 
 	// Check if already locked and not expired
 	if entry, ok := m.locks[key]; ok {
@@ -77,18 +77,18 @@ func (m *memoryLock) Unlock(ctx context.Context, key string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-    if entry, ok := m.locks[key]; ok {
-        if entry.token == m.token {
-            delete(m.locks, key)
-        }
-    }
+	if entry, ok := m.locks[key]; ok {
+		if entry.token == m.token {
+			delete(m.locks, key)
+		}
+	}
 	return nil
 }
 
 // cloudLock provides a Redis backed lock using rueidis.
 type cloudLock struct {
 	client rueidis.Client
-    token  string
+	token  string
 }
 
 func (c *cloudLock) Lock(ctx context.Context, key string, ttl time.Duration) (bool, error) {

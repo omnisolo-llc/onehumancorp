@@ -2,9 +2,9 @@ package db
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"embed"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io/fs"
@@ -26,12 +26,12 @@ var (
 
 func splitSQLStatements(sqlText string) []string {
 	var (
-		statements      []string
-		current         strings.Builder
-		inSingleQuote   bool
-		inDoubleQuote   bool
-		inLineComment   bool
-		inBlockComment  bool
+		statements     []string
+		current        strings.Builder
+		inSingleQuote  bool
+		inDoubleQuote  bool
+		inLineComment  bool
+		inBlockComment bool
 	)
 
 	for i := 0; i < len(sqlText); i++ {

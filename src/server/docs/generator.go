@@ -61,7 +61,7 @@ func (b *PremiumDocBuilder) AddDiagram(mermaidCode string) {
 func (b *PremiumDocBuilder) Render() string {
 	var sb strings.Builder
 
-		sb.WriteString("<style>\n")
+	sb.WriteString("<style>\n")
 	sb.WriteString(".ohc-premium-card {\n")
 	sb.WriteString("    backdrop-filter: blur(20px) saturate(200%);\n")
 	sb.WriteString("    background: rgba(255, 255, 255, 0.03);\n")

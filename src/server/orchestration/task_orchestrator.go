@@ -6,13 +6,14 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/google/uuid"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/onehumancorp/mono/src/server/checkpointer"
 	"github.com/onehumancorp/mono/src/server/db"
@@ -23,7 +24,6 @@ import (
 )
 
 // TaskOrchestrator abstracts the state machine and dependency tracking for the Teammate Mesh
-
 
 type SharedTaskDecompositionDB struct {
 	ID              string          `json:"id" db:"id"`
@@ -40,7 +40,6 @@ type SharedTaskDecompositionDB struct {
 	CreatedAt       time.Time       `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time       `json:"updated_at" db:"updated_at"`
 }
-
 
 type TaskOrchestrator interface {
 	ReceiveHighLevelRequest(ctx context.Context, orgID, title string) (string, error)
@@ -661,8 +660,6 @@ func (to *DefaultTaskOrchestrator) ReceiveHighLevelRequest(ctx context.Context, 
 	return taskID, nil
 }
 
-
-
 func (to *DefaultTaskOrchestrator) ClaimDecompositionTask(ctx context.Context, agentID string) (*SharedTaskDecompositionDB, error) {
 	if to.db.IsSQLite() {
 		return to.claimDecompositionTaskSQLite(ctx, agentID)
@@ -690,8 +687,8 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskSQLite(ctx context.Cont
 
 	var task SharedTaskDecompositionDB
 	var payloadStr, dependenciesStr string
-    var createdAtStr, updatedAtStr string
-    var lockedUntil *time.Time
+	var createdAtStr, updatedAtStr string
+	var lockedUntil *time.Time
 	if err := row.Scan(
 		&task.ID, &task.OrganizationID, &task.Title, &task.Description,
 		&task.Status, &task.AssignedAgentID, &task.Priority, &payloadStr, &task.ParentPlanID,
@@ -703,16 +700,16 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskSQLite(ctx context.Cont
 			if checkErr == nil && exists {
 				telemetry.RecordPostgresLockContention(ctx, "claim_decomposition_task_sqlite")
 			}
-				return nil, nil
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to query pending task: %w", err)
 	}
 
 	task.Payload = []byte(payloadStr)
 	task.Dependencies = []byte(dependenciesStr)
-    task.LockedUntil = lockedUntil
-    task.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAtStr)
-    task.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAtStr)
+	task.LockedUntil = lockedUntil
+	task.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAtStr)
+	task.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAtStr)
 
 	if _, err = tx.Exec(ctx, "UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2", agentID, task.ID); err != nil {
 		return nil, fmt.Errorf("failed to update task status: %w", err)
@@ -755,7 +752,7 @@ func (to *DefaultTaskOrchestrator) claimDecompositionTaskPostgres(ctx context.Co
 			if checkErr == nil && exists {
 				telemetry.RecordPostgresLockContention(ctx, "claim_decomposition_task_postgres")
 			}
-				return nil, nil
+			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to query pending task: %w", err)
 	}

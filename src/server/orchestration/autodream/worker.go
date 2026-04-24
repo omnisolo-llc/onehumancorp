@@ -140,8 +140,6 @@ func (w *AutoDreamWorker) embedAndStore(ctx context.Context, orgID, agentID, mem
 		return fmt.Errorf("failed to generate embedding: %w", err)
 	}
 
-
-
 	query := `INSERT INTO agent_memory_embeddings (organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5)`
 
 	if w.db.IsSQLite() {

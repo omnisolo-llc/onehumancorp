@@ -39,7 +39,6 @@ func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDre
 		llmClient = builtin.NewOllamaClient("")
 	}
 
-
 	var mClient orchestration.MinimaxClient
 	if minimaxKey := os.Getenv("MINIMAX_API_KEY"); minimaxKey != "" {
 		mClient = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), pool, redisClient)
@@ -317,7 +316,7 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 				return err
 			}
 
-		telemetry.RecordAutoDreamMemoryCompressed(ctx, s.AgentID)
+			telemetry.RecordAutoDreamMemoryCompressed(ctx, s.AgentID)
 
 			// Delete from agent_session_data
 			var delQuery string

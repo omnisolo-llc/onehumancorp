@@ -128,7 +128,7 @@ type Store struct {
 	roles   map[string]*Role
 	byName  map[tenantKey]*User
 	byEmail map[tenantKey]*User
-	byOIDC  map[tenantKey]*User     // OIDC subject → User
+	byOIDC  map[tenantKey]*User  // OIDC subject → User
 	revoked map[string]time.Time // JTI → expiry (for token revocation)
 	secret  []byte               // HS256 signing secret
 	repo    UserRepository
@@ -257,15 +257,15 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 
 		now := time.Now().UTC()
 		u := &User{
-			ID:           generateID(),
-			Username:     username,
-			Email:        email,
-			PasswordHash: string(hash),
-			Roles:        append([]string(nil), roles...),
-			Active:       true,
+			ID:             generateID(),
+			Username:       username,
+			Email:          email,
+			PasswordHash:   string(hash),
+			Roles:          append([]string(nil), roles...),
+			Active:         true,
 			OrganizationID: orgID,
-			CreatedAt:    now,
-			UpdatedAt:    now,
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		}
 		if err := s.repo.CreateUser(context.Background(), u, orgID); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
@@ -290,15 +290,15 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:           generateID(),
-		Username:     username,
-		Email:        email,
-		PasswordHash: string(hash),
-		Roles:        append([]string(nil), roles...),
-		Active:       true,
+		ID:             generateID(),
+		Username:       username,
+		Email:          email,
+		PasswordHash:   string(hash),
+		Roles:          append([]string(nil), roles...),
+		Active:         true,
 		OrganizationID: orgID,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	s.users[u.ID] = u
 	s.byName[tenantKey{orgID, username}] = u
@@ -618,15 +618,15 @@ func (s *Store) GetOrCreateOIDCUser(sub, email, preferredUsername string, orgID 
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:          generateID(),
-		Username:    uname,
-		Email:       email,
-		Roles:       []string{RoleViewer},
-		Active:      true,
+		ID:             generateID(),
+		Username:       uname,
+		Email:          email,
+		Roles:          []string{RoleViewer},
+		Active:         true,
 		OrganizationID: orgID,
-		OIDCSubject: sub,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		OIDCSubject:    sub,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	s.users[u.ID] = u
 	if uname != "" {
@@ -668,15 +668,15 @@ func (s *Store) getOrCreateOIDCUserInRepository(sub, email, preferredUsername st
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:          generateID(),
-		Username:    uname,
-		Email:       email,
-		Roles:       []string{RoleViewer},
-		Active:      true,
+		ID:             generateID(),
+		Username:       uname,
+		Email:          email,
+		Roles:          []string{RoleViewer},
+		Active:         true,
 		OrganizationID: orgID,
-		OIDCSubject: sub,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		OIDCSubject:    sub,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 
 	for attempts := 0; attempts < 2; attempts++ {

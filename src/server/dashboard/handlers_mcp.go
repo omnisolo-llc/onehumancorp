@@ -18,8 +18,8 @@ import (
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/telemetry"
 	"github.com/onehumancorp/mono/src/server/tools/blobinspector"
-	"github.com/onehumancorp/mono/src/server/tools/localstatefulproxy"
 	"github.com/onehumancorp/mono/src/server/tools/edgeoffloadmcp"
+	"github.com/onehumancorp/mono/src/server/tools/localstatefulproxy"
 	"go.opentelemetry.io/otel"
 )
 
@@ -374,7 +374,6 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 
 		// use passed ctx
 
-
 		method, _ := params["method"].(string)
 		if method == "tools/list" {
 			tools := edgeRouter.ListTools()
@@ -453,7 +452,6 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 			"result":           res,
 			"HybridEscalation": true,
 		}, nil
-
 
 	// ── Local Stateful Execution Proxy tool ───────────────────────────────────
 	case "local_stateful_proxy":
@@ -851,10 +849,10 @@ func (s *Server) handleMcpRagSync(w http.ResponseWriter, r *http.Request) {
 			redactedContext := telemetry.RedactPII(rec.Context)
 
 			memory := orchestration.EpisodicMemory{
-				MemoryID:        rec.ID,
-				Context:         redactedContext,
-				SourcePlugin:    "hybrid-sync",
-				CreatedAt:       time.Now().UTC(),
+				MemoryID:     rec.ID,
+				Context:      redactedContext,
+				SourcePlugin: "hybrid-sync",
+				CreatedAt:    time.Now().UTC(),
 			}
 			if err := s.hub.SIPDB().StoreEpisodicMemory(ctx, memory); err == nil {
 				syncedCount++

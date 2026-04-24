@@ -6,9 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	pb "github.com/onehumancorp/mono/src/proto"
 	"log/slog"
 	"net/http"
+
+	pb "github.com/onehumancorp/mono/src/proto"
 
 	"sync"
 	"time"

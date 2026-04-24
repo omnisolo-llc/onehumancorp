@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 	"sync"
+	"time"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/google/uuid"
@@ -22,8 +23,8 @@ import (
 
 // AutoDreamWorker handles memory consolidation, pruning, and conflict resolution.
 type AutoDreamWorker struct {
-	pool db.Provider
-	mesh MeshTransport
+	pool      db.Provider
+	mesh      MeshTransport
 	llmClient MinimaxClient
 }
 
@@ -1039,7 +1040,6 @@ func (w *AutoDreamWorker) ingestMissionArtifacts(ctx context.Context) {
 		}
 	}
 }
-
 
 // SetLLMClient configures the LLM client to use for embeddings.
 func (w *AutoDreamWorker) SetLLMClient(client MinimaxClient) {

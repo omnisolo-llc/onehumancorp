@@ -34,7 +34,7 @@ type Node interface {
 // CentrifugeNode wraps a centrifuge.Node with OHC-specific configuration and
 // channel-permission rules that map directly to the Hub's meeting/chat model.
 type CentrifugeNode struct {
-	node Node
+	node          Node
 	meshTransport MeshTransport
 }
 
@@ -118,7 +118,6 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 
 	return &CentrifugeNode{node: node}, nil
 }
-
 
 // SetMeshTransport configures the transport layer to use for cross-node mesh broadcasts
 // and starts listening to the transport to forward events to websocket clients.
@@ -346,25 +345,25 @@ func (cn *CentrifugeNode) Close() error {
 }
 
 func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, action, status string, payload map[string]interface{}) {
-    msg := map[string]interface{}{
-        "agent_id": agentID,
-        "action":   action,
-        "status":   status,
-        "payload":  payload,
-    }
+	msg := map[string]interface{}{
+		"agent_id": agentID,
+		"action":   action,
+		"status":   status,
+		"payload":  payload,
+	}
 
-    data, err := json.Marshal(msg)
-    if err != nil {
-        slog.Error("[centrifuge] marshal teammate mesh event", "error", err)
-        return
-    }
+	data, err := json.Marshal(msg)
+	if err != nil {
+		slog.Error("[centrifuge] marshal teammate mesh event", "error", err)
+		return
+	}
 
-    // Also dispatch to internal transport fallback memory if active
-    if cn.meshTransport != nil {
-        payloadBytes, _ := json.Marshal(payload)
-        _ = cn.meshTransport.PublishTeammateMeshEvent(context.Background(), "teammate_mesh", agentID, action, status, payloadBytes)
-    }
+	// Also dispatch to internal transport fallback memory if active
+	if cn.meshTransport != nil {
+		payloadBytes, _ := json.Marshal(payload)
+		_ = cn.meshTransport.PublishTeammateMeshEvent(context.Background(), "teammate_mesh", agentID, action, status, payloadBytes)
+	}
 
-    // Publish to the Centrifuge redis pubsub backend
-    _, _ = cn.node.Publish("orchestration.tasks", data)
+	// Publish to the Centrifuge redis pubsub backend
+	_, _ = cn.node.Publish("orchestration.tasks", data)
 }

@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/sync"
 	"github.com/onehumancorp/mono/src/server/orchestration/hybrid_sync"
+	"github.com/onehumancorp/mono/src/server/sync"
 	"github.com/redis/rueidis"
 
 	"google.golang.org/grpc"

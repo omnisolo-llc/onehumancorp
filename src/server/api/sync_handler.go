@@ -101,10 +101,10 @@ func writeJSON(w http.ResponseWriter, data interface{}) {
 
 // HandleVectorSync handles vector sync logic
 func HandleVectorSync(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
-        http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-        return
-    }
-    w.WriteHeader(http.StatusOK)
-    w.Write([]byte("vectors synced successfully"))
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("vectors synced successfully"))
 }

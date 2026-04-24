@@ -1,6 +1,5 @@
 package workers
 
-
 import (
 	"context"
 	"log/slog"
@@ -11,8 +10,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
-
-
 
 type CompetitorAuditWorker struct {
 	pool    db.Provider
@@ -29,9 +26,8 @@ func NewCompetitorAuditWorker(pool db.Provider) *CompetitorAuditWorker {
 	}
 }
 
-
 func (w *CompetitorAuditWorker) Start(ctx context.Context) {
-    w.runAudit(ctx) // Run immediately on start
+	w.runAudit(ctx) // Run immediately on start
 
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
@@ -50,7 +46,7 @@ func (w *CompetitorAuditWorker) runAudit(ctx context.Context) {
 	slog.Info("CompetitorAuditWorker: running audit")
 
 	if w.counter != nil {
-	    w.counter.Add(ctx, 1)
+		w.counter.Add(ctx, 1)
 	}
 
 	competitors := []string{"Claude Code", "OpenClaw", "Replit Agent"}
