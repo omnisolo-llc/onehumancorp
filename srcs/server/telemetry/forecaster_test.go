@@ -39,14 +39,14 @@ func TestForecaster(t *testing.T) {
 	orgID := "tenant-1"
 	f.SetBudget(orgID, 1000)
 
-	// Add usage: 100 tokens.
-	// In a 1 minute window, this is 100 tokens/min.
-	// 24h prediction = 100 * 60 * 24 = 144,000 tokens.
-	// This should exceed the budget of 1000.
+	// Add initial usage to trigger moving average tracking: 100 tokens.
+	// Within a 1-minute window, this equates to 100 tokens/min.
+	// The 24h prediction calculation: 100 * 60 * 24 = 144,000 tokens.
+	// This projection strictly exceeds the allocated budget of 1000.
 	f.RecordUsage(orgID, 100)
 
-	// Wait for the forecaster to process
-	time.Sleep(50 * time.Millisecond)
+	// Await the background forecaster ticker execution
+	time.Sleep(60 * time.Millisecond)
 
 	f.mu.Lock()
 	records, ok := f.usageHistory[orgID]

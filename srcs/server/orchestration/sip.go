@@ -64,21 +64,25 @@ var (
 	standaloneThrottleOnce sync.Once
 )
 
-// getThrottle conditionally acquires the semaphore if in standalone mode
+// getThrottle conditionally acquires the semaphore if in standalone mode.
+// This throttling mechanism restricts concurrent SQLite writes, mitigating
+// "database is locked" contention errors during burst swarm agent operations.
 func acquireThrottle(ctx context.Context) error {
+	isStandalone := os.Getenv("OHC_STANDALONE") == "true"
+
 	standaloneThrottleOnce.Do(func() {
-		if os.Getenv("OHC_STANDALONE") == "true" {
-			// already initialized to 1
-		} else {
-			// If not standalone, make channel large enough or just ignore
+		if isStandalone {
+			// Channel is already initialized to a capacity of 1 for SQLite concurrency throttling
 		}
 	})
 
-	if os.Getenv("OHC_STANDALONE") == "true" {
+	if isStandalone {
 		select {
 		case standaloneThrottle <- struct{}{}:
+			// Lock acquired without contention
 			return nil
 		default:
+			// Contention detected, log metric and wait
 			telemetry.RecordSQLiteThrottledRequest(ctx, "acquireThrottle")
 			select {
 			case standaloneThrottle <- struct{}{}:
@@ -95,7 +99,9 @@ func releaseThrottle() {
 	if os.Getenv("OHC_STANDALONE") == "true" {
 		select {
 		case <-standaloneThrottle:
+			// Successfully released the lock
 		default:
+			// Channel was already empty; this shouldn't normally happen
 		}
 	}
 }

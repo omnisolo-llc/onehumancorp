@@ -2297,6 +2297,34 @@
           "mode": "multi"
         }
       }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 100
+      },
+      "id": 47,
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
+          "expr": "ohc_token_burn_rate_forecast",
+          "legendFormat": "{{organization_id}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Token Forecasting",
+      "description": "Token forecasting metrics for Cloud-Native Token Budgeting",
+      "type": "timeseries"
     }
   ],
   "refresh": "",

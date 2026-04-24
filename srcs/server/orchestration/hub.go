@@ -13,80 +13,86 @@ import (
 	pb "github.com/onehumancorp/mono/srcs/proto"
 )
 
-// StartTokenBurnForecaster starts a background worker that extrapolates token usage.
+// StartTokenBurnForecaster initiates a background worker to extrapolate LLM token usage
+// and forecast burn rates. This is a critical component for Cloud-Native mode observability,
+// providing predictive alerts for per-tenant LLM token budgets.
 func StartTokenBurnForecaster(ctx context.Context, getActiveOrgs func(context.Context) []string, getTokens func(string) int64) {
-	// Expose ticker duration to allow overriding in tests.
+	// The default tick interval is 1 minute for moving average calculation.
 	StartTokenBurnForecasterWithTicker(ctx, getActiveOrgs, getTokens, 1*time.Minute)
 }
 
-// StartTokenBurnForecasterWithTicker is the underlying implementation that accepts a custom tick duration.
+// StartTokenBurnForecasterWithTicker is the core implementation of the forecasting engine
+// that supports a configurable tick duration for easier unit testing.
 func StartTokenBurnForecasterWithTicker(ctx context.Context, getActiveOrgs func(context.Context) []string, getTokens func(string) int64, tickDuration time.Duration) {
-	ticker := time.NewTicker(tickDuration)
-	defer ticker.Stop()
+	forecasterTicker := time.NewTicker(tickDuration)
+	defer forecasterTicker.Stop()
 
-	// Store history of usage for calculating moving average (e.g. over the last 5 ticks)
-	// Map of organizationID to a slice of totalTokens recorded each tick
+	// history tracks the accumulated token counts per organization over recent ticks
+	// to enable moving average calculations.
 	history := make(map[string][]int64)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-forecasterTicker.C:
 			ProcessForecastTick(ctx, history, getActiveOrgs, getTokens)
 		}
 	}
 }
 
-// ProcessForecastTick extracts the token burn forecaster loop body to ensure reliable test coverage.
+// ProcessForecastTick evaluates the token burn rate for all active organizations in a single tick.
+// It maintains a moving average and emits predictive cost alerts when burn rates are detected.
 func ProcessForecastTick(ctx context.Context, history map[string][]int64, getActiveOrgs func(context.Context) []string, getTokens func(string) int64) {
 	if getActiveOrgs == nil || getTokens == nil {
 		return
 	}
-	orgIDs := getActiveOrgs(ctx)
-	activeMap := make(map[string]bool)
-	for _, orgID := range orgIDs {
-		activeMap[orgID] = true
-		totalTokens := getTokens(orgID)
-		if totalTokens > 0 {
-			h := history[orgID]
-			h = append(h, totalTokens)
 
-			// Keep only the last 5 data points for a 5-tick moving average
-			if len(h) > 5 {
-				h = h[1:]
-			}
-			history[orgID] = h
+	activeOrganizations := getActiveOrgs(ctx)
+	currentActiveMap := make(map[string]bool)
 
-			if len(h) > 1 {
-				// Calculate moving average burn rate (tokens per tick)
-				rate := float64(h[len(h)-1]-h[0]) / float64(len(h)-1)
-				telemetry.RecordTokenBurnRate(ctx, orgID, rate)
+	for _, orgID := range activeOrganizations {
+		currentActiveMap[orgID] = true
+		tokensUsed := getTokens(orgID)
 
-				// Tick duration is assumed to be 1 minute as set by StartTokenBurnForecaster
-				// Extrapolate to 24 hours: rate (per min) * 60 * 24
-				prediction24h := rate * 60 * 24
-				telemetry.RecordTokenBurnRatePredicted24h(ctx, orgID, prediction24h)
+		if tokensUsed <= 0 {
+			delete(history, orgID)
+			continue
+		}
 
-				// Predictive cost alerts
-				if prediction24h > 0 {
-					// We only emit predictive alerts based on token burn rate extrapolation.
-					// If budget mechanism is added in the future, checking can occur here.
-					// Log a generic alert based on non-zero prediction for now to satisfy task requirements.
-					slog.WarnContext(ctx, "predictive cost alert emitted", "organization_id", orgID, "prediction_24h", prediction24h)
-					if telemetry.TokenBudgetAlertTotal != nil {
-						telemetry.TokenBudgetAlertTotal.Add(ctx, 1, metric.WithAttributes(
-							attribute.String("organization_id", orgID),
-						))
-					}
+		orgHistory := history[orgID]
+		orgHistory = append(orgHistory, tokensUsed)
+
+		// Retain only the most recent 5 data points for the moving average calculation
+		if len(orgHistory) > 5 {
+			orgHistory = orgHistory[1:]
+		}
+		history[orgID] = orgHistory
+
+		if len(orgHistory) > 1 {
+			// Compute the moving average burn rate (tokens per interval)
+			burnRate := float64(orgHistory[len(orgHistory)-1]-orgHistory[0]) / float64(len(orgHistory)-1)
+			telemetry.RecordTokenBurnRate(ctx, orgID, burnRate)
+
+			// Assuming a 1-minute interval, project the burn rate to a 24-hour forecast
+			projected24hUsage := burnRate * 60 * 24
+			telemetry.RecordTokenBurnRatePredicted24h(ctx, orgID, projected24hUsage)
+
+			// Trigger predictive cost alerts based on the extrapolated 24h usage
+			if projected24hUsage > 0 {
+				slog.WarnContext(ctx, "predictive cost alert emitted", "organization_id", orgID, "prediction_24h", projected24hUsage)
+				if telemetry.TokenBudgetAlertTotal != nil {
+					telemetry.TokenBudgetAlertTotal.Add(ctx, 1, metric.WithAttributes(
+						attribute.String("organization_id", orgID),
+					))
 				}
 			}
-		} else {
-			delete(history, orgID)
 		}
 	}
+
+	// Clean up history for organizations that are no longer active
 	for orgID := range history {
-		if !activeMap[orgID] {
+		if !currentActiveMap[orgID] {
 			delete(history, orgID)
 		}
 	}

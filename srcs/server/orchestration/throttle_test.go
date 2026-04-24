@@ -37,8 +37,8 @@ func TestSIPDB_DelegateMission_ConcurrencyThrottle(t *testing.T) {
 	concurrency := 10
 	errChan := make(chan error, concurrency)
 
-	// We simulate many concurrent DelegateMission calls.
-	// The semaphore ensures they don't hit "database is locked" errors and crash.
+	// Simulate burst concurrency via DelegateMission calls.
+	// The SQLite concurrency throttle strictly prevents "database is locked" contention errors.
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func(i int) {
