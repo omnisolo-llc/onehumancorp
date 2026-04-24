@@ -15,6 +15,7 @@ class HealthNotifier extends AsyncNotifier<HealthStatus> {
   @override
   Future<HealthStatus> build() async {
     _startPolling();
+    ref.onDispose(() => _timer?.cancel());
     return _checkHealth();
   }
 
