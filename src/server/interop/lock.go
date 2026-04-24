@@ -52,11 +52,12 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 
 	safeKey := strings.ReplaceAll(key, "/", "_")
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
+	infoPath := filepath.Join(path, "info")
 
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	err := os.Mkdir(path, 0700)
 	if err != nil {
 		if os.IsExist(err) {
-			content, err := os.ReadFile(path)
+			content, err := os.ReadFile(infoPath)
 			if err == nil {
 				parts := strings.SplitN(string(content), ",", 2)
 				if len(parts) == 2 {
@@ -68,8 +69,8 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 						// We just delete it and retry.
 						// Wait, if it has expired, anyone could be trying to delete it.
 						// To be safer, we can try to delete it. If it fails, that's fine.
-						os.Remove(path)
-						file, err = os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+						os.RemoveAll(path)
+						err = os.Mkdir(path, 0700)
 						if err != nil {
 							return false, nil
 						}
@@ -83,11 +84,10 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 	}
 
 acquired:
-	defer file.Close()
 	expiry := time.Now().Add(ttl).Format(time.RFC3339Nano)
-	_, err = file.WriteString(expiry + "," + m.token)
+	err = os.WriteFile(infoPath, []byte(expiry+","+m.token), 0600)
 	if err != nil {
-		os.Remove(path)
+		os.RemoveAll(path)
 		return false, err
 	}
 
@@ -98,19 +98,20 @@ func (m *memoryLock) Unlock(ctx context.Context, key string) error {
 	safeKey := strings.ReplaceAll(key, "/", "_")
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
-	// TOCTOU mitigation: rename the file to a temp file, read it, if valid, delete it. If invalid, rename it back.
+	// TOCTOU mitigation: rename the directory to a temp directory, read it, if valid, delete it. If invalid, rename it back.
 	// Wait, rename on Windows/Linux is atomic.
 	tempPath := path + "_" + uuid.New().String() + ".tmp"
 	err := os.Rename(path, tempPath)
 	if err != nil {
-		return nil // File might already be gone
+		return nil // Directory might already be gone
 	}
 
-	content, err := os.ReadFile(tempPath)
+	infoPath := filepath.Join(tempPath, "info")
+	content, err := os.ReadFile(infoPath)
 	if err == nil {
 		parts := strings.SplitN(string(content), ",", 2)
 		if len(parts) == 2 && parts[1] == m.token {
-			return os.Remove(tempPath)
+			return os.RemoveAll(tempPath)
 		}
 	}
 
