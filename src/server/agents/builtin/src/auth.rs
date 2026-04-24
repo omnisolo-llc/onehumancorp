@@ -115,3 +115,9 @@ mod tests {
         assert!(validate_spiffe_id("spiffe://onehumancorp.io/%2F").is_err());
     }
 }
+
+#[test]
+fn test_validate_spiffe_valid_regional() {
+    assert!(validate_spiffe_id("spiffe://us-east.ohc.global/agent/foo").is_ok());
+    assert!(validate_spiffe_id("spiffe://ap-south-1.ohc.global/agent/foo").is_ok());
+}

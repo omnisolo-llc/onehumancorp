@@ -92,3 +92,14 @@ func TestValidateSPIFFEID_ErrorScheme(t *testing.T) {
 		t.Fatalf("expected error from parsing")
 	}
 }
+
+func TestValidateSPIFFEID_ValidRegionalDomain(t *testing.T) {
+	err := ValidateSPIFFEID("spiffe://us-east.ohc.global/agent/agent-1")
+	if err != nil {
+		t.Fatalf("expected valid SPIFFE ID, got error: %v", err)
+	}
+	err = ValidateSPIFFEID("spiffe://ap-south-1.ohc.global/agent/agent-1")
+	if err != nil {
+		t.Fatalf("expected valid SPIFFE ID, got error: %v", err)
+	}
+}

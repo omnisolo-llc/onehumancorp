@@ -86,11 +86,9 @@ func ValidateSPIFFEID(id string) error {
 		"ohc.local":       true,
 		"ohc.os":          true,
 		"ohc.global":      true,
-		"eu.ohc.global":   true,
-		"eu-west.ohc.global": true,
 	}
 
-	if !validDomains[u.Host] {
+	if !validDomains[u.Host] && !strings.HasSuffix(u.Host, ".ohc.global") {
 		return fmt.Errorf("untrusted SPIFFE domain: %s", u.Host)
 	}
 
