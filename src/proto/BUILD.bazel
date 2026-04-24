@@ -77,13 +77,6 @@ proto_library(
     visibility = ["//visibility:public"],
 )
 
-go_proto_library_with_tags(
-    name = "agent_go_proto",
-    protos = ["agent.proto", "common.proto"],
-    importpath = "github.com/onehumancorp/mono/src/proto/ohc/agent",
-    visibility = ["//visibility:public"],
-)
-
 proto_dart_library(
     name = "agent_dart_proto",
     protos = ":agent_proto",
@@ -105,7 +98,12 @@ proto_dart_library(
     visibility = ["//visibility:public"],
 )
 
-
+go_proto_library_with_tags(
+    name = "agent_service_go_proto",
+    importpath = "github.com/onehumancorp/mono/src/proto/agentservice",
+    protos = ["agent_service.proto"],
+    visibility = ["//visibility:public"],
+)
 
 # ── Skills ─────────────────────────────────────────────────────────────────────
 
