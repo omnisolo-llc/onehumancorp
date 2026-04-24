@@ -507,6 +507,34 @@ class ApiService {
   // ── Helpers ──────────────────────────────────────────────────────────────
 
 
+  Future<http.Response> getBillingPlans() async {
+    return await _client.get(
+      Uri.parse('$baseUrl/api/billing/plans'),
+      headers: _headers,
+    );
+  }
+
+  Future<String> createCheckoutSession(String planId) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/billing/checkout'),
+      headers: _headers,
+      body: jsonEncode({'planId': planId}),
+    );
+    _checkStatus(response);
+    final data = jsonDecode(response.body);
+    return data['url'] as String;
+  }
+
+  Future<String> createCustomerPortalSession() async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/billing/portal'),
+      headers: _headers,
+    );
+    _checkStatus(response);
+    final data = jsonDecode(response.body);
+    return data['url'] as String;
+  }
+
   Future<void> trackDownload(String os, String version) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/growth/downloads'),

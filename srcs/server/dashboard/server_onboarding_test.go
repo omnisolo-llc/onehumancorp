@@ -13,7 +13,9 @@ func TestHandleHybridHealthCheck_Standalone(t *testing.T) {
 	defer os.Unsetenv("OHC_STANDALONE")
 	os.Setenv("DATABASE_URL", "")
 
-	server := &Server{}
+	app, serverMock, _ := newTestServer(t)
+	defer serverMock.Close()
+	server := app
 	req, _ := http.NewRequest("GET", "/api/health/hybrid", nil)
 	rr := httptest.NewRecorder()
 
@@ -55,7 +57,9 @@ func TestHandleHybridHealthCheck_Cloud(t *testing.T) {
 	os.Setenv("REDIS_URL", "redis://localhost:6379")
 	defer os.Unsetenv("REDIS_URL")
 
-	server := &Server{}
+	app, serverMock, _ := newTestServer(t)
+	defer serverMock.Close()
+	server := app
 	req, _ := http.NewRequest("GET", "/api/health/hybrid", nil)
 	rr := httptest.NewRecorder()
 

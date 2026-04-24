@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "stripe",
+    srcs = ["stripe_mock.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/billing/stripe",
+    visibility = ["//visibility:public"],
+)

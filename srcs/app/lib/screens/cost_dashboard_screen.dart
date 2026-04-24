@@ -2,6 +2,8 @@ import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -28,6 +30,24 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
     setState(() {
       _dashboardFuture = ref.read(apiServiceProvider)!.getDashboard();
     });
+  }
+
+  Future<void> _manageBilling() async {
+    final api = ref.read(apiServiceProvider);
+    if (api == null) return;
+    try {
+      final urlString = await api.createCustomerPortalSession();
+      final uri = Uri.parse(urlString);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open billing portal.')));
+      }
+    } catch (e) {
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 
   @override
@@ -81,6 +101,41 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
           return ListView(
             padding: const EdgeInsets.all(24),
             children: [
+              // My Plan Section
+              Text(
+                'My Plan',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Free Plan', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      const Text('100 AI actions used this month.', style: TextStyle(color: Colors.grey)),
+                      const Text('50MB / 500MB storage used.', style: TextStyle(color: Colors.grey)),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          FilledButton(
+                            onPressed: () => context.push('/pricing'),
+                            child: const Text('Upgrade Plan'),
+                          ),
+                          const SizedBox(width: 16),
+                          OutlinedButton(
+                            onPressed: _manageBilling,
+                            child: const Text('Manage Billing'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
               // Summary Cards
               Row(
                 children: [
