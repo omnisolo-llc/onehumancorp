@@ -1,3 +1,4 @@
+import 'package:ohc_app/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -48,8 +49,14 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
-                                await Future.delayed(const Duration(seconds: 2));
-                                if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                try {
+                                  final api = ref.read(apiServiceProvider);
+                                  if (api != null) {
+                                    await api.triggerHybridSync();
+                                  }
+                                } finally {
+                                  if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                }
                               },
                               child: const Text('Apply Fix'),
                             ),
