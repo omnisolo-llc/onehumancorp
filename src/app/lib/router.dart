@@ -33,6 +33,7 @@ import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
+import 'package:ohc_app/widgets/health_banner.dart';
 import 'package:flutter/material.dart';
 
 /// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
@@ -223,7 +224,16 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Column(
+        children: [
+          const HealthBanner(),
+          Expanded(
+            child: Row(children: [_Sidebar(), Expanded(child: child)]),
+          ),
+        ],
+      ),
+    );
   }
 }
 
