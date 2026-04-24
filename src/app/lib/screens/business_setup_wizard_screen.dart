@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'dart:ui';
+import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
@@ -98,12 +98,11 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   void updateAdminPassword(String val) => state = state.copyWith(adminPassword: val);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
-    final user = ref.read(authStateProvider).valueOrNull;
-    final baseUrl = ref.read(backendUrlProvider);
+    final api = ref.read(apiServiceProvider);
 
     state = state.copyWith(isLoading: true, errorMessage: null);
 
-    if (user != null && baseUrl.isNotEmpty) {
+    if (api != null) {
       final body = {
         'extras': {
           'company_name': state.companyName,
@@ -117,21 +116,9 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
       };
 
       try {
-        final res = await http.post(
-          Uri.parse('$baseUrl/api/wizard/configure'),
-          headers: {
-            'Authorization': 'Bearer ${user.token}',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(body),
-        );
-
-        if (res.statusCode != 200) {
-          state = state.copyWith(isLoading: false, errorMessage: 'Configuration failed: ${res.statusCode}');
-          return;
-        }
+        await api.configureWizard(body);
       } catch (e) {
-        state = state.copyWith(isLoading: false, errorMessage: 'Network error: $e');
+        state = state.copyWith(isLoading: false, errorMessage: 'Configuration failed: $e');
         return;
       }
     }
