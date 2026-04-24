@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS task_dependencies (
     task_id UUID NOT NULL,
     depends_on_task_id UUID NOT NULL,
@@ -8,3 +10,5 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 
 CREATE INDEX idx_task_deps_task ON task_dependencies(task_id);
 CREATE INDEX idx_task_deps_depends ON task_dependencies(depends_on_task_id);
+
+-- +goose StatementEnd

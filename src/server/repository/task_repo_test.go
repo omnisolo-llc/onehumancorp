@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"io"
 	"context"
 	"database/sql"
 	"database/sql/driver"
@@ -247,7 +248,28 @@ func (s *mockStmt) Query(args []driver.Value) (driver.Rows, error)  {
     if len(args) > 0 && args[0] == "rows_error_org" {
         return &mockRows{failNext: true}, nil
     }
+    if len(args) > 0 && args[0] == "status" {
+        // This is called by UpdateTaskStatus which only scans 1 column
+        return &mockRowsUpdate{fail: true}, nil
+    }
     return &mockRows{}, nil
+}
+
+type mockRowsUpdate struct {
+    fail bool
+    count int
+}
+func (r *mockRowsUpdate) Columns() []string { return []string{"id"} }
+func (r *mockRowsUpdate) Close() error { return nil }
+func (r *mockRowsUpdate) Next(dest []driver.Value) error {
+    if r.count > 0 { return driver.ErrBadConn }
+    r.count++
+    if r.fail {
+        // Return EOF to simulate no rows, which makes QueryRow().Scan() return sql.ErrNoRows
+        return io.EOF
+    }
+    dest[0] = "updated_id"
+    return nil
 }
 
 type mockResult struct{}
@@ -313,7 +335,7 @@ func TestTaskRepository_MockErrors(t *testing.T) {
 
     // Test RowsAffected() error
 	err = repo.UpdateTaskStatus(ctx, "id", "status")
-	if err == nil || err.Error() != "mock rows affected error" {
-		t.Errorf("expected mock rows affected error, got %v", err)
+	if err == nil || err.Error() != "task not found or not owned by organization" {
+		t.Errorf("expected task not found error, got %v", err)
 	}
 }

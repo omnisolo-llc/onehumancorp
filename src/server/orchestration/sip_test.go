@@ -156,8 +156,8 @@ func TestSIPDB_PollMissions_ScanError(t *testing.T) {
 	}
 }
 
-func TestSIPDB_CompleteMission_RowsAffectedError(t *testing.T) {
-	// We can't easily trigger RowsAffected() error with go-sqlite3 normally,
+func TestSIPDB_CompleteMission_NotFound(t *testing.T) {
+	// We can't easily trigger RowsAffected() error, but let's test the 'mission not found' path.
 	// but let's at least test the "mission not found" path.
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
