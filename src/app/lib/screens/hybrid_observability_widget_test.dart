@@ -7,6 +7,7 @@ import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/models/agent.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 void main() {
   testWidgets('HybridObservabilityWidget renders data from dashboardProvider', (WidgetTester tester) async {
@@ -71,7 +72,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(ShimmerLoading), findsOneWidget);
   });
 
   testWidgets('HybridObservabilityWidget renders error state', (WidgetTester tester) async {

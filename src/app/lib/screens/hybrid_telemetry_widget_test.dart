@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/models/dashboard.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 void main() {
   testWidgets('HybridTelemetryWidget renders data when loaded', (WidgetTester tester) async {
@@ -52,7 +53,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(ShimmerLoading), findsOneWidget);
   });
 
   testWidgets('HybridTelemetryWidget renders error state', (WidgetTester tester) async {

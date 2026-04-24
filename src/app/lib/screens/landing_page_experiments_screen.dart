@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 class LandingPageExperimentsScreen extends ConsumerStatefulWidget {
   const LandingPageExperimentsScreen({super.key});
@@ -158,11 +160,7 @@ class _LandingPageExperimentsScreenState extends ConsumerState<LandingPageExperi
         future: _experimentsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            );
+            return const Center(child: ShimmerLoading());
           }
 
           if (snapshot.hasError) {

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 class MockApiService extends Mock implements ApiService {}
 
@@ -40,7 +41,7 @@ void main() {
     );
 
     await tester.pumpWidget(buildTestWidget());
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(ShimmerLoading), findsOneWidget);
 
     await tester.pumpAndSettle();
 

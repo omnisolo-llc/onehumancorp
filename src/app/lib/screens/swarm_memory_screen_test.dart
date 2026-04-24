@@ -7,6 +7,7 @@ import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
 import 'package:powersync/powersync.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 class MockCentrifugeService extends Mock implements CentrifugeService {}
 class MockPowerSyncService extends Mock implements PowerSyncService {}
@@ -85,7 +86,7 @@ void main() {
         ),
       );
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(ShimmerLoading), findsOneWidget);
     });
 
     testWidgets('shows empty state for durable memory', (tester) async {

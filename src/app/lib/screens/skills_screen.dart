@@ -4,6 +4,8 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 final _skillsProvider = FutureProvider<List<Skill>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -26,12 +28,7 @@ class SkillsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Skills & Plugins')),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+        loading: () => const Center(child: ShimmerLoading()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data: (skills) {
           final filtered =

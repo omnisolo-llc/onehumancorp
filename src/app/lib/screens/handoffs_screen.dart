@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:ohc_app/models/handoff.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/slide_to_approve.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 /// Screen for managing agent-to-human escalation handoffs.
 class HandoffsScreen extends ConsumerStatefulWidget {
@@ -97,11 +99,7 @@ class _HandoffsScreenState extends ConsumerState<HandoffsScreen> {
         future: _handoffsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            );
+            return const Center(child: ShimmerLoading());
           }
 
           if (snapshot.hasError) {

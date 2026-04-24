@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:ohc_app/widgets/agent_status_indicator.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 class HybridObservabilityWidget extends ConsumerWidget {
   const HybridObservabilityWidget({super.key});
@@ -12,7 +14,7 @@ class HybridObservabilityWidget extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
 
     return snapshot.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: ShimmerLoading()),
       error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
       data: (data) {
         final activeAgents = data.agents.where((a) => a.isRunning).length;

@@ -34,7 +34,7 @@ import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/skills_screen.dart';
-import 'package:ohc_app/screens/wizard_screen.dart';
+import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
@@ -898,11 +898,11 @@ void main() {
     });
   });
 
-  // ── SetupWizardScreen ─────────────────────────────────────────────────────
+  // ── BusinessSetupWizardScreen ─────────────────────────────────────────────────────
 
-  group('SetupWizardScreen – button clicks', () {
+  group('BusinessSetupWizardScreen – button clicks', () {
     testWidgets('Next button advances wizard steps', (tester) async {
-      await tester.pumpWidget(_wrap(const SetupWizardScreen()));
+      await tester.pumpWidget(_wrap(const BusinessSetupWizardScreen()));
       await tester.pumpAndSettle();
 
       // First step should be visible
@@ -920,7 +920,7 @@ void main() {
     });
 
     testWidgets('Back button is disabled on first step', (tester) async {
-      await tester.pumpWidget(_wrap(const SetupWizardScreen()));
+      await tester.pumpWidget(_wrap(const BusinessSetupWizardScreen()));
       await tester.pumpAndSettle();
 
       final backBtn = find.text('Back');
@@ -934,7 +934,7 @@ void main() {
     });
 
     testWidgets('final step Finish button is tappable', (tester) async {
-      await tester.pumpWidget(_wrap(const SetupWizardScreen()));
+      await tester.pumpWidget(_wrap(const BusinessSetupWizardScreen()));
       await tester.pumpAndSettle();
 
       // Click through all steps via Next buttons

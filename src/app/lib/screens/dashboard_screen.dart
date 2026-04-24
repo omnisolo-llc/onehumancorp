@@ -15,6 +15,8 @@ import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -38,12 +40,7 @@ class DashboardScreen extends ConsumerWidget {
       ),
             floatingActionButton: const AiHelpChatWidget(),
 body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+        loading: () => const Center(child: ShimmerLoading()),
         error:
             (e, _) => Center(
               child: SelectableText(

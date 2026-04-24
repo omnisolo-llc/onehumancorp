@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'dart:ui';
 import 'package:intl/intl.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 class ReferralsDashboardScreen extends ConsumerStatefulWidget {
   const ReferralsDashboardScreen({super.key});
@@ -46,7 +48,7 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
         future: _referralsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: ShimmerLoading());
           }
           if (snapshot.hasError) {
             return Center(

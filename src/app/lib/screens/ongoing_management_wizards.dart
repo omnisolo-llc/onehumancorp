@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
 import '../widgets/glass_card.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 // --- Fix This Wizard ---
 class FixThisWizardScreen extends ConsumerStatefulWidget {
@@ -45,7 +47,7 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                       const Text('Suggested fix: Restart the agent process and clear local cache to reconnect.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
                       const SizedBox(height: 24),
                       _isApplying
-                          ? const Center(child: CircularProgressIndicator())
+                          ? const Center(child: ShimmerLoading())
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
@@ -105,7 +107,7 @@ class UpgradeWizardScreen extends ConsumerWidget {
                         final max = quota['max'] ?? 0;
                         return Text('Your current daily quota is $max tasks.', style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.bold));
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () => const Center(child: ShimmerLoading()),
                       error: (err, stack) => Text('Error loading quota: $err', style: const TextStyle(color: Colors.red)),
                     ),
                     const SizedBox(height: 24),
@@ -180,7 +182,7 @@ class BillingWizardScreen extends ConsumerWidget {
                         final max = quota['max'] ?? 0;
                         return Text('Your current plan includes $max AI tasks per day. You have used $used today.', style: const TextStyle(fontFamily: 'Inter', fontSize: 14));
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () => const Center(child: ShimmerLoading()),
                       error: (err, stack) => Text('Error loading quota: $err', style: const TextStyle(color: Colors.red)),
                     ),
                     const SizedBox(height: 24),

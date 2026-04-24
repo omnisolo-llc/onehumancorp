@@ -2,6 +2,8 @@ import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 /// Screen for managing external integrations and MCP tools.
 class IntegrationsScreen extends ConsumerStatefulWidget {
@@ -88,11 +90,7 @@ class _IntegrationsScreenState extends ConsumerState<IntegrationsScreen> {
             future: _mcpToolsFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(
-                  child: CircularProgressIndicator(
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                );
+                return const Center(child: ShimmerLoading());
               }
 
               if (snapshot.hasError) {

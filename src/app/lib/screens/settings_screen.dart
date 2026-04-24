@@ -7,6 +7,8 @@ import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -21,12 +23,7 @@ class SettingsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: clientSettingsAsync.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+        loading: () => const Center(child: ShimmerLoading()),
         error:
             (err, _) => Center(
               child: Text(

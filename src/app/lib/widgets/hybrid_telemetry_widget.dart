@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 class HybridTelemetryWidget extends ConsumerWidget {
   const HybridTelemetryWidget({super.key});
@@ -11,7 +13,7 @@ class HybridTelemetryWidget extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
 
     return snapshot.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: ShimmerLoading()),
       error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
       data: (data) {
         return ClipRRect(

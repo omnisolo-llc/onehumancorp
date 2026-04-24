@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 final _agentsProvider = FutureProvider<List<Agent>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -35,12 +37,7 @@ class AgentsScreen extends ConsumerWidget {
         ],
       ),
       body: snapshot.when(
-        loading:
-            () => Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
+        loading: () => const Center(child: ShimmerLoading()),
         error:
             (e, _) => Center(
               child: Text(

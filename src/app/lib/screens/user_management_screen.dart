@@ -6,6 +6,8 @@ import 'dart:ui';
 import 'package:ohc_app/models/user.dart';
 import 'package:ohc_app/services/api_service.dart';
 import '../widgets/growth_referral_widget.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 /// Screen for administering users and managing RBAC.
 class UserManagementScreen extends ConsumerStatefulWidget {
@@ -102,11 +104,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
         future: _usersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            );
+            return const Center(child: ShimmerLoading());
           }
 
           if (snapshot.hasError) {

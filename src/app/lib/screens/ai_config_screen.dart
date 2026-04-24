@@ -4,6 +4,8 @@ import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/ai_provider.dart';
 import 'package:ohc_app/services/api_service.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 final _providersProvider = FutureProvider<List<AiProvider>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -32,7 +34,7 @@ class AiConfigScreen extends ConsumerWidget {
         ],
       ),
       body: snapshot.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: ShimmerLoading()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data:
             (providers) =>

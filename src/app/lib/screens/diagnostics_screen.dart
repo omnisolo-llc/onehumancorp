@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:ohc_app/widgets/shimmer_loading.dart';
+
 
 final _diagnosticsDashboardProvider = FutureProvider.autoDispose<DashboardSnapshot?>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -91,7 +93,7 @@ class DiagnosticsScreen extends ConsumerWidget {
                           ],
                         );
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
+                      loading: () => const Center(child: ShimmerLoading()),
                       error: (err, stack) => SelectableText('Error loading health: $err', style: const TextStyle(color: Colors.redAccent)),
                     ),
                     const SizedBox(height: 32),
