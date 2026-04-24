@@ -35,6 +35,11 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.go('/website_builder'),
+        icon: const Icon(Icons.web),
+        label: const Text('Build My Website'),
+      ),
       body: snapshot.when(
         loading:
             () => Center(

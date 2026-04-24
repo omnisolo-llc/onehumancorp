@@ -1,31 +1,25 @@
-1. **Create Database Migration:**
-   - Run `cat << 'MIG' > srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql ... MIG` to add `locked_until` (via ALTER TABLE if missing) and the indices on `status` and `locked_until` on `shared_tasks`.
-   - Add a verification step: `ls -la srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql` to verify creation.
-   - Run a Python script or `sed` to update `embedsrcs` in `srcs/server/db/BUILD.bazel` to include this new migration.
-   - Add a verification step: `cat srcs/server/db/BUILD.bazel | grep 20260427020001_shared_tasks_indexes.sql` to confirm.
+1. **Create the Website Builder Wizard Screen (`srcs/app/lib/screens/website_builder_wizard_screen.dart`)**:
+   - Create a state notifier using Riverpod to track: `step`, `template`, `brandColor`, `productName`, `productPrice`, `productDescription`, `domainOption`, `domainName`, `isAdvancedMode`, etc.
+   - Implement the 5 steps matching the design doc:
+     - Step 0: Template Gallery (Grid of templates, selectable, CTA turns green).
+     - Step 1: Brand Colors & Logo (Color palettes, generate logo).
+     - Step 2: Add Product (Name, price, description with AI generation).
+     - Step 3: Connect Domain (Free subdomain vs custom domain).
+     - Step 4: Go Live (Preview and Publish button, clipboard copy).
+   - Add the progressive disclosure toggle for "Advanced Mode".
+   - Use `GlassCard`, `Outfit`, and `Inter` fonts for premium aesthetic.
+   - Make it mobile-responsive (375px) via single-column layout.
 
-2. **Update TaskManager Enhancements:**
-   - Use a Python script to inject `tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")` in `CompleteTaskWithResult` inside `srcs/server/orchestration/tasks.go`.
-   - Use a Python script to replace the status update in `ReviewTask` to utilize `tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Oh, wait, `ReviewTask` is ALREADY doing `err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Let me verify `tasks.go` again to see what exactly needs modification.
+2. **Add Backend Endpoint (`srcs/server/dashboard/handlers_wizard.go` and `server.go`)**:
+   - Add a `/api/wizard/website` endpoint to `server.go`.
+   - Implement `handleWizardWebsite` in `handlers_wizard.go` to parse the `wizardWebsiteRequest` and return a successful JSON response (`{"status": "published"}`).
 
-3. **Modify API Endpoints:**
-   - Use a Python script to add a `requireSPIFFE` HTTP middleware in `srcs/server/orchestration/service.go`. The middleware will check the `Authorization` header for a bearer token, and validate it starts with `spiffe://` using `interop.ValidateSPIFFEID`.
-   - Wrap the HTTP handlers defined in `RegisterTaskHTTPHandlers` with this new middleware.
-   - Add a verification step: `cat srcs/server/orchestration/service.go | grep -C 5 requireSPIFFE` to verify changes.
+3. **Update Navigation (`srcs/app/lib/router.dart`, `business_setup_wizard_screen.dart`, `dashboard_screen.dart`)**:
+   - Add `GoRoute(path: '/website_builder', builder: ...)` in `router.dart`.
+   - Change `GoRouter.of(context).go('/dashboard')` to `GoRouter.of(context).go('/website_builder')` in `business_setup_wizard_screen.dart`.
+   - Add a prominent "Build My Website" button on `DashboardScreen`.
 
-4. **Update Tests:**
-   - Run `cat << 'TEST' > srcs/server/orchestration/patch_tasks_test.py ... TEST` and execute it to inject `TestSharedTask_StateMachine` in `srcs/server/orchestration/tasks_test.go` covering all transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-   - Add a verification step: `grep -nri "TestSharedTask_StateMachine" srcs/server/orchestration/tasks_test.go` to confirm injection.
+4. **Write E2E Test (`srcs/app/e2e/website_builder.spec.ts`)**:
+   - Write a complete Playwright test that starts at the home page, logs in, clicks "Build My Website" (or completes the business setup), and goes through all 5 steps of the Website Builder Wizard, clicking buttons, filling fields, and asserting the final result matches the design ("published" state).
 
-5. **Expose Prometheus Metrics:**
-   - Write a python script to ensure `telemetry.RecordSwarmTaskTransition` is properly used inside `tasks.go` right after state transitions, and ensure we use `metric.WithAttributes` properly in `telemetry.go`.
-   - Add verification step: `cat srcs/server/orchestration/tasks.go | grep RecordSwarmTaskTransition` to confirm changes.
-
-6. **Test the changes:**
-   - Run `bazelisk test //srcs/server/orchestration/... //srcs/server/db/...` to verify the logic.
-
-7. **Pre-commit steps:**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-
-8. **Completion:**
-   - Output a final unstructured message containing issue_id.
+5. **Pre-commit**: Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
