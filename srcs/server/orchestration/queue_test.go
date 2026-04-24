@@ -30,7 +30,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 	}
 
 	// Poll
-	task, err := q.Acquire(ctx, "test_queue")
+	task, err := q.Poll(ctx, "test_queue")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -51,7 +51,7 @@ func TestSQLiteTaskQueue(t *testing.T) {
 	}
 
 	// Poll again (should be empty)
-	task2, err := q.Acquire(ctx, "test_queue")
+	task2, err := q.Poll(ctx, "test_queue")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -77,7 +77,7 @@ func TestSQLiteTaskQueue_Delayed(t *testing.T) {
 	}
 
 	// Poll immediately (should be empty)
-	task, err := q.Acquire(ctx, "test_queue")
+	task, err := q.Poll(ctx, "test_queue")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -87,7 +87,7 @@ func TestSQLiteTaskQueue_Delayed(t *testing.T) {
 
 	// Wait and poll again
 	time.Sleep(150 * time.Millisecond)
-	task, err = q.Acquire(ctx, "test_queue")
+	task, err = q.Poll(ctx, "test_queue")
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
