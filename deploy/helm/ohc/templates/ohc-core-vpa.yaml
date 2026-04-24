@@ -15,7 +15,7 @@ spec:
   resourcePolicy:
     containerPolicies:
       - containerName: ohc-core
-        controlledResources: ["memory"]
+        controlledResources: ["cpu", "memory"]
         minAllowed:
           cpu: {{ .Values.ohcCore.resources.requests.cpu }}
           memory: {{ .Values.ohcCore.resources.requests.memory }}

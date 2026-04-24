@@ -25,7 +25,6 @@ import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
 import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
-import 'package:ohc_app/screens/website_builder_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
@@ -184,10 +183,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/wizards/billing',
             builder: (context, state) => const BillingWizardScreen(),
-          ),
-          GoRoute(
-            path: '/wizards/website_builder',
-            builder: (context, state) => const WebsiteBuilderWizardScreen(),
           ),
           GoRoute(
             path: '/agents/:id/tune',
