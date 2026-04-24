@@ -11,11 +11,11 @@ spec:
     kind:       Deployment
     name:       {{ .Release.Name }}-chatwoot
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "Off"
   resourcePolicy:
     containerPolicies:
       - containerName: chatwoot
-        controlledResources: ["cpu", "memory"]
+        controlledResources: ["memory"]
         minAllowed:
           cpu: {{ .Values.chatwoot.resources.requests.cpu }}
           memory: {{ .Values.chatwoot.resources.requests.memory }}
