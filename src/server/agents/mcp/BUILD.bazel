@@ -21,13 +21,13 @@ js_binary(
 go_library(
     name = "mcp",
     srcs = [
-        "secret_provider.go",
-        "local_secret_provider.go",
-        "cloud_secret_provider.go",
         "blob_provider.go",
-        "crdt_provider.go",
         "client.go",
+        "cloud_secret_provider.go",
+        "crdt_provider.go",
         "hybrid_sync.go",
+        "local_secret_provider.go",
+        "secret_provider.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/agents/mcp",
     visibility = ["//visibility:public"],
@@ -37,12 +37,12 @@ go_library(
 go_test(
     name = "mcp_test",
     srcs = [
-        "secret_provider_test.go",
         "blob_provider_test.go",
         "client_test.go",
         "crdt_provider_test.go",
         "hybrid_mcp_bridge_test.go",
         "hybrid_sync_test.go",
+        "secret_provider_test.go",
     ],
     embed = [":mcp"],
     deps = ["//src/server/telemetry"],

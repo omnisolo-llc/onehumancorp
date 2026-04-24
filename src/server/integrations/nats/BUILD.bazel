@@ -1,0 +1,30 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "nats",
+    srcs = ["nats.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/integrations/nats",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:hub_go_proto",
+        "//src/server/msgbus",
+        "//src/server/telemetry",
+        "@com_github_nats_io_nats_go//:nats_go",
+        "@com_github_nats_io_nats_server_v2//server",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "nats_test",
+    srcs = ["nats_test.go"],
+    embed = [":nats"],
+    deps = [
+        "//src/server/msgbus",
+        "//src/server/telemetry",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

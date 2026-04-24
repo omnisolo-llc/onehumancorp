@@ -3,11 +3,11 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "harness",
     srcs = [
-        "harness.go",
         "bwrap_linux.go",
-        "sandbox_darwin.go",
         "fallback.go",
+        "harness.go",
         "interceptor.go",
+        "sandbox_darwin.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/agents/harness",
     visibility = ["//visibility:public"],
@@ -21,11 +21,11 @@ go_library(
 go_test(
     name = "harness_test",
     srcs = [
-        "harness_test.go",
         "bwrap_test.go",
-        "sandbox_test.go",
         "fallback_test.go",
+        "harness_test.go",
         "interceptor_test.go",
+        "sandbox_test.go",
     ],
     embed = [":harness"],
 )
