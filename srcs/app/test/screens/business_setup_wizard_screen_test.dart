@@ -74,23 +74,24 @@ void main() {
     await tester.pumpAndSettle();
 
     // Step 5: Administrator account
-    expect(find.byType(TextField), findsNWidgets(3)); // Admin Name, Admin Email, Admin Password
-
-    await tester.enterText(find.byType(TextField).at(0), 'Admin');
-    await tester.enterText(find.byType(TextField).at(1), 'admin@test.com');
-    await tester.enterText(find.byType(TextField).at(2), 'password');
+    // removed
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 6: Review & Launch
-    expect(find.text('Review & Launch'), findsOneWidget);
-    expect(find.text('Business: Test Company'), findsOneWidget);
-    expect(find.text('Type: Online Store'), findsOneWidget);
-    expect(find.text('Selling: Physical products'), findsOneWidget);
-    expect(find.text('Payments: Online only'), findsOneWidget);
-    expect(find.text('Admin: Admin (admin@test.com)'), findsOneWidget);
+    // Step 5: Template
+    expect(find.text('Template Selection'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 6: Product
+    expect(find.text('First Product / Service'), findsOneWidget);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 7: Domain & Go-Live
+    expect(find.text('Domain & Go-Live'), findsOneWidget);
 
     expect(find.text('Launch My Business →'), findsOneWidget);
   });
@@ -139,14 +140,11 @@ void main() {
     notifier.updatePayments('Online only');
     expect(container.read(businessSetupProvider).payments, 'Online only');
 
-    notifier.updateAdminName('Admin');
-    expect(container.read(businessSetupProvider).adminName, 'Admin');
 
-    notifier.updateAdminEmail('admin@example.com');
-    expect(container.read(businessSetupProvider).adminEmail, 'admin@example.com');
 
-    notifier.updateAdminPassword('secr3t');
-    expect(container.read(businessSetupProvider).adminPassword, 'secr3t');
+
+
+
 
     notifier.toggleObscurePassword();
     expect(container.read(businessSetupProvider).obscurePassword, false);

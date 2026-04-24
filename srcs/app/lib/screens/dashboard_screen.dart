@@ -14,6 +14,10 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/share_business_widget.dart';
+import 'package:ohc_app/widgets/email_marketing_widget.dart';
+import 'package:ohc_app/widgets/social_media_widget.dart';
+import 'package:ohc_app/widgets/milestones_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -212,6 +216,14 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
+        const SizedBox(height: 16),
+        const ShareBusinessWidget(),
+        const SizedBox(height: 16),
+        const EmailMarketingWidget(),
+        const SizedBox(height: 16),
+        const SocialMediaWidget(),
+        const SizedBox(height: 16),
+        const SuccessMilestonesWidget(),
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),

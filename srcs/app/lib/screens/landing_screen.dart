@@ -1,4 +1,5 @@
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:ohc_app/widgets/viral_storefront_footer_widget.dart';
 
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -68,6 +69,8 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                         onPressed: () => context.go('/login'),
                         child: const Text('Or continue to Cloud Dashboard'),
                       ),
+                      const SizedBox(height: 32),
+                      const ViralStorefrontFooterWidget(),
                     ],
                   ),
                 ),

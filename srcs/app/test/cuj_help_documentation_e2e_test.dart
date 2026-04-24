@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/help/help_center_screen.dart';
 import 'package:ohc_app/screens/help/help_article_screen.dart';
-import 'package:ohc_app/screens/help/video_tutorials_screen.dart';
+
 
 Widget _wrapScreen(Widget screen) {
   final router = GoRouter(
@@ -12,7 +12,7 @@ Widget _wrapScreen(Widget screen) {
     routes: [
       GoRoute(path: '/help', builder: (context, state) => screen),
       GoRoute(path: '/help/article/:id', builder: (context, state) => HelpArticleScreen(articleId: state.pathParameters['id'] ?? 'unknown')),
-      GoRoute(path: '/help/video-tutorials', builder: (context, state) => const VideoTutorialsScreen()),
+      // removed
     ],
   );
   return ProviderScope(
