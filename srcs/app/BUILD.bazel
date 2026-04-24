@@ -181,6 +181,18 @@ flutter_test(
     workspace_pubspec = "//:pubspec.yaml",
 )
 
+sh_test(
+    name = "app_web_e2e_test",
+    srcs = ["test/flutter_web_e2e_test.sh"],
+    data = [
+        ":app",
+        "//srcs/server:ohc",
+        "//srcs/app/e2e:playwright_config",
+        "//:node_modules",
+    ],
+    tags = ["manual", "local"],
+)
+
 # ── CUJ e2e Flutter test targets ─────────────────────────────────────────────
 # Each target covers one critical user journey (CUJ) to enable fine-grained
 # caching: a code change in one feature only invalidates the related target.

@@ -224,7 +224,7 @@ fi
 E2E_TMP_DIR="${TMPDIR}/e2e"
 mkdir -p "${E2E_TMP_DIR}"
 cp "${CONFIG}" "${E2E_TMP_DIR}/playwright.config.ts"
-cp "${SPEC_FILE}" "${E2E_TMP_DIR}/web.spec.ts"
+cp -rL "${RUNFILES}/${WORKSPACE}/srcs/app/e2e/"* "${E2E_TMP_DIR}/"
 CONFIG="${E2E_TMP_DIR}/playwright.config.ts"
 export NODE_PATH="${NODE_MODULES_DIR}${NODE_PATH:+:${NODE_PATH}}"
 
