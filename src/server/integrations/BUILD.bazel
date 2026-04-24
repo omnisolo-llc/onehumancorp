@@ -10,6 +10,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/integrations",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server/integrations/atlas",
         "//src/server/integrations/libsql",
         "//src/server/integrations/litefs",
         "//src/server/integrations/etcd",

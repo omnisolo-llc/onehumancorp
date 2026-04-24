@@ -74,15 +74,22 @@ func TestQueueManagerLoop(t *testing.T) {
 		t.Fatalf("Expected 2 jobs to be processed, got %d", len(processedJobs))
 	}
 
-	// Verify status in DB
+	// Wait a bit before verifying status
+	time.Sleep(100 * time.Millisecond)
+
+	// Wait a bit before verifying status
+	time.Sleep(250 * time.Millisecond)
+
+	// Verify status in DB using context.Background() since ctx is canceled
+	verifyCtx := context.Background()
 	var status1, status2 string
 	// Retry loop for SQLITE_BUSY
-	for i := 0; i < 5; i++ {
-		err = provider.QueryRow(context.TODO(), "SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&status1)
+	for i := 0; i < 20; i++ {
+		err = provider.QueryRow(verifyCtx, "SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&status1)
 		if err == nil || (err != nil && !strings.Contains(err.Error(), "database is locked")) {
 			break
 		}
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)
@@ -91,12 +98,12 @@ func TestQueueManagerLoop(t *testing.T) {
 		t.Fatalf("Expected job-1 status COMPLETED, got %s", status1)
 	}
 
-	for i := 0; i < 5; i++ {
-		err = provider.QueryRow(context.TODO(), "SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&status2)
+	for i := 0; i < 20; i++ {
+		err = provider.QueryRow(verifyCtx, "SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&status2)
 		if err == nil || (err != nil && !strings.Contains(err.Error(), "database is locked")) {
 			break
 		}
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 	if err != nil {
 		t.Fatalf("Failed to query status: %v", err)

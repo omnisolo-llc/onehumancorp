@@ -12,11 +12,34 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+import (
+	pb "github.com/onehumancorp/mono/src/proto"
+	"google.golang.org/protobuf/proto"
+)
+
+
+// ValidateMeshPayload ensures the payload complies with OHC-SIP specification.
+func ValidateMeshPayload(msg *pb.MeshMessage) error {
+	if msg == nil {
+		return fmt.Errorf("invalid mesh payload: message is nil")
+	}
+	if msg.AgentId == "" {
+		return fmt.Errorf("missing agent_id in mesh payload")
+	}
+	if msg.Action == "" {
+		return fmt.Errorf("missing action in mesh payload")
+	}
+	if msg.Status == "" {
+		return fmt.Errorf("missing status in mesh payload")
+	}
+	return nil
+}
+
 // TeammateMesh provides the interface for agents to publish and subscribe
 // to real-time communication messages across the swarm.
 type TeammateMesh interface {
-	Publish(ctx context.Context, channel string, data []byte) error
-	Subscribe(ctx context.Context, channel string) (<-chan []byte, error)
+	Publish(ctx context.Context, channel string, msg *pb.MeshMessage) error
+	Subscribe(ctx context.Context, channel string) (<-chan *pb.MeshMessage, error)
 }
 
 // NewTeammateMesh returns a new TeammateMesh depending on the execution mode.
@@ -39,7 +62,7 @@ func NewTeammateMesh() (TeammateMesh, error) {
 
 	slog.Info("TeammateMesh initialized in Standalone mode (In-Memory)")
 	return &memoryMesh{
-		channels: make(map[string][]chan []byte),
+		channels: make(map[string][]chan *pb.MeshMessage),
 	}, nil
 }
 
@@ -50,17 +73,21 @@ func NewTeammateMeshWithClient(c rueidis.Client) TeammateMesh {
 		return &cloudMesh{client: c}
 	}
 	return &memoryMesh{
-		channels: make(map[string][]chan []byte),
+		channels: make(map[string][]chan *pb.MeshMessage),
 	}
 }
 
 // memoryMesh provides a local in-memory pub/sub.
 type memoryMesh struct {
 	mu       sync.RWMutex
-	channels map[string][]chan []byte
+	channels map[string][]chan *pb.MeshMessage
 }
 
-func (m *memoryMesh) Publish(ctx context.Context, channel string, data []byte) error {
+func (m *memoryMesh) Publish(ctx context.Context, channel string, msg *pb.MeshMessage) error {
+	if err := ValidateMeshPayload(msg); err != nil {
+		return err
+	}
+
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
@@ -76,7 +103,7 @@ func (m *memoryMesh) Publish(ctx context.Context, channel string, data []byte) e
 	for _, sub := range subs {
 		// Non-blocking send
 		select {
-		case sub <- data:
+		case sub <- msg:
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
@@ -86,8 +113,8 @@ func (m *memoryMesh) Publish(ctx context.Context, channel string, data []byte) e
 	return nil
 }
 
-func (m *memoryMesh) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
-	out := make(chan []byte, 100)
+func (m *memoryMesh) Subscribe(ctx context.Context, channel string) (<-chan *pb.MeshMessage, error) {
+	out := make(chan *pb.MeshMessage, 100)
 
 	m.mu.Lock()
 	m.channels[channel] = append(m.channels[channel], out)
@@ -108,7 +135,7 @@ func (m *memoryMesh) Subscribe(ctx context.Context, channel string) (<-chan []by
 	}()
 
 	// Intercept the output channel to track metrics before sending to consumer
-	meteredOut := make(chan []byte, 100)
+	meteredOut := make(chan *pb.MeshMessage, 100)
 	go func() {
 		defer close(meteredOut)
 		for {
@@ -139,7 +166,16 @@ type cloudMesh struct {
 	client rueidis.Client
 }
 
-func (c *cloudMesh) Publish(ctx context.Context, channel string, data []byte) error {
+func (c *cloudMesh) Publish(ctx context.Context, channel string, msg *pb.MeshMessage) error {
+	if err := ValidateMeshPayload(msg); err != nil {
+		return err
+	}
+
+	data, err := proto.Marshal(msg)
+	if err != nil {
+		return fmt.Errorf("failed to marshal protobuf message: %w", err)
+	}
+
 	if meshMessagesPublished != nil {
 		meshMessagesPublished.Add(ctx, 1, metric.WithAttributes(attribute.String("channel", channel), attribute.String("mode", "cloud")))
 	}
@@ -147,18 +183,25 @@ func (c *cloudMesh) Publish(ctx context.Context, channel string, data []byte) er
 	return c.client.Do(ctx, cmd).Error()
 }
 
-func (c *cloudMesh) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
-	out := make(chan []byte, 100)
+func (c *cloudMesh) Subscribe(ctx context.Context, channel string) (<-chan *pb.MeshMessage, error) {
+	out := make(chan *pb.MeshMessage, 100)
 
 	go func() {
 		defer close(out)
 
-		err := c.client.Receive(ctx, c.client.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
+		err := c.client.Receive(ctx, c.client.B().Subscribe().Channel(channel).Build(), func(redisMsg rueidis.PubSubMessage) {
 			if meshMessagesReceived != nil {
 				meshMessagesReceived.Add(context.Background(), 1, metric.WithAttributes(attribute.String("channel", channel), attribute.String("mode", "cloud")))
 			}
+
+			var msg pb.MeshMessage
+			if err := proto.Unmarshal([]byte(redisMsg.Message), &msg); err != nil {
+				slog.Error("failed to unmarshal protobuf message from Redis", "error", err, "channel", channel)
+				return
+			}
+
 			select {
-			case out <- []byte(msg.Message):
+			case out <- &msg:
 			case <-ctx.Done():
 			}
 		})

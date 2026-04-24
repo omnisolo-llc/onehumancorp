@@ -5,7 +5,6 @@ import (
 )
 
 func TestNotificationsNotificationCenterIsAccessibleFromTheTopNavigation(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -17,7 +16,6 @@ func TestNotificationsNotificationCenterIsAccessibleFromTheTopNavigation(t *test
 }
 
 func TestNotificationsMarkAllNotificationsAsRead(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -29,7 +27,6 @@ func TestNotificationsMarkAllNotificationsAsRead(t *testing.T) {
 }
 
 func TestSettingsSettingsPageIsAccessibleFromTheNavigation(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -41,7 +38,6 @@ func TestSettingsSettingsPageIsAccessibleFromTheNavigation(t *testing.T) {
 }
 
 func TestSettingsSystemConfigurationPageShowsAvailableOptions(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -53,7 +49,6 @@ func TestSettingsSystemConfigurationPageShowsAvailableOptions(t *testing.T) {
 }
 
 func TestSettingsTimezoneConfigurationFieldAcceptsANewValue(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -65,7 +60,6 @@ func TestSettingsTimezoneConfigurationFieldAcceptsANewValue(t *testing.T) {
 }
 
 func TestSettingsLanguagePreferenceSelectorIsPresent(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -77,7 +71,6 @@ func TestSettingsLanguagePreferenceSelectorIsPresent(t *testing.T) {
 }
 
 func TestChatIntegrationSlackChannelConfigurationFieldIsPresentOrSkippable(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -89,7 +82,6 @@ func TestChatIntegrationSlackChannelConfigurationFieldIsPresentOrSkippable(t *te
 }
 
 func TestChatIntegrationWebhookUrlFieldAcceptsAValidUrl(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -101,7 +93,6 @@ func TestChatIntegrationWebhookUrlFieldAcceptsAValidUrl(t *testing.T) {
 }
 
 func TestChatIntegrationTestNotificationButtonIsPresent(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -113,7 +104,6 @@ func TestChatIntegrationTestNotificationButtonIsPresent(t *testing.T) {
 }
 
 func TestSettingsNotificationTimeFieldsAreVisible(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -125,7 +115,6 @@ func TestSettingsNotificationTimeFieldsAreVisible(t *testing.T) {
 }
 
 func TestSettingsWebNotificationToggleIsPresent(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -137,7 +126,6 @@ func TestSettingsWebNotificationToggleIsPresent(t *testing.T) {
 }
 
 func TestSettingsChatNotificationToggleIsPresent(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -149,7 +137,6 @@ func TestSettingsChatNotificationToggleIsPresent(t *testing.T) {
 }
 
 func TestSettingsSlackWebhookIntegrationFieldsVisible(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -161,7 +148,6 @@ func TestSettingsSlackWebhookIntegrationFieldsVisible(t *testing.T) {
 }
 
 func TestSettingsSaveActionDoesNotProduceA500Error(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -173,7 +159,6 @@ func TestSettingsSaveActionDoesNotProduceA500Error(t *testing.T) {
 }
 
 func TestNotificationsNotificationBellOrIconIsPresent(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 
@@ -185,7 +170,6 @@ func TestNotificationsNotificationBellOrIconIsPresent(t *testing.T) {
 }
 
 func TestNotificationsClickingBellOpensNotificationListOrPanel(t *testing.T) {
-	t.Parallel()
 	page := newPage(t)
 	defer page.Close()
 

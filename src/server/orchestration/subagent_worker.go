@@ -3,9 +3,11 @@ package orchestration
 import (
 	"context"
 	"time"
+	"fmt"
 
 	"github.com/onehumancorp/mono/src/server/orchestration/queue"
 	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/backend/harness"
 )
 
 type SubAgentWorker struct {
@@ -46,15 +48,25 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 			return
 		}
 
-		job, err := w.taskQueue.Dequeue(ctx, []string{})
+		job, err := w.taskQueue.Acquire(ctx, []string{})
 		if err != nil || job == nil {
 			return
 		}
 
-
-
 		go func(job *queue.Job) {
 			startTime := time.Now()
+
+			allowedDomains := []string{"api.openai.com", "api.anthropic.com"} // Just some default allowed domains
+
+			// Use port 0 to let OS assign a random open port
+			proxy := harness.NewNetworkProxy(0, allowedDomains, job.ID)
+			server, err := proxy.Start(ctx)
+			if err != nil {
+				telemetry.RecordSubAgentFailure(ctx)
+				_ = w.taskQueue.Fail(ctx, job.ID, fmt.Sprintf("failed to start network proxy: %v", err))
+				return
+			}
+			defer server.Close()
 
 			ac := &AgentContext{
 				AgentID:         job.ID,
@@ -62,12 +74,12 @@ func (w *SubAgentWorker) poll(ctx context.Context) {
 				ParentSessionID: job.ParentTaskID,
 
 				Env: map[string]string{
-					"HTTP_PROXY": "http://127.0.0.1:8080",
-					"HTTPS_PROXY": "http://127.0.0.1:8080",
+					"HTTP_PROXY": fmt.Sprintf("http://127.0.0.1:%d", proxy.Port),
+					"HTTPS_PROXY": fmt.Sprintf("http://127.0.0.1:%d", proxy.Port),
 				},
 			}
 			agentCtx := WithAgentContext(ctx, ac)
-			err := w.spawner.SpawnIsolated(agentCtx, job)
+			err = w.spawner.SpawnIsolated(agentCtx, job)
 
 			duration := time.Since(startTime).Seconds()
 			telemetry.RecordSubAgentExecutionDuration(ctx, duration)

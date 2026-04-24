@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -228,7 +229,14 @@ class _PipelineCardState extends State<_PipelineCard> {
                                     size: 16,
                                   ),
                                   tooltip: 'Open staging URL',
-                                  onPressed: () {}, // Link preview
+                                  onPressed: () async {
+                                    await Clipboard.setData(ClipboardData(text: pipeline.stagingUrl!));
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Staging URL copied to clipboard')),
+                                      );
+                                    }
+                                  },
                                 ),
                               ),
                             ],

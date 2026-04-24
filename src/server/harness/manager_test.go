@@ -17,9 +17,7 @@ func init() {
 }
 
 func TestManager(t *testing.T) {
-	runner := NewBwrapRunner(nil)
-	runner.ProxySock = "" // Disable proxy socket in tests
-	manager := NewManager(nil, runner)
+	manager := NewManager(nil, nil)
 	ctx := context.Background()
 
 	t.Run("Initialize", func(t *testing.T) {
@@ -61,12 +59,17 @@ func TestManager(t *testing.T) {
 	t.Run("ExecuteStream", func(t *testing.T) {
 		var outBuf, errBuf bytes.Buffer
 		res, err := manager.ExecuteStream(ctx, "echo stream_test", nil, nil, &outBuf, &errBuf, "agent-1", "org-1", "admin", "gpt-4")
-		// The error might be because bwrap is not available, but we just verify it doesn't panic
-		// and attempts to use the buffers.
-		if err == nil {
-			if !strings.Contains(outBuf.String(), "stream_test") && !strings.Contains(res.Stdout, "stream_test") {
-				t.Errorf("Expected output to contain 'stream_test', got outBuf: %q, res.Stdout: %q, errBuf: %q, res.Stderr: %q, ExitCode: %d", outBuf.String(), res.Stdout, errBuf.String(), res.Stderr, res.ExitCode)
-			}
+		if err != nil {
+			t.Fatalf("ExecuteStream failed: %v", err)
+		}
+		if res.ExitCode != 0 {
+			t.Logf("ExecuteStream exited with code %d. Stderr: %s", res.ExitCode, res.Stderr)
+			t.Logf("Stdout: %s", res.Stdout)
+			t.Logf("outBuf: %s", outBuf.String())
+			t.Fatalf("ExecuteStream failed with non-zero exit code")
+		}
+		if !strings.Contains(outBuf.String(), "stream_test") && !strings.Contains(res.Stdout, "stream_test") {
+			t.Errorf("Expected output to contain 'stream_test'")
 		}
 	})
 
