@@ -241,6 +241,7 @@ class _Sidebar extends StatelessWidget {
           ),
         ),
         const Divider(),
+        _NavItem(icon: Icons.storefront, label: 'Business Setup', path: '/business_setup'),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(

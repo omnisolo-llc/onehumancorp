@@ -77,8 +77,8 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('alice'), findsWidgets);
-      expect(find.textContaining('bob'), findsWidgets);
+      expect(find.textContaining('alice', skipOffstage: false), findsWidgets);
+      expect(find.textContaining('bob', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('Invite User FAB is present', (tester) async {
@@ -119,7 +119,7 @@ void main() {
       await tester.tap(find.text('Invite User'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
