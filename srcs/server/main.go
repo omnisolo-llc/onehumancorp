@@ -328,7 +328,7 @@ func run(now time.Time, listen listenFunc) error {
 					return
 				case <-ticker.C:
 					// Run the distillation process
-					slog.Debug("Running Semantic Distillation Worker")
+					slog.Info("Running Semantic Distillation Worker")
 					// Fetch active threads and distill. For now, this just registers the worker.
 					_ = distillationWorker
 				}
@@ -442,18 +442,18 @@ func run(now time.Time, listen listenFunc) error {
 				case <-ticker.C:
 					// Prune missions older than 7 days or marked COMPLETED
 					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
-						slog.Warn("failed to prune stale missions", "error", err)
+						slog.Error("failed to prune stale missions", "error", err)
 					}
 					// Hygiene: Prune old telemetry buffer entries to prevent unbounded local growth
 					if err := sipdb.PruneTelemetryBuffer(ctx, 24*time.Hour); err != nil {
-						slog.Warn("failed to prune stale telemetry buffer", "error", err)
+						slog.Error("failed to prune stale telemetry buffer", "error", err)
 					} else {
 						slog.Debug("successfully pruned stale agent missions and telemetry buffer")
 					}
 
 					// Prune buffered telemetry metrics older than 24 hours
 					if err := sipdb.PruneBufferedMetrics(ctx, 24*time.Hour); err != nil {
-						slog.Warn("failed to prune stale telemetry metrics", "error", err)
+						slog.Error("failed to prune stale telemetry metrics", "error", err)
 					} else {
 						slog.Debug("successfully pruned stale telemetry metrics")
 					}
@@ -510,7 +510,7 @@ func run(now time.Time, listen listenFunc) error {
 
 	// 4. Start Scheduler Background Task
 	go hub.Scheduler().StartBackgroundTask(ctx, func(task scheduler.Task) {
-		slog.Debug("executing scheduled task", "task_id", task.ID, "name", task.Name)
+		slog.Info("executing scheduled task", "task_id", task.ID, "name", task.Name)
 		// Mark as running
 		if _, err := hub.Scheduler().MarkRunning(task.OrganizationID, task.ID); err != nil {
 			slog.Error("failed to mark task as running", "task_id", task.ID, "error", err)
