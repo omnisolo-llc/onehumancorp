@@ -20,13 +20,9 @@ spec:
           port: {{ .Values.powersync.service.targetPort }}
   egress:
     - to:
-        - podSelector:
+        - namespaceSelector:
             matchLabels:
-              app: {{ .Release.Name }}-backend
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: postgresql
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
     - to:
         - namespaceSelector:
             matchLabels:
