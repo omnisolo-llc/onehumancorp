@@ -1,35 +1,26 @@
-# Problem Description
+1. **Frontend Update (`src/app/lib/screens/business_setup_wizard_screen.dart`)**
+   - The wizard needs to strictly follow the problem description steps:
+     1. Welcome screen
+     2. Business type (single tap grid tiles: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other)
+     3. Business name & description
+     4. What do you sell? (multi-select grid tiles)
+     5. How do you want to receive payments?
+     6. Administrator account (name, email, password with strength)
+     7. Review & Launch
+   - When launching, it already uses `/api/wizard/configure` but we also need to implement `/api/wizard/state/save` and load endpoints so that if a user quits and comes back from another device, they resume where they left off.
 
-The problem requests replacing the current `Business Setup Wizard` logic with a simplified version.
-The new wizard should have:
-1. **Welcome screen**: Beautiful hero animation, one-line value proposition ("Your business, live in minutes").
-2. **Business type**: Single-tap selection from friendly categories with large icons: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other. No dropdowns.
-3. **Business name & description**: Large-input text fields. AI auto-suggests a tagline and short description based on the business name. User can accept or edit.
-4. **What do you sell?**: Multi-select tiles: "Physical products", "Digital downloads", "Services / appointments", "Food & beverages", "Subscriptions". Friendly labels only.
-5. **How do you want to receive payments?**: Card tiles — Online only, In-person (POS), Both, Skip for now. Show estimated time to first payment next to each.
-6. **Administrator account**: Name, email, password (strength meter), optional SSO (Google / Apple). No username, no security questions.
-7. **Review & Launch**: Summary card with a pulsing "Launch My Business →" CTA. Clicking it provisions the tenant, selects a starter website template, pre-seeds AI agents, and lands the user in the dashboard with a "Your business is setting up…" animated progress overlay.
+2. **Backend API endpoints (`src/server/dashboard/handlers_wizard.go`)**
+   - Implement `handleWizardStateSave(w, r)`: Takes a JSON payload of the entire state and saves it. For now, since `settings.Extras` is our DB store, we can marshal the state into a JSON string and store it in `settings.Extras["wizard_state"]`.
+   - Implement `handleWizardStateLoad(w, r)`: Reads `settings.Extras["wizard_state"]` and returns it, or a 404/empty.
+   - Wire these up in `src/server/dashboard/server.go`.
 
-# Proposed Plan
+3. **Modify `BusinessSetupWizardScreen` to load and save state**
+   - Add a `saveState()` method to `BusinessSetupNotifier` that calls `/api/wizard/state/save`. Call this on every `nextStep()` and `prevStep()`.
+   - Add a `loadState()` method that runs on init and populates the `BusinessSetupState` from the backend API `/api/wizard/state/load`.
 
-1. **Update Frontend UI & State**
-   - Refactor `src/app/lib/screens/business_setup_wizard_screen.dart` to match the 7 new steps (Welcome, Business type, Business name & description, What do you sell, Payment preference, Administrator account, Review & Launch).
-   - Use `AnimatedSwitcher` to animate between the steps.
-   - Use `GlassCard` and OHC Premium Tokens (Glassmorphism, `Outfit`/`Inter` fonts) for styling.
-   - Update `BusinessSetupState` to store fields like `businessType`, `businessDescription`, `whatYouSell`, `paymentMethod`, etc.
-   - Make all screens responsive (down to 375px) without horizontal scrolling.
+4. **Add go/flutter tests**
+   - Add/update flutter tests if needed (`src/app/test/screens/business_setup_wizard_screen_test.dart` if present).
+   - Write E2E test in Go.
 
-2. **Backend API updates**
-   - To resume state, the system currently expects a `wizardConfigureRequest` to handle configuring. But the wizard state needs an endpoint `/api/wizard/state/save`? Wait, the problem says "All wizard state must be persisted to the OHC backend so resuming from another device works seamlessly. Implement backend API endpoints if they do not already exist."
-   - The backend `dashboard` server handles wizard config currently. I will add `handleWizardStateSave`, `handleWizardStateLoad` to `src/server/dashboard/handlers_wizard.go` and wire them up in `src/server/dashboard/server.go`.
-   - Add a `handleWizardStateSave` handler which accepts a JSON payload of the wizard state and stores it in memory (or Redis, though `dashboard` server is simpler, I'll store it in a `wizardState` map in `Server`). Or wait, `Server` has `settings.Extras`. We can just store wizard progress in `settings.Extras`. Let's just create a quick endpoint for `state/save` and `state` (load).
-
-3. **Cleanup unused code**
-   - Delete `src/server/lib/features/onboarding/business_setup_wizard.dart` and `business_setup_wizard_test.dart` as they are Flutter UI mockups misplaced in the `server` tree and unused. Or I will just replace `src/app/lib/screens/business_setup_wizard_screen.dart` and delete the server ones.
-
-4. **Testing**
-   - Write unit tests for `src/app/lib/screens/business_setup_wizard_screen.dart` (if needed, replace existing tests like `wizard_screen_test.dart` or add `business_setup_wizard_test.dart` in `src/app/lib/screens/`).
-   - Write Go E2E tests for the flow in `src/tests/e2e/e2e_business_setup_test.go`. The test must start from home page after login, navigate the wizard, select options, and assert the final API call or UI state.
-
-5. **Pre-commit checks**
-   - Call `pre_commit_instructions` and follow the required validation, verification, formatting, and tests (`bazelisk test //...`).
+5. **Pre-commit steps**
+   - Run `pre_commit_instructions` and follow them to complete proper testing, verifications, reviews and reflections.
