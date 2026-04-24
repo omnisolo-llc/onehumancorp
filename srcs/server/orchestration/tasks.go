@@ -467,7 +467,8 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 }
 
 // ReviewTask marks a task for review.
-func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) error {
+func (tm *TaskManager) ReviewTask(ctx context.Context, taskId, agentId string) error {
+	// Enforce transition logic and prometheus metric
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
 		return errors.New("unauthorized: missing claims")
@@ -479,8 +480,9 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	}
 
 	// Verify ownership first
-	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&currentStatus)
+	var currentTaskStatus string
+	var missionID string
+	err := tm.db.QueryRow(ctx, "SELECT status, mission_id FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskId, agentId, claims.OrganizationID).Scan(&currentTaskStatus, &missionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -488,7 +490,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		return fmt.Errorf("failed to verify task ownership: %w", err)
 	}
 
-	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")
+	err = tm.stateMachine.Transition(ctx, taskId, "SHARED_TASK", statemachine.StateReview, agentId, "Agent requested review")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
@@ -496,25 +498,25 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		return fmt.Errorf("failed to move task to review: %w", err)
 	}
 
-	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "REVIEW")
+	telemetry.RecordSwarmTaskTransition(ctx, missionID, currentTaskStatus, "REVIEW")
 
 	// Broadcast task review
 	if tm.mesh != nil {
 		_ = tm.mesh.BroadcastTask(ctx, Task{
-			AgentID: agentID,
+			AgentID: agentId,
 			Action:  "REVIEW",
 			Status:  "REVIEW",
-			TaskID:  taskID,
+			TaskID:  taskId,
 		})
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
-				"task_id":  taskID,
+				"task_id":  taskId,
 				"action":   "REVIEW",
-				"agent_id": agentID,
+				"agent_id": agentId,
 				"status":   "REVIEW",
 			}
-			tm.hub.PublishTaskBroadcast(taskID, payload)
+			tm.hub.PublishTaskBroadcast(taskId, payload)
 		}()
 	}
 
@@ -527,7 +529,8 @@ func (tm *TaskManager) CompleteTask(ctx context.Context, taskID, agentID string)
 }
 
 // CompleteTaskWithResult marks a task as completed and persists the completion result.
-func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agentID, result string) error {
+func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskId, agentId, taskResult string) error {
+	// Enforce transition logic and prometheus metric
 	claims := auth.ClaimsFromContext(ctx)
 	if claims == nil {
 		return errors.New("unauthorized: missing claims")
@@ -539,8 +542,9 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 
 	var createdAt time.Time
-	var currentStatus string
-	err := tm.db.QueryRow(ctx, "SELECT created_at, status FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskID, agentID, claims.OrganizationID).Scan(&createdAt, &currentStatus)
+	var currentTaskStatus string
+	var missionID string
+	err := tm.db.QueryRow(ctx, "SELECT created_at, status, mission_id FROM shared_tasks WHERE id = $1 AND agent_id = $2 AND organization_id = $3", taskId, agentId, claims.OrganizationID).Scan(&createdAt, &currentTaskStatus, &missionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New("task not found or not assigned to agent")
@@ -551,7 +555,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
 
-	if currentStatus == statemachine.StateCompleted {
+	if currentTaskStatus == statemachine.StateCompleted {
 		return errors.New("task already completed")
 	}
 
@@ -561,8 +565,8 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 	defer tx.Rollback(ctx)
 
-	_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = NULL WHERE id = $1", taskID)
-	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
+	_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = NULL WHERE id = $1", taskId)
+	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskId, "SHARED_TASK", statemachine.StateCompleted, agentId, "Task completed successfully")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
@@ -570,7 +574,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		return fmt.Errorf("failed to complete task: %w", err)
 	}
 
-	if err := tm.persistSharedTaskCompletion(ctx, tx, taskID, result); err != nil {
+	if err := tm.persistSharedTaskCompletion(ctx, tx, taskId, taskResult); err != nil {
 		return err
 	}
 
@@ -581,13 +585,13 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 		broadcast()
 	}
 
-	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
+	telemetry.RecordSwarmTaskTransition(ctx, missionID, currentTaskStatus, "COMPLETED")
 
 	if tm.autodream != nil {
 		go func() {
-			logLine := strings.TrimSpace(result)
+			logLine := strings.TrimSpace(taskResult)
 			if logLine == "" {
-				logLine = "Task " + taskID + " completed successfully."
+				logLine = "Task " + taskId + " completed successfully."
 			}
 			logs := []string{logLine}
 
@@ -596,32 +600,32 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 			if tm.db.IsSQLite() {
 				query = "INSERT INTO autodream_memories (id, content, source_mission_id, organization_id, agent_id, source_type) VALUES (?, ?, ?, ?, ?, 'task_completion')"
 			}
-			_, err := tm.db.Exec(context.Background(), query, uuid.New().String(), logLine, taskID, claims.OrganizationID, agentID)
+			_, err := tm.db.Exec(context.Background(), query, uuid.New().String(), logLine, taskId, claims.OrganizationID, agentId)
 			if err != nil {
 				// Ignore error for now to match background task semantics
 			}
 
-			_ = tm.autodream.Consolidate(context.Background(), taskID, logs)
+			_ = tm.autodream.Consolidate(context.Background(), taskId, logs)
 		}()
 	}
 
 	// Broadcast task completion
 	if tm.mesh != nil {
 		_ = tm.mesh.BroadcastTask(ctx, Task{
-			AgentID: agentID,
+			AgentID: agentId,
 			Action:  "COMPLETE",
 			Status:  "COMPLETED",
-			TaskID:  taskID,
+			TaskID:  taskId,
 		})
 	} else if tm.hub != nil {
 		go func() {
 			payload := map[string]interface{}{
-				"task_id":  taskID,
+				"task_id":  taskId,
 				"action":   "COMPLETE",
-				"agent_id": agentID,
+				"agent_id": agentId,
 				"status":   "COMPLETED",
 			}
-			tm.hub.PublishTaskBroadcast(taskID, payload)
+			tm.hub.PublishTaskBroadcast(taskId, payload)
 		}()
 	}
 

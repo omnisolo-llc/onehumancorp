@@ -1,6 +1,8 @@
 package orchestration
 
 import (
+	"github.com/onehumancorp/mono/srcs/server/interop"
+
 	"google.golang.org/protobuf/proto"
 
 	"bytes"
@@ -1888,24 +1890,41 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 }
 
 // RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.
+
+func requireSPIFFE(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer spiffe://") {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		// Validate SPIFFE ID format or trust domain
+		if err := interop.ValidateSPIFFEID(strings.TrimPrefix(authHeader, "Bearer ")); err != nil {
+			http.Error(w, "Invalid SPIFFE ID", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
-	mux.HandleFunc("/api/sync/missions", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/sync/missions", requireSPIFFE(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleSyncMissions(w, r, tm)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
+	})))
 
-	mux.HandleFunc("/api/orchestration/tasks/decompose", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/orchestration/tasks/decompose", requireSPIFFE(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleDecomposeTask(w, r, tm)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
+	})))
 
-	mux.HandleFunc("/api/orchestration/tasks", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/orchestration/tasks", requireSPIFFE(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleCreateTask(w, r, tm)
 			return
@@ -1915,15 +1934,15 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
+	})))
 
-	mux.HandleFunc("/api/orchestration/tasks/", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/api/orchestration/tasks/", requireSPIFFE(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/status") {
 			handleUpdateTaskStatus(w, r, tm)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	})
+	})))
 }
 
 func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager) {

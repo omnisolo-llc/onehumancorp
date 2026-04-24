@@ -1732,13 +1732,13 @@ func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
-func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus string, newStatus string) {
+func RecordSwarmTaskTransition(ctx context.Context, missionID string, previousState string, nextState string) {
 
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
 			"mission_id": missionID,
-			"old_status": oldStatus,
-			"new_status": newStatus,
+			"old_status": previousState,
+			"new_status": nextState,
 		}
 
 		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
@@ -1749,8 +1749,8 @@ func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus 
 	}
 	swarmTaskTransitionsCounter.Add(ctx, 1, metric.WithAttributes(
 		attribute.String("mission_id", missionID),
-		attribute.String("old_status", oldStatus),
-		attribute.String("new_status", newStatus),
+		attribute.String("old_status", previousState),
+		attribute.String("new_status", nextState),
 	))
 }
 
