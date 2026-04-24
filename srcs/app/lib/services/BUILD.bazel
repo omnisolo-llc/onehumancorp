@@ -86,21 +86,23 @@ flutter_library(
 
 SERVICE_TESTS = glob(["*_test.dart"])
 
-[
-    flutter_test(
-        name = file.replace(".dart", ""),
-        srcs = [file],
-        embed = [":services_for_tests"],
-        test_files = [file],
-        workspace_pubspec = "//:pubspec.yaml",
-    )
-    for file in SERVICE_TESTS
-]
+[flutter_test(
+    name = test_file[:-5],
+    srcs = [test_file],
+    embed = [":services_for_tests"],
+    test_files = [test_file],
+    workspace_pubspec = "//:pubspec.yaml",
+) for test_file in SERVICE_TESTS]
+
+test_suite(
+    name = "services_test",
+    tests = [test_file[:-5] for test_file in SERVICE_TESTS],
+)
 
 test_suite(
     name = "all_tests",
     tags = ["manual"],
-    tests = [":" + file.replace(".dart", "") for file in SERVICE_TESTS],
+    tests = [":services_test"],
 )
 
 flutter_test(
