@@ -119,7 +119,7 @@ type DB struct {
 }
 
 // New creates a new Provider from DATABASE_URL.
-// If DATABASE_URL is empty, it defaults to a local SQLite database in ~/.openclaw/ohc_state.db.
+// If DATABASE_URL is empty, it defaults to a local SQLite database in ~/.ohc/ohc_state.db.
 // If DATABASE_URL starts with sqlite:// it uses SQLite.
 // Otherwise it assumes PostgreSQL.
 func New(ctx context.Context) (*DB, error) {
@@ -138,9 +138,9 @@ func New(ctx context.Context) (*DB, error) {
 				if err != nil {
 					return nil, fmt.Errorf("db: find home dir: %w", err)
 				}
-				openclawDir := filepath.Join(homeDir, ".openclaw")
+				openclawDir := filepath.Join(homeDir, ".ohc")
 				if err := os.MkdirAll(openclawDir, 0700); err != nil {
-					return nil, fmt.Errorf("db: create .openclaw dir: %w", err)
+					return nil, fmt.Errorf("db: create .ohc dir: %w", err)
 				}
 				dbPath = filepath.Join(openclawDir, "ohc_state.db")
 			}
@@ -205,7 +205,7 @@ func New(ctx context.Context) (*DB, error) {
 				if keyDir == "" || keyDir == "." {
 					homeDir, err := os.UserHomeDir()
 					if err == nil {
-						keyDir = filepath.Join(homeDir, ".openclaw")
+						keyDir = filepath.Join(homeDir, ".ohc")
 					} else {
 						keyDir = os.TempDir()
 					}
@@ -218,16 +218,17 @@ func New(ctx context.Context) (*DB, error) {
 						newKey := make([]byte, 32)
 						if _, err := rand.Read(newKey); err == nil {
 							key = hex.EncodeToString(newKey)
-							_ = os.WriteFile(keyFile, []byte(key), 0600)
+							if err := os.WriteFile(keyFile, []byte(key), 0600); err != nil {
+								return nil, fmt.Errorf("db: failed to securely save generated encryption key: %w", err)
+							}
 						} else {
-							key = "standalone_ephemeral_key" // fallback if random fails, though rare
+							return nil, fmt.Errorf("db: secure random generator failed: %w", err)
 						}
 					}
 				} else {
-					key = "standalone_ephemeral_key" // fallback if mkdir fails
+					return nil, fmt.Errorf("db: failed to create secure directory for key: %w", err)
 				}
 			} else if os.Getenv("OHC_STANDALONE") == "true" {
-				// We cannot fail yet as it breaks tests without environment variables.
 				// For tests, use a transient key.
 				key = "standalone_ephemeral_key"
 			} else {

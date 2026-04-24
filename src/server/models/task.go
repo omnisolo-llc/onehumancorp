@@ -16,6 +16,10 @@ type Task struct {
 	Payload         string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+
+	ActionRisk      string   `json:"action_risk,omitempty"`
+	ApprovalStatus  string   `json:"approval_status,omitempty"`
+	ProposedContent string   `json:"proposed_content,omitempty"`
 }
 
 // TaskDependency represents a dependency relationship between tasks.
@@ -39,4 +43,8 @@ type SharedTask struct {
 	LockedUntil     *time.Time `json:"locked_until,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+
+	ActionRisk      string   `json:"action_risk,omitempty"`
+	ApprovalStatus  string   `json:"approval_status,omitempty"`
+	ProposedContent string   `json:"proposed_content,omitempty"`
 }

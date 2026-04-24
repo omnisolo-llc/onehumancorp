@@ -1310,27 +1310,53 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.orgAgentsLocked()
+	var wg sync.WaitGroup
 
-	queue := make([]orchestration.SharedTask, 0)
-	queueLen := 0
-	if s.hub != nil && s.hub.TaskManager() != nil {
-		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
-			for _, t := range pending {
-				if t != nil {
-					queue = append(queue, *t)
+	var agents []orchestration.Agent
+	var meetings []orchestration.MeetingRoom
+	var statuses []statusCount
+	var costs billing.Summary
+	var queue []orchestration.SharedTask
+	var queueLen int
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		agents = s.orgAgentsLocked()
+		meetings = s.orgMeetingsLocked()
+		statuses = summarizeStatuses(agents)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		costs = s.tracker.Summary(s.org.ID)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		queue = make([]orchestration.SharedTask, 0)
+		if s.hub != nil && s.hub.TaskManager() != nil {
+			if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
+				for _, t := range pending {
+					if t != nil {
+						queue = append(queue, *t)
+					}
 				}
+				queueLen = len(queue)
 			}
-			queueLen = len(queue)
 		}
-	}
+	}()
+
+	wg.Wait()
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.orgMeetingsLocked(),
-		Costs:        s.tracker.Summary(s.org.ID),
+		Meetings:     meetings,
+		Costs:        costs,
 		Agents:       agents,
-		Statuses:     summarizeStatuses(agents),
+		Statuses:     statuses,
 		TaskQueue:    queue,
 		QueueLength:  queueLen,
 		UpdatedAt:    time.Now().UTC(),
