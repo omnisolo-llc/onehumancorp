@@ -44,11 +44,6 @@ func (p *DatabaseLockProvider) TryLock(ctx context.Context, key string, ttl time
 func (p *DatabaseLockProvider) trySQLiteLock(ctx context.Context, key string, ttl time.Duration) (bool, func(context.Context) error, error) {
 	token := uuid.New().String()
 
-	// For SQLite, we can simulate an advisory lock using a dedicated locks table.
-	// The Go database/sql driver with go-sqlite3 saves time.Time values directly, which are returned as strings in our previous test,
-	// but using pure SQLite `datetime` functions might cause type mismatch or formatting issues depending on how the table was created
-	// Let's use Go time to avoid SQLite `datetime` function mismatch if we're not sure how time is stored.
-
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
 
@@ -59,15 +54,16 @@ func (p *DatabaseLockProvider) trySQLiteLock(ctx context.Context, key string, tt
 			token = excluded.token,
 			expires_at = excluded.expires_at
 		WHERE distributed_locks.expires_at < ?
+		RETURNING key
 	`
 
-	rowsAffected, err := p.db.Exec(ctx, query, key, token, expiresAt, now)
+	var returnedKey string
+	err := p.db.QueryRow(ctx, query, key, token, expiresAt, now).Scan(&returnedKey)
 	if err != nil {
+		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+			return false, nil, nil
+		}
 		return false, nil, fmt.Errorf("failed to acquire sqlite lock: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return false, nil, nil
 	}
 
 	unlock := func(unlockCtx context.Context) error {
@@ -81,7 +77,6 @@ func (p *DatabaseLockProvider) trySQLiteLock(ctx context.Context, key string, tt
 func (p *DatabaseLockProvider) tryPostgresLock(ctx context.Context, key string, ttl time.Duration) (bool, func(context.Context) error, error) {
 	token := uuid.New().String()
 
-	// PostgreSQL ON CONFLICT syntax with database-native timestamps
 	ttlSeconds := ttl.Seconds()
 
 	query := fmt.Sprintf(`
@@ -91,15 +86,16 @@ func (p *DatabaseLockProvider) tryPostgresLock(ctx context.Context, key string, 
 			token = EXCLUDED.token,
 			expires_at = EXCLUDED.expires_at
 		WHERE distributed_locks.expires_at < CURRENT_TIMESTAMP
+		RETURNING key
 	`, ttlSeconds)
 
-	rowsAffected, err := p.db.Exec(ctx, query, key, token)
+	var returnedKey string
+	err := p.db.QueryRow(ctx, query, key, token).Scan(&returnedKey)
 	if err != nil {
+		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+			return false, nil, nil
+		}
 		return false, nil, fmt.Errorf("failed to acquire postgres lock: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return false, nil, nil
 	}
 
 	unlock := func(unlockCtx context.Context) error {
