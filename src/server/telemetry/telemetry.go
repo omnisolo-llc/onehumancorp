@@ -1690,14 +1690,22 @@ func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
 func RecordSwarmTaskTransition(ctx context.Context, missionID string, oldStatus string, newStatus string) {
-	if swarmTaskTransitionsCounter == nil {
-		return
+	if swarmTaskTransitionsCounter != nil {
+		swarmTaskTransitionsCounter.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("mission_id", missionID),
+			attribute.String("old_status", oldStatus),
+			attribute.String("new_status", newStatus),
+		))
 	}
-	swarmTaskTransitionsCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("mission_id", missionID),
-		attribute.String("old_status", oldStatus),
-		attribute.String("new_status", newStatus),
-	))
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"mission_id": missionID,
+			"old_status": oldStatus,
+			"new_status": newStatus,
+		}
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "swarm_task_transition", string(payloadBytes))
+	}
 }
 
 // RecordSwarmTaskQueueLength adds a delta to the current queue length gauge.
