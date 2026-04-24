@@ -881,15 +881,13 @@ func (s *Server) bootstrapInternalDefaultAgent() {
 		region = "docker"
 	}
 
-	s.hub.RegisterAgent(orchestration.Agent{
-		ID:             s.org.ID + "-agent-internal-default",
-		Name:           name,
-		Role:           role,
-		OrganizationID: s.org.ID,
-		Status:         orchestration.StatusIdle,
-		ProviderType:   string(agents.ProviderTypeBuiltin),
-		Region:         region,
-	})
+	s.hub.RegisterAgent(orchestration.AgentFactory(
+		s.org.ID+"-agent-internal-default",
+		name,
+		role,
+		s.org.ID,
+		region,
+	))
 }
 
 func (s *Server) defaultInternalAgentRole() string {

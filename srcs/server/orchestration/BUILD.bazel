@@ -6,6 +6,7 @@ go_library(
     name = "orchestration",
     srcs = [
         "agent_context.go",
+        "agent_factory.go",
         "auth_interceptor.go",
         "autodream.go",
         "autodream_advanced.go",

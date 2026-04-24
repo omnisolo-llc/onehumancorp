@@ -1,0 +1,40 @@
+<<<<<<< SEARCH
+package kairos
+
+import (
+	"github.com/onehumancorp/mono/srcs/server/agents"
+	"github.com/onehumancorp/mono/srcs/server/orchestration"
+)
+
+// AgentFactory creates a new Agent configured to use the builtin AI engine by default.
+func AgentFactory(id, name, role, organizationID, region string) orchestration.Agent {
+	return orchestration.Agent{
+		ID:             id,
+		Name:           name,
+		Role:           role,
+		OrganizationID: organizationID,
+		Status:         orchestration.StatusIdle,
+		ProviderType:   string(agents.ProviderTypeBuiltin),
+		Region:         region,
+	}
+}
+=======
+package orchestration
+
+import (
+	"github.com/onehumancorp/mono/srcs/server/agents"
+)
+
+// AgentFactory creates a new Agent configured to use the builtin AI engine by default.
+func AgentFactory(id, name, role, organizationID, region string) Agent {
+	return Agent{
+		ID:             id,
+		Name:           name,
+		Role:           role,
+		OrganizationID: organizationID,
+		Status:         StatusIdle,
+		ProviderType:   string(agents.ProviderTypeBuiltin),
+		Region:         region,
+	}
+}
+>>>>>>> REPLACE
