@@ -102,13 +102,13 @@ func TestClaimTask(t *testing.T) {
     }
 }
 
-type mockPGProvider struct {
+type mockPGProviderSharedTasks struct {
 	db.Provider
 	lastQuery string
 }
 
-func (m *mockPGProvider) IsSQLite() bool { return false }
-func (m *mockPGProvider) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
+func (m *mockPGProviderSharedTasks) IsSQLite() bool { return false }
+func (m *mockPGProviderSharedTasks) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
 	m.lastQuery = query
 	return &mockPGRow{}
 }
@@ -118,7 +118,7 @@ func (m *mockPGRow) Scan(dest ...interface{}) error { return sql.ErrNoRows }
 
 func TestClaimTask_PostgresLocking(t *testing.T) {
 	ctx := context.Background()
-	provider := &mockPGProvider{}
+	provider := &mockPGProviderSharedTasks{}
 
 	_, err := ClaimTask(ctx, provider, "org-1", "agent-1")
 	if err != nil {
