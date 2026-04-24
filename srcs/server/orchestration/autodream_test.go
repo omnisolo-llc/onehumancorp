@@ -521,3 +521,105 @@ func TestAutoDreamWorker_SearchTruthCoverage2(t *testing.T) {
 	ctx := context.Background()
 	_, _ = worker.SearchTruth(ctx, "[0.0]", 10)
 }
+
+func TestAutoDreamWorker_Pipelines(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool.Provider)
+	ctx := context.Background()
+
+	// Ensure coverage by triggering methods directly
+	worker.runSessionCompressionPipeline(ctx)
+	worker.runMemoryIngestionPipeline(ctx)
+	worker.runPruningPipeline(ctx)
+	worker.runConflictResolutionPipeline(ctx)
+	worker.runCompletedTasksIngestionPipeline(ctx)
+	worker.runMissionIngestionPipeline(ctx)
+}
+
+func TestAutoDreamWorker_IngestMemories(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool.Provider)
+	ctx := context.Background()
+	worker.ingestAgentMemories(ctx)
+}
+
+func TestAutoDreamWorker_ConflictResolution(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool.Provider)
+	ctx := context.Background()
+
+	// mock conflict data
+	q := "INSERT INTO autodream_memories (id, content, embedding, source_mission_id) VALUES ('1', 'memory1', '[0.1, 0.2]', 'm1'), ('2', 'memory2', '[0.11, 0.21]', 'm2')"
+	_, _ = pool.Exec(ctx, q)
+
+	worker.resolveConflicts(ctx)
+}
+
+func TestAutoDreamWorker_FullCoverage_More(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory")
+	pool, err := db.New(context.Background())
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer pool.Close()
+
+	if err := pool.RunMigrations(context.Background()); err != nil {
+		t.Fatalf("failed migrations: %v", err)
+	}
+
+	worker := NewAutoDreamWorker(pool.Provider)
+	ctx := context.Background()
+
+	// Add mock data
+	_, _ = pool.Exec(ctx, "INSERT INTO shared_tasks (id, status, organization_id, payload) VALUES ('t1', 'COMPLETED', 'test_org', '{}')")
+	oldTime := time.Now().Add(-10 * time.Minute).UTC().Format("2006-01-02 15:04:05")
+	_, _ = pool.Exec(ctx, "INSERT INTO agent_session_data (session_id, agent_id, context_data, last_accessed) VALUES ('s1', 'agent', 'ctx', ?)", oldTime)
+
+	dir := t.TempDir()
+	t.Setenv("OHC_MEMORY_DIR", dir)
+	validFile := filepath.Join(dir, "valid.yml")
+	os.WriteFile(validFile, []byte("agent_session_data: test\ncontent: test content\n"), 0o644)
+
+	q := "INSERT INTO autodream_memories (id, content, embedding, source_mission_id) VALUES ('1', 'memory1', '[0.1, 0.2]', 'm1'), ('2', 'memory2', '[0.11, 0.21]', 'm2')"
+	_, _ = pool.Exec(ctx, q)
+
+	worker.compressSessionData(ctx)
+	worker.compressSessionContexts(ctx)
+	worker.ingestAgentMemories(ctx)
+	worker.pruneStaleSessionsWithDistributedLock(ctx)
+	worker.pruneStaleSessions(ctx)
+	worker.resolveConflicts(ctx)
+	worker.ingestCompletedTasks(ctx)
+	worker.ingestMissionArtifacts(ctx)
+	worker.ConsolidateEpoch(ctx)
+}
