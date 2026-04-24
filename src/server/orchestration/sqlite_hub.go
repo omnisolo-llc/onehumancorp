@@ -59,11 +59,15 @@ func (r *SqliteHubRepository) GetAgent(ctx context.Context, id string) (Agent, b
 }
 
 func (r *SqliteHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
+	return r.ListAgentsByOrg(ctx, r.orgID)
+}
+
+func (r *SqliteHubRepository) ListAgentsByOrg(ctx context.Context, orgID string) ([]Agent, error) {
 	query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents"
 	var args []any
-	if r.orgID != "" {
+	if orgID != "" {
 		query += " WHERE organization_id = ?"
-		args = append(args, r.orgID)
+		args = append(args, orgID)
 	}
 	query += " ORDER BY id"
 

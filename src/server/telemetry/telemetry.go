@@ -331,17 +331,7 @@ func InitWithMeter(m mockableMeter) error {
 		return fmt.Errorf("meter is nil")
 	}
 
-	CapabilityViolationTotal = nil
-
 	var err error
-	CapabilityViolationTotal, err = m.Int64Counter(
-		"capability_violation_total",
-		metric.WithDescription("Total number of capability ACL violations"),
-	)
-	if err != nil {
-		return err
-	}
-
 	AutoDreamRecordsSyncedTotal, err = m.Int64Counter("autodream_records_synced_total",
 		metric.WithDescription("Total number of autodream records successfully synced"),
 	)
@@ -1654,8 +1644,7 @@ func RecordLocalToCloudMissionSync(ctx context.Context, missionID string) {
 		// In Standalone Mode, BufferMetricFunc unmarshals the JSON payload into a map[string]interface{},
 		// then calls RedactInterfacePII centrally. We use RedactInterfacePII here so the AST linter
 		// TestBufferMetricFuncRedactionLinter passes because it statically checks for its presence.
-		payloadMap["missionID"] = RedactInterfacePII(missionID)
-		payloadBytes, _ := json.Marshal(payloadMap)
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
 		_ = BufferMetricFunc(ctx, "local_to_cloud_mission_sync_count", string(payloadBytes))
 	}
 	if LocalToCloudMissionSyncCount == nil {
@@ -2205,6 +2194,15 @@ func RecordHarnessExecutionLatency(ctx context.Context, latency float64, mode st
 }
 
 var CapabilityViolationTotal metric.Int64Counter
+
+func initCapabilityMetrics(m metric.Meter) error {
+	var err error
+	CapabilityViolationTotal, err = m.Int64Counter(
+		"capability_violation_total",
+		metric.WithDescription("Total number of capability ACL violations"),
+	)
+	return err
+}
 
 // RecordCapabilityViolation increments the counter for capability ACL violations.
 func RecordCapabilityViolation(ctx context.Context, sessionID, capability string) {

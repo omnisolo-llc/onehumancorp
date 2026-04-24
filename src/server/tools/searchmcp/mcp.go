@@ -59,6 +59,9 @@ func (p *LocalSearchProvider) Search(ctx context.Context, query string) ([]Searc
 			results = append(results, SearchResult{ID: id, Title: title, Content: content, Score: 1.0})
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return results, nil
 }
 
@@ -96,6 +99,9 @@ func (p *CloudSearchProvider) Search(ctx context.Context, query string) ([]Searc
 		if err := rows.Scan(&id, &title, &content); err == nil {
 			results = append(results, SearchResult{ID: id, Title: title, Content: content, Score: 1.0})
 		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return results, nil
 }
