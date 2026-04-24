@@ -49,7 +49,7 @@ func TestLocalMesh_Locks(t *testing.T) {
 	mesh := NewLocalMesh()
 	ctx := context.Background()
 
-	acquired, err := mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
+	token, acquired, err := mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestLocalMesh_Locks(t *testing.T) {
 	}
 
 	// Try again
-	acquired, err = mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
+	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
@@ -66,14 +66,25 @@ func TestLocalMesh_Locks(t *testing.T) {
 		t.Errorf("Expected lock to fail as it is already held")
 	}
 
+	// Try to release with wrong token
+	err = mesh.ReleaseLock(ctx, "test-lock", "wrong-token")
+	if err == nil {
+		t.Fatalf("Expected error when releasing with wrong token")
+	}
+	// Verify lock is still held
+	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
+	if acquired {
+		t.Errorf("Expected lock to fail as wrong token release should have failed")
+	}
+
 	// Release
-	err = mesh.ReleaseLock(ctx, "test-lock")
+	err = mesh.ReleaseLock(ctx, "test-lock", token)
 	if err != nil {
 		t.Fatalf("Failed to release lock: %v", err)
 	}
 
 	// Try again after release
-	acquired, err = mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
+	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
@@ -178,7 +189,7 @@ func TestRedisMesh_Locks(t *testing.T) {
 
 	ctx := context.Background()
 
-	acquired, err := mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
+	token, acquired, err := mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
@@ -187,7 +198,7 @@ func TestRedisMesh_Locks(t *testing.T) {
 	}
 
 	// Try again
-	acquired, err = mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
+	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
@@ -195,14 +206,20 @@ func TestRedisMesh_Locks(t *testing.T) {
 		t.Errorf("Expected lock to fail as it is already held")
 	}
 
+	// Try release wrong token
+	err = mesh.ReleaseLock(ctx, "test-lock", "wrong-token")
+	if err == nil {
+		t.Fatalf("Expected error when releasing with wrong token")
+	}
+
 	// Release
-	err = mesh.ReleaseLock(ctx, "test-lock")
+	err = mesh.ReleaseLock(ctx, "test-lock", token)
 	if err != nil {
 		t.Fatalf("Failed to release lock: %v", err)
 	}
 
 	// Try again after release
-	acquired, err = mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
+	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
