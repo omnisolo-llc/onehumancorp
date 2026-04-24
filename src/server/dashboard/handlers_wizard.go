@@ -181,6 +181,50 @@ func hasEnabledProvider(providers []settings.AiProvider) bool {
 	return false
 }
 
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	bytes, err := json.Marshal(req)
+	if err != nil {
+		http.Error(w, "failed to marshal", http.StatusInternalServerError)
+		return
+	}
+	err = s.hub.SettingsStore().SetExtra("wizard_state", string(bytes))
+	if err != nil {
+		http.Error(w, "failed to save state", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "ok"})
+}
+
+func (s *Server) handleWizardStateLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	settings := s.hub.SettingsStore().Get()
+	var state map[string]interface{}
+	if val, ok := settings.Extras["wizard_state"]; ok && val != "" {
+		_ = json.Unmarshal([]byte(val), &state)
+	}
+	if state == nil {
+		state = make(map[string]interface{})
+	}
+
+	writeJSON(w, state)
+}
+
 // handleWizardOnboardingVerify performs a diagnostic verification of env vars
 // and connection requirements for Day One onboarding.
 func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Request) {

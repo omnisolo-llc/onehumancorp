@@ -12,6 +12,9 @@ void main() {
   testWidgets('BusinessSetupWizardScreen steps navigation', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: BusinessSetupWizardScreen())));
 
+    // Mock loadState by letting init render
+    await tester.pumpAndSettle();
+
     // Step 0 -> 1
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
@@ -89,5 +92,9 @@ void main() {
 
     notifier.updateAdminPassword('secr3t');
     expect(container.read(businessSetupProvider).adminPassword, 'secr3t');
+
+    // prevStep
+    notifier.prevStep();
+    expect(container.read(businessSetupProvider).step, 0);
   });
 }

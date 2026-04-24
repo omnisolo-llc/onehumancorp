@@ -11,28 +11,40 @@ import (
 	"github.com/onehumancorp/mono/src/server/settings"
 )
 
-type mockSettingsStore struct{}
+type mockSettingsStore struct {
+	data settings.AppSettings
+}
 
-func (m mockSettingsStore) Update(cfg settings.AppSettings) error {
+func (m *mockSettingsStore) Update(cfg settings.AppSettings) error {
+	m.data = cfg
 	return nil
 }
 
-func (m mockSettingsStore) Get() settings.AppSettings {
-	return settings.AppSettings{}
+func (m *mockSettingsStore) Get() settings.AppSettings {
+	return m.data
 }
 
-func (m mockSettingsStore) Save() error {
+func (m *mockSettingsStore) Save() error {
 	return nil
 }
 
-func (m mockSettingsStore) SetExtra(key, value string) error {
-    return nil
+func (m *mockSettingsStore) SetExtra(key, value string) error {
+	if m.data.Extras == nil {
+		m.data.Extras = make(map[string]string)
+	}
+	m.data.Extras[key] = value
+	return nil
 }
+
+// Use real orchestration.Hub with in-memory settings store for tests
 
 func TestHandleWizardConfigure(t *testing.T) {
+	hub := orchestration.NewHub()
+	hub.SetSettingsStore(settings.NewStore())
+
 	s := &Server{
 		settings: settings.AppSettings{},
-		hub:      orchestration.NewHub(),
+		hub:      hub,
 	}
 
 	reqBody := wizardConfigureRequest{
@@ -61,6 +73,49 @@ func TestHandleWizardConfigure(t *testing.T) {
 }
 
 // TestHandleWizardOnboardingVerify checks the onboarding verify endpoint
+func TestHandleWizardState(t *testing.T) {
+	hub := orchestration.NewHub()
+	hub.SetSettingsStore(settings.NewStore())
+
+	s := &Server{hub: hub}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/wizard/state/save", s.handleWizardStateSave)
+	mux.HandleFunc("/api/wizard/state", s.handleWizardStateLoad)
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	body := []byte(`{"step": 3, "company_name": "Test Company"}`)
+	req, _ := http.NewRequest(http.MethodPost, server.URL+"/api/wizard/state/save", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to execute save request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("Expected status %v, got %v", http.StatusOK, resp.StatusCode)
+	}
+
+	req2, _ := http.NewRequest(http.MethodGet, server.URL+"/api/wizard/state", nil)
+	resp2, err := http.DefaultClient.Do(req2)
+	if err != nil {
+		t.Fatalf("Failed to execute get request: %v", err)
+	}
+	defer resp2.Body.Close()
+
+	var stateData map[string]interface{}
+	json.NewDecoder(resp2.Body).Decode(&stateData)
+
+	if stateData["step"].(float64) != 3 {
+		t.Errorf("Expected step 3, got %v", stateData["step"])
+	}
+	if stateData["company_name"] != "Test Company" {
+		t.Errorf("Expected 'Test Company', got %v", stateData["company_name"])
+	}
+}
+
 func TestHandleWizardOnboardingVerify(t *testing.T) {
 	s := &Server{}
 

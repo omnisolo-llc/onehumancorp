@@ -66,15 +66,77 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
   BusinessSetupState build() => const BusinessSetupState();
 
+  Future<void> _saveState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+    if (user == null || baseUrl.isEmpty) return;
+
+    try {
+      await http.post(
+        Uri.parse('$baseUrl/api/wizard/state/save'),
+        headers: {
+          'Authorization': 'Bearer ${user.token}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'step': state.step,
+          'business_type': state.businessType,
+          'company_name': state.companyName,
+          'business_description': state.businessDescription,
+          'what_you_sell': state.whatYouSell,
+          'payment_method': state.paymentMethod,
+          'admin_name': state.adminName,
+          'admin_email': state.adminEmail,
+        }),
+      );
+    } catch (e) {
+      // Ignore save state errors for now
+    }
+  }
+
+  Future<void> loadState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+    if (user == null || baseUrl.isEmpty) return;
+
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/api/wizard/state'),
+        headers: {
+          'Authorization': 'Bearer ${user.token}',
+        },
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data.isNotEmpty) {
+          state = state.copyWith(
+            step: data['step'] as int? ?? 0,
+            businessType: data['business_type'] as String? ?? '',
+            companyName: data['company_name'] as String? ?? '',
+            businessDescription: data['business_description'] as String? ?? '',
+            whatYouSell: (data['what_you_sell'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? const [],
+            paymentMethod: data['payment_method'] as String? ?? '',
+            adminName: data['admin_name'] as String? ?? '',
+            adminEmail: data['admin_email'] as String? ?? '',
+          );
+        }
+      }
+    } catch (e) {
+      // Ignore load state errors
+    }
+  }
+
   void nextStep() {
     if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
+      _saveState();
     }
   }
 
   void prevStep() {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      _saveState();
     }
   }
 
@@ -161,6 +223,14 @@ class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
 
 class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(businessSetupProvider.notifier).loadState();
+    });
+  }
 
   Widget _buildStep(BusinessSetupState state, BusinessSetupNotifier notifier) {
     if (state.step == 0) {
