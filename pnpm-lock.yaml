@@ -37,7 +37,7 @@ importers:
         specifier: ^1.51.1
         version: 1.58.2
 
-  src/cli:
+  srcs/cli:
     dependencies:
       ink:
         specifier: ^7.0.1
