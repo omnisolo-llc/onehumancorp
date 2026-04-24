@@ -30,6 +30,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
   bool _capEmailRead = false;
   bool _capMessagingSend = false;
   bool _capDataAccess = false;
+  bool _capOrderUpdates = false;
 
   // Resource limits state
   double _maxSessionsPerDay = 50.0;
@@ -94,12 +95,16 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
     try {
       final api = ref.read(apiServiceProvider);
       if (api != null) {
-        // Note: Additional state collected (capabilities, limits, topology)
-        // should be passed here when the API supports them. For now we use the required fields.
+        final caps = <String>[];
+        if (_capEmailRead) caps.add('EMAIL_READ');
+        if (_capMessagingSend) caps.add('MESSAGING_SEND');
+        if (_capDataAccess) caps.add('DATA_ACCESS');
+        if (_capOrderUpdates) caps.add('ORDER_UPDATES');
         await api.hireAgent(
           _nameController.text.trim(),
           _selectedRole,
           providerType: _selectedProvider,
+          capabilities: caps,
         );
         if (mounted) {
           context.go('/agents');
@@ -471,23 +476,29 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 const SizedBox(height: 8),
                 const Text('What permissions should this agent have?'),
                 const SizedBox(height: 16),
-                CheckboxListTile(
-                  title: const Text('Read my emails'),
-                  subtitle: const Text('Grants EMAIL_READ permission'),
+                SwitchListTile(
+                  title: const Text('Reply to customer messages'),
+                  subtitle: Text(expertMode ? 'Grants EMAIL_READ permission' : 'Allow agent to read and reply to messages'),
                   value: _capEmailRead,
                   onChanged: (val) => setState(() => _capEmailRead = val!),
                 ),
-                CheckboxListTile(
-                  title: const Text('Send messages on my behalf'),
-                  subtitle: const Text('Grants MESSAGING_SEND permission'),
+                SwitchListTile(
+                  title: const Text('Post to Instagram & Facebook'),
+                  subtitle: Text(expertMode ? 'Grants MESSAGING_SEND permission' : 'Allow agent to manage social media'),
                   value: _capMessagingSend,
                   onChanged: (val) => setState(() => _capMessagingSend = val!),
                 ),
-                CheckboxListTile(
-                  title: const Text('Access business data'),
-                  subtitle: const Text('Grants DATA_ACCESS permission'),
+                SwitchListTile(
+                  title: const Text('Write product descriptions'),
+                  subtitle: Text(expertMode ? 'Grants DATA_ACCESS permission' : 'Allow agent to update product catalog'),
                   value: _capDataAccess,
                   onChanged: (val) => setState(() => _capDataAccess = val!),
+                ),
+                SwitchListTile(
+                  title: const Text('Send order updates'),
+                  subtitle: Text(expertMode ? 'Grants ORDER_UPDATES permission' : 'Allow agent to send order updates'),
+                  value: _capOrderUpdates,
+                  onChanged: (val) => setState(() => _capOrderUpdates = val!),
                 ),
               ],
             ),

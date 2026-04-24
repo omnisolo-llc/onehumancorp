@@ -1,0 +1,18 @@
+--- src/app/lib/services/api_service.dart
++++ src/app/lib/services/api_service.dart
+@@ -48,6 +48,7 @@
+     String name,
+     String role, {
+     String providerType = 'openclaw',
++    List<String>? capabilities,
+   }) async {
+     final res = await _client.post(
+       Uri.parse('$baseUrl/api/agents/hire'),
+@@ -56,6 +57,7 @@
+         'name': name,
+         'role': role,
+         'providerType': providerType,
++        if (capabilities != null) 'capabilities': capabilities,
+       }),
+     );
+     _checkStatus(res);
