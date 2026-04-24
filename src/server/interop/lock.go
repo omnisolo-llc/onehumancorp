@@ -62,7 +62,7 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 			// Check if it's actually a file from a previous version and remove it
 			info, err := os.Stat(path)
 			if err == nil && !info.IsDir() {
-				os.Remove(path)
+				os.RemoveAll(path)
 				return m.Lock(ctx, key, ttl)
 			}
 
