@@ -148,8 +148,8 @@ class _DashboardContent extends StatelessWidget {
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Dashboard Updates',
-              value: data.statuses.length.toString(),
+              label: 'Today\'s Sales',
+              value: '\$' + data.costs.totalCostUSD.toStringAsFixed(2),
               icon: Icons.pending_actions,
               color: Theme.of(context).colorScheme.secondary,
             ),

@@ -157,3 +157,30 @@ func TestDashboardDisplaysHybridDeploymentTelemetryWidget(t *testing.T) {
 	body, _ := page.Content()
 	_ = body
 }
+
+func TestDashboardDisplaysTodaysSalesInsteadOfDashboardUpdates(t *testing.T) {
+	page := newPage(t)
+	defer page.Close()
+
+	loginAsAdmin(t, page)
+
+	// Wait for dashboard content to load
+	page.Locator("text=Overview").First().WaitFor()
+
+	// Verify the presence of plain-language labels
+	count, err := page.Locator("text=Today's Sales").Count()
+	if err != nil {
+		t.Fatalf("Failed to count 'Today's Sales': %v", err)
+	}
+	if count == 0 {
+		t.Errorf("Expected 'Today's Sales' to be visible, but it was not found")
+	}
+
+	count, err = page.Locator("text=Dashboard Updates").Count()
+	if err != nil {
+		t.Fatalf("Failed to count 'Dashboard Updates': %v", err)
+	}
+	if count > 0 {
+		t.Errorf("Expected 'Dashboard Updates' to be removed, but it was still found")
+	}
+}
