@@ -1397,10 +1397,6 @@ func TestTelegramAPIBaseSSRF(t *testing.T) {
 }
 
 func TestSendTelegramMessage_NewRequestError(t *testing.T) {
-	oldLookupIP := LookupIPFunc
-	LookupIPFunc = mockLookupIP
-	defer func() { LookupIPFunc = oldLookupIP }()
-
 	originalBase := TelegramAPIBase
 	TelegramAPIBase = "http://example.com"
 	defer func() { TelegramAPIBase = originalBase }()
