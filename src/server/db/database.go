@@ -29,6 +29,51 @@ var (
 	migrationsFS embed.FS
 )
 
+func init() {
+	_ = sqlite.RegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+		if args[0] == nil || args[1] == nil {
+			return nil, nil
+		}
+		var s1, s2 string
+		switch v := args[0].(type) {
+		case string:
+			s1 = v
+		case []byte:
+			s1 = string(v)
+		default:
+			return nil, fmt.Errorf("unexpected type for arg0: %T", args[0])
+		}
+		switch v := args[1].(type) {
+		case string:
+			s2 = v
+		case []byte:
+			s2 = string(v)
+		default:
+			return nil, fmt.Errorf("unexpected type for arg1: %T", args[1])
+		}
+		var v1, v2 []float32
+		if err := json.Unmarshal([]byte(s1), &v1); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(s2), &v2); err != nil {
+			return nil, err
+		}
+		if len(v1) != len(v2) {
+			return nil, fmt.Errorf("vector length mismatch")
+		}
+		var dot, mag1, mag2 float64
+		for i := range v1 {
+			dot += float64(v1[i] * v2[i])
+			mag1 += float64(v1[i] * v1[i])
+			mag2 += float64(v2[i] * v2[i])
+		}
+		if mag1 == 0 || mag2 == 0 {
+			return 1.0, nil
+		}
+		return 1.0 - (dot / (math.Sqrt(mag1) * math.Sqrt(mag2))), nil
+	})
+}
+
 func splitSQLStatements(sqlText string) []string {
 	var (
 		statements     []string
@@ -250,32 +295,6 @@ func New(ctx context.Context) (*DB, error) {
 		if sqliteErr != nil {
 			return nil, fmt.Errorf("db: connect to sqlite: %w", sqliteErr)
 		}
-
-		_ = sqlite.RegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
-			if args[0] == nil || args[1] == nil {
-				return nil, nil
-			}
-			var v1, v2 []float32
-			if err := json.Unmarshal([]byte(args[0].(string)), &v1); err != nil {
-				return nil, err
-			}
-			if err := json.Unmarshal([]byte(args[1].(string)), &v2); err != nil {
-				return nil, err
-			}
-			if len(v1) != len(v2) {
-				return nil, fmt.Errorf("vector length mismatch")
-			}
-			var dot, mag1, mag2 float64
-			for i := range v1 {
-				dot += float64(v1[i] * v2[i])
-				mag1 += float64(v1[i] * v1[i])
-				mag2 += float64(v2[i] * v2[i])
-			}
-			if mag1 == 0 || mag2 == 0 {
-				return 1.0, nil
-			}
-			return 1.0 - (dot / (math.Sqrt(mag1) * math.Sqrt(mag2))), nil
-		})
 
 		sqliteDB.SetMaxOpenConns(1)
 

@@ -3,15 +3,12 @@ package autodream
 import (
 	"context"
 	"database/sql"
-	"database/sql/driver"
 	"testing"
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/memory"
-
-	import_sqlite "modernc.org/sqlite"
 )
 
 type mockLLM struct{}
@@ -29,10 +26,6 @@ func setupTestDB(t *testing.T) db.Provider {
 	if err != nil {
 		t.Fatalf("failed to open test sqlite db: %v", err)
 	}
-
-	_ = import_sqlite.RegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *import_sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
-		return 0.01, nil
-	})
 
 	provider := db.NewSqliteProvider(dbConn)
 	ctx := context.Background()
