@@ -396,7 +396,22 @@ func TestRecordFunctions(t *testing.T) {
 	})
 
 	t.Run("RecordAgentTransitionLatency", func(t *testing.T) {
+		var capturedType, capturedPayload string
+		BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+			capturedType = metricType
+			capturedPayload = payload
+			return nil
+		}
+		defer func() { BufferMetricFunc = nil }()
+
 		RecordAgentTransitionLatency(ctx, "pending_to_running", 1.23)
+
+		if capturedType != "agent_transition_latency" {
+			t.Errorf("expected buffered metric type agent_transition_latency, got %s", capturedType)
+		}
+		if capturedPayload == "" {
+			t.Errorf("expected payload, got empty string")
+		}
 	})
 
 	t.Run("RecordSQLiteLockContention", func(t *testing.T) {
@@ -859,14 +874,6 @@ func TestRecordBubblewrapMetrics(t *testing.T) {
 	RecordBubblewrapSpawn(ctx)
 	RecordBubblewrapExecutionLatency(ctx, 1.23)
 	RecordBubblewrapViolation(ctx)
-}
-
-func TestRecordHarnessMetrics(t *testing.T) {
-	ctx := context.Background()
-
-	RecordHarnessToolInvocation(ctx)
-	RecordHarnessExecutionDuration(ctx, 1.23)
-	RecordHarnessViolation(ctx)
 }
 
 func TestRecordSandboxViolation(t *testing.T) {

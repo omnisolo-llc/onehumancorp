@@ -347,9 +347,27 @@ func (s *SIPDB) UpdateMemory(ctx context.Context, key, value string) error {
 
 // getMissionUpdatedAt fetches the updated_at or created_at timestamp for a mission.
 func (s *SIPDB) getMissionUpdatedAt(ctx context.Context, missionID string) (time.Time, error) {
-	var updatedAt time.Time
+	var updatedAt interface{}
 	err := s.db.QueryRow(ctx, "SELECT COALESCE(updated_at, created_at) FROM agent_missions WHERE id = $1 AND organization_id = $2", missionID, s.orgID).Scan(&updatedAt)
-	return updatedAt, err
+	if err != nil {
+		return time.Time{}, err
+	}
+	switch v := updatedAt.(type) {
+	case time.Time:
+		return v, nil
+	case string:
+		// Try parsing common SQLite datetime format
+		if t, err := time.Parse("2006-01-02 15:04:05", v); err == nil {
+			return t, nil
+		}
+		if t, err := time.Parse(time.RFC3339Nano, v); err == nil {
+			return t, nil
+		}
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unknown type for timestamp")
 }
 
 // GetPendingMissions proactively seeks tasks assigned to the role.
@@ -705,7 +723,7 @@ func (s *SIPDB) PruneBufferedMetrics(ctx context.Context, ageThreshold time.Dura
 }
 
 // PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.
-// It also sanitizes stuck PENDING missions by converting them to FAILED after 1h.
+// It also sanitizes stuck PENDING missions by converting them to STUCK after 1h, then FAILED if they are older than the ageThreshold.
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
 // Returns error.
 // Produces errors: Explicit error handling.
@@ -715,17 +733,22 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		stuckThreshold := time.Now().Add(-1 * time.Hour).UTC().Format("2006-01-02 15:04:05")
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
-		// 1. Mark stagnant PENDING missions as FAILED after 1 hour to prevent infinite retry loops
-		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
+		// 1. Mark stagnant PENDING missions as STUCK after 1 hour to trigger triage visibility
+		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
 		if err == nil {
 			for rows.Next() {
 				var id, prevStatus string
 				var prevTime time.Time
 				if rows.Scan(&id, &prevStatus, &prevTime) == nil && !prevTime.IsZero() {
-					telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(prevStatus)+"_to_failed", time.Since(prevTime).Seconds())
+					telemetry.RecordAgentTransitionLatency(ctx, strings.ToLower(prevStatus)+"_to_stuck", time.Since(prevTime).Seconds())
 				}
 			}
 			rows.Close()
+		}
+
+		// 1b. Immediately requeue STUCK missions to prevent them from persisting
+		if _, errRequeue := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1", s.orgID); errRequeue != nil {
+			return errRequeue
 		}
 
 		// 2. Mark missions as FAILED if they exceed the absolute age threshold

@@ -89,10 +89,11 @@ func (r *SharedTaskListRepo) GetNextAvailableTask(ctx context.Context, agentID s
 }
 
 func (r *SharedTaskListRepo) getNextAvailableTaskSQLite(ctx context.Context, agentID string) (*SharedTaskListTask, error) {
-	r.mu.TryLock()
-	r.mu.Lock()
+		if !r.mu.TryLock() {
+			telemetry.RecordPostgresLockContention(ctx, "shared_task_list_tasks")
+			r.mu.Lock()
+		}
 	defer r.mu.Unlock()
-	telemetry.RecordPostgresLockContention(ctx, "shared_task_list_tasks")
 	tx, err := r.dbProvider.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
