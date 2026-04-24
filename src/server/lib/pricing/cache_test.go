@@ -106,7 +106,7 @@ func TestCompressedEmbeddingCache_GetSet(t *testing.T) {
 
 func TestCompressedEmbeddingCache_Expiration(t *testing.T) {
 	// Very short TTL for testing
-	cache := NewCompressedEmbeddingCache(500 * time.Millisecond)
+	cache := NewCompressedEmbeddingCache(10 * time.Millisecond)
 
 	prompt := "What is the meaning of life?"
 	response := "42"
@@ -120,7 +120,7 @@ func TestCompressedEmbeddingCache_Expiration(t *testing.T) {
 	}
 
 	// Wait for expiration
-	time.Sleep(600 * time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
 
 	// Should not exist after expiration
 	_, exists = cache.Get(prompt)

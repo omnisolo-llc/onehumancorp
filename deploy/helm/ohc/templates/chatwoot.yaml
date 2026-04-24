@@ -35,8 +35,6 @@ spec:
           resources:
             {{- toYaml .Values.chatwoot.resources | nindent 12 }}
           env:
-            - name: LOG_FORMAT
-              value: "json"
             - name: LOG_LEVEL
               value: "info"
             - name: SECRET_KEY_BASE
@@ -51,10 +49,6 @@ spec:
               value: {{ if .Values.chatwoot.redisUrl }}{{ .Values.chatwoot.redisUrl | quote }}{{ else }}"redis://{{ .Release.Name }}-redis-master:6379"{{ end }}
             - name: RAILS_ENV
               value: "production"
-            - name: LOGRAGE_FORMAT
-              value: "json"
-            - name: LOGRAGE_ENABLED
-              value: "true"
             - name: INSTALLATION_ENV
               value: "kubernetes"
             - name: FORCE_SSL
@@ -111,8 +105,6 @@ spec:
           ports:
             - containerPort: {{ .Values.chatwoot.service.port }}
           env:
-            - name: LOG_FORMAT
-              value: "json"
             - name: LOG_LEVEL
               value: "info"
             - name: SECRET_KEY_BASE
@@ -127,10 +119,6 @@ spec:
               value: {{ if .Values.chatwoot.redisUrl }}{{ .Values.chatwoot.redisUrl | quote }}{{ else }}"redis://{{ .Release.Name }}-redis-master:6379"{{ end }}
             - name: RAILS_ENV
               value: "production"
-            - name: LOGRAGE_FORMAT
-              value: "json"
-            - name: LOGRAGE_ENABLED
-              value: "true"
             - name: INSTALLATION_ENV
               value: "kubernetes"
             - name: DEFAULT_LOCALE
@@ -201,8 +189,6 @@ spec:
           resources:
             {{- toYaml .Values.chatwoot.resources | nindent 12 }}
           env:
-            - name: LOG_FORMAT
-              value: "json"
             - name: LOG_LEVEL
               value: "info"
             - name: SECRET_KEY_BASE
@@ -217,10 +203,6 @@ spec:
               value: {{ if .Values.chatwoot.redisUrl }}{{ .Values.chatwoot.redisUrl | quote }}{{ else }}"redis://{{ .Release.Name }}-redis-master:6379"{{ end }}
             - name: RAILS_ENV
               value: "production"
-            - name: LOGRAGE_FORMAT
-              value: "json"
-            - name: LOGRAGE_ENABLED
-              value: "true"
             - name: INSTALLATION_ENV
               value: "kubernetes"
             - name: FORCE_SSL

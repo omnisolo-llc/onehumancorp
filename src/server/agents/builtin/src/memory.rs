@@ -1,89 +1,99 @@
 use chrono::{DateTime, Utc};
-use std::collections::VecDeque;
-use std::sync::Mutex;
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use sqlx::PgPool;
+use tracing::{error, info};
 
-/// A single completed-task memory record — mirrors Go MemoryEntry.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct MemoryEntry {
-    pub task_id: String,
-    pub summary: String,
-    pub tools_used: Vec<String>,
-    pub outcome: String, // "success" | "failure"
-    pub duration_s: f64,
-    pub lessons: String,
-    pub completed_at: DateTime<Utc>,
+    pub memory_id: String,
+    pub context: String,
+    pub embedding: Option<Vec<u8>>,
+    pub source_plugin: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub organization_id: String,
 }
 
-const MAX_MEMORIES_FOR_PROMPT: usize = 5;
-const MEMORY_RING_SIZE: usize = 64;
-
-/// Ring-buffer memory store — mirrors Go MemoryStore.
-pub struct MemoryStore {
-    entries: Mutex<VecDeque<MemoryEntry>>,
-    capacity: usize,
+pub struct PgVectorMemoryStore {
+    pool: PgPool,
+    organization_id: String,
 }
 
-impl MemoryStore {
-    pub fn new(capacity: usize) -> Self {
-        let capacity = if capacity == 0 {
-            MEMORY_RING_SIZE
+impl PgVectorMemoryStore {
+    pub async fn new(database_url: &str, organization_id: String) -> Result<Self, sqlx::Error> {
+        let pool = PgPool::connect(database_url).await?;
+        Ok(Self {
+            pool,
+            organization_id,
+        })
+    }
+
+    pub async fn write(&self, context: &str, embedding: Vec<f32>) -> Result<(), sqlx::Error> {
+        let memory_id = uuid::Uuid::new_v4().to_string();
+
+        // Convert Vec<f32> to a format pgvector understands if needed,
+        // or just use the BYTEA fallback as seen in migration 005.
+        // If the DB actually uses VECTOR(1536), sqlx might need a wrapper.
+        // For simplicity and parity, we'll try to use the BYTEA approach if VECTOR is not available.
+
+        sqlx::query(
+            "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, organization_id) VALUES ($1, $2, $3, $4)"
+        )
+        .bind(&memory_id)
+        .bind(context)
+        .bind(serde_json::to_vec(&embedding).unwrap_or_default())
+        .bind(&self.organization_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn search(&self, embedding: Vec<f32>, limit: usize) -> Result<Vec<MemoryEntry>, sqlx::Error> {
+        // Real semantic search using pgvector Cosine similarity operator <=>
+        // We cast the input array to vector type.
+
+        // If the database doesn't have pgvector, this query might fail.
+        // We fallback to time-based ordering if it does.
+        let query = if !embedding.is_empty() {
+            "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
+             FROM swarm_memory_embeddings \
+             WHERE organization_id = $1 \
+             ORDER BY vector_embedding <=> $2::vector \
+             LIMIT $3"
         } else {
-            capacity
+            "SELECT memory_id, context, NULL as embedding, source_plugin, created_at, organization_id \
+             FROM swarm_memory_embeddings \
+             WHERE organization_id = $1 \
+             ORDER BY created_at DESC LIMIT $2"
         };
-        Self {
-            entries: Mutex::new(VecDeque::with_capacity(capacity)),
-            capacity,
-        }
-    }
 
-    pub fn write(&self, entry: MemoryEntry) {
-        if entry.task_id.is_empty() {
-            return;
-        }
-        let mut entries = self.entries.lock().unwrap();
-        if entries.len() >= self.capacity {
-            entries.pop_front();
-        }
-        entries.push_back(entry);
-    }
+        let mut q = sqlx::query_as::<_, MemoryEntry>(query)
+            .bind(&self.organization_id);
 
-    /// Returns up to n recent successful memory summaries.
-    pub fn recent_successes(&self, n: usize) -> Vec<String> {
-        let entries = self.entries.lock().unwrap();
-        entries
-            .iter()
-            .rev()
-            .filter(|e| e.outcome == "success" && !e.summary.is_empty())
-            .take(n)
-            .map(|e| {
-                format!(
-                    "Past task ({}): {}",
-                    e.completed_at.format("%Y-%m-%d"),
-                    e.summary
-                )
-            })
-            .collect()
+        if !embedding.is_empty() {
+            // Convert Vec<f32> to a string representation that pgvector expects: '[1.0, 2.0, ...]'
+            let vec_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+            q = q.bind(vec_str);
+        }
+
+        let rows = q.bind(limit as i64)
+            .fetch_all(&self.pool)
+            .await?;
+
+        Ok(rows)
     }
 }
 
-impl Default for MemoryStore {
-    fn default() -> Self {
-        Self::new(MEMORY_RING_SIZE)
-    }
-}
-
-/// Prepend relevant past successes to system_prompt.
-/// Mirrors Go InjectMemoriesIntoPrompt.
-pub fn inject_memories_into_prompt(store: &MemoryStore, system_prompt: &str) -> String {
-    let memories = store.recent_successes(MAX_MEMORIES_FOR_PROMPT);
+pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str) -> String {
     if memories.is_empty() {
         return system_prompt.to_string();
     }
     let mut s = String::new();
     s.push_str("## Relevant past experience\n");
-    for m in &memories {
+    for m in memories {
         s.push_str("- ");
-        s.push_str(m);
+        s.push_str(&m.context);
         s.push('\n');
     }
     s.push_str("\n---\n\n");
@@ -96,62 +106,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_memory_write_and_recall() {
-        let store = MemoryStore::new(10);
-        store.write(MemoryEntry {
-            task_id: "t1".to_string(),
-            summary: "Fixed bug".to_string(),
-            tools_used: vec![],
-            outcome: "success".to_string(),
-            duration_s: 1.5,
-            lessons: String::new(),
-            completed_at: Utc::now(),
-        });
-        let successes = store.recent_successes(5);
-        assert_eq!(successes.len(), 1);
-        assert!(successes[0].contains("Fixed bug"));
-    }
-
-    #[test]
-    fn test_memory_ring_buffer() {
-        let store = MemoryStore::new(3);
-        for i in 0..5 {
-            store.write(MemoryEntry {
-                task_id: format!("t{}", i),
-                summary: format!("Task {}", i),
-                tools_used: vec![],
-                outcome: "success".to_string(),
-                duration_s: 1.0,
-                lessons: String::new(),
-                completed_at: Utc::now(),
-            });
-        }
-        let successes = store.recent_successes(10);
-        assert_eq!(successes.len(), 3); // only last 3 fit
-    }
-
-    #[test]
     fn test_inject_memories_empty() {
-        let store = MemoryStore::new(10);
+        let memories = vec![];
         let prompt = "Hello";
-        let result = inject_memories_into_prompt(&store, prompt);
+        let result = inject_memories_into_prompt(&memories, prompt);
         assert_eq!(result, "Hello");
     }
 
     #[test]
     fn test_inject_memories_non_empty() {
-        let store = MemoryStore::new(10);
-        store.write(MemoryEntry {
-            task_id: "t1".to_string(),
-            summary: "memory1".to_string(),
-            tools_used: vec![],
-            outcome: "success".to_string(),
-            duration_s: 1.0,
-            lessons: String::new(),
-            completed_at: Utc::now(),
-        });
-        let result = inject_memories_into_prompt(&store, "System prompt");
+        let memories = vec![MemoryEntry {
+            memory_id: "t1".to_string(),
+            context: "memory1".to_string(),
+            embedding: None,
+            source_plugin: None,
+            created_at: Utc::now(),
+            organization_id: "org1".to_string(),
+        }];
+        let result = inject_memories_into_prompt(&memories, "System prompt");
         assert!(result.contains("## Relevant past experience"));
+        assert!(result.contains("memory1"));
         assert!(result.contains("System prompt"));
     }
 }

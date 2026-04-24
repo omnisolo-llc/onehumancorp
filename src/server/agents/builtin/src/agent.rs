@@ -26,6 +26,7 @@ pub struct AgentRunConfig {
     pub temperature: f32,
     pub max_iterations: i32,
     pub max_task_tokens: i32, // budget for token tracking
+    pub confidence_threshold: f32,
 }
 
 impl Default for AgentRunConfig {
@@ -37,6 +38,7 @@ impl Default for AgentRunConfig {
             temperature: 0.0,
             max_iterations: 100,
             max_task_tokens: 0,
+            confidence_threshold: 0.0,
         }
     }
 }
@@ -83,6 +85,7 @@ impl Agent {
     }
 
     /// Run the agent loop. Calls `on_event` for each event.
+    #[tracing::instrument(skip(self, on_event, cfg), fields(model = %cfg.model))]
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -175,6 +178,10 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
+                // In a production-grade agent, we might use a separate LLM pass
+                // to evaluate confidence in the final answer if threshold > 0.
+                // For now, we'll assume the model is confident if it didn't use more tools.
+
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });

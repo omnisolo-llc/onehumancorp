@@ -17,13 +17,10 @@ spec:
       containers:
       - name: pushgateway
         image: prom/pushgateway:latest
-        args: ["--log.format=json"]
         ports:
-        - containerPort: 9091
         env:
-        - name: LOG_FORMAT
-          value: "json"
         - name: LOG_LEVEL
           value: "info"
+        - containerPort: 9091
         resources:
           {{- toYaml .Values.pushgateway.resources | nindent 12 }}
