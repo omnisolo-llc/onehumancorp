@@ -20,7 +20,9 @@
       },
       "options": {
         "mode": "html",
-        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>"
+        "content": "<style>.panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; font-family: 'Outfit', 'Inter', sans-serif !important; border-radius: 12px !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; }</style>",
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "transparent": true
     },
@@ -34,7 +36,9 @@
       "id": 100,
       "options": {
         "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Premium Telemetry\n</div>",
-        "mode": "html"
+        "mode": "html",
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "title": "Aesthetic Mandate Injector",
       "transparent": true,
@@ -116,7 +120,9 @@
         "tooltip": {
           "mode": "single",
           "sort": "none"
-        }
+        },
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "title": "OHC Server Memory Usage (Glassmorphism Styled)",
       "type": "timeseries",
