@@ -78,9 +78,9 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 	threshold := time.Now().Add(-1 * time.Hour).UTC()
 	var query string
 	if p.db.IsSQLite() {
-		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < ? LIMIT 50"
+		query = "SELECT session_id, agent_id, context_data, organization_id FROM agent_session_data WHERE last_accessed < ? LIMIT 50"
 	} else {
-		query = "SELECT session_id, agent_id, context_data FROM agent_session_data WHERE last_accessed < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
+		query = "SELECT session_id, agent_id, context_data, organization_id FROM agent_session_data WHERE last_accessed < $1 LIMIT 50 FOR UPDATE SKIP LOCKED"
 	}
 
 	rows, err := p.db.Query(ctx, query, threshold)
@@ -90,15 +90,16 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 	}
 
 	type Session struct {
-		ID          string
-		AgentID     string
-		ContextData string
+		ID             string
+		AgentID        string
+		ContextData    string
+		OrganizationID string
 	}
 
 	var sessions []Session
 	for rows.Next() {
 		var s Session
-		if err := rows.Scan(&s.ID, &s.AgentID, &s.ContextData); err == nil {
+		if err := rows.Scan(&s.ID, &s.AgentID, &s.ContextData, &s.OrganizationID); err == nil {
 			sessions = append(sessions, s)
 		}
 	}
@@ -136,14 +137,14 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 
 				var insertQuery string
 				if p.db.IsSQLite() {
-					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, 'system', ?, ?, ?, 'session_compression')"
-					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
+					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, 'session_compression')"
+					_, err = tx.Exec(ctx, insertQuery, s.ID, s.OrganizationID, s.AgentID, summary, embeddingStr)
 					if err == nil {
 						_, err = tx.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES (?, ?, ?, ?)", uuid.New().String(), "Session Compression: "+s.ID, summary, embeddingStr)
 					}
 				} else {
-					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, 'system', $2, $3, $4::vector, 'session_compression')"
-					_, err = tx.Exec(ctx, insertQuery, s.ID, s.AgentID, summary, embeddingStr)
+					insertQuery = "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, 'session_compression')"
+					_, err = tx.Exec(ctx, insertQuery, s.ID, s.OrganizationID, s.AgentID, summary, embeddingStr)
 					if err == nil {
 						_, err = tx.Exec(ctx, "INSERT INTO swarm_long_term_memory (id, topic, summary, embedding) VALUES ($1, $2, $3, $4::vector)", uuid.New().String(), "Session Compression: "+s.ID, summary, embeddingStr)
 					}
@@ -200,6 +201,7 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		var memFile struct {
 			AgentSessionData string `yaml:"agent_session_data"`
 			Content          string `yaml:"content"`
+			OrganizationID   string `yaml:"organization_id"`
 		}
 
 		if err := yaml.Unmarshal(data, &memFile); err != nil {
@@ -210,6 +212,11 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 		contentToEmbed := memFile.AgentSessionData
 		if contentToEmbed == "" {
 			contentToEmbed = memFile.Content
+		}
+
+		orgID := memFile.OrganizationID
+		if orgID == "" {
+			orgID = "system"
 		}
 		if contentToEmbed == "" {
 			os.Remove(file)
@@ -251,10 +258,10 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 			if p.db.IsSQLite() {
 				insertQuery = `
 					INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-					VALUES (?, 'system', 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
+					VALUES (?, ?, 'auto-dream-pipeline', ?, ?, 'memory_file', CURRENT_TIMESTAMP)
 					ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 				`
-				insertArgs = []interface{}{memID, chunk, embeddingStr}
+				insertArgs = []interface{}{memID, orgID, chunk, embeddingStr}
 				if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
 					slog.Warn("AutoDreamPipeline: failed to insert memory chunk", "id", memID, "error", err)
 					success = false
@@ -270,10 +277,10 @@ func (p *AutoDreamPipeline) process(ctx context.Context) {
 			} else {
 				insertQuery = `
 					INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
-					VALUES ($1, 'system', 'auto-dream-pipeline', $2, $3::vector, 'memory_file', NOW())
+					VALUES ($1, $2, 'auto-dream-pipeline', $3, $4::vector, 'memory_file', NOW())
 					ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding
 				`
-				insertArgs = []interface{}{memID, chunk, embeddingStr}
+				insertArgs = []interface{}{memID, orgID, chunk, embeddingStr}
 				if _, err := p.db.Exec(ctx, insertQuery, insertArgs...); err != nil {
 					slog.Warn("AutoDreamPipeline: failed to insert memory chunk", "id", memID, "error", err)
 					success = false

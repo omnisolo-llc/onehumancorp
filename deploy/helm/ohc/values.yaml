@@ -11,7 +11,6 @@ backend:
     minReplicas: 2
     maxReplicas: 20
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "250m"
@@ -53,7 +52,6 @@ ohcCore:
     minReplicas: 2
     maxReplicas: 20
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "50m"
@@ -95,7 +93,6 @@ chatwoot:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "250m"
@@ -136,7 +133,6 @@ powersync:
     minReplicas: 1
     maxReplicas: 5
     targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
   resources:
     requests:
       cpu: "50m"
