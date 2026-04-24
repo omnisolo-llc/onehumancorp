@@ -1,31 +1,33 @@
-1. **Create Database Migration:**
-   - Run `cat << 'MIG' > src/server/db/migrations/20260427020001_shared_tasks_indexes.sql ... MIG` to add `locked_until` (via ALTER TABLE if missing) and the indices on `status` and `locked_until` on `shared_tasks`.
-   - Add a verification step: `ls -la src/server/db/migrations/20260427020001_shared_tasks_indexes.sql` to verify creation.
-   - Run a Python script or `sed` to update `embedsrcs` in `src/server/db/BUILD.bazel` to include this new migration.
-   - Add a verification step: `cat src/server/db/BUILD.bazel | grep 20260427020001_shared_tasks_indexes.sql` to confirm.
+1. **Tooltip Registry**:
+   - Create `src/app/lib/widgets/tooltip_registry.dart` containing a centralized `TooltipRegistry` class/provider to store tooltip texts by key, and a `RegistryTooltip` widget that reads from it.
+   - Use `grep` and `sed` or `write_file` to create this.
 
-2. **Update TaskManager Enhancements:**
-   - Use a Python script to inject `tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")` in `CompleteTaskWithResult` inside `src/server/orchestration/tasks.go`.
-   - Use a Python script to replace the status update in `ReviewTask` to utilize `tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Oh, wait, `ReviewTask` is ALREADY doing `err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Let me verify `tasks.go` again to see what exactly needs modification.
+2. **Help Portal Screen (In-App Help Center)**:
+   - Create `src/app/lib/screens/help_portal_screen.dart` with categories: "Getting Started", "My Store", "Payments", "AI Agents", "Marketing", "Account & Billing".
+   - Include a search bar.
+   - Use `GlassCard` and OHC premium tokens.
 
-3. **Modify API Endpoints:**
-   - Use a Python script to add a `requireSPIFFE` HTTP middleware in `src/server/orchestration/service.go`. The middleware will check the `Authorization` header for a bearer token, and validate it starts with `spiffe://` using `interop.ValidateSPIFFEID`.
-   - Wrap the HTTP handlers defined in `RegisterTaskHTTPHandlers` with this new middleware.
-   - Add a verification step: `cat src/server/orchestration/service.go | grep -C 5 requireSPIFFE` to verify changes.
+3. **Release Notes Screen**:
+   - Create `src/app/lib/screens/release_notes_screen.dart` showing recent OHC updates in plain language.
 
-4. **Update Tests:**
-   - Run `cat << 'TEST' > src/server/orchestration/patch_tasks_test.py ... TEST` and execute it to inject `TestSharedTask_StateMachine` in `src/server/orchestration/tasks_test.go` covering all transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-   - Add a verification step: `grep -nri "TestSharedTask_StateMachine" src/server/orchestration/tasks_test.go` to confirm injection.
+4. **API Documentation Screen**:
+   - Create `src/app/lib/screens/api_docs_screen.dart` with a mockup of an interactive API reference.
 
-5. **Expose Prometheus Metrics:**
-   - Write a python script to ensure `telemetry.RecordSwarmTaskTransition` is properly used inside `tasks.go` right after state transitions, and ensure we use `metric.WithAttributes` properly in `telemetry.go`.
-   - Add verification step: `cat src/server/orchestration/tasks.go | grep RecordSwarmTaskTransition` to confirm changes.
+5. **AppShell Updates & AI Help Chat**:
+   - Modify `src/app/lib/router.dart` to include the new routes (`/help`, `/release-notes`, `/api-docs`).
+   - Add sidebar links for "Release Notes", "API Docs" and "Help Portal".
+   - Add a Floating Action Button (FAB) in `AppShell` for the "Ask anything" AI-powered help chat.
+   - Implement the Help Chat widget overlay/modal in `AppShell`.
 
-6. **Test the changes:**
-   - Run `bazelisk test //src/server/orchestration/... //src/server/db/...` to verify the logic.
+6. **Interactive Walkthroughs**:
+   - Create `src/app/lib/widgets/walkthrough_overlay.dart` that implements the step-by-step tours ("Set up your store", etc.) using an overlay with speech bubbles.
 
-7. **Pre-commit steps:**
+7. **Testing**:
+   - Create `src/app/test/screens/help_portal_screen_test.dart` and other tests to ensure 100% coverage.
+   - Run `bazelisk test //...` to ensure everything compiles and passes.
+
+8. **Pre-commit**:
    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
 
-8. **Completion:**
-   - Output a final unstructured message containing issue_id.
+9. **Submit PR**:
+   - Title: "✍️ Scribe: In-App Help Center and Documentation Infrastructure"

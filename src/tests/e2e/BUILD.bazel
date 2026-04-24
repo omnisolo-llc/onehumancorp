@@ -219,6 +219,20 @@ go_test(
     tags = _COMMON_TAGS,
 )
 
+
+# ── Scribe Help ───────────────────────────────────────────────────────────────
+go_test(
+    name = "e2e_scribe_help_test",
+    srcs = _SHARED_SRCS + ["scribe_help_test.go"],
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS,
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)
+
 # ── Misc ──────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_misc_test",
@@ -251,6 +265,7 @@ test_suite(
         ":e2e_cuj_audit_test",
         ":e2e_cuj_extended_test",
         ":e2e_cuj_accessibility_test",
+        ":e2e_scribe_help_test",
         ":e2e_misc_test",
     ],
 )

@@ -1,5 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import 'package:ohc_app/screens/help_portal_screen.dart';
+import 'package:ohc_app/screens/release_notes_screen.dart';
+import 'package:ohc_app/screens/api_docs_screen.dart';
+
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
 import 'package:ohc_app/screens/login_screen.dart';
@@ -98,7 +103,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/diagnostics',
             builder: (context, state) => const DiagnosticsScreen(),
           ),
+
           GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpPortalScreen(),
+          ),
+          GoRoute(
+            path: '/release-notes',
+            builder: (context, state) => const ReleaseNotesScreen(),
+          ),
+          GoRoute(
+            path: '/api-docs',
+            builder: (context, state) => const ApiDocsScreen(),
+          ),
+GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
           ),
@@ -217,15 +235,107 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 
 /// Persistent shell (sidebar + navigation) wrapping all authenticated routes.
-class AppShell extends StatelessWidget {
+
+class AppShell extends StatefulWidget {
   final Widget child;
   const AppShell({super.key, required this.child});
 
   @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  bool _isChatOpen = false;
+
+  void _toggleChat() {
+    setState(() {
+      _isChatOpen = !_isChatOpen;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Stack(
+        children: [
+          Row(children: [_Sidebar(), Expanded(child: widget.child)]),
+          if (_isChatOpen)
+            Positioned(
+              right: 24,
+              bottom: 80,
+              width: 350,
+              height: 500,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 4))
+                    ]
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF0F172A),
+                          borderRadius: BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('AI Help Chat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              onPressed: _toggleChat,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            )
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: const [
+                            Text('Hi there! I am your AI Help Agent. How can I assist you with One Human Corp today?', style: TextStyle(color: Colors.white70)),
+                          ],
+                        )
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: TextField(
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Ask anything...',
+                            hintStyle: const TextStyle(color: Colors.white54),
+                            filled: true,
+                            fillColor: Colors.black26,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            suffixIcon: const Icon(Icons.send, color: Colors.blueAccent),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _toggleChat,
+        backgroundColor: Colors.blueAccent,
+        child: const Icon(Icons.support_agent),
+      ),
+    );
   }
 }
+
 
 class _Sidebar extends StatelessWidget {
   @override
@@ -310,7 +420,12 @@ class _Sidebar extends StatelessWidget {
           label: 'Setup Wizard',
           path: '/wizard',
         ),
-        const SizedBox(height: 16),
+
+        const Divider(),
+        _NavItem(icon: Icons.help_outline, label: 'Help Portal', path: '/help'),
+        _NavItem(icon: Icons.new_releases, label: 'Release Notes', path: '/release-notes'),
+        _NavItem(icon: Icons.code, label: 'API Docs', path: '/api-docs'),
+const SizedBox(height: 16),
         _NavItem(
           icon: Icons.health_and_safety,
           label: 'Diagnostics',
