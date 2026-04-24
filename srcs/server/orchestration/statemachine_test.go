@@ -18,12 +18,15 @@ func TestStateMachine_Transitions(t *testing.T) {
 	// Create tables
 	tx, _ := provider.Begin(ctx)
 	tx.Exec(ctx, `
-		CREATE TABLE shared_tasks_master (
+		CREATE TABLE IF NOT EXISTS distributed_locks (lock_key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at DATETIME NOT NULL);
+		CREATE TABLE IF NOT EXISTS distributed_locks (lock_key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at DATETIME NOT NULL);
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (id TEXT PRIMARY KEY, entity_id TEXT NOT NULL, entity_type TEXT NOT NULL, from_state TEXT NOT NULL, to_state TEXT NOT NULL, agent_id TEXT, reason TEXT, occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
+			agent_id TEXT,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
@@ -39,7 +42,7 @@ func TestStateMachine_Transitions(t *testing.T) {
 			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
-	tx.Exec(ctx, `INSERT INTO shared_tasks_master (id, organization_id, title, status) VALUES ('task1', 'org1', 'Test', 'PENDING')`)
+	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task1', 'org1', 'Test', 'PENDING')`)
 	tx.Commit(ctx)
 
 	lockProvider, _ := NewDistributedLockProvider(ctx, provider, nil)
@@ -55,7 +58,7 @@ func TestStateMachine_Transitions(t *testing.T) {
 
 	// Verify state
 	var status, assignedAgent string
-	provider.QueryRow(ctx, "SELECT status, assigned_agent_id FROM shared_tasks_master WHERE id = 'task1'").Scan(&status, &assignedAgent)
+	provider.QueryRow(ctx, "SELECT status, agent_id FROM shared_tasks WHERE id = 'task1'").Scan(&status, &assignedAgent)
 	assert.Equal(t, "IN_PROGRESS", status)
 	assert.Equal(t, "agent1", assignedAgent)
 
@@ -76,12 +79,15 @@ func TestStateMachine_ConcurrentTransitions(t *testing.T) {
 	// Create tables
 	tx, _ := provider.Begin(ctx)
 	tx.Exec(ctx, `
-		CREATE TABLE shared_tasks_master (
+		CREATE TABLE IF NOT EXISTS distributed_locks (lock_key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at DATETIME NOT NULL);
+		CREATE TABLE IF NOT EXISTS distributed_locks (lock_key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at DATETIME NOT NULL);
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (id TEXT PRIMARY KEY, entity_id TEXT NOT NULL, entity_type TEXT NOT NULL, from_state TEXT NOT NULL, to_state TEXT NOT NULL, agent_id TEXT, reason TEXT, occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+		CREATE TABLE shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
-			assigned_agent_id TEXT,
+			agent_id TEXT,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
@@ -97,7 +103,7 @@ func TestStateMachine_ConcurrentTransitions(t *testing.T) {
 			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
-	tx.Exec(ctx, `INSERT INTO shared_tasks_master (id, organization_id, title, status) VALUES ('task2', 'org1', 'Test', 'READY')`)
+	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task2', 'org1', 'Test', 'READY')`)
 	tx.Commit(ctx)
 
 	lockProvider, _ := NewDistributedLockProvider(ctx, provider, nil)
@@ -123,8 +129,66 @@ func TestStateMachine_ConcurrentTransitions(t *testing.T) {
 	for err := range errs {
 		if err == nil {
 			successCount++
-		}
+		} else { t.Log("Error:", err) }
 	}
 
 	assert.Equal(t, 1, successCount)
+}
+
+func TestStateMachine_AdditionalTransitions(t *testing.T) {
+	ctx := context.Background()
+	provider := db.NewTestProvider(t)
+
+	tx, _ := provider.Begin(ctx)
+	tx.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS distributed_locks (lock_key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at DATETIME NOT NULL);
+		CREATE TABLE IF NOT EXISTS distributed_locks (lock_key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at DATETIME NOT NULL);
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (id TEXT PRIMARY KEY, entity_id TEXT NOT NULL, entity_type TEXT NOT NULL, from_state TEXT NOT NULL, to_state TEXT NOT NULL, agent_id TEXT, reason TEXT, occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+		CREATE TABLE shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT NOT NULL,
+			title TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'PENDING',
+			agent_id TEXT,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	tx.Exec(ctx, `
+		CREATE TABLE state_machine_transitions (
+			id TEXT PRIMARY KEY,
+			entity_id TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
+			reason TEXT,
+			occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task3', 'org1', 'Test', 'IN_PROGRESS')`)
+	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task4', 'org1', 'Test', 'IN_PROGRESS')`)
+	tx.Exec(ctx, `INSERT INTO shared_tasks (id, organization_id, title, status) VALUES ('task5', 'org1', 'Test', 'BLOCKED')`)
+	tx.Commit(ctx)
+
+	lockProvider, _ := NewDistributedLockProvider(ctx, provider, nil)
+	sm := NewStateMachine(provider, lockProvider, nil)
+
+	err := sm.TransitionToBlocked(ctx, "task3", "agent1")
+	require.NoError(t, err)
+
+	var status string
+	provider.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'task3'").Scan(&status)
+	assert.Equal(t, "BLOCKED", status)
+
+	err = sm.TransitionToFailed(ctx, "task4", "agent1")
+	require.NoError(t, err)
+
+	provider.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'task4'").Scan(&status)
+	assert.Equal(t, "FAILED", status)
+
+	err = sm.Transition(ctx, "task5", "agent1", "BLOCKED", "IN_PROGRESS", "Resuming")
+	require.NoError(t, err)
+
+	provider.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = 'task5'").Scan(&status)
+	assert.Equal(t, "IN_PROGRESS", status)
 }

@@ -16,7 +16,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/memory/autodream"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
 	"github.com/redis/rueidis"
 )
@@ -54,7 +53,7 @@ type TaskManager struct {
 	redisClient  rueidis.Client
 	hub          *CentrifugeNode // For Teammate Mesh broadcast
 	stopChan     chan struct{}
-	stateMachine *statemachine.StateMachine
+	stateMachine *StateMachine
 	taskQueue    queue.TaskQueue
 	mu           sync.Mutex // For Standalone mode SQLite locking
 	autodream    autodream.MemoryConsolidator
@@ -63,15 +62,13 @@ type TaskManager struct {
 
 // NewTaskManager creates a new TaskManager.
 func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.MemoryConsolidator) *TaskManager {
-	var broadcast func(string, map[string]interface{})
-	if hub != nil {
-		broadcast = hub.PublishTaskBroadcast
-	}
 
+
+	lockProvider, _ := NewDistributedLockProvider(context.Background(), provider, nil)
 	tm := &TaskManager{
 		db:           provider,
 		hub:          hub,
-		stateMachine: statemachine.NewStateMachine(provider, broadcast, nil),
+		stateMachine: NewStateMachine(provider, lockProvider, nil),
 		autodream:    ad,
 	}
 
@@ -90,7 +87,8 @@ func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.Memo
 	}
 
 	if tm.redisClient != nil {
-		tm.stateMachine = statemachine.NewStateMachine(provider, broadcast, tm.redisClient)
+		lockProviderRedis, _ := NewDistributedLockProvider(context.Background(), provider, tm.redisClient)
+		tm.stateMachine = NewStateMachine(provider, lockProviderRedis, nil)
 	}
 
 	// Fallback to SQLite queue if not using Redis
@@ -380,7 +378,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to check pending task: %w", queryErr)
 	}
 
-	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", statemachine.StateInProgress, agentID, "Claimed task")
+	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", "IN_PROGRESS", agentID, "Claimed task")
 	if err != nil {
 		return nil, fmt.Errorf("failed to transition state: %w", err)
 	}
@@ -488,7 +486,7 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 		return fmt.Errorf("failed to verify task ownership: %w", err)
 	}
 
-	err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")
+	err = tm.stateMachine.Transition(ctx, taskID, agentID, "IN_PROGRESS", "REVIEW", "Agent requested review")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
@@ -551,7 +549,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	latencyMS := float64(time.Since(createdAt).Milliseconds())
 	telemetry.RecordSwarmTaskProcessingLatency(ctx, latencyMS)
 
-	if currentStatus == statemachine.StateCompleted {
+	if currentStatus == "COMPLETED" {
 		return errors.New("task already completed")
 	}
 
@@ -562,7 +560,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	defer tx.Rollback(ctx)
 
 	_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = NULL WHERE id = $1", taskID)
-	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
+	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", "COMPLETED", agentID, "Task completed successfully")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
@@ -813,7 +811,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 		for _, id := range taskIDs {
 			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
-			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
+			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", "IN_PROGRESS", agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
 			}
@@ -878,7 +876,7 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 		for _, id := range taskIDs {
 			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
-			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
+			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", "IN_PROGRESS", agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
 			}

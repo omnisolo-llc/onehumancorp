@@ -11,7 +11,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/db"
 	"github.com/onehumancorp/mono/srcs/server/lib/resilience"
 	"github.com/onehumancorp/mono/srcs/server/orchestration/queue"
-	"github.com/onehumancorp/mono/srcs/server/orchestration/statemachine"
 )
 
 // writeHeartbeat persists a heartbeat record for taskID into the database.
@@ -130,7 +129,7 @@ func (s *DefaultSubAgentSpawner) failTask(task *SharedTask) error {
 
 	// Update TaskStateMachine
 	if s.tm != nil && s.tm.stateMachine != nil {
-		_ = s.tm.stateMachine.Transition(context.Background(), task.ID, "SHARED_TASK", statemachine.StateFailed, "sub-agent", EventSubTaskFailed)
+		_ = s.tm.stateMachine.TransitionToFailed(context.Background(), task.ID, "sub-agent")
 	}
 
 	// Emit SUB_AGENT_FAILED event
@@ -194,7 +193,7 @@ func (s *DefaultSubAgentSpawner) completeTask(task *SharedTask) error {
 
 	// Update TaskStateMachine
 	if s.tm != nil && s.tm.stateMachine != nil {
-		_ = s.tm.stateMachine.Transition(context.Background(), task.ID, "SHARED_TASK", statemachine.StateCompleted, "sub-agent", EventSubTaskCompleted)
+		_ = s.tm.stateMachine.TransitionToCompleted(context.Background(), task.ID, "sub-agent")
 	}
 
 	// Emit SUB_AGENT_COMPLETED event

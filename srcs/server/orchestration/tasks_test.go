@@ -51,6 +51,8 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 	ctx := context.Background()
 
 	createTables := `
+		CREATE TABLE IF NOT EXISTS distributed_locks (lock_key TEXT PRIMARY KEY, owner_id TEXT NOT NULL, expires_at DATETIME NOT NULL);
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (id TEXT PRIMARY KEY, entity_id TEXT NOT NULL, entity_type TEXT NOT NULL, from_state TEXT NOT NULL, to_state TEXT NOT NULL, agent_id TEXT, reason TEXT, occurred_at DATETIME DEFAULT CURRENT_TIMESTAMP);
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id VARCHAR PRIMARY KEY,
 			organization_id VARCHAR NOT NULL,
@@ -295,7 +297,8 @@ func TestTaskManager_CompleteTask(t *testing.T) {
 	ctx := taskClaimsContext()
 	task, _ := tm.CreateTask(ctx, "org-1", "test-mission", "Test Task", "Desc", "P1")
 	approveTasksForExecution(t, tm, ctx, task.ID)
-	claimedTask, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
+	claimedTask, errClaim := tm.ClaimTask(ctx, task.ID, "agent-1")
+	if errClaim != nil { t.Fatalf("ClaimTask failed: %v", errClaim) }
 
 	if claimedTask.ID != task.ID {
 		t.Fatalf("claimed task id mismatch")
