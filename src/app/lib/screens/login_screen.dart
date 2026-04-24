@@ -14,6 +14,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  bool _isRegisterMode = false;
+  bool _showVerification = false;
+  bool _verifyingEmail = false;
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
@@ -22,9 +26,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   void dispose() {
     _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
+
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -33,15 +39,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (_isRegisterMode) {
+        // Show simulated verification screen inline
+        setState(() {
+           _loading = false;
+           _showVerification = true;
+        });
+      } else {
+        await ref
+            .read(authStateProvider.notifier)
+            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      }
     } catch (e) {
       setState(() => _error = e.toString());
-    } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  Future<void> _verifyAndRegister() async {
+    setState(() {
+      _verifyingEmail = true;
+      _error = null;
+    });
+    try {
+      await Future.delayed(const Duration(seconds: 1)); // simulated latency
+      await ref
+          .read(authStateProvider.notifier)
+          .signUp(_usernameCtrl.text.trim(), _emailCtrl.text.trim(), _passwordCtrl.text);
+    } catch (e) {
+      setState(() => _error = e.toString());
+      if (mounted) setState(() => _verifyingEmail = false);
+    }
+  }
+
 
   Future<void> _oauthLogin(String provider) async {
     // Simulated OAuth flow with Graceful Degradation / Loading states for Thin Client
@@ -260,9 +290,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             fontFamily: 'Outfit',
                           ),
                         ),
+
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in to orchestrate your swarm',
+                          _isRegisterMode ? 'Create a new account' : 'Sign in to orchestrate your swarm',
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'Inter',
@@ -270,11 +301,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
+                        if (_showVerification) ...[
+                           Icon(Icons.mark_email_read, size: 64, color: Theme.of(context).colorScheme.primary),
+                           const SizedBox(height: 16),
+                           const Text('Verification Email Sent', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold)),
+                           const SizedBox(height: 8),
+                           Text('Please check ${_emailCtrl.text.trim()} to verify your account.', textAlign: TextAlign.center),
+                           const SizedBox(height: 24),
+                           Semantics(
+                             button: true,
+                             label: 'I verified my email',
+                             child: FilledButton(
+                               onPressed: _verifyingEmail ? null : _verifyAndRegister,
+                               style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                               child: _verifyingEmail ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('I verified my email', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+                             ),
+                           ),
+                           const SizedBox(height: 16),
+                           TextButton(
+                             onPressed: () {
+                               // Simulate resend
+                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Verification email resent.')));
+                             },
+                             child: const Text('Resend email'),
+                           ),
+                           TextButton(
+                             onPressed: () {
+                               setState(() => _showVerification = false);
+                             },
+                             child: const Text('Back'),
+                           ),
+                        ] else ...[
+                        if (_isRegisterMode) ...[
+                          TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email Address',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty || !v.contains('@')) ? 'Enter a valid email' : null,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         TextFormField(
                           controller: _usernameCtrl,
                           keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
+                            labelText: _isRegisterMode ? 'Username' : 'Email or Username',
                             prefixIcon: const Icon(Icons.person_outline),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -283,9 +360,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           validator:
                               (v) =>
                                   (v == null || v.trim().isEmpty)
-                                      ? 'Enter your email or username'
+                                      ? (_isRegisterMode ? 'Enter a username' : 'Enter your email or username')
                                       : null,
                         ),
+
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordCtrl,
@@ -348,9 +426,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
+
+                                    : Text(
+                                        _isRegisterMode ? 'Create Account' : 'Sign In',
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Inter',
@@ -358,7 +437,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 16),
+                        TextButton(
+                           onPressed: () {
+                             setState(() {
+                               _isRegisterMode = !_isRegisterMode;
+                               _error = null;
+                             });
+                           },
+                           child: Text(_isRegisterMode ? 'Already have an account? Sign In' : 'Need an account? Sign Up'),
+                        ),
+                        const SizedBox(height: 8),
+
                         Row(
                           children: [
                             const Expanded(child: Divider()),
@@ -407,6 +497,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                         ),
+                        ],
                         ],
                       ),
                     ),

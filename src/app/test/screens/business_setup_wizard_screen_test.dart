@@ -25,10 +25,10 @@ void main() {
     // Initial state
     expect(find.text('Business Setup'), findsOneWidget);
     expect(find.text('Welcome! Your AI team, ready in minutes.'), findsOneWidget);
-    expect(find.text('Next'), findsOneWidget);
+    expect(find.text('Continue'), findsOneWidget);
 
     // Step 1: Business Profile
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsNWidgets(2)); // Company Name, Industry
@@ -37,7 +37,7 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Test Company');
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Step 2: Goal selection
@@ -47,7 +47,7 @@ void main() {
     await tester.tap(find.text('Support'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Step 3: Deployment Preference (Cloud Mode)
@@ -55,18 +55,18 @@ void main() {
     expect(find.byType(RadioListTile<String>), findsNWidgets(3));
     expect(find.text('Standalone Mode Detected. Multi-tenant cloud databases and Redis configurations bypassed for local execution.'), findsNothing);
 
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Step 4: Administrator account
-    expect(find.byType(TextField), findsNWidgets(3)); // Admin Name, Admin Email, Admin Password
+    expect(find.byType(TextField), findsNWidgets(3)); //  Admin Email, Admin Password
 
     await tester.enterText(find.byType(TextField).at(0), 'Admin');
     await tester.enterText(find.byType(TextField).at(1), 'admin@test.com');
     await tester.enterText(find.byType(TextField).at(2), 'password');
     await tester.pumpAndSettle();
 
-    expect(find.text('Launch My AI Team →'), findsOneWidget);
+    expect(find.text('Launch My Business →'), findsOneWidget);
   });
 
   test('BusinessSetupNotifier covers all state mutations', () {
@@ -97,23 +97,14 @@ void main() {
     notifier.updateCompany('NewCo');
     expect(container.read(businessSetupProvider).companyName, 'NewCo');
 
-    notifier.updateIndustry('Tech');
-    expect(container.read(businessSetupProvider).industry, 'Tech');
+    notifier.updateBusinessType('Retail');
+    expect(container.read(businessSetupProvider).businessType, 'Retail');
 
-    notifier.updateSize('L');
-    expect(container.read(businessSetupProvider).size, 'L');
+    notifier.toggleWhatYouSell('Physical Products');
+    expect(container.read(businessSetupProvider).whatYouSell.contains('Physical Products'), true);
 
-    notifier.toggleGoal('Support');
-    expect(container.read(businessSetupProvider).goals.contains('Support'), true);
-
-    notifier.toggleGoal('Support');
-    expect(container.read(businessSetupProvider).goals.contains('Support'), false);
-
-    notifier.updateDeployment('Desktop');
-    expect(container.read(businessSetupProvider).deployment, 'Desktop');
-
-    notifier.updateAdminName('Admin');
-    expect(container.read(businessSetupProvider).adminName, 'Admin');
+    notifier.updatePaymentMethod('Online only');
+    expect(container.read(businessSetupProvider).paymentMethod, 'Online only');
 
     notifier.updateAdminEmail('admin@example.com');
     expect(container.read(businessSetupProvider).adminEmail, 'admin@example.com');
@@ -146,11 +137,11 @@ void main() {
     );
 
     for(int i = 0; i < 4; i++) {
-      await tester.tap(find.text('Next'));
+      await tester.tap(find.text('Continue'));
       await tester.pumpAndSettle();
     }
 
-    await tester.tap(find.text('Launch My AI Team →'));
+    await tester.tap(find.text('Launch My Business →'));
     await tester.pumpAndSettle();
 
     // As auth is null, the API is bypassed and we should navigate to /dashboard
@@ -174,11 +165,11 @@ void main() {
     );
 
     // Navigate to Step 3
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     // Step 3: Deployment Preference (Standalone Mode)

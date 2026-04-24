@@ -61,6 +61,21 @@ class AuthService {
     throw Exception('Login failed: ${response.statusCode}');
   }
 
+  Future<AuthUser> signUp(String username, String email, String password) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'username': username, 'email': email, 'password': password}),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = data['token'] as String;
+      final user = data['user'] as Map<String, dynamic>;
+      return AuthUser.fromJson(user, token);
+    }
+    throw Exception('Login failed: ${response.statusCode}');
+  }
+
   Future<void> logout(String token) async {
     await _client.post(
       Uri.parse('$baseUrl/api/auth/logout'),
@@ -130,6 +145,17 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
     final service = ref.read(authServiceProvider);
     state = await AsyncValue.guard(() async {
       final user = await service.login(email, password);
+      final prefs = await ref.read(_prefsProvider.future);
+      await prefs.setString(_tokenKey, user.token);
+      return user;
+    });
+  }
+
+  Future<void> signUp(String username, String email, String password) async {
+    state = const AsyncLoading();
+    final service = ref.read(authServiceProvider);
+    state = await AsyncValue.guard(() async {
+      final user = await service.signUp(username, email, password);
       final prefs = await ref.read(_prefsProvider.future);
       await prefs.setString(_tokenKey, user.token);
       return user;
