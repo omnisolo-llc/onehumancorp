@@ -73,7 +73,9 @@
       },
       "options": {
         "mode": "html",
-        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">Agent Audit Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #aaa; font-size: 14px;\">OHC Swarm Intelligence Protocol</p>\n</div>"
+        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">Agent Audit Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #aaa; font-size: 14px;\">OHC Swarm Intelligence Protocol</p>\n</div>",
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "pluginVersion": "10.0.0",
       "transparent": true
@@ -100,7 +102,9 @@
       "options": {
         "showLabels": true,
         "showTime": true,
-        "sortOrder": "Descending"
+        "sortOrder": "Descending",
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
       },
       "transparent": true
     },
@@ -123,7 +127,11 @@
           "refId": "A"
         }
       ],
-      "transparent": true
+      "transparent": true,
+      "options": {
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
+      }
     },
     {
       "title": "State Machine Transitions",
@@ -144,7 +152,11 @@
           "refId": "A"
         }
       ],
-      "transparent": true
+      "transparent": true,
+      "options": {
+        "glassmorphism": true,
+        "typography": "Outfit, Inter"
+      }
     }
   ],
   "refresh": "5s",

@@ -1117,6 +1117,9 @@ func TestSIPDB_SyncMissions_Sanitization(t *testing.T) {
 
 	var reqBody []byte
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-OHC-Conflict-Resolution") != "force-local" {
+			t.Errorf("missing conflict resolution header")
+		}
 		reqBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
 	}))
