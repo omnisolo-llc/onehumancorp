@@ -1,6 +1,9 @@
 package orchestration
 
 import (
+	"sync"
+	"github.com/onehumancorp/mono/src/server/telemetry"
+
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -10,6 +13,8 @@ import (
 	"github.com/onehumancorp/mono/src/server/db"
 )
 
+
+var sharedTasksMu sync.Mutex
 
 func ClaimTask(ctx context.Context, database db.Provider, organizationID string, agentID string) (*SharedTaskDecomposition, error) {
 	var task SharedTaskDecomposition
@@ -21,6 +26,10 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
 
 	var query string
 	if database.IsSQLite() {
+		sharedTasksMu.TryLock()
+		sharedTasksMu.Lock()
+		defer sharedTasksMu.Unlock()
+		telemetry.RecordPostgresLockContention(ctx, "shared_tasks_decomposition")
 		tx, err := database.Begin(ctx)
 		if err != nil {
 			return nil, err
@@ -107,6 +116,10 @@ func ClaimTask(ctx context.Context, database db.Provider, organizationID string,
     }
 
     if database.IsSQLite() {
+		sharedTasksMu.TryLock()
+		sharedTasksMu.Lock()
+		defer sharedTasksMu.Unlock()
+		telemetry.RecordPostgresLockContention(ctx, "shared_tasks_decomposition")
         task.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", createdAt)
         task.UpdatedAt, _ = time.Parse("2006-01-02 15:04:05", updatedAt)
     }
@@ -137,6 +150,10 @@ func CreateTask(ctx context.Context, database db.Provider, task *SharedTaskDecom
     }
 
 	if database.IsSQLite() {
+		sharedTasksMu.TryLock()
+		sharedTasksMu.Lock()
+		defer sharedTasksMu.Unlock()
+		telemetry.RecordPostgresLockContention(ctx, "shared_tasks_decomposition")
 		query := `INSERT INTO shared_tasks_decomposition (id, organization_id, title, description, status, agent_id, priority, payload, parent_plan_id, dependencies, locked_until) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`
 		err := database.QueryRow(ctx, query, task.ID, task.OrganizationID, task.Title, task.Description, task.Status, task.AssignedAgentID, task.Priority, payloadStr, task.ParentPlanID, depStr, task.LockedUntil).Scan(&id)
 		if err != nil {

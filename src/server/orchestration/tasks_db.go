@@ -393,10 +393,8 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
 	var id string
 
 	if to.dbProvider.IsSQLite() {
-		if !to.mu.TryLock() {
-			// Fallback to Lock
-			to.mu.Lock()
-		}
+		to.mu.TryLock()
+		to.mu.Lock()
 		defer to.mu.Unlock()
 
 		query := `
