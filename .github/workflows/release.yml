@@ -263,6 +263,7 @@ jobs:
       - name: Flatten artifact directories
         run: |
           find dist -mindepth 2 -type f -exec mv -t dist/ {} +
+          rm -f dist/ohc-app-web.tar.gz
           ls -lh dist/
 
       - name: Generate combined checksums

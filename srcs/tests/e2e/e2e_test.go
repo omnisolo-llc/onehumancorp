@@ -63,6 +63,7 @@ func TestMain(m *testing.M) {
 
 	// If no external server provided, start the OHC binary in standalone mode.
 	if baseURL == "" {
+		fmt.Println("e2e: starting server...")
 		ohcBin := findOhcBinary()
 		if ohcBin == "" {
 			fmt.Fprintln(os.Stderr, "e2e: ohc binary not found in runfiles; set OHC_E2E_BASE_URL to use an existing server")
@@ -99,7 +100,7 @@ func TestMain(m *testing.M) {
 			fmt.Sprintf("OHC_LOCAL_LLM_ENDPOINT=%s/api/chat", llmURL),
 			fmt.Sprintf("OHC_LOCAL_LLM_EMBED_ENDPOINT=%s/api/embeddings", llmURL),
 			"OHC_LLM_PROVIDER=ollama",
-			fmt.Sprintf("GRPC_PORT=:%d", freePort()),
+			fmt.Sprintf("GRPC_PORT=%d", freePort()),
 		)
 		serverCmd.Stdout = os.Stdout
 		serverCmd.Stderr = os.Stderr
@@ -112,6 +113,7 @@ func TestMain(m *testing.M) {
 		// 120s (instead of 60s) is necessary because up to 4 test binaries
 		// run in parallel (--local_test_jobs=4), each launching an OHC
 		// process; on resource-constrained CI hosts startup can be slow.
+		fmt.Println("e2e: waiting for server to be ready...")
 		deadline := time.Now().Add(120 * time.Second)
 		ready := false
 		for time.Now().Before(deadline) {
@@ -131,50 +133,53 @@ func TestMain(m *testing.M) {
 			serverCmd.Process.Kill()
 			os.Exit(1)
 		}
+		fmt.Println("e2e: server is ready.")
 	}
 
 	// Install playwright browsers (no-op if already installed).
 	// This downloads browsers to ~/.cache/ms-playwright by default.
 	// Skip host-requirement validation so tests are hermetic and pass even
 	// when the host is missing optional system libraries (e.g. in CI containers).
-	// Failure is non-fatal: browser-based tests will be skipped automatically
-	// via newPage() which calls t.Skip() when bCtx is nil.
 	os.Setenv("PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS", "1")
 	playwrightReady := true
 	if os.Getenv("PLAYWRIGHT_SKIP_INSTALL") == "" {
+		fmt.Println("e2e: installing playwright browsers...")
 		if installErr := playwright.Install(); installErr != nil {
 			fmt.Fprintf(os.Stderr, "playwright install: %v (browser tests will be skipped)\n", installErr)
 			playwrightReady = false
 		}
+		fmt.Println("e2e: playwright install done.")
 	} else {
 		fmt.Fprintln(os.Stdout, "playwright install skipped via PLAYWRIGHT_SKIP_INSTALL")
+		// If PLAYWRIGHT_BROWSERS_PATH is set, we assume it points to valid binaries.
+		if os.Getenv("PLAYWRIGHT_BROWSERS_PATH") == "" {
+			fmt.Fprintln(os.Stderr, "Error: PLAYWRIGHT_SKIP_INSTALL=1 but PLAYWRIGHT_BROWSERS_PATH is not set.")
+			os.Exit(1)
+		}
 	}
 
 	var err error
 	if playwrightReady {
+		fmt.Println("e2e: running playwright...")
 		pw, err = playwright.Run()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "playwright run: %v (browser tests will be skipped)\n", err)
-			playwrightReady = false
-			err = nil // reset so browser launch path does not inherit this error
+			fmt.Fprintf(os.Stderr, "playwright run fatal: %v\n", err)
+			// Check if we can provide more info about why it failed.
+			if browsersPath := os.Getenv("PLAYWRIGHT_BROWSERS_PATH"); browsersPath != "" {
+				fmt.Fprintf(os.Stderr, "PLAYWRIGHT_BROWSERS_PATH is set to: %s\n", browsersPath)
+				if _, statErr := os.Stat(browsersPath); statErr != nil {
+					fmt.Fprintf(os.Stderr, "Browsers path does not exist: %v\n", statErr)
+				}
+			}
+			os.Exit(1)
 		}
-	}
-
-	if !playwrightReady {
-		// Browser unavailable: run tests in API-only mode.
-		// All tests that call newPage() will be skipped automatically.
-		browser = nil
-		bCtx = nil
-		code := m.Run()
-		if serverCmd != nil {
-			serverCmd.Process.Kill()
-		}
-		os.Exit(code)
+		fmt.Println("e2e: playwright running.")
 	}
 
 	// Use Firefox instead of Chromium for better cross-platform compatibility
 	// Firefox has fewer system library dependencies than Chromium/GTK.
 	// The hermetic playwright.Install() downloads Firefox with bundled dependencies.
+	fmt.Println("e2e: launching browser...")
 	browser, err = pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{
 		Headless: playwright.Bool(true),
 	})
@@ -191,34 +196,25 @@ func TestMain(m *testing.M) {
 			},
 		})
 		if err != nil {
-			// If browser launch fails entirely, continue without browser
-			// Tests that need browser will be skipped
-			fmt.Fprintf(os.Stderr, "browser launch failed (tests requiring browser will be skipped): %v\n", err)
-			browser = nil
-			bCtx = nil
-			code := m.Run()
-			if serverCmd != nil {
-				serverCmd.Process.Kill()
-			}
-			os.Exit(code)
+			fmt.Fprintf(os.Stderr, "browser launch fatal: %v\n", err)
+			os.Exit(1)
 		}
 	}
+	fmt.Println("e2e: browser launched.")
 
+	fmt.Println("e2e: creating new context...")
 	bCtx, err = browser.NewContext(playwright.BrowserNewContextOptions{
 		BaseURL: playwright.String(baseURL),
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "browser context: %v (browser tests will be skipped)\n", err)
-		browser = nil
-		bCtx = nil
-		code := m.Run()
-		if serverCmd != nil {
-			serverCmd.Process.Kill()
-		}
-		os.Exit(code)
+		fmt.Fprintf(os.Stderr, "browser context fatal: %v\n", err)
+		os.Exit(1)
 	}
+	fmt.Println("e2e: context created.")
 
+	fmt.Println("e2e: running tests...")
 	code := m.Run()
+	fmt.Println("e2e: tests finished.")
 
 	_ = bCtx.Close()
 	_ = browser.Close()
