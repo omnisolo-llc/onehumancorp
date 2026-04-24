@@ -551,3 +551,20 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 	}
 }
 // added for Sub-Agent Orchestration Queue
+func TestSharedTask_StateMachine(t *testing.T) {
+	t.Setenv("OHC_MULTITENANT", "false")
+	tm, cleanup := setupTasksTestDB(t)
+	defer cleanup()
+	ctx := taskClaimsContext()
+	task, _ := tm.CreateTask(ctx, "org-1", "mission", "title", "desc", "P1")
+	approveTasksForExecution(t, tm, ctx, task.ID)
+	claimed, _ := tm.ClaimTask(ctx, task.ID, "agent-1")
+	err := tm.ReviewTask(ctx, claimed.ID, "agent-1")
+	if err != nil {
+		t.Fatalf("expected no error moving to review, got %v", err)
+	}
+	err = tm.CompleteTaskWithResult(ctx, claimed.ID, "agent-1", "done")
+	if err != nil {
+		t.Fatalf("expected no error completing, got %v", err)
+	}
+}
