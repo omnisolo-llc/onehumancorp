@@ -129,23 +129,11 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
     state = const AsyncLoading();
     final service = ref.read(authServiceProvider);
     state = await AsyncValue.guard(() async {
-      try {
-        final user = await service.login(email, password);
-        final prefs = await ref.read(_prefsProvider.future);
-        await prefs.setString(_tokenKey, user.token);
-        return user;
-      } catch (e) {
-        // Provide user-friendly connection error messages
-        if (e.toString().contains('SocketException') || e.toString().contains('Failed host lookup')) {
-          throw Exception('Cannot connect to server. Is the backend running at ${service.baseUrl}?');
-        }
-        rethrow;
-      }
+      final user = await service.login(email, password);
+      final prefs = await ref.read(_prefsProvider.future);
+      await prefs.setString(_tokenKey, user.token);
+      return user;
     });
-
-    if (state.hasError) {
-      throw state.error!;
-    }
   }
 
   Future<void> logout() async {
