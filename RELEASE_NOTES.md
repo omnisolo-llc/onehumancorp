@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+- Scaling (Cloud): Fix failing registry tests in integrations service.
+- Privacy/Offline (Standalone): Fix failing registry tests in integrations service for standalone environment.
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 - Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.
 - Privacy/Offline (Standalone): Enhance AutoDream Vector Data Pipelines for standalone privacy.
