@@ -2,7 +2,6 @@ package queue
 
 import (
 	"context"
-	"github.com/onehumancorp/mono/src/server/telemetry"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -10,7 +9,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/db"
-
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"github.com/onehumancorp/mono/src/server/orchestration/kairos"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel"

@@ -47,6 +47,7 @@ var (
 	tokenUsageCounter                  metric.Int64Counter
 	AgentTokenUsageTotal               metric.Int64Counter
 	AgentCostEstimateUSD               metric.Float64Counter
+	MissionCostCents                   metric.Float64Counter
 	tokenBurnRateGauge                 metric.Float64Gauge
 	usdBurnRateGauge                   metric.Float64Gauge
 	agentApiCallsCounter               metric.Int64Counter
@@ -95,7 +96,6 @@ var (
 	SyncPayloadSize              metric.Int64Histogram
 	RateLimitExceededCount       metric.Int64Counter
 	syncDaemonBatchSize          metric.Int64Histogram
-	SyncDaemonErrorTotal         metric.Int64Counter
 	LocalToCloudMissionSyncCount metric.Int64Counter
 
 	sqliteLockContentionCounter   metric.Int64Counter
@@ -461,14 +461,6 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
-	SyncDaemonErrorTotal, err = m.Int64Counter(
-		"ohc_sync_daemon_errors_total",
-		metric.WithDescription("Total number of sync failures by the SyncDaemon"),
-	)
-	if err != nil {
-		errs = append(errs, err)
-	}
-
 	LocalToCloudMissionSyncCount, err = m.Int64Counter(
 		"ohc_local_to_cloud_mission_sync_count",
 		metric.WithDescription("Total number of local-to-cloud mission syncs"),
@@ -547,6 +539,14 @@ func InitWithMeter(m mockableMeter) error {
 	AgentCostEstimateUSD, err = m.Float64Counter(
 		"ohc_agent_cost_estimate_usd",
 		metric.WithDescription("Cumulative estimated USD cost of agent LLM operations"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	MissionCostCents, err = m.Float64Counter(
+		"ohc_mission_cost_cents",
+		metric.WithDescription("Core observability metric for calculating Return on Agent (ROA) in cents"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -1637,11 +1637,11 @@ func RecordAgentTransitionLatency(ctx context.Context, transitionType string, du
 }
 
 // RecordSyncEscalation increments the global counter for synced cloud escalations.
-func RecordSyncEscalation(ctx context.Context, count int64, mode string) {
+func RecordSyncEscalation(ctx context.Context, count int64) {
 	if SyncEscalationsCount == nil {
 		return
 	}
-	SyncEscalationsCount.Add(ctx, count, metric.WithAttributes(attribute.String("mode", mode)))
+	SyncEscalationsCount.Add(ctx, count)
 }
 
 // RecordLocalToCloudMissionSync records a local-to-cloud mission synchronization.
@@ -1664,35 +1664,27 @@ func RecordLocalToCloudMissionSync(ctx context.Context, missionID string) {
 }
 
 // RecordSyncLatency records the latency of the sync process.
-func RecordSyncLatency(ctx context.Context, latency float64, mode string) {
+func RecordSyncLatency(ctx context.Context, latency float64) {
 	if SyncLatency == nil {
 		return
 	}
-	SyncLatency.Record(ctx, latency, metric.WithAttributes(attribute.String("mode", mode)))
+	SyncLatency.Record(ctx, latency)
 }
 
 // RecordSyncPayloadSize records the size of the sync payload.
-func RecordSyncPayloadSize(ctx context.Context, size int64, mode string) {
+func RecordSyncPayloadSize(ctx context.Context, size int64) {
 	if SyncPayloadSize == nil {
 		return
 	}
-	SyncPayloadSize.Record(ctx, size, metric.WithAttributes(attribute.String("mode", mode)))
+	SyncPayloadSize.Record(ctx, size)
 }
 
 // RecordSyncDaemonBatchSize records the batch size processed by SyncDaemon.
-func RecordSyncDaemonBatchSize(ctx context.Context, size int64, mode string) {
+func RecordSyncDaemonBatchSize(ctx context.Context, size int64) {
 	if syncDaemonBatchSize == nil {
 		return
 	}
-	syncDaemonBatchSize.Record(ctx, size, metric.WithAttributes(attribute.String("mode", mode)))
-}
-
-// RecordSyncDaemonError records a failure by the SyncDaemon.
-func RecordSyncDaemonError(ctx context.Context, mode string) {
-	if SyncDaemonErrorTotal == nil {
-		return
-	}
-	SyncDaemonErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("mode", mode)))
+	syncDaemonBatchSize.Record(ctx, size)
 }
 
 // RecordSwarmTaskTransition increments the counter for task state transitions.
@@ -1853,7 +1845,12 @@ func RecordMeshLatency(ctx context.Context, operation string, latency time.Durat
 // RecordQueueLength correctly applies PII redaction before JSON marshaling.
 func RecordQueueLength(ctx context.Context, delta int) {
 	if BufferMetricFunc != nil {
-		BufferMetricFunc(ctx, "sub_agent_queue_length", fmt.Sprintf("%d", delta))
+		payloadMap := map[string]interface{}{
+			"delta": delta,
+		}
+		redactedMap := RedactInterfacePII(payloadMap)
+		payloadBytes, _ := json.Marshal(redactedMap)
+		_ = BufferMetricFunc(ctx, "ohc_sub_agent_queue_length", string(payloadBytes))
 		return
 	}
 	if subAgentQueueLengthGauge != nil {
@@ -2256,4 +2253,30 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	TelemetryBatchSizeGauge.Record(ctx, size)
+}
+
+// RecordMissionCostCents records the estimated cost in cents of a mission.
+func RecordMissionCostCents(ctx context.Context, agentID, organizationID, role, model string, costCents float64) {
+	if MissionCostCents == nil {
+		return
+	}
+	MissionCostCents.Add(ctx, costCents, metric.WithAttributes(
+		attribute.String("agent_id", agentID),
+		attribute.String("organization_id", organizationID),
+		attribute.String("role", role),
+		attribute.String("model", model),
+	))
+
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"agent_id":        agentID,
+			"organization_id": organizationID,
+			"role":            role,
+			"model":           model,
+			"cost_cents":      costCents,
+		}
+
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "mission_cost_cents", string(payloadBytes))
+	}
 }

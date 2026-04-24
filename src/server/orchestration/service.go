@@ -1384,11 +1384,6 @@ func NewHubServiceServer(hub *Hub, mesh MeshTransport) *HubServiceServer {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) PublishTeammateMeshEvent(ctx context.Context, req *pb.PublishTeammateMeshEventRequest) (*pb.PublishMessageResponse, error) {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "PublishTeammateMeshEvent", time.Since(start)) }()
-	if telemetry.BufferMetricFunc == nil {
-		telemetry.RecordMeshBroadcast(ctx, "teammate_mesh")
-	}
 	event := req.GetEvent()
 	err := s.mesh.PublishTeammateMeshEvent(ctx, req.GetChannel(), event.GetAgentId(), event.GetAction(), event.GetStatus(), event.GetPayload())
 	if err != nil {
@@ -1403,12 +1398,6 @@ func (s *HubServiceServer) PublishTeammateMeshEvent(ctx context.Context, req *pb
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) StreamTeammateMesh(req *pb.EventStreamRequest, stream pb.HubService_StreamTeammateMeshServer) error {
-	ctx := stream.Context()
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "StreamTeammateMesh", time.Since(start)) }()
-	if telemetry.BufferMetricFunc == nil {
-		telemetry.RecordMeshBroadcast(ctx, "teammate_mesh")
-	}
 	ch, err := s.mesh.SubscribeTeammateMesh(stream.Context(), req.GetTopic())
 	if err != nil {
 		return err
@@ -1742,7 +1731,7 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(1 * time.Second): }
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
@@ -1751,14 +1740,14 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 				// Retry on high load without recording circuit breaker failure immediately
 				resp.Body.Close()
 				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
-				select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(2 * time.Second): } // Longer backoff for overloaded
+				time.Sleep(2 * time.Second) // Longer backoff for overloaded
 				continue
 			}
 			c.cb.RecordFailure()
 			respBody, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
 			lastErr = fmt.Errorf("minimax API error (status %d): %s", resp.StatusCode, string(respBody))
-			select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(1 * time.Second): }
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
@@ -1776,14 +1765,14 @@ func (c *minimaxClientImpl) Reason(ctx context.Context, prompt string) (string, 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(1 * time.Second): }
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
 		if len(result.Choices) == 0 {
 			c.cb.RecordFailure()
 			lastErr = errors.New("empty response from minimax")
-			select { case <-ctx.Done(): return "", ctx.Err(); case <-time.After(1 * time.Second): }
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
@@ -1859,7 +1848,7 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 		if err != nil {
 			c.cb.RecordFailure()
 			lastErr = err
-			select { case <-ctx.Done(): return nil, ctx.Err(); case <-time.After(1 * time.Second): }
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
@@ -1867,13 +1856,13 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 			if resp.StatusCode >= 500 {
 				resp.Body.Close()
 				lastErr = fmt.Errorf("minimax API overloaded (status %d)", resp.StatusCode)
-				select { case <-ctx.Done(): return nil, ctx.Err(); case <-time.After(2 * time.Second): }
+				time.Sleep(2 * time.Second)
 				continue
 			}
 			c.cb.RecordFailure()
 			lastErr = fmt.Errorf("minimax API error: status %d", resp.StatusCode)
 			resp.Body.Close()
-			select { case <-ctx.Done(): return nil, ctx.Err(); case <-time.After(1 * time.Second): }
+			time.Sleep(1 * time.Second)
 			continue
 		}
 

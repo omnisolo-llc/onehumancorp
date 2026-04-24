@@ -66,7 +66,7 @@ func TestQueueManagerLoop(t *testing.T) {
 
 	go qm.StartPolling(ctx, "worker-1", 10*time.Millisecond, handler)
 
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	cancel() // stop polling
 	time.Sleep(50 * time.Millisecond)
 

@@ -117,7 +117,7 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 
 				if !hasRedact {
 					// For existing failing tests on main, skip the error. If it is the newly added function, error out.
-					if fn.Name.Name == "RecordLocalToCloudMissionSync" {
+					if fn.Name.Name == "RecordLocalToCloudMissionSync" || fn.Name.Name == "RecordQueueLength" {
 						t.Errorf("PII Leak Risk in %s: Function %s calls BufferMetricFunc and json.Marshal but misses RedactInterfacePII/RedactPII", path, fn.Name.Name)
 					}
 				}

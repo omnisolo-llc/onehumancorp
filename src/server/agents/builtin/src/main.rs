@@ -6,9 +6,17 @@ use ohc_builtin_agent::{
 use std::{env, net::SocketAddr};
 use tonic::transport::Server;
 use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use prost::Message;
 use tokio_stream::StreamExt;
+use opentelemetry::{global, KeyValue};
+use opentelemetry_sdk::{
+    propagation::TraceContextPropagator,
+    runtime,
+    trace::{self, Sampler},
+    Resource,
+};
+use opentelemetry_otlp::WithExportConfig;
 
 fn get_env(key: &str, default: &str) -> String {
     env::var(key).unwrap_or_else(|_| default.to_string())
@@ -21,13 +29,37 @@ fn get_env_int(key: &str, default: i32) -> i32 {
         .unwrap_or(default)
 }
 
+fn init_otel() {
+    global::set_text_map_propagator(TraceContextPropagator::new());
+
+    let otlp_endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:4317".to_string());
+
+    let tracer = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(otlp_endpoint)
+        .build()
+        .expect("failed to build tracer");
+
+    let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
+        .with_batch_exporter(tracer, runtime::Tokio)
+        .with_resource(Resource::new(vec![KeyValue::new("service.name", "ohc-agent")]))
+        .build();
+
+    global::set_tracer_provider(tracer_provider.clone());
+    let tracer = opentelemetry::trace::TracerProvider::tracer(&tracer_provider, "ohc-agent");
+
+    tracing_subscriber::registry()
+        .with(fmt::layer())
+        .with(EnvFilter::from_default_env().add_directive(Level::INFO.into()))
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
+        .init();
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Set up logging.
-    let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .finish();
-    tracing::subscriber::set_global_default(subscriber)?;
+    // Set up logging and OTEL.
+    init_otel();
 
     let address = get_env("OHC_AGENT_ADDRESS", DEFAULT_ADDRESS);
     let agent_id = get_env(
@@ -53,7 +85,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting OHC builtin agent (Rust) at {} (id: {})", address, agent_id);
 
     let addr: SocketAddr = address.parse()?;
-    let svc = std::sync::Arc::new(AgentServiceImpl::new(agent_id, cfg, auth));
+    let mut svc_impl = AgentServiceImpl::new(agent_id, cfg, auth);
+    svc_impl.init_memory().await;
+    let svc = std::sync::Arc::new(svc_impl);
     let svc_for_redis = svc.clone();
 
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
@@ -61,47 +95,66 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let redis_url_clone = redis_url.clone();
     tokio::spawn(async move {
         tracing::info!("Connecting to Redis at {}", redis_url_clone);
-        if let Ok(client) = redis::Client::open(redis_url_clone.clone()) {
-            if let Ok(mut con) = client.get_async_connection().await {
-                let mut pubsub = con.into_pubsub();
-                if pubsub.subscribe("agent_jobs").await.is_ok() {
-                    tracing::info!("Subscribed to Redis channel 'agent_jobs'");
-                    let mut stream = pubsub.on_message();
-                    while let Some(msg) = stream.next().await {
-                        let payload: Vec<u8> = msg.get_payload().unwrap_or_default();
-                        if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
-                            tracing::info!("Received job from Redis: {}", req.task_id);
+        let client = match redis::Client::open(redis_url_clone.clone()) {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Failed to open Redis client: {}", e);
+                return;
+            }
+        };
 
-                            let svc = svc_for_redis.clone();
-                            let redis_url_inner = redis_url_clone.clone();
+        let mut con = match client.get_multiplexed_async_connection().await {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Failed to get Redis connection: {}", e);
+                return;
+            }
+        };
 
-                            tokio::spawn(async move {
-                                if let Ok(client) = redis::Client::open(redis_url_inner) {
-                                    if let Ok(mut con) = client.get_async_connection().await {
-                                        match svc.run_task(tonic::Request::new(req)).await {
-                                            Ok(resp) => {
-                                                let mut stream = resp.into_inner();
-                                                while let Some(Ok(evt)) = stream.next().await {
-                                                    let mut buf = Vec::new();
-                                                    if prost::Message::encode(&evt, &mut buf).is_ok() {
-                                                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                                                            .arg("agent_events")
-                                                            .arg(buf)
-                                                            .query_async(&mut con)
-                                                            .await;
-                                                    }
-                                                }
-                                            }
-                                            Err(e) => {
-                                                tracing::error!("Error running task: {}", e);
-                                            }
-                                        }
-                                    }
+        let mut pubsub_con = match client.get_async_connection().await {
+            Ok(c) => c,
+            Err(e) => {
+                tracing::error!("Failed to get Redis pubsub connection: {}", e);
+                return;
+            }
+        };
+
+        let mut pubsub = pubsub_con.into_pubsub();
+        if let Err(e) = pubsub.subscribe("agent_jobs").await {
+            tracing::error!("Failed to subscribe to 'agent_jobs': {}", e);
+            return;
+        }
+
+        tracing::info!("Subscribed to Redis channel 'agent_jobs'");
+        let mut stream = pubsub.on_message();
+        while let Some(msg) = stream.next().await {
+            let payload: Vec<u8> = msg.get_payload().unwrap_or_default();
+            if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
+                tracing::info!("Received job from Redis: {}", req.task_id);
+
+                let svc = svc_for_redis.clone();
+                let mut con_inner = con.clone();
+
+                tokio::spawn(async move {
+                    match svc.run_task(tonic::Request::new(req)).await {
+                        Ok(resp) => {
+                            let mut stream = resp.into_inner();
+                            while let Some(Ok(evt)) = stream.next().await {
+                                let mut buf = Vec::new();
+                                if prost::Message::encode(&evt, &mut buf).is_ok() {
+                                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                                        .arg("agent_events")
+                                        .arg(buf)
+                                        .query_async(&mut con_inner)
+                                        .await;
                                 }
-                            });
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Error running task from Redis: {}", e);
                         }
                     }
-                }
+                });
             }
         }
     });
