@@ -26,9 +26,7 @@ class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, ApiService api) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
@@ -57,13 +55,13 @@ void main() {
   });
 
   group('CUJ: Handoffs & Escalations', () {
-    testWidgets('shows "No pending handoffs" when list is empty', (tester) async {
+    testWidgets('shows "No pending handoffs" when list is empty', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -76,7 +74,9 @@ void main() {
       expect(find.textContaining('No pending handoffs'), findsOneWidget);
     });
 
-    testWidgets('renders handoff cards when API returns handoffs', (tester) async {
+    testWidgets('renders handoff cards when API returns handoffs', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -103,9 +103,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -118,15 +116,14 @@ void main() {
       expect(find.byIcon(Icons.refresh), findsOneWidget);
     });
 
-    testWidgets('Approve button triggers POST to resolve endpoint', (tester) async {
+    testWidgets('Approve button triggers POST to resolve endpoint', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response(
-          jsonEncode([_fakeHandoff('h1')]),
-          200,
-        ),
+        (_) async => http.Response(jsonEncode([_fakeHandoff('h1')]), 200),
       );
       when(
         () => mockClient.post(
@@ -147,13 +144,15 @@ void main() {
 
       final approveBtn = find.textContaining('Approve');
       if (approveBtn.evaluate().isNotEmpty) {
-
         final slider = find.bySemanticsLabel('Slide to Approve');
         if (slider.evaluate().isNotEmpty) {
           await tester.drag(slider.first, const Offset(240.0, 0));
         } else {
           // fallback if sematics isn't picked up
-          await tester.drag(find.byIcon(Icons.chevron_right), const Offset(240.0, 0));
+          await tester.drag(
+            find.byIcon(Icons.chevron_right),
+            const Offset(240.0, 0),
+          );
         }
 
         await tester.pumpAndSettle();
@@ -169,15 +168,14 @@ void main() {
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
-    testWidgets('Reject button triggers POST with rejected resolution', (tester) async {
+    testWidgets('Reject button triggers POST with rejected resolution', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response(
-          jsonEncode([_fakeHandoff('h1')]),
-          200,
-        ),
+        (_) async => http.Response(jsonEncode([_fakeHandoff('h1')]), 200),
       );
       when(
         () => mockClient.post(

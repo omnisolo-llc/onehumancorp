@@ -27,7 +27,7 @@ class MockHttpClient extends Mock implements http.Client {}
 class FakeUri extends Fake implements Uri {}
 
 class _FakeClientSettingsNotifier extends ClientSettingsNotifier {
-  _FakeClientSettingsNotifier(Ref ref) : super(ref) {
+  _FakeClientSettingsNotifier(super.ref) {
     state = const AsyncData(
       ClientSettings(backendUrl: 'http://localhost', standaloneMode: false),
     );
@@ -48,8 +48,7 @@ Widget _wrapWizard(MockHttpClient mockClient) {
       ),
       GoRoute(
         path: '/agents',
-        builder: (context, state) =>
-            const Scaffold(body: Text('Agents List')),
+        builder: (context, state) => const Scaffold(body: Text('Agents List')),
       ),
     ],
   );
@@ -81,11 +80,7 @@ void main() {
       // Providers response
       when(
         () => mockClient.get(
-          any(
-            that: predicate<Uri>(
-              (u) => u.path.contains('providers'),
-            ),
-          ),
+          any(that: predicate<Uri>((u) => u.path.contains('providers'))),
           headers: any(named: 'headers'),
         ),
       ).thenAnswer(
@@ -116,7 +111,9 @@ void main() {
       expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
-    testWidgets('Next button is disabled when no role selected', (tester) async {
+    testWidgets('Next button is disabled when no role selected', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrapWizard(mockClient));
       await tester.pumpAndSettle();
 

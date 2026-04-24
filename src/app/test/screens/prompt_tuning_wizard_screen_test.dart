@@ -5,27 +5,30 @@ import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
 
 void main() {
-  testWidgets('PromptTuningWizardScreen navigates steps and updates state', (WidgetTester tester) async {
+  testWidgets('PromptTuningWizardScreen navigates steps and updates state', (
+    WidgetTester tester,
+  ) async {
     final router = GoRouter(
       initialLocation: '/agents/123/tune',
       routes: [
         GoRoute(
           path: '/agents/:id/tune',
-          builder: (context, state) => PromptTuningWizardScreen(agentId: state.pathParameters['id'] ?? ''),
+          builder:
+              (context, state) => PromptTuningWizardScreen(
+                agentId: state.pathParameters['id'] ?? '',
+              ),
         ),
         GoRoute(
           path: '/dashboard',
-          builder: (context, state) => const Scaffold(body: Text('Dashboard Placeholder')),
-        )
+          builder:
+              (context, state) =>
+                  const Scaffold(body: Text('Dashboard Placeholder')),
+        ),
       ],
     );
 
     await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
-      ),
+      ProviderScope(child: MaterialApp.router(routerConfig: router)),
     );
 
     expect(find.text('Tune Agent: 123'), findsOneWidget);

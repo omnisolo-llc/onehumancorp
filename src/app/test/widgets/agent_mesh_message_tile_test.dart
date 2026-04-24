@@ -1,10 +1,11 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ohc_app/widgets/agent_mesh_message_tile.dart';
 
 void main() {
-  testWidgets('AgentMeshMessageTile renders correctly', (WidgetTester tester) async {
+  testWidgets('AgentMeshMessageTile renders correctly', (
+    WidgetTester tester,
+  ) async {
     final timestamp = DateTime(2023, 10, 10, 14, 30);
 
     await tester.pumpWidget(

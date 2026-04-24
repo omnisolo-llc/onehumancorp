@@ -9,13 +9,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('SecureAgentConfigScreen visibility toggle test', (WidgetTester tester) async {
+  testWidgets('SecureAgentConfigScreen visibility toggle test', (
+    WidgetTester tester,
+  ) async {
     // Build the SecureAgentConfigScreen widget
-    await tester.pumpWidget(
-      const MaterialApp(
-        home: SecureAgentConfigScreen(),
-      ),
-    );
+    await tester.pumpWidget(const MaterialApp(home: SecureAgentConfigScreen()));
 
     // Verify initial state: obscureText is true, icon is visibility_off
     final secureFieldFinder = find.byType(SecureInputField);
@@ -35,7 +33,9 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify state after tap: obscureText is false, icon is visibility
-    final TextField updatedTextField = tester.widget<TextField>(textFieldFinder);
+    final TextField updatedTextField = tester.widget<TextField>(
+      textFieldFinder,
+    );
     expect(updatedTextField.obscureText, isFalse);
 
     expect(find.byIcon(Icons.visibility), findsOneWidget);
@@ -53,13 +53,11 @@ void main() {
     expect(find.byIcon(Icons.visibility), findsNothing);
   });
 
-  testWidgets('SecureAgentConfigScreen save functionality test', (WidgetTester tester) async {
+  testWidgets('SecureAgentConfigScreen save functionality test', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(
-          body: SecureAgentConfigScreen(),
-        ),
-      ),
+      const MaterialApp(home: Scaffold(body: SecureAgentConfigScreen())),
     );
 
     // Enter a token

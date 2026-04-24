@@ -26,9 +26,7 @@ class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, ApiService api) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
@@ -59,9 +57,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -78,9 +74,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -97,9 +91,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -116,7 +108,9 @@ void main() {
       expect(find.byType(Dialog), findsOneWidget);
     });
 
-    testWidgets('channel name is shown in list when returned from API', (tester) async {
+    testWidgets('channel name is shown in list when returned from API', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -142,9 +136,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response('Internal Server Error', 500),
-      );
+      ).thenAnswer((_) async => http.Response('Internal Server Error', 500));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',

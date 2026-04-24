@@ -5,12 +5,12 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'dart:async';
 import 'package:ohc_app/widgets/swarm_observability_dashboard.dart';
-import 'package:ohc_app/widgets/agent_task_progress.dart';
-import 'package:ohc_app/widgets/agent_mesh_message_tile.dart';
 import 'package:ohc_app/widgets/autodream_pipeline_widget.dart';
 
-class MockWebSocketChannel extends StreamChannelMixin implements WebSocketChannel {
-  final StreamController<dynamic> _streamController = StreamController<dynamic>.broadcast();
+class MockWebSocketChannel extends StreamChannelMixin
+    implements WebSocketChannel {
+  final StreamController<dynamic> _streamController =
+      StreamController<dynamic>.broadcast();
   final StreamController<dynamic> _sinkController = StreamController<dynamic>();
 
   @override
@@ -49,7 +49,8 @@ class _MockWebSocketSink implements WebSocketSink {
   void add(dynamic data) => controller.add(data);
 
   @override
-  void addError(Object error, [StackTrace? stackTrace]) => controller.addError(error, stackTrace);
+  void addError(Object error, [StackTrace? stackTrace]) =>
+      controller.addError(error, stackTrace);
 
   @override
   Future addStream(Stream<dynamic> stream) => controller.addStream(stream);
@@ -62,25 +63,32 @@ class _MockWebSocketSink implements WebSocketSink {
 }
 
 void main() {
-  testWidgets('SwarmObservabilityDashboard displays tasks from websocket', (WidgetTester tester) async {
+  testWidgets('SwarmObservabilityDashboard displays tasks from websocket', (
+    WidgetTester tester,
+  ) async {
     final channel = MockWebSocketChannel();
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: SwarmObservabilityDashboard(channel: channel),
-        ),
+        home: Scaffold(body: SwarmObservabilityDashboard(channel: channel)),
       ),
     );
 
     expect(find.text('Swarm Observability'), findsOneWidget);
     expect(find.byType(AutoDreamPipelineWidget), findsOneWidget);
 
-    channel.addMessage(jsonEncode({
-      'tasks': [
-        {'id': '1', 'name': 'Data processing', 'progress': 0.4, 'isWorking': true},
-      ]
-    }));
+    channel.addMessage(
+      jsonEncode({
+        'tasks': [
+          {
+            'id': '1',
+            'name': 'Data processing',
+            'progress': 0.4,
+            'isWorking': true,
+          },
+        ],
+      }),
+    );
 
     // Use pump instead of pumpAndSettle because AgentTaskProgressWidget has infinite animation
     await tester.pump(const Duration(milliseconds: 500));
@@ -90,15 +98,23 @@ void main() {
     // Check if AgentTaskProgressWidget has the correct progress
     final progressBarFinder = find.byType(LinearProgressIndicator);
     expect(progressBarFinder, findsOneWidget);
-    final LinearProgressIndicator progressBar = tester.widget(progressBarFinder);
+    final LinearProgressIndicator progressBar = tester.widget(
+      progressBarFinder,
+    );
     expect(progressBar.value, 0.4);
 
     // Now test messages
-    channel.addMessage(jsonEncode({
-      'messages': [
-        {'sender': 'Guide', 'message': 'Hello from Guide', 'timestamp': '2026-04-15T08:00:00Z'},
-      ]
-    }));
+    channel.addMessage(
+      jsonEncode({
+        'messages': [
+          {
+            'sender': 'Guide',
+            'message': 'Hello from Guide',
+            'timestamp': '2026-04-15T08:00:00Z',
+          },
+        ],
+      }),
+    );
 
     await tester.pump(const Duration(milliseconds: 500));
 

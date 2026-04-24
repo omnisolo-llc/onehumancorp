@@ -14,20 +14,20 @@ void main() {
     mockApiService = MockApiService();
   });
 
-  testWidgets('GrowthReferralWidget displays quota and invite button', (WidgetTester tester) async {
-    when(() => mockApiService.getQuota()).thenAnswer((_) async => {'used': 10, 'max': 100});
-    when(() => mockApiService.createReferral(any(), any())).thenAnswer((_) async {});
+  testWidgets('GrowthReferralWidget displays quota and invite button', (
+    WidgetTester tester,
+  ) async {
+    when(
+      () => mockApiService.getQuota(),
+    ).thenAnswer((_) async => {'used': 10, 'max': 100});
+    when(
+      () => mockApiService.createReferral(any(), any()),
+    ).thenAnswer((_) async {});
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          apiServiceProvider.overrideWithValue(mockApiService),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: GrowthReferralWidget(),
-          ),
-        ),
+        overrides: [apiServiceProvider.overrideWithValue(mockApiService)],
+        child: const MaterialApp(home: Scaffold(body: GrowthReferralWidget())),
       ),
     );
 
@@ -40,8 +40,14 @@ void main() {
     await tester.tap(find.text('Invite Team to Expand Quota'));
     await tester.pumpAndSettle();
 
-    verify(() => mockApiService.createReferral("anonymous", "xYz8vQ_local_sovereign")).called(1);
+    verify(
+      () =>
+          mockApiService.createReferral("anonymous", "xYz8vQ_local_sovereign"),
+    ).called(1);
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.textContaining('Cloud-Bridge invite link copied'), findsOneWidget);
+    expect(
+      find.textContaining('Cloud-Bridge invite link copied'),
+      findsOneWidget,
+    );
   });
 }

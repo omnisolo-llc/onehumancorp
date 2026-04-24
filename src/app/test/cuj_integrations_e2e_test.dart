@@ -26,9 +26,7 @@ class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, ApiService api) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
@@ -50,9 +48,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -69,9 +65,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -88,9 +82,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -107,9 +99,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -129,14 +119,21 @@ void main() {
       expect(find.byType(Scaffold), findsOneWidget);
     });
 
-    testWidgets('MCP tools section renders when tools are available', (tester) async {
+    testWidgets('MCP tools section renders when tools are available', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
         (_) async => http.Response(
           jsonEncode([
-            {'id': 't1', 'name': 'GitHub', 'description': 'GitHub integration', 'actions': []},
+            {
+              'id': 't1',
+              'name': 'GitHub',
+              'description': 'GitHub integration',
+              'actions': [],
+            },
           ]),
           200,
         ),

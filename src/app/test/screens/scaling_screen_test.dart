@@ -4,14 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ohc_app/screens/scaling_screen.dart';
 
 void main() {
-  testWidgets('ScalingScreen displays AI_NEWS_COLLECTOR role', (WidgetTester tester) async {
+  testWidgets('ScalingScreen displays AI_NEWS_COLLECTOR role', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(
-            body: ScalingScreen(),
-          ),
-        ),
+        child: MaterialApp(home: Scaffold(body: ScalingScreen())),
       ),
     );
 

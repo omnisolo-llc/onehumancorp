@@ -26,9 +26,7 @@ class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, ApiService api) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
@@ -90,7 +88,8 @@ void main() {
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response(jsonEncode(_fakeDashboard(total: 1234.56)), 200),
+        (_) async =>
+            http.Response(jsonEncode(_fakeDashboard(total: 1234.56)), 200),
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -124,7 +123,9 @@ void main() {
       expect(find.byIcon(Icons.refresh), findsOneWidget);
     });
 
-    testWidgets('tapping refresh button triggers a second API call', (tester) async {
+    testWidgets('tapping refresh button triggers a second API call', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       var callCount = 0;
       when(
@@ -153,9 +154,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response('Internal Server Error', 500),
-      );
+      ).thenAnswer((_) async => http.Response('Internal Server Error', 500));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',

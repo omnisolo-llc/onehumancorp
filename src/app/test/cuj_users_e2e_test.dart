@@ -26,9 +26,7 @@ class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, ApiService api) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
@@ -36,7 +34,11 @@ Widget _wrapScreen(Widget screen, ApiService api) {
   );
 }
 
-Map<String, dynamic> _fakeUser(String id, String username, {bool admin = false}) => {
+Map<String, dynamic> _fakeUser(
+  String id,
+  String username, {
+  bool admin = false,
+}) => {
   'id': id,
   'username': username,
   'email': '$username@example.com',
@@ -85,9 +87,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -104,9 +104,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -148,9 +146,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response('Server Error', 500),
-      );
+      ).thenAnswer((_) async => http.Response('Server Error', 500));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',

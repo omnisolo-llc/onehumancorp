@@ -7,7 +7,6 @@
 //   4. Scale button is present
 //   5. Provisioning logs area is visible
 
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,9 +25,7 @@ class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, ApiService api) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
@@ -75,7 +72,9 @@ void main() {
       expect(find.byType(ChoiceChip), findsWidgets);
     });
 
-    testWidgets('selecting a role chip updates selection state', (tester) async {
+    testWidgets('selecting a role chip updates selection state', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -112,7 +111,9 @@ void main() {
       expect(
         find.byWidgetPredicate(
           (w) =>
-              (w is ElevatedButton || w is FilledButton || w is OutlinedButton) &&
+              (w is ElevatedButton ||
+                  w is FilledButton ||
+                  w is OutlinedButton) &&
               w.toString().isNotEmpty,
         ),
         findsWidgets,

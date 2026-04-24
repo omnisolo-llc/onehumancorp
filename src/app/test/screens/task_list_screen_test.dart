@@ -5,7 +5,9 @@ import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/models/shared_task.dart';
 
 void main() {
-  testWidgets('TaskListScreen renders properly and handles parent tasks', (WidgetTester tester) async {
+  testWidgets('TaskListScreen renders properly and handles parent tasks', (
+    WidgetTester tester,
+  ) async {
     // Override the provider to return mocked tasks
     final tasks = [
       SharedTask(
@@ -19,14 +21,8 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          sharedTasksProvider.overrideWith((ref) => tasks),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: TaskListScreen(),
-          ),
-        ),
+        overrides: [sharedTasksProvider.overrideWith((ref) => tasks)],
+        child: const MaterialApp(home: Scaffold(body: TaskListScreen())),
       ),
     );
 
@@ -36,6 +32,9 @@ void main() {
     expect(find.text('Shared Task List'), findsOneWidget);
     expect(find.text('Task 1'), findsOneWidget);
     expect(find.text('Parent Task: parent-123'), findsOneWidget);
-    expect(find.text('Workflow State: {"step": "DECOMPOSING"}'), findsOneWidget);
+    expect(
+      find.text('Workflow State: {"step": "DECOMPOSING"}'),
+      findsOneWidget,
+    );
   });
 }

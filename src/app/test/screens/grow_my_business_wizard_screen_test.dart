@@ -5,7 +5,9 @@ import 'package:ohc_app/screens/grow_my_business_wizard_screen.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
-  testWidgets('GrowMyBusinessWizardScreen navigates through all steps', (WidgetTester tester) async {
+  testWidgets('GrowMyBusinessWizardScreen navigates through all steps', (
+    WidgetTester tester,
+  ) async {
     final router = GoRouter(
       routes: [
         GoRoute(
@@ -20,16 +22,15 @@ void main() {
     );
 
     await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
-      ),
+      ProviderScope(child: MaterialApp.router(routerConfig: router)),
     );
 
     // Step 0
     expect(find.text('Growth Strategies'), findsOneWidget);
-    expect(find.text('Select a next step to grow your business'), findsOneWidget);
+    expect(
+      find.text('Select a next step to grow your business'),
+      findsOneWidget,
+    );
 
     // Next is disabled
     final nextButtonFinder = find.widgetWithText(ElevatedButton, 'Next');
@@ -45,7 +46,10 @@ void main() {
     await tester.tap(nextButtonFinder);
     await tester.pumpAndSettle();
     expect(find.text('Confirm Action'), findsOneWidget);
-    expect(find.text('You are about to start: Connect Instagram'), findsOneWidget);
+    expect(
+      find.text('You are about to start: Connect Instagram'),
+      findsOneWidget,
+    );
 
     // Check advanced mode toggle
     final switchFinder = find.byType(Switch);
@@ -56,7 +60,10 @@ void main() {
     // Back test
     await tester.tap(find.widgetWithText(OutlinedButton, 'Back'));
     await tester.pumpAndSettle();
-    expect(find.text('Select a next step to grow your business'), findsOneWidget);
+    expect(
+      find.text('Select a next step to grow your business'),
+      findsOneWidget,
+    );
     await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Next'));
     await tester.tap(find.widgetWithText(ElevatedButton, 'Next'));
     await tester.pumpAndSettle();
@@ -85,6 +92,9 @@ void main() {
     expect(container.read(growMyBusinessProvider).step, 0);
 
     notifier.updateStrategy('Run your first email campaign');
-    expect(container.read(growMyBusinessProvider).selectedStrategy, 'Run your first email campaign');
+    expect(
+      container.read(growMyBusinessProvider).selectedStrategy,
+      'Run your first email campaign',
+    );
   });
 }

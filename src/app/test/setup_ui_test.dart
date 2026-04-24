@@ -5,14 +5,20 @@ import 'package:ohc_app/widgets/setup_ui.dart';
 import 'package:ohc_app/services/settings_service.dart';
 
 void main() {
-  testWidgets('SetupUI has correct text and checklists for Cloud Mode', (WidgetTester tester) async {
+  testWidgets('SetupUI has correct text and checklists for Cloud Mode', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           clientSettingsProvider.overrideWith(
-            (ref) => ClientSettingsNotifier(ref)..state = const AsyncValue.data(
-              ClientSettings(backendUrl: 'http://localhost', standaloneMode: false),
-            ),
+            (ref) => ClientSettingsNotifier(ref)
+              ..state = const AsyncValue.data(
+                ClientSettings(
+                  backendUrl: 'http://localhost',
+                  standaloneMode: false,
+                ),
+              ),
           ),
         ],
         child: const MaterialApp(home: Scaffold(body: SetupUI())),
@@ -26,14 +32,20 @@ void main() {
     expect(find.text('4. Launch Standalone Mode'), findsOneWidget);
   });
 
-  testWidgets('SetupUI has correct text and checklists for Standalone Mode', (WidgetTester tester) async {
+  testWidgets('SetupUI has correct text and checklists for Standalone Mode', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           clientSettingsProvider.overrideWith(
-            (ref) => ClientSettingsNotifier(ref)..state = const AsyncValue.data(
-              ClientSettings(backendUrl: 'http://localhost', standaloneMode: true),
-            ),
+            (ref) => ClientSettingsNotifier(ref)
+              ..state = const AsyncValue.data(
+                ClientSettings(
+                  backendUrl: 'http://localhost',
+                  standaloneMode: true,
+                ),
+              ),
           ),
         ],
         child: const MaterialApp(home: Scaffold(body: SetupUI())),

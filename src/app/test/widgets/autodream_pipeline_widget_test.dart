@@ -3,14 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ohc_app/widgets/autodream_pipeline_widget.dart';
 
 void main() {
-  testWidgets('AutoDreamPipelineWidget renders correctly with all nodes', (WidgetTester tester) async {
+  testWidgets('AutoDreamPipelineWidget renders correctly with all nodes', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: AutoDreamPipelineWidget(),
-          ),
-        ),
+        home: Scaffold(body: Center(child: AutoDreamPipelineWidget())),
       ),
     );
 

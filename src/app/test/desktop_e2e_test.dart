@@ -18,10 +18,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
-import 'package:ohc_app/models/agent.dart';
-import 'package:ohc_app/models/ai_provider.dart';
-import 'package:ohc_app/models/channel.dart';
-import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/ai_config_screen.dart';
 import 'package:ohc_app/screens/channels_screen.dart';
@@ -39,7 +35,6 @@ import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
-import 'package:ohc_app/models/settings.dart';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
 
@@ -50,8 +45,10 @@ class FakeUri extends Fake implements Uri {}
 // ── Helpers ───────────────────────────────────────────────────────────────
 
 class _FakeClientSettingsNotifier extends ClientSettingsNotifier {
-  _FakeClientSettingsNotifier(Ref ref) : super(ref) {
-    state = const AsyncData(ClientSettings(backendUrl: 'http://localhost', standaloneMode: false));
+  _FakeClientSettingsNotifier(super.ref) {
+    state = const AsyncData(
+      ClientSettings(backendUrl: 'http://localhost', standaloneMode: false),
+    );
   }
 }
 
@@ -245,7 +242,9 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
-            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
+            clientSettingsProvider.overrideWith(
+              (ref) => _FakeClientSettingsNotifier(ref),
+            ),
           ],
         ),
       );
@@ -257,9 +256,9 @@ void main() {
 
       // Because we scroll to the bottom, sometimes the element isn't visible yet
       await tester.dragUntilVisible(
-          signOutFinder,
-          find.byType(ListView),
-          const Offset(0, -500),
+        signOutFinder,
+        find.byType(ListView),
+        const Offset(0, -500),
       );
       await tester.pumpAndSettle();
 
@@ -277,7 +276,9 @@ void main() {
           const SettingsScreen(),
           overrides: [
             authStateProvider.overrideWith(() => _FakeAuthNotifier(_fakeUser)),
-            clientSettingsProvider.overrideWith((ref) => _FakeClientSettingsNotifier(ref)),
+            clientSettingsProvider.overrideWith(
+              (ref) => _FakeClientSettingsNotifier(ref),
+            ),
           ],
         ),
       );
@@ -1028,11 +1029,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify API was called
-      verify(() => mockClient.post(
-        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
-        headers: any(named: 'headers'),
-        body: any(named: 'body', that: contains('Mac')),
-      )).called(1);
+      verify(
+        () => mockClient.post(
+          any(
+            that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads'),
+          ),
+          headers: any(named: 'headers'),
+          body: any(named: 'body', that: contains('Mac')),
+        ),
+      ).called(1);
 
       // Tap Windows download button
       final winBtn = find.text('Download for Windows');
@@ -1041,11 +1046,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify API was called
-      verify(() => mockClient.post(
-        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
-        headers: any(named: 'headers'),
-        body: any(named: 'body', that: contains('Windows')),
-      )).called(1);
+      verify(
+        () => mockClient.post(
+          any(
+            that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads'),
+          ),
+          headers: any(named: 'headers'),
+          body: any(named: 'body', that: contains('Windows')),
+        ),
+      ).called(1);
 
       // Tap Linux download button
       final linuxBtn = find.text('Download for Linux');
@@ -1054,11 +1063,15 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify API was called
-      verify(() => mockClient.post(
-        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
-        headers: any(named: 'headers'),
-        body: any(named: 'body', that: contains('Linux')),
-      )).called(1);
+      verify(
+        () => mockClient.post(
+          any(
+            that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads'),
+          ),
+          headers: any(named: 'headers'),
+          body: any(named: 'body', that: contains('Linux')),
+        ),
+      ).called(1);
     });
   });
 }

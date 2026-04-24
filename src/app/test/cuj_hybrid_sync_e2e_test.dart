@@ -5,7 +5,6 @@
 //   2. "Trigger Hybrid Sync" button is present
 //   3. Clicking the sync button triggers a sync and shows success
 
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,7 +18,6 @@ import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/local_manager_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
-import 'package:ohc_app/models/settings.dart';
 
 // ── Mocks & Fakes ─────────────────────────────────────────────────────────
 
@@ -63,26 +61,30 @@ class _FakeLocalManagerService implements LocalManagerService {
   @override
   Future<Map<String, dynamic>> getSystemInfo() async => {};
 
-  @override
   Future<ProcessResult> processRun(
-      String executable, List<String> arguments,
-      {String? workingDirectory, Map<String, String>? environment, bool runInShell = false}) async {
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool runInShell = false,
+  }) async {
     throw UnimplementedError();
   }
 
-  @override
   Future<Process> processStart(
-      String executable, List<String> arguments,
-      {String? workingDirectory, Map<String, String>? environment, bool runInShell = false}) async {
+    String executable,
+    List<String> arguments, {
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool runInShell = false,
+  }) async {
     throw UnimplementedError();
   }
 }
 
 Widget _wrapScreen(Widget screen, ApiService api) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
     overrides: [
@@ -90,10 +92,27 @@ Widget _wrapScreen(Widget screen, ApiService api) {
       localManagerServiceProvider.overrideWithValue(_FakeLocalManagerService()),
       clientSettingsProvider.overrideWith(
         (ref) => ClientSettingsNotifier(ref)
-          ..state = const AsyncData(ClientSettings(backendUrl: 'http://localhost', standaloneMode: false)),
+          ..state = const AsyncData(
+            ClientSettings(
+              backendUrl: 'http://localhost',
+              standaloneMode: false,
+            ),
+          ),
       ),
-      authStateProvider.overrideWith(() => AuthNotifier()
-        ..state = const AsyncData(AuthUser(id: '1', name: 'Test', email: 'test@example.com', role: 'admin', organizationId: 'org-1', token: 'test-token'))),
+      authStateProvider.overrideWith(
+        () =>
+            AuthNotifier()
+              ..state = const AsyncData(
+                AuthUser(
+                  id: '1',
+                  name: 'Test',
+                  email: 'test@example.com',
+                  role: 'admin',
+                  organizationId: 'org-1',
+                  token: 'test-token',
+                ),
+              ),
+      ),
     ],
     child: MaterialApp.router(routerConfig: router),
   );
@@ -112,8 +131,9 @@ void main() {
     testWidgets('renders Settings title in AppBar', (tester) async {
       final mockClient = MockHttpClient();
 
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response('{}', 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('{}', 200));
 
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -127,14 +147,22 @@ void main() {
       expect(find.textContaining('Settings'), findsOneWidget);
     });
 
-    testWidgets('Trigger Hybrid Sync button is present and works', (tester) async {
+    testWidgets('Trigger Hybrid Sync button is present and works', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
 
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response('{}', 200));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response('{}', 200));
 
-      when(() => mockClient.post(any(), headers: any(named: 'headers'), body: any(named: 'body')))
-          .thenAnswer((_) async => http.Response('{"status": "synced"}', 200));
+      when(
+        () => mockClient.post(
+          any(),
+          headers: any(named: 'headers'),
+          body: any(named: 'body'),
+        ),
+      ).thenAnswer((_) async => http.Response('{"status": "synced"}', 200));
 
       final api = ApiService(
         baseUrl: 'http://localhost',

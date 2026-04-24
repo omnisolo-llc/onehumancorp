@@ -5,7 +5,9 @@ import 'package:ohc_app/screens/website_builder_wizard_screen.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
-  testWidgets('WebsiteBuilderWizardScreen navigates through all steps', (WidgetTester tester) async {
+  testWidgets('WebsiteBuilderWizardScreen navigates through all steps', (
+    WidgetTester tester,
+  ) async {
     final router = GoRouter(
       routes: [
         GoRoute(
@@ -20,11 +22,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
-      ),
+      ProviderScope(child: MaterialApp.router(routerConfig: router)),
     );
 
     // Initial state (Step 0)
@@ -39,7 +37,10 @@ void main() {
     await tester.tap(find.text('Portfolio'));
     await tester.pumpAndSettle();
 
-    final useTemplateFinder = find.widgetWithText(ElevatedButton, 'Use this template →');
+    final useTemplateFinder = find.widgetWithText(
+      ElevatedButton,
+      'Use this template →',
+    );
     expect(tester.widget<ElevatedButton>(useTemplateFinder).enabled, isTrue);
 
     // Go to Step 1
@@ -114,7 +115,10 @@ void main() {
     expect(container.read(websiteBuilderProvider).step, 0);
 
     notifier.updateTemplate('E-commerce');
-    expect(container.read(websiteBuilderProvider).selectedTemplate, 'E-commerce');
+    expect(
+      container.read(websiteBuilderProvider).selectedTemplate,
+      'E-commerce',
+    );
 
     notifier.updateColor('#123456');
     expect(container.read(websiteBuilderProvider).primaryColor, '#123456');

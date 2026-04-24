@@ -26,9 +26,7 @@ class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, ApiService api) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
@@ -36,7 +34,11 @@ Widget _wrapScreen(Widget screen, ApiService api) {
   );
 }
 
-Map<String, dynamic> _fakePipeline(String id, String name, {String status = 'active'}) => {
+Map<String, dynamic> _fakePipeline(
+  String id,
+  String name, {
+  String status = 'active',
+}) => {
   'id': id,
   'name': name,
   'status': status,
@@ -57,13 +59,13 @@ void main() {
   });
 
   group('CUJ: SDLC Pipelines', () {
-    testWidgets('shows "No active pipelines" when list is empty', (tester) async {
+    testWidgets('shows "No active pipelines" when list is empty', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -102,9 +104,7 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
@@ -123,7 +123,9 @@ void main() {
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
         (_) async => http.Response(
-          jsonEncode([_fakePipeline('p1', 'Feature Deploy', status: 'running')]),
+          jsonEncode([
+            _fakePipeline('p1', 'Feature Deploy', status: 'running'),
+          ]),
           200,
         ),
       );
@@ -140,7 +142,9 @@ void main() {
       expect(find.textContaining('main'), findsWidgets);
     });
 
-    testWidgets('Promote button triggers POST to promote endpoint', (tester) async {
+    testWidgets('Promote button triggers POST to promote endpoint', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -151,10 +155,7 @@ void main() {
         ),
       );
       when(
-        () => mockClient.post(
-          any(),
-          headers: any(named: 'headers'),
-        ),
+        () => mockClient.post(any(), headers: any(named: 'headers')),
       ).thenAnswer((_) async => http.Response('{}', 200));
 
       final api = ApiService(

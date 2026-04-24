@@ -27,14 +27,10 @@ class FakeUri extends Fake implements Uri {}
 
 Widget _wrapScreen(Widget screen, {ApiService? api}) {
   final router = GoRouter(
-    routes: [
-      GoRoute(path: '/', builder: (context, state) => screen),
-    ],
+    routes: [GoRoute(path: '/', builder: (context, state) => screen)],
   );
   return ProviderScope(
-    overrides: [
-      if (api != null) apiServiceProvider.overrideWithValue(api),
-    ],
+    overrides: [if (api != null) apiServiceProvider.overrideWithValue(api)],
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -81,22 +77,24 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
+      ).thenAnswer((_) async => http.Response(jsonEncode(<dynamic>[]), 200));
       final api = ApiService(
         baseUrl: 'http://localhost',
         token: 'tok',
         client: mockClient,
       );
 
-      await tester.pumpWidget(_wrapScreen(const ReferralsDashboardScreen(), api: api));
+      await tester.pumpWidget(
+        _wrapScreen(const ReferralsDashboardScreen(), api: api),
+      );
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.textContaining('Viral Loop'), findsOneWidget);
     });
 
-    testWidgets('referral entries are rendered when API returns data', (tester) async {
+    testWidgets('referral entries are rendered when API returns data', (
+      tester,
+    ) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -121,7 +119,9 @@ void main() {
         client: mockClient,
       );
 
-      await tester.pumpWidget(_wrapScreen(const ReferralsDashboardScreen(), api: api));
+      await tester.pumpWidget(
+        _wrapScreen(const ReferralsDashboardScreen(), api: api),
+      );
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.byType(Scaffold), findsOneWidget);

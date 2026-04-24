@@ -16,17 +16,14 @@ void main() {
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => const Scaffold(body: AgentHireWizardScreen()),
+          builder:
+              (context, state) => const Scaffold(body: AgentHireWizardScreen()),
         ),
       ],
     );
 
     await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
-      ),
+      ProviderScope(child: MaterialApp.router(routerConfig: router)),
     );
     await tester.pumpAndSettle();
 
@@ -34,19 +31,15 @@ void main() {
     expect(find.text('Next'), findsWidgets);
   });
 
-
-
-
-
-
-
-
-  testWidgets('AgentHireWizardScreen advanced settings toggle test', (WidgetTester tester) async {
+  testWidgets('AgentHireWizardScreen advanced settings toggle test', (
+    WidgetTester tester,
+  ) async {
     final router = GoRouter(
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => const Scaffold(body: AgentHireWizardScreen()),
+          builder:
+              (context, state) => const Scaffold(body: AgentHireWizardScreen()),
         ),
       ],
     );
@@ -54,17 +47,13 @@ void main() {
     // Let's create a fake provider override if necessary
     // However, the test might just be missing a pump.
     await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
-      ),
+      ProviderScope(child: MaterialApp.router(routerConfig: router)),
     );
     await tester.pumpAndSettle();
 
-    for (int i=0; i<3; i++) {
-        await tester.tap(find.text('Next').first);
-        await tester.pumpAndSettle();
+    for (int i = 0; i < 3; i++) {
+      await tester.tap(find.text('Next').first);
+      await tester.pumpAndSettle();
     }
 
     final context = tester.element(find.byType(AgentHireWizardScreen));
@@ -75,8 +64,8 @@ void main() {
     notifier.updateExpertMode(true);
 
     // We need to make sure the stream of state updates completes
-    for(int i=0; i<5; i++){
-        await tester.pump(const Duration(milliseconds: 500));
+    for (int i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 500));
     }
 
     // Scroll to see it? Maybe it's off screen?
@@ -87,11 +76,4 @@ void main() {
     // We expect the Advanced Configuration to appear
     expect(find.text('Advanced Configuration'), findsOneWidget);
   });
-
-
-
-
-
-
-
 }

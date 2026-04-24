@@ -6,9 +6,17 @@ import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/models/dashboard.dart';
 
 // Provide a mock dashboard snapshot
-final mockDashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
+final mockDashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((
+  ref,
+) async {
   return DashboardSnapshot(
-    organization: const Organization(id: 'org1', name: 'Test Org', domain: 'test.com', members: [], roleProfiles: []),
+    organization: const Organization(
+      id: 'org1',
+      name: 'Test Org',
+      domain: 'test.com',
+      members: [],
+      roleProfiles: [],
+    ),
     meetings: [],
     costs: const CostSummary(totalCostUSD: 0.0, totalTokens: 0, agents: []),
     agents: [],
@@ -18,7 +26,9 @@ final mockDashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref
 });
 
 void main() {
-  testWidgets('DashboardScreen includes TaskListScreen with Glassmorphism', (WidgetTester tester) async {
+  testWidgets('DashboardScreen includes TaskListScreen with Glassmorphism', (
+    WidgetTester tester,
+  ) async {
     // Increase size so we can scroll or everything fits
     tester.view.physicalSize = const Size(1920, 1080);
     tester.view.devicePixelRatio = 1.0;
@@ -26,13 +36,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          dashboardProvider.overrideWithProvider(mockDashboardProvider),
+          dashboardProvider.overrideWith((ref) => ref.watch(mockDashboardProvider.future)),
         ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: DashboardScreen(),
-          ),
-        ),
+        child: const MaterialApp(home: Scaffold(body: DashboardScreen())),
       ),
     );
 

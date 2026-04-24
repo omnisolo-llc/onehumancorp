@@ -1,18 +1,15 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/widgets/swarm_velocity_widget.dart';
+import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 
 void main() {
-  testWidgets('SwarmVelocityWidget renders correctly with OHC tokens', (WidgetTester tester) async {
+  testWidgets('SwarmVelocityWidget renders correctly with OHC tokens', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: MaterialApp(
-          home: Scaffold(
-            body: SwarmVelocityWidget(),
-          ),
-        ),
+        child: MaterialApp(home: Scaffold(body: SwarmVelocityWidget())),
       ),
     );
 

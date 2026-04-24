@@ -5,7 +5,9 @@ import 'package:ohc_app/screens/agent_config_wizard_screen.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
-  testWidgets('AgentConfigWizardScreen navigates through all steps', (WidgetTester tester) async {
+  testWidgets('AgentConfigWizardScreen navigates through all steps', (
+    WidgetTester tester,
+  ) async {
     final router = GoRouter(
       routes: [
         GoRoute(
@@ -20,11 +22,7 @@ void main() {
     );
 
     await tester.pumpWidget(
-      ProviderScope(
-        child: MaterialApp.router(
-          routerConfig: router,
-        ),
-      ),
+      ProviderScope(child: MaterialApp.router(routerConfig: router)),
     );
 
     // Step 0

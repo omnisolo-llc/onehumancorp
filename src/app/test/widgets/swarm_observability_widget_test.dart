@@ -9,25 +9,23 @@ import 'package:ohc_app/services/centrifuge_service.dart';
 class MockCentrifugeService extends Mock implements CentrifugeService {}
 
 void main() {
-  testWidgets('SwarmObservabilityWidget renders and displays messages', (WidgetTester tester) async {
+  testWidgets('SwarmObservabilityWidget renders and displays messages', (
+    WidgetTester tester,
+  ) async {
     final mockService = MockCentrifugeService();
 
     when(() => mockService.subscribeRaw('mesh:tasks')).thenAnswer(
       (_) => Stream.fromIterable([
         {'agent_id': 'Agent 1', 'action': 'Thinking', 'status': 'Working'},
-        {'agent_id': 'Agent 2', 'action': 'Coding', 'status': 'Done'}
-      ])
+        {'agent_id': 'Agent 2', 'action': 'Coding', 'status': 'Done'},
+      ]),
     );
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          centrifugeServiceProvider.overrideWithValue(mockService),
-        ],
+        overrides: [centrifugeServiceProvider.overrideWithValue(mockService)],
         child: const MaterialApp(
-          home: Scaffold(
-            body: SwarmObservabilityWidget(),
-          ),
+          home: Scaffold(body: SwarmObservabilityWidget()),
         ),
       ),
     );

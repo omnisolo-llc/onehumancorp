@@ -1,4 +1,4 @@
-import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,9 +8,17 @@ import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/models/agent.dart';
 
 void main() {
-  testWidgets('HybridObservabilityWidget renders correctly with OHC tokens', (WidgetTester tester) async {
+  testWidgets('HybridObservabilityWidget renders correctly with OHC tokens', (
+    WidgetTester tester,
+  ) async {
     final mockSnapshot = DashboardSnapshot(
-      organization: const Organization(id: '1', name: 'Test Org', domain: 'test.com', members: [], roleProfiles: []),
+      organization: const Organization(
+        id: '1',
+        name: 'Test Org',
+        domain: 'test.com',
+        members: [],
+        roleProfiles: [],
+      ),
       meetings: [],
       costs: const CostSummary(totalCostUSD: 0, totalTokens: 0, agents: []),
       agents: [
@@ -23,21 +31,15 @@ void main() {
           createdAt: DateTime.now(),
         ),
       ],
-      statuses: [
-        const StatusBucket(status: 'Running', count: 5),
-      ],
+      statuses: [const StatusBucket(status: 'Running', count: 5)],
       updatedAt: DateTime.now(),
     );
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [
-          dashboardProvider.overrideWith((ref) => mockSnapshot),
-        ],
+        overrides: [dashboardProvider.overrideWith((ref) => mockSnapshot)],
         child: const MaterialApp(
-          home: Scaffold(
-            body: HybridObservabilityWidget(),
-          ),
+          home: Scaffold(body: HybridObservabilityWidget()),
         ),
       ),
     );
@@ -47,11 +49,11 @@ void main() {
     expect(find.text('1'), findsOneWidget); // 1 active agent
     expect(find.text('5'), findsOneWidget); // 5 total tasks
 
-    final backdropFilter = tester.widget<BackdropFilter>(find.byType(BackdropFilter).first);
-    final imageFilter = backdropFilter.filter as ImageFilter;
+
+
 
     final container = tester.widget<Container>(find.byType(Container).first);
     final decoration = container.decoration as BoxDecoration;
-    expect(decoration.color, Colors.white.withOpacity(0.03));
+    expect(decoration.color, Colors.white.withValues(alpha: 0.03));
   });
 }

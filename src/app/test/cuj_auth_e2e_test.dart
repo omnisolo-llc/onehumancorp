@@ -27,22 +27,6 @@ class _FailingAuthNotifier extends AuthNotifier {
   }
 }
 
-class _SuccessAuthNotifier extends AuthNotifier {
-  @override
-  Future<AuthUser?> build() async => null;
-  @override
-  Future<void> login(String email, String password) async {
-    state = const AsyncData(AuthUser(
-      id: 'u1',
-      email: 'user@example.com',
-      name: 'Test User',
-      role: 'admin',
-      organizationId: 'org-1',
-      token: 'tok-ok',
-    ));
-  }
-}
-
 Widget _wrapLogin({List<Override> overrides = const []}) {
   return ProviderScope(
     overrides: overrides,
@@ -81,27 +65,32 @@ void main() {
       expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
-    testWidgets('invalid email format does NOT show format error (only empty check)', (tester) async {
-      // LoginScreen only validates for empty, not email format
-      await tester.pumpWidget(_wrapLogin());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'invalid email format does NOT show format error (only empty check)',
+      (tester) async {
+        // LoginScreen only validates for empty, not email format
+        await tester.pumpWidget(_wrapLogin());
+        await tester.pumpAndSettle();
 
-      // Enter text in the email field (first TextFormField)
-      final emailField = findEmailField(tester);
-      await tester.enterText(find.byWidget(emailField), 'not-an-email');
-      await tester.pumpAndSettle();
+        // Enter text in the email field (first TextFormField)
+        final emailField = findEmailField(tester);
+        await tester.enterText(find.byWidget(emailField), 'not-an-email');
+        await tester.pumpAndSettle();
 
-      // Submit form
-      await tester.tap(find.text('Sign In'));
-      await tester.pumpAndSettle();
+        // Submit form
+        await tester.tap(find.text('Sign In'));
+        await tester.pumpAndSettle();
 
-      // Should NOT show "Enter a valid email" since format is not validated
-      expect(find.text('Enter a valid email'), findsNothing);
-      // Should show password error since password field is empty
-      expect(find.text('Enter your password'), findsOneWidget);
-    });
+        // Should NOT show "Enter a valid email" since format is not validated
+        expect(find.text('Enter a valid email'), findsNothing);
+        // Should show password error since password field is empty
+        expect(find.text('Enter your password'), findsOneWidget);
+      },
+    );
 
-    testWidgets('missing password shows password validation error', (tester) async {
+    testWidgets('missing password shows password validation error', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrapLogin());
       await tester.pumpAndSettle();
 
@@ -144,7 +133,9 @@ void main() {
       expect(find.textContaining('Unauthorized'), findsOneWidget);
     });
 
-    testWidgets('login screen renders Sign In button and two text fields', (tester) async {
+    testWidgets('login screen renders Sign In button and two text fields', (
+      tester,
+    ) async {
       await tester.pumpWidget(_wrapLogin());
       await tester.pumpAndSettle();
 

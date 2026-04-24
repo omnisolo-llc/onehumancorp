@@ -4,16 +4,16 @@ import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 
 void main() {
   group('AutoDreamSyncWalkthroughScreen Widget Tests', () {
-    testWidgets('renders basic UI structure and navigates through steps', (tester) async {
+    testWidgets('renders basic UI structure and navigates through steps', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(2400, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: AutoDreamSyncWalkthroughScreen(),
-        ),
+        const MaterialApp(home: AutoDreamSyncWalkthroughScreen()),
       );
 
       // Verify Screen title
