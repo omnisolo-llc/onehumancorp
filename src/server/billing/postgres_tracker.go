@@ -75,6 +75,9 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		totalActions += a.TotalActions
 		agents = append(agents, a)
 	}
+	if err := rows.Err(); err != nil {
+		return Summary{}, fmt.Errorf("pg: iteration error: %w", err)
+	}
 
 	return Summary{
 		OrganizationID:      organizationID,
