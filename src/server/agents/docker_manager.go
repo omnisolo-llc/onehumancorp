@@ -39,7 +39,7 @@ func (m *DockerManager) SpawnAgent(ctx context.Context, agent Agent, config stri
 	// Prepare container creation request
 	// We use a simple mapping for now. In reality, we might parse 'config' JSON.
 	image := "ohc-builtin-agent:latest"
-	
+
 	createReq := map[string]interface{}{
 		"Image": image,
 		"Env": []string{
