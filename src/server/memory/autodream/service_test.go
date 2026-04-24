@@ -5,6 +5,8 @@ import (
 	"testing"
 	"database/sql"
 	"time"
+	"strings"
+
 	_ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/src/server/db"
@@ -22,6 +24,20 @@ func (m *mockLLM) GenerateEmbedding(ctx context.Context, text string) ([]float32
 	return []float32{0.1, 0.2, 0.3}, nil
 }
 
+// mockProvider intercepts queries to replace vec_distance_cosine with a constant 0.0 for testing,
+// since registering UDFs in modernc.org/sqlite is complex.
+type mockProvider struct {
+	db.Provider
+}
+
+func (m *mockProvider) Query(ctx context.Context, query string, args ...any) (db.Rows, error) {
+	if strings.Contains(query, "vec_distance_cosine") {
+		// Replace vec_distance_cosine(embedding, $2) with 0.0 to simulate perfect match
+		query = strings.ReplaceAll(query, "vec_distance_cosine(embedding, $2)", "0.0")
+	}
+	return m.Provider.Query(ctx, query, args...)
+}
+
 func TestAutoDreamConsolidation(t *testing.T) {
 	dbConn, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
@@ -29,16 +45,18 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	}
 	defer dbConn.Close()
 
-	provider := db.NewSqliteProvider(dbConn)
+	sqliteProvider := db.NewSqliteProvider(dbConn)
+	provider := &mockProvider{Provider: sqliteProvider}
+
 	claims := &auth.Claims{OrganizationID: "test-tenant-123"}
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
 
 	_, err = provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS autodream_memories_master (
 		id VARCHAR PRIMARY KEY,
-		organization_id VARCHAR NOT NULL,
+		tenant_id VARCHAR NOT NULL,
 		memory_type TEXT NOT NULL,
 		content TEXT NOT NULL,
-		embedding BLOB,
+		embedding TEXT,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		source_task_id VARCHAR
 	);`)
@@ -75,7 +93,6 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	}
 
 	// Test PruneStaleContext
-	// Record is created now, so 30 days retention won't delete it
 	err = service.PruneStaleContext(ctx, 30 * 24 * time.Hour)
 	if err != nil {
 		t.Fatalf("PruneStaleContext failed: %v", err)

@@ -48,16 +48,19 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 	}
 
 	claims := auth.ClaimsFromContext(ctx)
-	if claims == nil || claims.OrganizationID == "" {
-		return fmt.Errorf("unauthorized: missing claims or organization ID")
+	// We map OrganizationID as the tenant_id in the db because the auth claims only have OrganizationID.
+	tenantID := claims.OrganizationID
+	if tenantID == "" {
+		return fmt.Errorf("unauthorized: missing claims or tenant ID")
 	}
 
 	// Semantic Search to find existing similar memories to resolve conflicts
-	results, err := s.vectorRepo.SemanticSearch(ctx, claims.OrganizationID, embedding, 1)
+	// VectorRepository semantic search now filters by threshold > 0.90 automatically.
+	results, err := s.vectorRepo.SemanticSearch(ctx, tenantID, embedding, 1)
 	if err == nil && len(results) > 0 {
 		top := results[0]
-		// If similarity > 0.90, merge to resolve conflict
-		if top.Score > 0.90 && top.Record.MemoryType == "TASK_SUMMARY" {
+		// VectorRepository already enforces score > 0.90
+		if top.Record.MemoryType == "TASK_SUMMARY" {
 			mergePrompt := fmt.Sprintf("Merge these two summaries into one cohesive memory, resolving any conflicting facts by keeping the newer information:\nOld: %s\nNew: %s", top.Record.Content, summary)
 			mergedSummary, err := s.llm.Reason(ctx, mergePrompt)
 			if err == nil {
@@ -78,7 +81,7 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 
 	record := &memory.EmbeddingRecord{
 		ID:             taskID + "-summary",
-		OrganizationID: claims.OrganizationID,
+		TenantID:       tenantID,
 		MemoryType:     "TASK_SUMMARY",
 		Content:        summary,
 		Embedding:      embedding,
