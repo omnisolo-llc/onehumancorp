@@ -217,13 +217,13 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 	slog.Debug("sync: successfully synced agent_missions", "count", len(payloads))
 }
 
-func (e *AutoDreamSyncEngine) sendToCloud(ctx context.Context, payloads []AutoDreamPayload) error {
+func (e *AutoDreamSyncEngine) sendToCloud(ctx context.Context, autoDreamPayloads []AutoDreamPayload) error {
 	// If cloudAPIURL is empty (e.g. testing), mock success
 	if e.cloudAPIURL == "" {
 		return nil
 	}
 
-	jsonData, err := json.Marshal(payloads)
+	jsonData, err := json.Marshal(autoDreamPayloads)
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}

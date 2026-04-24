@@ -163,8 +163,8 @@ func (d *HybridSyncDaemon) ProcessSync(ctx context.Context) {
 	slog.Debug("hybrid_sync: successfully synced and escalated RAG vectors", "count", len(payloads))
 }
 
-func (d *HybridSyncDaemon) sendToCloud(ctx context.Context, payloads []SyncPayload) error {
-	jsonData, err := json.Marshal(payloads)
+func (d *HybridSyncDaemon) sendToCloud(ctx context.Context, syncPayloads []SyncPayload) error {
+	jsonData, err := json.Marshal(syncPayloads)
 	if err != nil {
 		return fmt.Errorf("marshal payloads: %w", err)
 	}
@@ -238,8 +238,8 @@ func (d *HybridSyncDaemon) ProcessCRDTSync(ctx context.Context) {
 		return
 	}
 
-	payload := SyncDeltasPayload{Deltas: deltas}
-	jsonData, err := json.Marshal(payload)
+	crdtPayload := SyncDeltasPayload{Deltas: deltas}
+	jsonData, err := json.Marshal(crdtPayload)
 	if err != nil {
 		slog.Error("hybrid_sync: failed to marshal CRDT deltas", "error", err)
 		return
@@ -308,7 +308,7 @@ func (d *HybridSyncDaemon) SyncLocalToCloud(ctx context.Context, mission *AgentM
 		redactedPayload = telemetry.RedactPII(mission.Payload)
 	}
 
-	payloadToSync := map[string]interface{}{
+	missionSyncData := map[string]interface{}{
 		"mission_id":      mission.ID,
 		"organization_id": mission.OrganizationID,
 		"status":          mission.Status,
@@ -317,7 +317,7 @@ func (d *HybridSyncDaemon) SyncLocalToCloud(ctx context.Context, mission *AgentM
 		},
 	}
 
-	jsonData, err := json.Marshal(payloadToSync)
+	jsonData, err := json.Marshal(missionSyncData)
 	if err != nil {
 		return fmt.Errorf("marshal payload: %w", err)
 	}

@@ -204,7 +204,7 @@ proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension
 use_repo(proto_deps, "google_protobuf_dart")
 
 # ── Playwright Browsers (Hermetic) ──────────────────────────────────────────
-playwright = use_extension("//bazel:playwright_browsers.bzl", "playwright_browsers_extension")
+playwright = use_extension("//:bazel/playwright_browsers.bzl", "playwright_browsers_extension")
 use_repo(
     playwright,
     "playwright_chromium",
