@@ -50,6 +50,12 @@ class HelpCenterScreen extends StatelessWidget {
             description: 'Managing your OHC subscription and settings.',
             onTap: () => context.push('/help/article/account-billing'),
           ),
+          _HelpCategory(
+            title: 'Video Tutorials',
+            icon: Icons.video_library,
+            description: 'Watch short guides on how to use OHC.',
+            onTap: () => context.push('/help/video-tutorials'),
+          ),
           const SizedBox(height: 24),
           ListTile(
             leading: const Icon(Icons.code),

@@ -16,7 +16,7 @@ class HelpArticleScreen extends StatelessWidget {
 
     if (articleId == 'getting-started') {
       title = 'Getting Started';
-      content = 'Welcome to OneHumanCorp! Let\'s get your business up and running.';
+      content = 'Welcome to OneHumanCorp! Let\'s get your business set up and ready to go.';
     } else if (articleId == 'my-store') {
       title = 'My Store';
       content = 'Learn how to add products, manage inventory, and customize your storefront.';

@@ -7,6 +7,7 @@ import 'dart:ui';
 import '../services/auth_service.dart';
 import '../services/settings_service.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/interactive_walkthrough_widget.dart';
 
 class BusinessSetupState {
   final int step;
@@ -169,8 +170,15 @@ final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSe
   return BusinessSetupNotifier();
 });
 
-class BusinessSetupWizardScreen extends ConsumerWidget {
+class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
   const BusinessSetupWizardScreen({super.key});
+
+  @override
+  ConsumerState<BusinessSetupWizardScreen> createState() => _BusinessSetupWizardScreenState();
+}
+
+class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
+  final GlobalKey _wizardContainerKey = GlobalKey();
 
   Widget _buildStepZero() {
     return Column(
@@ -392,12 +400,20 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final state = ref.watch(businessSetupProvider);
     final notifier = ref.read(businessSetupProvider.notifier);
 
-    return Scaffold(
-      body: Container(
+    return InteractiveWalkthrough(
+      steps: [
+        WalkthroughStep(
+          key: _wizardContainerKey,
+          title: 'Set up your store',
+          description: 'Follow these steps to configure your business and get your AI team ready.',
+        ),
+      ],
+      child: Scaffold(
+        body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -407,6 +423,7 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
         ),
         child: Center(
           child: ConstrainedBox(
+            key: _wizardContainerKey,
             constraints: const BoxConstraints(maxWidth: 600),
           child: GlassCard(
             child: Padding(
@@ -474,6 +491,6 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
           ),
         ),
       ),
-    );
+    ));
   }
 }

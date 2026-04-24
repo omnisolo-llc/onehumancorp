@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/tooltip_registry.dart';
 import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +37,6 @@ class DashboardScreen extends ConsumerWidget {
           child: Icon(Icons.person),
         ),
       ),
-            floatingActionButton: const AiHelpChatWidget(),
 body: snapshot.when(
         loading:
             () => Center(
@@ -257,8 +257,8 @@ class _ObservabilityWidget extends StatelessWidget {
 
     return Semantics(
       label: 'System Overview Panel',
-      child: Tooltip(
-        message: 'View System Health & Metrics',
+      child: RegisteredTooltip(
+        tooltipKey: 'dashboard_system_health',
         child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
@@ -460,8 +460,8 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
+      child: RegisteredTooltip(
+        tooltipKey: 'dashboard_scale_role_${widget.role}',
         child: SizedBox(
           width: 320,
           child: GlassCard(
@@ -632,8 +632,8 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
-      child: Tooltip(
-        message: 'View ${widget.label}',
+      child: RegisteredTooltip(
+        tooltipKey: 'dashboard_metric_${widget.label.toLowerCase().replaceAll(' ', '_')}',
         child: SizedBox(
           width: 200,
           child: SlideTransition(
