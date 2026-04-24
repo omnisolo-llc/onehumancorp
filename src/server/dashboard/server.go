@@ -49,6 +49,7 @@ type Server struct {
 	// ⚡ BOLT: [high-allocation hashing or mapping for agent roles] - Randomized Selection from Top 5
 	roleProfileCache      map[string]domain.RoleProfile
 	hub                   *orchestration.Hub
+	tasks                 *orchestration.TaskManager
 	tracker               *billing.Tracker
 	approvals             []ApprovalRequest
 	handoffs              []HandoffPackage
@@ -533,6 +534,21 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	if key := os.Getenv("GEMINI_API_KEY"); key != "" {
 		_ = server.agentProviderRegistry.Authenticate(agents.ProviderTypeGemini, agents.Credentials{APIKey: key})
 	}
+
+	var prov db.Provider
+	if server.dbProvider != nil {
+		prov = server.dbProvider
+	} else if hub != nil && hub.SIPDB() != nil {
+		prov = hub.SIPDB().Provider()
+	}
+	if prov != nil {
+		var centrifugeNode *orchestration.CentrifugeNode
+		if hub != nil {
+			centrifugeNode = hub.CentrifugeNode()
+		}
+		server.tasks = orchestration.NewTaskManager(prov, centrifugeNode, nil)
+	}
+
 	if key := os.Getenv("OPENAI_API_KEY"); key != "" {
 		_ = server.agentProviderRegistry.Authenticate(agents.ProviderTypeOpenCode, agents.Credentials{APIKey: key})
 	}
@@ -548,6 +564,11 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/agents/hire", server.handleHireAgent)
 	mux.HandleFunc("/api/agents/fire", server.handleFireAgent)
 	mux.HandleFunc("/api/agents/delegate", server.handleDelegateTask)
+
+	mux.HandleFunc("/api/tasks/approve", server.handleTaskApprove)
+	mux.HandleFunc("/api/tasks/reject", server.handleTaskReject)
+	mux.HandleFunc("/api/tasks/approvals", server.handleListPendingApprovals)
+
 	mux.HandleFunc("/api/growth/referral", growth.ReferralHandler)
 	// Agent provider management
 	mux.HandleFunc("/api/agents/providers", server.handleAgentProviders)

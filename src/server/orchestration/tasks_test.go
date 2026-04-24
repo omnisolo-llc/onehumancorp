@@ -60,6 +60,7 @@ func setupTasksTestDB(t *testing.T) (*TaskManager, func()) {
 			status VARCHAR NOT NULL DEFAULT 'PENDING',
 			agent_id VARCHAR,
 			priority VARCHAR NOT NULL DEFAULT 'P2',
+			action_risk VARCHAR NOT NULL DEFAULT 'ACTION_RISK_UNSPECIFIED',
 			payload TEXT,
 			parent_plan_id TEXT,
 			ultraplan_phase TEXT,
@@ -541,7 +542,7 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 	_ = tm.UpdateTask(ctx, task2)
 
 	// Attempt to make task1 depend on task2 (circular)
-	_, err := tm.CreateTaskWithPlan(ctx, "org-1", "test-mission", "", []string{task2.ID}, "Task 3", "Desc", "P1")
+	_, err := tm.CreateTaskWithPlan(ctx, "org-1", "test-mission", "", []string{task2.ID}, "Task 3", "Desc", "P1", "ACTION_RISK_UNSPECIFIED")
 	// If task3 depends on task2, and task2 depends on task1, it's NOT a cycle for task3.
 	// But let's try to update task1 to depend on task2.
 	task1.Dependencies = []string{task2.ID}

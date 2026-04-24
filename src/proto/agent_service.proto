@@ -18,6 +18,13 @@ message AgentRuntimeConfig {
 }
 
 // RunTaskRequest is sent from the main server to the agent to start a task.
+
+enum ActionRisk {
+  ACTION_RISK_UNSPECIFIED = 0;
+  ACTION_RISK_LOW = 1;
+  ACTION_RISK_HIGH = 2;
+}
+
 message RunTaskRequest {
   // Unique task identifier for tracing and output file naming.
   string task_id = 11;
@@ -46,6 +53,7 @@ message RunTaskRequest {
   ToolsetConfig toolset_config = 10;
   // The OHC department handling the task.
   string department = 12;
+  ActionRisk action_risk = 13;
 }
 enum EventType {
   EVENT_TYPE_UNSPECIFIED = 0;

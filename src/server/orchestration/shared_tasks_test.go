@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     status VARCHAR NOT NULL DEFAULT 'PENDING',
     agent_id VARCHAR,
     priority VARCHAR NOT NULL DEFAULT 'P2',
+			action_risk VARCHAR NOT NULL DEFAULT 'ACTION_RISK_UNSPECIFIED',
     payload TEXT,
     parent_plan_id TEXT,
     dependencies TEXT NOT NULL DEFAULT '[]',

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server/auth"
 )
 
 func (s *Server) handleIncidents(w http.ResponseWriter, r *http.Request) {
@@ -440,4 +441,73 @@ func (s *Server) handlePruneMissions(w http.ResponseWriter, r *http.Request) {
 		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
 	}
 	writeJSON(w, map[string]string{"status": "success", "message": "agent missions pruned"})
+}
+
+func (s *Server) handleTaskApprove(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		TaskID string `json:"taskId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if req.TaskID == "" {
+		http.Error(w, "taskId is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.tasks.ApproveTask(r.Context(), req.TaskID); err != nil {
+		http.Error(w, "failed to approve task", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleTaskReject(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		TaskID string `json:"taskId"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if req.TaskID == "" {
+		http.Error(w, "taskId is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := s.tasks.RejectTask(r.Context(), req.TaskID); err != nil {
+		http.Error(w, "failed to reject task", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleListPendingApprovals(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tasks, err := s.tasks.ListPendingApprovals(r.Context(), claims.OrganizationID)
+	if err != nil {
+		http.Error(w, "failed to list approvals", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, tasks)
 }

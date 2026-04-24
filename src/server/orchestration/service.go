@@ -2074,7 +2074,7 @@ func handleDecomposeTask(w http.ResponseWriter, r *http.Request, tm *TaskManager
 				filteredDeps = append(filteredDeps, dep)
 			}
 		}
-		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, "", req.TaskID, filteredDeps, st.Title, st.Description, st.Priority)
+		t, err := tm.CreateTaskWithPlan(r.Context(), req.OrganizationID, "", req.TaskID, filteredDeps, st.Title, st.Description, st.Priority, "ACTION_RISK_UNSPECIFIED")
 		if err != nil {
 			http.Error(w, fmt.Sprintf("failed to create subtask: %v", err), http.StatusInternalServerError)
 			return

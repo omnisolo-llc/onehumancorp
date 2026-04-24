@@ -39,6 +39,7 @@ type SharedTask struct { // issue_id: 3980
 	AssignedAgentID string     `json:"assigned_agent_id,omitempty"`
 	Status          string     `json:"status"` // PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED, PROPOSAL_PENDING, DELIBERATING, REVISION_REQUIRED, APPROVED
 	Priority        string     `json:"priority"`
+	ActionRisk      string     `json:"action_risk"`
 	Payload         string     `json:"payload"`
 	LockedUntil     *time.Time `json:"locked_until,omitempty"`
 	UltraPlanPhase  string     `json:"ultraplan_phase,omitempty"`
@@ -194,11 +195,11 @@ func (tm *TaskManager) SetMeshTransport(mt MeshTransport) {
 // CreateTask creates a new shared task.
 // CreateTask creates a new pending task.
 func (tm *TaskManager) CreateTask(ctx context.Context, organizationID, missionID, title, description, priority string) (*SharedTask, error) {
-	return tm.CreateTaskWithPlan(ctx, organizationID, missionID, "", nil, title, description, priority)
+	return tm.CreateTaskWithPlan(ctx, organizationID, missionID, "", nil, title, description, priority, "ACTION_RISK_UNSPECIFIED")
 }
 
 // CreateTaskWithPlan creates a new pending task with plan association.
-func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, missionID string, parentPlanID string, dependencies []string, title, description, priority string) (*SharedTask, error) {
+func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID string, missionID string, parentPlanID string, dependencies []string, title, description, priority string, actionRisk string) (*SharedTask, error) {
 	id := uuid.New().String()
 
 	// Verify dependencies don't form a cycle.
@@ -206,6 +207,12 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 		return nil, err
 	}
 
+	status := "PENDING"
+	if actionRisk == "ACTION_RISK_HIGH" {
+		status = "DRAFT_FOR_REVIEW"
+	}
+
+	_ = status // to avoid compiler errors temporarily if not used further down
 	var task SharedTask
 
 	payloadMap := map[string]interface{}{
@@ -232,19 +239,19 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	var query string
 	if tm.db.IsSQLite() {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, action_risk, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, $9, $6, $10, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
 			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	} else {
 		query = `
-			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
-			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, 'PENDING', $6, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
+			INSERT INTO shared_tasks (id, organization_id, mission_id, parent_plan_id, title, description, payload, status, priority, action_risk, ultraplan_phase, deliberation_log, depth)
+			VALUES ($1, $2, $8, NULLIF($7, ''), $3, $4, $5, $9, $6, $10, 'PROPOSE', '[]', COALESCE((SELECT depth FROM shared_tasks WHERE id = $7), -1) + 1)
 			RETURNING id, organization_id, mission_id, COALESCE(parent_plan_id, ''), title, payload, status, priority, COALESCE(ultraplan_phase, ''), COALESCE(deliberation_log, ''), COALESCE(depth, 0), created_at, updated_at
 		`
 	}
 
-	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID, missionID).Scan(
+	err = tx.QueryRow(ctx, query, id, organizationID, title, description, payload, priority, parentPlanID, missionID, status, actionRisk).Scan(
 		&task.ID, &task.OrganizationID, &task.MissionID, &task.ParentPlanID, &task.Title, &task.Payload, &task.Status, &task.Priority, &task.UltraPlanPhase, &task.DeliberationLog, &task.Depth, &task.CreatedAt, &task.UpdatedAt,
 	)
 
@@ -1262,3 +1269,43 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 }
 
 // added for Sub-Agent Orchestration Queue
+
+// ApproveTask approves a DRAFT_FOR_REVIEW task and sets it to PENDING.
+func (tm *TaskManager) ApproveTask(ctx context.Context, taskID string) error {
+	_, err := tm.db.Exec(ctx, "UPDATE shared_tasks SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'DRAFT_FOR_REVIEW'", taskID)
+	return err
+}
+
+// RejectTask rejects a DRAFT_FOR_REVIEW task.
+func (tm *TaskManager) RejectTask(ctx context.Context, taskID string) error {
+	_, err := tm.db.Exec(ctx, "UPDATE shared_tasks SET status = 'REJECTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'DRAFT_FOR_REVIEW'", taskID)
+	return err
+}
+
+// ListPendingApprovals lists tasks waiting for approval.
+func (tm *TaskManager) ListPendingApprovals(ctx context.Context, orgID string) ([]*SharedTask, error) {
+	query := "SELECT id, organization_id, title, description, status, priority, action_risk, created_at, updated_at FROM shared_tasks WHERE organization_id = $1 AND status = 'DRAFT_FOR_REVIEW' ORDER BY created_at DESC"
+	rows, err := tm.db.Query(ctx, query, orgID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*SharedTask
+	for rows.Next() {
+		var t SharedTask
+		var desc sql.NullString
+		var actionRisk sql.NullString
+		if err := rows.Scan(&t.ID, &t.OrganizationID, &t.Title, &desc, &t.Status, &t.Priority, &actionRisk, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if desc.Valid {
+			t.Description = desc.String
+		}
+		if actionRisk.Valid {
+			t.ActionRisk = actionRisk.String
+		}
+		tasks = append(tasks, &t)
+	}
+	return tasks, nil
+}
