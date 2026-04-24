@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/onehumancorp/mono/src/server/auth"
 	pb "github.com/onehumancorp/mono/src/proto"
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/scheduler"
@@ -1917,6 +1918,18 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	})
 
+	mux.HandleFunc("/api/orchestration/approvals/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/approve") {
+			handleApproveAction(w, r, tm)
+			return
+		}
+		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/reject") {
+			handleRejectAction(w, r, tm)
+			return
+		}
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
 	mux.HandleFunc("/api/orchestration/tasks/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/status") {
 			handleUpdateTaskStatus(w, r, tm)
@@ -2046,6 +2059,75 @@ func handleUpdateTaskStatus(w http.ResponseWriter, r *http.Request, tm *TaskMana
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+}
+
+
+func handleApproveAction(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) != 5 || parts[4] != "approve" {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+	approvalID := parts[3]
+
+	query := `UPDATE pending_approvals SET status = 'APPROVED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2`
+	_, err := tm.db.Exec(r.Context(), query, approvalID, claims.OrganizationID)
+	if err != nil {
+		http.Error(w, "failed to approve action", http.StatusInternalServerError)
+		return
+	}
+
+	// Notify the orchestrator to resume the task
+	if tm.hub != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"approval_id": approvalID,
+				"action":   "APPROVE",
+			}
+			tm.hub.PublishTaskBroadcast(approvalID, payload)
+		}()
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func handleRejectAction(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) != 5 || parts[4] != "reject" {
+		http.Error(w, "invalid path", http.StatusBadRequest)
+		return
+	}
+	approvalID := parts[3]
+
+	query := `UPDATE pending_approvals SET status = 'REJECTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2`
+	_, err := tm.db.Exec(r.Context(), query, approvalID, claims.OrganizationID)
+	if err != nil {
+		http.Error(w, "failed to reject action", http.StatusInternalServerError)
+		return
+	}
+
+	// Notify the orchestrator to cancel the task
+	if tm.hub != nil {
+		go func() {
+			payload := map[string]interface{}{
+				"approval_id": approvalID,
+				"action":   "REJECT",
+			}
+			tm.hub.PublishTaskBroadcast(approvalID, payload)
+		}()
+	}
 	w.WriteHeader(http.StatusOK)
 }
 

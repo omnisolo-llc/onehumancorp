@@ -98,6 +98,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/db",
     visibility = ["//visibility:public"],
     deps = [
+        "@com_github_pressly_goose_v3//:goose",
         "//src/server/telemetry",
         "@com_github_jackc_pgx_v5//:pgx",
         "@com_github_jackc_pgx_v5//pgxpool",
@@ -116,5 +117,6 @@ go_test(
         "swarm_tasks_migration_test.go",
     ],
     embed = [":db"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
+    deps = [
+        "@com_github_pressly_goose_v3//:goose","@org_modernc_sqlite//:sqlite"],
 )

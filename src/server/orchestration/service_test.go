@@ -1561,3 +1561,29 @@ func TestForkAgent(t *testing.T) {
 		t.Errorf("Expected task notification in second message, got '%s'", inbox[1].Content)
 	}
 }
+
+func TestHandleApproveAction(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/api/orchestration/approvals/test-id/approve", nil)
+	w := httptest.NewRecorder()
+
+	tm := &TaskManager{}
+
+	// Context without claims should return unauthorized
+	handleApproveAction(w, req, tm)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected unauthorized")
+	}
+}
+
+func TestHandleRejectAction(t *testing.T) {
+	req := httptest.NewRequest(http.MethodPost, "/api/orchestration/approvals/test-id/reject", nil)
+	w := httptest.NewRecorder()
+
+	tm := &TaskManager{}
+
+	// Context without claims should return unauthorized
+	handleRejectAction(w, req, tm)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected unauthorized")
+	}
+}
