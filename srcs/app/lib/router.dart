@@ -80,7 +80,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         final encodedTarget = Uri.encodeComponent(state.uri.toString());
         return '/login?redirect=$encodedTarget';
       }
-      if (isLoggedIn && isLoginRoute) return redirectTarget ?? '/dashboard';
+      if (isLoggedIn && isLoginRoute) {
+        // Since we want users to go through the business setup wizard on first login,
+        // and we don't have a specific "is first login" flag in the auth token yet,
+        // we'll default to the business setup wizard which is idempotent and checks
+        // for completion or allows users to view it again/reconfigure.
+        // It's a quick onboarding flow.
+        return redirectTarget ?? '/business_setup';
+      }
       return null;
     },
     routes: [

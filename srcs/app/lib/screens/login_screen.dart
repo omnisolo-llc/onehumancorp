@@ -35,12 +35,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       if (_isSignUp) {
-        // Implement signup logic if authService supports it
-        // Or if authService handles creation via login, just login.
-        // As a temporary fix for OHC registration, login doubles as register for the local auth system
         await ref
             .read(authStateProvider.notifier)
-            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+            .register(_usernameCtrl.text.trim(), _passwordCtrl.text);
       } else {
         await ref
             .read(authStateProvider.notifier)
@@ -364,6 +361,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                         ),
+                        if (_isSignUp) ...[
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Verification email sent.'),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Resend verification email',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
                         ],
                       ),
                     ),

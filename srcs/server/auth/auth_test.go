@@ -1153,6 +1153,35 @@ func TestOIDC_UnknownKID(t *testing.T) {
 	}
 }
 
+func TestHandleRegister(t *testing.T) {
+	s := auth.NewStore()
+	h := auth.NewHandlers(s)
+
+	body := `{"username":"newuser","email":"newuser@example.com","password":"password123"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	h.HandleRegister(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d. Body: %s", rec.Code, rec.Body.String())
+	}
+
+	var resp map[string]any
+	json.NewDecoder(rec.Body).Decode(&resp)
+
+	if resp["token"] == "" {
+		t.Error("expected a token")
+	}
+
+	userMap, ok := resp["user"].(map[string]any)
+	if !ok {
+		t.Fatal("expected user object in response")
+	}
+	if userMap["username"] != "newuser" {
+		t.Errorf("expected username newuser, got %v", userMap["username"])
+	}
+}
+
 func TestHandleLogin_IssueTokenError(t *testing.T) {
 	// This is hard to trigger unless the underlying system fails random generation,
 	// but we can just note that handlers HandleLogin error path is mostly covered.
