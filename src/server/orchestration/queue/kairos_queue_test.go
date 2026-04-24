@@ -18,16 +18,6 @@ func setupTestProvider(t *testing.T) db.Provider {
 	provider := db.NewSqliteProvider(sqliteDB)
 
 	_, err = provider.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS state_machine_transitions (
-			id TEXT PRIMARY KEY,
-			entity_id TEXT NOT NULL,
-			entity_type TEXT NOT NULL,
-			from_state TEXT NOT NULL,
-			to_state TEXT NOT NULL,
-			agent_id TEXT,
-			reason TEXT,
-			occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-		);
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
