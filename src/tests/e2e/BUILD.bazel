@@ -18,6 +18,7 @@ _COMMON_DEPS = [
 
 _COMMON_DATA = [
     "//src/server:ohc",
+    "//src/app:app",
 ]
 
 _COMMON_ENV = {
