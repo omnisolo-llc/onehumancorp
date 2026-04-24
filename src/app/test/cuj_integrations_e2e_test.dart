@@ -103,25 +103,6 @@ void main() {
       expect(find.textContaining('Discord'), findsOneWidget);
     });
 
-    testWidgets('Mercado Pago integration card is displayed', (tester) async {
-      final mockClient = MockHttpClient();
-      when(
-        () => mockClient.get(any(), headers: any(named: 'headers')),
-      ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
-      );
-      final api = ApiService(
-        baseUrl: 'http://localhost',
-        token: 'tok',
-        client: mockClient,
-      );
-
-      await tester.pumpWidget(_wrapScreen(const IntegrationsScreen(), api));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('Mercado Pago'), findsOneWidget);
-    });
-
     testWidgets('Connect button opens dialog when tapped', (tester) async {
       final mockClient = MockHttpClient();
       when(

@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
 import 'package:ohc_app/services/powersync_service.dart';
 import 'package:powersync/powersync.dart' hide Column, Row;
-import 'package:ohc_app/widgets/shimmer_loading.dart';
 // import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 class SwarmMemoryScreen extends ConsumerStatefulWidget {
@@ -218,22 +217,14 @@ class _DurableMemoryWidget extends ConsumerWidget {
     final db = ref.watch(powersyncProvider).db;
 
     if (db == null) {
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        itemBuilder: (context, index) => const ShimmerListTile(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     return StreamBuilder<List<dynamic>>(
       stream: db.watch('SELECT * FROM swarm_memory ORDER BY updated_at DESC LIMIT 50'),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: 5,
-            itemBuilder: (context, index) => const ShimmerListTile(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
 
         if (snapshot.hasError) {

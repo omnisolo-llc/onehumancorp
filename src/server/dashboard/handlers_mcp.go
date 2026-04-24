@@ -12,6 +12,7 @@ import (
 	"context"
 
 	"github.com/onehumancorp/mono/src/server/auth"
+	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/billing"
 	"github.com/onehumancorp/mono/src/server/integrations"
 	"github.com/onehumancorp/mono/src/server/interop"
@@ -20,6 +21,7 @@ import (
 	"github.com/onehumancorp/mono/src/server/telemetry"
 	"github.com/onehumancorp/mono/src/server/tools/blobinspector"
 	"github.com/onehumancorp/mono/src/server/tools/localstatefulproxy"
+	"github.com/onehumancorp/mono/src/server/tools/statesyncmcp"
 	"github.com/onehumancorp/mono/src/server/tools/edgeoffloadmcp"
 	"go.opentelemetry.io/otel"
 )
@@ -495,6 +497,47 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 		}
 
 		res, err := proxyTool.CallTool(ctx, req.Action, params)
+		if err != nil {
+			return nil, err
+		}
+
+		return map[string]any{
+			"result":           res,
+			"HybridEscalation": true,
+		}, nil
+
+
+	// ── State Sync MCP tool ───────────────────────────────────
+	case "statesync-mcp":
+		var isLocal bool
+
+		var dbProvider db.Provider
+		if s.hub != nil && s.hub.SIPDB() != nil {
+			dbProvider = s.hub.SIPDB().Provider()
+		}
+
+		var dbWrapper *db.DB
+		if dbProvider != nil {
+			dbWrapper = &db.DB{Provider: dbProvider}
+			if dbProvider.IsSQLite() {
+				isLocal = true
+			}
+		}
+
+		cloudURL := "https://api.onehumancorp.com"
+
+		syncProvider := statesyncmcp.NewDBStateSyncProvider(dbWrapper, cloudURL)
+		syncMcp := statesyncmcp.NewStateSyncMCP(syncProvider, isLocal)
+
+		var params map[string]interface{}
+		if err := json.Unmarshal(req.Params, &params); err != nil && len(req.Params) > 0 {
+			// If not empty and invalid JSON, fail
+			if string(req.Params) != "null" && string(req.Params) != "" {
+				return nil, fmt.Errorf("invalid statesync-mcp parameters: %w", err)
+			}
+		}
+
+		res, err := syncMcp.CallTool(ctx, req.Action, params)
 		if err != nil {
 			return nil, err
 		}

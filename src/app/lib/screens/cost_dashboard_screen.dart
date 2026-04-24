@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 /// Screen for financial analytics and token usage monitoring.
 class CostDashboardScreen extends ConsumerStatefulWidget {
@@ -65,7 +64,11 @@ class _CostDashboardScreenState extends ConsumerState<CostDashboardScreen> {
         future: _dashboardFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const DashboardShimmer();
+            return Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            );
           }
 
           if (snapshot.hasError) {
