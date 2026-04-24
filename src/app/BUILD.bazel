@@ -186,6 +186,41 @@ flutter_test(
 # caching: a code change in one feature only invalidates the related target.
 
 flutter_test(
+    name = "cuj_business_setup_wizard_e2e_test",
+    srcs = ["test/cuj_business_setup_wizard_e2e_test.dart"],
+    test_files = ["test/cuj_business_setup_wizard_e2e_test.dart"],
+    embed = [":app_lib"],
+)
+
+flutter_test(
+    name = "cuj_website_builder_wizard_e2e_test",
+    srcs = ["test/cuj_website_builder_wizard_e2e_test.dart"],
+    test_files = ["test/cuj_website_builder_wizard_e2e_test.dart"],
+    embed = [":app_lib"],
+)
+
+flutter_test(
+    name = "cuj_agent_config_wizard_e2e_test",
+    srcs = ["test/cuj_agent_config_wizard_e2e_test.dart"],
+    test_files = ["test/cuj_agent_config_wizard_e2e_test.dart"],
+    embed = [":app_lib"],
+)
+
+flutter_test(
+    name = "cuj_prompt_tuning_wizard_e2e_test",
+    srcs = ["test/cuj_prompt_tuning_wizard_e2e_test.dart"],
+    test_files = ["test/cuj_prompt_tuning_wizard_e2e_test.dart"],
+    embed = [":app_lib"],
+)
+
+flutter_test(
+    name = "cuj_grow_my_business_wizard_e2e_test",
+    srcs = ["test/cuj_grow_my_business_wizard_e2e_test.dart"],
+    test_files = ["test/cuj_grow_my_business_wizard_e2e_test.dart"],
+    embed = [":app_lib"],
+)
+
+flutter_test(
     name = "cuj_auth_e2e_test",
     srcs = ["test/cuj_auth_e2e_test.dart"],
     embed = [":app_lib"],
@@ -273,6 +308,11 @@ test_suite(
     name = "cuj_e2e_tests",
     tags = ["manual"],
     tests = [
+        ":cuj_business_setup_wizard_e2e_test",
+        ":cuj_website_builder_wizard_e2e_test",
+        ":cuj_agent_config_wizard_e2e_test",
+        ":cuj_prompt_tuning_wizard_e2e_test",
+        ":cuj_grow_my_business_wizard_e2e_test",
         ":cuj_auth_e2e_test",
         ":cuj_agents_hire_e2e_test",
         ":cuj_cost_e2e_test",
