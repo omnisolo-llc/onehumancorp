@@ -1,5 +1,6 @@
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
@@ -209,6 +210,122 @@ class _DashboardContent extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
+
+        const SizedBox(height: 32),
+        _SectionTitle('Share My Business'),
+        const SizedBox(height: 16),
+        GlassCard(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.store, color: Theme.of(context).colorScheme.primary),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        data.organization.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, fontFamily: 'Outfit'),
+                      ),
+                      Text(
+                        'Premium Storefront',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontFamily: 'Inter'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(const ClipboardData(text: 'https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign')).then((_) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Link copied! Share to Instagram/WhatsApp/X')),
+                          );
+                        });
+                      },
+                      icon: const Icon(Icons.share),
+                      label: const Text('Share my business'),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => Dialog(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 375, maxHeight: 600),
+                              child: Column(
+                                children: [
+                                  AppBar(
+                                    title: Text(data.organization.name),
+                                    leading: const Icon(Icons.store),
+                                    automaticallyImplyLeading: false,
+                                    actions: [
+                                      IconButton(
+                                        icon: const Icon(Icons.close),
+                                        onPressed: () => Navigator.pop(context),
+                                      ),
+                                    ],
+                                  ),
+                                  Expanded(
+                                    child: Center(
+                                      child: Text(
+                                        'Welcome to ${data.organization.name}',
+                                        style: Theme.of(context).textTheme.headlineSmall,
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                    width: double.infinity,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Starting business setup wizard...')),
+                                        );
+                                      },
+                                      child: const Text(
+                                        'Built with OHC — Start your free business →',
+                                        style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.preview),
+                      label: const Text('View Live Storefront'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
         const GrowthReferralWidget(),
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),

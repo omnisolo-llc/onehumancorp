@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -57,7 +58,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Grow Your Swarm. Maintain Sovereignty.',
+                          'Share OHC & Get Pro',
                           style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 20,
@@ -67,7 +68,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
+                          'Share OHC with a friend, both get 1 month free Pro.',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
@@ -119,9 +120,10 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                               "xYz8vQ_local_sovereign",
                             );
                             if (context.mounted) {
+                              Clipboard.setData(const ClipboardData(text: 'Hey, check out OneHumanCorp! Start your business in 10 minutes and we both get 1 month free Pro: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign'));
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    'Hey, check out OneHumanCorp! Start your business in 10 minutes and we both get 1 month free Pro: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
                                     style: TextStyle(
                                       color: colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',
@@ -143,7 +145,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                             }
                           }
                         },
-                        child: const Text('Invite Team to Expand Quota', style: TextStyle(fontFamily: 'Outfit')),
+                        child: const Text('Share OHC & Get Pro', style: TextStyle(fontFamily: 'Outfit')),
                       ),
                     ],
                   ),
