@@ -1,4 +1,10 @@
-import 'package:flutter/material.dart';
+
+import 'package:ohc_app/widgets/swarm_observability_widget.dart';
+import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
+import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
+import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
+import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+  import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -82,10 +88,20 @@ class DiagnosticsScreen extends ConsumerWidget {
                               isError: health.stuckMissions > 0,
                             ),
                             _HybridHealthRow(
-                              label: 'Sync Backlog',
-                              value: health.syncBacklog.toString(),
-                              icon: Icons.sync_problem,
-                            ),
+    label: 'Sync Backlog',
+    value: health.syncBacklog.toString(),
+    icon: Icons.sync_problem,
+  ),
+  const SizedBox(height: 16),
+  const SwarmObservabilityWidget(),
+  const SizedBox(height: 16),
+  const SwarmVelocityWidget(),
+  const SizedBox(height: 16),
+  const HybridObservabilityWidget(),
+  const SizedBox(height: 16),
+  const HybridTelemetryWidget(),
+  const SizedBox(height: 16),
+  SubAgentQueueWidget(statuses: snapshot.statuses),
                           ],
                         );
                       },
