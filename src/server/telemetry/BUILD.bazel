@@ -14,6 +14,7 @@ go_library(
         "forecaster.go",
         "mcp_sync_worker.go",
         "sync_daemon.go",
+        "harness_metrics.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/telemetry",
     visibility = ["//visibility:public"],
