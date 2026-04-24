@@ -2,9 +2,10 @@ package interop
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -150,10 +151,12 @@ func TestMemoryLock_FailuresAndPaths(t *testing.T) {
 	}
 
 	// Simulate invalid file content for the lock token file by overwriting it
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	h := sha256.New()
+	h.Write([]byte(key))
+	safeKey := hex.EncodeToString(h.Sum(nil))
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 	os.Mkdir(path, 0700)
-	os.WriteFile(filepath.Join(path, "lock.data"), []byte("invalid_format"), 0600)
+	os.WriteFile(filepath.Join(path, "info_dummy_token.json"), []byte("invalid_format"), 0600)
 
 	// Attempt to lock again. Since it's invalid format, parsing expiry should fail, and we shouldn't get the lock
 	locked3, _ := lock2.Lock(ctx, key, 1*time.Second)
@@ -180,12 +183,14 @@ func TestMemoryLock_ExpiredLockOverwrite(t *testing.T) {
 	key := "test_lock_key_expired"
 
 	// Create an artificially expired lock file
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	h := sha256.New()
+	h.Write([]byte(key))
+	safeKey := hex.EncodeToString(h.Sum(nil))
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	expiry := time.Now().Add(-1 * time.Hour).Format(time.RFC3339Nano)
 	os.Mkdir(path, 0700)
-	os.WriteFile(filepath.Join(path, "lock.data"), []byte(expiry+",old_token"), 0600)
+	os.WriteFile(filepath.Join(path, "info_old_token.json"), []byte(expiry), 0600)
 
 	// Now try to lock
 	locked, _ := lock1.Lock(ctx, key, 1*time.Second)
@@ -204,7 +209,9 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_coverage"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	h := sha256.New()
+	h.Write([]byte(key))
+	safeKey := hex.EncodeToString(h.Sum(nil))
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// Clean up any existing state
@@ -252,7 +259,9 @@ func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_rename_error"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	h := sha256.New()
+	h.Write([]byte(key))
+	safeKey := hex.EncodeToString(h.Sum(nil))
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// Clean up any existing state
@@ -281,7 +290,9 @@ func TestMemoryLock_IsExistError(t *testing.T) {
 	ctx := context.Background()
 	key := "test_lock_key_is_exist"
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	h := sha256.New()
+	h.Write([]byte(key))
+	safeKey := hex.EncodeToString(h.Sum(nil))
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// Clean up any existing state

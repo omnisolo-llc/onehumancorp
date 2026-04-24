@@ -2,6 +2,8 @@ package interop
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -50,29 +52,35 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 		m.token = uuid.New().String()
 	}
 
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	h := sha256.New()
+	h.Write([]byte(key))
+	safeKey := hex.EncodeToString(h.Sum(nil))
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	err := os.Mkdir(path, 0700)
 	if err != nil {
 		if os.IsExist(err) {
-			content, err := os.ReadFile(filepath.Join(path, "lock.data"))
+			// Lock directory exists, check if any token file inside is expired
+			entries, err := os.ReadDir(path)
 			if err == nil {
-				parts := strings.SplitN(string(content), ",", 2)
-				if len(parts) == 2 {
-					expiryTime, parseErr := time.Parse(time.RFC3339Nano, parts[0])
-					if parseErr == nil && time.Now().After(expiryTime) {
-						// Expired lock found. To avoid TOCTOU, we attempt to rename the directory.
-						tempPath := path + "_" + uuid.New().String() + ".tmp"
-						renameErr := os.Rename(path, tempPath)
-						if renameErr == nil {
-							// We successfully "stole" the expired lock atomically.
-							os.RemoveAll(tempPath)
-							err = os.Mkdir(path, 0700)
-							if err != nil {
+				for _, entry := range entries {
+					if !entry.IsDir() && strings.HasPrefix(entry.Name(), "info_") && strings.HasSuffix(entry.Name(), ".json") {
+						content, err := os.ReadFile(filepath.Join(path, entry.Name()))
+						if err == nil {
+							expiryTime, parseErr := time.Parse(time.RFC3339Nano, string(content))
+							if parseErr == nil && time.Now().After(expiryTime) {
+								// Expired lock found. Delete the token file.
+								os.Remove(filepath.Join(path, entry.Name()))
+								// Delete the directory (will fail if another token file was written, avoiding TOCTOU)
+								os.Remove(path)
+
+								// Try to acquire the lock again
+								err = os.Mkdir(path, 0700)
+								if err == nil {
+									goto acquired
+								}
 								return false, nil
 							}
-							goto acquired
 						}
 					}
 				}
@@ -84,9 +92,10 @@ func (m *memoryLock) Lock(ctx context.Context, key string, ttl time.Duration) (b
 
 acquired:
 	expiry := time.Now().Add(ttl).Format(time.RFC3339Nano)
-	err = os.WriteFile(filepath.Join(path, "lock.data"), []byte(expiry+","+m.token), 0600)
+	err = os.WriteFile(filepath.Join(path, "info_"+m.token+".json"), []byte(expiry), 0600)
 	if err != nil {
-		os.RemoveAll(path)
+		os.Remove(filepath.Join(path, "info_"+m.token+".json"))
+		os.Remove(path)
 		return false, err
 	}
 
@@ -94,26 +103,22 @@ acquired:
 }
 
 func (m *memoryLock) Unlock(ctx context.Context, key string) error {
-	safeKey := strings.ReplaceAll(key, "/", "_")
+	h := sha256.New()
+	h.Write([]byte(key))
+	safeKey := hex.EncodeToString(h.Sum(nil))
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
-	// TOCTOU mitigation: rename the directory to a temp directory, read it, if valid, delete it. If invalid, rename it back.
-	tempPath := path + "_" + uuid.New().String() + ".tmp"
-	err := os.Rename(path, tempPath)
+	tokenPath := filepath.Join(path, "info_"+m.token+".json")
+
+	// Delete our token file
+	err := os.Remove(tokenPath)
 	if err != nil {
 		return nil // Lock might already be gone
 	}
 
-	content, err := os.ReadFile(filepath.Join(tempPath, "lock.data"))
-	if err == nil {
-		parts := strings.SplitN(string(content), ",", 2)
-		if len(parts) == 2 && parts[1] == m.token {
-			return os.RemoveAll(tempPath)
-		}
-	}
+	// Safely attempt to delete the directory (will only succeed if empty)
+	os.Remove(path)
 
-	// If not our lock, put it back
-	os.Rename(tempPath, path)
 	return nil
 }
 
