@@ -73,12 +73,22 @@ func (m *StandaloneStateManager) TransitionState(ctx context.Context, taskID, ag
 		return err
 	}
 
-	_, err = tx.Exec(ctx,
-		"INSERT INTO state_machine_transitions (entity_id, entity_type, from_state, to_state, agent_id, reason) VALUES ($1, $2, $3, $4, $5, $6)",
-		taskID, "task", fromState, toState, agentID, reason,
-	)
-	if err != nil {
-		return err
+	if m.dbProvider.IsSQLite() {
+		_, err = tx.Exec(ctx,
+			"INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason) VALUES (lower(hex(randomblob(16))), $1, $2, $3, $4, $5, $6)",
+			taskID, "task", fromState, toState, agentID, reason,
+		)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = tx.Exec(ctx,
+			"INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)",
+			taskID, "task", fromState, toState, agentID, reason,
+		)
+		if err != nil {
+			return err
+		}
 	}
 
 	return tx.Commit(ctx)
@@ -96,12 +106,23 @@ func (m *StandaloneStateManager) ClaimTask(ctx context.Context, agentID string) 
 
 	var task Task
 	var depsStr string
-	err = tx.QueryRow(ctx, `
+	query := `
 		SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
 		FROM swarm_tasks
 		WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+		AND (SELECT COUNT(*) FROM jsonb_array_elements_text(dependencies) AS dep_id INNER JOIN swarm_tasks d ON d.id = dep_id::uuid WHERE d.status != 'COMPLETED') = 0
 		LIMIT 1
-	`).Scan(&task.ID, &task.MissionID, &task.ParentPlanID, &depsStr, &task.Title, &task.Status, &task.AssignedAgentID)
+	`
+	if m.dbProvider.IsSQLite() {
+		query = `
+			SELECT id, mission_id, parent_plan_id, dependencies, title, status, assigned_agent_id
+			FROM swarm_tasks
+			WHERE status = 'PENDING' AND (locked_until IS NULL OR locked_until < CURRENT_TIMESTAMP)
+			AND NOT EXISTS (SELECT 1 FROM json_each(dependencies) WHERE (SELECT status FROM swarm_tasks WHERE id = json_each.value) != 'COMPLETED')
+			LIMIT 1
+		`
+	}
+	err = tx.QueryRow(ctx, query).Scan(&task.ID, &task.MissionID, &task.ParentPlanID, &depsStr, &task.Title, &task.Status, &task.AssignedAgentID)
 
 	if err != nil {
 		return nil, err
