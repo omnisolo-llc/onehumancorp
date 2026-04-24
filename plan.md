@@ -1,31 +1,27 @@
-1. **Create Database Migration:**
-   - Run `cat << 'MIG' > srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql ... MIG` to add `locked_until` (via ALTER TABLE if missing) and the indices on `status` and `locked_until` on `shared_tasks`.
-   - Add a verification step: `ls -la srcs/server/db/migrations/20260427020001_shared_tasks_indexes.sql` to verify creation.
-   - Run a Python script or `sed` to update `embedsrcs` in `srcs/server/db/BUILD.bazel` to include this new migration.
-   - Add a verification step: `cat srcs/server/db/BUILD.bazel | grep 20260427020001_shared_tasks_indexes.sql` to confirm.
+1. **Fix `get_async_connection` deprecation in `srcs/server/agents/builtin/src/main.rs`**
+   - The method `get_async_connection` in the `redis` Rust crate has been deprecated and needs to be replaced.
+   - For establishing a PubSub connection, use `client.get_async_pubsub().await`.
+   - For a standard multiplexed async connection (used for publishing), use `client.get_multiplexed_async_connection().await`.
+   - Remove any unnecessary `mut` variables.
+   - *Status: Completed and tests are passing.*
 
-2. **Update TaskManager Enhancements:**
-   - Use a Python script to inject `tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")` in `CompleteTaskWithResult` inside `srcs/server/orchestration/tasks.go`.
-   - Use a Python script to replace the status update in `ReviewTask` to utilize `tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Oh, wait, `ReviewTask` is ALREADY doing `err = tm.stateMachine.Transition(ctx, taskID, "SHARED_TASK", statemachine.StateReview, agentID, "Agent requested review")`. Let me verify `tasks.go` again to see what exactly needs modification.
+2. **Fix `#[warn(unused_imports)]` in `srcs/server/agents/builtin/src/tools/sendmessage.rs` and `srcs/server/agents/builtin/src/tools/todowrite.rs`**
+   - Remove the unused import `use tokio::sync::RwLock;` from both files.
+   - *Status: Completed.*
 
-3. **Modify API Endpoints:**
-   - Use a Python script to add a `requireSPIFFE` HTTP middleware in `srcs/server/orchestration/service.go`. The middleware will check the `Authorization` header for a bearer token, and validate it starts with `spiffe://` using `interop.ValidateSPIFFEID`.
-   - Wrap the HTTP handlers defined in `RegisterTaskHTTPHandlers` with this new middleware.
-   - Add a verification step: `cat srcs/server/orchestration/service.go | grep -C 5 requireSPIFFE` to verify changes.
+3. **Fix unused imports and variables in LLM implementation files**
+   - I have explicitly confirmed the compiler warnings in the output of `bazelisk build //srcs/server/agents/builtin/...` and read the files containing these fields to confirm the exact struct configurations.
+   - In `srcs/server/agents/builtin/src/llm/gemini.rs` (verified imports on lines 3 and 6): remove unused imports `serde_json::Value` and `ToolCall`.
+   - In `srcs/server/agents/builtin/src/llm/anthropic.rs` (verified `AnthropicUsage` struct on line 103): add `#[allow(dead_code)]` to the `cache_creation_input_tokens` and `cache_read_input_tokens` fields in the `AnthropicUsage` struct.
+   - In `srcs/server/agents/builtin/src/llm/openai.rs` (verified `OpenAIResponseMessage` struct on line 101): add `#[allow(dead_code)]` to the `role` field in the `OpenAIResponseMessage` struct.
+   - *Status: Completed.*
 
-4. **Update Tests:**
-   - Run `cat << 'TEST' > srcs/server/orchestration/patch_tasks_test.py ... TEST` and execute it to inject `TestSharedTask_StateMachine` in `srcs/server/orchestration/tasks_test.go` covering all transitions (`PENDING` -> `IN_PROGRESS` -> `REVIEW` -> `COMPLETED`).
-   - Add a verification step: `grep -nri "TestSharedTask_StateMachine" srcs/server/orchestration/tasks_test.go` to confirm injection.
+4. **Run all relevant tests**
+   - Run `export PATH=$PATH:$HOME/go/bin && bazelisk test //srcs/server/agents/...` to ensure everything passes and no warnings are emitted for the Rust codebase.
+   - *Status: Completed.*
 
-5. **Expose Prometheus Metrics:**
-   - Write a python script to ensure `telemetry.RecordSwarmTaskTransition` is properly used inside `tasks.go` right after state transitions, and ensure we use `metric.WithAttributes` properly in `telemetry.go`.
-   - Add verification step: `cat srcs/server/orchestration/tasks.go | grep RecordSwarmTaskTransition` to confirm changes.
-
-6. **Test the changes:**
-   - Run `bazelisk test //srcs/server/orchestration/... //srcs/server/db/...` to verify the logic.
-
-7. **Pre-commit steps:**
+5. **Complete pre-commit steps**
    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
 
-8. **Completion:**
-   - Output a final unstructured message containing issue_id.
+6. **Submit the PR**
+   - Commit and submit the code changes.

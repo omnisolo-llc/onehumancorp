@@ -62,8 +62,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(async move {
         tracing::info!("Connecting to Redis at {}", redis_url_clone);
         if let Ok(client) = redis::Client::open(redis_url_clone.clone()) {
-            if let Ok(mut con) = client.get_async_connection().await {
-                let mut pubsub = con.into_pubsub();
+            if let Ok(con) = client.get_async_pubsub().await {
+                let mut pubsub = con;
                 if pubsub.subscribe("agent_jobs").await.is_ok() {
                     tracing::info!("Subscribed to Redis channel 'agent_jobs'");
                     let mut stream = pubsub.on_message();
@@ -77,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             
                             tokio::spawn(async move {
                                 if let Ok(client) = redis::Client::open(redis_url_inner) {
-                                    if let Ok(mut con) = client.get_async_connection().await {
+                                    if let Ok(mut con) = client.get_multiplexed_async_connection().await {
                                         match svc.run_task(tonic::Request::new(req)).await {
                                             Ok(resp) => {
                                                 let mut stream = resp.into_inner();
