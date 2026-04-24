@@ -44,7 +44,7 @@ graph TD
 
 ## Validation & Implementation Feasibility
 
-This architectural shift is highly feasible. It requires introducing an interface (`mcp.BlobProvider`) in the Go backend (`srcs/server/agents/mcp`) and implementing two concrete providers: `LocalBlobProvider` and `S3BlobProvider`. A factory pattern will evaluate the environment variables at boot time and inject the appropriate provider into the MCP server registry.
+This architectural shift is highly feasible. It requires introducing an interface (`mcp.BlobProvider`) in the Go backend (`src/server/agents/mcp`) and implementing two concrete providers: `LocalBlobProvider` and `S3BlobProvider`. A factory pattern will evaluate the environment variables at boot time and inject the appropriate provider into the MCP server registry.
 
 This report finalizes the market research phase and initiates the mission queueing for implementation.
 

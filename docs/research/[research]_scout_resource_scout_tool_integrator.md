@@ -32,7 +32,7 @@ The OHC Hybrid Agentic OS requires a specialized agent responsible for scouting 
   - Columns: `id`, `name`, `description`, `api_url`, `integration_code`, `status`, `created_at`
 
 ## Implementation Prompt
-"Implement the Scout Agent module in `srcs/agents/scout/`. The agent should subscribe to tool requests, use a search API to find resources, parse documentation, and save a Tool Integration Brief to the database. Ensure it supports both PostgreSQL and SQLite backends."
+"Implement the Scout Agent module in `src/agents/scout/`. The agent should subscribe to tool requests, use a search API to find resources, parse documentation, and save a Tool Integration Brief to the database. Ensure it supports both PostgreSQL and SQLite backends."
 
 ## Priority
 High

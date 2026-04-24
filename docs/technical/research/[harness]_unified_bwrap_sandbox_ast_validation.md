@@ -39,16 +39,16 @@ On Linux, the harness exclusively executes agent commands within `bwrap` (Bubble
 ## Design Doc
 
 ### Proposed Architecture: The Unified Hybrid Harness (UHH)
-We will introduce the **Unified Hybrid Harness** in `srcs/server/harness/`. It acts as the execution layer between the KAIROS Orchestrator and the host OS.
+We will introduce the **Unified Hybrid Harness** in `src/server/harness/`. It acts as the execution layer between the KAIROS Orchestrator and the host OS.
 
-1.  **AST Policy Engine (`srcs/server/harness/parser.go`)**:
+1.  **AST Policy Engine (`src/server/harness/parser.go`)**:
     *   A pre-flight validation phase. All bash commands will be parsed into an AST using an AST library (e.g., `mvdan.cc/sh/v3/syntax`).
     *   Validators will explicitly check for blocked subshell executions, redirects, and unauthorized alias usage.
-2.  **OS Sandbox Runner (`srcs/server/harness/bwrap.go`)**:
+2.  **OS Sandbox Runner (`src/server/harness/bwrap.go`)**:
     *   A Go adapter that wraps standard commands in `bwrap`.
     *   Enforces `--ro-bind / /` and restricts write access via `--bind` strictly to the agent's task workspace.
     *   Unshares network and PID namespaces by default.
-3.  **Network Proxy Daemon (`srcs/server/harness/proxy.go`)**:
+3.  **Network Proxy Daemon (`src/server/harness/proxy.go`)**:
     *   Spawns a local HTTP/SOCKS proxy.
     *   Dynamically sets `HTTP_PROXY` inside the `bwrap` environment, proxying all egress traffic against a `TaskEgressPolicy` struct.
 4.  **Telemetry Hook**:
@@ -80,8 +80,8 @@ graph TD
 **Role:** Implementer Agent
 **Task:** Build the core execution engine of the Unified Hybrid Harness.
 
-1.  **Create the AST Parser:** In `srcs/server/harness/parser.go`, implement a `ValidateCommand(cmd string) error` function using `mvdan.cc/sh/v3/syntax` to parse the command. If the AST contains redirection nodes (`>`) or subshell execution (`$()`), return an error.
-2.  **Create the Bwrap Runner:** In `srcs/server/harness/bwrap.go`, implement `RunInSandbox(ctx context.Context, cmd string, workspace string, allowNet bool) error`.
+1.  **Create the AST Parser:** In `src/server/harness/parser.go`, implement a `ValidateCommand(cmd string) error` function using `mvdan.cc/sh/v3/syntax` to parse the command. If the AST contains redirection nodes (`>`) or subshell execution (`$()`), return an error.
+2.  **Create the Bwrap Runner:** In `src/server/harness/bwrap.go`, implement `RunInSandbox(ctx context.Context, cmd string, workspace string, allowNet bool) error`.
     *   Construct a command slice starting with `bwrap`.
     *   Add flags: `--unshare-all`, `--ro-bind / /`, `--bind <workspace> <workspace>`.
     *   If `allowNet` is true, add `--share-net`.

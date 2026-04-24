@@ -1,0 +1,35 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "local",
+    srcs = [
+        "agent.go",
+        "cached_llm.go",
+        "llm.go",
+        "output.go",
+        "runner.go",
+        "task.go",
+        "tools.go",
+        "playwright_tool.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/agents/local",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/db",
+        "//src/server/telemetry",
+        "//src/server/utils",
+        "@com_github_google_uuid//:uuid",
+        "@com_github_redis_rueidis//:rueidis",
+    ],
+)
+
+go_test(
+    name = "local_test",
+    srcs = [
+        "agent_test.go",
+        "playwright_tool_test.go",
+        "cached_llm_test.go",
+    ],
+    embed = [":local"],
+    deps = ["//src/server/db"],
+)
