@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"os/exec"
@@ -53,7 +54,7 @@ func NewHarness(config *SandboxConfig) *Harness {
 		var err error
 		executionsTotal, err = otel.Meter("ohc.harness").Int64Counter("ohc_harness_executions_total")
 		if err != nil {
-			fmt.Printf("failed to initialize metric: %v\n", err)
+			slog.Error("failed to initialize metric", "error", err)
 		}
 	})
 	h.execTotal = executionsTotal
@@ -163,7 +164,6 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 	defer span.End()
 
 	telemetry.RecordBubblewrapSpawn(ctx)
-	telemetry.RecordHarnessToolInvocation(ctx)
 	start := time.Now()
 
 	span.SetAttributes(attribute.String("command", cmd))
@@ -214,7 +214,6 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 
 	duration := time.Since(start).Seconds()
 	telemetry.RecordBubblewrapExecutionLatency(ctx, duration)
-	telemetry.RecordHarnessExecutionDuration(ctx, duration)
 
 	exitCode := 0
 	if err != nil {
@@ -222,13 +221,11 @@ func (h *Harness) Run(ctx context.Context, cmd string, args []string) (Result, e
 			exitCode = exitError.ExitCode()
 			if exitCode != 0 && (strings.Contains(stderr.String(), "Permission denied") || exitCode == 126) {
 				telemetry.RecordBubblewrapViolation(ctx)
-				telemetry.RecordHarnessViolation(ctx)
 			}
 		} else {
 			exitCode = -1
 			if strings.Contains(err.Error(), "permission denied") {
 				telemetry.RecordBubblewrapViolation(ctx)
-				telemetry.RecordHarnessViolation(ctx)
 			}
 		}
 	}

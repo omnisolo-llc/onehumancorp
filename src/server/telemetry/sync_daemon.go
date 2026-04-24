@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -37,7 +37,7 @@ func (d *SyncDaemon) Start(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if err := d.syncOnce(ctx); err != nil {
-				log.Printf("Telemetry sync failed: %v", err)
+				slog.Error("Telemetry sync failed", "error", err)
 			}
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 
 	"github.com/pressly/goose/v3"
 )
@@ -21,7 +22,7 @@ func upAutodreamMemoriesDecomposition20260427000000(ctx context.Context, tx *sql
 	alterTasksQuery := "ALTER TABLE shared_tasks_decomposition ADD COLUMN auto_dreamed BOOLEAN DEFAULT false;"
 	_, err = tx.ExecContext(ctx, alterTasksQuery)
 	if err != nil {
-		fmt.Printf("Info: adding auto_dreamed column to shared_tasks_decomposition: %v\n", err)
+		slog.Info("Info: adding auto_dreamed column to shared_tasks_decomposition", "error", err)
 	}
 
 	if !isSQLite {
