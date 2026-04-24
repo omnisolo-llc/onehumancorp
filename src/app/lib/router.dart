@@ -143,7 +143,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ServiceScreen(),
           ),
           GoRoute(
-            path: '/wizard',
+            path: '/business_setup',
             builder: (context, state) => const SetupWizardScreen(),
           ),
           GoRoute(
@@ -308,7 +308,7 @@ class _Sidebar extends StatelessWidget {
         _NavItem(
           icon: Icons.auto_fix_high,
           label: 'Setup Wizard',
-          path: '/wizard',
+          path: '/business_setup',
         ),
         const SizedBox(height: 16),
         _NavItem(
