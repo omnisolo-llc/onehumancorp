@@ -1,0 +1,89 @@
+<<<<<<< SEARCH
+// --- Billing Wizard ---
+=======
+// --- Grow My Business Wizard ---
+class GrowMyBusinessWizardScreen extends ConsumerStatefulWidget {
+  const GrowMyBusinessWizardScreen({super.key});
+
+  @override
+  ConsumerState<GrowMyBusinessWizardScreen> createState() => _GrowMyBusinessWizardScreenState();
+}
+
+class _GrowMyBusinessWizardScreenState extends ConsumerState<GrowMyBusinessWizardScreen> {
+  int _step = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Grow Your Business')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_step == 0) ...[
+                      Text('Next steps to grow your business', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 24),
+                      const Text('We have analyzed your business stage and prepared some suggestions to help you grow.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => setState(() => _step = 1),
+                        child: const Text('Start'),
+                      ),
+                    ] else if (_step == 1) ...[
+                      Text('Add 5 more products', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 24),
+                      const Text('Having more products gives your customers more options and increases your average order value.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => setState(() => _step = 2),
+                        child: const Text('Do it now'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => setState(() => _step = 2),
+                        child: const Text('I\'ll do it later'),
+                      ),
+                    ] else if (_step == 2) ...[
+                      Text('Connect Instagram', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 24),
+                      const Text('Connect your social media accounts to automatically cross-post your new products and reach a wider audience.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => setState(() => _step = 3),
+                        child: const Text('Do it now'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () => setState(() => _step = 3),
+                        child: const Text('I\'ll do it later'),
+                      ),
+                    ] else if (_step == 3) ...[
+                      Text('Run your first email campaign', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 24),
+                      const Text('Keep your customers engaged by sending them a welcome email or a discount code.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => context.go('/dashboard'),
+                        child: const Text('Finish'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- Billing Wizard ---
+>>>>>>> REPLACE

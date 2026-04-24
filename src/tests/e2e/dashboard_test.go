@@ -157,3 +157,33 @@ func TestDashboardDisplaysHybridDeploymentTelemetryWidget(t *testing.T) {
 	body, _ := page.Content()
 	_ = body
 }
+
+func TestGrowMyBusinessWizardFromDashboard(t *testing.T) {
+	page := newPage(t)
+	defer page.Close()
+
+	loginAsAdmin(t, page)
+
+	// Wait for dashboard and trigger wizard
+	Expect(page.Locator("text=Grow My Business")).ToBeVisible()
+	page.Locator("text=Grow My Business").Click()
+
+	// Verify step 0
+	Expect(page.Locator("text=Next steps to grow your business")).ToBeVisible()
+	page.Locator("text=Start").Click()
+
+	// Verify step 1
+	Expect(page.Locator("text=Add 5 more products")).ToBeVisible()
+	page.Locator("text=I'll do it later").Click()
+
+	// Verify step 2
+	Expect(page.Locator("text=Connect Instagram")).ToBeVisible()
+	page.Locator("text=I'll do it later").Click()
+
+	// Verify step 3
+	Expect(page.Locator("text=Run your first email campaign")).ToBeVisible()
+	page.Locator("text=Finish").Click()
+
+	// Should be back on dashboard
+	Expect(page.Locator("text=Dashboard").First()).ToBeVisible()
+}

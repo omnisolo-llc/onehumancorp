@@ -103,6 +103,11 @@ class _DashboardContent extends StatelessWidget {
                   label: const Text('Build My Website'),
                 ),
                 OutlinedButton.icon(
+                  onPressed: () => context.go('/wizards/grow_my_business'),
+                  icon: const Icon(Icons.trending_up),
+                  label: const Text('Grow My Business'),
+                ),
+                OutlinedButton.icon(
                   onPressed: () => context.go('/wizards/billing'),
                   icon: const Icon(Icons.credit_card),
                   label: const Text('Billing & Credits'),
