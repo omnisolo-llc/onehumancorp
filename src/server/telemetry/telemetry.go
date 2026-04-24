@@ -858,6 +858,11 @@ func InitWithMeter(m mockableMeter) error {
 		errs = append(errs, err)
 	}
 
+	err = initHarnessMetrics(m)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	SubAgentExecutionDuration, err = m.Float64Histogram(
 		"ohc_sub_agent_execution_duration_seconds",
 		metric.WithDescription("Duration of sub-agent execution in seconds"),

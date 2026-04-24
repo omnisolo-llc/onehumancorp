@@ -861,6 +861,14 @@ func TestRecordBubblewrapMetrics(t *testing.T) {
 	RecordBubblewrapViolation(ctx)
 }
 
+func TestRecordHarnessMetrics(t *testing.T) {
+	ctx := context.Background()
+
+	RecordHarnessToolInvocation(ctx)
+	RecordHarnessExecutionDuration(ctx, 1.23)
+	RecordHarnessViolation(ctx)
+}
+
 func TestRecordSandboxViolation(t *testing.T) {
 	prometheus.DefaultRegisterer = prometheus.NewRegistry()
 	InitTelemetry()
