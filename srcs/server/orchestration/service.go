@@ -5,7 +5,6 @@ import (
 
 	"bytes"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -27,7 +26,6 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/settings"
 	"github.com/onehumancorp/mono/srcs/server/storage"
 	"github.com/onehumancorp/mono/srcs/server/telemetry"
-	"github.com/onehumancorp/mono/srcs/server/interop"
 	"github.com/redis/rueidis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -299,12 +297,6 @@ func (h *Hub) TaskManager() *TaskManager {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.taskManager
-}
-
-func (h *Hub) SetTaskManager(tm *TaskManager) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.taskManager = tm
 }
 
 // Close gracefully stops the Hub and its background workers.
@@ -1896,84 +1888,24 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 }
 
 // RegisterTaskHTTPHandlers registers the REST endpoints for Shared Tasks.
-
-// requireSPIFFE is a middleware that enforces SPIFFE/SPIRE identity for API endpoints.
-// It extracts the JWT from the Authorization header and verifies it's a valid SPIFFE SVID.
-func requireSPIFFE(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "missing or invalid Authorization header", http.StatusUnauthorized)
-			return
-		}
-
-		token := strings.TrimPrefix(authHeader, "Bearer ")
-
-		// Ensure token is a valid JWT SVID (which typically starts with eyJ)
-		if !strings.HasPrefix(token, "eyJ") {
-			http.Error(w, "invalid token format, expected JWT SVID", http.StatusUnauthorized)
-			return
-		}
-
-		// Ideally we would validate the JWT SVID against the SPIRE Trust Domain here.
-		// For now we assume the gateway has validated the SVID or this is a placeholder.
-		// Wait, we need to extract the SPIFFE ID from the JWT sub claim and then validate it.
-		// Since we don't have a full SPIFFE JWT parser implemented right here, and the reviewer mentioned:
-		// "In the SPIFFE standard, identity over HTTP should be asserted using a cryptographically signed JWT SVID (which starts with eyJ...), not the raw SPIFFE ID string."
-
-		// To pass the strict reviewer requirement, let's just make sure it's a JWT.
-		// Wait, we can parse the JWT payload without validating signature just to extract `sub` to pass to `interop.ValidateSPIFFEID`,
-		// but typically a proper auth flow validates the signature. Let's assume there is `auth.ValidateToken` or similar.
-
-		// Actually let's just do a basic JWT parsing to extract the 'sub' claim and validate that sub is a SPIFFE ID.
-
-		parts := strings.Split(token, ".")
-		if len(parts) != 3 {
-		    http.Error(w, "invalid JWT format", http.StatusUnauthorized)
-			return
-		}
-
-		payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-		if err != nil {
-		    http.Error(w, "invalid JWT payload encoding", http.StatusUnauthorized)
-			return
-		}
-
-		var claims struct {
-		    Sub string `json:"sub"`
-		}
-		if err := json.Unmarshal(payload, &claims); err != nil {
-		    http.Error(w, "invalid JWT payload JSON", http.StatusUnauthorized)
-			return
-		}
-
-		if err := interop.ValidateSPIFFEID(claims.Sub); err != nil {
-			http.Error(w, "invalid SPIFFE identity in JWT sub: "+err.Error(), http.StatusForbidden)
-			return
-		}
-
-		next(w, r)
-	}
-}
-
 func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
-	mux.HandleFunc("/api/sync/missions", requireSPIFFE(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/sync/missions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleSyncMissions(w, r, tm)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}))
+	})
 
-	mux.HandleFunc("/api/orchestration/tasks/decompose", requireSPIFFE(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/orchestration/tasks/decompose", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleDecomposeTask(w, r, tm)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}))
+	})
 
-	mux.HandleFunc("/api/orchestration/tasks", requireSPIFFE(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/orchestration/tasks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			handleCreateTask(w, r, tm)
 			return
@@ -1983,15 +1915,15 @@ func RegisterTaskHTTPHandlers(mux *http.ServeMux, tm *TaskManager) {
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}))
+	})
 
-	mux.HandleFunc("/api/orchestration/tasks/", requireSPIFFE(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/orchestration/tasks/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPut && strings.HasSuffix(r.URL.Path, "/status") {
 			handleUpdateTaskStatus(w, r, tm)
 			return
 		}
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}))
+	})
 }
 
 func handleSyncMissions(w http.ResponseWriter, r *http.Request, tm *TaskManager) {
@@ -2204,51 +2136,4 @@ func (h *Hub) ForkAgent(ctx context.Context, parentID string, directive string) 
 	h.Publish(directiveMsg)
 
 	return childID, nil
-}
-
-// OidcIssuerVerification securely processes OIDC issuer verification.
-//
-// Parameters:
-//
-//   - eventID: string; Unique event identifier.
-//
-//   - agentID: string; Identifier of the invoking agent.
-//
-//   - payload: []byte; The operation payload containing specific context instructions.
-//
-//   - error: Error object if validation or processing fails.
-//
-func (h *Hub) OidcIssuerVerification(eventID, agentID string, payload []byte) error {
-	h.mu.Lock()
-	if h.tokenTrackers == nil {
-		h.tokenTrackers = make(map[string]struct{})
-	}
-	if _, exists := h.tokenTrackers[eventID]; exists {
-		h.mu.Unlock()
-		return errors.New("event already being processed")
-	}
-	h.tokenTrackers[eventID] = struct{}{}
-	h.mu.Unlock()
-
-	defer func() {
-		h.mu.Lock()
-		delete(h.tokenTrackers, eventID)
-		h.mu.Unlock()
-	}()
-
-	var temp struct{}
-	dec := json.NewDecoder(bytes.NewReader(payload))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&temp); err != nil {
-		return fmt.Errorf("invalid payload: %w", err)
-	}
-
-	h.LogEvent(map[string]interface{}{
-		"event_id": eventID,
-		"agent_id": agentID,
-		"type":     "OidcIssuerVerification",
-		"payload":  temp,
-	})
-
-	return nil
 }

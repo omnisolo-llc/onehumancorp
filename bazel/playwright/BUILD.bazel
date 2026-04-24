@@ -1,9 +1,0 @@
-load(":playwright.bzl", "playwright_browsers")
-
-playwright_browsers(
-    name = "ms-playwright",
-    chromium = "@playwright_chromium//:files",
-    firefox = "@playwright_firefox//:files",
-    ffmpeg = "@playwright_ffmpeg//:files",
-    visibility = ["//visibility:public"],
-)

@@ -7,8 +7,6 @@ import (
 	"fmt"
 )
 
-// CloudSecretProvider implements SecretProvider for multi-tenant cloud mode.
-// It interfaces with robust backend secrets engines like HashiCorp Vault or Kubernetes Secrets.
 type CloudSecretProvider struct {
 	// mock K8s/Vault logic
 }

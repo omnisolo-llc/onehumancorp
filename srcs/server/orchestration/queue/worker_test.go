@@ -19,7 +19,7 @@ type mockQueue struct {
 
 func (m *mockQueue) Enqueue(ctx context.Context, job *Job) error { return nil }
 
-func (m *mockQueue) Acquire(ctx context.Context, roles []string) (*Job, error) {
+func (m *mockQueue) Dequeue(ctx context.Context, roles []string) (*Job, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
