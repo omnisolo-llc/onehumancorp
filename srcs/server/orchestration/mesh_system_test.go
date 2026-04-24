@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/srcs/server/db"
+	"github.com/alicebob/miniredis/v2"
 )
 
 func TestMemoryMeshTransport_BroadcastAndSubscribe(t *testing.T) {
@@ -52,6 +53,60 @@ func TestMemoryMeshTransport_BroadcastAndSubscribe(t *testing.T) {
 		}
 		if received.AgentID != task.AgentID {
 			t.Errorf("expected agent ID %s, got %s", task.AgentID, received.AgentID)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for broadcasted task")
+	}
+
+    // Test Publish/Subscribe API directly
+    ch2, err := mesh.Subscribe("test_topic")
+    if err != nil {
+        t.Fatalf("failed to subscribe: %v", err)
+    }
+    err = mesh.Publish("test_topic", []byte("data1"))
+    if err != nil {
+        t.Fatalf("failed to publish: %v", err)
+    }
+    select {
+    case received := <-ch2:
+        if string(received) != "data1" {
+            t.Errorf("expected data1, got %s", received)
+        }
+    case <-time.After(2 * time.Second):
+        t.Fatal("timeout waiting for broadcasted task")
+    }
+
+}
+
+func TestRedisMeshTransport_PublishAndSubscribe(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("failed to start miniredis: %v", err)
+	}
+	defer mr.Close()
+
+	mesh, err := NewRedisMeshTransport(mr.Addr())
+	if err != nil {
+		t.Fatalf("failed to create redis mesh: %v", err)
+	}
+
+	ch, err := mesh.Subscribe("test_topic")
+	if err != nil {
+		t.Fatalf("failed to subscribe: %v", err)
+	}
+
+	// Allow some time for redis pubsub subscription to connect
+	time.Sleep(100 * time.Millisecond)
+
+	err = mesh.Publish("test_topic", []byte("data1"))
+	if err != nil {
+		t.Fatalf("failed to publish: %v", err)
+	}
+
+	select {
+	case received := <-ch:
+		if string(received) != "data1" {
+			t.Errorf("expected data1, got %s", received)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for broadcasted task")
