@@ -12,22 +12,11 @@
     },
     {
       "type": "timeseries",
-      "title": "Total Query Latency P99",
+      "title": "Total Query Latency",
       "targets": [
         {
-          "expr": "histogram_quantile(0.99, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, operation))",
-          "legendFormat": "{{operation}} P99",
+          "expr": "sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, operation)",
           "refId": "A"
-        },
-        {
-          "expr": "histogram_quantile(0.90, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, operation))",
-          "legendFormat": "{{operation}} P90",
-          "refId": "B"
-        },
-        {
-          "expr": "histogram_quantile(0.50, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, operation))",
-          "legendFormat": "{{operation}} P50",
-          "refId": "C"
         }
       ]
     },

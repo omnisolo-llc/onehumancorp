@@ -84,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: BackdropFilter(
                   filter: ImageFilter.compose(
                     outer: ColorFilter.matrix(const <double>[
-                      1.787, -0.715, -0.072, 0, 0
+                      1.787, -0.715, -0.072, 0, 0,
                       -0.213, 1.285, -0.072, 0, 0,
                       -0.213, -0.715, 1.928, 0, 0,
                       0, 0, 0, 1, 0,
