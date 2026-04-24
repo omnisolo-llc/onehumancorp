@@ -203,3 +203,184 @@ class BillingWizardScreen extends ConsumerWidget {
     );
   }
 }
+class GrowMyBusinessWizardScreen extends ConsumerStatefulWidget {
+  const GrowMyBusinessWizardScreen({super.key});
+
+  @override
+  ConsumerState<GrowMyBusinessWizardScreen> createState() => _GrowMyBusinessWizardScreenState();
+}
+
+class _GrowMyBusinessWizardScreenState extends ConsumerState<GrowMyBusinessWizardScreen> {
+  int _step = 0;
+  bool _isApplying = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Grow My Business', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold))),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: GlassCard(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Grow your business 🌱', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 24),
+                    if (_step == 0) ...[
+                      const Text('Based on your current business stage, here are our top recommendations to help you grow.', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      _ActionCard(
+                        icon: Icons.add_shopping_cart,
+                        title: 'Add 5 more products',
+                        subtitle: 'Stores with 5+ products see 40% higher conversion rates.',
+                        onTap: () => setState(() => _step = 1),
+                      ),
+                      const SizedBox(height: 12),
+                      _ActionCard(
+                        icon: Icons.camera_alt,
+                        title: 'Connect Instagram',
+                        subtitle: 'Let The Promoter auto-post your inventory to social media.',
+                        onTap: () => setState(() => _step = 2),
+                      ),
+                      const SizedBox(height: 12),
+                      _ActionCard(
+                        icon: Icons.email,
+                        title: 'Run your first email campaign',
+                        subtitle: 'Reach out to your first 10 customers with a special offer.',
+                        onTap: () => setState(() => _step = 3),
+                      ),
+                    ] else if (_step == 1) ...[
+                      const Icon(Icons.add_shopping_cart, color: Colors.blueAccent, size: 48),
+                      const SizedBox(height: 16),
+                      const Text('Ready to add more products?', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      const Text('The Promoter agent can help you write descriptions and format images.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () {
+                          context.go('/dashboard');
+                        },
+                        child: const Text('Go to Inventory'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => setState(() => _step = 0),
+                        child: const Text('Back'),
+                      ),
+                    ] else if (_step == 2) ...[
+                      const Icon(Icons.camera_alt, color: Colors.pinkAccent, size: 48),
+                      const SizedBox(height: 16),
+                      const Text('Connect Instagram', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      const Text('Connect your Instagram Professional account to allow auto-posting.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      _isApplying
+                          ? const Center(child: CircularProgressIndicator())
+                          : FilledButton(
+                              onPressed: () async {
+                                setState(() => _isApplying = true);
+                                await Future.delayed(const Duration(seconds: 1));
+                                if (mounted) {
+                                  setState(() { _isApplying = false; _step = 4; });
+                                }
+                              },
+                              child: const Text('Connect Account'),
+                            ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => setState(() => _step = 0),
+                        child: const Text('Back'),
+                      ),
+                    ] else if (_step == 3) ...[
+                      const Icon(Icons.email, color: Colors.orangeAccent, size: 48),
+                      const SizedBox(height: 16),
+                      const Text('Create Email Campaign', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Outfit', fontSize: 20, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 16),
+                      const Text('Let The Promoter draft an email to your recent customers.', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () {
+                          context.go('/dashboard');
+                        },
+                        child: const Text('Start Drafting'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => setState(() => _step = 0),
+                        child: const Text('Back'),
+                      ),
+                    ] else if (_step == 4) ...[
+                      const Icon(Icons.check_circle, color: Colors.green, size: 64),
+                      const SizedBox(height: 16),
+                      const Text('Instagram Connected!', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () => context.go('/dashboard'),
+                        child: const Text('Return to Dashboard'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _ActionCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2)),
+            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.05),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 32, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Inter')),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: const TextStyle(fontSize: 12, fontFamily: 'Inter', color: Colors.grey)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -217,6 +217,44 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
         const SizedBox(height: 16),
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3)),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => context.go('/wizards/grow'),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    Icon(Icons.trending_up, color: Theme.of(context).colorScheme.tertiary),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Grow my business", style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Outfit', color: Theme.of(context).colorScheme.onSurface)),
+                          const Text("Get tailored recommendations to take your business to the next level.", style: TextStyle(fontFamily: 'Inter', fontSize: 13)),
+                        ],
+                      ),
+                    ),
+                    FilledButton.icon(
+                      onPressed: () => context.go('/wizards/grow'),
+                      icon: const Icon(Icons.rocket_launch, size: 18),
+                      label: const Text('Start Growing'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
         SubAgentQueueWidget(statuses: data.statuses),
         const SizedBox(height: 32),
         _SectionTitle('Company Structure'),

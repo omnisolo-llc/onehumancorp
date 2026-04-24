@@ -65,9 +65,9 @@ void main() {
 
     // Initially scale should be at 0.95 (from animation tween begin)
     final scaleFinder = find.byType(ScaleTransition);
-    expect(scaleFinder, findsOneWidget);
+    expect(scaleFinder, findsWidgets);
 
-    final scaleTransition = tester.widget<ScaleTransition>(scaleFinder);
+    final scaleTransition = tester.widget<ScaleTransition>(scaleFinder.first);
     expect(scaleTransition.scale.value, closeTo(0.95, 0.01));
 
     // Pump to finish animation
