@@ -8,6 +8,7 @@ import (
 
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/db"
+	"github.com/onehumancorp/mono/src/server/orchestration/statemachine"
 	"github.com/onehumancorp/mono/src/server/telemetry"
 	_ "modernc.org/sqlite"
 )
@@ -550,4 +551,109 @@ func TestTaskManager_CircularDependencyDetection(t *testing.T) {
 		t.Fatalf("expected error for circular dependency, got nil")
 	}
 }
+
 // added for Sub-Agent Orchestration Queue
+
+func TestSharedTask_StateMachine(t *testing.T) {
+	tm := newTaskTestProvider(t)
+	defer tm.Close()
+
+	ctx := context.Background()
+	taskID := "task-state-machine-1"
+	orgID := "org-sm"
+
+	_, err := tm.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id TEXT PRIMARY KEY,
+			organization_id TEXT,
+			mission_id TEXT,
+			title TEXT,
+			description TEXT,
+			payload TEXT,
+			status TEXT,
+			priority TEXT,
+			ultraplan_phase TEXT,
+			deliberation_log TEXT,
+			depth INTEGER,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			locked_until DATETIME,
+			parent_plan_id TEXT,
+			agent_id TEXT,
+			dependencies TEXT DEFAULT '[]'
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create table: %v", err)
+	}
+
+	// Create task using the provider
+	_, err = tm.Exec(ctx, `
+		INSERT INTO shared_tasks (id, organization_id, mission_id, title, description, payload, status, priority, ultraplan_phase, deliberation_log, depth)
+		VALUES ($1, $2, 'mission-sm', 'Test State Machine', 'Description', '{}', 'PENDING', 'HIGH', 'PROPOSE', '[]', 0)
+	`, taskID, orgID)
+	if err != nil {
+		t.Fatalf("failed to insert task: %v", err)
+	}
+
+	_, err = tm.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS state_machine_transitions (
+			id TEXT PRIMARY KEY,
+			entity_type TEXT NOT NULL,
+			entity_id TEXT NOT NULL,
+			from_state TEXT NOT NULL,
+			to_state TEXT NOT NULL,
+			agent_id TEXT,
+			reason TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+	`)
+	if err != nil {
+		t.Fatalf("failed to create state_machine_transitions table: %v", err)
+	}
+
+	taskManager := &TaskManager{db: tm, stateMachine: statemachine.NewStateMachine(tm, nil, nil)}
+
+	// Poll -> IN_PROGRESS
+	tasks, pollErr := taskManager.PollTasks(context.WithValue(ctx, auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: orgID}), "agent-1", 1)
+	if pollErr != nil {
+		t.Fatalf("failed to poll tasks: %v", pollErr)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("expected 1 task, got %d", len(tasks))
+	}
+	if tasks[0].Status != statemachine.StateInProgress {
+		t.Fatalf("expected status %s, got %s", statemachine.StateInProgress, tasks[0].Status)
+	}
+
+	// REVIEW
+	revErr := taskManager.ReviewTask(context.WithValue(ctx, auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: orgID}), taskID, "agent-1")
+	if revErr != nil {
+		t.Fatalf("failed to review task: %v", revErr)
+	}
+
+	// Verify REVIEW status
+	var status string
+	qErr := tm.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", taskID).Scan(&status)
+	if qErr != nil {
+		t.Fatalf("failed to query status: %v", qErr)
+	}
+	if status != statemachine.StateReview {
+		t.Fatalf("expected status %s, got %s", statemachine.StateReview, status)
+	}
+
+	// COMPLETED
+	compErr := taskManager.CompleteTaskWithResult(context.WithValue(ctx, auth.ClaimsContextKeyForTest, &auth.Claims{OrganizationID: orgID}), taskID, "agent-1", "result")
+	if compErr != nil {
+		t.Fatalf("failed to complete task: %v", compErr)
+	}
+
+	// Verify COMPLETED status
+	qErr2 := tm.QueryRow(ctx, "SELECT status FROM shared_tasks WHERE id = $1", taskID).Scan(&status)
+	if qErr2 != nil {
+		t.Fatalf("failed to query status: %v", qErr2)
+	}
+	if status != statemachine.StateCompleted {
+		t.Fatalf("expected status %s, got %s", statemachine.StateCompleted, status)
+	}
+}
