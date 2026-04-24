@@ -32,6 +32,19 @@ void main() {
 
     expect(find.byType(AgentHireWizardScreen), findsOneWidget);
     expect(find.text('Next'), findsWidgets);
+
+    // Advance to Capabilities step (Step 5)
+    for (int i = 0; i < 4; i++) {
+        await tester.tap(find.text('Next').first);
+        await tester.pumpAndSettle();
+    }
+
+    // Verify the new plain-language labels exist
+    expect(find.text('Step 5 — Select Capabilities'), findsOneWidget);
+    expect(find.text('Reply to customer messages'), findsOneWidget);
+    expect(find.text('Post to Instagram & Facebook'), findsOneWidget);
+    expect(find.text('Write product descriptions'), findsOneWidget);
+    expect(find.text('Send order updates'), findsOneWidget);
   });
 
 
