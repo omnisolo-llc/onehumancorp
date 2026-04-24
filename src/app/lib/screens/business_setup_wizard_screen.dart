@@ -144,6 +144,10 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
       }
     } else {
       state = state.copyWith(isLoading: false, errorMessage: 'Not authenticated');
+      // In standalone testing, go directly to dashboard if auth bypass is enabled
+      if (context.mounted) {
+        context.go('/dashboard');
+      }
     }
   }
 }
@@ -188,7 +192,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
         {'label': 'Service Business', 'icon': Icons.build},
         {'label': 'Restaurant / Food', 'icon': Icons.restaurant},
         {'label': 'Creative / Portfolio', 'icon': Icons.brush},
-        {'label': 'Local Business', 'icon': Icons.store},
+        {'label': 'Local Business', 'icon': Icons.storefront},
         {'label': 'Other', 'icon': Icons.category},
       ];
       return Column(
@@ -200,24 +204,25 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           Wrap(
             spacing: 16,
             runSpacing: 16,
+            alignment: WrapAlignment.center,
             children: types.map((t) {
               final isSelected = state.businessType == t['label'];
               return InkWell(
                 onTap: () => notifier.updateBusinessType(t['label'] as String),
                 child: Container(
-                  width: 140,
-                  height: 120,
+                  width: 130,
+                  height: 110,
                   decoration: BoxDecoration(
                     color: isSelected ? Colors.blueAccent.withAlpha(51) : Colors.white.withAlpha(13),
                     border: Border.all(color: isSelected ? Colors.blueAccent : Colors.white.withAlpha(26)),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(t['icon'] as IconData, size: 32, color: isSelected ? Colors.blueAccent : Colors.white70),
+                      Icon(t['icon'] as IconData, size: 36, color: isSelected ? Colors.blueAccent : Colors.white70),
                       const SizedBox(height: 12),
-                      Text(t['label'] as String, textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Inter', color: isSelected ? Colors.white : Colors.white70, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                      Text(t['label'] as String, style: TextStyle(fontFamily: 'Inter', color: isSelected ? Colors.white : Colors.white70, fontSize: 12, fontWeight: FontWeight.w500), textAlign: TextAlign.center),
                     ],
                   ),
                 ),

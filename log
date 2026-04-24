@@ -1,0 +1,592 @@
+WARNING: The following configs were expanded more than once: [buildbuddy]. For repeatable flags, repeats are counted twice and may lead to unexpected behavior.
+INFO: Invocation ID: 0a7b8159-9545-4b0f-86b7-30e2087f2f9f
+INFO: Streaming build results to: https://buildbuddy.phslc.com/invocation/0a7b8159-9545-4b0f-86b7-30e2087f2f9f
+INFO: Options provided by the client:
+  Inherited 'common' options: --isatty=0 --terminal_columns=80
+INFO: Reading rc options for 'test' from /app/.bazelrc:
+  Inherited 'build' options: --config=buildbuddy --remote_download_toplevel --action_env=CGO_ENABLED=1 --spawn_strategy=remote,sandboxed,local --incompatible_strict_action_env --announce_rc --rewind_lost_inputs --action_env=GEMINI_API_KEY --action_env=MINIMAX_API_KEY --action_env=MCP_BUNDLE_DIR --action_env=CI
+INFO: Reading rc options for 'test' from /app/.bazelrc:
+  'test' options: --config=buildbuddy --test_output=errors --build_tests_only --test_timeout=300,600,900,1800 --local_test_jobs=4 --jobs=200 --test_env=GEMINI_API_KEY --test_env=MINIMAX_API_KEY --test_env=MCP_BUNDLE_DIR --test_env=CI --test_env=HOME --test_env=MCPANY_DEBUG --test_env=MCPANY_DANGEROUS_ALLOW_LOCAL_IPS --test_env=PATH
+INFO: Found applicable config definition common:buildbuddy in file /app/.bazelrc: --bes_timeout=600s --bes_timeout=600s --bes_results_url=https://buildbuddy.phslc.com/invocation/ --bes_backend=grpcs://buildbuddy-grpc.phslc.com --remote_cache=grpcs://buildbuddy-grpc.phslc.com --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com --remote_local_fallback --remote_upload_local_results --experimental_remote_downloader_local_fallback --jobs=200 --remote_header=x-buildbuddy-api-key=h2FUJLgaH6D2RL7T3PAV --remote_timeout=10m
+INFO: Found applicable config definition build:buildbuddy in file /app/.bazelrc: --verbose_failures --bes_upload_mode=fully_async
+INFO: Found applicable config definition common:buildbuddy in file /app/.bazelrc: --bes_timeout=600s --bes_timeout=600s --bes_results_url=https://buildbuddy.phslc.com/invocation/ --bes_backend=grpcs://buildbuddy-grpc.phslc.com --remote_cache=grpcs://buildbuddy-grpc.phslc.com --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com --remote_local_fallback --remote_upload_local_results --experimental_remote_downloader_local_fallback --jobs=200 --remote_header=x-buildbuddy-api-key=h2FUJLgaH6D2RL7T3PAV --remote_timeout=10m
+INFO: Found applicable config definition build:buildbuddy in file /app/.bazelrc: --verbose_failures --bes_upload_mode=fully_async
+WARNING: --remote_upload_local_results is set, but the remote cache does not support uploading action results or the current account is not authorized to write local results to the remote cache.
+Computing main repo mapping:
+Loading:
+Loading: 0 packages loaded
+Analyzing: 155 targets (74 packages loaded)
+Analyzing: 155 targets (74 packages loaded, 0 targets configured)
+Analyzing: 155 targets (74 packages loaded, 0 targets configured)
+
+Analyzing: 155 targets (94 packages loaded, 923 targets configured)
+
+Analyzing: 155 targets (153 packages loaded, 3555 targets configured)
+
+Analyzing: 155 targets (183 packages loaded, 12209 targets configured)
+
+Analyzing: 155 targets (199 packages loaded, 17553 targets configured)
+
+Analyzing: 155 targets (251 packages loaded, 24976 targets configured)
+
+Analyzing: 155 targets (270 packages loaded, 33357 targets configured)
+
+Analyzing: 155 targets (283 packages loaded, 42363 targets configured)
+
+Analyzing: 155 targets (316 packages loaded, 52394 targets configured)
+
+Analyzing: 155 targets (356 packages loaded, 54216 targets configured)
+
+Analyzing: 155 targets (427 packages loaded, 57884 targets configured)
+[37 / 51] checking cached actions
+Analyzing: 155 targets (437 packages loaded, 58096 targets configured)
+[42 / 58] checking cached actions
+Analyzing: 155 targets (447 packages loaded, 58337 targets configured)
+[42 / 58] checking cached actions
+Analyzing: 155 targets (464 packages loaded, 59059 targets configured)
+[42 / 58] Testing //src/server:standalone_cleanup_test; 0s linux-sandbox, remote-cache
+Analyzing: 155 targets (487 packages loaded, 59449 targets configured)
+[43 / 58] 1 / 20 tests; checking cached actions
+Analyzing: 155 targets (502 packages loaded, 59737 targets configured)
+[43 / 58] 1 / 32 tests; checking cached actions
+Analyzing: 155 targets (513 packages loaded, 60372 targets configured)
+[62 / 98] 1 / 32 tests; checking cached actions
+Analyzing: 155 targets (532 packages loaded, 60659 targets configured)
+[97 / 161] 1 / 38 tests; checking cached actions
+Analyzing: 155 targets (543 packages loaded, 61064 targets configured)
+[129 / 220] 1 / 113 tests; Testing //deploy:deploy_artifacts_test; 0s linux-sandbox, remote-cache
+Analyzing: 155 targets (544 packages loaded, 63805 targets configured)
+[154 / 261] 2 / 149 tests; checking cached actions
+Analyzing: 155 targets (547 packages loaded, 65394 targets configured)
+[176 / 299] 2 / 149 tests; checking cached actions
+Analyzing: 155 targets (549 packages loaded, 66352 targets configured)
+[236 / 399] 2 / 149 tests; checking cached actions
+Analyzing: 155 targets (549 packages loaded, 73515 targets configured)
+[456 / 870] 2 / 153 tests; checking cached actions
+INFO: Analyzed 155 targets (549 packages loaded, 73515 targets configured).
+[1,381 / 1,814] 2 / 155 tests; checking cached actions
+[1,872 / 3,680] 2 / 155 tests; [Prepa] Testing //src/app:app_layout_test
+[2,114 / 3,980] 3 / 155 tests; Setting up Flutter workspace for main_lib; 1s linux-sandbox ... (3 actions, 2 running)
+[2,207 / 3,992] 4 / 155 tests; Setting up Flutter workspace for main_lib; 2s linux-sandbox ... (3 actions running)
+[2,374 / 3,995] 4 / 155 tests; Setting up Flutter workspace for main_lib; 4s linux-sandbox ... (7 actions, 4 running)
+[2,436 / 3,997] 6 / 155 tests; Setting up Flutter workspace for main_lib; 5s linux-sandbox ... (7 actions, 5 running)
+[2,510 / 4,004] 6 / 155 tests; Setting up Flutter workspace for main_lib; 6s linux-sandbox ... (8 actions, 5 running)
+[2,557 / 4,016] 12 / 155 tests; Setting up Flutter workspace for main_lib; 7s linux-sandbox ... (13 actions, 8 running)
+[2,665 / 4,033] 18 / 155 tests; Setting up Flutter workspace for main_lib; 8s linux-sandbox ... (17 actions, 8 running)
+[2,701 / 4,035] 26 / 155 tests; Setting up Flutter workspace for main_lib; 9s linux-sandbox ... (14 actions, 11 running)
+[2,719 / 4,036] 31 / 155 tests; Setting up Flutter workspace for main_lib; 10s linux-sandbox ... (6 actions, 4 running)
+[2,745 / 4,040] 33 / 155 tests; Setting up Flutter workspace for main_lib; 11s linux-sandbox ... (8 actions, 6 running)
+[2,800 / 4,049] 38 / 155 tests; Setting up Flutter workspace for main_lib; 12s linux-sandbox ... (16 actions, 8 running)
+[2,846 / 4,059] 44 / 155 tests; Setting up Flutter workspace for main_lib; 13s linux-sandbox ... (25 actions, 8 running)
+[2,865 / 4,066] 47 / 155 tests; Setting up Flutter workspace for main_lib; 14s linux-sandbox ... (28 actions, 8 running)
+[2,918 / 4,074] 51 / 155 tests; Setting up Flutter workspace for main_lib; 15s linux-sandbox ... (31 actions, 8 running)
+[2,932 / 4,079] 54 / 155 tests; Setting up Flutter workspace for main_lib; 16s linux-sandbox ... (35 actions, 8 running)
+[2,956 / 4,083] 60 / 155 tests; Setting up Flutter workspace for main_lib; 17s linux-sandbox ... (37 actions, 8 running)
+[3,010 / 4,087] 62 / 155 tests; Setting up Flutter workspace for main_lib; 18s linux-sandbox ... (41 actions, 8 running)
+[3,022 / 4,091] 64 / 155 tests; Setting up Flutter workspace for main_lib; 19s linux-sandbox ... (43 actions, 8 running)
+[3,027 / 4,093] 64 / 155 tests; Setting up Flutter workspace for main_lib; 21s linux-sandbox ... (44 actions, 8 running)
+[3,027 / 4,093] 64 / 155 tests; Setting up Flutter workspace for main_lib; 23s linux-sandbox ... (45 actions, 8 running)
+[3,029 / 4,093] 64 / 155 tests; Setting up Flutter workspace for main_lib; 25s linux-sandbox ... (45 actions, 8 running)
+[3,041 / 4,095] 64 / 155 tests; Setting up Flutter workspace for main_lib; 30s linux-sandbox ... (46 actions, 8 running)
+[3,058 / 4,096] 64 / 155 tests; Setting up Flutter workspace for main_lib; 31s linux-sandbox ... (48 actions, 8 running)
+[3,062 / 4,096] 64 / 155 tests; Setting up Flutter workspace for main_lib; 32s linux-sandbox ... (50 actions, 8 running)
+[3,108 / 4,097] 64 / 155 tests; Setting up Flutter workspace for main_lib; 34s linux-sandbox ... (53 actions, 9 running)
+[3,108 / 4,097] 64 / 155 tests; Setting up Flutter workspace for main_lib; 35s linux-sandbox ... (53 actions, 10 running)
+[3,111 / 4,097] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 21s linux-sandbox, remote-cache ... (50 actions, 7 running)
+[3,135 / 4,098] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 26s linux-sandbox, remote-cache ... (49 actions, 6 running)
+[3,190 / 4,099] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 27s linux-sandbox, remote-cache ... (50 actions, 6 running)
+[3,260 / 4,099] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 28s linux-sandbox, remote-cache ... (51 actions, 7 running)
+[3,478 / 4,099] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 30s linux-sandbox, remote-cache ... (52 actions, 7 running)
+[3,704 / 4,099] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 31s linux-sandbox, remote-cache ... (52 actions, 7 running)
+[3,705 / 4,099] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 33s linux-sandbox, remote-cache ... (51 actions, 6 running)
+[3,783 / 4,099] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 35s linux-sandbox, remote-cache ... (52 actions, 6 running)
+[3,866 / 4,100] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 36s linux-sandbox, remote-cache ... (52 actions, 6 running)
+[3,899 / 4,101] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 37s linux-sandbox, remote-cache ... (52 actions, 6 running)
+[3,900 / 4,101] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 43s linux-sandbox, remote-cache ... (52 actions, 5 running)
+[3,944 / 4,101] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 44s linux-sandbox, remote-cache ... (51 actions, 4 running)
+[3,967 / 4,101] 64 / 155 tests; Testing //src/server/orchestration:orchestration_test; 47s linux-sandbox, remote-cache ... (51 actions, 5 running)
+[3,967 / 4,101] 65 / 155 tests; Testing //src/server/orchestration:orchestration_test; 48s linux-sandbox, remote-cache ... (51 actions, 5 running)
+[3,971 / 4,101] 65 / 155 tests; Testing //src/server/orchestration:orchestration_test; 50s linux-sandbox, remote-cache ... (51 actions, 4 running)
+[3,995 / 4,110] 65 / 155 tests; Testing //src/server/orchestration:orchestration_test; 51s linux-sandbox, remote-cache ... (60 actions, 4 running)
+[3,999 / 4,110] 69 / 155 tests; Testing //src/server/orchestration:orchestration_test; 52s linux-sandbox, remote-cache ... (56 actions, 4 running)
+[4,005 / 4,110] 75 / 155 tests; Testing //src/server/orchestration:orchestration_test; 53s linux-sandbox, remote-cache ... (50 actions, 5 running)
+[4,011 / 4,110] 81 / 155 tests; Testing //src/server/orchestration:orchestration_test; 54s linux-sandbox, remote-cache ... (44 actions, 5 running)
+[4,011 / 4,110] 81 / 155 tests; Testing //src/server/orchestration:orchestration_test; 66s linux-sandbox, remote-cache ... (44 actions, 5 running)
+[4,011 / 4,110] 81 / 155 tests; Testing //src/server/orchestration:orchestration_test; 69s linux-sandbox, remote-cache ... (44 actions, 6 running)
+[4,012 / 4,110] 82 / 155 tests; Testing //src/server/orchestration:orchestration_test; 70s linux-sandbox, remote-cache ... (43 actions, 5 running)
+[4,012 / 4,110] 82 / 155 tests; Testing //src/server/orchestration:orchestration_test; 75s linux-sandbox, remote-cache ... (43 actions, 6 running)
+[4,013 / 4,110] 83 / 155 tests; Testing //src/server/orchestration:orchestration_test; 76s linux-sandbox, remote-cache ... (42 actions, 5 running)
+[4,013 / 4,110] 83 / 155 tests; Testing //src/server/orchestration:orchestration_test; 86s linux-sandbox, remote-cache ... (42 actions, 5 running)
+INFO: From Preparing Flutter dependencies for screens_lib:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+Cleaning up temporary directories...
+[4,013 / 4,110] 83 / 155 tests; Testing //src/server/orchestration:orchestration_test; 91s linux-sandbox, remote-cache ... (42 actions, 6 running)
+[4,013 / 4,110] 84 / 155 tests; Testing //src/server/orchestration:orchestration_test; 93s linux-sandbox, remote-cache ... (42 actions, 6 running)
+[4,015 / 4,110] 84 / 155 tests; Testing //src/server/orchestration:orchestration_test; 95s linux-sandbox, remote-cache ... (40 actions, 4 running)
+[4,015 / 4,110] 84 / 155 tests; Testing //src/server/orchestration:orchestration_test; 98s linux-sandbox, remote-cache ... (40 actions, 5 running)
+[4,015 / 4,110] 89 / 155 tests; Testing //src/server/orchestration:orchestration_test; 99s linux-sandbox, remote-cache ... (40 actions, 10 running)
+[4,021 / 4,110] 93 / 155 tests; Testing //src/server/orchestration:orchestration_test; 100s linux-sandbox, remote-cache ... (34 actions, 7 running)
+[4,021 / 4,110] 96 / 155 tests; Testing //src/server/orchestration:orchestration_test; 101s linux-sandbox, remote-cache ... (34 actions, 10 running)
+[4,021 / 4,110] 97 / 155 tests; Testing //src/server/orchestration:orchestration_test; 102s linux-sandbox, remote-cache ... (34 actions, 11 running)
+[4,025 / 4,110] 98 / 155 tests; Testing //src/server/orchestration:orchestration_test; 103s linux-sandbox, remote-cache ... (30 actions, 8 running)
+[4,025 / 4,110] 99 / 155 tests; Testing //src/server/orchestration:orchestration_test; 104s linux-sandbox, remote-cache ... (30 actions, 10 running)
+[4,030 / 4,110] 100 / 155 tests; Testing //src/server/orchestration:orchestration_test; 105s linux-sandbox, remote-cache ... (25 actions, 5 running)
+[4,031 / 4,110] 100 / 155 tests; Testing //src/server/orchestration:orchestration_test; 107s linux-sandbox, remote-cache ... (26 actions, 5 running)
+[4,035 / 4,110] 104 / 155 tests; Testing //src/server/orchestration:orchestration_test; 108s linux-sandbox, remote-cache ... (22 actions, 6 running)
+[4,039 / 4,110] 108 / 155 tests; Testing //src/server/orchestration:orchestration_test; 109s linux-sandbox, remote-cache ... (18 actions, 6 running)
+[4,041 / 4,110] 110 / 155 tests; Testing //src/server/orchestration:orchestration_test; 110s linux-sandbox, remote-cache ... (16 actions, 7 running)
+[4,042 / 4,110] 111 / 155 tests; Testing //src/server/orchestration:orchestration_test; 112s linux-sandbox, remote-cache ... (15 actions, 6 running)
+[4,042 / 4,110] 111 / 155 tests; Testing //src/server/orchestration:orchestration_test; 114s linux-sandbox, remote-cache ... (15 actions, 7 running)
+[4,044 / 4,110] 113 / 155 tests; Testing //src/app/lib/models:coverage_test; 24s linux-sandbox, remote-cache ... (13 actions, 6 running)
+[4,044 / 4,110] 113 / 155 tests; Testing //src/app/lib/models:coverage_test; 33s linux-sandbox, remote-cache ... (13 actions, 6 running)
+[4,044 / 4,110] 113 / 155 tests; Testing //src/app/lib/models:coverage_test; 41s linux-sandbox, remote-cache ... (13 actions, 6 running)
+[4,045 / 4,110] 114 / 155 tests; Testing //src/server/dashboard:dashboard_test; 30s linux-sandbox, remote-cache ... (12 actions, 6 running)
+[4,045 / 4,110] 114 / 155 tests; Testing //src/server/dashboard:dashboard_test; 39s linux-sandbox, remote-cache ... (12 actions, 6 running)
+[4,045 / 4,110] 114 / 155 tests; Testing //src/server/dashboard:dashboard_test; 51s linux-sandbox, remote-cache ... (12 actions, 7 running)
+[4,046 / 4,110] 115 / 155 tests; Testing //src/server/dashboard:dashboard_test; 53s linux-sandbox, remote-cache ... (11 actions, 6 running)
+[4,046 / 4,110] 115 / 155 tests; Testing //src/server/dashboard:dashboard_test; 63s linux-sandbox, remote-cache ... (11 actions, 6 running)
+INFO: From Preparing Flutter dependencies for screens_for_tests:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+Cleaning up temporary directories...
+[4,046 / 4,110] 115 / 155 tests; Testing //src/server/dashboard:dashboard_test; 74s linux-sandbox, remote-cache ... (11 actions, 7 running)
+[4,046 / 4,110] 116 / 155 tests; Testing //src/server/dashboard:dashboard_test; 76s linux-sandbox, remote-cache ... (11 actions, 7 running)
+[4,048 / 4,110] 116 / 155 tests; Testing //src/server/dashboard:dashboard_test; 79s linux-sandbox, remote-cache ... (9 actions, 5 running)
+[4,052 / 4,112] 116 / 155 tests; Testing //src/server/dashboard:dashboard_test; 80s linux-sandbox, remote-cache ... (17 actions, 8 running)
+[4,066 / 4,119] 116 / 155 tests; Testing //src/server/dashboard:dashboard_test; 81s linux-sandbox, remote-cache ... (18 actions, 5 running)
+[4,066 / 4,119] 116 / 155 tests; Testing //src/server/dashboard:dashboard_test; 82s linux-sandbox, remote-cache ... (18 actions, 6 running)
+[4,067 / 4,119] 117 / 155 tests; Testing //src/server/dashboard:dashboard_test; 84s linux-sandbox, remote-cache ... (17 actions, 5 running)
+[4,069 / 4,119] 119 / 155 tests; Preparing Flutter dependencies for router_lib; 82s local ... (15 actions, 6 running)
+[4,071 / 4,119] 121 / 155 tests; Preparing Flutter dependencies for router_lib; 84s local ... (13 actions, 5 running)
+[4,071 / 4,119] 121 / 155 tests; Preparing Flutter dependencies for router_lib; 94s local ... (13 actions, 5 running)
+[4,071 / 4,119] 121 / 155 tests; Preparing Flutter dependencies for router_lib; 99s local ... (13 actions, 6 running)
+[4,072 / 4,119] 122 / 155 tests; Preparing Flutter dependencies for router_lib; 101s local ... (12 actions, 5 running)
+[4,072 / 4,119] 122 / 155 tests; Preparing Flutter dependencies for router_lib; 110s local ... (12 actions, 5 running)
+INFO: From Preparing Flutter dependencies for router_lib:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+Cleaning up temporary directories...
+[4,073 / 4,119] 122 / 155 tests; Testing //src/app/lib/services:auth_service_test; 70s linux-sandbox, remote-cache ... (11 actions, 4 running)
+[4,073 / 4,119] 122 / 155 tests; Testing //src/app/lib/services:auth_service_test; 82s linux-sandbox, remote-cache ... (11 actions, 4 running)
+[4,073 / 4,119] 122 / 155 tests; Testing //src/app/lib/services:auth_service_test; 85s linux-sandbox, remote-cache ... (11 actions, 5 running)
+[4,075 / 4,119] 124 / 155 tests; Testing //src/app/lib/screens:wizard_screen_test; 52s linux-sandbox, remote-cache ... (10 actions, 4 running)
+[4,075 / 4,119] 124 / 155 tests; Testing //src/app/lib/screens:wizard_screen_test; 53s linux-sandbox, remote-cache ... (11 actions, 5 running)
+[4,076 / 4,119] 125 / 155 tests; Testing //src/app/lib/screens:wizard_screen_test; 55s linux-sandbox, remote-cache ... (10 actions, 4 running)
+[4,076 / 4,119] 125 / 155 tests; Testing //src/app/lib/screens:wizard_screen_test; 56s linux-sandbox, remote-cache ... (10 actions, 4 running)
+[4,076 / 4,119] 125 / 155 tests; Testing //src/app/lib/screens:wizard_screen_test; 58s linux-sandbox, remote-cache ... (10 actions, 5 running)
+[4,076 / 4,119] 125 / 155 tests; Testing //src/app/lib/screens:wizard_screen_test; 59s linux-sandbox, remote-cache ... (10 actions, 6 running)
+[4,076 / 4,119] 125 / 155 tests; Testing //src/app/lib/screens:wizard_screen_test; 60s linux-sandbox, remote-cache ... (10 actions, 7 running)
+[4,077 / 4,119] 126 / 155 tests; Testing //src/app/lib/screens:swarm_memory_screen_test; 10s linux-sandbox, remote-cache ... (9 actions, 6 running)
+[4,077 / 4,119] 126 / 155 tests; Testing //src/app/lib/screens:swarm_memory_screen_test; 21s linux-sandbox, remote-cache ... (9 actions, 6 running)
+[4,077 / 4,119] 126 / 155 tests; Testing //src/app/lib/screens:swarm_memory_screen_test; 47s linux-sandbox, remote-cache ... (9 actions, 7 running)
+[4,078 / 4,119] 127 / 155 tests; Testing //src/app/lib/screens:swarm_memory_screen_test; 49s linux-sandbox, remote-cache ... (8 actions, 7 running)
+[4,079 / 4,119] 128 / 155 tests; Testing //src/app/lib/screens:widget_interactions_test; 50s linux-sandbox, remote-cache ... (7 actions, 6 running)
+[4,079 / 4,119] 128 / 155 tests; Testing //src/app/lib/screens:widget_interactions_test; 53s linux-sandbox, remote-cache ... (7 actions running)
+[4,080 / 4,119] 129 / 155 tests; Preparing Flutter dependencies for main_lib; 49s local ... (6 actions running)
+[4,080 / 4,119] 129 / 155 tests; Preparing Flutter dependencies for main_lib; 56s local ... (6 actions running)
+[4,081 / 4,119] 130 / 155 tests; Preparing Flutter dependencies for main_lib; 58s local ... (5 actions running)
+INFO: From Preparing Flutter dependencies for app_for_tests:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+Cleaning up temporary directories...
+[4,081 / 4,119] 130 / 155 tests; Preparing Flutter dependencies for main_lib; 68s local ... (5 actions running)
+[4,082 / 4,119] 130 / 155 tests; Preparing Flutter dependencies for main_lib; 74s local ... (5 actions, 4 running)
+[4,086 / 4,121] 130 / 155 tests; Preparing Flutter dependencies for main_lib; 75s local ... (6 actions, 5 running)
+[4,086 / 4,121] 130 / 155 tests; Preparing Flutter dependencies for main_lib; 85s local ... (6 actions, 5 running)
+[4,086 / 4,121] 130 / 155 tests; Preparing Flutter dependencies for main_lib; 88s local ... (6 actions running)
+[4,087 / 4,121] 131 / 155 tests; Preparing Flutter dependencies for main_lib; 89s local ... (5 actions running)
+[4,088 / 4,121] 132 / 155 tests; Preparing Flutter dependencies for main_lib; 90s local ... (4 actions running)
+[4,089 / 4,121] 133 / 155 tests; Preparing Flutter dependencies for main_lib; 91s local ... (3 actions running)
+INFO: From Preparing Flutter dependencies for main_lib:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+Cleaning up temporary directories...
+[4,090 / 4,121] 133 / 155 tests; Testing //src/app/lib/screens:advanced_widget_test; 25s linux-sandbox, remote-cache ... (2 actions running)
+[4,090 / 4,121] 133 / 155 tests; Testing //src/app/lib/screens:advanced_widget_test; 32s linux-sandbox, remote-cache ... (3 actions, 2 running)
+[4,090 / 4,121] 133 / 155 tests; Testing //src/app/lib/screens:advanced_widget_test; 34s linux-sandbox, remote-cache ... (3 actions, 2 running)
+[4,090 / 4,121] 133 / 155 tests; Testing //src/app/lib/screens:advanced_widget_test; 35s linux-sandbox, remote-cache ... (3 actions running)
+[4,090 / 4,121] 133 / 155 tests; Testing //src/app/lib/screens:advanced_widget_test; 36s linux-sandbox, remote-cache ... (3 actions running)
+[4,090 / 4,121] 133 / 155 tests; Testing //src/app/lib/screens:advanced_widget_test; 39s linux-sandbox, remote-cache ... (3 actions running)
+[4,091 / 4,121] 134 / 155 tests; Testing //src/app/lib/screens:coverage_test; 28s linux-sandbox, remote-cache ... (2 actions running)
+[4,091 / 4,121] 134 / 155 tests; Testing //src/app/lib/screens:coverage_test; 38s linux-sandbox, remote-cache ... (2 actions running)
+[4,091 / 4,121] 134 / 155 tests; Testing //src/app/lib/screens:coverage_test; 57s linux-sandbox, remote-cache ... (2 actions running)
+[4,092 / 4,121] 135 / 155 tests; Preparing Flutter dependencies for app_lib; 37s local
+[4,092 / 4,121] 135 / 155 tests; Preparing Flutter dependencies for app_lib; 48s local
+[4,092 / 4,121] 135 / 155 tests; Preparing Flutter dependencies for app_lib; 78s local
+INFO: From Preparing Flutter dependencies for app_lib:
+=== Preparing pub cache from dependencies ===
+
+=== Generating pub_deps.json ===
+
+=== Dependency preparation complete ===
+Cleaning up temporary directories...
+[4,093 / 4,121] 135 / 155 tests; [Prepa] Preparing Flutter test workspace for cuj_scaling_e2e_test
+[4,106 / 4,127] 135 / 155 tests; Testing //src/app:cuj_pipelines_e2e_test; 0s linux-sandbox, remote-cache ... (7 actions, 4 running)
+[4,106 / 4,127] 135 / 155 tests; Testing //src/app:cuj_pipelines_e2e_test; 1s linux-sandbox, remote-cache ... (7 actions, 5 running)
+[4,106 / 4,127] 135 / 155 tests; Testing //src/app:cuj_pipelines_e2e_test; 10s linux-sandbox, remote-cache ... (7 actions, 5 running)
+[4,106 / 4,127] 135 / 155 tests; Testing //src/app:cuj_pipelines_e2e_test; 40s linux-sandbox, remote-cache ... (7 actions, 5 running)
+[4,106 / 4,127] 135 / 155 tests; Testing //src/app:cuj_pipelines_e2e_test; 43s linux-sandbox, remote-cache ... (7 actions, 6 running)
+[4,108 / 4,127] 137 / 155 tests; Testing //src/app:cuj_agents_hire_e2e_test; 45s linux-sandbox, remote-cache ... (5 actions running)
+[4,110 / 4,127] 139 / 155 tests; Running flutter build web for app.web; 45s linux-sandbox ... (3 actions running)
+[4,110 / 4,127] 139 / 155 tests; Running flutter build web for app.web; 55s linux-sandbox ... (3 actions running)
+[4,110 / 4,127] 139 / 155 tests; Running flutter build web for app.web; 69s linux-sandbox ... (3 actions running)
+[4,112 / 4,127] 141 / 155 tests; Running flutter build web for app.web; 71s linux-sandbox
+[4,112 / 4,127] 141 / 155 tests; Running flutter build web for app.web; 80s linux-sandbox
+[4,112 / 4,127] 141 / 155 tests; Running flutter build web for app.web; 111s linux-sandbox
+INFO: From Running flutter build web for app.web:
+Building flutter tool...
+Flutter binary verified at: /home/jules/.cache/bazel/_bazel_jules/8c069df52082beee3c95ca17836fb8e2/sandbox/linux-sandbox/2968/execroot/_main/external/rules_flutter++flutter+flutter_linux/flutter/bin/flutter
+=== Flutter Build web ===
+Working directory: /tmp/flutter_workspace.DP6rad
+Entered package directory: /tmp/flutter_workspace.DP6rad/src/app
+Flutter binary: /tmp/flutter_root.f0suzj/bin/flutter
+Target: web
+
+
+Regenerating package_config.json for build environment...
+✓ Package config regenerated successfully
+
+Running: /tmp/flutter_root.f0suzj/bin/flutter build web --release
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 76.0.0 (100.0.0 available)
+  analyzer 6.11.0 (13.0.0 available)
+  archive 3.6.1 (4.0.9 available)
+  args 2.6.0 (2.7.0 available)
+  async 2.12.0 (2.13.1 available)
+  built_value 8.9.3 (8.12.5 available)
+  checked_yaml 2.0.3 (2.0.4 available)
+  completion 1.0.1 (1.0.2 available)
+  coverage 1.11.1 (1.15.0 available)
+  crypto 3.0.6 (3.0.7 available)
+  dds 5.0.0 (5.3.0 available)
+  dds_service_extensions 2.0.1 (2.1.0 available)
+  devtools_shared 11.2.0 (12.1.0 available)
+  dtd 2.4.0 (4.0.0 available)
+  dwds 24.3.2 (27.1.0 available)
+  fake_async 1.3.2 (1.3.3 available)
+  ffi 2.1.3 (2.2.0 available)
+  glob 2.1.2 (2.1.3 available)
+  html 0.15.5 (0.15.6 available)
+  http 1.2.2 (1.6.0 available)
+  intl 0.19.0 (0.20.2 available)
+  js 0.7.1 (discontinued)
+  json_annotation 4.9.0 (4.11.0 available)
+  json_rpc_2 3.0.3 (4.1.0 available)
+  matcher 0.12.17 (0.12.19 available)
+  meta 1.16.0 (1.18.2 available)
+  multicast_dns 0.3.2+7 (0.3.3 available)
+  mustache_template 2.0.0 (2.0.4 available)
+  native_assets_builder 0.10.2 (discontinued replaced by hooks_runner)
+  native_assets_cli 0.10.0 (discontinued replaced by hooks)
+  native_stack_traces 0.6.0 (0.6.1 available)
+  package_config 2.1.1 (2.2.0 available)
+  petitparser 6.1.0 (7.0.2 available)
+  pool 1.5.1 (1.5.2 available)
+  process 5.0.3 (5.0.5 available)
+  pub_semver 2.1.5 (2.2.0 available)
+  shelf_proxy 1.0.4 (1.0.5 available)
+  shelf_web_socket 2.0.1 (3.0.0 available)
+  source_span 1.10.1 (1.10.2 available)
+  sse 4.1.7 (4.2.0 available)
+  test 1.25.14 (1.31.0 available)
+  test_api 0.7.4 (0.7.11 available)
+  test_core 0.6.8 (0.6.17 available)
+  unified_analytics 7.0.1 (8.0.14 available)
+  usage 4.1.1 (discontinued)
+  uuid 4.5.1 (4.5.3 available)
+  vm_service 14.3.1 (15.1.0 available)
+  watcher 1.1.1 (1.2.1 available)
+  web 1.1.0 (1.1.1 available)
+  web_socket 0.1.6 (1.0.1 available)
+  web_socket_channel 3.0.1 (3.0.3 available)
+  webdriver 3.0.4 (3.1.0 available)
+  xml 6.5.0 (6.6.1 available)
+  yaml_edit 2.2.2 (2.2.4 available)
+No dependencies changed.
+4 packages are discontinued.
+53 packages have newer versions incompatible with dependency constraints.
+Try `dart pub outdated` for more information.
+
+  ╔════════════════════════════════════════════════════════════════════════════╗
+  ║                 Welcome to Flutter! - https://flutter.dev                  ║
+  ║                                                                            ║
+  ║ The Flutter tool uses Google Analytics to anonymously report feature usage ║
+  ║ statistics and basic crash reports. This data is used to help improve      ║
+  ║ Flutter tools over time.                                                   ║
+  ║                                                                            ║
+  ║ Flutter tool analytics are not sent on the very first run. To disable      ║
+  ║ reporting, type 'flutter config --no-analytics'. To display the current    ║
+  ║ setting, type 'flutter config'. If you opt out of analytics, an opt-out    ║
+  ║ event will be sent, and then no further information will be sent by the    ║
+  ║ Flutter tool.                                                              ║
+  ║                                                                            ║
+  ║ By downloading the Flutter SDK, you agree to the Google Terms of Service.  ║
+  ║ The Google Privacy Policy describes how data is handled in this service.   ║
+  ║                                                                            ║
+  ║ Moreover, Flutter includes the Dart SDK, which may send usage metrics and  ║
+  ║ crash reports to Google.                                                   ║
+  ║                                                                            ║
+  ║ Read about data we send with crash reports:                                ║
+  ║ https://flutter.dev/to/crash-reporting                                     ║
+  ║                                                                            ║
+  ║ See Google's privacy policy:                                               ║
+  ║ https://policies.google.com/privacy                                        ║
+  ║                                                                            ║
+  ║ To disable animations in this tool, use                                    ║
+  ║ 'flutter config --no-cli-animations'.                                      ║
+  ╚════════════════════════════════════════════════════════════════════════════╝
+
+Resolving dependencies...
+Downloading packages...
+  async 2.12.0 (2.13.1 available)
+  centrifuge 0.14.1 (0.18.0 available)
+  characters 1.4.0 (1.4.1 available)
+  checked_yaml 2.0.3 (2.0.4 available)
+  cupertino_icons 1.0.8 (1.0.9 available)
+  fake_async 1.3.2 (1.3.3 available)
+  flutter_lints 3.0.2 (6.0.0 available)
+  flutter_riverpod 2.6.1 (3.3.1 available)
+  go_router 14.8.1 (17.2.2 available)
+  googleapis_auth 1.6.0 (2.3.0 available)
+  grpc 4.0.1 (5.1.0 available)
+  intl 0.19.0 (0.20.2 available)
+  json_annotation 4.9.0 (4.11.0 available)
+  leak_tracker 10.0.8 (11.0.2 available)
+  leak_tracker_flutter_testing 3.0.9 (3.0.10 available)
+  leak_tracker_testing 3.0.1 (3.0.2 available)
+  lints 3.0.0 (6.1.0 available)
+  matcher 0.12.17 (0.12.19 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  meta 1.16.0 (1.18.2 available)
+  path_provider_android 2.2.19 (2.3.1 available)
+  path_provider_foundation 2.4.2 (2.6.0 available)
+  powersync 1.8.5 (2.0.1 available)
+  powersync_flutter_libs 0.4.15+1 (0.5.0+eol available)
+  protobuf 3.1.0 (6.0.0 available)
+  riverpod 2.6.1 (3.2.1 available)
+  shared_preferences 2.5.3 (2.5.5 available)
+  shared_preferences_android 2.4.13 (2.4.23 available)
+  shared_preferences_foundation 2.5.4 (2.5.6 available)
+  shared_preferences_platform_interface 2.4.1 (2.4.2 available)
+  source_span 1.10.1 (1.10.2 available)
+  sqlite3 2.4.5 (3.3.1 available)
+  sqlite3_flutter_libs 0.5.42 (0.6.0+eol available)
+  sqlite3_web 0.1.2-wip (0.7.0 available)
+  sqlite_async 0.8.3 (0.14.1 available)
+  test_api 0.7.4 (0.7.11 available)
+  vector_math 2.1.4 (2.3.0 available)
+  vm_service 14.3.1 (15.1.0 available)
+  web 0.5.1 (1.1.1 available)
+  web_socket_channel 2.4.5 (3.0.3 available)
+Got dependencies!
+40 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+
+Compiling lib/main.dart for the Web...
+Font asset "CupertinoIcons.ttf" was tree-shaken, reducing it from 257628 to 1472 bytes (99.4% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Font asset "MaterialIcons-Regular.otf" was tree-shaken, reducing it from 1645184 to 21388 bytes (98.7% reduction). Tree-shaking can be disabled by providing the --no-tree-shake-icons flag when building your app.
+Compiling lib/main.dart for the Web...                             55.5s
+✓ Built build/web
+✓ flutter build web --release completed successfully
+Copying from build/web to /home/jules/.cache/bazel/_bazel_jules/8c069df52082beee3c95ca17836fb8e2/sandbox/linux-sandbox/2968/execroot/_main/bazel-out/k8-fastbuild/bin/src/app/app.web_build_artifacts
+Build artifacts copied from build/web
+Artifacts directory contents:
+total 3452
+drwxrwxr-x 5 jules jules    4096 Apr 24 20:44 .
+drwxrwxr-x 6 jules jules    4096 Apr 24 20:43 ..
+drwxr-xr-x 5 jules jules    4096 Apr 24 20:44 assets
+drwxr-xr-x 3 jules jules    4096 Apr 24 20:44 canvaskit
+-rw-r--r-- 1 jules jules     917 Apr 24 20:44 favicon.png
+-rw-r--r-- 1 jules jules    7735 Apr 24 20:44 flutter.js
+-rw-r--r-- 1 jules jules    8061 Apr 24 20:44 flutter_bootstrap.js
+-rw-r--r-- 1 jules jules    8350 Apr 24 20:44 flutter_service_worker.js
+drwxr-xr-x 2 jules jules    4096 Apr 24 20:44 icons
+✓ Flutter build completed successfully
+Cleaning up temporary directories...
+[4,113 / 4,127] 141 / 155 tests; [Prepa] runfiles for //src/tests/e2e:e2e_budget_test
+[4,127 / 4,141] 141 / 155 tests; Testing //src/tests/e2e:e2e_budget_test; 1s linux-sandbox, remote-cache ... (14 actions, 4 running)
+[4,127 / 4,141] 141 / 155 tests; Testing //src/tests/e2e:e2e_budget_test; 2s linux-sandbox, remote-cache ... (14 actions, 5 running)
+[4,131 / 4,141] 145 / 155 tests; Testing //src/tests/e2e:e2e_hybrid_sync_test; 1s linux-sandbox, remote-cache ... (10 actions, 5 running)
+[4,136 / 4,141] 150 / 155 tests; Testing //src/tests/e2e:e2e_cuj_audit_test; 1s linux-sandbox, remote-cache ... (5 actions, 4 running)
+[4,139 / 4,141] 154 / 155 tests; Testing //src/tests/e2e:e2e_cuj_extended_test; 1s linux-sandbox, remote-cache ... (2 actions running)
+INFO: Found 155 test targets...
+INFO: Elapsed time: 659.581s, Critical Path: 622.02s
+INFO: 224 processes: 2825 action cache hit, 36 internal, 217 linux-sandbox, 6 local.
+INFO: Build completed successfully, 224 total actions
+INFO:
+//:app_deb_structure_test                                                PASSED in 0.6s
+//:standalone_e2e_test                                                   PASSED in 2.5s
+//deploy:deploy_artifacts_test                                           PASSED in 0.6s
+//src/app:app_layout_test                                                PASSED in 0.1s
+//src/app:cuj_agents_hire_e2e_test                                       PASSED in 43.4s
+//src/app:cuj_auth_e2e_test                                              PASSED in 42.4s
+//src/app:cuj_channels_extra_e2e_test                                    PASSED in 26.0s
+//src/app:cuj_integrations_e2e_test                                      PASSED in 24.0s
+//src/app:cuj_pipelines_e2e_test                                         PASSED in 41.0s
+//src/app:cuj_scaling_e2e_test                                           PASSED in 42.1s
+//src/app:website_builder_wizard_screen_test                             PASSED in 43.4s
+//src/app/lib/models:agent_model_test                                    PASSED in 49.7s
+//src/app/lib/models:ai_provider_model_test                              PASSED in 20.2s
+//src/app/lib/models:channel_model_test                                  PASSED in 21.8s
+//src/app/lib/models:coverage_test                                       PASSED in 40.9s
+//src/app/lib/models:security_issue_model_test                           PASSED in 23.3s
+//src/app/lib/models:skill_model_test                                    PASSED in 49.9s
+//src/app/lib/screens:advanced_widget_test                               PASSED in 38.7s
+//src/app/lib/screens:business_setup_wizard_test                         PASSED in 41.8s
+//src/app/lib/screens:coverage_test                                      PASSED in 55.7s
+//src/app/lib/screens:landing_screen_test                                PASSED in 36.9s
+//src/app/lib/screens:pulse_animation_test                               PASSED in 36.3s
+//src/app/lib/screens:referrals_dashboard_screen_test                    PASSED in 42.6s
+//src/app/lib/screens:swarm_memory_screen_test                           PASSED in 47.3s
+//src/app/lib/screens:widget_interactions_test                           PASSED in 51.0s
+//src/app/lib/screens:widget_test                                        PASSED in 50.3s
+//src/app/lib/screens:wizard_screen_test                                 PASSED in 60.0s
+//src/app/lib/services:api_service_test                                  PASSED in 54.1s
+//src/app/lib/services:auth_service_test                                 PASSED in 80.9s
+//src/app/lib/services:centrifuge_service_full_test                      PASSED in 52.4s
+//src/app/lib/services:centrifuge_service_test                           PASSED in 25.1s
+//src/app/lib/services:coverage_test                                     PASSED in 66.7s
+//src/app/lib/services:local_manager_service_test                        PASSED in 40.7s
+//src/server:standalone_cleanup_test                                     PASSED in 0.3s
+//src/server/agents:agents_test                                          PASSED in 0.7s
+//src/server/agents/builtin/src:unit_tests                               PASSED in 0.2s
+//src/server/agents/builtin_rust_integration_test:ping_test              PASSED in 0.8s
+//src/server/agents/builtin_rust_integration_test:runtask_test           PASSED in 0.6s
+//src/server/agents/builtin_rust_integration_test:subagent_test          PASSED in 0.4s
+//src/server/agents/grpc:grpc_test                                       PASSED in 0.3s
+//src/server/agents/harness:harness_test                                 PASSED in 0.3s
+//src/server/agents/harness/terminal:terminal_test                       PASSED in 0.4s
+//src/server/agents/kairos:kairos_test                                   PASSED in 0.3s
+//src/server/agents/kairos/mesh:mesh_test                                PASSED in 0.2s
+//src/server/agents/local:local_test                                     PASSED in 1.6s
+//src/server/agents/mcp:mcp_test                                         PASSED in 0.3s
+//src/server/agents/mcp/proxy:proxy_test                                 PASSED in 0.2s
+//src/server/agents/proxy:proxy_test                                     PASSED in 0.2s
+//src/server/agents/sandbox:sandbox_test                                 PASSED in 0.4s
+//src/server/api:api_test                                                PASSED in 2.6s
+//src/server/api/mesh:mesh_test                                          PASSED in 0.5s
+//src/server/api/mesh_legacy:mesh_test                                   PASSED in 4.3s
+//src/server/auth:auth_test                                              PASSED in 44.0s
+//src/server/autodream:autodream_test                                    PASSED in 0.3s
+//src/server/bash_sandbox:bash_sandbox_test                              PASSED in 0.3s
+//src/server/billing:billing_test                                        PASSED in 0.1s
+//src/server/checkpointer:checkpointer_test                              PASSED in 0.3s
+//src/server/config:config_test                                          PASSED in 0.2s
+//src/server/dashboard:dashboard_test                                    PASSED in 84.2s
+//src/server/db:db_test                                                  PASSED in 0.6s
+//src/server/db/repositories:repositories_test                           PASSED in 0.4s
+//src/server/docs:docs_test                                              PASSED in 0.1s
+//src/server/domain:domain_test                                          PASSED in 0.2s
+//src/server/harness:harness_test                                        PASSED in 0.3s
+//src/server/harness/authz:authz_test                                    PASSED in 0.2s
+//src/server/harness/mcp:mcp_test                                        PASSED in 0.2s
+//src/server/harness/sandbox:sandbox_test                                PASSED in 0.4s
+//src/server/harness/validation:validation_test                          PASSED in 0.2s
+//src/server/hub:hub_test                                                PASSED in 0.4s
+//src/server/integrations:integrations_test                              PASSED in 16.0s
+//src/server/integrations/chatwoot:chatwoot_test                         PASSED in 0.2s
+//src/server/integrations/etcd:etcd_test                                 PASSED in 0.2s
+//src/server/integrations/libsql:libsql_test                             PASSED in 0.3s
+//src/server/integrations/litefs:litefs_test                             PASSED in 0.2s
+//src/server/integrations/mcp_audit_sync:mcp_audit_sync_test             PASSED in 0.3s
+//src/server/integrations/mcp_config_sync:mcp_config_sync_test           PASSED in 0.3s
+//src/server/integrations/mcp_sync:mcp_sync_test                         PASSED in 0.3s
+//src/server/integrations/mcp_webhook_tunnel:mcp_webhook_tunnel_test     PASSED in 0.5s
+//src/server/integrations/mercadopago:mercadopago_test                   PASSED in 0.2s
+//src/server/integrations/nats:nats_test                                 PASSED in 0.2s
+//src/server/integrations/obsidian:obsidian_test                         PASSED in 0.2s
+//src/server/integrations/ollama:ollama_test                             PASSED in 0.3s
+//src/server/integrations/powersync:powersync_test                       PASSED in 0.2s
+//src/server/integrations/restic:restic_test                             PASSED in 0.3s
+//src/server/integrations/sync_adapter:sync_adapter_test                 PASSED in 0.3s
+//src/server/interop:interop_test                                        PASSED in 3.3s
+//src/server/interop/mcp:mcp_test                                        PASSED in 0.5s
+//src/server/interop/mcp:tools_test                                      PASSED in 0.3s
+//src/server/ironclaw:ironclaw_test                                      PASSED in 0.5s
+//src/server/lib/integrations/hybrid_discovery:hybrid_discovery_test     PASSED in 0.5s
+//src/server/lib/integrations/hybridfsmcp:hybridfsmcp_test               PASSED in 0.2s
+//src/server/lib/integrations/scout:scout_test                           PASSED in 0.3s
+//src/server/lib/perf:hybrid_bench_test                                  PASSED in 0.3s
+//src/server/lib/perf:perf_test                                          PASSED in 0.2s
+//src/server/lib/pricing:pricing_test                                    PASSED in 0.3s
+//src/server/lib/pricing/tokencalc:tokencalc_test                        PASSED in 0.2s
+//src/server/lib/resilience:resilience_test                              PASSED in 1.4s
+//src/server/lib/resilience/chaos:chaos_test                             PASSED in 0.3s
+//src/server/lib/resilience/lock:lock_test                               PASSED in 1.8s
+//src/server/lib/sync:sync_test                                          PASSED in 0.1s
+//src/server/memory/autodream:autodream_test                             PASSED in 0.2s
+//src/server/mesh:mesh_test                                              PASSED in 0.3s
+//src/server/msgbus:msgbus_test                                          PASSED in 0.3s
+//src/server/orchestration:orchestration_test                            PASSED in 114.5s
+//src/server/orchestration/autodream:autodream_test                      PASSED in 0.3s
+//src/server/orchestration/hybrid_sync:hybrid_sync_test                  PASSED in 0.2s
+//src/server/orchestration/kairos:kairos_test                            PASSED in 0.6s
+//src/server/orchestration/mesh:mesh_test                                PASSED in 0.3s
+//src/server/orchestration/queue:queue_test                              PASSED in 0.7s
+//src/server/orchestration/state:state_test                              PASSED in 0.2s
+//src/server/orchestration/statemachine:statemachine_test                PASSED in 0.3s
+//src/server/orchestration/tasks:tasks_test                              PASSED in 0.3s
+//src/server/pipeline:pipeline_test                                      PASSED in 3.1s
+//src/server/profiling:profiling_test                                    PASSED in 0.2s
+//src/server/repository:repository_test                                  PASSED in 0.2s
+//src/server/scheduler:scheduler_test                                    PASSED in 2.5s
+//src/server/services/billing:cost_auditor_test                          PASSED in 0.3s
+//src/server/services/growth:growth_test                                 PASSED in 1.2s
+//src/server/services/harness-daemon:harnessdaemon_test                  PASSED in 51.7s
+//src/server/services/onboarding:onboarding_test                         PASSED in 0.3s
+//src/server/services/onboarding_legacy:onboarding_legacy_test           PASSED in 0.2s
+//src/server/services/sync:sync_test                                     PASSED in 0.3s
+//src/server/services/wizard:wizard_test                                 PASSED in 0.2s
+//src/server/settings:settings_test                                      PASSED in 0.2s
+//src/server/storage:storage_test                                        PASSED in 0.2s
+//src/server/sync:sync_test                                              PASSED in 1.3s
+//src/server/tasks:tasks_test                                            PASSED in 0.2s
+//src/server/telemetry:telemetry_test                                    PASSED in 0.6s
+//src/server/tools/blobinspector:blobinspector_test                      PASSED in 0.2s
+//src/server/tools/dbinspector:dbinspector_test                          PASSED in 0.3s
+//src/server/tools/edgeoffloadmcp:edgeoffloadmcp_test                    PASSED in 0.2s
+//src/server/tools/hybridfsmcp:hybridfsmcp_test                          PASSED in 0.7s
+//src/server/tools/localstatefulproxy:localstatefulproxy_test            PASSED in 0.1s
+//src/server/tools/mcpwebhooktunnel:mcpwebhooktunnel_test                PASSED in 0.5s
+//src/server/tools/searchmcp:searchmcp_test                              PASSED in 0.2s
+//src/server/tools/statesyncmcp:statesyncmcp_test                        PASSED in 0.4s
+//src/server/tools/vectorragmcp:vectorragmcp_test                        PASSED in 0.3s
+//src/server/utils:utils_test                                            PASSED in 0.2s
+//src/server/workers:workers_test                                        PASSED in 2.7s
+//src/server/workers/distillation:distillation_test                      PASSED in 0.2s
+//src/tests/chaos:chaos_system_test                                      PASSED in 0.3s
+//src/tests/e2e:e2e_admin_test                                           PASSED in 1.8s
+//src/tests/e2e:e2e_agents_test                                          PASSED in 2.0s
+//src/tests/e2e:e2e_auth_test                                            PASSED in 0.9s
+//src/tests/e2e:e2e_budget_test                                          PASSED in 2.4s
+//src/tests/e2e:e2e_business_test                                        PASSED in 0.7s
+//src/tests/e2e:e2e_cuj_accessibility_test                               PASSED in 1.8s
+//src/tests/e2e:e2e_cuj_audit_test                                       PASSED in 1.4s
+//src/tests/e2e:e2e_cuj_extended_test                                    PASSED in 1.1s
+//src/tests/e2e:e2e_dashboard_test                                       PASSED in 1.4s
+//src/tests/e2e:e2e_hybrid_sync_test                                     PASSED in 1.7s
+//src/tests/e2e:e2e_misc_test                                            PASSED in 2.4s
+//src/tests/e2e:e2e_model_provider_test                                  PASSED in 1.4s
+//src/tests/e2e:e2e_settings_test                                        PASSED in 2.4s
+//src/tests/e2e:e2e_wizard_test                                          PASSED in 2.4s
+
+Executed 155 out of 155 tests: 155 tests pass.
+There were tests whose specified size is too big. Use the --test_verbose_timeout_warnings command line option to see which ones these are.
+INFO: Streaming build results to: https://buildbuddy.phslc.com/invocation/0a7b8159-9545-4b0f-86b7-30e2087f2f9f
