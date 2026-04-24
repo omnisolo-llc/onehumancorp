@@ -78,7 +78,7 @@ func TestQueueManagerLoop(t *testing.T) {
 	var status1, status2 string
 	// Retry loop for SQLITE_BUSY
 	for i := 0; i < 5; i++ {
-		err = provider.QueryRow(context.TODO(), "SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&status1)
+		err = provider.QueryRow(context.Background(), "SELECT status FROM sub_agent_queue WHERE id = 'job-1'").Scan(&status1)
 		if err == nil || (err != nil && !strings.Contains(err.Error(), "database is locked")) {
 			break
 		}
@@ -92,7 +92,7 @@ func TestQueueManagerLoop(t *testing.T) {
 	}
 
 	for i := 0; i < 5; i++ {
-		err = provider.QueryRow(context.TODO(), "SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&status2)
+		err = provider.QueryRow(context.Background(), "SELECT status FROM sub_agent_queue WHERE id = 'job-2'").Scan(&status2)
 		if err == nil || (err != nil && !strings.Contains(err.Error(), "database is locked")) {
 			break
 		}
