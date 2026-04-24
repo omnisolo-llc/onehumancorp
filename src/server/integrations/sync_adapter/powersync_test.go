@@ -48,7 +48,15 @@ func TestPowerSyncAdapter(t *testing.T) {
 
 	// Wait for background process to finish simulation to test "UpToDate"
 	adapter.StartSync()
-	time.Sleep(150 * time.Millisecond) // Wait longer than the 100ms in syncLoop
+
+	// Poll for status update to avoid flakiness with Sleep
+	for i := 0; i < 20; i++ {
+		if adapter.GetSyncStatus() == syncpkg.SyncStatusUpToDate {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
 	if adapter.GetSyncStatus() != syncpkg.SyncStatusUpToDate {
 		t.Errorf("Expected status %s, got %s", syncpkg.SyncStatusUpToDate, adapter.GetSyncStatus())
 	}

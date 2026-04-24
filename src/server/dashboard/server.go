@@ -103,6 +103,7 @@ type dashboardSnapshot struct {
 	Statuses     []statusCount               `json:"statuses"`
 	TaskQueue    []orchestration.SharedTask  `json:"taskQueue,omitempty"`
 	QueueLength  int                         `json:"queueLength"`
+	ActiveHandoffs int                         `json:"activeHandoffs"`
 	UpdatedAt    time.Time                   `json:"updatedAt"`
 }
 
@@ -1348,6 +1349,13 @@ func (s *Server) snapshotLocked() dashboardSnapshot {
 
 	wg.Wait()
 
+	activeHandoffs := 0
+	for _, h := range s.handoffs {
+		if h.Status == "pending" {
+			activeHandoffs++
+		}
+	}
+
 	return dashboardSnapshot{
 		Organization: s.org,
 		Meetings:     meetings,
@@ -1356,6 +1364,7 @@ func (s *Server) snapshotLocked() dashboardSnapshot {
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
 		QueueLength:  queueLen,
+		ActiveHandoffs: activeHandoffs,
 		UpdatedAt:    time.Now().UTC(),
 	}
 }
