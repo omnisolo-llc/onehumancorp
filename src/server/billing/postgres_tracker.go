@@ -79,10 +79,6 @@ func (r *PgUsageRepository) Summary(ctx context.Context, organizationID string) 
 		return Summary{}, fmt.Errorf("pg: iteration error: %w", err)
 	}
 
-	if err := rows.Err(); err != nil {
-		return Summary{}, fmt.Errorf("pg: billing summary iteration: %w", err)
-	}
-
 	return Summary{
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,
