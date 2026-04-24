@@ -4,18 +4,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 
 void main() {
-  testWidgets('BusinessSetupWizardScreen renders welcome screen', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: BusinessSetupWizardScreen())));
+  testWidgets('BusinessSetupWizardScreen renders welcome screen', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: BusinessSetupWizardScreen()),
+      ),
+    );
     expect(find.text('Your business, live in minutes'), findsOneWidget);
   });
 
-  testWidgets('BusinessSetupWizardScreen steps navigation', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: BusinessSetupWizardScreen())));
+  testWidgets('BusinessSetupWizardScreen steps navigation', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const ProviderScope(
+        child: MaterialApp(home: BusinessSetupWizardScreen()),
+      ),
+    );
 
     // Step 0 -> 1
     await tester.tap(find.text('Get Started'));
     await tester.pumpAndSettle();
-    expect(find.text('What kind of business are you building?'), findsOneWidget);
+    expect(
+      find.text('What kind of business are you building?'),
+      findsOneWidget,
+    );
 
     // Step 1 -> 2
     await tester.tap(find.text('Online Store'));
@@ -73,10 +88,19 @@ void main() {
     expect(container.read(businessSetupProvider).companyName, 'Acme');
 
     notifier.updateDescription('A great company');
-    expect(container.read(businessSetupProvider).businessDescription, 'A great company');
+    expect(
+      container.read(businessSetupProvider).businessDescription,
+      'A great company',
+    );
 
     notifier.toggleWhatYouSell('Physical products');
-    expect(container.read(businessSetupProvider).whatYouSell.contains('Physical products'), isTrue);
+    expect(
+      container
+          .read(businessSetupProvider)
+          .whatYouSell
+          .contains('Physical products'),
+      isTrue,
+    );
 
     notifier.updatePaymentMethod('Online only');
     expect(container.read(businessSetupProvider).paymentMethod, 'Online only');
