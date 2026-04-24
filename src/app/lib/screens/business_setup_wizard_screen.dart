@@ -18,6 +18,7 @@ class BusinessSetupState {
   final String template;
   final String firstProductName;
   final String firstProductPrice;
+  final String firstProductDescription;
   final String domain;
   final bool isLoading;
   final String? errorMessage;
@@ -33,6 +34,7 @@ class BusinessSetupState {
     this.template = '',
     this.firstProductName = '',
     this.firstProductPrice = '',
+    this.firstProductDescription = '',
     this.domain = '',
     this.isLoading = false,
     this.errorMessage,
@@ -49,6 +51,7 @@ class BusinessSetupState {
     String? template,
     String? firstProductName,
     String? firstProductPrice,
+    String? firstProductDescription,
     String? domain,
     bool? isLoading,
     String? errorMessage,
@@ -64,6 +67,7 @@ class BusinessSetupState {
       template: template ?? this.template,
       firstProductName: firstProductName ?? this.firstProductName,
       firstProductPrice: firstProductPrice ?? this.firstProductPrice,
+      firstProductDescription: firstProductDescription ?? this.firstProductDescription,
       domain: domain ?? this.domain,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -74,23 +78,75 @@ class BusinessSetupState {
 
 class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
-  BusinessSetupState build() => const BusinessSetupState();
+  BusinessSetupState build() {
+    _loadInitialState();
+    return const BusinessSetupState();
+  }
+
+  Future<void> _loadInitialState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/api/wizard/status'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+          },
+        );
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          final extras = data['extras'] as Map<String, dynamic>?;
+          if (extras != null) {
+            state = state.copyWith(
+              businessType: extras['business_type'] ?? '',
+              companyName: extras['company_name'] ?? '',
+              description: extras['description'] ?? '',
+              whatYouSell: (extras['what_you_sell'] as String?)?.split(',').where((s) => s.isNotEmpty).toList() ?? [],
+              payments: extras['payments'] ?? '',
+              template: extras['template'] ?? '',
+              firstProductName: extras['first_product_name'] ?? '',
+              firstProductPrice: extras['first_product_price'] ?? '',
+              firstProductDescription: extras['first_product_description'] ?? '',
+              domain: extras['domain'] ?? '',
+              step: int.tryParse(extras['wizard_step'] ?? '0') ?? 0,
+            );
+          }
+        }
+      } catch (_) {}
+    }
+  }
 
   void nextStep() {
     if (state.step < 7) {
       state = state.copyWith(step: state.step + 1);
+      _persistExtras();
     }
   }
 
   void prevStep() {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      _persistExtras();
     }
   }
 
-  void updateBusinessType(String val) => state = state.copyWith(businessType: val);
-  void updateCompany(String name) => state = state.copyWith(companyName: name);
-  void updateDescription(String val) => state = state.copyWith(description: val);
+  void updateBusinessType(String val) {
+    state = state.copyWith(businessType: val);
+    _persistExtras();
+  }
+
+  void updateCompany(String name) {
+    state = state.copyWith(companyName: name);
+    _persistExtras();
+  }
+
+  void updateDescription(String val) {
+    state = state.copyWith(description: val);
+    _persistExtras();
+  }
+
   void toggleWhatYouSell(String val) {
     final list = List<String>.from(state.whatYouSell);
     if (list.contains(val)) {
@@ -99,23 +155,98 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
       list.add(val);
     }
     state = state.copyWith(whatYouSell: list);
+    _persistExtras();
   }
-  void updatePayments(String val) => state = state.copyWith(payments: val);
+
+  void updatePayments(String val) {
+    state = state.copyWith(payments: val);
+    _persistExtras();
+  }
+
   void updateTemplate(String template) {
     state = state.copyWith(template: template);
+    _persistExtras();
   }
 
   void updateFirstProductName(String name) {
     state = state.copyWith(firstProductName: name);
+    _persistExtras();
   }
 
   void updateFirstProductPrice(String price) {
     state = state.copyWith(firstProductPrice: price);
+    _persistExtras();
   }
 
   void updateDomain(String domain) {
     state = state.copyWith(domain: domain);
+    _persistExtras();
   }
+
+  Future<void> magicFill() async {
+    if (state.firstProductName.isEmpty) return;
+
+    final baseUrl = ref.read(backendUrlProvider);
+    state = state.copyWith(isLoading: true);
+
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/api/wizard/ai-product-desc'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'product_name': state.firstProductName}),
+      );
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        state = state.copyWith(
+          firstProductDescription: data['description'],
+          isLoading: false,
+        );
+        _persistExtras();
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
+    } catch (_) {
+      state = state.copyWith(isLoading: false);
+    }
+  }
+
+  Future<void> _persistExtras() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+
+    if (user != null && baseUrl.isNotEmpty) {
+      final body = {
+        'extras': {
+          'business_type': state.businessType,
+          'company_name': state.companyName,
+          'description': state.description,
+          'what_you_sell': state.whatYouSell.join(','),
+          'payments': state.payments,
+          'template': state.template,
+          'first_product_name': state.firstProductName,
+          'first_product_price': state.firstProductPrice,
+          'first_product_description': state.firstProductDescription,
+          'domain': state.domain,
+          'wizard_step': state.step.toString(),
+        }
+      };
+
+      try {
+        await http.post(
+          Uri.parse('$baseUrl/api/wizard/configure'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        );
+      } catch (_) {
+        // Silently fail persistence during wizard
+      }
+    }
+  }
+
   void toggleObscurePassword() => state = state.copyWith(obscurePassword: !state.obscurePassword);
 
   Future<void> launch(BuildContext context, WidgetRef ref) async {
@@ -341,9 +472,38 @@ class BusinessSetupWizardScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         TextField(
-          decoration: const InputDecoration(labelText: 'Product / Service Name', labelStyle: TextStyle(color: Colors.white70)),
+          decoration: const InputDecoration(
+            labelText: 'Product / Service Name',
+            labelStyle: TextStyle(color: Colors.white70),
+          ),
           onChanged: notifier.updateFirstProductName,
           style: const TextStyle(fontFamily: 'Inter', color: Colors.white),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                state.firstProductDescription.isEmpty
+                    ? 'AI can help write your description'
+                    : state.firstProductDescription,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  color: state.firstProductDescription.isEmpty ? Colors.white38 : Colors.white70,
+                  fontSize: 12,
+                  fontStyle: state.firstProductDescription.isEmpty ? FontStyle.italic : FontStyle.normal,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            TextButton.icon(
+              onPressed: state.firstProductName.isEmpty ? null : notifier.magicFill,
+              icon: const Icon(Icons.auto_awesome, size: 16),
+              label: const Text('Magic Fill', style: TextStyle(fontSize: 12)),
+            ),
+          ],
         ),
         const SizedBox(height: 16),
         TextField(

@@ -39,6 +39,47 @@ type loginResponse struct {
 	ExpiresAt time.Time  `json:"expiresAt"`
 }
 
+type signupRequest struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// HandleSignUp creates a new user and a corresponding organization.
+// POST /api/auth/signup {"username":"…","email":"…","password":"…"}
+func (h *Handlers) HandleSignUp(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req signupRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	orgID := "org-" + generateID()
+	user, err := h.store.CreateUser(req.Username, req.Email, req.Password, []string{RoleAdmin}, orgID)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	token, err := h.store.IssueToken(user)
+	if err != nil {
+		jsonError(w, "failed to issue token", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, loginResponse{
+		Token:     token,
+		User:      user.PublicView(),
+		ExpiresAt: time.Now().UTC().Add(tokenTTL),
+	})
+}
+
 // HandleLogin validates credentials and returns a signed JWT.  	POST /api/auth/login  {"username":"…","password":"…"}
 // Accepts parameters: h *Handlers (No Constraints).
 // Returns nothing.

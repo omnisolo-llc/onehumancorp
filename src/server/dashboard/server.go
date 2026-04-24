@@ -627,6 +627,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/v1/stream", auth.RequireRole("system", server.handleStream))
 	mux.HandleFunc("/api/v1/autodream/sync", server.handleAutoDreamSync)
 	mux.HandleFunc("/api/v1/autodream/query", server.handleAutoDreamQuery)
+	mux.HandleFunc("/api/wizard/ai-product-desc", server.handleAIProductDesc)
 	mux.HandleFunc("/api/incidents", server.handleIncidents)
 	mux.HandleFunc("/api/incidents/status", server.handleIncidentStatus)
 	mux.HandleFunc("/api/missions/prune", server.handlePruneMissions)
@@ -697,6 +698,7 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
+	mux.HandleFunc("/api/auth/signup", server.authHandlers.HandleSignUp)
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
 	mux.HandleFunc("/api/auth/me", server.authHandlers.HandleMe)

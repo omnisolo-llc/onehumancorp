@@ -35,12 +35,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       if (_isSignUp) {
-        // Implement signup logic if authService supports it
-        // Or if authService handles creation via login, just login.
-        // As a temporary fix for OHC registration, login doubles as register for the local auth system
         await ref
             .read(authStateProvider.notifier)
-            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+            .signup(_usernameCtrl.text.trim(), _usernameCtrl.text.trim(), _passwordCtrl.text);
       } else {
         await ref
             .read(authStateProvider.notifier)

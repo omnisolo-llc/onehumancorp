@@ -14,6 +14,7 @@ type wizardStatusResponse struct {
 	Configured bool `json:"configured"`
 	// Steps holds per-step completion status.
 	Steps wizardSteps `json:"steps"`
+	Extras map[string]string `json:"extras,omitempty"`
 }
 
 type wizardSteps struct {
@@ -54,6 +55,7 @@ func (s *Server) handleWizardStatus(w http.ResponseWriter, r *http.Request) {
 	resp := wizardStatusResponse{
 		Configured: steps.Server && steps.AiProvider && steps.Centrifuge,
 		Steps:      steps,
+		Extras:     cfg.Extras,
 	}
 	writeJSON(w, resp)
 }
@@ -205,4 +207,25 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 	}
 
 	writeJSON(w, resp)
+}
+
+func (s *Server) handleAIProductDesc(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		ProductName string `json:"product_name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Mocked AI response
+	description := "A premium " + req.ProductName + " designed for those who value quality and style. Perfect for daily use and special occasions."
+
+	writeJSON(w, map[string]string{
+		"description": description,
+	})
 }

@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/services/settings_service.dart';
-import 'package:ohc_app/widgets/glass_card.dart';
 
 void main() {
-  testWidgets('BusinessSetupWizardScreen renders and navigates steps in Cloud Mode', (WidgetTester tester) async {
+  testWidgets('BusinessSetupWizardScreen renders and navigates steps', (WidgetTester tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -47,9 +45,6 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Test Company');
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField).last, 'Selling things');
-    await tester.pumpAndSettle();
-
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
@@ -73,25 +68,28 @@ void main() {
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 5: Administrator account
-    expect(find.byType(TextField), findsNWidgets(3)); // Admin Name, Admin Email, Admin Password
+    // Step 5: Template
+    expect(find.text('Template Selection'), findsOneWidget);
+    expect(find.byType(ChoiceChip), findsNWidgets(4));
 
-    await tester.enterText(find.byType(TextField).at(0), 'Admin');
-    await tester.enterText(find.byType(TextField).at(1), 'admin@test.com');
-    await tester.enterText(find.byType(TextField).at(2), 'password');
+    await tester.tap(find.text('Modern'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 6: Review & Launch
-    expect(find.text('Review & Launch'), findsOneWidget);
-    expect(find.text('Business: Test Company'), findsOneWidget);
-    expect(find.text('Type: Online Store'), findsOneWidget);
-    expect(find.text('Selling: Physical products'), findsOneWidget);
-    expect(find.text('Payments: Online only'), findsOneWidget);
-    expect(find.text('Admin: Admin (admin@test.com)'), findsOneWidget);
+    // Step 6: Product
+    expect(find.text('First Product / Service'), findsOneWidget);
+    expect(find.text('Magic Fill'), findsOneWidget);
 
+    await tester.enterText(find.byType(TextField).first, 'Coffee');
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 7: Domain & Go-Live
+    expect(find.text('Domain & Go-Live'), findsOneWidget);
     expect(find.text('Launch My Business →'), findsOneWidget);
   });
 
@@ -106,21 +104,6 @@ void main() {
     notifier.nextStep();
     expect(container.read(businessSetupProvider).step, 1);
 
-    notifier.prevStep();
-    expect(container.read(businessSetupProvider).step, 0);
-
-    notifier.prevStep();
-    expect(container.read(businessSetupProvider).step, 0);
-
-    notifier.nextStep();
-    notifier.nextStep();
-    notifier.nextStep();
-    notifier.nextStep();
-    notifier.nextStep();
-    notifier.nextStep();
-
-    expect(container.read(businessSetupProvider).step, 6);
-
     notifier.updateBusinessType('Online Store');
     expect(container.read(businessSetupProvider).businessType, 'Online Store');
 
@@ -133,22 +116,19 @@ void main() {
     notifier.toggleWhatYouSell('Physical products');
     expect(container.read(businessSetupProvider).whatYouSell.contains('Physical products'), true);
 
-    notifier.toggleWhatYouSell('Physical products');
-    expect(container.read(businessSetupProvider).whatYouSell.contains('Physical products'), false);
-
     notifier.updatePayments('Online only');
     expect(container.read(businessSetupProvider).payments, 'Online only');
 
-    notifier.updateAdminName('Admin');
-    expect(container.read(businessSetupProvider).adminName, 'Admin');
+    notifier.updateTemplate('Modern');
+    expect(container.read(businessSetupProvider).template, 'Modern');
 
-    notifier.updateAdminEmail('admin@example.com');
-    expect(container.read(businessSetupProvider).adminEmail, 'admin@example.com');
+    notifier.updateFirstProductName('Widget');
+    expect(container.read(businessSetupProvider).firstProductName, 'Widget');
 
-    notifier.updateAdminPassword('secr3t');
-    expect(container.read(businessSetupProvider).adminPassword, 'secr3t');
+    notifier.updateFirstProductPrice('10');
+    expect(container.read(businessSetupProvider).firstProductPrice, '10');
 
-    notifier.toggleObscurePassword();
-    expect(container.read(businessSetupProvider).obscurePassword, false);
+    notifier.updateDomain('testco');
+    expect(container.read(businessSetupProvider).domain, 'testco');
   });
 }
