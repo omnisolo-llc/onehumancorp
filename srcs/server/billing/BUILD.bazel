@@ -20,7 +20,10 @@ go_test(
     name = "billing_test",
     srcs = [
         "burn_rate_test.go",
+        "repository_test.go",
+        "tracker_extra_test.go",
         "tracker_test.go",
     ],
     embed = [":billing"],
+    deps = ["//srcs/server/db"],
 )
