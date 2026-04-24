@@ -90,10 +90,23 @@ class _DashboardContent extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _SectionTitle('My Business'),
-            OutlinedButton.icon(
-              onPressed: () => context.go('/wizards/billing'),
-              icon: const Icon(Icons.credit_card),
-              label: const Text('Billing & Credits'),
+            Expanded(
+              child: Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/wizards/website-builder'),
+                    icon: const Icon(Icons.web),
+                    label: const Text('Build My Website'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/wizards/billing'),
+                    icon: const Icon(Icons.credit_card),
+                    label: const Text('Billing & Credits'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

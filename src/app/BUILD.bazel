@@ -278,8 +278,18 @@ flutter_test(
     workspace_pubspec = "//:pubspec.yaml",
 )
 
+
+flutter_test(
+    name = "cuj_website_builder_e2e_test",
+    srcs = ["test/cuj_website_builder_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_website_builder_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
 test_suite(
     name = "cuj_e2e_tests",
+
     tags = ["manual"],
     tests = [
         ":cuj_auth_e2e_test",
@@ -293,6 +303,7 @@ test_suite(
         ":cuj_scaling_e2e_test",
         ":cuj_diagnostics_referrals_e2e_test",
         ":cuj_review_actions_e2e_test",
+        ":cuj_website_builder_e2e_test",
     ],
 )
 
