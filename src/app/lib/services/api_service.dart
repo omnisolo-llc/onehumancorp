@@ -47,7 +47,6 @@ class ApiService {
     String name,
     String role, {
     String providerType = 'openclaw',
-    List<String>? capabilities,
   }) async {
     final res = await _client.post(
       Uri.parse('$baseUrl/api/agents/hire'),
@@ -56,7 +55,6 @@ class ApiService {
         'name': name,
         'role': role,
         'providerType': providerType,
-        if (capabilities != null) 'capabilities': capabilities,
       }),
     );
     _checkStatus(res);
