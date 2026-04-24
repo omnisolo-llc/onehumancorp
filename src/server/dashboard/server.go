@@ -677,8 +677,11 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.Handle("/api/mesh/v2/broadcast", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshV2Broadcast)))
 	mux.Handle("/api/mesh/direct", mesh.ValidationMiddleware(auth.RequireRole("system", server.handleMeshDirect)))
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
-	// Auth – login / logout / current user
+	// Auth – login / register / verify / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
+	mux.HandleFunc("/api/auth/register", server.authHandlers.HandleRegister)
+	mux.HandleFunc("/api/auth/verify-email", auth.RequireRole("admin", server.authHandlers.HandleVerifyEmail))
+	mux.HandleFunc("/api/auth/resend-verification", auth.RequireRole("admin", server.authHandlers.HandleResendVerification))
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
 	mux.HandleFunc("/api/auth/me", server.authHandlers.HandleMe)
 	// PowerSync Endpoints

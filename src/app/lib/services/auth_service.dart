@@ -12,6 +12,7 @@ class AuthUser {
   final String role;
   final String organizationId;
   final String token;
+  final bool emailVerified;
 
   const AuthUser({
     required this.id,
@@ -20,6 +21,7 @@ class AuthUser {
     required this.role,
     required this.organizationId,
     required this.token,
+    this.emailVerified = false,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json, String token) {
@@ -34,6 +36,7 @@ class AuthUser {
       role: role,
       organizationId: json['organizationId'] as String? ?? json['organization_id'] as String? ?? '',
       token: token,
+      emailVerified: json['emailVerified'] as bool? ?? false,
     );
   }
 }
@@ -59,6 +62,34 @@ class AuthService {
       return AuthUser.fromJson(user, token);
     }
     throw Exception('Login failed: ${response.statusCode}');
+  }
+
+  Future<AuthUser> register(String username, String email, String password) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'username': username,
+        'email': email,
+        'password': password,
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = data['token'] as String;
+      final user = data['user'] as Map<String, dynamic>;
+      return AuthUser.fromJson(user, token);
+    }
+
+    String errorMessage = 'Registration failed: ${response.statusCode}';
+    try {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (data.containsKey('error')) {
+        errorMessage = data['error'];
+      }
+    } catch (_) {}
+
+    throw Exception(errorMessage);
   }
 
   Future<void> logout(String token) async {
@@ -134,6 +165,52 @@ class AuthNotifier extends AsyncNotifier<AuthUser?> {
       await prefs.setString(_tokenKey, user.token);
       return user;
     });
+  }
+
+  Future<void> register(String username, String email, String password) async {
+    state = const AsyncLoading();
+    final service = ref.read(authServiceProvider);
+    state = await AsyncValue.guard(() async {
+      final user = await service.register(username, email, password);
+      final prefs = await ref.read(_prefsProvider.future);
+      await prefs.setString(_tokenKey, user.token);
+      return user;
+    });
+  }
+
+  Future<void> verifyEmail(String code) async {
+    final user = state.valueOrNull;
+    if (user == null) throw Exception("Not logged in");
+
+    final service = ref.read(authServiceProvider);
+    final response = await service._client.post(
+      Uri.parse('${service.baseUrl}/api/auth/verify-email'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${user.token}',
+      },
+      body: jsonEncode({'code': code}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Verification failed: ${response.statusCode}');
+    }
+  }
+
+  Future<void> resendVerification() async {
+    final user = state.valueOrNull;
+    if (user == null) throw Exception("Not logged in");
+
+    final service = ref.read(authServiceProvider);
+    final response = await service._client.post(
+      Uri.parse('${service.baseUrl}/api/auth/resend-verification'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${user.token}',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Resend failed: ${response.statusCode}');
+    }
   }
 
   Future<void> logout() async {

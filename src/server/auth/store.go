@@ -62,6 +62,7 @@ type User struct {
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 	OIDCSubject    string    `json:"oidcSubject,omitempty"`
+	EmailVerified  bool      `json:"emailVerified"`
 }
 
 // UserPublic represents the sanitized, non-sensitive profile of a user suitable for external API consumption.
@@ -79,6 +80,7 @@ type UserPublic struct {
 	CreatedAt      time.Time `json:"createdAt"`
 	UpdatedAt      time.Time `json:"updatedAt"`
 	OIDCSubject    string    `json:"oidcSubject,omitempty"`
+	EmailVerified  bool      `json:"emailVerified"`
 }
 
 // PublicView returns a UserPublic with no sensitive fields.
@@ -97,6 +99,7 @@ func (u *User) PublicView() UserPublic {
 		CreatedAt:      u.CreatedAt,
 		UpdatedAt:      u.UpdatedAt,
 		OIDCSubject:    u.OIDCSubject,
+		EmailVerified:  u.EmailVerified,
 	}
 }
 
@@ -257,15 +260,16 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 
 		now := time.Now().UTC()
 		u := &User{
-			ID:           generateID(),
-			Username:     username,
-			Email:        email,
-			PasswordHash: string(hash),
-			Roles:        append([]string(nil), roles...),
-			Active:       true,
+			ID:             generateID(),
+			Username:       username,
+			Email:          email,
+			PasswordHash:   string(hash),
+			Roles:          append([]string(nil), roles...),
+			Active:         true,
 			OrganizationID: orgID,
-			CreatedAt:    now,
-			UpdatedAt:    now,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+			EmailVerified:  false,
 		}
 		if err := s.repo.CreateUser(context.Background(), u, orgID); err != nil {
 			return nil, normalizeRepositoryWriteError(err)
@@ -290,15 +294,16 @@ func (s *Store) CreateUser(username, email, password string, roles []string, org
 
 	now := time.Now().UTC()
 	u := &User{
-		ID:           generateID(),
-		Username:     username,
-		Email:        email,
-		PasswordHash: string(hash),
-		Roles:        append([]string(nil), roles...),
-		Active:       true,
+		ID:             generateID(),
+		Username:       username,
+		Email:          email,
+		PasswordHash:   string(hash),
+		Roles:          append([]string(nil), roles...),
+		Active:         true,
 		OrganizationID: orgID,
-		CreatedAt:    now,
-		UpdatedAt:    now,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+		EmailVerified:  false,
 	}
 	s.users[u.ID] = u
 	s.byName[tenantKey{orgID, username}] = u
@@ -375,6 +380,47 @@ func (s *Store) GetUser(id string, orgID string) (*User, bool) {
 // Returns []*User.
 // Produces no errors.
 // Has no side effects.
+// GenerateVerificationCode generates a mock verification code for a user and simulates sending it.
+func (s *Store) GenerateVerificationCode(id string) error {
+	slog.Info("Simulating sending verification email", "user_id", id, "code", "123456")
+	return nil
+}
+
+func (s *Store) MarkEmailVerified(id string, orgID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.repo != nil {
+		ctx := context.Background()
+		u, err := s.repo.GetByID(ctx, id, orgID)
+		if err != nil {
+			if errors.Is(err, ErrUserNotFound) {
+				return errors.New("user not found")
+			}
+			return err
+		}
+		u.EmailVerified = true
+		u.UpdatedAt = time.Now().UTC()
+		if err := s.repo.UpdateUser(ctx, u, orgID); err != nil {
+			return err
+		}
+		// update memory cache
+		if memU, ok := s.users[id]; ok && memU.OrganizationID == orgID {
+			memU.EmailVerified = true
+			memU.UpdatedAt = u.UpdatedAt
+		}
+		return nil
+	}
+
+	u, ok := s.users[id]
+	if !ok || u.OrganizationID != orgID {
+		return errors.New("user not found")
+	}
+	u.EmailVerified = true
+	u.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
 func (s *Store) ListUsers(orgID string) []*User {
 	if s.repo != nil {
 		users, err := s.repo.ListUsers(context.Background(), orgID)

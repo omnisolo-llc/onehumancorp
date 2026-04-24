@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
@@ -14,15 +15,21 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  final _verificationCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
+  bool _isRegistering = false;
+  bool _needsVerification = false;
   String? _error;
 
   @override
   void dispose() {
     _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
+    _verificationCtrl.dispose();
     super.dispose();
   }
 
@@ -33,9 +40,50 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (_needsVerification) {
+        await ref
+            .read(authStateProvider.notifier)
+            .verifyEmail(_verificationCtrl.text.trim());
+        if (mounted) {
+          context.go('/business_setup');
+        }
+      } else if (_isRegistering) {
+        await ref
+            .read(authStateProvider.notifier)
+            .register(
+              _usernameCtrl.text.trim(),
+              _emailCtrl.text.trim(),
+              _passwordCtrl.text,
+            );
+        if (mounted) {
+          setState(() {
+            _needsVerification = true;
+          });
+        }
+      } else {
+        await ref
+            .read(authStateProvider.notifier)
+            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      }
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _resendVerification() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await ref.read(authStateProvider.notifier).resendVerification();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Verification code resent')),
+        );
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -262,7 +310,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Sign in to orchestrate your swarm',
+                          _needsVerification
+                            ? 'Verify your email'
+                            : (_isRegistering ? 'Create your account' : 'Sign in to orchestrate your swarm'),
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontFamily: 'Inter',
@@ -270,50 +320,84 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
-                        TextFormField(
-                          controller: _usernameCtrl,
-                          keyboardType: TextInputType.text,
-                          decoration: InputDecoration(
-                            labelText: 'Email or Username',
-                            prefixIcon: const Icon(Icons.person_outline),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        if (_needsVerification) ...[
+                          TextFormField(
+                            controller: _verificationCtrl,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: 'Verification Code',
+                              prefixIcon: const Icon(Icons.security),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
+                            validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter code' : null,
                           ),
-                          validator:
-                              (v) =>
-                                  (v == null || v.trim().isEmpty)
-                                      ? 'Enter your email or username'
-                                      : null,
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _passwordCtrl,
-                          obscureText: _obscurePassword,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) => _submit(),
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              tooltip: _obscurePassword ? 'Show password' : 'Hide password',
-                              icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
+                        ] else ...[
+                          TextFormField(
+                            controller: _usernameCtrl,
+                            keyboardType: TextInputType.text,
+                            decoration: InputDecoration(
+                              labelText: 'Username',
+                              prefixIcon: const Icon(Icons.person_outline),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            validator:
+                                (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                        ? 'Enter your username'
+                                        : null,
                           ),
-                          validator:
-                              (v) =>
-                                  (v == null || v.isEmpty)
-                                      ? 'Enter your password'
-                                      : null,
-                        ),
+                          const SizedBox(height: 16),
+                          if (_isRegistering) ...[
+                            TextFormField(
+                              controller: _emailCtrl,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: InputDecoration(
+                                labelText: 'Email',
+                                prefixIcon: const Icon(Icons.email_outlined),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              validator:
+                                  (v) =>
+                                      (v == null || v.trim().isEmpty)
+                                          ? 'Enter your email'
+                                          : null,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          TextFormField(
+                            controller: _passwordCtrl,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            onFieldSubmitted: (_) => _submit(),
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: IconButton(
+                                tooltip: _obscurePassword ? 'Show password' : 'Hide password',
+                                icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                                onPressed: () {
+                                  setState(() {
+                                    _obscurePassword = !_obscurePassword;
+                                  });
+                                },
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator:
+                                (v) =>
+                                    (v == null || v.isEmpty)
+                                        ? 'Enter your password'
+                                        : null,
+                          ),
+                        ],
                         if (_error != null) ...[
                           const SizedBox(height: 12),
                           Text(
@@ -329,7 +413,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const SizedBox(height: 24),
                         Semantics(
                           button: true,
-                          label: 'Sign In',
+                          label: _needsVerification ? 'Verify' : (_isRegistering ? 'Sign Up' : 'Sign In'),
                           child: FilledButton(
                             onPressed: _loading ? null : _submit,
                             style: FilledButton.styleFrom(
@@ -348,9 +432,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
+                                    : Text(
+                                        _needsVerification ? 'Verify' : (_isRegistering ? 'Sign Up' : 'Sign In'),
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Inter',
@@ -358,55 +442,79 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                       ),
                           ),
                         ),
-                        const SizedBox(height: 24),
-                        Row(
-                          children: [
-                            const Expanded(child: Divider()),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'OR',
+                        if (_needsVerification) ...[
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: _loading ? null : _resendVerification,
+                            child: const Text('Resend code'),
+                          ),
+                        ] else ...[
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: _loading
+                                ? null
+                                : () {
+                                    setState(() {
+                                      _isRegistering = !_isRegistering;
+                                      _error = null;
+                                    });
+                                  },
+                            child: Text(
+                              _isRegistering
+                                  ? 'Already have an account? Sign In'
+                                  : "Don't have an account? Sign Up",
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            children: [
+                              const Expanded(child: Divider()),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Text(
+                                  'OR',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Inter',
+                                  ),
+                                ),
+                              ),
+                              const Expanded(child: Divider()),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Semantics(
+                            button: true,
+                            label: 'Sign in with SSO',
+                            child: OutlinedButton.icon(
+                              onPressed: _loading ? null : () => _oauthLogin('SSO'),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: _loading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Icon(Icons.shield_outlined),
+                              label: const Text(
+                                'Continue with SSO',
                                 style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   fontFamily: 'Inter',
                                 ),
                               ),
                             ),
-                            const Expanded(child: Divider()),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        Semantics(
-                          button: true,
-                          label: 'Sign in with SSO',
-                          child: OutlinedButton.icon(
-                            onPressed: _loading ? null : () => _oauthLogin('SSO'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            icon: _loading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.shield_outlined),
-                            label: const Text(
-                              'Continue with SSO',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Inter',
-                              ),
-                            ),
                           ),
-                        ),
+                        ],
                         ],
                       ),
                     ),

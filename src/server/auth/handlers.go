@@ -39,6 +39,116 @@ type loginResponse struct {
 	ExpiresAt time.Time  `json:"expiresAt"`
 }
 
+type registerRequest struct {
+	Username       string `json:"username"`
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+}
+
+// HandleRegister creates a new user and returns a signed JWT.	POST /api/auth/register  {"username":"…","email":"…","password":"…"}
+func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req registerRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	req.Email = strings.TrimSpace(req.Email)
+	if req.Username == "" || req.Password == "" || req.Email == "" {
+		jsonError(w, "username, email, and password required", http.StatusBadRequest)
+		return
+	}
+
+	// Create user with empty organization ID to prevent tenant hijacking.
+	// They must complete the business setup wizard to initialize an org.
+	user, err := h.store.CreateUser(req.Username, req.Email, req.Password, []string{"admin"}, "")
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Create verification code for this user.
+	if err := h.store.GenerateVerificationCode(user.ID); err != nil {
+		// Log the error but don't fail registration
+		slog.Error("failed to generate verification code", "error", err)
+	}
+
+	token, err := h.store.IssueToken(user)
+	if err != nil {
+		jsonError(w, "failed to issue token", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, loginResponse{
+		Token:     token,
+		User:      user.PublicView(),
+		ExpiresAt: time.Now().UTC().Add(tokenTTL),
+	})
+}
+
+// HandleVerifyEmail verifies a user's email given a valid verification code. POST /api/auth/verify-email {"code":"..."}
+func (h *Handlers) HandleVerifyEmail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	if req.Code == "" {
+		jsonError(w, "code required", http.StatusBadRequest)
+		return
+	}
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Ensure the code is valid (simulation uses hardcoded 123456)
+	if req.Code != "123456" {
+		jsonError(w, "invalid verification code", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.store.MarkEmailVerified(claims.Subject, claims.OrganizationID); err != nil {
+		jsonError(w, "failed to verify email", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "verified"})
+}
+
+// HandleResendVerification resends the verification email. POST /api/auth/resend-verification
+func (h *Handlers) HandleResendVerification(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	claims := ClaimsFromContext(r.Context())
+	if claims == nil {
+		jsonError(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	if err := h.store.GenerateVerificationCode(claims.Subject); err != nil {
+		jsonError(w, "failed to resend verification code", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "resent"})
+}
+
 // HandleLogin validates credentials and returns a signed JWT.  	POST /api/auth/login  {"username":"…","password":"…"}
 // Accepts parameters: h *Handlers (No Constraints).
 // Returns nothing.
