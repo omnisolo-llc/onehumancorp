@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "interop",
+    srcs = ["mesh_interop.go"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/orchestration/interop",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//srcs/proto:mesh_go_proto",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "interop_test",
+    srcs = ["mesh_interop_test.go"],
+    embed = [":interop"],
+    deps = [
+        "//srcs/proto:mesh_go_proto",
+        "@com_github_stretchr_testify//assert",
+        "@org_golang_google_protobuf//proto",
+    ],
+)

@@ -10,6 +10,7 @@ import (
 	"github.com/onehumancorp/mono/srcs/server/integrations/ollama"
 	"github.com/onehumancorp/mono/srcs/server/integrations/powersync"
 	"github.com/onehumancorp/mono/srcs/server/integrations/restic"
+	"github.com/onehumancorp/mono/srcs/server/integrations/nats"
 )
 
 // IntegrationProvider represents a plugin blueprint defining how to instantiate connections.
@@ -40,6 +41,7 @@ var Catalog = []IntegrationProvider{
 	&ollama.OllamaIntegration{},
 	&powersync.PowerSyncIntegration{},
 	&restic.ResticIntegration{},
+	&nats.NatsIntegration{},
 	&obsidian.ObsidianIntegration{},
 }
 

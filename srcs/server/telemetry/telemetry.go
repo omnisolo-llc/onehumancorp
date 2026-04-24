@@ -22,6 +22,10 @@ import (
 )
 
 var (
+
+	// NATS Integration
+	natsMessagesPublished metric.Int64Counter
+	natsMessagesReceived  metric.Int64Counter
 	IdentityVerificationSuccessTotal metric.Int64Counter
 	IdentityVerificationFailureTotal metric.Int64Counter
 	SyncConflictsResolvedTotal       metric.Int64Counter
@@ -327,6 +331,13 @@ type mockableMeter interface {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func InitWithMeter(m mockableMeter) error {
+
+	natsMessagesPublished, _ = m.Int64Counter("ohc.nats.messages_published",
+		metric.WithDescription("Total number of NATS messages published"),
+	)
+	natsMessagesReceived, _ = m.Int64Counter("ohc.nats.messages_received",
+		metric.WithDescription("Total number of NATS messages received"),
+	)
 	if m == nil {
 		return fmt.Errorf("meter is nil")
 	}
@@ -2452,4 +2463,16 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	TelemetryBatchSizeGauge.Record(ctx, size)
+}
+
+func RecordNatsMessagesPublished(ctx context.Context, count int64) {
+	if natsMessagesPublished != nil {
+		natsMessagesPublished.Add(ctx, count)
+	}
+}
+
+func RecordNatsMessagesReceived(ctx context.Context, count int64) {
+	if natsMessagesReceived != nil {
+		natsMessagesReceived.Add(ctx, count)
+	}
 }

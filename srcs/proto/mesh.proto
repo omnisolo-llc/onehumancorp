@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package ohc.mesh;
+
+option go_package = "github.com/onehumancorp/mono/srcs/proto/mesh;meshpb";
+
+// MeshJobDispatch governs how jobs are dispatched to the builtin agent.
+message MeshJobDispatch {
+  string job_id = 1;
+  string tenant_id = 2;
+  string payload = 3;
+}
+
+// MeshJobStatus governs how status is reported back from the builtin agent.
+message MeshJobStatus {
+  string job_id = 1;
+  string status = 2;
+  string result = 3;
+}
+
+// MeshContextSync governs how context (like AI memory) is synchronized.
+message MeshContextSync {
+  string tenant_id = 1;
+  string memory_id = 2;
+  bytes vector_embedding = 3;
+  string context = 4;
+}
+
+// MeshHandoff governs the state handoff when switching between Cloud and Standalone modes.
+message MeshHandoff {
+  string tenant_id = 1;
+  string mode = 2; // "CLOUD" or "STANDALONE"
+  int64 sequence_id = 3;
+  bytes state_snapshot = 4;
+}
+
+service DummyService {
+  rpc Dummy(MeshJobDispatch) returns (MeshJobStatus);
+}

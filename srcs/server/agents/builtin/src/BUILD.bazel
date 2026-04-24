@@ -37,6 +37,8 @@ rust_library(
     srcs = [
         "agent.rs",
         "lib.rs",
+        "mesh.rs",
+        "mesh_test.rs",
         "service.rs",
         "departments.rs",
         "guardrails.rs",
