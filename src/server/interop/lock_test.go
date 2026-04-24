@@ -222,7 +222,8 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 		t.Fatalf("Expected lock to recover and succeed when a file blocked the path")
 	}
 
-	os.Remove(path) // Cleanup
+	os.RemoveAll(path) // Cleanup
+	_ = lock1.Unlock(ctx, key) // Need to actually unlock it correctly since os.RemoveAll isn't unlocking it internally
 
 	// Test unlock for non-existent file
 	err = lock1.Unlock(ctx, "non_existent_key")
@@ -301,7 +302,8 @@ func TestMemoryLock_IsExistError(t *testing.T) {
 		t.Fatalf("Expected lock to fail gracefully")
 	}
 
-	os.Remove(path) // Cleanup
+	os.RemoveAll(path) // Cleanup
+	_ = lock1.Unlock(ctx, key) // Need to actually unlock it correctly since os.RemoveAll isn't unlocking it internally
 }
 
 func TestCloudLock(t *testing.T) {

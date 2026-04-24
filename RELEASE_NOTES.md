@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+- Scaling (Cloud): Implement Builtin Agent Rust Microservice (Maintenance & Warning Cleanup).
+- Privacy/Offline (Standalone): Cleanup Redis PubSub and Compiler Warnings in standalone Rust builtin AI agent microservice.
+
 
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 - Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.

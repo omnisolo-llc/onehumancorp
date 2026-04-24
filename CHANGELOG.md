@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Builtin Agent Rust Microservice (Maintenance & Warning Cleanup).
+
+### Privacy/Offline Improvements
+- Cleanup Redis PubSub and Compiler Warnings in standalone Rust builtin AI agent microservice.
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Phase 3: AutoDream Vector Data Pipelines.
