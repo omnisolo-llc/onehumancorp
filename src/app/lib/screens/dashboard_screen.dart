@@ -8,11 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/widgets/swarm_observability_widget.dart';
-import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
-import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
-import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
-import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+
+
+
+
+
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -103,25 +103,25 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Active Agents',
+              label: 'AI Helpers',
               value: data.agents.where((a) => a.isRunning).length.toString(),
               icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Active Tasks',
+              label: 'Tasks in Progress',
               value: data.statuses.length.toString(),
               icon: Icons.pending_actions,
               color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
-              label: 'Scheduled Calls',
+              label: 'Upcoming Meetings',
               value: data.meetings.length.toString(),
               icon: Icons.video_call,
               color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
-              label: 'Team Members',
+              label: 'Team',
               value: data.organization.members.length.toString(),
               icon: Icons.people,
               color: Theme.of(context).colorScheme.primaryContainer,
@@ -169,20 +169,17 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         const SizedBox(height: 32),
-        _SectionTitle('System Health'),
+
         const SizedBox(height: 16),
-        _ObservabilityWidget(data: data),
+
         const SizedBox(height: 16),
-        const SwarmObservabilityWidget(),
+
         const SizedBox(height: 16),
-        const SwarmVelocityWidget(),
+
         const SizedBox(height: 16),
-        const HybridObservabilityWidget(),
+
         const SizedBox(height: 16),
-        Container(
-          key: const ValueKey('hybrid_telemetry'),
-          child: const HybridTelemetryWidget(),
-        ),
+
         const SizedBox(height: 16),
         SizedBox(
           height: 350,
@@ -194,7 +191,7 @@ class _DashboardContent extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: Text(
-                        'Proactive Task Stream',
+                        'Recent Activity',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -211,12 +208,12 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
         const SizedBox(height: 16),
-        SubAgentQueueWidget(statuses: data.statuses),
+
         const SizedBox(height: 32),
-        _SectionTitle('Company Structure'),
+        _SectionTitle('My Team'),
         const SizedBox(height: 8),
         Text(
-          'Manage your AI workforce. Scale roles up or down to match current organizational demands.',
+          'Manage your team. Hire or fire AI helpers for different jobs.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontFamily: 'Inter',

@@ -105,21 +105,6 @@ func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
 		if companyName, ok := req.Extras["company_name"]; ok {
 			s.org.Name = companyName
 		}
-
-		adminName, hasAdminName := req.Extras["admin_name"]
-		adminEmail, hasAdminEmail := req.Extras["admin_email"]
-		adminPassword, hasAdminPassword := req.Extras["admin_password"]
-
-		if hasAdminName && hasAdminEmail && hasAdminPassword {
-			_, err := s.authStore.CreateUser(adminName, adminEmail, adminPassword, []string{"admin"}, s.org.ID)
-			if err != nil {
-				s.mu.Unlock()
-				http.Error(w, "failed to create admin user: "+err.Error(), http.StatusInternalServerError)
-				return
-			}
-			// remove the password from the saved extras
-			delete(cfg.Extras, "admin_password")
-		}
 	}
 	if len(req.AiProviders) > 0 {
 		cfg.AiProviders = req.AiProviders

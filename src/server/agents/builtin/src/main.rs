@@ -111,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-        let mut pubsub = match client.get_async_pubsub().await {
+        let mut pubsub_con = match client.get_async_connection().await {
             Ok(c) => c,
             Err(e) => {
                 tracing::error!("Failed to get Redis pubsub connection: {}", e);
@@ -119,6 +119,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
+        let mut pubsub = pubsub_con.into_pubsub();
         if let Err(e) = pubsub.subscribe("agent_jobs").await {
             tracing::error!("Failed to subscribe to 'agent_jobs': {}", e);
             return;

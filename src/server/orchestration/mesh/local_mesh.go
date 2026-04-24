@@ -2,9 +2,6 @@ package mesh
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
-	"errors"
 	"sync"
 	"time"
 )
@@ -29,7 +26,6 @@ type LocalMesh struct {
 	subscribers map[string]map[*localSubscription]struct{}
 	locks       sync.Mutex
 	activeLocks map[string]time.Time
-	lockTokens  map[string]string
 	presences   map[string]AgentPresence
 }
 
@@ -37,7 +33,6 @@ func NewLocalMesh() *LocalMesh {
 	return &LocalMesh{
 		subscribers: make(map[string]map[*localSubscription]struct{}),
 		activeLocks: make(map[string]time.Time),
-		lockTokens:  make(map[string]string),
 		presences:   make(map[string]AgentPresence),
 	}
 }
@@ -107,35 +102,27 @@ func (m *LocalMesh) unsubscribe(topic string, sub *localSubscription) {
 	}
 }
 
-func (m *LocalMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (string, bool, error) {
+func (m *LocalMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (bool, error) {
 	m.locks.Lock()
 	defer m.locks.Unlock()
 
 	now := time.Now()
 	if expiry, ok := m.activeLocks[key]; ok {
 		if now.Before(expiry) {
-			return "", false, nil // Lock is held
+			return false, nil // Lock is held
 		}
 	}
 
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	token := hex.EncodeToString(b)
 	m.activeLocks[key] = now.Add(ttl)
-	m.lockTokens[key] = token
-	return token, true, nil
+	return true, nil
 }
 
-func (m *LocalMesh) ReleaseLock(ctx context.Context, key string, token string) error {
+func (m *LocalMesh) ReleaseLock(ctx context.Context, key string) error {
 	m.locks.Lock()
 	defer m.locks.Unlock()
 
-	if expectedToken, ok := m.lockTokens[key]; ok && expectedToken == token {
-		delete(m.activeLocks, key)
-		delete(m.lockTokens, key)
-		return nil
-	}
-	return errors.New("lock not found or invalid token")
+	delete(m.activeLocks, key)
+	return nil
 }
 
 func (m *LocalMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {

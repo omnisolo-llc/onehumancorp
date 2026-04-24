@@ -3,7 +3,7 @@ package telemetry
 import (
 	"context"
 	"database/sql"
-	"log/slog"
+	"log"
 	"time"
 )
 
@@ -37,7 +37,7 @@ func (w *McpSyncWorker) Start(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("McpSyncWorker shutting down...")
+			log.Println("McpSyncWorker shutting down...")
 			return
 		case <-ticker.C:
 			w.syncOnce(ctx)
@@ -49,7 +49,7 @@ func (w *McpSyncWorker) syncOnce(ctx context.Context) {
 	// 1. Fetch pending metrics from SQLite buffer
 	rows, err := w.provider.DB().QueryContext(ctx, "SELECT id, metric_name, value FROM telemetry_buffer WHERE sync_status = 'pending' LIMIT 100")
 	if err != nil {
-		slog.Error("McpSyncWorker failed to query telemetry_buffer", "error", err)
+		log.Printf("McpSyncWorker failed to query telemetry_buffer: %v", err)
 		return
 	}
 	defer rows.Close()
@@ -59,16 +59,16 @@ func (w *McpSyncWorker) syncOnce(ctx context.Context) {
 		var id, metricName string
 		var value float64
 		if err := rows.Scan(&id, &metricName, &value); err != nil {
-			slog.Error("McpSyncWorker failed to scan row", "error", err)
+			log.Printf("McpSyncWorker failed to scan row: %v", err)
 			continue
 		}
 		pendingIDs = append(pendingIDs, id)
 		// Simulate SPIFFE mTLS API Gateway Call
-		slog.Info("McpSyncWorker Syncing metric to Cloud MCP Gateway via SPIRE SVID", "metricName", metricName, "id", id, "value", value)
+		log.Printf("[McpSyncWorker] Syncing metric %s (ID: %s, Value: %f) to Cloud MCP Gateway via SPIRE SVID", metricName, id, value)
 	}
 
 	if err := rows.Err(); err != nil {
-		slog.Error("McpSyncWorker row iteration error", "error", err)
+		log.Printf("McpSyncWorker row iteration error: %v", err)
 		return
 	}
 
@@ -80,8 +80,8 @@ func (w *McpSyncWorker) syncOnce(ctx context.Context) {
 	for _, id := range pendingIDs {
 		_, err := w.provider.DB().ExecContext(ctx, "UPDATE telemetry_buffer SET sync_status = 'synced' WHERE id = ?", id)
 		if err != nil {
-			slog.Error("McpSyncWorker failed to update status", "id", id, "error", err)
+			log.Printf("McpSyncWorker failed to update status for ID %s: %v", id, err)
 		}
 	}
-	slog.Info("McpSyncWorker Successfully synced metrics", "count", len(pendingIDs))
+	log.Printf("[McpSyncWorker] Successfully synced %d metrics.", len(pendingIDs))
 }

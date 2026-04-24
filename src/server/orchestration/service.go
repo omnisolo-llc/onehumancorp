@@ -1349,36 +1349,11 @@ func (h *Hub) Agents() []Agent {
 	return agents
 }
 
-func (h *Hub) AgentsByOrg(orgID string) []Agent {
-	if h.repo != nil {
-		agents, err := h.repo.ListAgentsByOrg(context.Background(), orgID)
-		if err != nil {
-			slog.Error("failed to list agents by org from repository", "error", err, "orgID", orgID)
-			return nil
-		}
-		sort.Slice(agents, func(i, j int) bool {
-			return agents[i].ID < agents[j].ID
-		})
-		return agents
-	}
-
-	h.mu.RLock()
-	agents := make([]Agent, 0)
-	for _, agent := range h.agents {
-		if agent.OrganizationID == orgID || strings.HasPrefix(agent.ID, orgID+"-") {
-			agents = append(agents, agent)
-		}
-	}
-	h.mu.RUnlock()
-
-	sort.Slice(agents, func(i, j int) bool {
-		return agents[i].ID < agents[j].ID
-	})
-
-	return agents
-}
-
-
+// RegisterHubService HubServiceServer implements the gRPC HubService defined in hub.proto.
+// Accepts parameters: s *grpc.Server (No Constraints), hub *Hub (No Constraints), mesh MeshTransport.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
 func RegisterHubService(s *grpc.Server, hub *Hub, mesh MeshTransport) {
 	pb.RegisterHubServiceServer(s, &HubServiceServer{hub: hub, mesh: mesh})
 }
