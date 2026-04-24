@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -20,7 +22,7 @@ import (
 )
 
 // loginForTest returns a JWT token for the default admin user by calling the login endpoint.
-func loginForTest(t *testing.T, serverURL string) string {
+func loginForTest(t testing.TB, serverURL string) string {
 	t.Helper()
 	body, _ := json.Marshal(map[string]string{"username": "admin", "password": "admin"})
 	resp, err := http.Post(serverURL+"/api/auth/login", "application/json", bytes.NewReader(body))
@@ -55,7 +57,7 @@ func (bt *bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return bt.base.RoundTrip(r2)
 }
 
-func newTestServer(t *testing.T) (*Server, *httptest.Server, string) {
+func newTestServer(t testing.TB) (*Server, *httptest.Server, string) {
 	t.Helper()
 	integrations.AllowLocalIPsForTesting = true
 
@@ -4129,5 +4131,31 @@ func TestHandleSyncRAG(t *testing.T) {
 	}
 	if !strings.Contains(memories[0].Context, "test sensitive context") {
 		t.Errorf("Expected context to contain 'test sensitive context', got '%s'", memories[0].Context)
+	}
+}
+
+
+
+func BenchmarkDashboardSnapshot(b *testing.B) {
+	app, server, _ := newTestServer(b)
+	defer server.Close()
+
+	// Seed some agents and meetings to simulate a load
+	for i := 0; i < 50; i++ {
+		id := "agent-" + string(rune(i))
+		app.hub.RegisterAgent(orchestration.Agent{
+			ID:             id,
+			Name:           id,
+			OrganizationID: app.org.ID,
+			Status:         orchestration.StatusActive,
+		})
+	}
+
+	app.hub.OpenMeeting("meeting-1", []string{"agent-1"})
+	app.hub.OpenMeeting("meeting-2", []string{"agent-2"})
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = app.snapshot()
 	}
 }
