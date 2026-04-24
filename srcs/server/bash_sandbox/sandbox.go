@@ -197,7 +197,18 @@ func (s *LocalEnvironment) ExecuteContext(ctx context.Context, command string, w
 		    defer cleanup()
 		}
 	} else if runtime.GOOS == "linux" {
-		cmd = exec.CommandContext(ctx, "bash", "-c", command)
+	    // Check if bwrap exists. If not, fallback to bash
+		_, err := exec.LookPath("bwrap")
+		if err != nil {
+			cmd = exec.CommandContext(ctx, "bash", "-c", command)
+		} else {
+		    var err error
+		    cmd, cleanup, err = wrapCommandWithSandboxLinux(ctx, command, workDirToUse)
+		    if err != nil {
+		        return "", err
+		    }
+		    defer cleanup()
+        }
 	} else {
 		cmd = exec.CommandContext(ctx, "bash", "-c", command)
 	}

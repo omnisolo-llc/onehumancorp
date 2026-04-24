@@ -202,20 +202,20 @@ sh_binary(
 
 sh_test(
     name = "standalone_e2e_test",
-    srcs = ["//srcs/app/test:standalone_e2e_test.sh"],
+    srcs = ["//srcs/app:test/standalone_e2e_test.sh"],
     data = [":desktop"],
 )
 
 sh_test(
     name = "app_deb_structure_test",
-    srcs = ["//srcs/app/test:linux_package_structure_test.sh"],
+    srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
     args = ["deb"],
     data = ["//srcs/app:app_deb.deb"],
 )
 
 sh_test(
     name = "app_rpm_structure_test",
-    srcs = ["//srcs/app/test:linux_package_structure_test.sh"],
+    srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
     args = ["rpm"],
     data = [
         "//srcs/app:app_rpm",
