@@ -1378,57 +1378,6 @@ func NewHubServiceServer(hub *Hub, mesh MeshTransport) *HubServiceServer {
 	return &HubServiceServer{hub: hub, mesh: mesh}
 }
 
-// PublishTeammateMeshEvent functionality.
-// Accepts parameters: s *HubServiceServer (No Constraints).
-// Returns (*pb.PublishMessageResponse, error).
-// Produces errors: Explicit error handling.
-// Has no side effects.
-func (s *HubServiceServer) PublishTeammateMeshEvent(ctx context.Context, req *pb.PublishTeammateMeshEventRequest) (*pb.PublishMessageResponse, error) {
-	event := req.GetEvent()
-	err := s.mesh.PublishTeammateMeshEvent(ctx, req.GetChannel(), event.GetAgentId(), event.GetAction(), event.GetStatus(), event.GetPayload())
-	if err != nil {
-		return nil, err
-	}
-	return pb.PublishMessageResponse_builder{Success: proto.Bool(true)}.Build(), nil
-}
-
-// StreamTeammateMesh functionality.
-// Accepts parameters: s *HubServiceServer (No Constraints).
-// Returns (error).
-// Produces errors: Explicit error handling.
-// Has no side effects.
-func (s *HubServiceServer) StreamTeammateMesh(req *pb.EventStreamRequest, stream pb.HubService_StreamTeammateMeshServer) error {
-	ch, err := s.mesh.SubscribeTeammateMesh(stream.Context(), req.GetTopic())
-	if err != nil {
-		return err
-	}
-	for {
-		select {
-		case msg, ok := <-ch:
-			if !ok {
-				return nil
-			}
-			var result struct {
-				AgentID string          `json:"agent_id"`
-				Action  string          `json:"action"`
-				Status  string          `json:"status"`
-				Payload json.RawMessage `json:"payload,omitempty"`
-			}
-			_ = json.Unmarshal(msg, &result)
-			err := stream.Send(pb.TeammateMeshEvent_builder{
-				AgentId: proto.String(result.AgentID),
-				Action:  proto.String(result.Action),
-				Status:  proto.String(result.Status),
-				Payload: []byte(result.Payload),
-			}.Build())
-			if err != nil {
-				return err
-			}
-		case <-stream.Context().Done():
-			return stream.Context().Err()
-		}
-	}
-}
 
 // RegisterAgent functionality.
 // Accepts parameters: s *HubServiceServer (No Constraints).

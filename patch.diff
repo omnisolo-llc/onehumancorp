@@ -1,24 +1,83 @@
---- src/server/integrations/registry_test.go
-+++ src/server/integrations/registry_test.go
-@@ -1428,6 +1428,10 @@
- }
+--- src/server/dashboard/handlers_ops.go
++++ src/server/dashboard/handlers_ops.go
+@@ -10,6 +10,80 @@
+	"github.com/onehumancorp/server/src/server/orchestration"
+ )
 
- func TestSendTelegramMessage_DoError(t *testing.T) {
-+	oldLookupIP := LookupIPFunc
-+	LookupIPFunc = mockLookupIP
-+	defer func() { LookupIPFunc = oldLookupIP }()
++func (s *Server) handleIncidents(w http.ResponseWriter, r *http.Request) {
++	switch r.Method {
++	case http.MethodGet:
++		s.mu.RLock()
++		incidents := append([]Incident(nil), s.incidents...)
++		s.mu.RUnlock()
++		writeJSON(w, incidents)
++	case http.MethodPost:
++		var req incidentCreateRequest
++		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
++			http.Error(w, "invalid JSON payload", http.StatusBadRequest)
++			return
++		}
++		if req.Severity == "" || req.Summary == "" {
++			http.Error(w, "severity and summary are required", http.StatusBadRequest)
++			return
++		}
 +
-	originalBase := TelegramAPIBase
-	TelegramAPIBase = "http://example.com"
-	defer func() { TelegramAPIBase = originalBase }()
-@@ -1445,6 +1449,10 @@
- }
-
- func TestSendDiscordWebhook_DoError(t *testing.T) {
-+	oldLookupIP := LookupIPFunc
-+	LookupIPFunc = mockLookupIP
-+	defer func() { LookupIPFunc = oldLookupIP }()
++		now := time.Now().UTC()
++		incident := Incident{
++			ID:        "inc-" + now.Format("20060102150405"),
++			Severity:  IncidentSeverity(req.Severity),
++			Summary:   req.Summary,
++			RCA:       req.RCA,
++			Status:    IncidentStatusInvestigating,
++			CreatedAt: now,
++			UpdatedAt: now,
++		}
 +
-	originalClient := safeClient
-	safeClient = &http.Client{Transport: &errorTripper{}}
-	defer func() { safeClient = originalClient }()
++		s.mu.Lock()
++		s.incidents = append(s.incidents, incident)
++		s.mu.Unlock()
++
++		writeJSON(w, incident)
++	default:
++		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
++	}
++}
++
++func (s *Server) handleIncidentStatus(w http.ResponseWriter, r *http.Request) {
++	if r.Method != http.MethodPost {
++		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
++		return
++	}
++	var req struct {
++		IncidentID       string `json:"incidentId"`
++		Status           string `json:"status"`
++		ResolutionPlanID string `json:"resolutionPlanId,omitempty"`
++	}
++	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
++		http.Error(w, "invalid JSON payload", http.StatusBadRequest)
++		return
++	}
++	if req.IncidentID == "" || req.Status == "" {
++		http.Error(w, "incidentId and status are required", http.StatusBadRequest)
++		return
++	}
++
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	for i, inc := range s.incidents {
++		if inc.ID == req.IncidentID {
++			s.incidents[i].Status = IncidentStatus(req.Status)
++			s.incidents[i].UpdatedAt = time.Now().UTC()
++			if req.ResolutionPlanID != "" {
++				s.incidents[i].ResolutionPlanID = req.ResolutionPlanID
++			}
++			writeJSON(w, s.incidents[i])
++			return
++		}
++	}
++	http.Error(w, "incident not found", http.StatusNotFound)
++}
++
+ func (s *Server) handleComputeProfiles(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:

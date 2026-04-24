@@ -469,21 +469,20 @@ func (to *TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) ([
 
 	var tasks []Task
 	for rows.Next() {
-		var t Task
+		var t SharedTaskDB
 		var risk, status, content *string
 		if err := rows.Scan(&t.ID, &t.Status, &t.AssignedAgentID, &risk, &status, &content, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
-		if risk != nil {
-			t.ActionRisk = *risk
+		task := Task{
+			TaskID: t.ID,
+			Status: t.Status,
 		}
-		if status != nil {
-			t.ApprovalStatus = *status
+		if t.AssignedAgentID != nil {
+			task.AgentID = *t.AssignedAgentID
 		}
-		if content != nil {
-			t.ProposedContent = *content
-		}
-		tasks = append(tasks, t)
+		tasks = append(tasks, task)
+
 	}
 	return tasks, nil
 }
