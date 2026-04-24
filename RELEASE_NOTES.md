@@ -1,5 +1,9 @@
 # Release Notes
 
+## v0.4.10 (Cloud) / v0.4.10+1 (Standalone)
+- Scaling (Cloud): Optimize multi-tenant scaling and improve Kubernetes resource consumption.
+- Privacy/Offline (Standalone): Enhance standalone performance and fix local SQLite state syncing for offline privacy.
+
 ## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
 - Scaling (Cloud): Business Setup Onboarding Overhaul for streamlined multi-tenant SaaS scaling.
 - Privacy/Offline (Standalone): Enhances Day One onboarding user privacy and local setup capabilities.
