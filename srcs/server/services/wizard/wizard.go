@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"sync"
+	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
@@ -72,4 +74,56 @@ func IsExpertMode(profile map[string]string) bool {
         return true
     }
     return false
+}
+
+var drafts = make(map[string][]byte)
+var draftsMutex sync.RWMutex
+
+func extractToken(r *http.Request) string {
+	authHeader := r.Header.Get("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		return strings.TrimPrefix(authHeader, "Bearer ")
+	}
+	return "anonymous"
+}
+
+func HandleSaveDraft(w http.ResponseWriter, r *http.Request) {
+	userId := extractToken(r)
+
+	var payload map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		http.Error(w, "Failed to marshal draft", http.StatusInternalServerError)
+		return
+	}
+
+	draftsMutex.Lock()
+	drafts[userId] = data
+	draftsMutex.Unlock()
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status": "saved"}`))
+}
+
+func HandleGetDraft(w http.ResponseWriter, r *http.Request) {
+	userId := extractToken(r)
+
+	draftsMutex.RLock()
+	data, ok := drafts[userId]
+	draftsMutex.RUnlock()
+
+	w.Header().Set("Content-Type", "application/json")
+	if !ok {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{}`))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(data)
 }

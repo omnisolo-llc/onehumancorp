@@ -139,14 +139,7 @@ void main() {
     notifier.updatePayments('Online only');
     expect(container.read(businessSetupProvider).payments, 'Online only');
 
-    notifier.updateAdminName('Admin');
-    expect(container.read(businessSetupProvider).adminName, 'Admin');
-
-    notifier.updateAdminEmail('admin@example.com');
-    expect(container.read(businessSetupProvider).adminEmail, 'admin@example.com');
-
-    notifier.updateAdminPassword('secr3t');
-    expect(container.read(businessSetupProvider).adminPassword, 'secr3t');
+    // Admin fields are no longer in state
 
     notifier.toggleObscurePassword();
     expect(container.read(businessSetupProvider).obscurePassword, false);
