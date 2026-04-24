@@ -255,9 +255,7 @@ class _ObservabilityWidget extends StatelessWidget {
 
     return Semantics(
       label: 'System Observability Panel',
-      child: Tooltip(
-        message: 'View System Health & Metrics',
-        child: GlassCard(
+      child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
                 color: Colors.transparent,
@@ -316,7 +314,6 @@ class _ObservabilityWidget extends StatelessWidget {
                 ),
               ),
           ),
-      ),
     );
   }
 }
@@ -458,9 +455,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
-        child: SizedBox(
+      child: SizedBox(
           width: 320,
           child: GlassCard(
         child: Padding(
@@ -482,12 +477,15 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 const SizedBox(height: 6),
-                                Text(
-                                  '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
-                                  style: TextStyle(
+                                Semantics(
+                                  label: '${widget.count} Agent${widget.count == 1 ? '' : 's'} count text',
+                                  child: Text(
+                                    '${widget.count} Agent${widget.count == 1 ? '' : 's'}',
+                                    style: TextStyle(
                                     fontSize: 15,
                                     color: colors.onSurfaceVariant,
-                                    fontFamily: 'Inter',
+                                      fontFamily: 'Inter',
+                                    ),
                                   ),
                                 ),
                               ],
@@ -500,13 +498,13 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Decrease $formattedRole count',
+                            tooltip: 'Fire Agent',
                             child: IconButton(
                               icon: const Icon(Icons.remove_circle_outline, size: 28),
                               color: colors.primary,
                               onPressed: widget.count > 0 && !_isScaling
                                   ? () => _scaleTo(widget.count - 1)
                                   : null,
-                              tooltip: 'Fire Agent',
                             ),
                           ),
                           SizedBox(
@@ -534,13 +532,13 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                           Semantics(
                             button: true,
                             label: 'Increase $formattedRole count',
+                            tooltip: 'Hire Agent',
                             child: IconButton(
                               icon: const Icon(Icons.add_circle_outline, size: 28),
                               color: colors.primary,
                               onPressed: !_isScaling
                                   ? () => _scaleTo(widget.count + 1)
                                   : null,
-                              tooltip: 'Hire Agent',
                             ),
                           ),
                             ],
@@ -550,7 +548,6 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                     ),
       ),
         ),
-      ),
     );
   }
 }
@@ -632,9 +629,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
-      child: Tooltip(
-        message: 'View ${widget.label}',
-        child: SizedBox(
+      child: SizedBox(
           width: 200,
           child: SlideTransition(
             position: _slideAnimation,
@@ -685,7 +680,6 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
             ),
           ),
         ),
-      ),
     );
   }
 }
