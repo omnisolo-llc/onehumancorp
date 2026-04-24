@@ -746,9 +746,10 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 			rows.Close()
 		}
 
-		// 1b. Immediately requeue STUCK missions to prevent them from persisting
-		if _, errRequeue := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1", s.orgID); errRequeue != nil {
-			return errRequeue
+		// 1b. Archive STUCK missions to prevent them from persisting
+		// Instead of requeuing, move them to FAILED (archived state) so they do not infinitely loop.
+		if _, errArchive := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1", s.orgID); errArchive != nil {
+			return errArchive
 		}
 
 		// 2. Mark missions as FAILED if they exceed the absolute age threshold
