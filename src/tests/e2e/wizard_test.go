@@ -400,7 +400,7 @@ func TestBusinessSetupWizardEndToEnd(t *testing.T) {
 
 	// Step 0: Welcome
 	welcomeText := page.Locator("text=Your business, live in minutes.")
-	err = welcomeText.WaitFor()
+	err = welcomeText.WaitFor(playwright.LocatorWaitForOptions{Timeout: playwright.Float(10000)})
 	require.NoError(t, err, "Wizard welcome text not found")
 
 	getStartedBtn := page.Locator("text=Get Started")
