@@ -32,7 +32,21 @@ Widget _wrapScreen(Widget screen, ApiService api) {
   );
   return ProviderScope(
     overrides: [apiServiceProvider.overrideWithValue(api)],
-    child: MaterialApp.router(routerConfig: router),
+    child: MaterialApp.router(
+      routerConfig: router,
+      builder: (context, child) {
+        // Provide a large enough screen for GrowthReferralWidget + ListView
+        return MediaQuery(
+          data: const MediaQueryData(
+            size: Size(1024, 2000),
+            padding: EdgeInsets.zero,
+            viewInsets: EdgeInsets.zero,
+            viewPadding: EdgeInsets.zero,
+          ),
+          child: Material(child: child!),
+        );
+      },
+    ),
   );
 }
 
@@ -77,7 +91,17 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
+      // First verify alice is found
       expect(find.textContaining('alice'), findsWidgets);
+
+      // Ensure bob is scrolled into view since it's lower down in the ListView.
+      final listFinder = find.byType(Scrollable);
+      if (listFinder.evaluate().isNotEmpty) {
+        final theList = listFinder.first;
+        await tester.drag(theList, const Offset(0, -500));
+        await tester.pumpAndSettle();
+      }
+
       expect(find.textContaining('bob'), findsWidgets);
     });
 
@@ -97,7 +121,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Invite'), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsOneWidget);
     });
 
     testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
@@ -116,10 +140,10 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.textContaining('Invite'));
+      await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {

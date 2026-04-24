@@ -48,8 +48,8 @@ class DashboardSnapshot {
                 (json['updatedAt'] ?? json['updated_at']) as String,
               )
               : DateTime.now(),
-      hybridHealth: json['hybridHealth'] != null
-          ? HybridHealth.fromJson(json['hybridHealth'] as Map<String, dynamic>)
+      hybridHealth: json['hybridHealth'] != null || json['hybrid_health'] != null
+          ? HybridHealth.fromJson((json['hybridHealth'] ?? json['hybrid_health']) as Map<String, dynamic>)
           : null,
     );
   }

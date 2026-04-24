@@ -96,7 +96,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Intent text should be visible
-      expect(find.textContaining('Deploy to production'), findsWidgets);
+      expect(find.textContaining('DEPLOY TO PRODUCTION'), findsWidgets);
     });
 
     testWidgets('refresh icon button is present in AppBar', (tester) async {
@@ -145,9 +145,10 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const HandoffsScreen(), api));
       await tester.pumpAndSettle();
 
-      final approveBtn = find.textContaining('Approve');
-      if (approveBtn.evaluate().isNotEmpty) {
-        await tester.tap(approveBtn.first);
+      // Use gesture to drag the slider
+      final sliderThumb = find.byIcon(Icons.chevron_right);
+      if (sliderThumb.evaluate().isNotEmpty) {
+        await tester.drag(sliderThumb.first, const Offset(300.0, 0.0));
         await tester.pumpAndSettle();
 
         verify(

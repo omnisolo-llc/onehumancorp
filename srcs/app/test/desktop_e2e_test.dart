@@ -151,7 +151,7 @@ void main() {
       // Tap with empty form → validation error
       await tester.tap(signInBtn);
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
     testWidgets(
@@ -168,7 +168,7 @@ void main() {
         await tester.pumpAndSettle();
 
         await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'),
+          find.widgetWithText(TextFormField, 'Email or Username'),
           'user@example.com',
         );
         await tester.enterText(
@@ -182,18 +182,18 @@ void main() {
       },
     );
 
-    testWidgets('email field validates correct email format', (tester) async {
+    testWidgets('email field validates empty email format', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.pumpAndSettle();
 
       // Enter invalid email
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
-        'notvalid',
+        find.widgetWithText(TextFormField, 'Email or Username'),
+        '   ',
       );
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
     testWidgets('password field validates non-empty', (tester) async {
@@ -201,7 +201,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'Email or Username'),
         'user@example.com',
       );
       await tester.tap(find.text('Sign In'));
@@ -221,7 +221,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
+        find.widgetWithText(TextFormField, 'Email or Username'),
         'bad@example.com',
       );
       await tester.enterText(
@@ -1047,9 +1047,10 @@ void main() {
         body: any(named: 'body', that: contains('Windows')),
       )).called(1);
 
-      // Tap Linux download button
+      // Scroll to and tap Linux download button
       final linuxBtn = find.text('Download for Linux');
       expect(linuxBtn, findsOneWidget);
+      await tester.ensureVisible(linuxBtn);
       await tester.tap(linuxBtn);
       await tester.pumpAndSettle();
 

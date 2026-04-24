@@ -50,27 +50,46 @@ void main() {
 
   group('CUJ: Diagnostics', () {
     testWidgets('renders health check section title', (tester) async {
-      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      final mockClient = MockHttpClient();
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response('{"metrics": [], "teams": [], "hybrid_health": {"mode": "cloud", "cloud_connected": true, "mesh_active": true, "stuck_missions": 0}}', 200));
+      final api = ApiService(baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+
+      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen(), api: api));
+      await tester.pump(); // Use pump instead of pumpAndSettle
+      await tester.pump(const Duration(seconds: 1)); // Wait for future to complete
 
       expect(find.textContaining('Day One Setup'), findsOneWidget);
     });
 
     testWidgets('shows Database connectivity status', (tester) async {
-      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      final mockClient = MockHttpClient();
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response('{"metrics": [], "teams": [], "hybrid_health": {"mode": "cloud", "cloud_connected": true, "mesh_active": true, "stuck_missions": 0}}', 200));
+      final api = ApiService(baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+
+      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen(), api: api));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.textContaining('Database'), findsOneWidget);
     });
 
     testWidgets('Run Diagnostics button is tappable', (tester) async {
-      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pumpAndSettle();
+      final mockClient = MockHttpClient();
+      when(() => mockClient.get(any(), headers: any(named: 'headers')))
+          .thenAnswer((_) async => http.Response('{"metrics": [], "teams": [], "hybrid_health": {"mode": "cloud", "cloud_connected": true, "mesh_active": true, "stuck_missions": 0}}', 200));
+      final api = ApiService(baseUrl: 'http://localhost', token: 'tok', client: mockClient);
+
+      await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen(), api: api));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
       final btn = find.text('Run Diagnostics');
       expect(btn, findsOneWidget);
+      await tester.ensureVisible(btn);
       await tester.tap(btn);
-      await tester.pumpAndSettle();
+      await tester.pump();
       // Screen should still be functional after tapping
       expect(find.byType(Scaffold), findsOneWidget);
     });
