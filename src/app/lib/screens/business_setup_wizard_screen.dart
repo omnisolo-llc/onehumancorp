@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import '../widgets/glass_card.dart';
@@ -134,6 +135,26 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
         if (res.statusCode != 200) {
           state = state.copyWith(isLoading: false, errorMessage: 'Configuration failed: ${res.statusCode}');
         } else {
+          // Integrate the KAIROS Orchestrator triggers to queue the "Storefront Generation" task
+          try {
+            final taskRes = await http.post(
+              Uri.parse('$baseUrl/api/v1/orchestration/tasks'),
+              headers: {
+                'Authorization': 'Bearer ${user.token}',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'title': 'Storefront Generation',
+                'description': 'Generate the initial storefront design for ${state.companyName}',
+                'agent_id': 'marketing_agent',
+              }),
+            );
+            if (taskRes.statusCode != 200 && taskRes.statusCode != 201) {
+              debugPrint('Warning: KAIROS Orchestrator trigger failed with status ${taskRes.statusCode}');
+            }
+          } catch (e) {
+            debugPrint('Error triggering KAIROS Orchestrator: $e');
+          }
           state = state.copyWith(isLoading: false);
           if (context.mounted) {
             context.go('/dashboard');
@@ -184,12 +205,11 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
       );
     } else if (state.step == 1) {
       final types = [
-        {'label': 'Online Store', 'icon': Icons.shopping_bag},
-        {'label': 'Service Business', 'icon': Icons.build},
-        {'label': 'Restaurant / Food', 'icon': Icons.restaurant},
-        {'label': 'Creative / Portfolio', 'icon': Icons.brush},
-        {'label': 'Local Business', 'icon': Icons.store},
-        {'label': 'Other', 'icon': Icons.category},
+        {'label': 'Products', 'icon': Icons.shopping_bag},
+        {'label': 'Services', 'icon': Icons.build},
+        {'label': 'Subscriptions', 'icon': Icons.calendar_month},
+        {'label': 'Food', 'icon': Icons.restaurant},
+        {'label': 'Portfolios', 'icon': Icons.brush},
       ];
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -200,6 +220,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
           Wrap(
             spacing: 16,
             runSpacing: 16,
+            alignment: WrapAlignment.spaceEvenly,
             children: types.map((t) {
               final isSelected = state.businessType == t['label'];
               return InkWell(
@@ -278,7 +299,7 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
                     children: [
                       Icon(isSelected ? Icons.check_circle : Icons.radio_button_unchecked, color: isSelected ? Colors.blueAccent : Colors.white70),
                       const SizedBox(width: 16),
-                      Text(item, style: TextStyle(fontFamily: 'Inter', color: isSelected ? Colors.white : Colors.white70, fontSize: 16)),
+                      Expanded(child: Text(item, style: TextStyle(fontFamily: 'Inter', color: isSelected ? Colors.white : Colors.white70, fontSize: 16))),
                     ],
                   ),
                 ),
@@ -426,63 +447,78 @@ class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardS
             colors: [Color(0xFF0D0D1A), Color(0xFF1A1A33)],
           ),
         ),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: GlassCard(
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (state.errorMessage != null) ...[
-                      Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
-                      const SizedBox(height: 16),
-                    ],
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder: (Widget child, Animation<double> animation) {
-                        return FadeTransition(opacity: animation, child: child);
-                      },
-                      child: Container(
-                        key: ValueKey<int>(state.step),
-                        child: _buildStep(state, notifier),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 375),
+                  child: GlassCard(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (state.errorMessage != null) ...[
+                            Text(state.errorMessage!, style: const TextStyle(color: Colors.red)),
+                            const SizedBox(height: 16),
+                          ],
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            transitionBuilder: (Widget child, Animation<double> animation) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                            child: Container(
+                              key: ValueKey<int>(state.step),
+                              child: _buildStep(state, notifier),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              runSpacing: 16,
+              children: [
+                if (state.step > 0)
+                  TextButton(
+                    onPressed: state.isLoading ? null : notifier.prevStep,
+                    child: const Text('Back', style: TextStyle(fontFamily: 'Inter', color: Colors.white70)),
+                  )
+                else
+                  const SizedBox(),
+                ElevatedButton(
+                  onPressed: state.isLoading ? null : () {
+                    if (state.step < 6) {
+                      notifier.nextStep();
+                    } else {
+                      notifier.launch(context, ref);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: state.step == 6 ? Colors.green : Colors.blueAccent,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: state.isLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            state.step == 6 ? 'Launch My Business →' : (state.step == 0 ? 'Get Started' : 'Continue'),
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        if (state.step > 0)
-                          TextButton(
-                            onPressed: state.isLoading ? null : notifier.prevStep,
-                            child: const Text('Back', style: TextStyle(fontFamily: 'Inter', color: Colors.white70)),
-                          )
-                        else
-                          const SizedBox(),
-                        ElevatedButton(
-                          onPressed: state.isLoading ? null : () {
-                            if (state.step < 6) {
-                              notifier.nextStep();
-                            } else {
-                              notifier.launch(context, ref);
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: state.step == 6 ? Colors.green : Colors.blueAccent,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: state.isLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : Text(
-                                  state.step == 6 ? 'Launch My Business →' : (state.step == 0 ? 'Get Started' : 'Continue'),
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                                ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),

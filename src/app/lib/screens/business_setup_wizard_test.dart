@@ -18,34 +18,43 @@ void main() {
     expect(find.text('What kind of business are you building?'), findsOneWidget);
 
     // Step 1 -> 2
-    await tester.tap(find.text('Online Store'));
+    await tester.tap(find.text('Products'));
     await tester.pumpAndSettle();
     expect(find.text('Tell us about your business'), findsOneWidget);
 
     // Step 2 -> 3
     await tester.enterText(find.byType(TextField).first, 'Test Company');
+    await tester.ensureVisible(find.text('Continue'));
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('What do you sell?'), findsOneWidget);
 
     // Step 3 -> 4
+    await tester.ensureVisible(find.text('Physical products'));
     await tester.tap(find.text('Physical products'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Continue'));
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('How do you want to receive payments?'), findsOneWidget);
 
     // Step 4 -> 5
+    await tester.ensureVisible(find.text('Online only'));
     await tester.tap(find.text('Online only'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Continue'));
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Administrator account'), findsOneWidget);
 
     // Step 5 -> 6
+    await tester.ensureVisible(find.byType(TextField).at(0));
     await tester.enterText(find.byType(TextField).at(0), 'Admin Name');
+    await tester.ensureVisible(find.byType(TextField).at(1));
     await tester.enterText(find.byType(TextField).at(1), 'admin@test.com');
+    await tester.ensureVisible(find.byType(TextField).at(2));
     await tester.enterText(find.byType(TextField).at(2), 'password123');
+    await tester.ensureVisible(find.text('Continue'));
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(find.text('Review & Launch'), findsOneWidget);
@@ -66,8 +75,8 @@ void main() {
     notifier.prevStep();
     expect(container.read(businessSetupProvider).step, 0);
 
-    notifier.updateBusinessType('Online Store');
-    expect(container.read(businessSetupProvider).businessType, 'Online Store');
+    notifier.updateBusinessType('Products');
+    expect(container.read(businessSetupProvider).businessType, 'Products');
 
     notifier.updateCompany('Acme');
     expect(container.read(businessSetupProvider).companyName, 'Acme');
