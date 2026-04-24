@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
@@ -18,6 +19,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
+  bool _isSignUp = false;
   String? _error;
 
   @override
@@ -42,6 +44,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+
+    if (_error == null && _isSignUp && mounted) {
+      context.go('/business_setup');
+    }
   }
 
   Future<void> _oauthLogin(String provider) async {
@@ -62,6 +68,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _error = "OAuth Login Unavailable: Remote endpoint unreachable ($e)");
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+
+    if (_error == null && _isSignUp && mounted) {
+      context.go('/business_setup');
     }
   }
 
@@ -349,14 +359,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
+                                    : Text(
+                                        _isSignUp ? 'Sign Up' : 'Sign In',
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Inter',
                                         ),
                                       ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isSignUp = !_isSignUp;
+                            });
+                          },
+                          child: Text(
+                            _isSignUp ? 'Already have an account? Sign In' : 'Don\'t have an account? Sign Up',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontFamily: 'Inter',
+                            ),
                           ),
                         ),
                         const SizedBox(height: 24),

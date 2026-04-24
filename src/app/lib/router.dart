@@ -17,6 +17,7 @@ import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';
 import 'package:ohc_app/screens/diagnostics_screen.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
+import 'package:ohc_app/screens/welcome_checklist_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
 import 'package:ohc_app/screens/cost_dashboard_screen.dart';
 import 'package:ohc_app/screens/scaling_screen.dart';
@@ -89,6 +90,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
+          ),
+          GoRoute(
+            path: '/welcome_checklist',
+            builder: (context, state) => const WelcomeChecklistScreen(),
           ),
           GoRoute(
             path: '/orchestration/tasks',
