@@ -3,7 +3,7 @@ package proxy
 import (
 	"context"
 	"io"
-	"log/slog"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -28,7 +28,7 @@ func init() {
 		metric.WithDescription("Total number of outbound HTTP requests made by KAIROS agents"),
 	)
 	if err != nil {
-		slog.Error("Failed to create requestsCounter", "error", err)
+		log.Printf("Failed to create requestsCounter: %v", err)
 	}
 
 	latencyHisto, err = meter.Float64Histogram(
@@ -36,7 +36,7 @@ func init() {
 		metric.WithDescription("Latency of outbound HTTP requests made by KAIROS agents"),
 	)
 	if err != nil {
-		slog.Error("Failed to create latencyHisto", "error", err)
+		log.Printf("Failed to create latencyHisto: %v", err)
 	}
 }
 
@@ -177,7 +177,7 @@ func (p *ProxyCapture) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	duration := time.Since(start).Seconds()
 
 	if err != nil {
-		slog.Error("Proxy error", "error", err)
+		log.Printf("Proxy error: %v", err)
 		http.Error(w, err.Error(), http.StatusBadGateway)
 	} else {
 		defer res.Body.Close()
