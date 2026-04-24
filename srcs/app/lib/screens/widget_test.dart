@@ -18,6 +18,7 @@ import 'package:ohc_app/screens/meetings_screen.dart';
 import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/skills_screen.dart';
+import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/services/api_service.dart';
 import 'package:ohc_app/services/auth_service.dart';
 
@@ -611,6 +612,71 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Weak password'), findsOneWidget);
+    });
+  });
+
+  // ── TaskListScreen ────────────────────────────────────────────────────────
+
+  group('TaskListScreen', () {
+    testWidgets('renders with null API', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const TaskListScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(null)],
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(Scaffold), findsOneWidget);
+    });
+
+    testWidgets('shows tasks when API returns data', (tester) async {
+      final mockClient = MockHttpClient();
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer(
+        (_) async => http.Response(
+          jsonEncode([
+            {
+              'id': 'task1',
+              'title': 'Test Task 1',
+              'description': 'A sample task',
+              'status': 'PENDING',
+            },
+            {
+              'id': 'task2',
+              'title': 'Test Task 2',
+              'description': 'Another sample task',
+              'status': 'COMPLETED',
+              'agent_id': 'agent_123',
+              'dependencies': ['task1'],
+              'parent_task_id': 'parent1',
+              'workflow_state': 'review_required'
+            }
+          ]),
+          200,
+        ),
+      );
+
+      final api = ApiService(
+        baseUrl: 'http://localhost',
+        token: 'tok',
+        client: mockClient,
+      );
+
+      await tester.pumpWidget(
+        _wrap(
+          const TaskListScreen(),
+          overrides: [apiServiceProvider.overrideWithValue(api)],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Test Task 1'), findsOneWidget);
+      expect(find.text('Test Task 2'), findsOneWidget);
+      expect(find.text('Agent: agent_123'), findsOneWidget);
+      expect(find.text('Dependencies: task1'), findsOneWidget);
+      expect(find.text('Parent Task: parent1'), findsOneWidget);
+      expect(find.text('Workflow State: review_required'), findsOneWidget);
     });
   });
 }
