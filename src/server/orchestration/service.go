@@ -1384,6 +1384,11 @@ func NewHubServiceServer(hub *Hub, mesh MeshTransport) *HubServiceServer {
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) PublishTeammateMeshEvent(ctx context.Context, req *pb.PublishTeammateMeshEventRequest) (*pb.PublishMessageResponse, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "PublishTeammateMeshEvent", time.Since(start)) }()
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "teammate_mesh")
+	}
 	event := req.GetEvent()
 	err := s.mesh.PublishTeammateMeshEvent(ctx, req.GetChannel(), event.GetAgentId(), event.GetAction(), event.GetStatus(), event.GetPayload())
 	if err != nil {
@@ -1398,6 +1403,12 @@ func (s *HubServiceServer) PublishTeammateMeshEvent(ctx context.Context, req *pb
 // Produces errors: Explicit error handling.
 // Has no side effects.
 func (s *HubServiceServer) StreamTeammateMesh(req *pb.EventStreamRequest, stream pb.HubService_StreamTeammateMeshServer) error {
+	ctx := stream.Context()
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "StreamTeammateMesh", time.Since(start)) }()
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "teammate_mesh")
+	}
 	ch, err := s.mesh.SubscribeTeammateMesh(stream.Context(), req.GetTopic())
 	if err != nil {
 		return err
