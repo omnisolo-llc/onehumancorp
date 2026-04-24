@@ -66,15 +66,74 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
   @override
   BusinessSetupState build() => const BusinessSetupState();
 
+  Future<void> _saveState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        final body = {
+          'step': state.step,
+          'businessType': state.businessType,
+          'companyName': state.companyName,
+          'businessDescription': state.businessDescription,
+          'whatYouSell': state.whatYouSell,
+          'paymentMethod': state.paymentMethod,
+          'adminName': state.adminName,
+          'adminEmail': state.adminEmail,
+        };
+        await http.post(
+          Uri.parse('$baseUrl/api/wizard/state/save'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        );
+      } catch (_) {}
+    }
+  }
+
+  Future<void> loadState() async {
+    final user = ref.read(authStateProvider).valueOrNull;
+    final baseUrl = ref.read(backendUrlProvider);
+    if (user != null && baseUrl.isNotEmpty) {
+      try {
+        final res = await http.get(
+          Uri.parse('$baseUrl/api/wizard/state'),
+          headers: {
+            'Authorization': 'Bearer ${user.token}',
+          },
+        );
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data != null && data is Map<String, dynamic> && data.isNotEmpty) {
+            state = state.copyWith(
+              step: data['step'] as int? ?? 0,
+              businessType: data['businessType'] as String? ?? '',
+              companyName: data['companyName'] as String? ?? '',
+              businessDescription: data['businessDescription'] as String? ?? '',
+              whatYouSell: (data['whatYouSell'] as List<dynamic>?)?.map((e) => e as String).toList() ?? [],
+              paymentMethod: data['paymentMethod'] as String? ?? '',
+              adminName: data['adminName'] as String? ?? '',
+              adminEmail: data['adminEmail'] as String? ?? '',
+            );
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
   void nextStep() {
     if (state.step < 6) {
       state = state.copyWith(step: state.step + 1);
+      _saveState();
     }
   }
 
   void prevStep() {
     if (state.step > 0) {
       state = state.copyWith(step: state.step - 1);
+      _saveState();
     }
   }
 
@@ -161,6 +220,14 @@ class BusinessSetupWizardScreen extends ConsumerStatefulWidget {
 
 class _BusinessSetupWizardScreenState extends ConsumerState<BusinessSetupWizardScreen> {
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(businessSetupProvider.notifier).loadState();
+    });
+  }
 
   Widget _buildStep(BusinessSetupState state, BusinessSetupNotifier notifier) {
     if (state.step == 0) {

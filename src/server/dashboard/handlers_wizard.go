@@ -104,6 +104,62 @@ func (s *Server) handleWizardGenerateLogo(w http.ResponseWriter, r *http.Request
 	writeJSON(w, generateLogoResponse{LogoURL: "ai_generated_logo_placeholder.png"})
 }
 
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	stateJSON, err := json.Marshal(req)
+	if err != nil {
+		http.Error(w, "failed to marshal state", http.StatusInternalServerError)
+		return
+	}
+
+	s.mu.Lock()
+	cfg := s.settings
+	if cfg.Extras == nil {
+		cfg.Extras = make(map[string]string)
+	}
+	cfg.Extras["wizard_state"] = string(stateJSON)
+	s.settings = cfg
+	s.mu.Unlock()
+
+	_ = s.hub.SettingsStore().Update(cfg)
+
+	writeJSON(w, map[string]string{"status": "saved"})
+}
+
+func (s *Server) handleWizardStateLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	s.mu.RLock()
+	stateStr := s.settings.Extras["wizard_state"]
+	s.mu.RUnlock()
+
+	if stateStr == "" {
+		writeJSON(w, map[string]interface{}{})
+		return
+	}
+
+	var state map[string]interface{}
+	if err := json.Unmarshal([]byte(stateStr), &state); err != nil {
+		writeJSON(w, map[string]interface{}{})
+		return
+	}
+
+	writeJSON(w, state)
+}
+
 // handleWizardConfigure applies a partial settings update from the wizard and
 // persists it via the settings store.
 func (s *Server) handleWizardConfigure(w http.ResponseWriter, r *http.Request) {
