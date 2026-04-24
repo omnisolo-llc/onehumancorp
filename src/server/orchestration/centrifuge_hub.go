@@ -345,12 +345,12 @@ func (cn *CentrifugeNode) Close() error {
 	return cn.node.Shutdown(context.Background())
 }
 
-func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, action, status string, payload map[string]interface{}) {
+func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, eventType string, payload map[string]interface{}) {
     msg := map[string]interface{}{
-        "agent_id": agentID,
-        "action":   action,
-        "status":   status,
-        "payload":  payload,
+        "agent_id":   agentID,
+        "channel":    "orchestration.tasks",
+        "event_type": eventType,
+        "data":       payload,
     }
 
     data, err := json.Marshal(msg)
@@ -362,7 +362,7 @@ func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, action, status strin
     // Also dispatch to internal transport fallback memory if active
     if cn.meshTransport != nil {
         payloadBytes, _ := json.Marshal(payload)
-        _ = cn.meshTransport.PublishTeammateMeshEvent(context.Background(), "teammate_mesh", agentID, action, status, payloadBytes)
+        _ = cn.meshTransport.PublishTeammateMeshEvent(context.Background(), "teammate_mesh", agentID, eventType, payloadBytes)
     }
 
     // Publish to the Centrifuge redis pubsub backend

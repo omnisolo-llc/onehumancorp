@@ -287,14 +287,23 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 	return ch, nil
 }
 
-func (rm *RedisMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {
+func (rm *RedisMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, eventType string, payload []byte) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "PublishTeammateMeshEvent", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "teammate_mesh")
+	}
+
 	msg := map[string]interface{}{
-		"agent_id": agentID,
-		"action":   action,
-		"status":   status,
+		"agent_id":   agentID,
+		"channel":    channel,
+		"event_type": eventType,
 	}
 	if len(payload) > 0 {
-		msg["payload"] = json.RawMessage(payload)
+		msg["data"] = json.RawMessage(payload)
+	} else {
+		msg["data"] = json.RawMessage(`{}`)
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -304,6 +313,9 @@ func (rm *RedisMeshTransport) PublishTeammateMeshEvent(ctx context.Context, chan
 }
 
 func (rm *RedisMeshTransport) SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeTeammateMesh", time.Since(start)) }()
+
 	return rm.SubscribeMeshEvents(ctx, channel)
 }
 
@@ -679,14 +691,23 @@ func (lm *MemoryMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task,
 	return ch, nil
 }
 
-func (lm *MemoryMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {
+func (lm *MemoryMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, eventType string, payload []byte) error {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "PublishTeammateMeshEvent", time.Since(start)) }()
+
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(ctx, "teammate_mesh")
+	}
+
 	msg := map[string]interface{}{
-		"agent_id": agentID,
-		"action":   action,
-		"status":   status,
+		"agent_id":   agentID,
+		"channel":    channel,
+		"event_type": eventType,
 	}
 	if len(payload) > 0 {
-		msg["payload"] = json.RawMessage(payload)
+		msg["data"] = json.RawMessage(payload)
+	} else {
+		msg["data"] = json.RawMessage(`{}`)
 	}
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -696,6 +717,9 @@ func (lm *MemoryMeshTransport) PublishTeammateMeshEvent(ctx context.Context, cha
 }
 
 func (lm *MemoryMeshTransport) SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeTeammateMesh", time.Since(start)) }()
+
 	return lm.SubscribeMeshEvents(ctx, channel)
 }
 
@@ -949,9 +973,10 @@ func (lm *MemoryMeshTransport) runEvents(topic string, shardIdx int) {
 
 // TeammateMeshEvent is the payload structure for Teammate Mesh coordination
 type TeammateMeshEvent struct {
-	AgentID string `json:"agent_id"`
-	Action  string `json:"action"`
-	Status  string `json:"status"`
+	AgentID   string          `json:"agent_id"`
+	Channel   string          `json:"channel"`
+	EventType string          `json:"event_type"`
+	Data      json.RawMessage `json:"data"`
 }
 
 func (rm *RedisMeshTransport) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {

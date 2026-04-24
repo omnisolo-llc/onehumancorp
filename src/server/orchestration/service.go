@@ -1349,36 +1349,11 @@ func (h *Hub) Agents() []Agent {
 	return agents
 }
 
-func (h *Hub) AgentsByOrg(orgID string) []Agent {
-	if h.repo != nil {
-		agents, err := h.repo.ListAgentsByOrg(context.Background(), orgID)
-		if err != nil {
-			slog.Error("failed to list agents by org from repository", "error", err, "orgID", orgID)
-			return nil
-		}
-		sort.Slice(agents, func(i, j int) bool {
-			return agents[i].ID < agents[j].ID
-		})
-		return agents
-	}
-
-	h.mu.RLock()
-	agents := make([]Agent, 0)
-	for _, agent := range h.agents {
-		if agent.OrganizationID == orgID || strings.HasPrefix(agent.ID, orgID+"-") {
-			agents = append(agents, agent)
-		}
-	}
-	h.mu.RUnlock()
-
-	sort.Slice(agents, func(i, j int) bool {
-		return agents[i].ID < agents[j].ID
-	})
-
-	return agents
-}
-
-
+// RegisterHubService HubServiceServer implements the gRPC HubService defined in hub.proto.
+// Accepts parameters: s *grpc.Server (No Constraints), hub *Hub (No Constraints), mesh MeshTransport.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
 func RegisterHubService(s *grpc.Server, hub *Hub, mesh MeshTransport) {
 	pb.RegisterHubServiceServer(s, &HubServiceServer{hub: hub, mesh: mesh})
 }
@@ -1410,7 +1385,7 @@ func NewHubServiceServer(hub *Hub, mesh MeshTransport) *HubServiceServer {
 // Has no side effects.
 func (s *HubServiceServer) PublishTeammateMeshEvent(ctx context.Context, req *pb.PublishTeammateMeshEventRequest) (*pb.PublishMessageResponse, error) {
 	event := req.GetEvent()
-	err := s.mesh.PublishTeammateMeshEvent(ctx, req.GetChannel(), event.GetAgentId(), event.GetAction(), event.GetStatus(), event.GetPayload())
+	err := s.mesh.PublishTeammateMeshEvent(ctx, req.GetChannel(), event.GetAgentId(), event.GetEventType(), event.GetPayload())
 	if err != nil {
 		return nil, err
 	}
@@ -1434,17 +1409,17 @@ func (s *HubServiceServer) StreamTeammateMesh(req *pb.EventStreamRequest, stream
 				return nil
 			}
 			var result struct {
-				AgentID string          `json:"agent_id"`
-				Action  string          `json:"action"`
-				Status  string          `json:"status"`
-				Payload json.RawMessage `json:"payload,omitempty"`
+				AgentID   string          `json:"agent_id"`
+				Channel   string          `json:"channel"`
+				EventType string          `json:"event_type"`
+				Data      json.RawMessage `json:"data"`
 			}
 			_ = json.Unmarshal(msg, &result)
 			err := stream.Send(pb.TeammateMeshEvent_builder{
-				AgentId: proto.String(result.AgentID),
-				Action:  proto.String(result.Action),
-				Status:  proto.String(result.Status),
-				Payload: []byte(result.Payload),
+				AgentId:   proto.String(result.AgentID),
+				Channel:   proto.String(result.Channel),
+				EventType: proto.String(result.EventType),
+				Payload:   result.Data,
 			}.Build())
 			if err != nil {
 				return err
