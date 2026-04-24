@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 
 	_ "modernc.org/sqlite" // Ensure sqlite driver is available for checks
 )
@@ -56,7 +56,7 @@ func (p *DiscoveryProxy) SearchTools(ctx context.Context, intent string) ([]Tool
 
 // searchSQLite performs a simple search against the local SQLite registry.
 func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]ToolSpec, error) {
-	log.Printf("Executing local SQLite search for intent: %s", intent)
+	slog.Info("Executing local SQLite search for intent", "intent", intent)
 	// In a real implementation, this would use SQLite FTS5 extension.
 	// For this mock, we just return a stub if the table doesn't exist,
 	// or perform a simple LIKE query if we setup a basic table.
@@ -70,7 +70,7 @@ func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]Too
 		)
 	`)
 	if err != nil {
-		log.Printf("Failed to ensure local_mcp_tools table exists: %v", err)
+		slog.Error("Failed to ensure local_mcp_tools table exists", "error", err)
 		// Return empty list instead of error for resilience
 		return []ToolSpec{}, nil
 	}
@@ -120,7 +120,7 @@ func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]Too
 
 // searchSwitchboard simulates routing to the Cloud Switchboard.
 func (p *DiscoveryProxy) searchSwitchboard(ctx context.Context, intent string) ([]ToolSpec, error) {
-	log.Printf("Routing request to Cloud Switchboard (%s) for intent: %s", p.switchboard, intent)
+	slog.Info("Routing request to Cloud Switchboard", "switchboard", p.switchboard, "intent", intent)
 
 	// Simulate gRPC call to Switchboard
 	if intent == "calculator" {
@@ -143,7 +143,7 @@ func (p *DiscoveryProxy) RegisterTool(ctx context.Context, spec ToolSpec) error 
 }
 
 func (p *DiscoveryProxy) registerSQLite(ctx context.Context, spec ToolSpec) error {
-	log.Printf("Registering tool in SQLite: %s", spec.Name)
+	slog.Info("Registering tool in SQLite", "tool", spec.Name)
 	_, err := p.db.ExecContext(ctx, `
 		CREATE TABLE IF NOT EXISTS local_mcp_tools (
 			name TEXT,
@@ -166,7 +166,7 @@ func (p *DiscoveryProxy) registerSQLite(ctx context.Context, spec ToolSpec) erro
 }
 
 func (p *DiscoveryProxy) registerSwitchboard(ctx context.Context, spec ToolSpec) error {
-	log.Printf("Routing registration to Cloud Switchboard (%s) for tool: %s", p.switchboard, spec.Name)
+	slog.Info("Routing registration to Cloud Switchboard", "switchboard", p.switchboard, "tool", spec.Name)
 	// Simulate gRPC call to Switchboard
 	return nil
 }
@@ -174,14 +174,14 @@ func (p *DiscoveryProxy) registerSwitchboard(ctx context.Context, spec ToolSpec)
 // RequestToolSVID requests a SPIFFE identity for the tool.
 func (p *DiscoveryProxy) RequestToolSVID(ctx context.Context, toolName string) (SVID, error) {
 	if p.isSQLite() {
-		log.Printf("Bypassing SPIRE in SQLite mode for tool: %s", toolName)
+		slog.Info("Bypassing SPIRE in SQLite mode for tool", "tool", toolName)
 		return SVID{
 			ID:    fmt.Sprintf("spiffe://local.standalone/tool/%s", toolName),
 			Token: "mock-local-token-12345",
 		}, nil
 	}
 
-	log.Printf("Requesting remote SPIRE SVID for tool: %s", toolName)
+	slog.Info("Requesting remote SPIRE SVID for tool", "tool", toolName)
 	// Simulate SPIRE request
 	return SVID{
 		ID:    fmt.Sprintf("spiffe://cloud.internal/tool/%s", toolName),
