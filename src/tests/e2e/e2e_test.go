@@ -24,10 +24,10 @@ var (
 func findOhcBinary() string {
 	if srcdir := os.Getenv("TEST_SRCDIR"); srcdir != "" {
 		candidates := []string{
-			filepath.Join(srcdir, "_main", "srcs", "server", "ohc_", "ohc"),
-			filepath.Join(srcdir, "_main", "srcs", "server", "ohc"),
-			filepath.Join(srcdir, "mono", "srcs", "server", "ohc_", "ohc"),
-			filepath.Join(srcdir, "mono", "srcs", "server", "ohc"),
+			filepath.Join(srcdir, "_main", "src", "server", "ohc_", "ohc"),
+			filepath.Join(srcdir, "_main", "src", "server", "ohc"),
+			filepath.Join(srcdir, "mono", "src", "server", "ohc_", "ohc"),
+			filepath.Join(srcdir, "mono", "src", "server", "ohc"),
 		}
 		for _, p := range candidates {
 			if _, err := os.Stat(p); err == nil {
@@ -37,6 +37,21 @@ func findOhcBinary() string {
 	}
 	if p, err := exec.LookPath("ohc"); err == nil {
 		return p
+	}
+	return ""
+}
+
+func findWebArtifacts(srcdir string) string {
+	candidates := []string{
+		filepath.Join(srcdir, "_main", "src", "app", "app_web.web_build_artifacts"),
+		filepath.Join(srcdir, "_main", "src", "app", "app_web_build_artifacts"),
+		filepath.Join(srcdir, "mono", "src", "app", "app_web.web_build_artifacts"),
+		filepath.Join(srcdir, "mono", "src", "app", "app_web_build_artifacts"),
+	}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
 	}
 	return ""
 }
@@ -84,11 +99,13 @@ func TestMain(m *testing.M) {
 		// instead of a real LLM provider.
 		llmURL := startFakeLLM()
 
+		webDir := findWebArtifacts(os.Getenv("TEST_SRCDIR"))
 		serverCmd = exec.Command(ohcBin)
 		serverCmd.Env = append(os.Environ(),
 			"OHC_STANDALONE=true",
 			"OHC_HEADLESS=true",
 			"OHC_SERVE_UI=true",
+			fmt.Sprintf("FRONTEND_STATIC_DIR=%s", webDir),
 			fmt.Sprintf("PORT=%d", port),
 			fmt.Sprintf("STATE_DIR=%s", stateDir),
 			fmt.Sprintf("OHC_RUNTIME_DIR=%s", stateDir),
