@@ -319,7 +319,6 @@ func TestDefaultCatalogContainsAllModels(t *testing.T) {
 		"claude-3.5-sonnet", "claude-3.5-haiku",
 		"claude-3.7-sonnet",
 		"gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini",
-		"gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano",
 		"o1", "o1-mini", "o3-mini",
 		"gemini-1.5-pro", "gemini-1.5-flash",
 		"gemini-2.0-flash", "gemini-2.0-flash-lite",
