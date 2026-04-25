@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
+- Scaling (Cloud): Implement Sub-Agent Orchestration Queue, Realtime Teammate Mesh APIs, Draft-for-Review workflow, and enhance testing.
+- Privacy/Offline (Standalone): Simplify dashboard UI, resolve memoryLock TOCTOU race conditions, add missing rows.Err() checks, and generate architecture report.
+
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 - Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.
 - Privacy/Offline (Standalone): Enhance AutoDream Vector Data Pipelines for standalone privacy.
