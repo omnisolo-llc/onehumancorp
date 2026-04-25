@@ -17,10 +17,16 @@ func (m *DummyLLMClient) GenerateEmbedding(ctx context.Context, text string) ([]
 }
 
 func TestE2E_AutoDreamPipeline(t *testing.T) {
-	pool := db.NewTestProvider(t)
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
 	ctx := context.Background()
+	database, err := db.New(ctx)
+	if err != nil {
+		t.Fatalf("failed to create db: %v", err)
+	}
+	defer database.Close()
+	pool := database.Provider
 
-	err := db.RunMigrations(pool, "../../server/db/migrations")
+	err = database.RunMigrations(ctx)
 	if err != nil {
 		t.Logf("migrations run result: %v", err)
 	}
