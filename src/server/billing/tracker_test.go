@@ -355,11 +355,16 @@ func TestSummaryProjectedMonthlyUSD(t *testing.T) {
 		Model:            "test-model",
 		PromptTokens:     1000000,
 		CompletionTokens: 1000000,
+		OccurredAt:       time.Now(),
 	})
 
 	summary := tracker.Summary("org-proj")
 	expectedCost := 20.0
-	expectedProjected := expectedCost * 30
+
+	now := time.Now().UTC()
+	daysInMonth := time.Date(now.Year(), now.Month()+1, 0, 0, 0, 0, 0, now.Location()).Day()
+	remainingDays := float64(daysInMonth - now.Day())
+	expectedProjected := expectedCost + (expectedCost * remainingDays)
 
 	if summary.TotalCostUSD != expectedCost {
 		t.Errorf("Expected total cost %v, got %v", expectedCost, summary.TotalCostUSD)

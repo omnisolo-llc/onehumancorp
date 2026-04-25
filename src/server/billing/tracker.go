@@ -332,6 +332,10 @@ func (t *Tracker) Summary(organizationID string) Summary {
 	var totalCost float64
 	var totalTokens int64
 	var totalActions int64
+	var last24hCost float64
+
+	now := time.Now().UTC()
+	last24h := now.Add(-24 * time.Hour)
 
 	for _, usage := range shard.usages {
 		if usage.OrganizationID != organizationID {
@@ -348,6 +352,10 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		byAgent[usage.AgentID] = agent
 		totalCost += usage.CostUSD
 		totalTokens += usage.PromptTokens + usage.CompletionTokens + usage.CachedTokens
+
+		if usage.OccurredAt.After(last24h) {
+			last24hCost += usage.CostUSD
+		}
 	}
 
 	agents := make([]AgentSummary, 0, len(byAgent))
@@ -358,12 +366,15 @@ func (t *Tracker) Summary(organizationID string) Summary {
 		return agents[i].AgentID < agents[j].AgentID
 	})
 
+	daysInMonth := time.Date(now.Year(), now.Month()+1, 0, 0, 0, 0, 0, now.Location()).Day()
+	remainingDays := daysInMonth - now.Day()
+
 	return Summary{
 		OrganizationID:      organizationID,
 		TotalCostUSD:        totalCost,
 		TotalTokens:         totalTokens,
 		TotalActions:        totalActions,
-		ProjectedMonthlyUSD: totalCost * 30,
+		ProjectedMonthlyUSD: totalCost + (last24hCost * float64(remainingDays)),
 		Agents:              agents,
 	}
 }
