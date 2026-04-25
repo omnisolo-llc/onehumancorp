@@ -3,6 +3,8 @@ package orchestration
 import (
 	"context"
 	"database/sql"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 	"time"
@@ -213,5 +215,53 @@ func TestCheckHealth_Postgres(t *testing.T) {
 	}
 	if probe.SyncBacklog != 5 {
 		t.Errorf("Expected SyncBacklog to be 5, got %d", probe.SyncBacklog)
+	}
+}
+
+func TestCheckHealth_CloudConnected(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	os.Setenv("OHC_CORE_URL", ts.URL)
+	defer os.Unsetenv("OHC_CORE_URL")
+
+	hub := NewHub()
+
+	probe, err := hub.CheckHealth(context.Background())
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if !probe.CloudConnected {
+		t.Errorf("Expected CloudConnected to be true")
+	}
+}
+
+func TestCheckHealth_CloudDisconnected(t *testing.T) {
+	os.Setenv("OHC_STANDALONE", "true")
+	defer os.Unsetenv("OHC_STANDALONE")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	os.Setenv("OHC_CORE_URL", ts.URL)
+	defer os.Unsetenv("OHC_CORE_URL")
+
+	hub := NewHub()
+
+	probe, err := hub.CheckHealth(context.Background())
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if probe.CloudConnected {
+		t.Errorf("Expected CloudConnected to be false")
 	}
 }
