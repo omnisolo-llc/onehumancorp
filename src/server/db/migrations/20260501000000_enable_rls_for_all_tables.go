@@ -13,9 +13,6 @@ func init() {
 	goose.AddMigrationContext(upEnableRLS, downEnableRLS)
 }
 
-func isSQLiteDialect() bool {
-	return goose.GetDialect() == "sqlite3" || goose.GetDialect() == "sqlite"
-}
 
 func upEnableRLS(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, "SAVEPOINT check_sqlite")

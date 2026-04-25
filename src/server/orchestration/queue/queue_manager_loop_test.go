@@ -33,7 +33,7 @@ func TestQueueManagerLoop(t *testing.T) {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-		qm := NewQueueManager(provider)
+	qm := NewQueueManager(provider)
 
 	// Keep a connection alive to prevent memory DB from disappearing in cache=shared mode
 	txKeepAlive, _ := provider.Begin(ctx)
