@@ -261,6 +261,14 @@ flutter_test(
 )
 
 flutter_test(
+    name = "cuj_growth_share_e2e_test",
+    srcs = ["test/cuj_growth_share_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_growth_share_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
     name = "cuj_diagnostics_referrals_e2e_test",
     srcs = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
     embed = [":app_lib"],
@@ -281,6 +289,7 @@ test_suite(
         ":cuj_users_e2e_test",
         ":cuj_integrations_e2e_test",
         ":cuj_channels_extra_e2e_test",
+        ":cuj_growth_share_e2e_test",
         ":cuj_scaling_e2e_test",
         ":cuj_my_plan_e2e_test",
 

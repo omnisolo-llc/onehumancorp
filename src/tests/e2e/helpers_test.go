@@ -54,12 +54,6 @@ func newPage(t *testing.T) playwright.Page {
 
 func openApp(t *testing.T, page playwright.Page) {
 	t.Helper()
-
-	// Bypassing login by injecting state early before hydration
-	_ = page.AddInitScript(playwright.Script{
-		Content: playwright.String(`window.localStorage.setItem('flutter.auth_token', '"mock-token"');`),
-	})
-
 	if _, err := page.Goto(baseURL + "/"); err != nil {
 		t.Fatalf("openApp goto: %v", err)
 	}
@@ -70,12 +64,6 @@ func openApp(t *testing.T, page playwright.Page) {
 
 func loginAsAdmin(t *testing.T, page playwright.Page) {
 	t.Helper()
-
-	// Bypassing login by injecting state early before hydration
-	_ = page.AddInitScript(playwright.Script{
-		Content: playwright.String(`window.localStorage.setItem('flutter.auth_token', '"mock-token"');`),
-	})
-
 	openApp(t, page)
 
 	loginForm := page.Locator(`form, [data-testid="login-form"], [aria-label*="login" i], [aria-label*="sign in" i]`)
