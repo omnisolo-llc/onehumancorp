@@ -35,7 +35,7 @@ jobs:
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
-            test --config=local
+            test --config=buildbuddy
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
             # build --config=buildbuddy-official
             # test --config=buildbuddy-official
@@ -54,7 +54,7 @@ jobs:
 
       - name: Test
         run: |
-          bazelisk test --config=local //... \
+          bazelisk test //... \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800
