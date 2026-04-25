@@ -267,6 +267,7 @@ flutter_test(
 test_suite(
     name = "cuj_e2e_tests",
     tests = [
+        ":cuj_onboarding_e2e_test",
         ":cuj_auth_e2e_test",
         ":cuj_agents_hire_e2e_test",
         ":cuj_cost_e2e_test",
@@ -448,4 +449,11 @@ sh_test(
         "requires-network",
     ],
     timeout = "eternal",
+)
+
+flutter_test(
+    name = "cuj_onboarding_e2e_test",
+    srcs = ["test/cuj_onboarding_e2e_test.dart"],
+    test_files = ["test/cuj_onboarding_e2e_test.dart"],
+    embed = [":app_for_tests"],
 )
