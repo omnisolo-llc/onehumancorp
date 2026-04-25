@@ -28,7 +28,7 @@ type SandboxConfig struct {
 	EnableSeccomp  bool
 }
 
-// PolicyExecutor abstracts the execution methods used by the manager and bwrap runner.
+
 
 type Harness struct {
 	config      *SandboxConfig
