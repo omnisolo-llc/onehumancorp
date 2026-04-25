@@ -41,7 +41,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .read(authStateProvider.notifier)
           .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
     } catch (e) {
-      setState(() => _error = e.toString());
+      if (mounted) setState(() => _error = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -91,7 +91,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
     } catch (e) {
       // Handle missing context or network degradation gracefully
-      setState(() => _error = "OAuth Login Unavailable: Remote endpoint unreachable ($e)");
+      if (mounted) setState(() => _error = "OAuth Login Unavailable: Remote endpoint unreachable ($e)");
     } finally {
       if (mounted) setState(() => _loading = false);
     }
