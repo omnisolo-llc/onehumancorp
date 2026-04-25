@@ -24,12 +24,27 @@
   "panels": [
     {
       "type": "text",
+      "title": "OHC Aesthetics",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.05) !important;\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n    border-radius: 12px !important;\n    border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n</style>"
+      },
+      "transparent": true
+    },
+    {
+      "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "options": {
         "mode": "html",
@@ -97,7 +112,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 5
       },
       "id": 2,
       "options": {
@@ -189,7 +204,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 3
+        "y": 5
       },
       "id": 3,
       "options": {
