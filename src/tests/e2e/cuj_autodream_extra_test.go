@@ -20,7 +20,7 @@ func TestE2E_AutoDreamPipeline(t *testing.T) {
 	pool := db.NewTestProvider(t)
 	ctx := context.Background()
 
-	err := db.RunMigrations(pool, "../../server/db/migrations")
+	err := pool.(*db.DB).RunMigrations(ctx)
 	if err != nil {
 		t.Logf("migrations run result: %v", err)
 	}
