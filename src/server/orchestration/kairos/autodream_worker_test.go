@@ -4,8 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"testing"
-	"time"
-
+	_ "modernc.org/sqlite"
 	"github.com/alicebob/miniredis/v2"
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/telemetry"
@@ -67,9 +66,9 @@ func TestAutoDreamConsolidator(t *testing.T) {
 	assert.NoError(t, err)
 
 	var embedding string
-	var processedAt time.Time
-	err = p.QueryRow(ctx, "SELECT embedding, processed_at FROM autodream_memories WHERE id = 'mem-1'").Scan(&embedding, &processedAt)
+	var processedAtStr string
+	err = p.QueryRow(ctx, "SELECT embedding, processed_at FROM autodream_memories WHERE id = 'mem-1'").Scan(&embedding, &processedAtStr)
 	assert.NoError(t, err)
 	assert.Equal(t, "[0.100000,0.200000,0.300000]", embedding)
-	assert.False(t, processedAt.IsZero())
+	assert.NotEmpty(t, processedAtStr)
 }

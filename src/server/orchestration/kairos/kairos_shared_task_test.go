@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"testing"
+	_ "modernc.org/sqlite"
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/db"

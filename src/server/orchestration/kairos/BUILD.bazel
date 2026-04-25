@@ -4,6 +4,7 @@ go_library(
     name = "kairos",
     srcs = [
         "kairos_shared_task.go",
+        "autodream_worker.go",
         "mesh.go",
         "mesh_api.go",
         "metrics.go",
@@ -23,6 +24,7 @@ go_test(
     name = "kairos_test",
     srcs = [
         "kairos_shared_task_test.go",
+        "autodream_worker_test.go",
         "mesh_test.go",
         "mesh_api_test.go",
         "metrics_test.go",
@@ -35,5 +37,6 @@ go_test(
         "@com_github_alicebob_miniredis_v2//:miniredis",
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_stretchr_testify//assert",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )
