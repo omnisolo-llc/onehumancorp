@@ -362,22 +362,22 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	err := withSipRetry(ctx, func() error {
 		missions = nil
 
-		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
+		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at ASC LIMIT 500"
 		var rows db.Rows
 		var err error
 
 		if role == "ANY" {
 			if s.db.IsSQLite() {
-				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500"
+				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 500"
 			} else {
-				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500 FOR UPDATE SKIP LOCKED"
+				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 500 FOR UPDATE SKIP LOCKED"
 			}
 			rows, err = s.db.Query(ctx, query, s.orgID)
 		} else {
 			if s.db.IsSQLite() {
-				query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
+				query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at ASC LIMIT 500"
 			} else {
-				query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500 FOR UPDATE SKIP LOCKED"
+				query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at ASC LIMIT 500 FOR UPDATE SKIP LOCKED"
 			}
 			rows, err = s.db.Query(ctx, query, role, s.orgID)
 		}
