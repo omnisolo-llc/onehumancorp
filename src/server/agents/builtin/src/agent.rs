@@ -193,8 +193,31 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
+                let mut retry_count = 0;
+                let mut final_result = Err(ohc_builtin_agent_core::types::ToolError::Transient("".to_string()));
+
+                while retry_count <= 2 {
+                    let result = self.execute_tool(&tc).await;
+                    match result {
+                        Ok(r) => {
+                            final_result = Ok(r);
+                            break;
+                        }
+                        Err(ohc_builtin_agent_core::types::ToolError::Transient(e)) => {
+                            retry_count += 1;
+                            final_result = Err(ohc_builtin_agent_core::types::ToolError::Transient(e));
+                            if retry_count <= 2 {
+                                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                            }
+                        }
+                        Err(e) => {
+                            final_result = Err(e);
+                            break;
+                        }
+                    }
+                }
+
+                let (content, error) = match final_result {
                     Ok(r) => {
                         self.progress.record_tool_use();
                         on_event(AgentEvent::ToolCall {
@@ -205,8 +228,13 @@ impl Agent {
                         });
                         (r, String::new())
                     }
-                    Err(e) => {
-                        let err = e.to_string();
+                    Err(ohc_builtin_agent_core::types::ToolError::Unexpected(err)) => {
+                        return Err(format!("Unexpected tool error: {}", err).into());
+                    }
+                    Err(ohc_builtin_agent_core::types::ToolError::UserFixable(err)) => {
+                        return Err(format!("User fixable error: {}", err).into());
+                    }
+                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(err)) => {
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -214,6 +242,15 @@ impl Agent {
                             iteration,
                         });
                         (String::new(), err)
+                    }
+                    Err(ohc_builtin_agent_core::types::ToolError::Transient(err)) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {} (Retried 2 times)", err),
+                            iteration,
+                        });
+                        (String::new(), format!("{} (Retried 2 times)", err))
                     }
                 };
                 tool_results.push(ToolResult {
@@ -262,14 +299,23 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ohc_builtin_agent_core::types::ToolError> {
         let tool = self
             .tools
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
 
-        tool.execute.execute(tc.arguments.clone()).await
+        match tool.execute.execute(tc.arguments.clone()).await {
+            Ok(r) => Ok(r),
+            Err(e) => {
+                if let Some(te) = e.downcast_ref::<ohc_builtin_agent_core::types::ToolError>() {
+                    Err(te.clone())
+                } else {
+                    Err(ohc_builtin_agent_core::types::ToolError::LlmRecoverable(e.to_string()))
+                }
+            }
+        }
     }
 }
 
@@ -301,6 +347,77 @@ mod tests {
     }
 
     struct MockToolExecutor;
+
+    struct ErrorMockToolExecutor {
+        err_type: std::sync::Mutex<Option<Box<dyn std::error::Error + Send + Sync>>>,
+    }
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for ErrorMockToolExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            let mut err = self.err_type.lock().unwrap();
+            if let Some(e) = err.take() {
+                Err(e)
+            } else {
+                Ok("success".to_string())
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tool_error_handling_transient_retry() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(ErrorMockToolExecutor {
+                err_type: std::sync::Mutex::new(Some(Box::new(ohc_builtin_agent_core::types::ToolError::Transient("network error".to_string())))),
+            }),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_observation_masking = false;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        let tool_call_events: Vec<_> = events.iter().filter_map(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e { Some(result.clone()) } else { None }
+        }).collect();
+
+        assert_eq!(tool_call_events.len(), 1);
+        assert_eq!(tool_call_events[0], "success");
+    }
+
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
