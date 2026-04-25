@@ -2,8 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-build --config=buildbuddy
-test --config=buildbuddy
+build --config=local
+test --config=local
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -84,9 +84,9 @@ common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3Jee
 # buildbuddy-official which relies on the global sandboxed,local fallback chain.
 common:buildbuddy --bes_timeout=600s
 common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
+# # common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+# # common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
+# # common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
 # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_local_fallback
 common:buildbuddy --remote_upload_local_results
