@@ -55,6 +55,7 @@ genrule(
 
 sh_test(
     name = "standalone_cleanup_test",
+    tags = ["no-remote-exec", "no-remote-cache"],
     srcs = ["standalone_cleanup_test.sh"],
     data = ["standalone_ohc.sh"],
 )
