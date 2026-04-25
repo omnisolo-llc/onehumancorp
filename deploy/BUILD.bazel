@@ -116,6 +116,7 @@ sh_test(
         "helm/ohc/**",
         "docker-compose.yml",
     ]) + ["BUILD.bazel"],
+    tags = ["local"],
 )
 
 # End-to-end smoke test against a real Kind cluster.
