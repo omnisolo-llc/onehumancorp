@@ -55,7 +55,6 @@ func TestSentry_Chaos_NetworkPartition(t *testing.T) {
 // TestSentry_TeamMesh_Corruption verifies that the Team Mesh degrades safely when
 // critical mailbox paths are corrupted, mimicking ML-Resilience.
 func TestSentry_TeamMesh_Corruption(t *testing.T) {
-	t.Skip("Skipping sentry test")
 	memoryDir := filepath.Join(t.TempDir(), "memory")
 	t.Setenv("OHC_MEMORY_DIR", memoryDir)
 	err := os.MkdirAll(memoryDir, 0755)
