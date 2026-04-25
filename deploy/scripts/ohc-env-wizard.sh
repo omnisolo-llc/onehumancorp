@@ -70,6 +70,38 @@ if [ -n "$openai_key" ]; then
     update_env "OPENAI_API_KEY" "$openai_key"
 fi
 
+read -p "Google Gemini API Key (leave blank to skip): " gemini_key
+
+if [ -n "$gemini_key" ]; then
+
+    update_env "GEMINI_API_KEY" "$gemini_key"
+
+fi
+
+read -p "MiniMax API Key (leave blank to skip): " minimax_key
+
+if [ -n "$minimax_key" ]; then
+
+    update_env "MINIMAX_API_KEY" "$minimax_key"
+
+fi
+
+read -p "Groq API Key (leave blank to skip): " groq_key
+
+if [ -n "$groq_key" ]; then
+
+    update_env "GROQ_API_KEY" "$groq_key"
+
+fi
+
+read -p "OpenRouter API Key (leave blank to skip): " openrouter_key
+
+if [ -n "$openrouter_key" ]; then
+
+    update_env "OPENROUTER_API_KEY" "$openrouter_key"
+
+fi
+
 read -p "Anthropic API Key (leave blank to skip): " anthropic_key
 if [ -n "$anthropic_key" ]; then
     update_env "ANTHROPIC_API_KEY" "$anthropic_key"
