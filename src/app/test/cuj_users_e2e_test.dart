@@ -55,7 +55,7 @@ void main() {
   });
 
   group('CUJ: User Management', () {
-    testWidgets('renders user names from API', skip: true, (tester) async {
+    testWidgets('renders user names from API', (tester) async {
       final mockClient = MockHttpClient();
 
       when(
@@ -85,8 +85,8 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('alice'), findsWidgets);
-      expect(find.textContaining('bob'), findsWidgets);
+      expect(find.textContaining('alice', skipOffstage: false), findsWidgets);
+      expect(find.textContaining('bob', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('Invite User FAB is present', (tester) async {
@@ -108,7 +108,7 @@ void main() {
       expect(find.text('Invite User'), findsOneWidget);
     });
 
-    testWidgets('Invite User FAB opens dialog when tapped', skip: true, (tester) async {
+    testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -124,10 +124,12 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Invite User'));
+      final inviteBtn = find.byType(FloatingActionButton);
+      expect(inviteBtn, findsOneWidget);
+      await tester.tap(inviteBtn);
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {

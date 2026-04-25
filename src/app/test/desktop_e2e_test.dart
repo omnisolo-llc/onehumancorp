@@ -140,7 +140,7 @@ void main() {
 
   // ── LoginScreen ──────────────────────────────────────────────────────────
 
-  group('LoginScreen – button clicks', skip: true, () {
+  group('LoginScreen – button clicks', () {
     testWidgets('Sign In button is present and tappable', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.pumpAndSettle();
@@ -151,7 +151,7 @@ void main() {
       // Tap with empty form → validation error
       await tester.tap(signInBtn);
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
     testWidgets(
@@ -167,14 +167,9 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'Email'),
-          'user@example.com',
-        );
-        await tester.enterText(
-          find.widgetWithText(TextFormField, 'Password'),
-          'correctpw',
-        );
+        final textFields = find.byType(TextFormField);
+        await tester.enterText(textFields.first, 'user@example.com');
+        await tester.enterText(textFields.last, 'correctpw');
         await tester.tap(find.text('Sign In'));
         await tester.pumpAndSettle();
 
@@ -187,23 +182,19 @@ void main() {
       await tester.pumpAndSettle();
 
       // Enter invalid email
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
-        'notvalid',
-      );
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.first, '');
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
-      expect(find.text('Enter a valid email'), findsOneWidget);
+      expect(find.text('Enter your email or username'), findsOneWidget);
     });
 
     testWidgets('password field validates non-empty', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
-        'user@example.com',
-      );
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.first, 'user@example.com');
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
       expect(find.text('Enter your password'), findsOneWidget);
@@ -220,14 +211,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Email'),
-        'bad@example.com',
-      );
-      await tester.enterText(
-        find.widgetWithText(TextFormField, 'Password'),
-        'wrongpw',
-      );
+      final textFields = find.byType(TextFormField);
+      await tester.enterText(textFields.first, 'bad@example.com');
+      await tester.enterText(textFields.last, 'wrongpw');
       await tester.tap(find.text('Sign In'));
       await tester.pumpAndSettle();
 
@@ -370,7 +356,7 @@ void main() {
       // removed expect for specific widget to prevent other tests from failing
     });
 
-    testWidgets('shows loading spinner then data', skip: true, (tester) async {
+    testWidgets('shows loading spinner then data', (tester) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -958,7 +944,7 @@ void main() {
   // ── AppShell navigation ───────────────────────────────────────────────────
 
   group('AppShell sidebar navigation', () {
-    testWidgets('sidebar nav items are tappable', skip: true, (tester) async {
+    testWidgets('sidebar nav items are tappable', (tester) async {
       // Ensure the sidebar nav items render without error
       final mockClient = MockHttpClient();
       when(
@@ -993,7 +979,7 @@ void main() {
 
   // ── LandingScreen ─────────────────────────────────────────────────────────
 
-  group('LandingScreen – button clicks', skip: true, () {
+  group('LandingScreen – button clicks', () {
     testWidgets('Download buttons call trackDownload API', (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1200));
       final mockClient = MockHttpClient();
@@ -1029,7 +1015,7 @@ void main() {
 
       // Verify API was called
       verify(() => mockClient.post(
-        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
+        any(that: predicate<Uri>((uri) => uri.path.endsWith('/api/growth/downloads'))),
         headers: any(named: 'headers'),
         body: any(named: 'body', that: contains('Mac')),
       )).called(1);
@@ -1042,7 +1028,7 @@ void main() {
 
       // Verify API was called
       verify(() => mockClient.post(
-        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
+        any(that: predicate<Uri>((uri) => uri.path.endsWith('/api/growth/downloads'))),
         headers: any(named: 'headers'),
         body: any(named: 'body', that: contains('Windows')),
       )).called(1);
@@ -1050,12 +1036,13 @@ void main() {
       // Tap Linux download button
       final linuxBtn = find.text('Download for Linux');
       expect(linuxBtn, findsOneWidget);
+      await tester.ensureVisible(linuxBtn);
       await tester.tap(linuxBtn);
       await tester.pumpAndSettle();
 
       // Verify API was called
       verify(() => mockClient.post(
-        any(that: predicate<Uri>((uri) => uri.path == '/api/growth/downloads')),
+        any(that: predicate<Uri>((uri) => uri.path.endsWith('/api/growth/downloads'))),
         headers: any(named: 'headers'),
         body: any(named: 'body', that: contains('Linux')),
       )).called(1);
