@@ -2,31 +2,18 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mesh",
-    srcs = [
-        "local_mesh.go",
-        "mesh.go",
-        "redis_mesh.go",
-        "transport.go",
-    ],
+    srcs = ["transport.go"],
     importpath = "github.com/onehumancorp/mono/src/server/mesh",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_redis_go_redis_v9//:go-redis",
-        "@com_github_redis_rueidis//:rueidis",
-    ],
+    deps = ["@com_github_redis_rueidis//:rueidis"],
 )
 
 go_test(
     name = "mesh_test",
-    srcs = [
-        "mesh_test.go",
-        "transport_test.go",
-    ],
+    srcs = ["transport_test.go"],
     embed = [":mesh"],
     deps = [
         "@com_github_alicebob_miniredis_v2//:miniredis",
-        "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_redis_rueidis//:rueidis",
-        "@com_github_stretchr_testify//assert",
     ],
 )

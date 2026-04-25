@@ -47,9 +47,9 @@ type SharedTask struct { // issue_id: 3980
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 
-	ActionRisk      string     `json:"action_risk,omitempty"`
-	ApprovalStatus  string     `json:"approval_status,omitempty"`
-	ProposedContent string     `json:"proposed_content,omitempty"`
+	ActionRisk      string `json:"action_risk,omitempty"`
+	ApprovalStatus  string `json:"approval_status,omitempty"`
+	ProposedContent string `json:"proposed_content,omitempty"`
 }
 
 // TaskManager manages the shared tasks list
@@ -67,17 +67,35 @@ type TaskManager struct {
 
 // NewTaskManager creates a new TaskManager.
 func NewTaskManager(provider db.Provider, hub *CentrifugeNode, ad autodream.MemoryConsolidator) *TaskManager {
-	var broadcast func(string, map[string]interface{})
-	if hub != nil {
-		broadcast = hub.PublishTaskBroadcast
+	tm := &TaskManager{
+		db:        provider,
+		hub:       hub,
+		autodream: ad,
 	}
 
-	tm := &TaskManager{
-		db:           provider,
-		hub:          hub,
-		stateMachine: statemachine.NewStateMachine(provider, broadcast, nil),
-		autodream:    ad,
+	var broadcast func(string, map[string]interface{})
+	broadcast = func(taskID string, payload map[string]interface{}) {
+		if tm.mesh != nil {
+			var agentID, action, status string
+			if a, ok := payload["agent_id"].(string); ok {
+				agentID = a
+			}
+			if a, ok := payload["action"].(string); ok {
+				action = a
+			}
+			if s, ok := payload["status"].(string); ok {
+				status = s
+			}
+			_ = tm.mesh.BroadcastTask(context.Background(), Task{
+				AgentID: agentID,
+				Action:  action,
+				Status:  status,
+				TaskID:  taskID,
+			})
+		}
 	}
+
+	tm.stateMachine = statemachine.NewStateMachine(provider, broadcast, nil)
 
 	if envBoolDefault("OHC_MULTITENANT", true) {
 		redisURL := os.Getenv("REDIS_URL")
@@ -131,6 +149,18 @@ func (tm *TaskManager) StopWorkerLoop() {
 }
 
 // evaluatePendingDependencies finds tasks whose dependencies have just been met and broadcasts them.
+func (tm *TaskManager) publishMeshEvent(ctx context.Context, payload map[string]interface{}) {
+	agentID, _ := payload["agent_id"].(string)
+	action, _ := payload["action"].(string)
+	status, _ := payload["status"].(string)
+	if tm.mesh != nil {
+		payloadBytes, _ := json.Marshal(payload)
+		_ = tm.mesh.PublishTeammateMeshEvent(ctx, "teammate_mesh", agentID, action, status, payloadBytes)
+	} else if tm.hub != nil {
+		tm.hub.PublishTeammateMeshEvent(agentID, action, status, payload)
+	}
+}
+
 func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 	// A simple check to find PENDING tasks without active locks and met dependencies
 	// and trigger a broadcast to awake idle agents.
@@ -172,15 +202,6 @@ func (tm *TaskManager) evaluatePendingDependencies(ctx context.Context) {
 					Status:  "PENDING",
 					TaskID:  id,
 				})
-			} else if tm.hub != nil {
-				// Broadcast that task is now ready
-				go func(taskID string) {
-					tm.hub.PublishTaskBroadcast(taskID, map[string]interface{}{
-						"action":   "READY",
-						"agent_id": "",
-						"status":   "PENDING",
-					})
-				}(id)
 			}
 		}
 	}
@@ -279,29 +300,16 @@ func (tm *TaskManager) CreateTaskWithPlan(ctx context.Context, organizationID st
 	telemetry.RecordSwarmTaskQueueLength(ctx, 1)
 
 	// Broadcast task creation
-	if tm.mesh != nil {
-		_ = tm.mesh.BroadcastTask(ctx, Task{
-			AgentID: task.AssignedAgentID,
-			Action:  "CREATE",
-			Status:  task.Status,
-			TaskID:  task.ID,
-		})
-	} else if tm.hub != nil {
-		go func() {
-			payload := map[string]interface{}{
-				"task_id":         task.ID,
-				"action":          "CREATE",
-				"agent_id":        task.AssignedAgentID,
-				"status":          task.Status,
-				"organization_id": task.OrganizationID,
-				"title":           task.Title,
-				"description":     task.Description,
-				"priority":        task.Priority,
-			}
-			tm.hub.PublishTaskBroadcast(task.ID, payload)
-		}()
-	}
-
+	tm.publishMeshEvent(ctx, map[string]interface{}{
+		"task_id":         task.ID,
+		"action":          "CREATE",
+		"agent_id":        task.AssignedAgentID,
+		"status":          task.Status,
+		"organization_id": task.OrganizationID,
+		"title":           task.Title,
+		"description":     task.Description,
+		"priority":        task.Priority,
+	})
 	return &task, nil
 }
 
@@ -448,25 +456,12 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	task.AssignedAgentID = agentID
 
 	// Broadcast task claim
-	if tm.mesh != nil {
-		_ = tm.mesh.BroadcastTask(ctx, Task{
-			AgentID: agentID,
-			Action:  "CLAIM",
-			Status:  task.Status,
-			TaskID:  task.ID,
-		})
-	} else if tm.hub != nil {
-		go func() {
-			payload := map[string]interface{}{
-				"task_id":  task.ID,
-				"action":   "CLAIM",
-				"agent_id": agentID,
-				"status":   task.Status,
-			}
-			tm.hub.PublishTaskBroadcast(task.ID, payload)
-		}()
-	}
-
+	tm.publishMeshEvent(ctx, map[string]interface{}{
+		"task_id":  task.ID,
+		"action":   "CLAIM",
+		"agent_id": agentID,
+		"status":   task.Status,
+	})
 	return &task, nil
 }
 
@@ -503,25 +498,12 @@ func (tm *TaskManager) ReviewTask(ctx context.Context, taskID, agentID string) e
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "REVIEW")
 
 	// Broadcast task review
-	if tm.mesh != nil {
-		_ = tm.mesh.BroadcastTask(ctx, Task{
-			AgentID: agentID,
-			Action:  "REVIEW",
-			Status:  "REVIEW",
-			TaskID:  taskID,
-		})
-	} else if tm.hub != nil {
-		go func() {
-			payload := map[string]interface{}{
-				"task_id":  taskID,
-				"action":   "REVIEW",
-				"agent_id": agentID,
-				"status":   "REVIEW",
-			}
-			tm.hub.PublishTaskBroadcast(taskID, payload)
-		}()
-	}
-
+	tm.publishMeshEvent(ctx, map[string]interface{}{
+		"task_id":  taskID,
+		"action":   "REVIEW",
+		"agent_id": agentID,
+		"status":   "REVIEW",
+	})
 	return nil
 }
 
@@ -610,25 +592,12 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	}
 
 	// Broadcast task completion
-	if tm.mesh != nil {
-		_ = tm.mesh.BroadcastTask(ctx, Task{
-			AgentID: agentID,
-			Action:  "COMPLETE",
-			Status:  "COMPLETED",
-			TaskID:  taskID,
-		})
-	} else if tm.hub != nil {
-		go func() {
-			payload := map[string]interface{}{
-				"task_id":  taskID,
-				"action":   "COMPLETE",
-				"agent_id": agentID,
-				"status":   "COMPLETED",
-			}
-			tm.hub.PublishTaskBroadcast(taskID, payload)
-		}()
-	}
-
+	tm.publishMeshEvent(ctx, map[string]interface{}{
+		"task_id":  taskID,
+		"action":   "COMPLETE",
+		"agent_id": agentID,
+		"status":   "COMPLETED",
+	})
 	return nil
 }
 
@@ -963,24 +932,12 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 	for _, task := range claimedTasks {
 		// Broadcast task claim
-		if tm.mesh != nil {
-			_ = tm.mesh.BroadcastTask(ctx, Task{
-				AgentID: agentID,
-				Action:  "CLAIM",
-				Status:  task.Status,
-				TaskID:  task.ID,
-			})
-		} else if tm.hub != nil {
-			go func(t *SharedTask) {
-				payload := map[string]interface{}{
-					"task_id":  t.ID,
-					"action":   "CLAIM",
-					"agent_id": agentID,
-					"status":   t.Status,
-				}
-				tm.hub.PublishTaskBroadcast(t.ID, payload)
-			}(task)
-		}
+		tm.publishMeshEvent(ctx, map[string]interface{}{
+			"task_id":  task.ID,
+			"action":   "CLAIM",
+			"agent_id": agentID,
+			"status":   task.Status,
+		})
 	}
 
 	return claimedTasks, nil
@@ -1136,25 +1093,12 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 	}
 
 	// Broadcast update
-	if tm.mesh != nil {
-		_ = tm.mesh.BroadcastTask(ctx, Task{
-			AgentID: task.AssignedAgentID,
-			Action:  "UPDATE",
-			Status:  task.Status,
-			TaskID:  task.ID,
-		})
-	} else if tm.hub != nil {
-		go func() {
-			payload := map[string]interface{}{
-				"task_id":  task.ID,
-				"action":   "UPDATE",
-				"agent_id": task.AssignedAgentID,
-				"status":   task.Status,
-			}
-			tm.hub.PublishTaskBroadcast(task.ID, payload)
-		}()
-	}
-
+	tm.publishMeshEvent(ctx, map[string]interface{}{
+		"task_id":  task.ID,
+		"action":   "UPDATE",
+		"agent_id": task.AssignedAgentID,
+		"status":   task.Status,
+	})
 	return nil
 }
 
@@ -1204,23 +1148,12 @@ func (tm *TaskManager) DeleteTask(ctx context.Context, taskID string) error {
 	}
 
 	// Broadcast deletion
-	if tm.mesh != nil {
-		_ = tm.mesh.BroadcastTask(ctx, Task{
-			AgentID: "",
-			Action:  "DELETE",
-			Status:  "",
-			TaskID:  taskID,
-		})
-	} else if tm.hub != nil {
-		go func() {
-			payload := map[string]interface{}{
-				"task_id": taskID,
-				"action":  "DELETE",
-			}
-			tm.hub.PublishTaskBroadcast(taskID, payload)
-		}()
-	}
-
+	tm.publishMeshEvent(ctx, map[string]interface{}{
+		"task_id":  taskID,
+		"action":   "DELETE",
+		"agent_id": "",
+		"status":   "",
+	})
 	return nil
 }
 
@@ -1270,7 +1203,3 @@ func (tm *TaskManager) CheckCircularDependency(ctx context.Context, taskID strin
 }
 
 // added for Sub-Agent Orchestration Queue
-
-func (tm *TaskManager) DBProvider() db.Provider {
-	return tm.db
-}

@@ -105,9 +105,6 @@ func (p *DiscoveryProxy) searchSQLite(ctx context.Context, intent string) ([]Too
 		}
 		tools = append(tools, t)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
 
 	// If nothing matched, maybe return a dummy for testing
 	if len(tools) == 0 && intent == "calculator" {

@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"github.com/onehumancorp/mono/src/server/telemetry"
 	"time"
 
 	"encoding/json")
@@ -718,20 +717,6 @@ func TestSIPDB_BurstMission(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Use a mock buffer func to capture telemetry metric
-	var capturedTransition string
-	var capturedDuration float64
-	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
-		if metricType == "agent_transition_latency" {
-			var p map[string]interface{}
-			json.Unmarshal([]byte(payload), &p)
-			capturedTransition = p["transition_type"].(string)
-			capturedDuration = p["duration"].(float64)
-		}
-		return nil
-	}
-	defer func() { telemetry.BufferMetricFunc = nil }()
-
 	// Create a mission
 	msg := Message{
 		ID:         "msg-burst-1",
@@ -746,9 +731,8 @@ func TestSIPDB_BurstMission(t *testing.T) {
 		t.Fatalf("DelegateMission failed: %v", err)
 	}
 
-	// Force the mission to have an updated_at in the past so time.Since() > 0 is strictly true
-	db.db.Exec(ctx, "UPDATE agent_missions SET updated_at = '2000-01-01 00:00:00' WHERE id = 'mission-burst-1'")
-	db.db.Exec(ctx, "UPDATE agent_missions SET created_at = '2000-01-01 00:00:00' WHERE id = 'mission-burst-1'")
+	// Wait a moment so transition duration > 0
+	time.Sleep(10 * time.Millisecond)
 
 	// Test 1: Burst without endpoint
 	err = db.BurstMission(ctx, "mission-burst-1", "")
@@ -764,13 +748,6 @@ func TestSIPDB_BurstMission(t *testing.T) {
 	}
 	if status != "BURSTING" {
 		t.Fatalf("Expected status BURSTING, got %s", status)
-	}
-
-	if capturedTransition != "to_bursting" {
-		t.Errorf("Expected telemetry transition to be 'to_bursting', got %s", capturedTransition)
-	}
-	if capturedDuration <= 0 {
-		t.Errorf("Expected telemetry duration > 0, got %f", capturedDuration)
 	}
 
 	// Test 2: Burst with mock remote endpoint

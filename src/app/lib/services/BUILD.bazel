@@ -99,7 +99,6 @@ SERVICE_TESTS = glob(["*_test.dart"])
 
 test_suite(
     name = "all_tests",
-    tags = ["manual"],
     tests = [":" + file.replace(".dart", "") for file in SERVICE_TESTS],
 )
 
@@ -109,7 +108,6 @@ flutter_test(
     coverage = True,
     coverage_min = 90,
     embed = [":services_lib"],
-    tags = ["manual"],
     test_files = ["."],
     workspace_pubspec = "//:pubspec.yaml",
 )

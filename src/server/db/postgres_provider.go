@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"time"
 
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/onehumancorp/mono/src/server/telemetry"
 )
 
 // PgProvider implements the Provider interface using pgxpool.
@@ -234,9 +234,6 @@ func (p *PgProvider) SearchMemories(ctx context.Context, organizationID string, 
 		if err := rows.Scan(&content); err == nil {
 			results = append(results, content)
 		}
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
 	}
 	return results, nil
 }

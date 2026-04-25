@@ -72,7 +72,7 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
 
 	if to.dbProvider.IsSQLite() {
 		if !to.mu.TryLock() {
-			telemetry.RecordPostgresLockContention(ctx, "claim_task")
+			telemetry.RecordSQLiteLockContention(ctx, "claim_task")
 			to.mu.Lock()
 		}
 		defer to.mu.Unlock()
@@ -191,7 +191,7 @@ func (to *SharedTaskOrchestrator) TransitionTask(ctx context.Context, taskID, ag
 func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, error) {
 	if to.dbProvider.IsSQLite() {
 		if !to.mu.TryLock() {
-			telemetry.RecordPostgresLockContention(ctx, "claim_pending_task")
+			telemetry.RecordSQLiteLockContention(ctx, "claim_pending_task")
 			to.mu.Lock()
 		}
 		defer to.mu.Unlock()
@@ -242,7 +242,7 @@ func (to *SharedTaskOrchestrator) ClaimPendingTask(ctx context.Context) (*Task, 
 func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentID string) (*SharedTaskDB, error) {
 	if to.dbProvider.IsSQLite() {
 		if !to.mu.TryLock() {
-			telemetry.RecordPostgresLockContention(ctx, "claim_task_v4")
+			telemetry.RecordSQLiteLockContention(ctx, "claim_task_v4")
 			to.mu.Lock()
 		}
 		defer to.mu.Unlock()

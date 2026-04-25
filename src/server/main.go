@@ -318,6 +318,7 @@ func run(now time.Time, listen listenFunc) error {
 		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
 
 		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil)
+		adConsolidator.StartBackgroundPruner(ctx, 24*time.Hour, 6*30*24*time.Hour) // Run every 24 hours, prune older than 6 months
 		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver, adConsolidator)
 		// Run distillation as a background job
 		go func() {
@@ -343,6 +344,15 @@ func run(now time.Time, listen listenFunc) error {
 
 		competitorAuditWorker := workers.NewCompetitorAuditWorker(pool.Provider)
 		go competitorAuditWorker.Start(ctx)
+
+
+		var client orchestration.EmbeddingClient
+		minimaxKey := os.Getenv("MINIMAX_API_KEY")
+		if minimaxKey != "" {
+			client = orchestration.NewCachedMinimaxClient(orchestration.NewMinimaxClient(minimaxKey), pool.Provider, nil)
+		}
+		autodreamSyncDaemon := orchestration.NewAutoDreamSyncDaemon(pool.Provider, client)
+		go autodreamSyncDaemon.Start(ctx)
 
 		autodreamPipeline := pipeline.NewAutoDreamPipeline(pool.Provider, redisClient)
 		go autodreamPipeline.Start(ctx)
