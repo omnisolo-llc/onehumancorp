@@ -1,10 +1,12 @@
 package authz
 
 import (
+	"github.com/onehumancorp/mono/src/server/telemetry"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/onehumancorp/mono/src/server/db"
+
 
 	"encoding/json"
 )
@@ -48,6 +50,6 @@ func (a *authorizer) Authorize(ctx context.Context, sessionID string, capability
 		}
 	}
 
-	// TODO: log violation using Violation Telemetry Engine
+	telemetry.RecordCapabilityViolation(ctx, sessionID, capability)
 	return ErrCapabilityDenied
 }

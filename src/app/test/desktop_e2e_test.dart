@@ -140,7 +140,7 @@ void main() {
 
   // ── LoginScreen ──────────────────────────────────────────────────────────
 
-  group('LoginScreen – button clicks', skip: true, () {
+  group('LoginScreen – button clicks', () {
     testWidgets('Sign In button is present and tappable', (tester) async {
       await tester.pumpWidget(_wrap(const LoginScreen()));
       await tester.pumpAndSettle();
@@ -370,7 +370,7 @@ void main() {
       // removed expect for specific widget to prevent other tests from failing
     });
 
-    testWidgets('shows loading spinner then data', skip: true, (tester) async {
+    testWidgets('shows loading spinner then data', (tester) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -958,7 +958,7 @@ void main() {
   // ── AppShell navigation ───────────────────────────────────────────────────
 
   group('AppShell sidebar navigation', () {
-    testWidgets('sidebar nav items are tappable', skip: true, (tester) async {
+    testWidgets('sidebar nav items are tappable', (tester) async {
       // Ensure the sidebar nav items render without error
       final mockClient = MockHttpClient();
       when(
@@ -993,7 +993,7 @@ void main() {
 
   // ── LandingScreen ─────────────────────────────────────────────────────────
 
-  group('LandingScreen – button clicks', skip: true, () {
+  group('LandingScreen – button clicks', () {
     testWidgets('Download buttons call trackDownload API', (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 1200));
       final mockClient = MockHttpClient();

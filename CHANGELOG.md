@@ -1,19 +1,5 @@
 # OHC Hybrid Agentic OS - Changelog
 
-## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
-### Cloud Scaling Improvements
-- Implement Sub-Agent Orchestration Queue for KAIROS (#7696).
-- Implement Realtime Teammate Mesh APIs (#7687).
-- Implement Draft-for-Review AI Action Approval Workflow in KAIROS (#7676).
-- Enhance test coverage for Agent Execution State Transition Latency Telemetry (#7692).
-- Add test coverage for CapabilityAuthorizer (#7707).
-
-### Privacy/Offline Improvements
-- Simplify dashboard UI for non-technical users (#7691).
-- Resolve memoryLock TOCTOU race conditions and expand lock suite (#7679).
-- Add missing rows.Err() checks after db row iteration (#7678).
-- Generate business journey architecture report (#7664).
-
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Phase 3: AutoDream Vector Data Pipelines.

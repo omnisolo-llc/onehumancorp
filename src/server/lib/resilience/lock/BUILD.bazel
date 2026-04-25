@@ -8,7 +8,6 @@ go_library(
     deps = [
         "//src/server/db",
         "@com_github_google_uuid//:uuid",
-        "@com_github_jackc_pgx_v5//:pgx",
     ],
 )
 

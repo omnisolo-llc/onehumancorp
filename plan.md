@@ -1,22 +1,12 @@
-1. **Create `GrowMyBusinessWizardScreen`**:
-   - Create `src/app/lib/screens/grow_my_business_wizard_screen.dart` with a multi-step stepper or guided flow for the "Grow my business" wizard.
-   - Steps should reflect actions to grow a business: e.g. "Add Products", "Connect Social Media", "Launch Email Campaign".
-
-2. **Create `WebsiteBuilderWizardScreen`**:
-   - Create `src/app/lib/screens/website_builder_wizard_screen.dart` to implement the 4-step website builder.
-   - Steps: "Template Gallery", "Brand Colors & Logo", "Add your first product/service", "Connect Domain & Publish".
-
-3. **Create `AI Agent Configuration Wizard`** (`agent_config_wizard_screen.dart` or expand `agent_hire_wizard_screen.dart`):
-   - We need to implement the AI agent configuration wizard which allows users to configure an agent's capabilities without technical knowledge.
-
-4. **Update `router.dart`**:
-   - Add routes for `/wizards/grow`, `/wizards/website`, `/wizards/agent_config`, etc.
-
-5. **Update Dashboard / Navigation**:
-   - Add triggers to open these wizards from the `DashboardScreen` or side navigation as outlined in the issue. "Grow my business" from home dashboard, "Build My Website" to open the website builder wizard.
-
-6. **Add Tests**:
-   - Add E2E and widget tests for the new wizards ensuring 100% test coverage. E2E tests must follow the exact flow starting from the dashboard.
-
-7. **Pre Commit Steps**:
-   - Run `pre_commit_instructions` tool to complete pre-commit checks.
+1. The error shows:
+```
+src/server/dashboard/server.go:668:49: cannot use orchestration.NewTasksDB(server.dbProvider) (value of type *orchestration.TasksDB) as kairos.ApprovalWorkflowEngine value in argument to kairos.NewMeshAPI: *orchestration.TasksDB does not implement kairos.ApprovalWorkflowEngine (wrong type for method GetPendingApprovalTasks)
+		have GetPendingApprovalTasks(context.Context, string) ([]orchestration.SharedTask, error)
+		want GetPendingApprovalTasks(context.Context, string) (interface{}, error)
+```
+Wait! I tried to fix this with `sed` earlier:
+```
+sed -i 's/func (to \*TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) (\[\]SharedTask, error)/func (to \*TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) (interface{}, error)/' src/server/orchestration/tasks_db.go
+```
+But it didn't take effect because I did a `git restore src/server/orchestration/tasks_db.go` later in my history, probably losing that fix!
+Let me check `src/server/orchestration/tasks_db.go` to see the current signature.

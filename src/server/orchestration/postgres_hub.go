@@ -125,18 +125,14 @@ func (r *PgHubRepository) GetAgent(ctx context.Context, id string) (Agent, bool,
 }
 
 func (r *PgHubRepository) ListAgents(ctx context.Context) ([]Agent, error) {
-	return r.ListAgentsByOrg(ctx, r.orgID)
-}
-
-func (r *PgHubRepository) ListAgentsByOrg(ctx context.Context, orgID string) ([]Agent, error) {
 	var agents []Agent
 	err := pgWithRetry(ctx, func() error {
 		agents = nil // Reset on retry
 		query := "SELECT id, name, role, organization_id, status, provider_type, region FROM agents"
 		var args []any
-		if orgID != "" {
+		if r.orgID != "" {
 			query += " WHERE organization_id = $1"
-			args = append(args, orgID)
+			args = append(args, r.orgID)
 		}
 		query += " ORDER BY id"
 		rows, err := r.pool.Query(ctx, query, args...)

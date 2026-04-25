@@ -6,14 +6,12 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"sync"
 
 	"github.com/onehumancorp/mono/src/server/telemetry"
 
 	_ "modernc.org/sqlite"
 )
 
-var sqliteGlobalTxMutex sync.Mutex
 var jsonPathRe = regexp.MustCompile(`([a-zA-Z0-9_]+)\s*::\s*json\s*->>\s*'([^']+)'`)
 
 // SqliteProvider implements the Provider interface using database/sql with modernc.org/sqlite.
@@ -84,6 +82,10 @@ func convertBindVars(query string) string {
 	// Map json paths `col::json->>'key'` to `json_extract(col, '$.key')`
 	resStr = jsonPathRe.ReplaceAllString(resStr, "json_extract($1, '$.$2')")
 
+	// Map pgvector `<->` to vec_distance_cosine UDF
+	vectorRe := regexp.MustCompile(`([a-zA-Z0-9_.]+)\s*<->\s*(\?[0-9]*|'[^']*'|\([^\)]+\))`)
+	resStr = vectorRe.ReplaceAllString(resStr, "vec_distance_cosine($1, $2)")
+
 	return resStr
 }
 
@@ -118,18 +120,12 @@ func (p *SqliteProvider) QueryRow(ctx context.Context, sqlQuery string, optionsA
 
 func (p *SqliteProvider) Begin(ctx context.Context) (Tx, error) {
 	start := time.Now()
-	if !sqliteGlobalTxMutex.TryLock() {
-		telemetry.RecordSQLiteLockContention(ctx, "BeginTx_Fallback_Lock")
-		sqliteGlobalTxMutex.Lock()
-	}
-
 	tx, err := p.db.BeginTx(ctx, nil)
 	trackQuery(ctx, "Begin", err, time.Since(start))
 	if err != nil {
-		sqliteGlobalTxMutex.Unlock()
 		return nil, err
 	}
-	return &SqliteTx{tx: tx, locked: true}, nil
+	return &SqliteTx{tx: tx}, nil
 }
 
 func (p *SqliteProvider) Close() {
@@ -268,8 +264,6 @@ func (r *SqliteRow) Scan(dest ...any) error {
 // SqliteTx implements Tx using sql.Tx.
 type SqliteTx struct {
 	tx *sql.Tx
-	locked bool
-	mu sync.Mutex
 }
 
 func (t *SqliteTx) Exec(ctx context.Context, sqlQuery string, arguments ...any) (int64, error) {
@@ -300,21 +294,9 @@ func (t *SqliteTx) QueryRow(ctx context.Context, sqlQuery string, optionsAndArgs
 }
 
 func (t *SqliteTx) Commit(ctx context.Context) error {
-	t.mu.Lock()
-	if t.locked {
-		sqliteGlobalTxMutex.Unlock()
-		t.locked = false
-	}
-	t.mu.Unlock()
 	return t.tx.Commit()
 }
 
 func (t *SqliteTx) Rollback(ctx context.Context) error {
-	t.mu.Lock()
-	if t.locked {
-		sqliteGlobalTxMutex.Unlock()
-		t.locked = false
-	}
-	t.mu.Unlock()
 	return t.tx.Rollback()
 }
