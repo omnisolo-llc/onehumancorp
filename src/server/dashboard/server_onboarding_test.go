@@ -41,6 +41,9 @@ func TestHandleHybridHealthCheck_Standalone(t *testing.T) {
 	if item1["id"] != "sqlite_db" {
 		t.Errorf("Expected sqlite_db checklist item, got %v", item1["id"])
 	}
+	if item1["status"] != "degraded" {
+		t.Errorf("Expected status degraded for sqlite_db without provider, got %v", item1["status"])
+	}
 
 	item2 := checklist[1].(map[string]interface{})
 	if item2["id"] != "sqlite_standalone" {
@@ -83,9 +86,15 @@ func TestHandleHybridHealthCheck_Cloud(t *testing.T) {
 	if item1["id"] != "postgres_db" {
 		t.Errorf("Expected postgres_db checklist item, got %v", item1["id"])
 	}
+	if item1["status"] != "degraded" {
+		t.Errorf("Expected status degraded for postgres_db without provider, got %v", item1["status"])
+	}
 
 	item2 := checklist[1].(map[string]interface{})
 	if item2["id"] != "redis_cache" {
 		t.Errorf("Expected redis_cache checklist item, got %v", item2["id"])
+	}
+	if item2["status"] != "degraded" {
+		t.Errorf("Expected status degraded for redis_cache without hub, got %v", item2["status"])
 	}
 }

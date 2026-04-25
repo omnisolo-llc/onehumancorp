@@ -808,40 +808,65 @@ func (s *Server) handleHybridHealthCheck(w http.ResponseWriter, r *http.Request)
 		mode = "standalone"
 	}
 
+	ctx := r.Context()
+
+	dbStatus := "degraded"
+	if s.dbProvider != nil {
+		if err := s.dbProvider.Ping(ctx); err == nil {
+			dbStatus = "ok"
+		}
+	}
+
+	status := "healthy"
+	var meshActive bool
+	var syncBacklog int
+	var lastSyncTime time.Time
+	var stuckMissions int
+
+	redisStatus := "degraded"
+
+	if s.hub != nil {
+		probe, err := s.hub.CheckHealth(ctx)
+		if err != nil || probe.Status == "degraded" {
+			status = "degraded"
+		} else {
+			redisStatus = "ok"
+		}
+		meshActive = probe.MeshActive
+		syncBacklog = probe.SyncBacklog
+		lastSyncTime = probe.LastSyncTime
+		stuckMissions = probe.StuckMissions
+	} else {
+		status = "degraded"
+	}
+
 	var checklist []map[string]interface{}
 	if isStandalone {
 		checklist = append(checklist, map[string]interface{}{
-			"id": "sqlite_db", "label": "SQLite Database", "status": "ok", "description": "Local Workmode data storage",
+			"id": "sqlite_db", "label": "SQLite Database", "status": dbStatus, "description": "Local Workmode data storage",
 		})
 		checklist = append(checklist, map[string]interface{}{
 			"id": "sqlite_standalone", "label": "SQLite Standalone Enabled", "status": "ok", "description": "Local Workmode Active",
 		})
 	} else {
 		checklist = append(checklist, map[string]interface{}{
-			"id": "postgres_db", "label": "PostgreSQL Connected", "status": "ok", "description": "Cloud Inframode data storage",
+			"id": "postgres_db", "label": "PostgreSQL Connected", "status": dbStatus, "description": "Cloud Inframode data storage",
 		})
 		checklist = append(checklist, map[string]interface{}{
-			"id": "redis_cache", "label": "Redis Available", "status": "ok", "description": "Cloud Inframode distributed cache",
+			"id": "redis_cache", "label": "Redis Available", "status": redisStatus, "description": "Cloud Inframode distributed cache",
 		})
-	}
-
-	ctx := r.Context()
-	probe, err := s.hub.CheckHealth(ctx)
-	status := "healthy"
-	if err != nil || probe.Status == "degraded" {
-		status = "degraded"
 	}
 
 	details := map[string]interface{}{
 		"status":        status,
-		"mesh_active":   probe.MeshActive,
-		"sync_queue":    probe.SyncBacklog,
-		"last_sync_at":  probe.LastSyncTime,
+		"mesh_active":   meshActive,
+		"sync_queue":    syncBacklog,
+		"last_sync_at":  lastSyncTime,
 		"agent_workers": 0,
 	}
 
-	details["stuck_missions"] = probe.StuckMissions
-	if probe.StuckMissions > 0 {
+	details["stuck_missions"] = stuckMissions
+	if stuckMissions > 0 {
 		status = "degraded"
 		details["status"] = status
 	}
