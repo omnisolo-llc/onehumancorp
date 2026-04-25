@@ -35,10 +35,10 @@ jobs:
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
-            test --config=buildbuddy
+            test --config=local
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
             # build --config=buildbuddy-official
-            # test --config=buildbuddy-official
+            # test --config=local-official
             build --build_metadata=ROLE=CI
             test --build_metadata=ROLE=CI
             build --color=yes
