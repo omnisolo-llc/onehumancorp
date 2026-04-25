@@ -30,10 +30,27 @@ var (
 
 // Ensure proper formatting of execution results
 func FormatExecutionResult(toolID string, status string, resultData []byte, escalation bool) *ExecutionResult {
+	finalData := resultData
+	if escalation {
+		var parsed interface{}
+		if err := json.Unmarshal(resultData, &parsed); err == nil {
+			redacted := telemetry.RedactInterfacePII(parsed)
+			if redactedBytes, err := json.Marshal(redacted); err == nil {
+				finalData = redactedBytes
+			}
+		} else {
+			// Fail-closed redaction: if we can't parse it to redact it properly,
+			// treat it as a string and redact the string to prevent PII leakage.
+			redactedStr := telemetry.RedactPII(string(resultData))
+			safeBytes, _ := json.Marshal(redactedStr)
+			finalData = safeBytes
+		}
+	}
+
 	return &ExecutionResult{
 		ToolID:           toolID,
 		Status:           status,
-		ResultData:       resultData,
+		ResultData:       finalData,
 		HybridEscalation: escalation,
 		Escalation:       escalation,
 		ExecutedAt:       time.Now().UTC(),

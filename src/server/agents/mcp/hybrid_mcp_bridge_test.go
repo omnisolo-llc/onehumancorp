@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
-
-	"github.com/onehumancorp/mono/src/server/telemetry"
 )
 
 func TestHybridMCPBridge_ExecutionResult(t *testing.T) {
@@ -44,21 +42,8 @@ func TestHybridMCPBridge_ExecutionResult(t *testing.T) {
 		t.Errorf("Expected status 'success', got %s", res.Status)
 	}
 
-	// 100% test coverage for the redaction pipeline within the MCP tool execution flow
-	// Simulate the redaction that happens before sync
-	var parsed interface{}
-	if err := json.Unmarshal(res.ResultData, &parsed); err != nil {
-		t.Fatalf("Failed to unmarshal result data: %v", err)
-	}
-
-	redacted := telemetry.RedactInterfacePII(parsed)
-
-	redactedBytes, err := json.Marshal(redacted)
-	if err != nil {
-		t.Fatalf("Failed to marshal redacted data: %v", err)
-	}
-
-	redactedStr := string(redactedBytes)
+	// The redaction now happens internally in FormatExecutionResult when escalation=true
+	redactedStr := string(res.ResultData)
 	if !contains(redactedStr, "[REDACTED_EMAIL]") {
 		t.Errorf("Expected [REDACTED_EMAIL] in output, got: %s", redactedStr)
 	}
