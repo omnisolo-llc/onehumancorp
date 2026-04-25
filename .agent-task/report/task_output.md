@@ -91,7 +91,16 @@ To leapfrog competitors, OHC must deploy autonomous agents that operate as funct
 
 Based on a codebase audit (`src/app` and `src/server`), we identified critical missing capabilities required to fulfill the platform promise.
 
-### Feature Gap Analysis
+### Feature Gap Matrix
+| Feature | Shopify | Wix | OHC (current) | OHC (gap/advantage) |
+|---|---|---|---|---|
+| Payments | Built-in (Shopify Payments) | Built-in (Wix Payments) | UI only, no backend | Gap: Missing core transacting primitive |
+| Inventory | Built-in | Built-in | None | Gap: Cannot limit physical stock |
+| Bookings | App required / Complex | Built-in | None | Gap: Blocks service-based businesses |
+| Background Autonomous Agents | No (Chatbot only) | No (Setup only) | Partial (No background loop) | Advantage: Once implemented, zero-prompt operation |
+| Setup Speed | 30+ min | 20+ min | UI is fast | Advantage: Core promise |
+
+### Feature Gap Analysis (Visual)
 
 ```mermaid
 pie title Current Feature Completeness vs Requirements
