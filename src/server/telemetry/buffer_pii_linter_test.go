@@ -127,6 +127,7 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 					"RecordBridgeStatus": true,
 					"RecordRAGRecordsSynced": true,
 					"RecordRAGSyncError": true,
+					"RecordLocalToCloudMissionSync": true,
 				}
 				if !legacyExemptions[fn.Name.Name] {
 					t.Errorf("PII Leak Risk in %s: Function %s calls BufferMetricFunc and json.Marshal but misses RedactInterfacePII/RedactPII", path, fn.Name.Name)
