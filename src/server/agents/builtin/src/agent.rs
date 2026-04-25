@@ -44,7 +44,6 @@ impl Default for AgentRunConfig {
             enable_observation_masking: true,
         }
     }
-
 }
 
 /// Progress metrics for a running agent task.
@@ -351,6 +350,74 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn test_observation_masking() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_2".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            is_mutating: false,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_observation_masking = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // In this test, the agent will loop:
+        // Iter 0: LLM asks for test_tool. Tool returns result.
+        //   Agent runs masking check. The message list contains User(Hello) and Assistant(tool_call).
+        //   The new tool result is appended.
+        // Iter 1: LLM asks for test_tool again.
+        //   Agent runs masking check. The previous tool result (from Iter 0) is now masked.
+        //   The new tool result is appended.
+        // Iter 2: LLM returns final answer.
+
+        // We can't directly inspect `messages` from the outside, but we can verify it compiled
+        // and ran without errors, which covers the logic path.
+        // Also checking the length constraint logic.
+    }
+
     struct MockToolOrderExecutor {
         id: std::sync::atomic::AtomicUsize,
     }
@@ -448,78 +515,7 @@ mod tests {
         assert_eq!(captured_results[2].0, "mutating_tool");
         assert_eq!(captured_results[3].0, "fast_read");
 
-        // slow_read takes 100ms, fast_read takes 10ms. Concurrent join_all(100ms, 10ms)
-        // will complete fast_read before slow_read, so fast_read gets ID 0 and slow_read gets ID 1.
         assert_eq!(captured_results[0].1, "done-1");
         assert_eq!(captured_results[1].1, "done-0");
-    }
-
-    #[tokio::test]
-    async fn test_observation_masking() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_1".to_string(),
-                            name: "test_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_2".to_string(),
-                            name: "test_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-            ]),
-        });
-
-        let shared_executor = Arc::new(MockToolOrderExecutor { id: std::sync::atomic::AtomicUsize::new(0) });
-        let tools = vec![Tool {
-            name: "test_tool".to_string(),
-            description: "test".to_string(),
-            parameters: Value::Null,
-            is_mutating: false,
-            execute: Arc::new(MockToolExecutor),
-        }];
-
-        let agent = Agent::new(client, tools);
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_observation_masking = true;
-
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-
-        let result = agent.run(&cfg, "Hello", &mut on_event).await;
-        assert!(result.is_ok());
-
-        // In this test, the agent will loop:
-        // Iter 0: LLM asks for test_tool. Tool returns result.
-        //   Agent runs masking check. The message list contains User(Hello) and Assistant(tool_call).
-        //   The new tool result is appended.
-        // Iter 1: LLM asks for test_tool again.
-        //   Agent runs masking check. The previous tool result (from Iter 0) is now masked.
-        //   The new tool result is appended.
-        // Iter 2: LLM returns final answer.
-
-        // We can't directly inspect `messages` from the outside, but we can verify it compiled
-        // and ran without errors, which covers the logic path.
-        // Also checking the length constraint logic.
     }
 }
