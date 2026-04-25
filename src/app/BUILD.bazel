@@ -194,6 +194,14 @@ flutter_test(
 )
 
 flutter_test(
+    name = "cuj_help_center_e2e_test",
+    srcs = ["test/cuj_help_center_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_help_center_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
     name = "cuj_agents_hire_e2e_test",
     srcs = ["test/cuj_agents_hire_e2e_test.dart"],
     embed = [":app_lib"],

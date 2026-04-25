@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
 
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
@@ -69,10 +70,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
+      final isHelpRoute = state.matchedLocation == '/help';
       final redirectTarget = safeRedirectTarget(state.uri.queryParameters['redirect']);
 
       // Allow these public routes without authentication.
-      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) {
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute && !isHelpRoute) {
         final encodedTarget = Uri.encodeComponent(state.uri.toString());
         return '/login?redirect=$encodedTarget';
       }
@@ -82,6 +84,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(path: '/help', builder: (context, state) => const HelpCenterScreen()),
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
