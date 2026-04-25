@@ -114,12 +114,15 @@ func (p *DBStateSyncProvider) SyncUp(ctx context.Context, claims *auth.Claims) (
 		})
 		ids = append(ids, id)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 
 	if len(missions) == 0 {
 		return map[string]interface{}{
-			"status": "success",
+			"status":       "success",
 			"synced_count": 0,
-			"message": "No pending items to sync up.",
+			"message":      "No pending items to sync up.",
 		}, nil
 	}
 
@@ -138,7 +141,7 @@ func (p *DBStateSyncProvider) SyncUp(ctx context.Context, claims *auth.Claims) (
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":       "success",
 		"synced_count": len(missions),
 	}, nil
 }
@@ -174,9 +177,9 @@ func (p *DBStateSyncProvider) SyncDown(ctx context.Context, claims *auth.Claims)
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":  "success",
 		"message": "Sync down completed successfully.",
-		"data": response,
+		"data":    response,
 	}, nil
 }
 
@@ -193,7 +196,7 @@ func (p *DBStateSyncProvider) GetStatus(ctx context.Context, claims *auth.Claims
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":          "success",
 		"pending_sync_up": count,
 	}, nil
 }
@@ -229,7 +232,7 @@ func (p *DBStateSyncProvider) CRDTPush(ctx context.Context, payload map[string]i
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":  "success",
 		"message": "CRDT delta pushed locally.",
 	}, nil
 }
@@ -254,13 +257,13 @@ func (p *DBStateSyncProvider) CRDTPull(ctx context.Context, entityID string, cla
 	if err != nil {
 		// Mock fetching remote state if not found locally
 		return map[string]interface{}{
-			"status": "success",
+			"status":     "success",
 			"crdt_state": "latest_mocked_state",
 		}, nil
 	}
 
 	return map[string]interface{}{
-		"status": "success",
+		"status":     "success",
 		"crdt_state": data,
 		"updated_at": updatedAt,
 	}, nil

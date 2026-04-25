@@ -289,12 +289,6 @@ func New(ctx context.Context) (*DB, error) {
 		}
 
 		slog.Info("db: connected to sqlite", "path", dbPath)
-
-		// Standalone PowerSync initialization wrapper
-		if os.Getenv("OHC_STANDALONE") == "true" {
-			slog.Info("Initializing local PowerSync sync rules for Standalone mode")
-		}
-
 		return &DB{Provider: NewSqliteProvider(sqliteDB)}, nil
 	}
 
@@ -395,21 +389,20 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			// VECTOR(dim) -> TEXT
 			sqlStr = strings.ReplaceAll(sqlStr, "UUID PRIMARY KEY DEFAULT gen_random_uuid()", "TEXT PRIMARY KEY")
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
-			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+[^;]+\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY;?`).ReplaceAllString(sqlStr, "")
-			sqlStr = regexp.MustCompile(`(?i)CREATE\s+POLICY\s+[^;]+;?`).ReplaceAllString(sqlStr, "")
-			sqlStr = regexp.MustCompile(`(?i)VECTOR\(\d+\)`).ReplaceAllString(sqlStr, "TEXT")
+			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+[a-zA-Z0-9_]+\s+ON\s+[a-zA-Z0-9_]+\s+USING\s+hnsw[^;]*;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+idx_consolidated_memory_embedding\s+ON\s+consolidated_memory\s+USING\s+hnsw\s*\([^;]+\);`).ReplaceAllString(sqlStr, "")
-			sqlStr = regexp.MustCompile(`(?i)BIGSERIAL\s+PRIMARY\s+KEY`).ReplaceAllString(sqlStr, "INTEGER PRIMARY KEY AUTOINCREMENT")
-			sqlStr = regexp.MustCompile(`(?i)TIMESTAMPTZ`).ReplaceAllString(sqlStr, "DATETIME")
-			sqlStr = regexp.MustCompile(`(?i)TIMESTAMP\s+WITH\s+TIME\s+ZONE`).ReplaceAllString(sqlStr, "DATETIME")
-			sqlStr = regexp.MustCompile(`(?i)JSONB`).ReplaceAllString(sqlStr, "TEXT")
-			sqlStr = regexp.MustCompile(`(?i)BYTEA`).ReplaceAllString(sqlStr, "BLOB")
+			sqlStr = strings.ReplaceAll(sqlStr, "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
+			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
+			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
+			sqlStr = strings.ReplaceAll(sqlStr, "BYTEA", "BLOB")
+			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
+			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT") // Convert vector array to JSON TEXT string for SQLite standalone mode parity
 			// We need to remove the array syntax `TEXT[] NOT NULL DEFAULT '{}'`
 			// Because SQLite does not support arrays.
 			// Replaced with TEXT DEFAULT '[]' for JSON array storage
-			sqlStr = regexp.MustCompile(`(?i)TEXT\[\]\s+NOT\s+NULL\s+DEFAULT\s+'\{\}'`).ReplaceAllString(sqlStr, "TEXT NOT NULL DEFAULT '[]'")
-			sqlStr = regexp.MustCompile(`(?i)NOW\(\)`).ReplaceAllString(sqlStr, "CURRENT_TIMESTAMP")
+			sqlStr = strings.ReplaceAll(sqlStr, "TEXT[] NOT NULL DEFAULT '{}'", "TEXT NOT NULL DEFAULT '[]'")
+			sqlStr = strings.ReplaceAll(sqlStr, "NOW()", "CURRENT_TIMESTAMP")
 
 			// Replace specific Postgres Array insert syntax used in migrations
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['*']", "'[\"*\"]'")
@@ -432,7 +425,6 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = regexp.MustCompile(`(?i)\bADD\s+COLUMN\s+IF\s+NOT\s+EXISTS\b`).ReplaceAllString(sqlStr, "ADD COLUMN")
 			// SQLite does not support DROP COLUMN IF EXISTS – strip the IF EXISTS qualifier.
 			sqlStr = regexp.MustCompile(`(?i)\bDROP\s+COLUMN\s+IF\s+EXISTS\b`).ReplaceAllString(sqlStr, "DROP COLUMN")
-			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+\w+\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY;`).ReplaceAllString(sqlStr, "")
 		} else {
 			// Postgres mode: normalise any SQLite-specific types that leaked into
 			// migration files so that migrations are portable in both directions.

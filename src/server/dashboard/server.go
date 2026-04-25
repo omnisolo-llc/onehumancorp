@@ -665,7 +665,13 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 		kairosMesh = kairos.NewTeammateMesh(nil)
 	}
 
-	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh)
+	var sharedTaskRepo *kairos.SharedTaskRepo
+	if server.dbProvider != nil {
+		sharedTaskRepo = kairos.NewSharedTaskRepo(server.dbProvider)
+	} else if hub != nil && hub.TaskManager() != nil {
+		sharedTaskRepo = kairos.NewSharedTaskRepo(hub.TaskManager().DBProvider())
+	}
+	kairosMeshAPI := kairos.NewMeshAPI(kairosMesh, sharedTaskRepo)
 
 	mux.HandleFunc("/api/kairos/mesh/publish", auth.RequireRole("system", kairosMeshAPI.HandlePublish))
 	mux.HandleFunc("/api/kairos/mesh/subscribe", auth.RequireRole("system", kairosMeshAPI.HandleSubscribe))
@@ -679,7 +685,6 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/mesh/mailbox", auth.RequireRole("system", server.handleMeshMailbox))
 	// Auth – login / logout / current user
 	mux.HandleFunc("/api/auth/login", server.authHandlers.HandleLogin)
-	mux.HandleFunc("/api/auth/register", server.authHandlers.HandleRegister)
 	mux.HandleFunc("/api/auth/logout", server.authHandlers.HandleLogout)
 	mux.HandleFunc("/api/auth/me", server.authHandlers.HandleMe)
 	// PowerSync Endpoints
@@ -932,30 +937,10 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.URL.Path != "/" {
-		cleanPath := strings.TrimPrefix(filepath.Clean(r.URL.Path), "/")
-		assetPath := filepath.Join(s.staticDir, cleanPath)
+		assetPath := filepath.Join(s.staticDir, strings.TrimPrefix(filepath.Clean(r.URL.Path), "/"))
 		if info, err := os.Stat(assetPath); err == nil && !info.IsDir() {
 			http.ServeFile(w, r, assetPath)
 			return
-		}
-
-		// Fallback 1: strip redundant "assets/" prefix if it exists (e.g. assets/assets/logo.png -> assets/logo.png)
-		if strings.HasPrefix(cleanPath, "assets/assets/") {
-			fallbackPath := filepath.Join(s.staticDir, "assets", strings.TrimPrefix(cleanPath, "assets/assets/"))
-			if info, err := os.Stat(fallbackPath); err == nil && !info.IsDir() {
-				http.ServeFile(w, r, fallbackPath)
-				return
-			}
-		}
-
-		// Fallback 2: check inside packages/ohc_app/assets (common in Bazel/Flutter web builds)
-		if strings.HasPrefix(cleanPath, "assets/") {
-			fileName := strings.TrimPrefix(cleanPath, "assets/")
-			packagePath := filepath.Join(s.staticDir, "assets/packages/ohc_app/assets", fileName)
-			if info, err := os.Stat(packagePath); err == nil && !info.IsDir() {
-				http.ServeFile(w, r, packagePath)
-				return
-			}
 		}
 	}
 
@@ -1336,7 +1321,7 @@ func (s *Server) snapshotLocked() dashboardSnapshot {
 	queue := make([]orchestration.SharedTask, 0)
 	queueLen := 0
 	if s.hub != nil && s.hub.TaskManager() != nil {
-		if pending, err := s.hub.TaskManager().PeekTasksByOrg(context.Background(), s.org.ID, 100); err == nil {
+		if pending, err := s.hub.TaskManager().PeekTasks(context.Background(), 100); err == nil {
 			for _, t := range pending {
 				if t != nil {
 					queue = append(queue, *t)

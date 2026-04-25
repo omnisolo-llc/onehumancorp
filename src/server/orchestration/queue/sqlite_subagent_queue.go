@@ -30,23 +30,24 @@ func (q *SQLiteSubAgentTaskQueue) Enqueue(ctx context.Context, payload *SubAgent
 
 func (q *SQLiteSubAgentTaskQueue) Process(ctx context.Context, queueName string) (*SubAgentTaskQueuePayload, error) {
 	for {
-		query := `
-			UPDATE sub_agent_tasks
-			SET status = 'RUNNING'
-			WHERE job_id = (
-				SELECT job_id FROM sub_agent_tasks
-				WHERE status = 'QUEUED' AND queue_name = $1
-				ORDER BY created_at ASC
-				LIMIT 1
-			)
-			RETURNING job_id, payload
-		`
+		query := "SELECT job_id, payload FROM sub_agent_tasks WHERE status = 'QUEUED' AND queue_name = $1 ORDER BY created_at ASC LIMIT 1"
 		var jobID, payloadStr string
 		err := q.provider.QueryRow(ctx, query, queueName).Scan(&jobID, &payloadStr)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		} else if err != nil {
 			return nil, err
+		}
+
+		updateQuery := "UPDATE sub_agent_tasks SET status = 'RUNNING' WHERE job_id = $1 AND status = 'QUEUED'"
+		res, err := q.provider.Exec(ctx, updateQuery, jobID)
+		if err != nil {
+			return nil, err
+		}
+
+		if res == 0 {
+			// Another worker grabbed it, try again
+			continue
 		}
 
 		var payload SubAgentTaskQueuePayload

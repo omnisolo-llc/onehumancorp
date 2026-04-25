@@ -23,6 +23,9 @@ func NewDistributedLock() (DistributedLock, error) {
 	redisURL := os.Getenv("REDIS_URL")
 	if redisURL != "" && os.Getenv("OHC_STANDALONE") != "true" {
 		opts, err := rueidis.ParseURL(redisURL)
+		if os.Getenv("DISABLE_REDIS_CACHE") == "true" {
+			opts.DisableCache = true
+		}
 		if err != nil {
 			slog.Warn("failed to parse REDIS_URL, falling back to memory lock", "error", err)
 			return &memoryLock{}, nil

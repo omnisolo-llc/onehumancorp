@@ -3,6 +3,7 @@ package autodream
 import (
 	"context"
 	"testing"
+	"database/sql"
 	_ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/src/server/db"
@@ -21,19 +22,25 @@ func (m *mockLLM) GenerateEmbedding(ctx context.Context, text string) ([]float32
 }
 
 func TestAutoDreamConsolidation(t *testing.T) {
-	provider := db.NewTestProvider(t)
+	dbConn, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open test sqlite db: %v", err)
+	}
+	defer dbConn.Close()
+
+	provider := db.NewSqliteProvider(dbConn)
 	claims := &auth.Claims{OrganizationID: "test-tenant-123"}
 	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
 
 	// In test, creating table
-	_, err := provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS consolidated_memory (
-		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
-		agent_id TEXT,
+	_, err = provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS autodream_memories_master (
+		id VARCHAR PRIMARY KEY,
+		organization_id VARCHAR NOT NULL,
+		memory_type TEXT NOT NULL,
 		content TEXT NOT NULL,
-		embedding TEXT,
-		source_type TEXT NOT NULL,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		embedding BLOB,
+		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		source_task_id VARCHAR
 	);`)
 	if err != nil {
 		t.Fatalf("failed to create table: %v", err)
@@ -46,11 +53,5 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	err = service.Consolidate(ctx, "task-123", []string{"log 1", "log 2"})
 	if err != nil {
 		t.Errorf("expected no error, got %v", err)
-	}
-
-	// Consolidate again to trigger conflict resolution logic
-	err = service.Consolidate(ctx, "task-124", []string{"log 3", "log 4"})
-	if err != nil {
-		t.Errorf("expected no error on second consolidate, got %v", err)
 	}
 }

@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:ui';
-import 'package:ohc_app/services/api_service.dart';
+import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/auth_service.dart';
 
 // ── Providers ─────────────────────────────────────────────────────────────
@@ -14,15 +14,16 @@ import 'package:ohc_app/services/auth_service.dart';
 final wizardStatusProvider = FutureProvider.autoDispose<WizardStatus>((
   ref,
 ) async {
-  final api = ref.watch(apiServiceProvider);
-  if (api == null) return WizardStatus.empty();
-
-  try {
-    final statusMap = await api.getWizardStatus();
-    return WizardStatus.fromJson(statusMap);
-  } catch (e) {
-    return WizardStatus.empty();
-  }
+  final user = ref.watch(authStateProvider).valueOrNull;
+  if (user == null) return WizardStatus.empty();
+  final baseUrl = ref.watch(backendUrlProvider);
+  final resp = await http.get(
+    Uri.parse('$baseUrl/api/wizard/status'),
+    headers: {'Authorization': 'Bearer ${user.token}'},
+  );
+  if (resp.statusCode != 200) return WizardStatus.empty();
+  final json = jsonDecode(resp.body) as Map<String, dynamic>;
+  return WizardStatus.fromJson(json);
 });
 
 // ── Model ──────────────────────────────────────────────────────────────────
@@ -101,12 +102,14 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
   }
 
   Future<void> _save() async {
-    final api = ref.read(apiServiceProvider);
-    if (api == null) return;
+    final user = ref.read(authStateProvider).valueOrNull;
+    if (user == null) return;
     setState(() {
       _saving = true;
       _error = null;
     });
+
+    final baseUrl = ref.read(backendUrlProvider);
 
     final body = <String, dynamic>{
       'listen_addr': _listenAddrCtrl.text.trim(),
@@ -126,15 +129,26 @@ class _SetupWizardScreenState extends ConsumerState<SetupWizardScreen> {
     }
 
     try {
-      await api.configureWizard(body);
-      ref.invalidate(wizardStatusProvider);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Configuration saved successfully!'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-        );
+      final resp = await http.post(
+        Uri.parse('$baseUrl/api/wizard/configure'),
+        headers: {
+          'Authorization': 'Bearer ${user.token}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(body),
+      );
+      if (resp.statusCode == 200) {
+        ref.invalidate(wizardStatusProvider);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Configuration saved successfully!'),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+            ),
+          );
+        }
+      } else {
+        setState(() => _error = 'Save failed: ${resp.statusCode} ${resp.body}');
       }
     } catch (e) {
       setState(() => _error = 'Error: $e');

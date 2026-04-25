@@ -17,7 +17,6 @@ import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';
 import 'package:ohc_app/screens/diagnostics_screen.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
-import 'package:ohc_app/screens/welcome_checklist_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
 import 'package:ohc_app/screens/cost_dashboard_screen.dart';
 import 'package:ohc_app/screens/scaling_screen.dart';
@@ -90,10 +89,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
-          ),
-          GoRoute(
-            path: '/welcome_checklist',
-            builder: (context, state) => const WelcomeChecklistScreen(),
           ),
           GoRoute(
             path: '/orchestration/tasks',
@@ -228,51 +223,7 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth <= 768) {
-          return Scaffold(
-            drawer: _Sidebar(),
-            body: Stack(
-              children: [
-                child,
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Builder(
-                    builder: (context) {
-                      return SafeArea(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.menu),
-                            onPressed: () {
-                              Scaffold.of(context).openDrawer();
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        } else {
-          return Scaffold(
-            body: Row(
-              children: [
-                _Sidebar(),
-                Expanded(child: child),
-              ],
-            ),
-          );
-        }
-      },
-    );
+    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
   }
 }
 

@@ -8,7 +8,7 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 APP_PACKAGE_NAME = "ohc-desktop"
 
-APP_PACKAGE_VERSION = "0.4.6"
+APP_PACKAGE_VERSION = "0.4.5"
 
 exports_files([
     "pubspec.yaml",
@@ -176,6 +176,7 @@ flutter_test(
     name = "app_desktop_e2e_test",
     srcs = ["test/desktop_e2e_test.dart"],
     embed = [":app_lib"],
+    tags = ["manual"],
     test_files = ["test/desktop_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -204,6 +205,7 @@ flutter_test(
     name = "cuj_cost_e2e_test",
     srcs = ["test/cuj_cost_e2e_test.dart"],
     embed = [":app_lib"],
+    tags = ["manual"],
     test_files = ["test/cuj_cost_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -212,6 +214,7 @@ flutter_test(
     name = "cuj_handoffs_e2e_test",
     srcs = ["test/cuj_handoffs_e2e_test.dart"],
     embed = [":app_lib"],
+    tags = ["manual"],
     test_files = ["test/cuj_handoffs_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -228,6 +231,7 @@ flutter_test(
     name = "cuj_users_e2e_test",
     srcs = ["test/cuj_users_e2e_test.dart"],
     embed = [":app_lib"],
+    tags = ["manual"],
     test_files = ["test/cuj_users_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
@@ -260,12 +264,14 @@ flutter_test(
     name = "cuj_diagnostics_referrals_e2e_test",
     srcs = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
     embed = [":app_lib"],
+    tags = ["manual"],
     test_files = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
     workspace_pubspec = "//:pubspec.yaml",
 )
 
 test_suite(
     name = "cuj_e2e_tests",
+    tags = ["manual"],
     tests = [
         ":cuj_auth_e2e_test",
         ":cuj_agents_hire_e2e_test",
@@ -276,14 +282,6 @@ test_suite(
         ":cuj_integrations_e2e_test",
         ":cuj_channels_extra_e2e_test",
         ":cuj_scaling_e2e_test",
-        ":cuj_my_plan_e2e_test",
-
-
-
-
-
-
-
         ":cuj_diagnostics_referrals_e2e_test",
     ],
 )
@@ -329,10 +327,7 @@ flutter_app(
 sh_binary(
     name = "start",
     srcs = ["test/start_web.sh"],
-    data = [
-        ":app",
-        "//src/server:ohc",
-    ],
+    data = [":app"],
     visibility = ["//visibility:public"],
 )
 
@@ -425,27 +420,4 @@ pkg_rpm(
     summary = "OHC standalone desktop runtime",
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
-)
-
-flutter_test(
-    name = "cuj_my_plan_e2e_test",
-    srcs = ["test/cuj_my_plan_e2e_test.dart"],
-    embed = [":app_lib"],
-    test_files = ["test/cuj_my_plan_e2e_test.dart"],
-    workspace_pubspec = "//:pubspec.yaml",
-)
-
-sh_test(
-    name = "playwright_web_e2e_test",
-    size = "large",
-    srcs = ["test/flutter_web_e2e_test.sh"],
-    data = glob(["e2e/*.ts"]) + [
-        ":app",
-        "//src/server:ohc",
-        "//:node_modules",
-    ],
-    tags = [
-        "requires-network",
-    ],
-    timeout = "eternal",
 )

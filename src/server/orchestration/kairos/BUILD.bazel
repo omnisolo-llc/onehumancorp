@@ -12,6 +12,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/db",
+		"//src/server/auth",
         "@com_github_gorilla_websocket//:websocket",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_redis_go_redis_v9//:go-redis",
@@ -29,6 +30,7 @@ go_test(
     embed = [":kairos"],
     deps = [
         "//src/server/db",
+		"//src/server/auth",
         "@com_github_gorilla_websocket//:websocket",
         "@com_github_alicebob_miniredis_v2//:miniredis",
         "@com_github_redis_go_redis_v9//:go-redis",

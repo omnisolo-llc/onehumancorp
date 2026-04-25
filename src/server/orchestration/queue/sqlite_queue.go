@@ -53,14 +53,10 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 	}
 	defer tx.Rollback(ctx)
 
-	lockTime := time.Now().Add(5 * time.Minute)
-	lockTimeStr := lockTime.Format(time.RFC3339Nano)
-	updatedAtStrNow := time.Now().Format(time.RFC3339Nano)
-
 	var rolePlaceholders []string
-	args := []any{lockTimeStr, updatedAtStrNow}
+	var args []any
 	for i, role := range roles {
-		rolePlaceholders = append(rolePlaceholders, fmt.Sprintf("$%d", i+3))
+		rolePlaceholders = append(rolePlaceholders, fmt.Sprintf("$%d", i+1))
 		args = append(args, role)
 	}
 
@@ -75,17 +71,12 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 
 	// We check for both QUEUED jobs, and RUNNING jobs that have crashed (locked_until has passed)
 	query := fmt.Sprintf(`
-		UPDATE sub_agent_jobs
-		SET status = 'RUNNING', locked_until = $1, attempts = attempts + 1, updated_at = $2
-		WHERE id = (
-			SELECT id
-			FROM sub_agent_jobs
-			WHERE (status = 'QUEUED' AND run_after <= %s %s)
-			   OR (status = 'RUNNING' AND locked_until IS NOT NULL AND locked_until <= %s %s)
-			ORDER BY run_after ASC
-			LIMIT 1
-		)
-		RETURNING id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
+		SELECT id, parent_task_id, agent_role, payload, status, attempts, max_attempts, run_after, locked_until, created_at, updated_at
+		FROM sub_agent_jobs
+		WHERE (status = 'QUEUED' AND run_after <= %s %s)
+		   OR (status = 'RUNNING' AND locked_until IS NOT NULL AND locked_until <= %s %s)
+		ORDER BY run_after ASC
+		LIMIT 1
 	`, nowPlaceholder, rolesCondition, nowPlaceholder, rolesCondition)
 
 	row := tx.QueryRow(ctx, query, args...)
@@ -99,6 +90,24 @@ func (q *SQLiteTaskQueue) Dequeue(ctx context.Context, roles []string) (*Job, er
 		return nil, nil // No jobs available
 	} else if err != nil {
 		return nil, err
+	}
+
+	// Update the job to mark it as RUNNING (simulate acquiring lock)
+	lockTime := time.Now().Add(5 * time.Minute)
+	updateQuery := `
+		UPDATE sub_agent_jobs
+		SET status = 'RUNNING', locked_until = $1, attempts = attempts + 1, updated_at = $2
+		WHERE id = $3 AND (status = 'QUEUED' OR status = 'RUNNING')
+	`
+	res, err := tx.Exec(ctx, updateQuery, lockTime.Format(time.RFC3339Nano), time.Now().Format(time.RFC3339Nano), j.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	rowsAffected := res
+	if rowsAffected == 0 {
+		// Someone else grabbed it between our SELECT and UPDATE
+		return nil, nil
 	}
 
 	if err := tx.Commit(ctx); err != nil {

@@ -115,6 +115,9 @@ func (m *DBInspectorMCP) inspectSchema(ctx context.Context, tableName string) (i
 				results = append(results, map[string]interface{}{"table": name, "schema": sql})
 			}
 		}
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
 		return results, nil
 	} else {
 		query := "SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema = current_schema()"
@@ -135,6 +138,9 @@ func (m *DBInspectorMCP) inspectSchema(ctx context.Context, tableName string) (i
 			if err := rows.Scan(&tname, &cname, &dtype); err == nil {
 				results = append(results, map[string]interface{}{"table": tname, "column": cname, "type": dtype})
 			}
+		}
+		if err := rows.Err(); err != nil {
+			return nil, err
 		}
 		return results, nil
 	}
