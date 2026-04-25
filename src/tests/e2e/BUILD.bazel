@@ -254,3 +254,18 @@ test_suite(
         ":e2e_misc_test",
     ],
 )
+
+# ── Help Center ───────────────────────────────────────────────────────────────
+go_test(
+    name = "e2e_help_center_test",
+    srcs = _SHARED_SRCS + ["cuj_help_center_test.go"],
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS + [
+        "@com_github_stretchr_testify//require",
+    ],
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)

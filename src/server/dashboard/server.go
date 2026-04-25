@@ -564,6 +564,9 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/approvals", server.handleApprovals)
 	mux.HandleFunc("/api/approvals/request", server.handleApprovalRequest)
 	mux.HandleFunc("/api/approvals/decide", server.handleApprovalDecide)
+	// Help Center API
+	mux.HandleFunc("/api/help/articles", server.handleHelpArticles)
+	mux.HandleFunc("/api/help/search", server.handleHelpSearch)
 	// Phase 2 – Warm Handoff
 	mux.HandleFunc("/api/handoffs", server.handleHandoffs)
 	mux.HandleFunc("/api/handoffs/resolve", server.handleHandoffResolve)

@@ -32,7 +32,9 @@ import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
 
+import 'package:ohc_app/widgets/contextual_tooltip.dart';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
 
@@ -215,6 +217,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
         ],
       ),
     ],
@@ -228,7 +234,17 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: Row(children: [_Sidebar(), Expanded(child: child)]),
+      floatingActionButton: ContextualTooltip(
+        tooltipKey: 'help_fab',
+        child: FloatingActionButton(
+          onPressed: () => context.go('/help'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          child: const Icon(Icons.help_outline, color: Colors.white),
+        ),
+      ),
+    );
   }
 }
 
@@ -246,7 +262,10 @@ class _Sidebar extends StatelessWidget {
           ),
         ),
         const Divider(),
-        _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+        ContextualTooltip(
+          tooltipKey: 'dashboard_nav',
+          child: _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+        ),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(
           icon: Icons.checklist,
