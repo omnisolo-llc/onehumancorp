@@ -33,11 +33,11 @@ func NewAutoDreamConsolidator(dbProvider db.Provider, redisClient rueidis.Client
 func (c *AutoDreamConsolidator) ProcessBacklog(ctx context.Context) error {
 	slog.Info("AutoDreamConsolidator: waking up to process backlog")
 
-	query := "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT $1"
+	query := "SELECT session_id as id, context_data as content FROM agent_session_data LIMIT $1 FOR UPDATE SKIP LOCKED"
 	args := []interface{}{c.batchSize}
 
 	if c.db.IsSQLite() {
-		query = "SELECT id, content FROM autodream_memories WHERE processed_at IS NULL LIMIT ?"
+		query = "SELECT session_id as id, context_data as content FROM agent_session_data LIMIT ?"
 	}
 
 	rows, err := c.db.Query(ctx, query, args...)

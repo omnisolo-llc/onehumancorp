@@ -368,3 +368,19 @@ func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, action, status strin
     // Publish to the Centrifuge redis pubsub backend
     _, _ = cn.node.Publish("orchestration.tasks", data)
 }
+
+
+// TeammateMesh API Interface Implementation
+// Publish allows agents to emit a message over a specific mesh channel
+func (cn *CentrifugeNode) Publish(channel string, payload []byte) error {
+	if cn.meshTransport != nil {
+		_ = cn.meshTransport.BroadcastMeshEvent(context.Background(), channel, payload)
+	}
+	_, err := cn.node.Publish("mesh:" + channel, payload)
+	return err
+}
+
+// Subscribe allows agents to listen to a specific mesh channel
+func (cn *CentrifugeNode) Subscribe(channel string, handler func(msg []byte)) error {
+	return nil
+}

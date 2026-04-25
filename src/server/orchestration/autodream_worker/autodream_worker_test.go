@@ -29,7 +29,8 @@ func TestAutoDreamConsolidator_ProcessBacklog(t *testing.T) {
 			content TEXT NOT NULL,
 			embedding TEXT,
 			processed_at DATETIME
-		)
+		);
+		CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, agent_id TEXT, context_data TEXT);
 	`)
 	assert.NoError(t, err)
 
@@ -38,6 +39,12 @@ func TestAutoDreamConsolidator_ProcessBacklog(t *testing.T) {
 	assert.NoError(t, err)
 	_, err = provider.Exec(ctx, "INSERT INTO autodream_memories (id, content, processed_at) VALUES ('mem2', 'Test memory 2', NULL)")
 	assert.NoError(t, err)
+
+	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, context_data) VALUES ('mem1', 'Test memory 1')")
+	assert.NoError(t, err)
+	_, err = provider.Exec(ctx, "INSERT INTO agent_session_data (session_id, context_data) VALUES ('mem2', 'Test memory 2')")
+	assert.NoError(t, err)
+
 
 
 	mockLLM := &mockConsolidatorEmbeddingClient{}
