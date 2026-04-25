@@ -1179,7 +1179,8 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		var idsToDelete []string
 		var mu sync.Mutex
 
-		workerCount := 4
+		workerCount := 16
+		client := &http.Client{Timeout: 10 * time.Second}
 		coordinator := perf.NewCoordinatorMode(workerCount)
 		tasks := make([]func() error, workerCount)
 
@@ -1188,7 +1189,6 @@ func (s *SIPDB) SyncContextSync(ctx context.Context, remoteEndpoint string) (int
 		for w := 0; w < workerCount; w++ {
 			w := w
 			tasks[w] = func() error {
-				client := &http.Client{Timeout: 10 * time.Second}
 				startIdx := w * batchSize
 				endIdx := startIdx + batchSize
 				if endIdx > len(records) {
@@ -1320,7 +1320,8 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		var idsToUpdate []string
 		var mu sync.Mutex
 
-		workerCount := 4
+		workerCount := 16
+		client := &http.Client{Timeout: 10 * time.Second}
 		coordinator := perf.NewCoordinatorMode(workerCount)
 		tasks := make([]func() error, workerCount)
 
@@ -1329,7 +1330,6 @@ func (s *SIPDB) SyncMissions(ctx context.Context, remoteEndpoint string) (int, e
 		for w := 0; w < workerCount; w++ {
 			w := w
 			tasks[w] = func() error {
-				client := &http.Client{Timeout: 10 * time.Second}
 				startIdx := w * batchSize
 				endIdx := startIdx + batchSize
 				if endIdx > len(missions) {
