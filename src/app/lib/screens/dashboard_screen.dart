@@ -1,4 +1,5 @@
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
+import 'package:ohc_app/widgets/ohc_tooltip.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -461,8 +462,9 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
-        message: 'Manage $formattedRole Allocation',
+      child: OhcTooltip(
+        tooltipKey: 'dashboard_scale_agents',
+        fallbackMessage: 'Manage $formattedRole Allocation',
         child: SizedBox(
           width: 320,
           child: GlassCard(

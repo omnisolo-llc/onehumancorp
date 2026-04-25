@@ -257,6 +257,13 @@ flutter_test(
 )
 
 flutter_test(
+    name = "cuj_help_ux_e2e_test",
+    srcs = ["test/cuj_help_ux_e2e_test.dart"],
+    test_files = ["test/cuj_help_ux_e2e_test.dart"],
+    embed = [":app_for_tests"],
+)
+
+flutter_test(
     name = "cuj_diagnostics_referrals_e2e_test",
     srcs = ["test/cuj_diagnostics_referrals_e2e_test.dart"],
     embed = [":app_lib"],
@@ -285,6 +292,7 @@ test_suite(
 
 
         ":cuj_diagnostics_referrals_e2e_test",
+
     ],
 )
 

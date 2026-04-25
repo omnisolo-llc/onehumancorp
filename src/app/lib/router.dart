@@ -1,3 +1,5 @@
+import 'screens/help_center_screen.dart';
+import 'screens/release_notes_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
@@ -212,6 +214,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
           GoRoute(
+            path: '/release_notes',
+            builder: (context, state) => const ReleaseNotesScreen(),
+          ),
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
@@ -233,6 +243,16 @@ class AppShell extends StatelessWidget {
         if (constraints.maxWidth <= 768) {
           return Scaffold(
             drawer: _Sidebar(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Typically this would open a modal or navigate to a dedicated chat screen.
+          // We navigate to the chat screen with a query param to initialize the Help Agent context.
+          context.go('/chat?agent=help');
+        },
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        child: const Icon(Icons.help_center),
+        tooltip: 'Ask AI Help',
+      ),
             body: Stack(
               children: [
                 child,
@@ -263,6 +283,16 @@ class AppShell extends StatelessWidget {
           );
         } else {
           return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          // Typically this would open a modal or navigate to a dedicated chat screen.
+          // We navigate to the chat screen with a query param to initialize the Help Agent context.
+          context.go('/chat?agent=help');
+        },
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        child: const Icon(Icons.help_center),
+        tooltip: 'Ask AI Help',
+      ),
             body: Row(
               children: [
                 _Sidebar(),
@@ -347,6 +377,17 @@ class _Sidebar extends StatelessWidget {
         _NavItem(icon: Icons.extension, label: 'Skills', path: '/skills'),
         _NavItem(icon: Icons.security, label: 'Security', path: '/security'),
         _NavItem(icon: Icons.terminal, label: 'Logs', path: '/logs'),
+        _NavItem(
+          icon: Icons.help_outline,
+          label: 'Help Center',
+          path: '/help',
+        ),
+        _NavItem(
+          icon: Icons.new_releases,
+          label: 'Release Notes',
+          path: '/release_notes',
+        ),
+
         const SizedBox(height: 8),
         _NavItem(icon: Icons.settings, label: 'Settings', path: '/settings'),
         _NavItem(
