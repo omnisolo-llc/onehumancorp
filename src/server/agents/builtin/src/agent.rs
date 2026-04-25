@@ -206,14 +206,56 @@ impl Agent {
                         (r, String::new())
                     }
                     Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
+                        // LangGraph 4-Type Error Handling Mechanics
+                        // 1. Check if the error is our ToolError
+                        if let Some(tool_err) = e.downcast_ref::<ohc_builtin_agent_core::types::ToolError>() {
+                            match tool_err.error_type {
+                                ohc_builtin_agent_core::types::ToolErrorType::Transient => {
+                                    let err = format!("Transient Error (max retries exceeded): {}", tool_err.message);
+                                    on_event(AgentEvent::ToolCall {
+                                        name: tc.name.clone(),
+                                        args_json: tc.arguments.to_string(),
+                                        result: err.clone(),
+                                        iteration,
+                                    });
+                                    (String::new(), err)
+                                }
+                                ohc_builtin_agent_core::types::ToolErrorType::LlmRecoverable => {
+                                    // LLM-recoverable: Return the raw error as a ToolMessage directly to the model so it can self-correct.
+                                    let err = format!("Error (Please fix your arguments and try again): {}", tool_err.message);
+                                    on_event(AgentEvent::ToolCall {
+                                        name: tc.name.clone(),
+                                        args_json: tc.arguments.to_string(),
+                                        result: err.clone(),
+                                        iteration,
+                                    });
+                                    (String::new(), err)
+                                }
+                                ohc_builtin_agent_core::types::ToolErrorType::UserFixable => {
+                                    // User-fixable: interrupt execution and ask user for input (bubble up as task error to halt agent)
+                                    let err_msg = format!("Execution interrupted: User action required. {}", tool_err.message);
+                                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                                    // We halt the task loop here since the user must fix this.
+                                    return Err(tool_err.message.clone().into());
+                                }
+                                ohc_builtin_agent_core::types::ToolErrorType::Unexpected => {
+                                    // Unexpected: bubble up to debug / halt
+                                    let err_msg = format!("Unexpected system error: {}", tool_err.message);
+                                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                                    return Err(tool_err.message.clone().into());
+                                }
+                            }
+                        } else {
+                            // Default to LLM-recoverable for unknown generic errors, wrapping it in our format
+                            let err = format!("Error: {}", e.to_string());
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: err.clone(),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
                     }
                 };
                 tool_results.push(ToolResult {
@@ -269,16 +311,35 @@ impl Agent {
             .find(|t| t.name == tc.name)
             .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
 
-        tool.execute.execute(tc.arguments.clone()).await
+        let mut retries = 0;
+        let max_retries = 3;
+        let mut backoff_ms = 500;
+
+        loop {
+            match tool.execute.execute(tc.arguments.clone()).await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    if let Some(tool_err) = e.downcast_ref::<ohc_builtin_agent_core::types::ToolError>() {
+                        if tool_err.error_type == ohc_builtin_agent_core::types::ToolErrorType::Transient && retries < max_retries {
+                            retries += 1;
+                            tokio::time::sleep(std::time::Duration::from_millis(backoff_ms)).await;
+                            backoff_ms *= 2;
+                            continue;
+                        }
+                    }
+                    return Err(e);
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage, ToolDefinition, ToolResult};
     use std::sync::Arc;
-    use ohc_builtin_agent_tools::ToolExecutor;
+    use crate::tools::ToolExecutor;
     use serde_json::Value;
 
     struct MockLlmClient {
@@ -374,5 +435,113 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    struct ErrorToolExecutor;
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for ErrorToolExecutor {
+        async fn execute(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            let action = args["action"].as_str().unwrap_or("");
+            match action {
+                "transient" => Err(Box::new(ohc_builtin_agent_core::types::ToolError::transient("network timeout"))),
+                "llm_recoverable" => Err(Box::new(ohc_builtin_agent_core::types::ToolError::llm_recoverable("missing argument x"))),
+                "user_fixable" => Err(Box::new(ohc_builtin_agent_core::types::ToolError::user_fixable("approval required"))),
+                "unexpected" => Err(Box::new(ohc_builtin_agent_core::types::ToolError::unexpected("database disk image is malformed"))),
+                _ => Err("generic error".into()),
+            }
+        }
+    }
+
+    struct MockLlmClientErrorTest {
+        action: String,
+        responses: tokio::sync::Mutex<Vec<ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for MockLlmClientErrorTest {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if resps.is_empty() {
+                return Ok(ChatResponse {
+                    message: ohc_builtin_agent_core::types::Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                });
+            }
+            Ok(resps.remove(0))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_langgraph_4_type_error_handling() {
+        let tools = vec![
+            Tool {
+                name: "error_tool".to_string(),
+                description: "".to_string(),
+                parameters: serde_json::json!({}),
+                execute: Arc::new(ErrorToolExecutor),
+            }
+        ];
+
+        let mut errors_collected = vec![];
+
+        let test_cases = vec![
+            ("transient", "Transient Error (max retries exceeded): network timeout"),
+            ("llm_recoverable", "Error (Please fix your arguments and try again): missing argument x"),
+            ("user_fixable", "Execution interrupted: User action required. approval required"),
+            ("unexpected", "Unexpected system error: database disk image is malformed"),
+            ("generic", "Error: generic error"),
+        ];
+
+        for (action, expected_err) in test_cases {
+            let llm = Arc::new(MockLlmClientErrorTest {
+                action: action.to_string(),
+                responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                    message: ohc_builtin_agent_core::types::Message {
+                        role: ohc_builtin_agent_core::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ohc_builtin_agent_core::types::ToolCall {
+                            id: "1".to_string(),
+                            name: "error_tool".to_string(),
+                            arguments: serde_json::json!({ "action": action }),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                }]),
+            });
+
+            let agent = Agent::new(llm, tools.clone());
+            let cfg = AgentRunConfig {
+                max_iterations: 10,
+                enable_observation_masking: false,
+                ..Default::default()
+            };
+
+            let mut last_event_msg = String::new();
+            let mut on_event = |evt: AgentEvent| {
+                match evt {
+                    AgentEvent::ToolCall { result, .. } => last_event_msg = result,
+                    AgentEvent::TaskError { error } => last_event_msg = error,
+                    _ => {}
+                }
+            };
+
+            let _ = agent.run(&cfg, "Start", &mut on_event).await;
+            errors_collected.push((action, last_event_msg));
+        }
+
+        for (action, msg) in errors_collected {
+            match action {
+                "transient" => assert_eq!(msg, "Transient Error (max retries exceeded): network timeout"),
+                "llm_recoverable" => assert_eq!(msg, "Error (Please fix your arguments and try again): missing argument x"),
+                "user_fixable" => assert_eq!(msg, "Execution interrupted: User action required. approval required"),
+                "unexpected" => assert_eq!(msg, "Unexpected system error: database disk image is malformed"),
+                "generic" => assert_eq!(msg, "Error: generic error"),
+                _ => {}
+            }
+        }
     }
 }

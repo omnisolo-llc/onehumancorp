@@ -104,3 +104,58 @@ pub struct ToolDefinition {
     pub description: String,
     pub parameters: serde_json::Value,
 }
+
+
+/// Types of errors that can occur during tool execution (LangGraph 4-type mechanics).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ToolErrorType {
+    /// Transient errors (e.g. network timeout) that can be automatically retried with backoff.
+    Transient,
+    /// Errors the LLM can self-correct (e.g. invalid arguments, missing params).
+    LlmRecoverable,
+    /// Errors that require user intervention to fix (e.g. missing credentials, explicit approval).
+    UserFixable,
+    /// Unexpected system or unrecoverable errors that should halt the agent.
+    Unexpected,
+}
+
+impl std::fmt::Display for ToolErrorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolErrorType::Transient => write!(f, "Transient"),
+            ToolErrorType::LlmRecoverable => write!(f, "LlmRecoverable"),
+            ToolErrorType::UserFixable => write!(f, "UserFixable"),
+            ToolErrorType::Unexpected => write!(f, "Unexpected"),
+        }
+    }
+}
+
+/// A standard ToolError that implements LangGraph 4-type mechanics.
+#[derive(Debug, Clone)]
+pub struct ToolError {
+    pub error_type: ToolErrorType,
+    pub message: String,
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}] {}", self.error_type, self.message)
+    }
+}
+
+impl std::error::Error for ToolError {}
+
+impl ToolError {
+    pub fn transient(msg: impl Into<String>) -> Self {
+        Self { error_type: ToolErrorType::Transient, message: msg.into() }
+    }
+    pub fn llm_recoverable(msg: impl Into<String>) -> Self {
+        Self { error_type: ToolErrorType::LlmRecoverable, message: msg.into() }
+    }
+    pub fn user_fixable(msg: impl Into<String>) -> Self {
+        Self { error_type: ToolErrorType::UserFixable, message: msg.into() }
+    }
+    pub fn unexpected(msg: impl Into<String>) -> Self {
+        Self { error_type: ToolErrorType::Unexpected, message: msg.into() }
+    }
+}
