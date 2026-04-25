@@ -430,3 +430,27 @@ pkg_rpm(
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )
+
+flutter_test(
+    name = "cuj_prompt_tuning_wizard_e2e_test",
+    srcs = ["test/cuj_prompt_tuning_wizard_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_prompt_tuning_wizard_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_business_setup_wizard_e2e_test",
+    srcs = ["test/cuj_business_setup_wizard_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_business_setup_wizard_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
+    name = "cuj_website_builder_wizard_e2e_test",
+    srcs = ["test/cuj_website_builder_wizard_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_website_builder_wizard_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
