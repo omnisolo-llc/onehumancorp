@@ -7,6 +7,7 @@ exports_files([
     "docker-compose.yml",
     "docker-compose.e2e.yml",
     "setup_k8s.sh",
+    "helm/ohc/dashboards/harness_efficiency.json",
 ])
 
 # ── server image (onehumancorp/server) ────────────────────────────────────────
@@ -142,5 +143,3 @@ sh_test(
     ],
     visibility = ["//visibility:public"],
 )
-
-exports_files(["helm/ohc/dashboards/harness_efficiency.json"])
