@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+	"io"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/onehumancorp/mono/src/server/telemetry"
 	pb "github.com/onehumancorp/mono/src/proto"
@@ -21,12 +24,67 @@ func NewMeshAPI(mt MeshTransport) *MeshAPI {
 }
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/api/mesh/v2/broadcast", api.HandleMeshV2Broadcast)
 	mux.HandleFunc("/api/mesh/broadcast", api.HandleBroadcast)
 	mux.HandleFunc("/api/v1/mesh/broadcast", api.HandleMeshV1Broadcast)
 	mux.HandleFunc("/api/mesh/stream", api.HandleStream)
 	mux.HandleFunc("/api/mesh/sync", api.HandleSync)
 	mux.HandleFunc("/api/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/mesh/connect", api.HandleConnect)
+}
+
+
+func (api *MeshAPI) HandleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(r.Context(), "HandleMeshV2Broadcast", time.Since(start)) }()
+	if telemetry.BufferMetricFunc == nil {
+		telemetry.RecordMeshBroadcast(r.Context(), "events")
+	} else {
+		payloadBytes, _ := json.Marshal(map[string]interface{}{"mode": "events"})
+		_ = telemetry.BufferMetricFunc(r.Context(), "mesh_broadcast", string(payloadBytes))
+	}
+
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req pb.PublishTeammateMeshEventRequest
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read body", http.StatusBadRequest)
+		return
+	}
+
+	if err := protojson.Unmarshal(body, &req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if req.GetChannel() == "" {
+		http.Error(w, "Missing channel parameter", http.StatusBadRequest)
+		return
+	}
+
+	if req.GetEvent() == nil {
+		http.Error(w, "Missing event parameter", http.StatusBadRequest)
+		return
+	}
+
+	payload, err := protojson.Marshal(req.GetEvent())
+	if err != nil {
+		http.Error(w, "Failed to marshal payload", http.StatusInternalServerError)
+		return
+	}
+
+	if err := api.meshTransport.BroadcastMeshEvent(r.Context(), req.GetChannel(), payload); err != nil {
+		http.Error(w, "Failed to broadcast", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(`{"status":"success"}`))
 }
 
 func (api *MeshAPI) HandleBroadcast(w http.ResponseWriter, r *http.Request) {

@@ -69,6 +69,7 @@ go_library(
         "@org_golang_google_grpc//peer",
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//encoding/protojson",
         "@org_modernc_sqlite//:sqlite",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",

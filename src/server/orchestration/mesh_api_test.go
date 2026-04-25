@@ -135,3 +135,33 @@ func TestMeshAPI_Sync(t *testing.T) {
 		t.Errorf("expected correct SSE format, got %s", body)
 	}
 }
+
+
+func TestMeshAPI_HandleMeshV2Broadcast(t *testing.T) {
+	mockMesh := &mockMeshApiTransport{}
+	api := NewMeshAPI(mockMesh)
+
+	tests := []struct {
+		name       string
+		method     string
+		body       string
+		statusCode int
+	}{
+		{"Method Not Allowed", http.MethodGet, "", http.StatusMethodNotAllowed},
+		{"Invalid JSON", http.MethodPost, "{invalid}", http.StatusBadRequest},
+		{"Missing Channel", http.MethodPost, `{"event":{"agentId":"worker-1"}}`, http.StatusBadRequest},
+		{"Missing Event", http.MethodPost, `{"channel":"ohc.mesh.agent.123"}`, http.StatusBadRequest},
+		{"Success", http.MethodPost, `{"channel":"ohc.mesh.agent.123", "event": {"agentId":"worker-1","action":"TaskTransition","status":"success"}}`, http.StatusOK},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, "/api/mesh/v2/broadcast", bytes.NewBuffer([]byte(tt.body)))
+			w := httptest.NewRecorder()
+			api.HandleMeshV2Broadcast(w, req)
+			if w.Code != tt.statusCode {
+				t.Errorf("expected %d, got %d", tt.statusCode, w.Code)
+			}
+		})
+	}
+}
