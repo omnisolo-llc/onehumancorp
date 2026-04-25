@@ -66,14 +66,14 @@
       "type": "text",
       "title": "OHC Aesthetics",
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "options": {
         "mode": "html",
-        "content": "<style>\n  .panel-container {\n    backdrop-filter: blur(20px) saturate(200%);\n    background: rgba(255, 255, 255, 0.03) !important;\n    border-radius: 12px;\n    border: 1px solid rgba(255, 255, 255, 0.1);\n    font-family: 'Outfit', 'Inter', sans-serif !important;\n  }\n</style>\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  <h1 style=\"margin: 0; color: #fff; font-size: 24px;\">Agent Audit Dashboard</h1>\n  <p style=\"margin: 5px 0 0; color: #aaa; font-size: 14px;\">OHC Swarm Intelligence Protocol</p>\n</div>"
+        "content": "<style> * { font-family: 'Outfit', 'Inter', sans-serif !important; } .panel-container { backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 12px; } .grafana-app { background-color: #0b0c10 !important; } </style>\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">AGENT AUDIT DASHBOARD</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">OHC Swarm Intelligence Protocol</p>\n</div>"
       },
       "pluginVersion": "10.0.0",
       "transparent": true
@@ -85,7 +85,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 2
+        "y": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -111,7 +111,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 2
+        "y": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -132,7 +132,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 2
+        "y": 3
       },
       "datasource": {
         "type": "prometheus",
