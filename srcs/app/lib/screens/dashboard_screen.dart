@@ -14,6 +14,7 @@ import 'package:ohc_app/widgets/swarm_velocity_widget.dart';
 import 'package:ohc_app/widgets/hybrid_observability_widget.dart';
 import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
+import 'package:ohc_app/widgets/welcome_checklist_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
@@ -127,6 +128,7 @@ class _DashboardContent extends StatelessWidget {
           ),
         ),
 
+        const WelcomeChecklistWidget(),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

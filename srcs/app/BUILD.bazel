@@ -186,6 +186,14 @@ flutter_test(
 # caching: a code change in one feature only invalidates the related target.
 
 flutter_test(
+    name = "cuj_welcome_checklist_e2e_test",
+    srcs = ["test/cuj_welcome_checklist_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_welcome_checklist_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+flutter_test(
     name = "cuj_auth_e2e_test",
     srcs = ["test/cuj_auth_e2e_test.dart"],
     embed = [":app_lib"],
@@ -283,6 +291,7 @@ test_suite(
         ":cuj_channels_extra_e2e_test",
         ":cuj_scaling_e2e_test",
         ":cuj_diagnostics_referrals_e2e_test",
+        ":cuj_welcome_checklist_e2e_test",
     ],
 )
 

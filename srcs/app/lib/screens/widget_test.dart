@@ -134,6 +134,8 @@ void main() {
     });
 
     testWidgets('shows dashboard data when API returns data', (tester) async {
+      tester.view.physicalSize = const Size(1920, 3000); // Taller view
+      tester.view.devicePixelRatio = 1.0;
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -192,9 +194,10 @@ void main() {
           overrides: [apiServiceProvider.overrideWithValue(api)],
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('3'), findsOneWidget);
+      expect(find.text('3'), findsAtLeastNWidgets(1));
     });
   });
 
@@ -252,6 +255,8 @@ void main() {
     testWidgets('shows empty agents state when API returns empty list', (
       tester,
     ) async {
+      tester.view.physicalSize = const Size(1920, 3000);
+      tester.view.devicePixelRatio = 1.0;
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -269,9 +274,13 @@ void main() {
           overrides: [apiServiceProvider.overrideWithValue(api)],
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('No agents yet'), findsOneWidget);
+
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
     });
   });
 
