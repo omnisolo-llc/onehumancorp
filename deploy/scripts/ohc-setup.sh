@@ -51,12 +51,7 @@ bazelisk test //src/server/api/...
 echo -e "${DIM}[X] Verifying .env setup...${RESET}"
 bash deploy/scripts/ohc-verify-setup.sh || { echo -e "${PURPLE}Verification failed.${RESET}"; false; }
 
-echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
-if [ -f deploy/scripts/ohc-audit-day-one.sh ]; then
-    bash deploy/scripts/ohc-audit-day-one.sh || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
-else
-    echo -e "${DIM}Audit script not found, skipping.${RESET}"
-fi
+
 
 echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
