@@ -31,12 +31,7 @@ class _SwarmVelocityWidgetState extends ConsumerState<SwarmVelocityWidget> {
 
           _completedTasks = _recentMessages.where((m) => m.action.toLowerCase().contains('complete') || m.action.toLowerCase().contains('finish') || m.action.toLowerCase().contains('success')).length;
 
-          if (_completedTasks > 0) {
-              // Simulate latency calculation from mesh timestamps (mock logic for visualizer)
-              _avgLatencyMs = 120.0 + (_recentMessages.length % 50);
-          } else {
-              _avgLatencyMs = 0.0;
-          }
+          _avgLatencyMs = 0.0;
         });
       }
     });

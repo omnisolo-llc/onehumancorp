@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
@@ -174,20 +173,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/users',
             builder: (context, state) => const UserManagementScreen(),
-          ),
-          GoRoute(
-            path: '/wizards/fix/:id',
-            builder: (context, state) => FixThisWizardScreen(
-              agentId: state.pathParameters['id'] ?? 'unknown',
-            ),
-          ),
-          GoRoute(
-            path: '/wizards/upgrade',
-            builder: (context, state) => const UpgradeWizardScreen(),
-          ),
-          GoRoute(
-            path: '/wizards/billing',
-            builder: (context, state) => const BillingWizardScreen(),
           ),
           GoRoute(
             path: '/agents/:id/tune',
