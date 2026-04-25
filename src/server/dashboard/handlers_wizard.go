@@ -14,6 +14,7 @@ type wizardStatusResponse struct {
 	Configured bool `json:"configured"`
 	// Steps holds per-step completion status.
 	Steps wizardSteps `json:"steps"`
+	Extras map[string]string `json:"extras,omitempty"`
 }
 
 type wizardSteps struct {

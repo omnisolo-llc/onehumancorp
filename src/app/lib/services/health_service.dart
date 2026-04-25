@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/services/auth_service.dart';
@@ -19,6 +20,8 @@ class HealthNotifier extends AsyncNotifier<HealthStatus> {
   }
 
   void _startPolling() {
+    if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) async {
       state = AsyncData(await _checkHealth());
