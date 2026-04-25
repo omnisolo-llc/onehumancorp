@@ -20,6 +20,8 @@ import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/screens/handoffs_screen.dart';
 import 'package:ohc_app/screens/cost_dashboard_screen.dart';
 import 'package:ohc_app/screens/scaling_screen.dart';
+import 'package:ohc_app/screens/pricing_screen.dart';
+
 import 'package:ohc_app/screens/pipelines_screen.dart';
 import 'package:ohc_app/screens/integrations_screen.dart';
 import 'package:ohc_app/screens/user_management_screen.dart';
@@ -179,7 +181,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/wizards/upgrade',
-            builder: (context, state) => const UpgradeWizardScreen(),
+            builder: (context, state) => const PricingScreen(),
+          ),
+          GoRoute(
+            path: '/pricing',
+            builder: (context, state) => const PricingScreen(),
           ),
           GoRoute(
             path: '/wizards/billing',

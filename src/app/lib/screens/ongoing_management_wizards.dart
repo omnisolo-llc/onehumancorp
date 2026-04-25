@@ -1,3 +1,6 @@
+import 'package:intl/intl.dart';
+import 'package:ohc_app/screens/dashboard_screen.dart';
+import 'package:ohc_app/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -159,56 +162,70 @@ class BillingWizardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final dashboardAsync = ref.watch(dashboardProvider);
+    final currencyFormat = NumberFormat.currency(symbol: '\$');
+
     return Scaffold(
       appBar: AppBar(title: const Text('Billing & Credits')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: GlassCard(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('How much does this cost?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 24),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                      ),
-                      child: Column(
-                        children: const [
-                          Text('Current Usage', style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
-                          SizedBox(height: 8),
-                          Text('\$42.50', style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold)),
-                          SizedBox(height: 8),
-                          Text('Projected monthly cost: \$85.00', style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Colors.grey)),
-                        ],
-                      ),
+      body: dashboardAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(child: Text('Error: $err')),
+        data: (dashboard) {
+          final costs = dashboard.costs;
+
+          return Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: GlassCard(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('Cost Transparency Dashboard', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text('Current Usage', style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
+                              const SizedBox(height: 8),
+                              Text(currencyFormat.format(costs.totalCostUSD), style: const TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 8),
+                              Text('Projected monthly cost: ${currencyFormat.format(costs.totalCostUSD * 30)}', style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text('Your current plan is Free. Storage Used: 0MB. Used: ${costs.agents.length} agents, ${costs.totalTokens} tokens.', style: const TextStyle(fontFamily: 'Inter', fontSize: 14)),
+                        const SizedBox(height: 24),
+                        FilledButton(
+                          onPressed: () async {
+                            await ref.read(apiServiceProvider)!.upgradePlan('Pro');
+                            context.go('/pricing');
+                          },
+                          child: const Text('Upgrade'),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: () => context.go('/pricing'),
+                          child: const Text('Switch Plan'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 24),
-                    const Text('Your current plan includes 1000 AI tasks per day. You have used 450 today.', style: TextStyle(fontFamily: 'Inter', fontSize: 14)),
-                    const SizedBox(height: 24),
-                    FilledButton(
-                      onPressed: () {},
-                      child: const Text('Add Credits'),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton(
-                      onPressed: () {},
-                      child: const Text('Switch Plan'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

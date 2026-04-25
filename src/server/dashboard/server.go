@@ -619,6 +619,8 @@ func NewServer(org domain.Organization, hub *orchestration.Hub, tracker *billing
 	mux.HandleFunc("/api/compute/profiles", server.handleComputeProfiles)
 	mux.HandleFunc("/api/clusters/", server.handleClusterStatus)
 	// Phase 5 – Budget Alerts
+
+	mux.HandleFunc("/api/billing/upgrade", server.handleBillingUpgrade)
 	mux.HandleFunc("/api/billing/alerts", server.handleBudgetAlerts)
 	// Phase 5 – Automated SDLC / Pipelines
 	mux.HandleFunc("/api/pipelines", server.handlePipelines)
@@ -2133,4 +2135,38 @@ func (s *Server) handleMeshV2Broadcast(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func (s *Server) handleBillingUpgrade(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Tier string `json:"tier"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	switch req.Tier {
+	case "Free":
+		s.org.Tier = domain.TierFree
+	case "Starter":
+		s.org.Tier = domain.TierStarter
+	case "Pro":
+		s.org.Tier = domain.TierPro
+	case "Business":
+		s.org.Tier = domain.TierBusiness
+	default:
+		http.Error(w, "invalid tier", http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, map[string]string{"status": "ok", "tier": string(s.org.Tier)})
 }

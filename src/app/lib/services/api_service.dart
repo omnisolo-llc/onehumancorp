@@ -113,7 +113,18 @@ class ApiService {
     _checkStatus(res);
   }
 
+
+  Future<void> upgradePlan(String tier) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/billing/upgrade'),
+      headers: _headers,
+      body: jsonEncode({'tier': tier}),
+    );
+    _checkStatus(res);
+  }
+
   // ── Handoffs & Approvals ─────────────────────────────────────────────────
+
 
   Future<List<HandoffPackage>> listHandoffs() async {
     final res = await _client.get(

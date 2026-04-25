@@ -160,6 +160,7 @@ const (
 	TierFree    Tier = "Free"
 	TierStarter Tier = "Starter"
 	TierPro     Tier = "Pro"
+	TierBusiness Tier = "Business"
 )
 
 // Organization represents the top-level structural entity, maintaining the hierarchy of members, active roles, and cross-team workflows.
@@ -190,6 +191,21 @@ func (o Organization) ActionLimit() int64 {
 		fallthrough
 	default:
 		return 100 // Default to Free tier limits if unspecified
+	}
+}
+
+// StorageLimitBytes returns the hard limit on storage usage in bytes based on the organization's tier.
+// Returns -1 for unlimited.
+func (o Organization) StorageLimitBytes() int64 {
+	switch o.Tier {
+	case TierStarter:
+		return 5 * 1024 * 1024 * 1024 // 5GB
+	case TierPro:
+		return 50 * 1024 * 1024 * 1024 // 50GB
+	case TierFree:
+		fallthrough
+	default:
+		return 500 * 1024 * 1024 // 500MB
 	}
 }
 
