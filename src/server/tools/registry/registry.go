@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 )
 
@@ -82,7 +83,6 @@ func (r *UnifiedToolRegistry) GetTool(name string) (AgentTool, bool) {
 	return tool, exists
 }
 
-
 // ExecuteTool safely executes a tool by name, handling logging and metrics interception.
 func (r *UnifiedToolRegistry) ExecuteTool(ctx context.Context, name string, input json.RawMessage) (json.RawMessage, error) {
 	tool, exists := r.GetTool(name)
@@ -93,14 +93,14 @@ func (r *UnifiedToolRegistry) ExecuteTool(ctx context.Context, name string, inpu
 	// Intercept standard metrics and logging here
 	// In a real system, you would use OpenTelemetry or a metrics package.
 	// For now, we simulate logging interception at the execution boundary.
-	fmt.Printf("[Registry Execution] Executing tool: %s\n", name)
+	slog.Info("Registry Execution Executing tool", "name", name)
 
 	res, err := tool.Execute(ctx, input)
 
 	if err != nil {
-		fmt.Printf("[Registry Execution] Tool %s failed: %v\n", name, err)
+		slog.Error("Registry Execution Tool failed", "name", name, "error", err)
 	} else {
-		fmt.Printf("[Registry Execution] Tool %s executed successfully\n", name)
+		slog.Info("Registry Execution Tool executed successfully", "name", name)
 	}
 
 	return res, err
