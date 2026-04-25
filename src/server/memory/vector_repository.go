@@ -120,12 +120,12 @@ func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID st
 	return results, nil
 }
 
-func (r *VectorRepository) PruneStale(ctx context.Context, olderThan time.Time) error {
+func (r *VectorRepository) PruneStale(ctx context.Context, organizationID string, olderThan time.Time) error {
 	// Only prune records explicitly marked as TASK_SUMMARY to be safe,
 	// or prune records that haven't been accessed recently (if we had last_accessed_at)
 	// Given the schema, we prune explicitly task summaries that are older than threshold.
-	query := `DELETE FROM consolidated_memory WHERE created_at < $1 AND source_type = 'TASK_SUMMARY'`
-	_, err := r.db.Exec(ctx, query, olderThan)
+	query := `DELETE FROM consolidated_memory WHERE organization_id = $1 AND created_at < $2 AND source_type = 'TASK_SUMMARY'`
+	_, err := r.db.Exec(ctx, query, organizationID, olderThan)
 	return err
 }
 
@@ -158,25 +158,35 @@ func (r *VectorRepository) GetOrganizationIDs(ctx context.Context) ([]string, er
 	return orgIDs, nil
 }
 
-func (r *VectorRepository) GetOrganizationIDs(ctx context.Context) ([]string, error) {
-	query := "SELECT DISTINCT organization_id FROM users WHERE organization_id != ''"
-	rows, err := r.db.Query(ctx, query)
+
+
+
+func (r *VectorRepository) GetRecentMemories(ctx context.Context, organizationID string, since time.Time) ([]*EmbeddingRecord, error) {
+	query := `
+		SELECT id, organization_id, COALESCE(agent_id, ''), content, embedding, source_type, created_at
+		FROM consolidated_memory
+		WHERE organization_id = $1 AND created_at >= $2
+		ORDER BY created_at DESC
+		LIMIT 100
+	`
+	rows, err := r.db.Query(ctx, query, organizationID, since)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get organization IDs: %w", err)
+		return nil, fmt.Errorf("failed to query recent memories: %w", err)
 	}
 	defer rows.Close()
 
-	var orgIDs []string
+	var results []*EmbeddingRecord
 	for rows.Next() {
-		var orgID string
-		if err := rows.Scan(&orgID); err != nil {
-			return nil, fmt.Errorf("failed to scan organization ID: %w", err)
+		var rec EmbeddingRecord
+		var embStr string
+		if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.AgentID, &rec.Content, &embStr, &rec.SourceType, &rec.CreatedAt); err != nil {
+			continue
 		}
-		orgIDs = append(orgIDs, orgID)
+		json.Unmarshal([]byte(embStr), &rec.Embedding)
+		results = append(results, &rec)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
-
-	return orgIDs, nil
+	return results, nil
 }

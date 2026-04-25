@@ -109,26 +109,84 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 	return nil
 }
 
-// PruneStaleContext removes context older than the specified threshold.
-// This implements the background pruning strategy logic.
-func (s *Service) PruneStaleContext(ctx context.Context, olderThan time.Time) error {
-	return s.vectorRepo.PruneStale(ctx, olderThan)
+// PruneStaleContext removes context older than the specified threshold for a specific tenant.
+func (s *Service) PruneStaleContext(ctx context.Context, orgID string, maxAge time.Duration) error {
+	olderThan := time.Now().Add(-maxAge)
+	return s.vectorRepo.PruneStale(ctx, orgID, olderThan)
 }
 
 // StartBackgroundPruner starts a background worker that periodically calls PruneStaleContext.
+// Deprecated: handled by BackgroundWorker now. Kept to not break main.go
 func (s *Service) StartBackgroundPruner(ctx context.Context, interval time.Duration, maxAge time.Duration) {
-	ticker := time.NewTicker(interval)
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				ticker.Stop()
-				return
-			case <-ticker.C:
-				olderThan := time.Now().Add(-maxAge)
-				// Best effort pruning, ignore errors
-				_ = s.PruneStaleContext(ctx, olderThan)
-			}
+	// No-op since BackgroundWorker handles it.
+}
+
+// ResolveConflicts searches for conflicting context and merges them.
+func (s *Service) ResolveConflicts(ctx context.Context, orgID string) error {
+	recentMemories, err := s.vectorRepo.GetRecentMemories(ctx, orgID, time.Now().Add(-24*time.Hour))
+	if err != nil {
+		return fmt.Errorf("failed to fetch recent memories: %w", err)
+	}
+
+	for _, recentRec := range recentMemories {
+		if recentRec.Embedding == nil || len(recentRec.Embedding) == 0 {
+			continue
 		}
-	}()
+
+		similarRecords, err := s.vectorRepo.SemanticSearch(ctx, orgID, recentRec.Embedding, 5)
+		if err != nil || len(similarRecords) <= 1 {
+			continue // No similar records found (only itself or none)
+		}
+
+		var similarContext string
+		var idsToDelete []string
+		hasOther := false
+
+		for _, rec := range similarRecords {
+			if rec.ID == recentRec.ID {
+				continue
+			}
+			hasOther = true
+			similarContext += fmt.Sprintf("- (ID: %s) %s\n", rec.ID, rec.Content)
+			idsToDelete = append(idsToDelete, rec.ID)
+		}
+
+		if !hasOther {
+			continue
+		}
+        idsToDelete = append(idsToDelete, recentRec.ID)
+
+		resolvePrompt := fmt.Sprintf(
+			"You are a memory consolidation agent. Here is a recently added fact:\n%s\n\n"+
+				"Here are similar past facts:\n%s\n\n"+
+				"If the new fact conflicts with the past facts, resolve the conflict by keeping the new fact (it is more recent) but incorporate any missing details from the old facts. If they don't conflict, just return the new fact merged with any relevant context. Do not include introductory text, just the resolved fact.",
+			recentRec.Content, similarContext)
+
+		resolvedSummary, err := s.llm.Reason(ctx, resolvePrompt)
+		if err != nil || resolvedSummary == "" {
+			continue
+		}
+
+		resolvedEmbedding, err := s.llm.GenerateEmbedding(ctx, resolvedSummary)
+		if err != nil {
+			continue
+		}
+
+		for _, id := range idsToDelete {
+			_ = s.vectorRepo.Delete(ctx, id)
+		}
+
+		resolvedRecord := &memory.EmbeddingRecord{
+			ID:             recentRec.ID + "-merged",
+			OrganizationID: orgID,
+			SourceType:     "TASK_SUMMARY",
+			Content:        resolvedSummary,
+			Embedding:      resolvedEmbedding,
+			CreatedAt:      time.Now(),
+		}
+
+		_ = s.vectorRepo.Upsert(ctx, resolvedRecord)
+	}
+
+	return nil
 }
