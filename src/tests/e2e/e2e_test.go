@@ -13,6 +13,17 @@ import (
 	playwright "github.com/playwright-community/playwright-go"
 )
 
+func init() {
+	// Set up writable directories for Playwright in Bazel sandbox
+	if tmp := os.Getenv("TEST_TMPDIR"); tmp != "" {
+		home := filepath.Join(tmp, "home")
+		os.MkdirAll(home, 0755)
+		os.Setenv("HOME", home)
+		os.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, "xdg-cache"))
+		os.Setenv("PLAYWRIGHT_BROWSERS_PATH", filepath.Join(tmp, "pw_browsers"))
+	}
+}
+
 var (
 	pw      *playwright.Playwright
 	browser playwright.Browser
