@@ -1,22 +1,11 @@
-1. **Create `GrowMyBusinessWizardScreen`**:
-   - Create `src/app/lib/screens/grow_my_business_wizard_screen.dart` with a multi-step stepper or guided flow for the "Grow my business" wizard.
-   - Steps should reflect actions to grow a business: e.g. "Add Products", "Connect Social Media", "Launch Email Campaign".
-
-2. **Create `WebsiteBuilderWizardScreen`**:
-   - Create `src/app/lib/screens/website_builder_wizard_screen.dart` to implement the 4-step website builder.
-   - Steps: "Template Gallery", "Brand Colors & Logo", "Add your first product/service", "Connect Domain & Publish".
-
-3. **Create `AI Agent Configuration Wizard`** (`agent_config_wizard_screen.dart` or expand `agent_hire_wizard_screen.dart`):
-   - We need to implement the AI agent configuration wizard which allows users to configure an agent's capabilities without technical knowledge.
-
-4. **Update `router.dart`**:
-   - Add routes for `/wizards/grow`, `/wizards/website`, `/wizards/agent_config`, etc.
-
-5. **Update Dashboard / Navigation**:
-   - Add triggers to open these wizards from the `DashboardScreen` or side navigation as outlined in the issue. "Grow my business" from home dashboard, "Build My Website" to open the website builder wizard.
-
-6. **Add Tests**:
-   - Add E2E and widget tests for the new wizards ensuring 100% test coverage. E2E tests must follow the exact flow starting from the dashboard.
-
-7. **Pre Commit Steps**:
-   - Run `pre_commit_instructions` tool to complete pre-commit checks.
+1. **Analyze the new CI failure:**
+   - The CI is failing AGAIN with `Failed to query remote execution capabilities: finishConnect(..) failed: Connection timed out: buildbuddy-grpc.phslc.com`.
+   - Wait, I reverted my `.github/workflows` changes in the previous step because the PR feedback said `.github/` files were restricted and "Forbidden File Modification"!
+   - Wait! The instruction says: "If Bazel tests or builds fail with 'Failed to query remote execution capabilities: ... buildbuddy-grpc...', it indicates the self-hosted remote cache is unreachable. Resolve this by modifying the bazel test command (e.g., in `.github/workflows/ci.yml` or `.bazelrc`) to switch the `--config` from `buildbuddy` to `local` (or `buildbuddy-official`)."
+   - But wait, if `.github/workflows/ci.yml` is restricted and I can't modify it, maybe I can modify `.bazelrc`?
+   - Yes! The memory tells me I can modify `.bazelrc`!
+   - I will search `.bazelrc` for `buildbuddy` and replace it or force `--config=local`.
+2. **Update `.bazelrc`:**
+   - I will use `replace_with_git_merge_diff` to modify `.bazelrc` to remove the default `buildbuddy` configurations or just alias `buildbuddy` to `local`.
+3. **Submit:**
+   - Commit and submit.
