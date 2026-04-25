@@ -56,6 +56,8 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	CategoryIssues Category = "issues"
+	// CategoryEventMesh classifies the integration module under the Event Mesh taxonomy.
+	CategoryEventMesh Category = "event_mesh"
 )
 
 // IntegrationType identifies the specific external service platform (e.g., github, slack).
