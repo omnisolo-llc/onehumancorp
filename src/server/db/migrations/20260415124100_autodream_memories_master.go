@@ -14,9 +14,13 @@ func init() {
 
 func upAutodreamMemoriesMaster(ctx context.Context, tx *sql.Tx) error {
 	var isSQLite bool
-	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(new(string))
-	if err == nil {
-		isSQLite = true
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT sqlite_probe"); err == nil {
+		if err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(new(string)); err == nil {
+			isSQLite = true
+			tx.ExecContext(ctx, "RELEASE SAVEPOINT sqlite_probe")
+		} else {
+			tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT sqlite_probe")
+		}
 	}
 
 	if !isSQLite {

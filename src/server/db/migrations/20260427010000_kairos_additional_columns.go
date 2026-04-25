@@ -13,9 +13,15 @@ func init() {
 }
 
 func upKairosAdditionalColumns20260427010000(ctx context.Context, tx *sql.Tx) error {
-	var sqliteVersion string
-	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
-	isSQLite := err == nil
+	var isSQLite bool
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT sqlite_probe"); err == nil {
+		if err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(new(string)); err == nil {
+			isSQLite = true
+			tx.ExecContext(ctx, "RELEASE SAVEPOINT sqlite_probe")
+		} else {
+			tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT sqlite_probe")
+		}
+	}
 
 	if !isSQLite {
 		// PostgreSQL migrations
@@ -98,9 +104,15 @@ func upKairosAdditionalColumns20260427010000(ctx context.Context, tx *sql.Tx) er
 }
 
 func downKairosAdditionalColumns20260427010000(ctx context.Context, tx *sql.Tx) error {
-	var sqliteVersion string
-	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
-	isSQLite := err == nil
+	var isSQLite bool
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT sqlite_probe"); err == nil {
+		if err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(new(string)); err == nil {
+			isSQLite = true
+			tx.ExecContext(ctx, "RELEASE SAVEPOINT sqlite_probe")
+		} else {
+			tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT sqlite_probe")
+		}
+	}
 
 	if !isSQLite {
 		_, err := tx.ExecContext(ctx, "DROP TABLE IF EXISTS agent_mesh_messages")

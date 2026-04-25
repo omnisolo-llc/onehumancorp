@@ -86,10 +86,17 @@ func upTenantIsolationRLS(ctx context.Context, tx *sql.Tx) error {
 	// Detect if we are on PostgreSQL safely without aborting its transaction
 	// SQLite does not have information_schema, and will throw an error, but it won't abort the transaction.
 	// PostgreSQL has information_schema, and will succeed.
-	var testVal int
-	err := tx.QueryRowContext(ctx, "SELECT 1 FROM information_schema.tables LIMIT 1").Scan(&testVal)
-	if err != nil {
-		// likely SQLite or an unsupported DB, skip RLS migration
+	var isSQLite bool
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT info_schema_probe"); err == nil {
+		var testVal int
+		if err := tx.QueryRowContext(ctx, "SELECT 1 FROM information_schema.tables LIMIT 1").Scan(&testVal); err != nil {
+			isSQLite = true
+			tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT info_schema_probe")
+		} else {
+			tx.ExecContext(ctx, "RELEASE SAVEPOINT info_schema_probe")
+		}
+	}
+	if isSQLite {
 		return nil
 	}
 
@@ -128,10 +135,18 @@ func upTenantIsolationRLS(ctx context.Context, tx *sql.Tx) error {
 }
 
 func downTenantIsolationRLS(ctx context.Context, tx *sql.Tx) error {
-	var testVal int
-	err := tx.QueryRowContext(ctx, "SELECT 1 FROM information_schema.tables LIMIT 1").Scan(&testVal)
-	if err != nil {
-		return nil // skip on sqlite
+	var isSQLite bool
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT info_schema_probe"); err == nil {
+		var testVal int
+		if err := tx.QueryRowContext(ctx, "SELECT 1 FROM information_schema.tables LIMIT 1").Scan(&testVal); err != nil {
+			isSQLite = true
+			tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT info_schema_probe")
+		} else {
+			tx.ExecContext(ctx, "RELEASE SAVEPOINT info_schema_probe")
+		}
+	}
+	if isSQLite {
+		return nil
 	}
 
 	for _, table := range tenantTables {

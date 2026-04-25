@@ -15,10 +15,13 @@ func upMCPAuditSyncLog(ctx context.Context, tx *sql.Tx) error {
 	// Let's create a generic table or use a single migration to avoid goose crashing due to identical timestamp
 	// Check for sqlite
 	isSqlite := false
-	var version string
-	err := tx.QueryRowContext(ctx, "select sqlite_version()").Scan(&version)
-	if err == nil {
-		isSqlite = true
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT sqlite_probe"); err == nil {
+		if err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(new(string)); err == nil {
+			isSqlite = true
+			tx.ExecContext(ctx, "RELEASE SAVEPOINT sqlite_probe")
+		} else {
+			tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT sqlite_probe")
+		}
 	}
 
 	var query string
