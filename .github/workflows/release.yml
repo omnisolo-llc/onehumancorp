@@ -48,7 +48,7 @@ jobs:
 
       - name: Build ironclaw archives (all platforms)
         run: |
-          bazelisk build \
+          bazelisk build --config=local \
             //release:ironclaw-x86_64-unknown-linux-gnu \
             //release:ironclaw-aarch64-unknown-linux-gnu \
             //release:ironclaw-x86_64-apple-darwin \
