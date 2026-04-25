@@ -52,8 +52,8 @@ func upAutodreamMemoriesMaster(ctx context.Context, tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, "ALTER TABLE autodream_memories_master ENABLE ROW LEVEL SECURITY;"); err != nil {
 			// ignore error if not postgres
 			if !strings.Contains(err.Error(), "ENABLE") {
-			    return err
-            }
+				return err
+			}
 		}
 	}
 
