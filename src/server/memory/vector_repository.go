@@ -158,3 +158,25 @@ func (r *VectorRepository) GetOrganizationIDs(ctx context.Context) ([]string, er
 	return orgIDs, nil
 }
 
+func (r *VectorRepository) GetOrganizationIDs(ctx context.Context) ([]string, error) {
+	query := "SELECT DISTINCT organization_id FROM users WHERE organization_id != ''"
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get organization IDs: %w", err)
+	}
+	defer rows.Close()
+
+	var orgIDs []string
+	for rows.Next() {
+		var orgID string
+		if err := rows.Scan(&orgID); err != nil {
+			return nil, fmt.Errorf("failed to scan organization ID: %w", err)
+		}
+		orgIDs = append(orgIDs, orgID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return orgIDs, nil
+}
