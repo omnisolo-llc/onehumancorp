@@ -1046,7 +1046,7 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string, 
 	processedPayloads := make([]string, len(records))
 
 	// Determine optimal worker count
-	workerCount := 4
+	workerCount := 16
 	if len(records) > 0 {
 		coordinator := perf.NewCoordinatorMode(workerCount)
 		tasks := make([]func() error, workerCount)
