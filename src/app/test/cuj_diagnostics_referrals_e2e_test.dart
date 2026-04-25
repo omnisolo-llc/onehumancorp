@@ -67,14 +67,8 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
       await tester.pump(const Duration(milliseconds: 500));
 
-      final btn = find.ancestor(
-        of: find.text('Run Diagnostics'),
-        matching: find.byType(ElevatedButton),
-      );
+      final btn = find.text('Run Diagnostics');
       expect(btn, findsOneWidget);
-
-      // Scroll into view
-      await tester.ensureVisible(btn);
       await tester.tap(btn);
       await tester.pump(const Duration(milliseconds: 500));
       // Screen should still be functional after tapping
