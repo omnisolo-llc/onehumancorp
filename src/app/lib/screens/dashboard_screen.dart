@@ -15,6 +15,9 @@ import 'package:ohc_app/services/api_service.dart';
 
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/widgets/shimmer_loading.dart';
+import 'package:ohc_app/widgets/help/contextual_tooltip.dart';
+import 'package:ohc_app/widgets/help/walkthrough_overlay.dart';
+import 'package:ohc_app/widgets/help/walkthrough_registry.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -22,11 +25,27 @@ final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) as
   return api.getDashboard();
 });
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    // Trigger walkthrough on first load (simulated)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // In a real app, check shared preferences if they've seen this before
+      ref.read(walkthroughProvider.notifier).state = WalkthroughRegistry.storeSetupWalkthrough;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
@@ -108,36 +127,42 @@ class _DashboardContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            _StatCard(
-              label: 'AI Helpers',
-              value: data.agents.where((a) => a.isRunning).length.toString(),
-              icon: Icons.smart_toy,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            _StatCard(
-              label: 'Tasks in Progress',
-              value: data.statuses.length.toString(),
-              icon: Icons.pending_actions,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            _StatCard(
-              label: 'Upcoming Meetings',
-              value: data.meetings.length.toString(),
-              icon: Icons.video_call,
-              color: Theme.of(context).colorScheme.tertiary,
-            ),
-            _StatCard(
-              label: 'Team',
-              value: data.organization.members.length.toString(),
-              icon: Icons.people,
-              color: Theme.of(context).colorScheme.primaryContainer,
-              iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-          ],
+        ContextualTooltip(
+          tooltipKey: 'dashboard_stats',
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 16,
+            children: [
+              _StatCard(
+                label: 'AI Helpers',
+                value: data.agents.where((a) => a.isRunning).length.toString(),
+                icon: Icons.smart_toy,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              _StatCard(
+                label: 'Tasks in Progress',
+                value: data.statuses.length.toString(),
+                icon: Icons.pending_actions,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+              ContextualTooltip(
+                tooltipKey: 'upcoming_meetings',
+                child: _StatCard(
+                  label: 'Upcoming Meetings',
+                  value: data.meetings.length.toString(),
+                  icon: Icons.video_call,
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
+              ),
+              _StatCard(
+                label: 'Team',
+                value: data.organization.members.length.toString(),
+                icon: Icons.people,
+                color: Theme.of(context).colorScheme.primaryContainer,
+                iconColor: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+            ],
+          ),
         ),
         // --- UPGRADE BANNER ---
         Container(

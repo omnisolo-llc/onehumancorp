@@ -6,6 +6,14 @@ import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
+import 'package:ohc_app/screens/help/help_center_screen.dart';
+import 'package:ohc_app/screens/help/article_detail_screen.dart';
+import 'package:ohc_app/screens/help/video_tutorials_screen.dart';
+import 'package:ohc_app/screens/help/api_docs_screen.dart';
+import 'package:ohc_app/screens/help/release_notes_screen.dart';
+import 'package:ohc_app/models/help_article.dart';
+import 'package:ohc_app/widgets/help/help_chat_widget.dart';
+import 'package:ohc_app/widgets/help/walkthrough_overlay.dart';
 import 'package:ohc_app/screens/chat_screen.dart';
 import 'package:ohc_app/screens/channels_screen.dart';
 import 'package:ohc_app/screens/ai_config_screen.dart';
@@ -135,6 +143,29 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/security',
             builder: (context, state) => const SecurityScreen(),
           ),
+        GoRoute(
+          path: '/help',
+          builder: (context, state) => const HelpCenterScreen(),
+        ),
+        GoRoute(
+          path: '/help/videos',
+          builder: (context, state) => const VideoTutorialsScreen(),
+        ),
+        GoRoute(
+          path: '/help/api',
+          builder: (context, state) => const ApiDocsScreen(),
+        ),
+        GoRoute(
+          path: '/help/releases',
+          builder: (context, state) => const ReleaseNotesScreen(),
+        ),
+        GoRoute(
+          path: '/help/article',
+          builder: (context, state) {
+            final article = state.extra as HelpArticle;
+            return ArticleDetailScreen(article: article);
+          },
+        ),
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsScreen(),
@@ -228,7 +259,16 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Row(children: [_Sidebar(), Expanded(child: child)]));
+    return Scaffold(
+      body: WalkthroughOverlay(
+        child: Stack(
+          children: [
+            Row(children: [_Sidebar(), Expanded(child: child)]),
+            const HelpChatWidget(),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -320,6 +360,15 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.health_and_safety,
           label: 'Diagnostics',
           path: '/diagnostics',
+        ),
+        const Divider(),
+        Semantics(
+          label: 'Help Center',
+          child: _NavItem(
+            icon: Icons.help,
+            label: 'Help Center',
+            path: '/help',
+          ),
         ),
         const SizedBox(height: 16),
       ],

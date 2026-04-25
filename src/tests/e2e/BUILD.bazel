@@ -257,3 +257,23 @@ test_suite(
         ":e2e_misc_test",
     ],
 )
+
+go_test(
+    name = "e2e_help_center_test",
+    srcs = [
+        "e2e_test.go",
+        "helpers_test.go",
+        "fake_llm_test.go",
+        "help_center_test.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS + [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)

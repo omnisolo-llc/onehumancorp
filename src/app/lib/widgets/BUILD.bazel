@@ -5,7 +5,7 @@ package(default_visibility = ["//src/app:__subpackages__"])
 filegroup(
     name = "srcs",
     srcs = glob(
-        ["*.dart"],
+        ["**/*.dart"],
         allow_empty = True,
     ) + ["BUILD.bazel"],
     visibility = ["//src/app:__pkg__"],
@@ -14,9 +14,9 @@ filegroup(
 filegroup(
     name = "dart_srcs",
     srcs = glob(
-        ["*.dart"],
+        ["**/*.dart"],
         allow_empty = True,
-        exclude = ["*_test.dart"],
+        exclude = ["**/*_test.dart"],
     ),
     visibility = ["//src/app:__pkg__"],
 )
@@ -25,8 +25,8 @@ filegroup(
 flutter_library(
     name = "widgets_lib",
     srcs = glob(
-        ["*.dart"],
-        exclude = ["*_test.dart"],
+        ["**/*.dart"],
+        exclude = ["**/*_test.dart"],
     ),
     pubspec = "//src/app:pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
