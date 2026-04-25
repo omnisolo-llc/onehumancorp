@@ -104,3 +104,43 @@ func (m *RedisMesh) ReleaseLock(ctx context.Context, key string, token string) e
 
 	return errors.New("lock not found or invalid token")
 }
+
+func (m *RedisMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
+	err := m.client.Set(ctx, "presence:"+agentID, status, 30*time.Second).Err()
+	return err
+}
+
+func (m *RedisMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
+	var agents []AgentPresence
+	var cursor uint64
+
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = m.client.Scan(ctx, cursor, "presence:*", 100).Result()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, key := range keys {
+			status, err := m.client.Get(ctx, key).Result()
+			if err == redis.Nil {
+				continue // Expired between scan and get
+			} else if err != nil {
+				return nil, err
+			}
+
+			agentID := key[len("presence:"):]
+			agents = append(agents, AgentPresence{
+				AgentID: agentID,
+				Status:  status,
+			})
+		}
+
+		if cursor == 0 {
+			break
+		}
+	}
+
+	return agents, nil
+}

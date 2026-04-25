@@ -22,4 +22,8 @@ type TeammateMesh interface {
 	// Distributed Lock
 	AcquireLock(ctx context.Context, key string, ttl time.Duration) (string, bool, error)
 	ReleaseLock(ctx context.Context, key string, token string) error
+
+	// Presence
+	RegisterPresence(ctx context.Context, agentID string, status string) error
+	GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
 }

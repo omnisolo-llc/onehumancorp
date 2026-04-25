@@ -46,6 +46,62 @@ func TestLocalMesh_PubSub(t *testing.T) {
 	}
 }
 
+func TestLocalMesh_Presence(t *testing.T) {
+	mesh := NewLocalMesh()
+	ctx := context.Background()
+
+	err := mesh.RegisterPresence(ctx, "agent-1", "ACTIVE")
+	if err != nil {
+		t.Fatalf("Failed to register presence: %v", err)
+	}
+
+	agents, err := mesh.GetActiveAgents(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get active agents: %v", err)
+	}
+
+	if len(agents) != 1 {
+		t.Fatalf("Expected 1 active agent, got %d", len(agents))
+	}
+
+	if agents[0].AgentID != "agent-1" || agents[0].Status != "ACTIVE" {
+		t.Errorf("Expected agent-1 ACTIVE, got %s %s", agents[0].AgentID, agents[0].Status)
+	}
+
+	// Update presence
+	err = mesh.RegisterPresence(ctx, "agent-1", "IDLE")
+	if err != nil {
+		t.Fatalf("Failed to update presence: %v", err)
+	}
+
+	agents, err = mesh.GetActiveAgents(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get active agents: %v", err)
+	}
+
+	if len(agents) != 1 {
+		t.Fatalf("Expected 1 active agent, got %d", len(agents))
+	}
+
+	if agents[0].AgentID != "agent-1" || agents[0].Status != "IDLE" {
+		t.Errorf("Expected agent-1 IDLE, got %s %s", agents[0].AgentID, agents[0].Status)
+	}
+
+	// Test TTL
+	mesh.mu.Lock()
+	mesh.presenceTtl["agent-1"] = time.Now().Add(-1 * time.Second)
+	mesh.mu.Unlock()
+
+	agents, err = mesh.GetActiveAgents(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get active agents: %v", err)
+	}
+
+	if len(agents) != 0 {
+		t.Fatalf("Expected 0 active agents, got %d", len(agents))
+	}
+}
+
 func TestLocalMesh_PubSub_PublishNoSubscribers(t *testing.T) {
     mesh := NewLocalMesh()
     ctx := context.Background()
@@ -126,6 +182,59 @@ func TestLocalMesh_Locks(t *testing.T) {
     if token == token2 {
         t.Errorf("Expected new token")
     }
+}
+
+func TestRedisMesh_Presence(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("Failed to start miniredis: %v", err)
+	}
+	defer mr.Close()
+
+	client := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	defer client.Close()
+
+	mesh := NewRedisMesh(client)
+	ctx := context.Background()
+
+	err = mesh.RegisterPresence(ctx, "agent-redis-1", "ACTIVE")
+	if err != nil {
+		t.Fatalf("Failed to register presence: %v", err)
+	}
+
+	agents, err := mesh.GetActiveAgents(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get active agents: %v", err)
+	}
+
+	if len(agents) != 1 {
+		t.Fatalf("Expected 1 active agent, got %d", len(agents))
+	}
+
+	if agents[0].AgentID != "agent-redis-1" || agents[0].Status != "ACTIVE" {
+		t.Errorf("Expected agent-redis-1 ACTIVE, got %s %s", agents[0].AgentID, agents[0].Status)
+	}
+
+	// Update presence
+	err = mesh.RegisterPresence(ctx, "agent-redis-1", "IDLE")
+	if err != nil {
+		t.Fatalf("Failed to update presence: %v", err)
+	}
+
+	agents, err = mesh.GetActiveAgents(ctx)
+	if err != nil {
+		t.Fatalf("Failed to get active agents: %v", err)
+	}
+
+	if len(agents) != 1 {
+		t.Fatalf("Expected 1 active agent, got %d", len(agents))
+	}
+
+	if agents[0].AgentID != "agent-redis-1" || agents[0].Status != "IDLE" {
+		t.Errorf("Expected agent-redis-1 IDLE, got %s %s", agents[0].AgentID, agents[0].Status)
+	}
 }
 
 func TestRedisMesh_PubSub(t *testing.T) {
