@@ -93,7 +93,7 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
             SELECT t.id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) d
+                SELECT 1 FROM jsonb_array_elements_text(COALESCE(t.dependencies, '[]')::jsonb) d
                 JOIN shared_tasks dep ON dep.id::text = d
                 WHERE dep.status != 'COMPLETED'
             )
@@ -259,7 +259,7 @@ func (to *SharedTaskOrchestrator) ClaimTaskV4(ctx context.Context, orgID, agentI
         WHERE t.status = 'PENDING' AND t.organization_id = $1
         AND NOT EXISTS (
             SELECT 1
-            FROM jsonb_array_elements_text(t.dependencies::jsonb) d
+            FROM jsonb_array_elements_text(COALESCE(t.dependencies, '[]')::jsonb) d
             JOIN shared_tasks_v4 dep ON dep.id = d
             WHERE dep.status != 'COMPLETED'
         )
