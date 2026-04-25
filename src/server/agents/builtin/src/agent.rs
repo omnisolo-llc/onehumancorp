@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use futures::future::join_all;
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use ohc_builtin_agent_llm::LlmClient;
@@ -43,6 +44,7 @@ impl Default for AgentRunConfig {
             enable_observation_masking: true,
         }
     }
+
 }
 
 /// Progress metrics for a running agent task.
@@ -191,36 +193,76 @@ impl Agent {
             }
 
             // Execute tool calls and collect results.
-            let mut tool_results: Vec<ToolResult> = Vec::new();
-            for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+            let mut tool_results: Vec<ToolResult> = vec![ToolResult {
+                tool_call_id: "".to_string(),
+                content: "".to_string(),
+                error: "".to_string(),
+            }; tool_calls.len()];
+
+            let mut current_idx = 0;
+            while current_idx < tool_calls.len() {
+                let mut concurrent_batch = Vec::new();
+                let mut batch_indices = Vec::new();
+
+                // Gather a sequence of read-only tools
+                while current_idx < tool_calls.len() {
+                    let tc = &tool_calls[current_idx];
+                    let is_mutating = self.tools.iter()
+                        .find(|t| t.name == tc.name)
+                        .map(|t| t.is_mutating)
+                        .unwrap_or(true); // default to mutating if not found just to be safe
+
+                    if is_mutating {
+                        if concurrent_batch.is_empty() {
+                            // If batch is empty, we just add this mutating tool and break
+                            // to execute it serially.
+                            concurrent_batch.push(tc.clone());
+                            batch_indices.push(current_idx);
+                            current_idx += 1;
+                        }
+                        break;
+                    } else {
+                        concurrent_batch.push(tc.clone());
+                        batch_indices.push(current_idx);
+                        current_idx += 1;
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
-                };
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
-                });
+                }
+
+                // If we collected mutating tool(s) and it's just 1, or multiple read-only,
+                // we can actually just use join_all because if it's 1 mutating, join_all(1) is serial.
+                // If it's multiple read-only, join_all(N) is concurrent.
+                let futures = concurrent_batch.iter().map(|tc| self.execute_tool(tc));
+                let results = join_all(futures).await;
+
+                for (idx, (tc, result)) in batch_indices.into_iter().zip(concurrent_batch.into_iter().zip(results)) {
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
+                    };
+                    tool_results[idx] = ToolResult {
+                        tool_call_id: tc.id.clone(),
+                        content,
+                        error,
+                    };
+                }
             }
 
             if cfg.enable_observation_masking {
@@ -309,6 +351,109 @@ mod tests {
         }
     }
 
+    struct MockToolOrderExecutor {
+        id: std::sync::atomic::AtomicUsize,
+    }
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for MockToolOrderExecutor {
+        async fn execute(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            let delay = args["delay"].as_u64().unwrap_or(0);
+            tokio::time::sleep(tokio::time::Duration::from_millis(delay)).await;
+            let id = self.id.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok(format!("done-{}", id))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_concurrent_execution_order() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall {
+                                id: "call_1".to_string(),
+                                name: "slow_read".to_string(),
+                                arguments: serde_json::json!({"delay": 100}),
+                            },
+                            ToolCall {
+                                id: "call_2".to_string(),
+                                name: "fast_read".to_string(),
+                                arguments: serde_json::json!({"delay": 10}),
+                            },
+                            ToolCall {
+                                id: "call_3".to_string(),
+                                name: "mutating_tool".to_string(),
+                                arguments: serde_json::json!({"delay": 10}),
+                            },
+                            ToolCall {
+                                id: "call_4".to_string(),
+                                name: "fast_read".to_string(),
+                                arguments: serde_json::json!({"delay": 10}),
+                            },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let shared_executor = Arc::new(MockToolOrderExecutor { id: std::sync::atomic::AtomicUsize::new(0) });
+        let tools = vec![
+            Tool {
+                name: "slow_read".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                is_mutating: false,
+                execute: shared_executor.clone(),
+            },
+            Tool {
+                name: "fast_read".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                is_mutating: false,
+                execute: shared_executor.clone(),
+            },
+            Tool {
+                name: "mutating_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                is_mutating: true,
+                execute: shared_executor.clone(),
+            },
+        ];
+
+        let agent = Agent::new(client, tools);
+
+        let cfg = AgentRunConfig::default();
+
+        let mut captured_results = vec![];
+        let mut on_event = |e| {
+            if let AgentEvent::ToolCall { name, result, .. } = e {
+                captured_results.push((name, result));
+            }
+        };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        assert_eq!(captured_results.len(), 4);
+        assert_eq!(captured_results[0].0, "slow_read");
+        assert_eq!(captured_results[1].0, "fast_read");
+        assert_eq!(captured_results[2].0, "mutating_tool");
+        assert_eq!(captured_results[3].0, "fast_read");
+
+        // slow_read takes 100ms, fast_read takes 10ms. Concurrent join_all(100ms, 10ms)
+        // will complete fast_read before slow_read, so fast_read gets ID 0 and slow_read gets ID 1.
+        assert_eq!(captured_results[0].1, "done-1");
+        assert_eq!(captured_results[1].1, "done-0");
+    }
+
     #[tokio::test]
     async fn test_observation_masking() {
         let client = Arc::new(MockLlmClient {
@@ -344,10 +489,12 @@ mod tests {
             ]),
         });
 
+        let shared_executor = Arc::new(MockToolOrderExecutor { id: std::sync::atomic::AtomicUsize::new(0) });
         let tools = vec![Tool {
             name: "test_tool".to_string(),
             description: "test".to_string(),
             parameters: Value::Null,
+            is_mutating: false,
             execute: Arc::new(MockToolExecutor),
         }];
 
