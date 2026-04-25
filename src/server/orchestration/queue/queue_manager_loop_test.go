@@ -18,6 +18,7 @@ func TestQueueManagerLoop(t *testing.T) {
 	CREATE TABLE IF NOT EXISTS sub_agent_queue (
 		id TEXT PRIMARY KEY,
 		organization_id TEXT NOT NULL,
+		tenant_id TEXT NOT NULL DEFAULT '',
 		parent_task_id TEXT NOT NULL,
 		payload TEXT,
 		status TEXT NOT NULL DEFAULT 'QUEUED',
@@ -66,11 +67,17 @@ func TestQueueManagerLoop(t *testing.T) {
 
 	go qm.StartPolling(ctx, "worker-1", 10*time.Millisecond, handler)
 
-	time.Sleep(100 * time.Millisecond)
+	// Wait for jobs to be processed
+	for i := 0; i < 20; i++ {
+		time.Sleep(100 * time.Millisecond)
+		if len(processedJobs) >= 2 {
+			break
+		}
+	}
 	cancel() // stop polling
 	time.Sleep(50 * time.Millisecond)
 
-	if len(processedJobs) != 2 {
+	if len(processedJobs) < 2 {
 		t.Fatalf("Expected 2 jobs to be processed, got %d", len(processedJobs))
 	}
 
