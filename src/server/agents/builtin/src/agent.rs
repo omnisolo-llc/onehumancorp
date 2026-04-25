@@ -28,6 +28,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrail_config: Option<crate::guardrails::GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +42,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrail_config: None,
         }
     }
 }
@@ -193,7 +195,7 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
+                let result = self.execute_tool(&tc, cfg).await;
                 let (content, error) = match result {
                     Ok(r) => {
                         self.progress.record_tool_use();
@@ -262,7 +264,14 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
+        cfg: &AgentRunConfig,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        if let Some(gc) = &cfg.guardrail_config {
+            if let Err(e) = crate::guardrails::check_tool(&tc.name, &tc.arguments.to_string(), gc) {
+                return Err(e.into());
+            }
+        }
+
         let tool = self
             .tools
             .iter()
@@ -374,5 +383,58 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    #[tokio::test]
+    async fn test_tool_guardrail() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::String("blocked_word".to_string()),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrail_config = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["blocked_word".to_string()],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // We expect the tool to fail with an error containing "blocked keyword"
+        let mut found_error = false;
+        for e in events {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                if result.contains("blocked keyword") {
+                    found_error = true;
+                }
+            }
+        }
+        assert!(found_error, "Guardrail should have blocked the tool execution");
     }
 }
