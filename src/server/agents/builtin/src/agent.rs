@@ -28,6 +28,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrails: Option<crate::guardrails::GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +42,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrails: None,
         }
     }
 }
@@ -98,6 +100,15 @@ impl Agent {
         F: FnMut(AgentEvent) + Send,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        // Input Guardrail (Hook 1/3)
+        if let Some(gr_cfg) = &cfg.guardrails {
+            if let Err(e) = crate::guardrails::check_input(initial_message, gr_cfg) {
+                let err = format!("Guardrail Input Block: {}", e);
+                on_event(AgentEvent::TaskError { error: err.clone() });
+                return Err(err.into());
+            }
+        }
 
         let tool_defs: Vec<ToolDefinition> = self
             .tools
@@ -184,6 +195,15 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
+                // Output Guardrail (Hook 3/3)
+                if let Some(gr_cfg) = &cfg.guardrails {
+                    if let Err(e) = crate::guardrails::check_output(&last_assistant_content, gr_cfg) {
+                        let err = format!("Guardrail Output Block: {}", e);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                }
+
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
@@ -193,6 +213,15 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+                // Tool Guardrail (Hook 2/3)
+                if let Some(gr_cfg) = &cfg.guardrails {
+                    if let Err(e) = crate::guardrails::check_tool(&tc.name, &tc.arguments.to_string(), gr_cfg) {
+                        let err = format!("Guardrail Tool Block: {}", e);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -252,6 +281,15 @@ impl Agent {
             });
         }
 
+        // Output Guardrail for Max Iterations (Hook 3/3 variant)
+        if let Some(gr_cfg) = &cfg.guardrails {
+            if let Err(e) = crate::guardrails::check_output(&last_assistant_content, gr_cfg) {
+                let err = format!("Guardrail Output Block: {}", e);
+                on_event(AgentEvent::TaskError { error: err.clone() });
+                return Err(err.into());
+            }
+        }
+
         // Hit max iterations.
         on_event(AgentEvent::TaskComplete {
             content: last_assistant_content.clone(),
@@ -276,7 +314,7 @@ impl Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
@@ -361,18 +399,101 @@ mod tests {
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_ok());
+    }
 
-        // In this test, the agent will loop:
-        // Iter 0: LLM asks for test_tool. Tool returns result.
-        //   Agent runs masking check. The message list contains User(Hello) and Assistant(tool_call).
-        //   The new tool result is appended.
-        // Iter 1: LLM asks for test_tool again.
-        //   Agent runs masking check. The previous tool result (from Iter 0) is now masked.
-        //   The new tool result is appended.
-        // Iter 2: LLM returns final answer.
+    #[tokio::test]
+    async fn test_guardrails_input_block() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![]),
+        });
+        let agent = Agent::new(client, vec![]);
 
-        // We can't directly inspect `messages` from the outside, but we can verify it compiled
-        // and ran without errors, which covers the logic path.
-        // Also checking the length constraint logic.
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["secret".to_string()],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "tell me a secret", &mut on_event).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Guardrail Input Block: Input contains blocked keyword: secret");
+
+        let error_event = events.iter().find(|e| matches!(e, AgentEvent::TaskError { .. }));
+        assert!(error_event.is_some());
+    }
+
+    #[tokio::test]
+    async fn test_guardrails_tool_block() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({"arg": "secret"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["secret".to_string()],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "hello", &mut on_event).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Guardrail Tool Block: Tool call contains blocked keyword: secret");
+    }
+
+    #[tokio::test]
+    async fn test_guardrails_output_block() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Here is the secret password"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["secret".to_string()],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "hello", &mut on_event).await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Guardrail Output Block: Output contains blocked keyword: secret");
     }
 }
