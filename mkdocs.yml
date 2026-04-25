@@ -59,6 +59,7 @@ nav:
       - NATS Hybrid Event Mesh: research/[backend]_nats_hybrid_event_mesh.md
       - Proactive RAG MCP: research/[backend]_scribe_proactive_rag_mcp.md
   - Walkthroughs:
+      - Hybrid FS MCP Architecture: technical/walkthroughs/hybrid_fs_mcp_architecture.md
       - KAIROS Orchestrator CLI Walkthrough: technical/walkthroughs/kairos_orchestrator_cli.md
       - Interactive API Playbook: walkthroughs/interactive_api_playbook.md
       - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
