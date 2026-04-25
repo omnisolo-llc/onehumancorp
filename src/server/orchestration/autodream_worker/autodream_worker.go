@@ -7,21 +7,18 @@ import (
 	"time"
 
 	"github.com/onehumancorp/mono/src/server/db"
+	"github.com/onehumancorp/mono/src/server/lib/llm"
 	"github.com/redis/rueidis"
 )
-
-type EmbeddingClient interface {
-	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
-}
 
 type AutoDreamConsolidator struct {
 	db          db.Provider
 	redisClient rueidis.Client
-	llmClient   EmbeddingClient
+	llmClient   llm.EmbeddingClient
 	batchSize   int
 }
 
-func NewAutoDreamConsolidator(dbProvider db.Provider, redisClient rueidis.Client, llmClient EmbeddingClient) *AutoDreamConsolidator {
+func NewAutoDreamConsolidator(dbProvider db.Provider, redisClient rueidis.Client, llmClient llm.EmbeddingClient) *AutoDreamConsolidator {
 	return &AutoDreamConsolidator{
 		db:          dbProvider,
 		redisClient: redisClient,
@@ -130,6 +127,129 @@ func (c *AutoDreamConsolidator) ProcessBacklog(ctx context.Context) error {
 				slog.Error("AutoDreamConsolidator: failed to update memory", "id", mem.ID, "error", err)
 			} else {
 				slog.Debug("AutoDreamConsolidator: successfully processed memory", "id", mem.ID)
+			}
+		}()
+	}
+
+	return nil
+}
+
+func (c *AutoDreamConsolidator) ProcessCompletedTasks(ctx context.Context) error {
+	slog.Info("AutoDreamConsolidator: waking up to process completed tasks")
+
+	// 1. Fetch completed tasks that haven't been dreamed yet
+	query := `
+		SELECT t.id, t.organization_id, t.title, COALESCE(t.description, ''), COALESCE(t.payload, '{}')
+		FROM shared_tasks_master t
+		LEFT JOIN autodream_memories_master m ON t.id = m.source_task_id
+		WHERE t.status = 'COMPLETED' AND m.id IS NULL
+		LIMIT $1
+	`
+	args := []interface{}{c.batchSize}
+
+	if c.db.IsSQLite() {
+		query = `
+			SELECT t.id, t.organization_id, t.title, COALESCE(t.description, ''), COALESCE(t.payload, '{}')
+			FROM shared_tasks_master t
+			LEFT JOIN autodream_memories_master m ON t.id = m.source_task_id
+			WHERE t.status = 'COMPLETED' AND m.id IS NULL
+			LIMIT ?
+		`
+	}
+
+	rows, err := c.db.Query(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to query shared_tasks_master: %w", err)
+	}
+	defer rows.Close()
+
+	type CompletedTask struct {
+		ID             string
+		OrganizationID string
+		Title          string
+		Description    string
+		Payload        string
+	}
+	var tasks []CompletedTask
+	for rows.Next() {
+		var t CompletedTask
+		if err := rows.Scan(&t.ID, &t.OrganizationID, &t.Title, &t.Description, &t.Payload); err != nil {
+			slog.Warn("AutoDreamConsolidator: failed to scan task row", "error", err)
+			continue
+		}
+		tasks = append(tasks, t)
+	}
+	rows.Close()
+
+	if len(tasks) == 0 {
+		slog.Debug("AutoDreamConsolidator: no pending completed tasks found")
+		return nil
+	}
+
+	slog.Info("AutoDreamConsolidator: found pending completed tasks", "count", len(tasks))
+
+	for _, task := range tasks {
+		// Acquire distributed lock
+		lockKey := fmt.Sprintf("ohc:lock:autodream_task:%s", task.ID)
+		if c.redisClient != nil {
+			acquireCmd := c.redisClient.B().Set().Key(lockKey).Value("locked").Nx().Ex(2 * time.Minute).Build()
+			res := c.redisClient.Do(ctx, acquireCmd)
+			if res.Error() != nil {
+				slog.Debug("AutoDreamConsolidator: skipping task, lock not acquired", "id", task.ID)
+				continue
+			}
+		}
+
+		func() {
+			defer func() {
+				if c.redisClient != nil {
+					delCmd := c.redisClient.B().Del().Key(lockKey).Build()
+					c.redisClient.Do(context.Background(), delCmd)
+				}
+			}()
+
+			content := fmt.Sprintf("Task: %s\nDescription: %s\nPayload: %s", task.Title, task.Description, task.Payload)
+
+			// Generate embedding
+			embedding, err := c.llmClient.GenerateEmbedding(ctx, content)
+			if err != nil {
+				slog.Error("AutoDreamConsolidator: failed to generate embedding for task", "id", task.ID, "error", err)
+				return
+			}
+
+			// Format embedding string
+			embeddingStr := ""
+			if len(embedding) > 0 {
+				embBytes := make([]byte, 0, len(embedding)*10)
+				embBytes = append(embBytes, '[')
+				for i, v := range embedding {
+					if i > 0 {
+						embBytes = append(embBytes, ',')
+					}
+					embBytes = append(embBytes, []byte(fmt.Sprintf("%f", v))...)
+				}
+				embBytes = append(embBytes, ']')
+				embeddingStr = string(embBytes)
+			}
+
+			memoryID := "mem_" + task.ID
+
+			insertQuery := `
+				INSERT INTO autodream_memories_master (id, organization_id, memory_type, content, embedding, source_task_id)
+				VALUES ($1, $2, 'task', $3, $4::vector, $5)
+			`
+			if c.db.IsSQLite() {
+				insertQuery = `
+					INSERT INTO autodream_memories_master (id, organization_id, memory_type, content, embedding, source_task_id)
+					VALUES (?, ?, 'task', ?, ?, ?)
+				`
+			}
+
+			_, err = c.db.Exec(ctx, insertQuery, memoryID, task.OrganizationID, content, embeddingStr, task.ID)
+			if err != nil {
+				slog.Error("AutoDreamConsolidator: failed to insert completed task memory", "id", task.ID, "error", err)
+			} else {
+				slog.Debug("AutoDreamConsolidator: successfully processed completed task", "id", task.ID)
 			}
 		}()
 	}
