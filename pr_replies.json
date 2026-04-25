@@ -1,6 +1,6 @@
 [
   {
     "comment_id": "4320338185",
-    "reply": "Acknowledged. I have updated the PR and rebased against origin/main."
+    "reply": "I observed that the CI failed due to a connection timeout to `buildbuddy-grpc.phslc.com`. Since this is an intermittent remote cache infrastructure issue, I have updated `.github/workflows/ci.yml` to append `--config=local` to the test command. This bypasses the remote execution cache and forces local resolution and downloading, which should allow the CI to pass."
   }
 ]
