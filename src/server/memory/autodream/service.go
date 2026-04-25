@@ -115,8 +115,6 @@ func (s *Service) PruneStaleContext(ctx context.Context, orgID string, maxAge ti
 	return s.vectorRepo.PruneStale(ctx, orgID, olderThan)
 }
 
-
-
 // ResolveConflicts searches for conflicting context and merges them.
 func (s *Service) ResolveConflicts(ctx context.Context, orgID string) error {
 	recentMemories, err := s.vectorRepo.GetRecentMemories(ctx, orgID, time.Now().Add(-24*time.Hour))

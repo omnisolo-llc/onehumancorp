@@ -318,8 +318,7 @@ func run(now time.Time, listen listenFunc) error {
 		cpSaver := checkpointer.NewPgCheckpointSaver(pool.Provider)
 
 		adConsolidator := autodream.NewService(memory.NewVectorRepository(pool.Provider), nil)
-		autodreamWorkerInstance := autodream.NewBackgroundWorker(adConsolidator, memory.NewVectorRepository(pool.Provider), 24*time.Hour, 6*30*24*time.Hour, lock.NewDatabaseLockProvider(pool.Provider))
-		go autodreamWorkerInstance.Start(ctx)
+		adConsolidator.StartBackgroundPruner(ctx, 24*time.Hour, 6*30*24*time.Hour) // Run every 24 hours, prune older than 6 months
 		distillationWorker := distillation.NewSemanticDistillationWorker(pool.Provider, cpSaver, adConsolidator)
 		// Run distillation as a background job
 		go func() {

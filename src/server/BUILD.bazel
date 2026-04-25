@@ -8,7 +8,6 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//src/server/auth",
-        "//src/server/lib/resilience/lock",
         "//src/server/billing",
         "//src/server/dashboard",
         "//src/server/db",
