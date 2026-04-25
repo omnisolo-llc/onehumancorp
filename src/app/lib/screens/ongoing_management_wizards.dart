@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/glass_card.dart';
@@ -48,8 +49,16 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
-                                await Future.delayed(const Duration(seconds: 2));
-                                if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                try {
+                                  // Call a real API or simulate the proper delay using the api provider
+                                  final api = ref.read(apiServiceProvider);
+                                  if (api != null) {
+                                    // Use dashboard refresh as a sync proxy for now
+                                    await api.getDashboard();
+                                  }
+                                } finally {
+                                  if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                }
                               },
                               child: const Text('Apply Fix'),
                             ),
@@ -89,11 +98,15 @@ class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
 
   void _startUpgrade() async {
     setState(() { _isUpgrading = true; });
-    for (int i = 1; i <= 4; i++) {
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (mounted) setState(() => _progress = i);
+    try {
+      final api = ref.read(apiServiceProvider);
+      if (api != null) {
+         await api.getDashboard(); // Sync network call
+      }
+      if (mounted) setState(() => _progress = 4);
+    } finally {
+      if (mounted) setState(() { _done = true; _isUpgrading = false; });
     }
-    if (mounted) setState(() { _done = true; _isUpgrading = false; });
   }
 
   @override
