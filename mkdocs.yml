@@ -34,6 +34,7 @@ nav:
       - architecture/index.md
       - Chaos Engineering: architecture/chaos_engineering.md
       - KAIROS Features Design: architecture/kairos_hybrid_os_architecture.md
+      - KAIROS Hybrid OS Design: architecture/kairos_hybrid_os_design.md
       - KAIROS Master Design: architecture/kairos_master_design_doc.md
       - Hybrid PubSub MCP: research/[integrations]_hybrid_pubsub_mcp.md
   - Developer:
