@@ -407,3 +407,29 @@ func formatJSON(v any) string {
 	b, _ := json.MarshalIndent(v, "", "  ")
 	return fmt.Sprintf("%s", b)
 }
+
+// ── Common UI Interaction Helpers ────────────────────────────────────────────
+
+func fillInput(t *testing.T, page playwright.Page, label, value string) {
+	t.Helper()
+	err := page.GetByLabel(label).Fill(value)
+	if err != nil {
+		t.Fatalf("Failed to fill input %q: %v", label, err)
+	}
+}
+
+func clickElement(t *testing.T, page playwright.Page, text string) {
+	t.Helper()
+	err := page.Locator("text=" + text).First().Click()
+	if err != nil {
+		t.Fatalf("Failed to click %q: %v", text, err)
+	}
+}
+
+func expectElement(t *testing.T, page playwright.Page, text string) {
+	t.Helper()
+	err := page.Locator("text=" + text).First().WaitFor()
+	if err != nil {
+		t.Fatalf("Expected element %q not found: %v", text, err)
+	}
+}

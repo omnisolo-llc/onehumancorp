@@ -222,6 +222,20 @@ go_test(
     tags = _COMMON_TAGS,
 )
 
+
+# ── Business Setup ────────────────────────────────────────────────────────────
+go_test(
+    name = "e2e_business_setup_test",
+    size = "large",
+    timeout = "eternal",
+    srcs = _SHARED_SRCS + ["e2e_business_setup_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
+    tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
+)
+
 # ── Misc ──────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_misc_test",
@@ -246,6 +260,7 @@ test_suite(
         ":e2e_dashboard_test",
         ":e2e_budget_test",
         ":e2e_business_test",
+        ":e2e_business_setup_test",
         ":e2e_settings_test",
         ":e2e_hybrid_sync_test",
         ":e2e_wizard_test",
