@@ -397,22 +397,19 @@ func (p *DB) RunMigrations(ctx context.Context) error {
 			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
 			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+[^;]+\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY;?`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?i)CREATE\s+POLICY\s+[^;]+;?`).ReplaceAllString(sqlStr, "")
-			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT")
+			sqlStr = regexp.MustCompile(`(?i)VECTOR\(\d+\)`).ReplaceAllString(sqlStr, "TEXT")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+[a-zA-Z0-9_]+\s+ON\s+[a-zA-Z0-9_]+\s+USING\s+hnsw[^;]*;`).ReplaceAllString(sqlStr, "")
 			sqlStr = regexp.MustCompile(`(?is)CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+idx_consolidated_memory_embedding\s+ON\s+consolidated_memory\s+USING\s+hnsw\s*\([^;]+\);`).ReplaceAllString(sqlStr, "")
-			sqlStr = strings.ReplaceAll(sqlStr, "BIGSERIAL PRIMARY KEY", "INTEGER PRIMARY KEY AUTOINCREMENT")
-			sqlStr = strings.ReplaceAll(sqlStr, "TIMESTAMPTZ", "DATETIME")
-			sqlStr = strings.ReplaceAll(sqlStr, "JSONB", "TEXT")
-			sqlStr = strings.ReplaceAll(sqlStr, "BYTEA", "BLOB")
-			sqlStr = strings.ReplaceAll(sqlStr, "CREATE EXTENSION IF NOT EXISTS vector;", "")
-			sqlStr = regexp.MustCompile(`(?i)ALTER\s+TABLE\s+[^;]+\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY;?`).ReplaceAllString(sqlStr, "")
-			sqlStr = regexp.MustCompile(`(?i)CREATE\s+POLICY\s+[^;]+;?`).ReplaceAllString(sqlStr, "")
-			sqlStr = strings.ReplaceAll(sqlStr, "VECTOR(1536)", "TEXT") // Convert vector array to JSON TEXT string for SQLite standalone mode parity
+			sqlStr = regexp.MustCompile(`(?i)BIGSERIAL\s+PRIMARY\s+KEY`).ReplaceAllString(sqlStr, "INTEGER PRIMARY KEY AUTOINCREMENT")
+			sqlStr = regexp.MustCompile(`(?i)TIMESTAMPTZ`).ReplaceAllString(sqlStr, "DATETIME")
+			sqlStr = regexp.MustCompile(`(?i)TIMESTAMP\s+WITH\s+TIME\s+ZONE`).ReplaceAllString(sqlStr, "DATETIME")
+			sqlStr = regexp.MustCompile(`(?i)JSONB`).ReplaceAllString(sqlStr, "TEXT")
+			sqlStr = regexp.MustCompile(`(?i)BYTEA`).ReplaceAllString(sqlStr, "BLOB")
 			// We need to remove the array syntax `TEXT[] NOT NULL DEFAULT '{}'`
 			// Because SQLite does not support arrays.
 			// Replaced with TEXT DEFAULT '[]' for JSON array storage
-			sqlStr = strings.ReplaceAll(sqlStr, "TEXT[] NOT NULL DEFAULT '{}'", "TEXT NOT NULL DEFAULT '[]'")
-			sqlStr = strings.ReplaceAll(sqlStr, "NOW()", "CURRENT_TIMESTAMP")
+			sqlStr = regexp.MustCompile(`(?i)TEXT\[\]\s+NOT\s+NULL\s+DEFAULT\s+'\{\}'`).ReplaceAllString(sqlStr, "TEXT NOT NULL DEFAULT '[]'")
+			sqlStr = regexp.MustCompile(`(?i)NOW\(\)`).ReplaceAllString(sqlStr, "CURRENT_TIMESTAMP")
 
 			// Replace specific Postgres Array insert syntax used in migrations
 			sqlStr = strings.ReplaceAll(sqlStr, "ARRAY['*']", "'[\"*\"]'")
