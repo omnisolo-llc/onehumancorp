@@ -83,13 +83,13 @@ common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3Jee
 # Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
 # buildbuddy-official which relies on the global sandboxed,local fallback chain.
 common:buildbuddy --bes_timeout=600s
-common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
+# common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
 # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_local_fallback
-common:buildbuddy --remote_upload_local_results
+# common:buildbuddy --remote_upload_local_results
 # common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
 common:buildbuddy --experimental_remote_downloader_local_fallback
