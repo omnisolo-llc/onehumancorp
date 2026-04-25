@@ -7,20 +7,20 @@ test('Diagnostics screen displays hybrid health info', async ({ page }) => {
   await page.goto('/');
 
   // Wait for load
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(2000);
 
   // Click reload now if there's a new version banner blocking the app
   try {
-      if (await page.locator('text=A new version is available!').isVisible({ timeout: 2000 })) {
+      if (await page.locator('text=A new version is available!').isVisible({ timeout: 1000 })) {
           await page.locator('button:has-text("Reload Now")').click();
-          await page.waitForTimeout(5000);
+          await page.waitForTimeout(2000);
       }
   } catch (e) { }
 
   try {
-      if (await page.locator('button:has-text("Enable accessibility")').isVisible({ timeout: 2000 })) {
+      if (await page.locator('button:has-text("Enable accessibility")').isVisible({ timeout: 1000 })) {
           await page.locator('button:has-text("Enable accessibility")').click();
-          await page.waitForTimeout(5000);
+          await page.waitForTimeout(2000);
       }
   } catch (e) { }
 
@@ -32,7 +32,7 @@ test('Diagnostics screen displays hybrid health info', async ({ page }) => {
   // So we MUST login via the UI.
 
   const emailField = page.locator('input[type="email"], input[name="username"]').first();
-  await emailField.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  await emailField.waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
   if (await emailField.isVisible()) {
     await emailField.fill('admin');
   }
