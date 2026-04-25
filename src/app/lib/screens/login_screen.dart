@@ -58,8 +58,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       // In a real app this would open a webview or use an OAuth library
-      // For Thin Client mode, simulate variable-latency remote calls
-      await Future.delayed(const Duration(milliseconds: 1500));
       await ref
           .read(authStateProvider.notifier)
           .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
