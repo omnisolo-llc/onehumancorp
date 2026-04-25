@@ -266,6 +266,8 @@ func TestHybridSyncDaemon_SyncLocalToCloud(t *testing.T) {
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			organization_id TEXT,
+			task_id TEXT,
+			dependencies TEXT,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)
@@ -370,6 +372,8 @@ func TestHybridSyncDaemon_ProcessMissionSync(t *testing.T) {
 			status TEXT NOT NULL,
 			payload TEXT NOT NULL,
 			organization_id TEXT,
+			task_id TEXT,
+			dependencies TEXT,
 			synced_to_cloud BOOLEAN DEFAULT FALSE,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
