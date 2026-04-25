@@ -222,7 +222,6 @@ impl AgentServiceImpl {
             max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
             max_task_tokens: 0,
             confidence_threshold,
-            enable_observation_masking: true,
         }
     }
 }
@@ -285,7 +284,7 @@ impl AgentService for AgentServiceImpl {
             .await;
 
         let agent_clone = agent.clone();
-        let _start = std::time::Instant::now();
+        let start = std::time::Instant::now();
 
         tokio::spawn(async move {
             let tx_clone = tx.clone();
@@ -370,7 +369,6 @@ impl AgentService for AgentServiceImpl {
                 max_iterations: 100,
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
-            enable_observation_masking: true,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
