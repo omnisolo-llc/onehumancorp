@@ -39,4 +39,20 @@ func TestWelcomeChecklistRendersOnDashboard(t *testing.T) {
 		State: playwright.WaitForSelectorStateVisible,
 	})
 	assert.NoError(t, err)
+
+	// Interact with the checklist item
+	err = addProductItem.Click()
+	assert.NoError(t, err)
+
+	// Check routing after click
+	err = page.WaitForURL("**/dashboard")
+	assert.NoError(t, err)
+
+	// Click instagram connect
+	instaItem := page.Locator("text=Connect Instagram")
+	err = instaItem.Click()
+	assert.NoError(t, err)
+
+	err = page.WaitForURL("**/integrations")
+	assert.NoError(t, err)
 }
