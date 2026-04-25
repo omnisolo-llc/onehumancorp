@@ -1,4 +1,5 @@
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
+import 'package:ohc_app/widgets/business_share_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -207,6 +208,8 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         const GrowthReferralWidget(),
+        const SizedBox(height: 16),
+        const BusinessShareWidget(),
         const SizedBox(height: 16),
 
         const SizedBox(height: 32),
