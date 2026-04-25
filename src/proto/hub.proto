@@ -110,6 +110,7 @@ message EventStreamRequest {
   string topic = 1;
 }
 
+// MeshEvent definition for Teammate Mesh APIs
 message MeshEvent {
   string event_id = 1;
   string topic = 2;
@@ -117,10 +118,7 @@ message MeshEvent {
   int64 timestamp = 4;
 }
 
-<<<<<<< HEAD
-=======
 // TeammateMeshEvent for rich payload task broadcasting and realtime coordination
->>>>>>> 0c5df1ec (🔨 Forge: Realtime Teammate Mesh APIs)
 message TeammateMeshEvent {
   string agent_id = 1;
   string action = 2;

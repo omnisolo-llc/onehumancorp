@@ -72,13 +72,9 @@ func (w *BackgroundWorker) runCycle(ctx context.Context) {
 		// Create a tenant-scoped context for each organization
 		tenantCtx := auth.ContextWithClaims(ctx, &auth.Claims{OrganizationID: orgID})
 
-		// Resolve conflicts
-		if err := w.service.ResolveConflicts(tenantCtx, orgID); err != nil {
-			log.Printf("Failed to resolve conflicts for org %s: %v", orgID, err)
-		}
 
 		// Prune stale context
-		if err := w.service.PruneStaleContext(tenantCtx, orgID, w.staleAfter); err != nil {
+		if err := w.service.PruneStaleContext(tenantCtx, time.Now().Add(-w.staleAfter)); err != nil {
 			log.Printf("Failed to prune stale context for org %s: %v", orgID, err)
 		}
 	}
