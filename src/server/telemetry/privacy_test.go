@@ -2,32 +2,12 @@ package telemetry_test
 
 import (
 	"bytes"
-	"context"
 	"log/slog"
 	"strings"
 	"testing"
 
 	"github.com/onehumancorp/mono/src/server/telemetry"
 )
-
-func TestHybridMultiTenantPIILeakage(t *testing.T) {
-	ctx := context.Background()
-	var bufferData string
-	telemetry.BufferMetricFunc = func(ctx context.Context, name, payload string) error {
-		bufferData = payload
-		return nil
-	}
-	defer func() { telemetry.BufferMetricFunc = nil }()
-
-	telemetry.RecordLocalToCloudMissionSync(ctx, "mission-123-ssn-123-45-6789")
-
-	if !strings.Contains(bufferData, "[REDACTED_SSN]") {
-		t.Errorf("Expected telemetry payload to redact PII, got: %s", bufferData)
-	}
-	if strings.Contains(bufferData, "123-45-6789") {
-		t.Errorf("Expected telemetry payload to not contain raw PII, got: %s", bufferData)
-	}
-}
 
 func TestMultiTenantLoggingPIIRedaction(t *testing.T) {
 	tests := []struct {

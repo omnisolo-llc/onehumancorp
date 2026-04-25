@@ -12,6 +12,4 @@ type UsageRepository interface {
 	// Summary returns the aggregate cost and token metrics for an
 	// organization.
 	Summary(ctx context.Context, organizationID string) (Summary, error)
-	// ActiveOrganizations returns a list of unique organization IDs that have recorded usage.
-	ActiveOrganizations(ctx context.Context) ([]string, error)
 }
