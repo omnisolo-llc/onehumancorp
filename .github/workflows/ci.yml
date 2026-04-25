@@ -34,8 +34,8 @@ jobs:
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            test --config=buildbuddy
+            build --config=local
+            test --config=local
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
             # build --config=buildbuddy-official
             # test --config=buildbuddy-official
