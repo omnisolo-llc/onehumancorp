@@ -18,9 +18,17 @@ func isSQLiteDialect() bool {
 }
 
 func upEnableRLS(ctx context.Context, tx *sql.Tx) error {
-	if isSQLiteDialect() {
+	_, err := tx.ExecContext(ctx, "SAVEPOINT check_sqlite")
+	if err != nil {
+		return err
+	}
+	var testVal string
+	err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&testVal)
+	if err == nil {
+		tx.ExecContext(ctx, "RELEASE SAVEPOINT check_sqlite")
 		return nil
 	}
+	tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT check_sqlite")
 
 	rows, err := tx.QueryContext(ctx, "SELECT schemaname || '.' || tablename FROM pg_catalog.pg_tables")
 	if err != nil {
@@ -116,9 +124,17 @@ func upEnableRLS(ctx context.Context, tx *sql.Tx) error {
 }
 
 func downEnableRLS(ctx context.Context, tx *sql.Tx) error {
-	if isSQLiteDialect() {
+	_, err := tx.ExecContext(ctx, "SAVEPOINT check_sqlite")
+	if err != nil {
+		return err
+	}
+	var testVal string
+	err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&testVal)
+	if err == nil {
+		tx.ExecContext(ctx, "RELEASE SAVEPOINT check_sqlite")
 		return nil
 	}
+	tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT check_sqlite")
 
 	rows, err := tx.QueryContext(ctx, "SELECT schemaname || '.' || tablename FROM pg_catalog.pg_tables")
 	if err != nil {
