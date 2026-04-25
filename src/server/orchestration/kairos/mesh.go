@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/nats-io/nats.go"
 )
 
 type TeammateMesh interface {
@@ -104,6 +105,44 @@ func (r *RedisMesh) Subscribe(ctx context.Context, channel string) (<-chan []byt
 		}
 	}()
 		return ch, nil
+}
+
+// NatsMesh implements TeammateMesh using NATS Pub/Sub.
+type NatsMesh struct {
+	nc *nats.Conn
+}
+
+func NewNatsMesh(nc *nats.Conn) *NatsMesh {
+	return &NatsMesh{
+		nc: nc,
+	}
+}
+
+func (n *NatsMesh) Publish(ctx context.Context, channel string, message []byte) error {
+	return n.nc.Publish(channel, message)
+}
+
+func (n *NatsMesh) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
+	ch := make(chan []byte, 100)
+
+	sub, err := n.nc.Subscribe(channel, func(msg *nats.Msg) {
+		select {
+		case ch <- msg.Data:
+		case <-ctx.Done():
+		default:
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		<-ctx.Done()
+		sub.Unsubscribe()
+		close(ch)
+	}()
+
+	return ch, nil
 }
 
 // LocalTeammateMesh implements TeammateMesh and provides explicit channels for mesh:tasks and mesh:coordination.

@@ -15,6 +15,7 @@ go_library(
     deps = [
         "@com_github_alicebob_miniredis_v2//:miniredis",
         "@com_github_redis_rueidis//:rueidis",
+        "@com_github_nats_io_nats_go//:nats_go",
         "@com_github_google_uuid//:uuid",
     ],
     visibility = ["//visibility:public"],
@@ -31,6 +32,7 @@ go_test(
     deps = [
         "@com_github_alicebob_miniredis_v2//:miniredis",
         "@com_github_redis_rueidis//:rueidis",
+        "@com_github_nats_io_nats_go//:nats_go",
         "@com_github_google_uuid//:uuid",
     ],
     embed = [":interop"],

@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/redis/rueidis"
+	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -35,6 +36,17 @@ func NewTeammateMesh() (TeammateMesh, error) {
 		}
 		slog.Info("TeammateMesh initialized in Cloud mode (Redis)")
 		return &cloudMesh{client: c}, nil
+	}
+
+	// Standalone mode: fallback to NATS if available or Memory
+	natsURL := os.Getenv("NATS_URL")
+	if natsURL != "" {
+		nc, err := nats.Connect(natsURL)
+		if err == nil {
+			slog.Info("TeammateMesh initialized in Standalone mode (NATS)")
+			return &NatsMesh{nc: nc}, nil
+		}
+		slog.Warn("Failed to connect to NATS, falling back to In-Memory mesh", "error", err)
 	}
 
 	slog.Info("TeammateMesh initialized in Standalone mode (In-Memory)")
@@ -167,6 +179,46 @@ func (c *cloudMesh) Subscribe(ctx context.Context, channel string) (<-chan []byt
 			// Suppress expected transient errors if context is done or redis connection is closed during shutdown.
 			slog.Error("Redis subscription failed", "channel", channel, "error", err)
 		}
+	}()
+
+	return out, nil
+}
+
+
+// NatsMesh provides a NATS pub/sub backed mesh.
+type NatsMesh struct {
+	nc *nats.Conn
+}
+
+func (n *NatsMesh) Publish(ctx context.Context, channel string, data []byte) error {
+	if meshMessagesPublished != nil {
+		meshMessagesPublished.Add(ctx, 1, metric.WithAttributes(attribute.String("channel", channel), attribute.String("mode", "standalone")))
+	}
+	return n.nc.Publish(channel, data)
+}
+
+func (n *NatsMesh) Subscribe(ctx context.Context, channel string) (<-chan []byte, error) {
+	out := make(chan []byte, 100)
+
+	sub, err := n.nc.Subscribe(channel, func(msg *nats.Msg) {
+		if meshMessagesReceived != nil {
+			meshMessagesReceived.Add(context.Background(), 1, metric.WithAttributes(attribute.String("channel", channel), attribute.String("mode", "standalone")))
+		}
+		select {
+		case out <- msg.Data:
+		case <-ctx.Done():
+		default:
+		}
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		<-ctx.Done()
+		sub.Unsubscribe()
+		close(out)
 	}()
 
 	return out, nil
