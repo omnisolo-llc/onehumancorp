@@ -115,11 +115,7 @@ func (s *Service) PruneStaleContext(ctx context.Context, orgID string, maxAge ti
 	return s.vectorRepo.PruneStale(ctx, orgID, olderThan)
 }
 
-// StartBackgroundPruner starts a background worker that periodically calls PruneStaleContext.
-// Deprecated: handled by BackgroundWorker now. Kept to not break main.go
-func (s *Service) StartBackgroundPruner(ctx context.Context, interval time.Duration, maxAge time.Duration) {
-	// No-op since BackgroundWorker handles it.
-}
+
 
 // ResolveConflicts searches for conflicting context and merges them.
 func (s *Service) ResolveConflicts(ctx context.Context, orgID string) error {
