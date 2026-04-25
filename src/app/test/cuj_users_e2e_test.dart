@@ -59,14 +59,27 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/api/growth/quota')) {
+          return http.Response(jsonEncode({"used": 1, "max": 10}), 200, headers: {'content-type': 'application/json'});
+        }
+        if (uri.path.contains('/api/users')) {
+          return http.Response(
+            jsonEncode([
+              _fakeUser('u1', 'alice', admin: true),
+              _fakeUser('u2', 'bob'),
+            ]),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response(jsonEncode(<dynamic>[]), 200, headers: {'content-type': 'application/json'});
+      });
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers'), body: any(named: 'body')),
       ).thenAnswer(
-        (_) async => http.Response(
-          jsonEncode([
-            _fakeUser('u1', 'alice', admin: true),
-            _fakeUser('u2', 'bob'),
-          ]),
-          200,
-        ),
+        (_) async => http.Response(jsonEncode({}), 200),
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -75,6 +88,8 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('alice'), findsWidgets);
@@ -85,8 +100,20 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/api/growth/quota')) {
+          return http.Response(jsonEncode({"used": 1, "max": 10}), 200, headers: {'content-type': 'application/json'});
+        }
+        if (uri.path.contains('/api/users')) {
+          return http.Response(jsonEncode(<dynamic>[]), 200, headers: {'content-type': 'application/json'});
+        }
+        return http.Response(jsonEncode(<dynamic>[]), 200, headers: {'content-type': 'application/json'});
+      });
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers'), body: any(named: 'body')),
       ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
+        (_) async => http.Response(jsonEncode({}), 200),
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -95,6 +122,8 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
       await tester.pumpAndSettle();
 
       expect(find.text('Invite User'), findsOneWidget);
@@ -104,8 +133,20 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/api/growth/quota')) {
+          return http.Response(jsonEncode({"used": 1, "max": 10}), 200, headers: {'content-type': 'application/json'});
+        }
+        if (uri.path.contains('/api/users')) {
+          return http.Response(jsonEncode(<dynamic>[]), 200, headers: {'content-type': 'application/json'});
+        }
+        return http.Response(jsonEncode(<dynamic>[]), 200, headers: {'content-type': 'application/json'});
+      });
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers'), body: any(named: 'body')),
       ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
+        (_) async => http.Response(jsonEncode({}), 200),
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -114,23 +155,39 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Invite User'));
+      await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/api/growth/quota')) {
+          return http.Response(jsonEncode({"used": 1, "max": 10}), 200, headers: {'content-type': 'application/json'});
+        }
+        if (uri.path.contains('/api/users')) {
+          return http.Response(
+            jsonEncode([_fakeUser('u1', 'adminuser', admin: true)]),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
+        return http.Response(jsonEncode(<dynamic>[]), 200, headers: {'content-type': 'application/json'});
+      });
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers'), body: any(named: 'body')),
       ).thenAnswer(
-        (_) async => http.Response(
-          jsonEncode([_fakeUser('u1', 'adminuser', admin: true)]),
-          200,
-        ),
+        (_) async => http.Response(jsonEncode({}), 200),
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -139,6 +196,8 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('admin'), findsWidgets);
@@ -148,8 +207,20 @@ void main() {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((invocation) async {
+        final uri = invocation.positionalArguments[0] as Uri;
+        if (uri.path.contains('/api/growth/quota')) {
+          return http.Response(jsonEncode({"used": 1, "max": 10}), 200, headers: {'content-type': 'application/json'});
+        }
+        if (uri.path.contains('/api/users')) {
+          return http.Response('Server Error', 500);
+        }
+        return http.Response(jsonEncode(<dynamic>[]), 200, headers: {'content-type': 'application/json'});
+      });
+      when(
+        () => mockClient.post(any(), headers: any(named: 'headers'), body: any(named: 'body')),
       ).thenAnswer(
-        (_) async => http.Response('Server Error', 500),
+        (_) async => http.Response(jsonEncode({}), 200),
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -158,6 +229,8 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1000));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Error'), findsWidgets);
