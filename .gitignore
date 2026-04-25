@@ -111,5 +111,3 @@ site/
 /src/app/macos/Flutter/Flutter.podspec
 /src/app/macos/Flutter/GeneratedPluginRegistrant.swift
 /src/app/**/ephemeral/
-
-src/server/agents/builtin/target/
