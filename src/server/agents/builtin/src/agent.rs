@@ -1,10 +1,12 @@
 use std::sync::Arc;
+use tokio::time::sleep;
+use std::time::Duration;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
+use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult, ToolError};
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
@@ -193,8 +195,29 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
+                let mut attempts = 0;
+                let max_attempts = 3;
+                let mut current_result: Result<String, Box<dyn std::error::Error + Send + Sync>> = Err("".into());
+
+                while attempts < max_attempts {
+                    attempts += 1;
+                    current_result = self.execute_tool(&tc).await;
+
+                    if let Err(ref e) = current_result {
+                        if let Some(tool_err) = e.downcast_ref::<ToolError>() {
+                            if let ToolError::Transient(_) = tool_err {
+                                if attempts < max_attempts {
+                                    let backoff = 2u64.pow(attempts as u32 - 1);
+                                    sleep(Duration::from_secs(backoff)).await;
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+
+                let (content, error) = match current_result {
                     Ok(r) => {
                         self.progress.record_tool_use();
                         on_event(AgentEvent::ToolCall {
@@ -206,14 +229,56 @@ impl Agent {
                         (r, String::new())
                     }
                     Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
+                        // Check if it's our LangGraph 4-type mechanics ToolError
+                        if let Some(tool_err) = e.downcast_ref::<ToolError>() {
+                            match tool_err {
+                                ToolError::Transient(msg) => {
+                                    // Exhausted retries. Inform the model.
+                                    let err_msg = format!("Transient error after {} attempts: {}.", max_attempts, msg);
+                                    on_event(AgentEvent::ToolCall {
+                                        name: tc.name.clone(),
+                                        args_json: tc.arguments.to_string(),
+                                        result: format!("Error: {}", err_msg),
+                                        iteration,
+                                    });
+                                    (String::new(), err_msg)
+                                }
+                                ToolError::LlmRecoverable(msg) => {
+                                    // Return the raw error as a ToolMessage directly to the model
+                                    // so it can self-correct.
+                                    let err_msg = format!("Tool error: {}", msg);
+                                    on_event(AgentEvent::ToolCall {
+                                        name: tc.name.clone(),
+                                        args_json: tc.arguments.to_string(),
+                                        result: format!("Error: {}", err_msg),
+                                        iteration,
+                                    });
+                                    (String::new(), err_msg)
+                                }
+                                ToolError::UserFixable(msg) => {
+                                    // Interrupt execution and ask user for input.
+                                    let err_msg = format!("User input required: {}", msg);
+                                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                                    return Err(err_msg.into());
+                                }
+                                ToolError::Unexpected(msg) => {
+                                    // Bubble up to debug/halt.
+                                    let err_msg = format!("Unexpected error: {}", msg);
+                                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                                    return Err(err_msg.into());
+                                }
+                            }
+                        } else {
+                            // Fallback for standard errors
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
                     }
                 };
                 tool_results.push(ToolResult {
@@ -276,7 +341,7 @@ impl Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
