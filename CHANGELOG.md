@@ -1,5 +1,15 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement formal realtime teammate mesh APIs (#8008)
+- Harness Upgrade - Context Management: JetBrains Observation Masking (#8016)
+
+### Privacy/Offline Improvements
+- Standardize E2E testing with Playwright configuration, improve SQLite migration parsing, and clean up project documentation and assets.
+- Improve E2E test reliability by switching to Chromium, adding console logging, and updating the server to serve the full app via the OHC binary instead of a static file server.
+- Simplify loginAsAdmin flow by forcing navigation to login page and using explicit element locators.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
