@@ -167,3 +167,18 @@ proto_dart_library(
     protos = ":app_proto",
     visibility = ["//visibility:public"],
 )
+
+# ── Mesh ──────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "mesh_proto",
+    srcs = ["mesh.proto"],
+    visibility = ["//visibility:public"],
+)
+
+go_proto_library_with_tags(
+    name = "mesh_go_proto",
+    protos = ["mesh.proto"],
+    importpath = "github.com/onehumancorp/mono/src/proto/ohc/mesh",
+    visibility = ["//visibility:public"],
+)

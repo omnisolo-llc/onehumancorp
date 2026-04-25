@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package ohc.mesh;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/mesh;meshpb";
+
+message MeshEvent {
+  string channel = 1;
+  string event_type = 2;
+  bytes data = 3;
+}
+
+// Dummy service to satisfy go_proto_library_with_tags
+service MeshService {
+}

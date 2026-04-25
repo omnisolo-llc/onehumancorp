@@ -5,6 +5,17 @@ import (
     "github.com/redis/rueidis"
 )
 
+type redisMeshSubscription struct {
+    client  rueidis.Client
+    channel string
+    cancel  context.CancelFunc
+}
+
+func (s *redisMeshSubscription) Close() error {
+    s.cancel()
+    return nil
+}
+
 type RedisMeshBroker struct {
     client rueidis.Client
 }
@@ -19,7 +30,20 @@ func (b *RedisMeshBroker) Broadcast(ctx context.Context, channel string, payload
 }
 
 func (b *RedisMeshBroker) Subscribe(ctx context.Context, channel string, handler func(msg []byte)) (Subscription, error) {
-	// Rely on existing redisSubscription implementation from redis_mesh.go if needed, or implement a basic one.
-	// For now, return a dummy subscription since this is primarily for broadcasting in phase 2.
-	return nil, nil
+    subCtx, cancel := context.WithCancel(ctx)
+
+    go func() {
+        err := b.client.Receive(subCtx, b.client.B().Subscribe().Channel(channel).Build(), func(msg rueidis.PubSubMessage) {
+            handler([]byte(msg.Message))
+        })
+        if err != nil {
+            // Check if context canceled, else handle err...
+        }
+    }()
+
+    return &redisMeshSubscription{
+        client:  b.client,
+        channel: channel,
+        cancel:  cancel,
+    }, nil
 }

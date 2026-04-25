@@ -20,7 +20,11 @@ go_library(
         "@com_github_redis_go_redis_v9//:go-redis",
         "@com_github_redis_rueidis//:rueidis",
         "@com_github_google_uuid//:uuid",
-    ],
+        "@com_github_gorilla_websocket//:websocket",
+
+        "//src/proto:mesh_go_proto",
+        "@org_golang_google_protobuf//proto",
+],
 )
 
 go_test(
@@ -29,6 +33,7 @@ go_test(
         "broker_test.go",
         "mesh_test.go",
         "mesh_coordinator_test.go",
+        "http_handler_test.go",
     ],
     embed = [":mesh"],
     deps = [
@@ -38,5 +43,9 @@ go_test(
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
         "@org_modernc_sqlite//:sqlite",
-    ],
+        "@com_github_gorilla_websocket//:websocket",
+
+        "//src/proto:mesh_go_proto",
+        "@org_golang_google_protobuf//proto",
+],
 )
