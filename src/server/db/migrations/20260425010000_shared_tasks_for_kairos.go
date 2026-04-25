@@ -38,6 +38,32 @@ func upSharedTasksForKairos20260425010000(ctx context.Context, tx *sql.Tx) error
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		)`
 		_, err = tx.ExecContext(ctx, query2)
+		if err != nil {
+			return err
+		}
+
+		query3 := `
+		CREATE TABLE IF NOT EXISTS shared_tasks (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			tenant_id VARCHAR NOT NULL,
+			organization_id VARCHAR NOT NULL,
+			title VARCHAR NOT NULL,
+			description TEXT,
+			status VARCHAR NOT NULL DEFAULT 'PENDING',
+			agent_id VARCHAR,
+			priority VARCHAR NOT NULL DEFAULT 'P2',
+			payload JSONB,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+		)`
+		_, err = tx.ExecContext(ctx, query3)
+		if err != nil {
+			return err
+		}
+
+		query4 := `ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;`
+		_, err = tx.ExecContext(ctx, query4)
+
 		return err
 	}
 
@@ -61,11 +87,34 @@ func upSharedTasksForKairos20260425010000(ctx context.Context, tx *sql.Tx) error
 		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	)`
 	_, err = tx.ExecContext(ctx, query2)
+	if err != nil {
+		return err
+	}
+
+	query3 := `
+	CREATE TABLE IF NOT EXISTS shared_tasks (
+		id TEXT PRIMARY KEY,
+		tenant_id TEXT NOT NULL,
+		organization_id TEXT NOT NULL,
+		title TEXT NOT NULL,
+		description TEXT,
+		status TEXT NOT NULL DEFAULT 'PENDING',
+		agent_id TEXT,
+		priority TEXT NOT NULL DEFAULT 'P2',
+		payload TEXT,
+		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	)`
+	_, err = tx.ExecContext(ctx, query3)
 	return err
 }
 
 func downSharedTasksForKairos20260425010000(ctx context.Context, tx *sql.Tx) error {
-	_, err := tx.ExecContext(ctx, "DROP TABLE IF EXISTS tasks")
+	_, err := tx.ExecContext(ctx, "DROP TABLE IF EXISTS shared_tasks")
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, "DROP TABLE IF EXISTS tasks")
 	if err != nil {
 		return err
 	}
