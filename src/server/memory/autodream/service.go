@@ -37,6 +37,11 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 		return nil // Nothing to consolidate
 	}
 
+	if s.llm == nil {
+		// Degrade gracefully if no LLM is configured
+		return nil
+	}
+
 	// 2. Synthesize
 	prompt := fmt.Sprintf("Summarize the key technical decisions, user preferences, and permanent facts from these logs:\n%s", combinedLogs)
 	summary, err := s.llm.Reason(ctx, prompt)
@@ -55,15 +60,46 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 		return fmt.Errorf("unauthorized: missing claims or organization ID")
 	}
 
+	// Conflict Resolution: Search for similar facts in the past to merge or override
+	similarRecords, err := s.vectorRepo.SemanticSearch(ctx, claims.OrganizationID, embedding, 3)
+	if err == nil && len(similarRecords) > 0 {
+		var similarContext string
+		for _, rec := range similarRecords {
+			similarContext += fmt.Sprintf("- (ID: %s) %s\n", rec.ID, rec.Content)
+		}
+
+		resolvePrompt := fmt.Sprintf(
+			"You are a memory consolidation agent. Here is a newly extracted fact:\n%s\n\n"+
+			"Here are similar past facts:\n%s\n\n"+
+			"If the new fact conflicts with the past facts, resolve the conflict by keeping the new fact (it is more recent) but incorporate any missing details from the old facts. If they don't conflict, just return the new fact merged with any relevant context. Do not include introductory text, just the resolved fact.",
+			summary, similarContext)
+
+		resolvedSummary, err := s.llm.Reason(ctx, resolvePrompt)
+		if err == nil && resolvedSummary != "" {
+			summary = resolvedSummary
+
+			// Delete the old superseded records to avoid redundant, contradictory information
+			for _, rec := range similarRecords {
+				// Fire-and-forget delete on older similar records
+				_ = s.vectorRepo.Delete(ctx, rec.ID)
+			}
+
+			// Re-embed the resolved summary
+			resolvedEmbedding, err := s.llm.GenerateEmbedding(ctx, summary)
+			if err == nil {
+				embedding = resolvedEmbedding
+			}
+		}
+	}
+
 	// 4. Persist
 	record := &memory.EmbeddingRecord{
-		ID:           taskID + "-summary", // Simplification
+		ID:             taskID + "-summary", // Simplification
 		OrganizationID: claims.OrganizationID,           // Secure isolation
-		MemoryType:   "TASK_SUMMARY",
-		Content:      summary,
-		Embedding:    embedding,
-		CreatedAt:    time.Now(),
-		SourceTaskID: taskID,
+		SourceType:     "TASK_SUMMARY",
+		Content:        summary,
+		Embedding:      embedding,
+		CreatedAt:      time.Now(),
 	}
 
 	if err := s.vectorRepo.Upsert(ctx, record); err != nil {
@@ -71,4 +107,28 @@ func (s *Service) Consolidate(ctx context.Context, taskID string, logs []string)
 	}
 
 	return nil
+}
+
+// PruneStaleContext removes context older than the specified threshold.
+// This implements the background pruning strategy logic.
+func (s *Service) PruneStaleContext(ctx context.Context, olderThan time.Time) error {
+	return s.vectorRepo.PruneStale(ctx, olderThan)
+}
+
+// StartBackgroundPruner starts a background worker that periodically calls PruneStaleContext.
+func (s *Service) StartBackgroundPruner(ctx context.Context, interval time.Duration, maxAge time.Duration) {
+	ticker := time.NewTicker(interval)
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				ticker.Stop()
+				return
+			case <-ticker.C:
+				olderThan := time.Now().Add(-maxAge)
+				// Best effort pruning, ignore errors
+				_ = s.PruneStaleContext(ctx, olderThan)
+			}
+		}
+	}()
 }
