@@ -1,6 +1,6 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
-load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_go//proto:def.bzl", "go_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 
 proto_library(
     name = "tunnel_proto",
@@ -10,7 +10,7 @@ proto_library(
 
 go_proto_library(
     name = "tunnel_go_proto",
-    compilers = ["@rules_go//proto:go_grpc"],
+    compilers = ["@io_bazel_rules_go//proto:go_grpc_v2"],
     importpath = "github.com/onehumancorp/mono/src/server/integrations/mcp_webhook_tunnel",
     proto = ":tunnel_proto",
     visibility = ["//visibility:public"],
@@ -23,13 +23,12 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/integrations/mcp_webhook_tunnel",
     visibility = ["//visibility:public"],
     deps = [
-        "@@gazelle++go_deps+io_opentelemetry_go_otel//:otel",
-        "@@gazelle++go_deps+io_opentelemetry_go_otel//attribute",
-        "@@gazelle++go_deps+org_golang_google_grpc//:grpc",
-        "@@gazelle++go_deps+org_golang_google_grpc//codes",
-        "@@gazelle++go_deps+org_golang_google_grpc//status",
-        "@@gazelle++go_deps+org_golang_google_grpc//peer",
-        "@@gazelle++go_deps+org_golang_google_grpc//credentials",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//peer",
+        "@org_golang_google_grpc//status",
     ],
 )
 
@@ -40,10 +39,10 @@ go_test(
         ":mcp_webhook_tunnel",
         "//src/server/db",
         "//src/server/tools/mcpwebhooktunnel",
-        "@@gazelle++go_deps+org_golang_google_grpc//:grpc",
-        "@@gazelle++go_deps+org_golang_google_grpc//credentials",
-        "@@gazelle++go_deps+org_golang_google_grpc//credentials/insecure",
-        "@@gazelle++go_deps+org_golang_google_grpc//peer",
-        "@@gazelle++go_deps+org_golang_google_grpc//test/bufconn",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials",
+        "@org_golang_google_grpc//credentials/insecure",
+        "@org_golang_google_grpc//peer",
+        "@org_golang_google_grpc//test/bufconn",
     ],
 )

@@ -15,7 +15,7 @@ import (
 
 func TestCreateAndGetEpicTasks(t *testing.T) {
 	pool := db.NewTestProvider(t)
-	db.RunMigrations(pool, "../migrations")
+	(&db.DB{Provider: pool}).RunMigrations(context.Background())
 
 	ctx := context.Background()
 	repo := NewEpicTaskRepository(pool)

@@ -4,12 +4,12 @@ rust_library(
     name = "llm",
     srcs = glob(["**/*.rs"]),
     crate_name = "ohc_builtin_agent_llm",
-    edition = "2024",
     crate_root = "mod.rs",
-    visibility = ["//src/server/agents/builtin:__subpackages__"],
+    edition = "2024",
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+    visibility = ["//src/server/agents/builtin:__subpackages__"],
     deps = [
         "//src/server/agents/builtin/src:core",
         "@crates//:reqwest",

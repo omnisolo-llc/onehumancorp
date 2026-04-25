@@ -4,7 +4,6 @@ go_library(
     name = "config",
     srcs = [
         "config.go",
-        "config_standalone.go",
         "config_standalone_stub.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/config",
@@ -18,8 +17,8 @@ go_library(
 go_test(
     name = "config_test",
     srcs = ["config_test.go"],
-    embed = [":config"],
     deps = [
+        ":config",
         "@com_github_spf13_afero//:afero",
     ],
 )

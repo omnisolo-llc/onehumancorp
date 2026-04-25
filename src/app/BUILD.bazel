@@ -65,8 +65,8 @@ filegroup(
 flutter_library(
     name = "router_lib",
     srcs = ["lib/router.dart"],
-    pubspec = "pubspec.yaml",
     data = [":app_assets"],
+    pubspec = "pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         "//src/app/lib/models:models_lib",
@@ -79,8 +79,8 @@ flutter_library(
 flutter_library(
     name = "main_lib",
     srcs = ["lib/main.dart"],
-    pubspec = "pubspec.yaml",
     data = [":app_assets"],
+    pubspec = "pubspec.yaml",
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
         ":router_lib",
@@ -95,8 +95,8 @@ flutter_library(
 flutter_library(
     name = "app_lib",
     srcs = ["lib/main.dart"],
-    pubspec = "pubspec.yaml",
     data = [":app_assets"],
+    pubspec = "pubspec.yaml",
     visibility = ["//src/app:__subpackages__"],
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
@@ -130,8 +130,8 @@ flutter_library(
 flutter_library(
     name = "app_for_tests",
     srcs = [],
-    pubspec = "pubspec.yaml",
     data = [":app_assets"],
+    pubspec = "pubspec.yaml",
     visibility = ["//src/app:__subpackages__"],
     workspace_pubspec = "//:pubspec.yaml",
     deps = [
@@ -273,16 +273,16 @@ test_suite(
     name = "cuj_e2e_tests",
     tags = ["manual"],
     tests = [
-        ":cuj_auth_e2e_test",
         ":cuj_agents_hire_e2e_test",
-        ":cuj_cost_e2e_test",
-        ":cuj_handoffs_e2e_test",
-        ":cuj_pipelines_e2e_test",
-        ":cuj_users_e2e_test",
-        ":cuj_integrations_e2e_test",
+        ":cuj_auth_e2e_test",
         ":cuj_channels_extra_e2e_test",
-        ":cuj_scaling_e2e_test",
+        ":cuj_cost_e2e_test",
         ":cuj_diagnostics_referrals_e2e_test",
+        ":cuj_handoffs_e2e_test",
+        ":cuj_integrations_e2e_test",
+        ":cuj_pipelines_e2e_test",
+        ":cuj_scaling_e2e_test",
+        ":cuj_users_e2e_test",
     ],
 )
 

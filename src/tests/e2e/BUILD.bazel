@@ -34,202 +34,200 @@ _COMMON_TAGS = [
 # ── Auth CUJ ──────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_auth_test",
-    srcs = _SHARED_SRCS + ["auth_login_test.go"],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = ["auth_login_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 go_test(
     name = "e2e_hybrid_sync_test",
-    srcs = _SHARED_SRCS + [
-        "hybrid_sync_e2e_test.go",
-    ],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
+    size = "large",
+    timeout = "eternal",
+    srcs = ["hybrid_sync_e2e_test.go"],
     data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
+    tags = _COMMON_TAGS,
     deps = _COMMON_DEPS + [
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],
-    env = _COMMON_ENV,
-    size = "large",
-    timeout = "eternal",
-    tags = _COMMON_TAGS,
 )
 
 # ── Agent CUJs ────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_agents_test",
-    srcs = _SHARED_SRCS + [
+    size = "large",
+    timeout = "eternal",
+    srcs = [
         "agent_test.go",
         "cuj_agents_extra_test.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
     env = _COMMON_ENV,
-    size = "large",
-    timeout = "eternal",
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_dashboard_test",
-    srcs = _SHARED_SRCS + ["dashboard_test.go"],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = ["dashboard_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── Budget ────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_budget_test",
-    srcs = _SHARED_SRCS + [
+    size = "large",
+    timeout = "eternal",
+    srcs = [
         "budget_test.go",
         "cuj_budget_extra_test.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
     env = _COMMON_ENV,
-    size = "large",
-    timeout = "eternal",
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── Business ──────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_business_test",
-    srcs = _SHARED_SRCS + [
+    size = "large",
+    timeout = "eternal",
+    srcs = [
         "business_test.go",
         "cuj_business_extra_test.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
     env = _COMMON_ENV,
-    size = "large",
-    timeout = "eternal",
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── Settings ──────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_settings_test",
-    srcs = _SHARED_SRCS + [
-        "settings_test.go",
-        "cuj_settings_extra_test.go",
-    ],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = [
+        "cuj_settings_extra_test.go",
+        "settings_test.go",
+    ],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── Wizard ────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_wizard_test",
-    srcs = _SHARED_SRCS + ["wizard_test.go"],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = ["wizard_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── Model / Provider ──────────────────────────────────────────────────────────
 go_test(
     name = "e2e_model_provider_test",
-    srcs = _SHARED_SRCS + ["model_provider_test.go"],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = ["model_provider_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_admin_test",
-    srcs = _SHARED_SRCS + ["admin_test.go"],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = ["admin_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── CUJ Audit ─────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_cuj_audit_test",
-    srcs = _SHARED_SRCS + ["cuj_audit_test.go"],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = ["cuj_audit_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── CUJ Extended ──────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_cuj_extended_test",
-    srcs = _SHARED_SRCS + [
+    size = "large",
+    timeout = "eternal",
+    srcs = [
         "cuj_extended_test.go",
         "cuj_integration_test.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
     env = _COMMON_ENV,
-    size = "large",
-    timeout = "eternal",
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── CUJ Accessibility ─────────────────────────────────────────────────────────
 go_test(
     name = "e2e_cuj_accessibility_test",
-    srcs = _SHARED_SRCS + ["cuj_accessibility_extra_test.go"],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = ["cuj_accessibility_extra_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_misc_test",
-    srcs = _SHARED_SRCS + ["misc_test.go"],
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
-    env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
+    srcs = ["misc_test.go"],
+    data = _COMMON_DATA,
+    env = _COMMON_ENV,
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     tags = _COMMON_TAGS,
+    deps = _COMMON_DEPS,
 )
 
 # ── All-in-one (backward compat alias) ───────────────────────────────────────
@@ -238,19 +236,19 @@ go_test(
 test_suite(
     name = "e2e_test",
     tests = [
-        ":e2e_auth_test",
+        ":e2e_admin_test",
         ":e2e_agents_test",
-        ":e2e_dashboard_test",
+        ":e2e_auth_test",
         ":e2e_budget_test",
         ":e2e_business_test",
-        ":e2e_settings_test",
-        ":e2e_hybrid_sync_test",
-        ":e2e_wizard_test",
-        ":e2e_model_provider_test",
-        ":e2e_admin_test",
+        ":e2e_cuj_accessibility_test",
         ":e2e_cuj_audit_test",
         ":e2e_cuj_extended_test",
-        ":e2e_cuj_accessibility_test",
+        ":e2e_dashboard_test",
+        ":e2e_hybrid_sync_test",
         ":e2e_misc_test",
+        ":e2e_model_provider_test",
+        ":e2e_settings_test",
+        ":e2e_wizard_test",
     ],
 )
