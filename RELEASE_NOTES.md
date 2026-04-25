@@ -1,6 +1,11 @@
 # Release Notes
 
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Implement formal realtime teammate mesh APIs and standardize Playwright E2E testing framework.
+- Privacy/Offline (Standalone): Harness Upgrade for JetBrains Observation Masking and improve SQLite migration parsing.
+
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 - Scaling (Cloud): Implement Business Setup and Website Builder wizard UI scaffolding, onboarding cross-device state, and Business Share & Embed widget.
 - Privacy/Offline (Standalone): Conduct Hybrid Privacy Audit with PII guardrails, implement in-app mobile-first Help Center with tooltips, and add Dashboard Welcome Checklist.
