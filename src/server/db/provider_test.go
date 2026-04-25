@@ -151,3 +151,135 @@ func TestProvider_AcquireTask(t *testing.T) {
 		t.Errorf("Expected nil task, got %v", task3.ID)
 	}
 }
+
+func TestAcquireTaskParity_NullPointer(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
+
+	dbp, err := New(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to initialize standalone db: %v", err)
+	}
+	defer dbp.Close()
+
+	provider := dbp.Provider
+	ctx := context.Background()
+
+	// Setup SQLite table schema specific to our test
+	schema := `
+	CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+		id TEXT PRIMARY KEY,
+		organization_id TEXT NOT NULL,
+		title TEXT NOT NULL,
+		description TEXT,
+		status TEXT NOT NULL DEFAULT 'PENDING',
+		assigned_agent_id TEXT,
+		priority TEXT NOT NULL DEFAULT 'P2',
+		payload TEXT,
+		parent_plan_id TEXT,
+		dependencies TEXT NOT NULL DEFAULT '[]',
+		locked_until DATETIME,
+		action_risk TEXT,
+		approval_status TEXT,
+		proposed_content TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	_, err = provider.Exec(ctx, schema)
+	if err != nil {
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+
+	// Insert test data with NULL payload and NULL parent_plan_id
+	insertQuery := `
+		INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, payload, parent_plan_id, created_at, updated_at)
+		VALUES ('task-1', 'org-1', 'Task 1', 'PENDING', NULL, NULL, '2026-04-15 10:00:00', '2026-04-15 10:00:00');
+	`
+	_, err = provider.Exec(ctx, insertQuery)
+	if err != nil {
+		t.Fatalf("Failed to insert test tasks: %v", err)
+	}
+
+	repo := NewSharedTaskRepository(provider)
+
+	task, err := repo.AcquireTask(ctx, "org-1", "agent-x")
+	if err != nil {
+		t.Fatalf("Failed to acquire task: %v", err)
+	}
+	if task == nil {
+		t.Fatalf("Expected a task, got nil")
+	}
+
+	if task.Payload != nil {
+		t.Errorf("Expected payload to be nil, got '%v'", *task.Payload)
+	}
+
+	if task.ParentTaskID != nil {
+	    t.Errorf("Expected ParentTaskID to be nil, got '%v'", *task.ParentTaskID)
+	}
+}
+
+func TestAcquireTaskParity_EmptyString(t *testing.T) {
+	t.Setenv("DATABASE_URL", "sqlite://file::memory:?mode=memory&cache=shared")
+
+	dbp, err := New(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to initialize standalone db: %v", err)
+	}
+	defer dbp.Close()
+
+	provider := dbp.Provider
+	ctx := context.Background()
+
+	// Setup SQLite table schema specific to our test
+	schema := `
+	CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
+		id TEXT PRIMARY KEY,
+		organization_id TEXT NOT NULL,
+		title TEXT NOT NULL,
+		description TEXT,
+		status TEXT NOT NULL DEFAULT 'PENDING',
+		assigned_agent_id TEXT,
+		priority TEXT NOT NULL DEFAULT 'P2',
+		payload TEXT,
+		parent_plan_id TEXT,
+		dependencies TEXT NOT NULL DEFAULT '[]',
+		locked_until DATETIME,
+		action_risk TEXT,
+		approval_status TEXT,
+		proposed_content TEXT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	_, err = provider.Exec(ctx, schema)
+	if err != nil {
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+
+	// Insert test data with empty string payload
+	insertQuery := `
+		INSERT INTO shared_tasks_decomposition (id, organization_id, title, status, payload, parent_plan_id, created_at, updated_at)
+		VALUES ('task-1', 'org-1', 'Task 1', 'PENDING', '', NULL, '2026-04-15 10:00:00', '2026-04-15 10:00:00');
+	`
+	_, err = provider.Exec(ctx, insertQuery)
+	if err != nil {
+		t.Fatalf("Failed to insert test tasks: %v", err)
+	}
+
+	repo := NewSharedTaskRepository(provider)
+
+	task, err := repo.AcquireTask(ctx, "org-1", "agent-x")
+	if err != nil {
+		t.Fatalf("Failed to acquire task: %v", err)
+	}
+	if task == nil {
+		t.Fatalf("Expected a task, got nil")
+	}
+
+	if task.Payload == nil {
+		t.Errorf("Expected payload to be empty string, got nil")
+	} else if *task.Payload != "" {
+	    t.Errorf("Expected payload to be empty string, got '%v'", *task.Payload)
+	}
+}

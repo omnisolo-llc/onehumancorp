@@ -84,9 +84,9 @@ func (p *PgProvider) AcquireTask(ctx context.Context, organizationID, agentID st
 	`
 
 	var t TaskRecord
-	var payloadBytes []byte
+	var payloadStr *string
 	err = tx.QueryRow(ctx, query, agentID, organizationID).Scan(
-		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &payloadBytes, &t.CreatedAt, &t.UpdatedAt,
+		&t.ID, &t.ParentTaskID, &t.AgentID, &t.Status, &payloadStr, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		// No rows is fine, but we check if it's due to lock contention
@@ -106,10 +106,7 @@ func (p *PgProvider) AcquireTask(ctx context.Context, organizationID, agentID st
 		return nil, err
 	}
 
-	if len(payloadBytes) > 0 {
-		payloadStr := string(payloadBytes)
-		t.Payload = &payloadStr
-	}
+	t.Payload = payloadStr
 
 	if err := tx.Commit(ctx); err != nil {
 		trackQuery(ctx, "AcquireTask_Commit", err, time.Since(start))
