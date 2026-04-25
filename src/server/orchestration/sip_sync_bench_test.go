@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"testing"
 
-
 )
 
 func BenchmarkSIPDB_SyncBufferedMetrics(b *testing.B) {

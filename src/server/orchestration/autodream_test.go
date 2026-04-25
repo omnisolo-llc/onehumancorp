@@ -854,7 +854,7 @@ func TestAutoDreamWorker_IngestCompletedTasksPg(t *testing.T) {
 		t.Fatalf("IngestCompletedTasks failed: %v", err)
 	}
 }
-type mockPgProviderStruct struct {
+type mockPgProvider struct {
 	db.Provider
 }
 
