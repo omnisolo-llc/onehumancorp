@@ -944,6 +944,20 @@ func (s *SIPDB) Provider() db.Provider {
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has side effects: Inserts a record into the telemetry_buffer table.
+
+// GetTelemetryBufferDepth returns the current depth of the telemetry buffer.
+// Accepts parameters: ctx context.Context.
+// Returns int, error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (s *SIPDB) GetTelemetryBufferDepth(ctx context.Context) (int, error) {
+	var count int
+	err := withSipRetry(ctx, func() error {
+		return s.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer WHERE organization_id = $1", s.orgID).Scan(&count)
+	})
+	return count, err
+}
+
 func (s *SIPDB) BufferMetric(ctx context.Context, metricType string, payload string) error {
 	// Sanitize payload before storing in the buffer
 	var obj interface{}
@@ -1102,16 +1116,29 @@ func (s *SIPDB) SyncBufferedMetrics(ctx context.Context, remoteEndpoint string, 
 	client := &http.Client{Timeout: 10 * time.Second}
 	start := time.Now()
 	resp, err := client.Do(req)
+
+	duration := time.Since(start)
+	telemetry.RecordSyncBatchDuration(ctx, duration.Seconds())
+
 	if err != nil {
+		if os.IsTimeout(err) || strings.Contains(err.Error(), "timeout") {
+			return 0, fmt.Errorf("timeout: %w", err)
+		}
 		return 0, fmt.Errorf("failed to sync metrics: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return 0, fmt.Errorf("remote endpoint returned status: %d", resp.StatusCode)
+		if resp.StatusCode == http.StatusTooManyRequests {
+			return 0, fmt.Errorf("429: %w", fmt.Errorf("too many requests"))
+		}
+		if resp.StatusCode >= 500 {
+			return 0, fmt.Errorf("500: %w", fmt.Errorf("internal server error"))
+		}
+		return 0, fmt.Errorf("status_%d: %w", resp.StatusCode, fmt.Errorf("unexpected status"))
 	}
 
-	telemetry.RecordSIPSyncLatency(ctx, time.Since(start)) // added for issue 4365
+	telemetry.RecordSIPSyncLatency(ctx, duration) // added for issue 4365
 	telemetry.RecordSIPSyncPayloadSize(ctx, payloadSize)   // added for issue 4365
 
 	// Delete successfully synced records

@@ -912,3 +912,16 @@ func TestRecordTelemetryBatchSize(t *testing.T) {
 func TestRecordTelemetrySyncBackoff(t *testing.T) {
 	RecordTelemetrySyncBackoff(context.Background(), 5.0)
 }
+
+
+func TestRecordSyncErrorReason(t *testing.T) {
+	RecordSyncErrorReason(context.Background(), "429")
+}
+
+func TestRecordSyncBatchDuration(t *testing.T) {
+	RecordSyncBatchDuration(context.Background(), 1.5)
+}
+
+func TestRecordTelemetryBufferDepth(t *testing.T) {
+	RecordTelemetryBufferDepth(context.Background(), 42)
+}

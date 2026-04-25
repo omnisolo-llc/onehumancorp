@@ -96,6 +96,9 @@ var (
 	RateLimitExceededCount       metric.Int64Counter
 	syncDaemonBatchSize          metric.Int64Histogram
 	SyncDaemonErrorTotal         metric.Int64Counter
+	SyncErrorTotal             metric.Int64Counter
+	SyncBatchDuration          metric.Float64Histogram
+	TelemetryBufferDepth       metric.Int64Gauge
 	LocalToCloudMissionSyncCount metric.Int64Counter
 
 	sqliteLockContentionCounter   metric.Int64Counter
@@ -464,6 +467,31 @@ func InitWithMeter(m mockableMeter) error {
 	SyncDaemonErrorTotal, err = m.Int64Counter(
 		"ohc_sync_daemon_errors_total",
 		metric.WithDescription("Total number of sync failures by the SyncDaemon"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncErrorTotal, err = m.Int64Counter(
+		"ohc_sync_error_total",
+		metric.WithDescription("Total number of synchronization errors by reason"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SyncBatchDuration, err = m.Float64Histogram(
+		"ohc_sync_batch_duration_seconds",
+		metric.WithDescription("Duration of synchronization batch processing in seconds"),
+		metric.WithUnit("s"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	TelemetryBufferDepth, err = m.Int64Gauge(
+		"ohc_telemetry_buffer_depth",
+		metric.WithDescription("Current depth of the telemetry buffer"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -2256,4 +2284,29 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	TelemetryBatchSizeGauge.Record(ctx, size)
+}
+
+
+// RecordSyncErrorReason records a sync error with its specific reason.
+func RecordSyncErrorReason(ctx context.Context, reason string) {
+	if SyncErrorTotal == nil {
+		return
+	}
+	SyncErrorTotal.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
+}
+
+// RecordSyncBatchDuration records the duration of a sync batch.
+func RecordSyncBatchDuration(ctx context.Context, duration float64) {
+	if SyncBatchDuration == nil {
+		return
+	}
+	SyncBatchDuration.Record(ctx, duration)
+}
+
+// RecordTelemetryBufferDepth records the current depth of the telemetry buffer.
+func RecordTelemetryBufferDepth(ctx context.Context, depth int64) {
+	if TelemetryBufferDepth == nil {
+		return
+	}
+	TelemetryBufferDepth.Record(ctx, depth)
 }

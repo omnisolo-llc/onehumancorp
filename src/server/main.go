@@ -375,7 +375,7 @@ func run(now time.Time, listen listenFunc) error {
 			// Background sync for standalone metrics to cloud
 			cloudEndpoint := os.Getenv("OHC_CLOUD_TELEMETRY_ENDPOINT")
 			if cloudEndpoint != "" && envBoolDefault("OHC_TELEMETRY_ENABLED", false) {
-				telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, cloudEndpoint, 5*time.Minute)
+				telemetry.StartSyncDaemon(ctx, sipdb.SyncBufferedMetrics, sipdb.GetTelemetryBufferDepth, cloudEndpoint, 5*time.Minute)
 			}
 			// Background sync for standalone missions to cloud
 			missionsEndpoint := os.Getenv("OHC_CLOUD_MISSIONS_ENDPOINT")

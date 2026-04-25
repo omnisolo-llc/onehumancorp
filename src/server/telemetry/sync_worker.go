@@ -13,7 +13,7 @@ type SyncFunc func(ctx context.Context, remoteEndpoint string, batchSize int) (i
 // StartSyncDaemon starts a background worker that periodically calls syncFunc
 // to push locally buffered metrics to the cloud API endpoint.
 // It uses the specified interval and respects context cancellation.
-func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, endpoint string, interval time.Duration) {
+func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, depthFunc func(context.Context) (int, error), endpoint string, interval time.Duration) {
 	go func() {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
@@ -28,6 +28,12 @@ func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, endpoint string, in
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				if depthFunc != nil {
+					depth, err := depthFunc(ctx)
+					if err == nil {
+						RecordTelemetryBufferDepth(ctx, int64(depth))
+					}
+				}
 				RecordTelemetryBatchSize(ctx, currentBatchSize)
 				for {
 					syncedCount, err := syncFunc(ctx, endpoint, int(currentBatchSize))
@@ -35,11 +41,24 @@ func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, endpoint string, in
 						errorCount++
 						slog.Warn("Failed to sync standalone metrics", "error", err, "errorCount", errorCount)
 
+						// Extract error reason
+						reason := "unknown"
+						errStr := err.Error()
+						if len(errStr) > 4 && errStr[0:4] == "429:" {
+							reason = "429"
+						} else if len(errStr) > 4 && errStr[0:4] == "500:" {
+							reason = "500"
+						} else if len(errStr) > 8 && errStr[0:8] == "timeout:" {
+							reason = "timeout"
+						}
+						RecordSyncErrorReason(ctx, reason)
+
 						backoffDuration := time.Duration(1<<errorCount) * time.Second
 						if backoffDuration > maxBackoff {
 							backoffDuration = maxBackoff
 						}
 
+						// AIMD Multiplicative Decrease
 						currentBatchSize = currentBatchSize / 2
 						if currentBatchSize < 10 {
 							currentBatchSize = 10
@@ -59,7 +78,14 @@ func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, endpoint string, in
 
 					if errorCount > 0 {
 						errorCount = 0
-						currentBatchSize = baseBatchSize
+					}
+
+					// AIMD Additive Increase
+					if currentBatchSize < 2000 {
+						currentBatchSize += 100
+						if currentBatchSize > 2000 {
+							currentBatchSize = 2000
+						}
 					}
 
 					if syncedCount > 0 {

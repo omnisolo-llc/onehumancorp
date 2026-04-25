@@ -1162,12 +1162,35 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) { // added for issue 4365
 	}
 
 	var reqBody []byte
+	var reqCount int
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqCount++
+		if reqCount == 1 {
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		if reqCount == 2 {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		reqBody, _ = io.ReadAll(r.Body)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
 
+	// 1st request returns 429
+	_, err = db.SyncBufferedMetrics(ctx, ts.URL, 500)
+	if err == nil || !strings.Contains(err.Error(), "429:") {
+		t.Fatalf("Expected 429 error, got: %v", err)
+	}
+
+	// 2nd request returns 500
+	_, err = db.SyncBufferedMetrics(ctx, ts.URL, 500)
+	if err == nil || !strings.Contains(err.Error(), "500:") {
+		t.Fatalf("Expected 500 error, got: %v", err)
+	}
+
+	// 3rd request returns 200
 	syncedCount, err := db.SyncBufferedMetrics(ctx, ts.URL, 500)
 	if err != nil {
 		t.Fatalf("SyncBufferedMetrics failed: %v", err)
@@ -1184,6 +1207,36 @@ func TestSIPDB_SyncBufferedMetrics(t *testing.T) { // added for issue 4365
 	err = db.db.QueryRow(ctx, "SELECT COUNT(*) FROM telemetry_buffer").Scan(&count)
 	if err != nil || count != 0 {
 		t.Fatalf("Expected 0 metrics after sync, got %d, err: %v", count, err)
+	}
+}
+
+func TestSIPDB_GetTelemetryBufferDepth(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "test_depth.db")
+	db, err := NewSIPDB(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create db: %v", err)
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+
+	depth, err := db.GetTelemetryBufferDepth(ctx)
+	if err != nil || depth != 0 {
+		t.Fatalf("Expected depth 0, got %d (err: %v)", depth, err)
+	}
+
+	err = db.BufferMetric(ctx, "token_usage", `{"count":1}`)
+	if err != nil {
+		t.Fatalf("BufferMetric failed: %v", err)
+	}
+	err = db.BufferMetric(ctx, "token_usage", `{"count":2}`)
+	if err != nil {
+		t.Fatalf("BufferMetric failed: %v", err)
+	}
+
+	depth, err = db.GetTelemetryBufferDepth(ctx)
+	if err != nil || depth != 2 {
+		t.Fatalf("Expected depth 2, got %d (err: %v)", depth, err)
 	}
 }
 
