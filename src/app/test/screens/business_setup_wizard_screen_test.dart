@@ -23,47 +23,56 @@ void main() {
     );
 
     expect(find.text('Business Setup'), findsOneWidget);
-    expect(find.text('Welcome! Your AI team, ready in minutes.'), findsOneWidget);
+    expect(find.text('Your business, live in minutes.'), findsOneWidget);
     expect(find.text('Next'), findsOneWidget);
 
-    // Step 1: Business Profile
+    // Step 1: Business Type
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    expect(find.byType(TextField), findsNWidgets(2)); // Business Type, Company Name
-
-    await tester.enterText(find.byType(TextField).first, 'Baker');
+    expect(find.text('Online Store'), findsOneWidget);
+    await tester.tap(find.text('Online Store'));
     await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Step 2: What they sell
-    expect(find.byType(TextField), findsOneWidget); // Products Services
-    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 3: Template
-    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+    // Step 2: Company Name & Description
+    expect(find.byType(TextField), findsNWidgets(2));
+
+    await tester.enterText(find.byType(TextField).first, 'My Bakery');
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 4: First Product
+    // Step 3: What do you sell?
+    expect(find.text('Physical products'), findsOneWidget);
+    await tester.tap(find.text('Physical products'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 4: Payments
+    expect(find.text('Online only'), findsOneWidget);
+    await tester.tap(find.text('Online only'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 5: Admin Account
     expect(find.byType(TextField), findsNWidgets(3));
 
+    await tester.enterText(find.byType(TextField).first, 'Admin');
+    await tester.pumpAndSettle();
+
     await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Step 5: Domain
-    expect(find.byType(TextField), findsNWidgets(1));
-
-    await tester.enterText(find.byType(TextField).first, 'mydomain');
-    await tester.pumpAndSettle();
-
-    expect(find.text('Launch My AI Team →'), findsOneWidget);
+    // Step 6: Ready to Launch
+    expect(find.text('Launch My Business →'), findsOneWidget);
   });
 
   test('BusinessSetupNotifier covers all state mutations', () {
@@ -80,12 +89,10 @@ void main() {
     notifier.prevStep();
     expect(container.read(businessSetupProvider).step, 0);
 
-    notifier.nextStep(); // 1
-    notifier.nextStep(); // 2
-    notifier.nextStep(); // 3
-    notifier.nextStep(); // 4
-    notifier.nextStep(); // 5
-    expect(container.read(businessSetupProvider).step, 5);
+    for(int i = 0; i < 6; i++) {
+        notifier.nextStep();
+    }
+    expect(container.read(businessSetupProvider).step, 6);
 
     notifier.updateCompany('NewCo');
     expect(container.read(businessSetupProvider).companyName, 'NewCo');
@@ -93,26 +100,26 @@ void main() {
     notifier.updateBusinessType('Baker');
     expect(container.read(businessSetupProvider).businessType, 'Baker');
 
-    notifier.updateProductsServices('Cakes');
-    expect(container.read(businessSetupProvider).productsServices, 'Cakes');
+    notifier.updateCompanyDescription('Best bakery');
+    expect(container.read(businessSetupProvider).companyDescription, 'Best bakery');
 
-    notifier.updatePaymentPref('paypal');
-    expect(container.read(businessSetupProvider).paymentPref, 'paypal');
+    notifier.toggleSellItem('Physical products');
+    expect(container.read(businessSetupProvider).sellItems.contains('Physical products'), true);
 
-    notifier.updateTemplateId('classic');
-    expect(container.read(businessSetupProvider).templateId, 'classic');
+    notifier.toggleSellItem('Physical products');
+    expect(container.read(businessSetupProvider).sellItems.contains('Physical products'), false);
 
-    notifier.updateFirstProductName('Cake');
-    expect(container.read(businessSetupProvider).firstProductName, 'Cake');
+    notifier.updatePaymentType('Online only');
+    expect(container.read(businessSetupProvider).paymentType, 'Online only');
 
-    notifier.updateFirstProductDesc('Yummy');
-    expect(container.read(businessSetupProvider).firstProductDesc, 'Yummy');
+    notifier.updateAdminName('Admin');
+    expect(container.read(businessSetupProvider).adminName, 'Admin');
 
-    notifier.updateFirstProductPrice('10');
-    expect(container.read(businessSetupProvider).firstProductPrice, '10');
+    notifier.updateAdminEmail('admin@test.com');
+    expect(container.read(businessSetupProvider).adminEmail, 'admin@test.com');
 
-    notifier.updateDomainName('baker');
-    expect(container.read(businessSetupProvider).domainName, 'baker');
+    notifier.updateAdminPassword('password');
+    expect(container.read(businessSetupProvider).adminPassword, 'password');
   });
 
   testWidgets('BusinessSetupWizardScreen launch bypasses API and routes if no user is set', (WidgetTester tester) async {
@@ -137,12 +144,12 @@ void main() {
       ),
     );
 
-    for(int i = 0; i < 5; i++) {
+    for(int i = 0; i < 6; i++) {
       await tester.tap(find.text('Next'));
       await tester.pumpAndSettle();
     }
 
-    await tester.tap(find.text('Launch My AI Team →'));
+    await tester.tap(find.text('Launch My Business →'));
     await tester.pumpAndSettle();
 
     expect(find.text('Checklist'), findsOneWidget);
