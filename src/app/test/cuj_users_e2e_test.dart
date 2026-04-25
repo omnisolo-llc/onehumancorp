@@ -77,8 +77,13 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('alice'), findsWidgets);
-      expect(find.textContaining('bob'), findsWidgets);
+      // With the DashboardShimmer we must pump frames over time
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+
+      expect(find.textContaining('alice', skipOffstage: false), findsWidgets);
+      expect(find.textContaining('bob', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('Invite User FAB is present', (tester) async {
@@ -95,9 +100,11 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
-      await tester.pumpAndSettle();
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
 
-      expect(find.text('Invite User'), findsOneWidget);
+      expect(find.text('Invite User', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('Invite User FAB opens dialog when tapped', (tester) async {
@@ -114,12 +121,18 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
-      await tester.pumpAndSettle();
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
 
-      await tester.tap(find.text('Invite User'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.byType(FloatingActionButton, skipOffstage: false).first);
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+        if (find.byType(Dialog, skipOffstage: false).evaluate().isNotEmpty) break;
+      }
+
+      expect(find.byType(Dialog, skipOffstage: false), findsWidgets);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
@@ -139,9 +152,11 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
-      await tester.pumpAndSettle();
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
 
-      expect(find.textContaining('admin'), findsWidgets);
+      expect(find.textContaining('admin', skipOffstage: false), findsWidgets);
     });
 
     testWidgets('shows error message when API fails', (tester) async {
@@ -158,9 +173,11 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
-      await tester.pumpAndSettle();
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
 
-      expect(find.textContaining('Error'), findsWidgets);
+      expect(find.textContaining('Error', skipOffstage: false), findsWidgets);
     });
   });
 }

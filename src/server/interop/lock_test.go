@@ -260,7 +260,7 @@ func TestMemoryLock_CoveragePaths_RenameError(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(path)
 
 	locked, err := lock1.Lock(ctx, key, 1*time.Second)
 	if !locked || err != nil {
