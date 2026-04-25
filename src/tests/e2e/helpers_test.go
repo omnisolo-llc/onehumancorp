@@ -44,18 +44,30 @@ func getEnvOr(key, def string) string {
 func newPage(t *testing.T) playwright.Page {
 	t.Helper()
 	if bCtx == nil {
-		t.Skip("browser not available (browser launch failed in this environment)")
+		t.Fatalf("browser not available (browser launch failed in this environment)")
 	}
 	page, err := bCtx.NewPage()
 	if err != nil {
 		t.Fatalf("newPage: %v", err)
 	}
+
+	page.OnConsole(func(msg playwright.ConsoleMessage) {
+		location := ""
+		if len(msg.Location().URL) > 0 {
+			location = fmt.Sprintf(" at %s", msg.Location().URL)
+		}
+		t.Logf("CONSOLE: [%s] %s%s", msg.Type(), msg.Text(), location)
+	})
+	page.OnPageError(func(err error) {
+		t.Logf("PAGE ERROR: %v", err)
+	})
+
 	return page
 }
 
 func openApp(t *testing.T, page playwright.Page) {
 	t.Helper()
-	if _, err := page.Goto(baseURL+"/"); err != nil {
+	if _, err := page.Goto(baseURL + "/"); err != nil {
 		t.Fatalf("openApp goto: %v", err)
 	}
 	// Wait for Flutter to bootstrap
