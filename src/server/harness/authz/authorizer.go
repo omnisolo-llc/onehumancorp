@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/onehumancorp/mono/src/server/db"
+	"github.com/onehumancorp/mono/src/server/telemetry"
 
 	"encoding/json"
 )
@@ -48,6 +49,6 @@ func (a *authorizer) Authorize(ctx context.Context, sessionID string, capability
 		}
 	}
 
-	// TODO: log violation using Violation Telemetry Engine
+	telemetry.RecordCapabilityViolation(ctx, sessionID, capability)
 	return ErrCapabilityDenied
 }
