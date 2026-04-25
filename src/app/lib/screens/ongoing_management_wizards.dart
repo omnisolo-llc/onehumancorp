@@ -228,6 +228,15 @@ class PendingAction {
     required this.actionDescription,
     required this.riskLevel,
   });
+
+  factory PendingAction.fromJson(Map<String, dynamic> json) {
+    return PendingAction(
+      id: json['id'] as String? ?? json['task_id'] as String? ?? '',
+      agentName: json['agent_name'] as String? ?? 'Unknown Agent',
+      actionDescription: json['action_description'] as String? ?? 'No description',
+      riskLevel: json['risk_level'] as String? ?? 'Medium',
+    );
+  }
 }
 
 class PendingActionsState {
@@ -253,51 +262,58 @@ class PendingActionsState {
 class PendingActionsNotifier extends Notifier<PendingActionsState> {
   @override
   PendingActionsState build() {
-    _loadMockActions();
+    _loadActions();
     return const PendingActionsState(isLoading: true);
   }
 
-  Future<void> _loadMockActions() async {
-    // Mock API delay
-    await Future.delayed(const Duration(milliseconds: 500));
-    // Notifier doesn't have mounted context. Just let state update.
-
-    state = state.copyWith(
-      isLoading: false,
-      actions: [
-        const PendingAction(
-          id: '1',
-          agentName: 'Customer Success Agent',
-          actionDescription: 'Send refund email to customer maya@example.com for order #123',
-          riskLevel: 'High',
-        ),
-        const PendingAction(
-          id: '2',
-          agentName: 'Marketing & Advertising Agent',
-          actionDescription: 'Publish Instagram post for new vegan cake catalog',
-          riskLevel: 'High',
-        ),
-      ],
-    );
+  Future<void> _loadActions() async {
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      if (apiService == null) return;
+      final actions = await apiService.getPendingActions();
+      state = state.copyWith(isLoading: false, actions: actions);
+    } catch (e) {
+      state = state.copyWith(isLoading: false);
+    }
   }
 
   Future<void> approveAction(BuildContext context, String id) async {
-    // Mock API call to approve
-    state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Action approved and executed.')),
-      );
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      if (apiService == null) return;
+      await apiService.approvePendingAction(id);
+      state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Action approved and executed.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to approve action: $e')),
+        );
+      }
     }
   }
 
   Future<void> rejectAction(BuildContext context, String id) async {
-    // Mock API call to reject
-    state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Action rejected and discarded.')),
-      );
+    try {
+      final apiService = ref.read(apiServiceProvider);
+      if (apiService == null) return;
+      await apiService.rejectPendingAction(id);
+      state = state.copyWith(actions: state.actions.where((a) => a.id != id).toList());
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Action rejected and discarded.')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to reject action: $e')),
+        );
+      }
     }
   }
 }

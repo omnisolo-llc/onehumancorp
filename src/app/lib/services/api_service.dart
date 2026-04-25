@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 import 'package:http/http.dart' as http;
 import 'package:ohc_app/models/agent.dart';
 import 'package:ohc_app/models/ai_provider.dart';
@@ -16,6 +17,43 @@ import 'package:ohc_app/services/auth_service.dart';
 
 /// API client for the OHC backend.
 class ApiService {
+
+  // Pending actions
+  Future<List<PendingAction>> getPendingActions() async {
+    final response = await _client.get(
+      Uri.parse('$baseUrl/api/kairos/actions/pending'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((json) => PendingAction.fromJson(json)).toList();
+    } else {
+      throw Exception('Failed to get pending actions');
+    }
+  }
+
+  Future<void> approvePendingAction(String taskId) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/kairos/actions/approve'),
+      headers: _headers,
+      body: jsonEncode({'task_id': taskId}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to approve action');
+    }
+  }
+
+  Future<void> rejectPendingAction(String taskId) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/kairos/actions/reject'),
+      headers: _headers,
+      body: jsonEncode({'task_id': taskId}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to reject action');
+    }
+  }
+
   final String baseUrl;
   final String token;
   final http.Client _client;
