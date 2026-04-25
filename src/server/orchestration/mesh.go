@@ -287,6 +287,7 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 	return ch, nil
 }
 
+// PublishTeammateMeshEvent publishes a realtime teammate mesh event.
 func (rm *RedisMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {
 	msg := map[string]interface{}{
 		"agent_id": agentID,

@@ -117,6 +117,7 @@ message MeshEvent {
   int64 timestamp = 4;
 }
 
+// Teammate Mesh Event for realtime coordination
 message TeammateMeshEvent {
   string agent_id = 1;
   string action = 2;

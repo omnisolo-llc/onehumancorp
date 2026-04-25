@@ -366,5 +366,5 @@ func (cn *CentrifugeNode) PublishTeammateMeshEvent(agentID, action, status strin
     }
 
     // Publish to the Centrifuge redis pubsub backend
-    _, _ = cn.node.Publish("orchestration.tasks", data)
+    _, _ = cn.node.Publish("teammate_mesh", data)
 }
