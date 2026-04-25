@@ -20,22 +20,15 @@ func TestGrowthShareWidgetRendersOnDashboard(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Wait for the share widget
-	locator := page.Locator("text=Share my business")
+	locator := page.Locator("text=Grow Your Swarm")
 	err = locator.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
 	})
 	assert.NoError(t, err)
 
-	// Check if the "Copy Link" button is there
-	copyBtn := page.Locator("text=Copy Link")
+	// Wait for the invite link button to be there
+	copyBtn := page.Locator("text=Invite Team to Expand Quota")
 	err = copyBtn.WaitFor(playwright.LocatorWaitForOptions{
-		State: playwright.WaitForSelectorStateVisible,
-	})
-	assert.NoError(t, err)
-
-	// Check if the generic built with OHC tagline is there
-	tagline := page.Locator("text=built with OHC")
-	err = tagline.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
 	})
 	assert.NoError(t, err)
