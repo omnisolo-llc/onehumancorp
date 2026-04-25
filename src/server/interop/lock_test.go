@@ -210,7 +210,7 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 	path := filepath.Join(os.TempDir(), "ohc_lock_"+safeKey)
 
 	// Clean up any existing state
-	os.Remove(path)
+	os.RemoveAll(path)
 
 	// Force os.Mkdir to fail with an error other than IsExist.
 	// We created a file, so Mkdir fails with EEXIST.
@@ -223,13 +223,15 @@ func TestMemoryLock_CoveragePaths(t *testing.T) {
 		t.Fatalf("Expected lock to recover and succeed when a file blocked the path")
 	}
 
-	os.Remove(path) // Cleanup
+	os.RemoveAll(path) // Cleanup
 
 	// Test unlock for non-existent file
 	err = lock1.Unlock(ctx, "non_existent_key")
 	if err != nil {
 		t.Fatalf("Expected unlock to gracefully handle non-existent file")
 	}
+
+	os.RemoveAll(path)
 
 	// Lock it normally to test close/write errors
 	locked, err = lock1.Lock(ctx, key, 1*time.Second)
