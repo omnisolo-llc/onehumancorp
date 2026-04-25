@@ -33,13 +33,13 @@ func StartTokenBurnForecasterWithTicker(ctx context.Context, getActiveOrgs func(
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			ProcessForecastTick(ctx, history, getActiveOrgs, getTokens)
+			ProcessForecastTick(ctx, history, getActiveOrgs, getTokens, tickDuration)
 		}
 	}
 }
 
 // ProcessForecastTick extracts the token burn forecaster loop body to ensure reliable test coverage.
-func ProcessForecastTick(ctx context.Context, history map[string][]int64, getActiveOrgs func(context.Context) []string, getTokens func(string) int64) {
+func ProcessForecastTick(ctx context.Context, history map[string][]int64, getActiveOrgs func(context.Context) []string, getTokens func(string) int64, tickDuration time.Duration) {
 	if getActiveOrgs == nil || getTokens == nil {
 		return
 	}
@@ -63,9 +63,9 @@ func ProcessForecastTick(ctx context.Context, history map[string][]int64, getAct
 				rate := float64(h[len(h)-1]-h[0]) / float64(len(h)-1)
 				telemetry.RecordTokenBurnRate(ctx, orgID, rate)
 
-				// Tick duration is assumed to be 1 minute as set by StartTokenBurnForecaster
-				// Extrapolate to 24 hours: rate (per min) * 60 * 24
-				prediction24h := rate * 60 * 24
+				// Extrapolate to 24 hours dynamically based on tick duration
+				multiplier := float64(24 * time.Hour) / float64(tickDuration)
+				prediction24h := rate * multiplier
 				telemetry.RecordTokenBurnRatePredicted24h(ctx, orgID, prediction24h)
 
 				// Predictive cost alerts
