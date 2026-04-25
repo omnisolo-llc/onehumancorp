@@ -268,3 +268,80 @@ func TestRedisMesh_Presence(t *testing.T) {
 		t.Errorf("Did not find expected agents in active agents list")
 	}
 }
+
+func TestLocalMesh_SyncState(t *testing.T) {
+	mesh := NewLocalMesh()
+	ctx := context.Background()
+
+	err := mesh.RegisterPresence(ctx, "agent1", "WORKING")
+	if err != nil {
+		t.Fatalf("Failed to register presence: %v", err)
+	}
+
+	// Set up subscriber
+	msgReceived := make(chan string, 1)
+	sub, err := mesh.Subscribe(ctx, "sync:agent1", func(msg []byte) {
+		msgReceived <- string(msg)
+	})
+	if err != nil {
+		t.Fatalf("Failed to subscribe: %v", err)
+	}
+
+	// Act
+	err = mesh.SyncState(ctx, "agent1")
+	if err != nil {
+		t.Fatalf("Failed to SyncState: %v", err)
+	}
+
+	// Assert
+	select {
+	case received := <-msgReceived:
+		if received != `{"AgentID":"agent1","Status":"WORKING"}` {
+			t.Errorf("Expected matching AgentPresence json, got '%s'", received)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for sync message")
+	}
+
+	sub.Close()
+}
+
+func TestRedisMesh_SyncState(t *testing.T) {
+	mr, mesh := setupRedis(t)
+	defer mr.Close()
+	ctx := context.Background()
+
+	err := mesh.RegisterPresence(ctx, "agent2", "IDLE")
+	if err != nil {
+		t.Fatalf("Failed to register presence: %v", err)
+	}
+
+	// Set up subscriber
+	msgReceived := make(chan string, 1)
+	sub, err := mesh.Subscribe(ctx, "sync:agent2", func(msg []byte) {
+		msgReceived <- string(msg)
+	})
+	if err != nil {
+		t.Fatalf("Failed to subscribe: %v", err)
+	}
+
+	// Give Redis pubsub a moment to attach
+	time.Sleep(100 * time.Millisecond)
+
+	// Act
+	err = mesh.SyncState(ctx, "agent2")
+	if err != nil {
+		t.Fatalf("Failed to SyncState: %v", err)
+	}
+
+	// Assert
+	select {
+	case received := <-msgReceived:
+		if received != `{"AgentID":"agent2","Status":"IDLE"}` {
+			t.Errorf("Expected matching AgentPresence json, got '%s'", received)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for sync message")
+	}
+	sub.Close()
+}

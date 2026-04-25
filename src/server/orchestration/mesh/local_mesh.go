@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"encoding/json"
 	"sync"
 	"time"
 )
@@ -154,4 +155,17 @@ func (m *LocalMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error
 		agents = append(agents, p)
 	}
 	return agents, nil
+}
+
+func (m *LocalMesh) SyncState(ctx context.Context, agentID string) error {
+	m.mu.RLock()
+	presence, ok := m.presences[agentID]
+	m.mu.RUnlock()
+
+	if ok {
+		if payload, err := json.Marshal(presence); err == nil {
+			return m.Publish(ctx, "sync:"+agentID, payload)
+		}
+	}
+	return nil
 }

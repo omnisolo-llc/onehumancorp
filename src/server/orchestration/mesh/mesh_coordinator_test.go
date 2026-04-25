@@ -44,6 +44,10 @@ func (m *MockTeammateMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence
 	return nil, nil
 }
 
+func (m *MockTeammateMesh) SyncState(ctx context.Context, agentID string) error {
+	return nil
+}
+
 func setupTestProvider(t *testing.T) db.Provider {
 	sqliteDB, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"encoding/json"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -146,4 +147,17 @@ func (m *RedisMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error
 	}
 
 	return agents, nil
+}
+
+func (m *RedisMesh) SyncState(ctx context.Context, agentID string) error {
+	status, err := m.client.Get(ctx, "presence:"+agentID).Result()
+	if err == redis.Nil {
+		return nil // No presence found to sync
+	} else if err != nil {
+		return err
+	}
+
+	presence := AgentPresence{AgentID: agentID, Status: status}
+	payload, _ := json.Marshal(presence)
+	return m.Publish(ctx, "sync:"+agentID, payload)
 }

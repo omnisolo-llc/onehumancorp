@@ -26,4 +26,7 @@ type TeammateMesh interface {
 	// Presence
 	RegisterPresence(ctx context.Context, agentID string, status string) error
 	GetActiveAgents(ctx context.Context) ([]AgentPresence, error)
+
+	// Cross-mode State Handoff
+	SyncState(ctx context.Context, agentID string) error
 }
