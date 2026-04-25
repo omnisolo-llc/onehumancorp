@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:ohc_app/widgets/business_share_card.dart';
+import 'package:ohc_app/widgets/social_media_drafts_widget.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
@@ -86,14 +88,32 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          runSpacing: 8,
           children: [
             _SectionTitle('My Business'),
-            OutlinedButton.icon(
-              onPressed: () => context.go('/wizards/billing'),
-              icon: const Icon(Icons.credit_card),
-              label: const Text('Billing & Credits'),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const BusinessShareCard(),
+                    );
+                  },
+                  icon: const Icon(Icons.share),
+                  label: const Text('Share my business'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/wizards/billing'),
+                  icon: const Icon(Icons.credit_card),
+                  label: const Text('Billing & Credits'),
+                ),
+              ],
             ),
           ],
         ),
@@ -212,6 +232,8 @@ class _DashboardContent extends StatelessWidget {
         const GrowthReferralWidget(),
         const SizedBox(height: 16),
         SubAgentQueueWidget(statuses: data.statuses),
+        const SizedBox(height: 16),
+        const SocialMediaDraftsWidget(),
         const SizedBox(height: 32),
         _SectionTitle('Company Structure'),
         const SizedBox(height: 8),

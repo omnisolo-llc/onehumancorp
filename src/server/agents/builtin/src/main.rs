@@ -71,10 +71,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         let payload: Vec<u8> = msg.get_payload().unwrap_or_default();
                         if let Ok(req) = ohc_builtin_agent::proto::RunTaskRequest::decode(&payload[..]) {
                             tracing::info!("Received job from Redis: {}", req.task_id);
-                            
+
                             let svc = svc_for_redis.clone();
                             let redis_url_inner = redis_url_clone.clone();
-                            
+
                             tokio::spawn(async move {
                                 if let Ok(client) = redis::Client::open(redis_url_inner) {
                                     if let Ok(mut con) = client.get_async_connection().await {
