@@ -54,7 +54,7 @@ jobs:
 
       - name: Test
         run: |
-          bazelisk test //... \
+          bazelisk test //... --config=local \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800
