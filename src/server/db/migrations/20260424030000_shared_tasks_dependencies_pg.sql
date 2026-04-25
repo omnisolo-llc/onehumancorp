@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 
 INSERT INTO task_dependencies (task_id, depends_on_task_id)
 SELECT id, value::text::uuid
-FROM shared_tasks, jsonb_array_elements_text(dependencies) AS value;
+FROM shared_tasks, jsonb_array_elements_text(COALESCE(dependencies, '[]')) AS value;
 
 ALTER TABLE shared_tasks DROP COLUMN dependencies;
 -- +goose StatementEnd
