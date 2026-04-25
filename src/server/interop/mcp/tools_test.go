@@ -186,6 +186,11 @@ func (m *mockRowsTools) Scan(dest ...any) error {
 	}
 	return nil
 }
+func (m *mockRowsTools) Columns() ([]string, error) { return nil, nil }
+
+
+type mockDirEntry struct {
+	name  string
 	isDir bool
 	info  fs.FileInfo
 	err   error
