@@ -13,7 +13,7 @@ actions:
           - "*"
     steps:
       - run: |
-          bazel test //... \
+          bazel test //... --config=local \
             --config=buildbuddy-official \
             --test_output=errors \
             --test_summary=terse \
