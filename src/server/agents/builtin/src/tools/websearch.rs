@@ -98,6 +98,7 @@ fn strip_tags(s: &str) -> String {
 pub fn websearch_tool() -> Tool {
     Tool {
         name: "WebSearch".to_string(),
+        is_mutating: false,
         description: "Search the web for information. Returns a list of result snippets.".to_string(),
         parameters: json!({
             "type": "object",

@@ -111,4 +111,4 @@ site/
 /src/app/ios/Flutter/Generated.xcconfig
 /src/app/macos/Flutter/Flutter.podspec
 /src/app/macos/Flutter/GeneratedPluginRegistrant.swift
-/src/app/**/ephemeral/
+/src/app/**/ephemeral/src/server/agents/builtin/target/

@@ -59,6 +59,7 @@ impl ToolExecutor for BashExecutor {
 pub fn bash_tool() -> Tool {
     Tool {
         name: "Bash".to_string(),
+        is_mutating: true,
         description: "Execute a bash command and return its output. \
             Use for build/test/git/shell operations. \
             Commands run in the repository root."

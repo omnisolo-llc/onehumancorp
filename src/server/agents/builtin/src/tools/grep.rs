@@ -105,6 +105,7 @@ fn matches_include(filename: &str, include: &str) -> bool {
 pub fn grep_tool() -> Tool {
     Tool {
         name: "Grep".to_string(),
+        is_mutating: false,
         description: "Search for a regex pattern in files under a directory. Returns file:line:content matches.".to_string(),
         parameters: json!({
             "type": "object",

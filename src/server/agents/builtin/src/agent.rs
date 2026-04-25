@@ -190,37 +190,112 @@ impl Agent {
                 return Ok(last_assistant_content);
             }
 
-            // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
-            for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+
+            // To preserve order but allow concurrency for consecutive read-only tools,
+            // we chunk the tool calls into either a batch of read-only tools or a single mutating tool.
+
+
+
+            // But wait, the inner async closure captures `self` which causes issues.
+            // Let's do it procedurally without inner closures that cause lifetime/move issues.
+            let mut i = 0;
+            while i < tool_calls.len() {
+                let mut batch = Vec::new();
+                let tc = &tool_calls[i];
+                let is_mutating = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(true);
+
+                if is_mutating {
+                    batch.push(tc.clone());
+                    i += 1;
+                } else {
+                    // Gather consecutive read-only tools
+                    while i < tool_calls.len() {
+                        let inner_tc = &tool_calls[i];
+                        let inner_mutating = self.tools.iter().find(|t| t.name == inner_tc.name).map(|t| t.is_mutating).unwrap_or(true);
+                        if inner_mutating {
+                            break;
+                        }
+                        batch.push(inner_tc.clone());
+                        i += 1;
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
+                }
+
+                // Execute batch
+                if batch.len() == 1 && is_mutating {
+                    let tc = &batch[0];
+                    let result = self.execute_tool(tc).await;
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
+                    };
+                    tool_results.push(ToolResult {
+                        tool_call_id: tc.id.clone(),
+                        content,
+                        error,
+                    });
+                } else {
+                    // Concurrent execution for read-only batch
+                    let mut futures = Vec::new();
+                    for tc in batch {
+                        // we need to avoid capturing &self by move if we use a closure.
+                        // wait, execute_tool takes &self, we can't move &self into `async move` easily
+                        // if we are iterating.
+                        // In Rust, you can do:
+                        futures.push(async {
+                            let res = self.execute_tool(&tc).await;
+                            (tc, res)
                         });
-                        (String::new(), err)
                     }
-                };
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
-                });
+                    let outcomes = futures::future::join_all(futures).await;
+                    for (tc, result) in outcomes {
+                        let (content, error) = match result {
+                            Ok(r) => {
+                                self.progress.record_tool_use();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: r.clone(),
+                                    iteration,
+                                });
+                                (r, String::new())
+                            }
+                            Err(e) => {
+                                let err = e.to_string();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                (String::new(), err)
+                            }
+                        };
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error,
+                        });
+                    }
+                }
             }
 
             if cfg.enable_observation_masking {
@@ -250,7 +325,7 @@ impl Agent {
                 tool_calls: vec![],
                 tool_results,
             });
-        }
+        } // End of while loop
 
         // Hit max iterations.
         on_event(AgentEvent::TaskComplete {
@@ -347,6 +422,7 @@ mod tests {
         let tools = vec![Tool {
             name: "test_tool".to_string(),
             description: "test".to_string(),
+            is_mutating: false,
             parameters: Value::Null,
             execute: Arc::new(MockToolExecutor),
         }];

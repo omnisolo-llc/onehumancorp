@@ -43,6 +43,7 @@ impl ToolExecutor for FinanceReportExecutor {
 pub fn finance_report_tool() -> Tool {
     Tool {
         name: "finance_report".to_string(),
+        is_mutating: false,
         description: "Generate a plain-language financial report or summary for the business.".to_string(),
         parameters: json!({
             "type": "object",

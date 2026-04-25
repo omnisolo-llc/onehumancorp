@@ -85,6 +85,7 @@ impl ToolExecutor for TodoReadExecutor {
 pub fn todowrite_tool(todos: SharedTodos) -> Tool {
     Tool {
         name: "TodoWrite".to_string(),
+        is_mutating: true,
         description: "Write the task todo list. Replaces the entire list with the provided items. \
             Use to track progress on multi-step tasks."
             .to_string(),
@@ -121,6 +122,7 @@ pub fn todowrite_tool(todos: SharedTodos) -> Tool {
 pub fn todoread_tool(todos: SharedTodos) -> Tool {
     Tool {
         name: "TodoRead".to_string(),
+        is_mutating: false,
         description: "Read the current todo list.".to_string(),
         parameters: json!({
             "type": "object",

@@ -74,6 +74,7 @@ impl ToolExecutor for TaskStatusExecutor {
 pub fn agent_tool() -> Tool {
     Tool {
         name: "Agent".to_string(),
+        is_mutating: true,
         description: "Spawn a sub-agent to execute a task autonomously. \
             The sub-agent runs its own ReAct loop with access to all tools. \
             Use for parallelizable or delegatable work."
@@ -108,6 +109,7 @@ pub fn agent_tool() -> Tool {
 pub fn agent_stop_tool() -> Tool {
     Tool {
         name: "TaskStop".to_string(),
+        is_mutating: true,
         description: "Stop a running sub-agent task by task ID.".to_string(),
         parameters: json!({
             "type": "object",
@@ -126,6 +128,7 @@ pub fn agent_stop_tool() -> Tool {
 pub fn agent_status_tool() -> Tool {
     Tool {
         name: "TaskStatus".to_string(),
+        is_mutating: false,
         description: "Get the status of a running sub-agent task by task ID.".to_string(),
         parameters: json!({
             "type": "object",

@@ -23,6 +23,7 @@ pub mod finance;
 pub struct Tool {
     pub name: String,
     pub description: String,
+    pub is_mutating: bool,
     pub parameters: Value,
     pub execute: Arc<dyn ToolExecutor>,
 }
@@ -38,6 +39,7 @@ impl Clone for Tool {
         Self {
             name: self.name.clone(),
             description: self.description.clone(),
+            is_mutating: self.is_mutating,
             parameters: self.parameters.clone(),
             execute: self.execute.clone(),
         }

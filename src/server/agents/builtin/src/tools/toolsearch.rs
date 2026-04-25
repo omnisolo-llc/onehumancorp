@@ -58,6 +58,7 @@ impl ToolExecutor for ToolSearchExecutor {
 pub fn toolsearch_tool() -> Tool {
     Tool {
         name: "ToolSearch".to_string(),
+        is_mutating: false,
         description: "Search available tools by name or description.".to_string(),
         parameters: json!({
             "type": "object",

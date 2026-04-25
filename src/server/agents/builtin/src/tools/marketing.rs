@@ -42,6 +42,7 @@ impl ToolExecutor for QrGenerateExecutor {
 pub fn qr_generate_tool() -> Tool {
     Tool {
         name: "qr_generate".to_string(),
+        is_mutating: true,
         description: "Generate a QR code for a given URL or text content.".to_string(),
         parameters: json!({
             "type": "object",

@@ -35,6 +35,7 @@ impl ToolExecutor for WriteExecutor {
 pub fn write_tool() -> Tool {
     Tool {
         name: "Write".to_string(),
+        is_mutating: true,
         description: "Write content to a file. Creates parent directories as needed. Overwrites any existing content.".to_string(),
         parameters: json!({
             "type": "object",

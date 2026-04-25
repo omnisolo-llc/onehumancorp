@@ -39,6 +39,7 @@ impl ToolExecutor for GlobExecutor {
 pub fn glob_tool() -> Tool {
     Tool {
         name: "Glob".to_string(),
+        is_mutating: false,
         description: "Find files matching a glob pattern. Returns newline-separated paths.".to_string(),
         parameters: json!({
             "type": "object",
