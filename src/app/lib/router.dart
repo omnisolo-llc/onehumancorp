@@ -28,6 +28,8 @@ import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/services/tooltip_registry.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
@@ -215,6 +217,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
         ],
       ),
     ],
@@ -258,15 +264,49 @@ class AppShell extends StatelessWidget {
                     },
                   ),
                 ),
+                Positioned(
+                  bottom: 16,
+                  right: 16,
+                  child: RegisteredTooltip(
+                    tooltipKey: 'global_help',
+                    child: Semantics(
+                      label: 'Help Center',
+                      button: true,
+                      child: FloatingActionButton(
+                        onPressed: () => context.push('/help'),
+                        child: const Icon(Icons.help_outline),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           );
         } else {
           return Scaffold(
-            body: Row(
+            body: Stack(
               children: [
-                _Sidebar(),
-                Expanded(child: child),
+                Row(
+                  children: [
+                    _Sidebar(),
+                    Expanded(child: child),
+                  ],
+                ),
+                Positioned(
+                  bottom: 16,
+                  right: 16,
+                  child: RegisteredTooltip(
+                    tooltipKey: 'global_help',
+                    child: Semantics(
+                      label: 'Help Center',
+                      button: true,
+                      child: FloatingActionButton(
+                        onPressed: () => context.push('/help'),
+                        child: const Icon(Icons.help_outline),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           );
@@ -365,6 +405,8 @@ class _Sidebar extends StatelessWidget {
           label: 'Diagnostics',
           path: '/diagnostics',
         ),
+        const Divider(),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help'),
         const SizedBox(height: 16),
       ],
     );
