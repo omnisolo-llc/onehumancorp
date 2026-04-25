@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
+import 'package:ohc_app/screens/pricing_screen.dart';
+import 'package:ohc_app/screens/my_plan_screen.dart';
 
 import 'package:ohc_app/screens/login_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
