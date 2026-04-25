@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"testing"
+	"github.com/playwright-community/playwright-go"
 )
 
 func TestAuthenticationLoginWithCorrectCredentialsSucceeds(t *testing.T) {
@@ -13,6 +14,49 @@ func TestAuthenticationLoginWithCorrectCredentialsSucceeds(t *testing.T) {
 	// Test: authentication: login with correct credentials succeeds
 	body, _ := page.Content()
 	_ = body
+}
+
+func TestAuthenticationSignUpWithNewCredentialsSucceeds(t *testing.T) {
+	page := newPage(t)
+	defer page.Close()
+
+	openApp(t, page)
+
+	// Ensure we are on the landing or login page, go to login explicitly
+	if _, err := page.Goto(baseURL + "/login"); err != nil {
+		t.Fatalf("Failed to navigate to login: %v", err)
+	}
+
+	// Wait for the Sign Up toggle text (which triggers the form switch)
+	signUpToggle := page.GetByText("Don't have an account? Sign Up").First()
+	if err := signUpToggle.WaitFor(); err != nil {
+		t.Fatalf("Sign Up toggle not found: %v", err)
+	}
+	if err := signUpToggle.Click(); err != nil {
+		t.Fatalf("Failed to click Sign Up toggle: %v", err)
+	}
+
+	// Fill out the form
+	if err := page.GetByLabel("Email or Username").Fill("newuser@example.com"); err != nil {
+		t.Fatalf("Failed to fill email: %v", err)
+	}
+	if err := page.GetByLabel("Password").Fill("securepassword123"); err != nil {
+		t.Fatalf("Failed to fill password: %v", err)
+	}
+
+	// Click the Sign Up button
+	signUpButton := page.GetByText("Sign Up", playwright.PageGetByTextOptions{Exact: playwright.Bool(true)}).First()
+	if err := signUpButton.WaitFor(); err != nil {
+		t.Fatalf("Sign Up button not found: %v", err)
+	}
+	if err := signUpButton.Click(); err != nil {
+		t.Fatalf("Failed to click Sign Up: %v", err)
+	}
+
+	// Verify redirection to business_setup
+	if err := page.WaitForURL("**/business_setup**"); err != nil {
+		t.Fatalf("Expected redirect to business_setup after sign up, but didn't happen: %v", err)
+	}
 }
 
 func TestAuthenticationLoginWithIncorrectCredentialsShowsAnError(t *testing.T) {

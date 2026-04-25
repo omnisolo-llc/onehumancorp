@@ -36,9 +36,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       _error = null;
     });
     try {
-      await ref
-          .read(authStateProvider.notifier)
-          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      if (_isSignUp) {
+        await ref
+            .read(authStateProvider.notifier)
+            .register(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      } else {
+        await ref
+            .read(authStateProvider.notifier)
+            .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
