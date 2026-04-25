@@ -40,6 +40,7 @@ go_library(
         "//src/server/scheduler",
         "//src/server/settings",
         "//src/server/agents/grpc",
+        "//src/proto/agentservice",
         "//src/server/telemetry",
         "//src/server/tools/blobinspector",
         "//src/server/tools/localstatefulproxy",
@@ -87,5 +88,6 @@ go_test(
         "//src/server/scheduler",
         "//src/server/settings",
         "//src/server/agents/grpc",
+        "//src/proto/agentservice",
     ],
 )
