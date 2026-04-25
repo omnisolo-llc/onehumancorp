@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Implement persistent memory layer, conflict resolution, and pruning; Architect end-to-end business journey; Add HarnessBackend.
+- Privacy/Offline (Standalone): Consolidate TeammateMesh and implement hybrid SyncState cross-mode handoff; Remove mock delayed network calls.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 - Scaling (Cloud): Implement Business Setup and Website Builder wizard UI scaffolding, onboarding cross-device state, and Business Share & Embed widget.
 - Privacy/Offline (Standalone): Conduct Hybrid Privacy Audit with PII guardrails, implement in-app mobile-first Help Center with tooltips, and add Dashboard Welcome Checklist.

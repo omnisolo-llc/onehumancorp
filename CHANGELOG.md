@@ -1,5 +1,16 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement persistent memory layer, conflict resolution, and pruning.
+- Architect end-to-end business journey.
+- Add HarnessBackend and routing to OHC agent harness.
+
+### Privacy/Offline Improvements
+- Consolidate TeammateMesh and implement hybrid SyncState cross-mode handoff.
+- Remove mock delayed network calls in UI.
+- Align postgres mock test signatures for autodream worker.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
