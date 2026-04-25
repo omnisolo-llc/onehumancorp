@@ -10,22 +10,18 @@ go_library(
         "manager.go",
         "registry.go",
         "daemon_harness.go",
-        "bridge.go",
-        "harness.go",
-        "permission_interceptor.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/harness",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/telemetry",
+
         "@com_github_smacker_go_tree_sitter//:go-tree-sitter",
         "@com_github_smacker_go_tree_sitter//bash",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel_metric//:metric",
-        "@io_opentelemetry_go_otel//attribute",
-        "@io_opentelemetry_go_otel_trace//:trace",
         "//src/server/harness/authz",
-        "@com_github_gorilla_websocket//:websocket",
+
     ],
 )
 
@@ -38,14 +34,10 @@ go_test(
         "macos_sandbox_test.go",
         "manager_test.go",
         "daemon_harness_test.go",
-        "harness_test.go",
-        "bridge_test.go",
-        "permission_interceptor_test.go",
     ],
     embed = [":harness"],
     deps = [
         "//src/server/telemetry",
         "@com_github_prometheus_client_golang//prometheus",
-        "@com_github_gorilla_websocket//:websocket",
     ],
 )

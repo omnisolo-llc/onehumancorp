@@ -91,15 +91,13 @@ class _BusinessShareWidgetState extends ConsumerState<BusinessShareWidget> {
                     children: [
                       Icon(Icons.storefront, color: colors.primary, size: 28),
                       const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Share my business',
-                          style: TextStyle(
-                            fontFamily: 'Outfit',
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: colors.onSurface,
-                          ),
+                      Text(
+                        'Share my business',
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: colors.onSurface,
                         ),
                       ),
                     ],
@@ -162,19 +160,19 @@ class _BusinessShareWidgetState extends ConsumerState<BusinessShareWidget> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8.0,
-                    runSpacing: 12.0,
-                    crossAxisAlignment: WrapCrossAlignment.center,
+                  Row(
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: _copyLink,
-                        icon: const Icon(Icons.link),
-                        label: const Text('Copy Link', style: TextStyle(fontFamily: 'Inter')),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _copyLink,
+                          icon: const Icon(Icons.link),
+                          label: const Text('Copy Link', style: TextStyle(fontFamily: 'Inter')),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 12),
                       Semantics(
                         label: 'Share to Instagram',
                         child: OutlinedButton(
@@ -186,6 +184,7 @@ class _BusinessShareWidgetState extends ConsumerState<BusinessShareWidget> {
                           child: const Icon(Icons.camera_alt_outlined),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Semantics(
                         label: 'Share to X',
                         child: OutlinedButton(
@@ -197,6 +196,7 @@ class _BusinessShareWidgetState extends ConsumerState<BusinessShareWidget> {
                           child: const Icon(Icons.close),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Semantics(
                         label: 'Share to WhatsApp',
                         child: OutlinedButton(

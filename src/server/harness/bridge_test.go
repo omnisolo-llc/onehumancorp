@@ -5,81 +5,68 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
-	"time"
-
-	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{}
-
-func TestWebSocketBridge_RequestPermission(t *testing.T) {
-	// Start mock websocket server
+func TestWebSocketBridge_RequestPermission_Authorized(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
+		var req PermissionRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
 		}
-		defer c.Close()
 
-		for {
-			mt, message, err := c.ReadMessage()
-			if err != nil {
-				break
-			}
-			var req PermissionRequest
-			if err := json.Unmarshal(message, &req); err != nil {
-				continue
-			}
-
-			// Mock authorization logic
-			var resp AuthorizationResponse
-			if req.Command == "allowed_tool" {
-				resp = AuthorizationResponse{Authorized: true}
-			} else {
-				resp = AuthorizationResponse{Authorized: false, Reason: "tool not allowed"}
-			}
-
-			respData, _ := json.Marshal(resp)
-			err = c.WriteMessage(mt, respData)
-			if err != nil {
-				break
-			}
+		if req.Command != "echo test" {
+			t.Errorf("expected command 'echo test', got %s", req.Command)
 		}
+
+		resp := AuthorizationResponse{Authorized: true}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
-	// Convert http:// to ws://
-	wsURL := "ws" + strings.TrimPrefix(server.URL, "http")
-	bridge := NewWebSocketBridge(wsURL)
+	bridge := NewWebSocketBridge(server.URL)
+	req := PermissionRequest{Command: "echo test"}
 
-	t.Run("authorized request", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
+	resp, err := bridge.RequestPermission(context.Background(), req)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
 
-		resp, err := bridge.RequestPermission(ctx, PermissionRequest{Command: "allowed_tool"})
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
-		}
-		if !resp.Authorized {
-			t.Errorf("expected authorized to be true")
-		}
-	})
+	if !resp.Authorized {
+		t.Errorf("expected authorized to be true")
+	}
+}
 
-	t.Run("denied request", func(t *testing.T) {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
+func TestWebSocketBridge_RequestPermission_Denied(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req PermissionRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
 
-		resp, err := bridge.RequestPermission(ctx, PermissionRequest{Command: "blocked_tool"})
-		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
+		if req.Command != "rm -rf /" {
+			t.Errorf("expected command 'rm -rf /', got %s", req.Command)
 		}
-		if resp.Authorized {
-			t.Errorf("expected authorized to be false")
-		}
-		if resp.Reason != "tool not allowed" {
-			t.Errorf("expected reason 'tool not allowed', got '%s'", resp.Reason)
-		}
-	})
+
+		resp := AuthorizationResponse{Authorized: false, Reason: "dangerous command"}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	bridge := NewWebSocketBridge(server.URL)
+	req := PermissionRequest{Command: "rm -rf /"}
+
+	resp, err := bridge.RequestPermission(context.Background(), req)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if resp.Authorized {
+		t.Errorf("expected authorized to be false")
+	}
+	if resp.Reason != "dangerous command" {
+		t.Errorf("expected reason 'dangerous command', got %s", resp.Reason)
+	}
 }

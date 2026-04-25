@@ -28,8 +28,6 @@ type SandboxConfig struct {
 	EnableSeccomp  bool
 }
 
-
-
 type Harness struct {
 	config      *SandboxConfig
 	proxyServer *http.Server
