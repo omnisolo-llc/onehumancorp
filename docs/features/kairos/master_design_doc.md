@@ -10,7 +10,7 @@ The Shared Task List manages the swarm's high-level objectives and granular sub-
 *   **Tables:** `shared_tasks`, `task_dependencies`
 *   **Fields:**
     *   `id` (UUID/TEXT)
-    *   `organization_id` (String)
+    *   `tenant_id` (String)
     *   `title` (String)
     *   `description` (String)
     *   `status` (String - PENDING, IN_PROGRESS, COMPLETED, FAILED)
@@ -18,7 +18,7 @@ The Shared Task List manages the swarm's high-level objectives and granular sub-
     *   `agent_id` (String - assigned agent)
     *   `created_at`, `updated_at` (Timestamps)
 *   **Compatibility:**
-    *   PostgreSQL utilizes native `UUID` and `TIMESTAMP WITH TIME ZONE`.
+    *   PostgreSQL utilizes native `UUID` and `TIMESTAMP WITH TIME ZONE`. Row-Level Security (RLS) is enabled using the `tenant_id` column to ensure strict data isolation between tenants.
     *   SQLite adapts with `TEXT` for IDs and `DATETIME` for timestamps.
 
 ### API Contracts
