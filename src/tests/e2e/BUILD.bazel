@@ -196,6 +196,18 @@ go_test(
     tags = _COMMON_TAGS,
 )
 
+go_test(
+    name = "day_one_audit_test",
+    srcs = _SHARED_SRCS + ["cuj_audit_test.go"],
+    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
+    data = _COMMON_DATA,
+    deps = _COMMON_DEPS,
+    env = _COMMON_ENV,
+    size = "large",
+    timeout = "eternal",
+    tags = _COMMON_TAGS,
+)
+
 # ── CUJ Extended ──────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_cuj_extended_test",
