@@ -29,7 +29,6 @@ import (
 	"github.com/redis/rueidis"
 
 	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/lib/perf"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/settings"
 	"github.com/onehumancorp/mono/src/server/telemetry"
@@ -1326,59 +1325,52 @@ type mcpRegisterRequest struct {
 }
 
 func (s *Server) snapshot() dashboardSnapshot {
+	var wg sync.WaitGroup
+
+	// Fetch queue concurrently outside of the RLock to avoid holding it during IO.
+	queue := make([]orchestration.SharedTask, 0)
+	queueLen := 0
+
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.snapshotLocked()
+	hub := s.hub
+	orgID := s.org.ID
+	s.mu.RUnlock()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if hub != nil && hub.TaskManager() != nil {
+			if pending, err := hub.TaskManager().PeekTasksByOrg(context.Background(), orgID, 100); err == nil {
+				for _, t := range pending {
+					if t != nil {
+						queue = append(queue, *t)
+					}
+				}
+				queueLen = len(queue)
+			}
+		}
+	}()
+
+	s.mu.RLock()
+	snap := s.snapshotLocked()
+	s.mu.RUnlock()
+
+	wg.Wait()
+	snap.TaskQueue = queue
+	snap.QueueLength = queueLen
+
+	return snap
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	var agents []orchestration.Agent
-	var meetings []orchestration.MeetingRoom
-	var costs billing.Summary
-	var queue []orchestration.SharedTask
-	var queueLen int
-
-	coordinator := perf.NewCoordinatorMode(4)
-	tasks := []func() error{
-		func() error {
-			agents = s.orgAgentsLocked()
-			return nil
-		},
-		func() error {
-			meetings = s.orgMeetingsLocked()
-			return nil
-		},
-		func() error {
-			costs = s.tracker.Summary(s.org.ID)
-			return nil
-		},
-		func() error {
-			queue = make([]orchestration.SharedTask, 0)
-			queueLen = 0
-			if s.hub != nil && s.hub.TaskManager() != nil {
-				if pending, err := s.hub.TaskManager().PeekTasksByOrg(context.Background(), s.org.ID, 100); err == nil {
-					for _, t := range pending {
-						if t != nil {
-							queue = append(queue, *t)
-						}
-					}
-					queueLen = len(queue)
-				}
-			}
-			return nil
-		},
-	}
-
-	_ = coordinator.ExecuteParallel(context.Background(), tasks)
+	agents := s.orgAgentsLocked()
 
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     meetings,
-		Costs:        costs,
+		Meetings:     s.orgMeetingsLocked(),
+		Costs:        s.tracker.Summary(s.org.ID),
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
-		TaskQueue:    queue,
-		QueueLength:  queueLen,
 		UpdatedAt:    time.Now().UTC(),
 	}
 }

@@ -22,7 +22,6 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/db",
-        "//src/server/lib/perf",
         "//src/server/api/mesh_legacy:mesh",
         "//src/server/orchestration/kairos",
         "@com_github_redis_go_redis_v9//:go-redis",
