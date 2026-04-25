@@ -213,7 +213,10 @@ impl Agent {
                             result: format!("Error: {}", err),
                             iteration,
                         });
-                        (String::new(), err)
+                        // LangGraph LLM-recoverable ToolMessage mechanic:
+                        // Return the error to the model so it can self-correct,
+                        // rather than crashing or skipping the result.
+                        (format!("Error: {}", err), String::new())
                     }
                 };
                 tool_results.push(ToolResult {
@@ -307,6 +310,75 @@ mod tests {
         async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
+    }
+
+    struct ErrorToolExecutor;
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for ErrorToolExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            Err("Simulated tool error for self-correction".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_recoverable_tool_error() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_err".to_string(),
+                            name: "error_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I corrected my mistake".to_string(),
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "error_tool".to_string(),
+            description: "fails always".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(ErrorToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Trigger error", &mut on_event).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "I corrected my mistake");
+
+        // Verify the error was emitted as a tool result instead of a system crash.
+        let mut found_error = false;
+        for event in &events {
+            if let AgentEvent::ToolCall { result, .. } = event {
+                if result.contains("Simulated tool error for self-correction") {
+                    found_error = true;
+                }
+            }
+        }
+        assert!(found_error, "Agent should have logged the tool error");
     }
 
     #[tokio::test]
