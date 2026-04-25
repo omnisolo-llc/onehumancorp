@@ -17,7 +17,7 @@ use ohc_builtin_agent_tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos,
 };
-// use chrono::Utc;
+use chrono::Utc;
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
@@ -284,7 +284,7 @@ impl AgentService for AgentServiceImpl {
             .await;
 
         let agent_clone = agent.clone();
-        let _start = std::time::Instant::now();
+        let start = std::time::Instant::now();
 
         tokio::spawn(async move {
             let tx_clone = tx.clone();
