@@ -8,7 +8,7 @@ class PricingScreen extends StatelessWidget {
   const PricingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Pricing & Billing')),
       body: ListView(
@@ -49,15 +49,11 @@ class _PricingCard extends ConsumerWidget {
             Text(description),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () async {
-                final api = ref.read(apiServiceProvider);
-                if (api != null) {
-                  try {
-                    final url = await api.createCheckoutSession(tier);
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Redirecting to Stripe: \$url')));
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Checkout error: \$e')));
-                  }
+              onPressed: () {
+                if (context.canPop()) {
+                  context.pop();
+                } else {
+                  context.go('/my-plan');
                 }
               },
               child: const Text('Select Plan'),

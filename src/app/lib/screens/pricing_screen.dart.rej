@@ -1,0 +1,11 @@
+--- pricing_screen.dart	2024-05-18 10:15:20.000000000 +0000
++++ pricing_screen.dart.new	2024-05-18 10:17:20.000000000 +0000
+@@ -45,7 +45,7 @@
+                 if (api != null) {
+                   try {
+                     final url = await api.createCheckoutSession(tier);
+-                    await launchUrl(Uri.parse(url));
++                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Redirecting to Stripe: \$url')));
+                   } catch (e) {
+                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Checkout error: \$e')));
+                   }

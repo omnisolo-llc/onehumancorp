@@ -574,6 +574,19 @@ class ApiService {
     }
   }
 
+  Future<String> createCheckoutSession(String plan) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/billing/checkout'),
+      headers: _headers,
+      body: jsonEncode({'plan': plan}),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to create checkout session');
+    }
+    final json = jsonDecode(response.body);
+    return json['url'];
+  }
+
   Future<void> triggerHybridSync() async {
     final response = await _client.post(
       Uri.parse('$baseUrl/api/mcp/sync'),

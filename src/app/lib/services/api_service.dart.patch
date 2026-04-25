@@ -1,0 +1,21 @@
+--- src/app/lib/services/api_service.dart	2024-05-18 10:15:20.000000000 +0000
++++ src/app/lib/services/api_service.dart.new	2024-05-18 10:17:20.000000000 +0000
+@@ -539,6 +539,18 @@
+     }
+   }
+
++  Future<String> createCheckoutSession(String plan) async {
++    final response = await _client.post(
++      Uri.parse('\$baseUrl/api/billing/checkout'),
++      headers: _headers,
++      body: jsonEncode({'plan': plan}),
++    );
++    if (response.statusCode != 200) {
++      throw Exception('Failed to create checkout session');
++    }
++    final json = jsonDecode(response.body);
++    return json['url'];
++  }
++
+   Future<void> triggerHybridSync() async {
+     final response = await _client.post(

@@ -86,6 +86,7 @@ void main() {
       // Tap Upgrade and navigate to Pricing
       await tester.tap(find.text('Upgrade'));
       await tester.pumpAndSettle();
+      await tester.pumpAndSettle();
 
       expect(find.text('Pricing & Billing'), findsOneWidget);
     });
