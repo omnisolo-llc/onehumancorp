@@ -1,5 +1,16 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
+- Implement onboarding wizard cross-device state management (#c58aec3b).
+- Add Business Share & Embed widget for viral storefront growth (#8c6d046a).
+
+### Privacy/Offline Improvements
+- Conduct Hybrid Privacy Audit and implement PII guardrails for telemetry (#16cac).
+- Implement in-app mobile-first Help Center and Registry-based tooltips (#2c67d2aa).
+- Implement Welcome Checklist post-onboarding widget on Dashboard (#ad60208b).
+
 ## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Sub-Agent Orchestration Queue for KAIROS (#7696).
