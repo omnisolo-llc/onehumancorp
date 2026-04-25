@@ -61,7 +61,8 @@ func IsTelemetryMCPBridgeRegistered(endpoint string) bool {
 type HybridContextTool struct{}
 
 func (t *HybridContextTool) Execute(ctx context.Context, payload map[string]interface{}) (*ExecutionResult, error) {
-	payloadBytes, err := json.Marshal(payload)
+	redactedPayload := telemetry.RedactInterfacePII(payload)
+	payloadBytes, err := json.Marshal(redactedPayload)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,8 @@ func (t *LocalFSSyncTool) Execute(ctx context.Context, payload map[string]interf
         return nil, errors.New("sandbox violation: path must start with .agent-task/")
     }
 
-    payloadBytes, err := json.Marshal(payload)
+    redactedPayload := telemetry.RedactInterfacePII(payload)
+    payloadBytes, err := json.Marshal(redactedPayload)
     if err != nil {
         return nil, err
     }

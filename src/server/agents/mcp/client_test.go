@@ -27,6 +27,7 @@ func TestHybridContextTool(t *testing.T) {
 	payload := map[string]interface{}{
 		"action": "click",
 		"widget": "button",
+		"email":  "user@example.com",
 	}
 
 	res, err := tool.Execute(ctx, payload)
@@ -41,7 +42,8 @@ func TestHybridContextTool(t *testing.T) {
 		t.Errorf("Expected metric 'hybrid_ui_context', got %s", recordedMetric)
 	}
 
-	expectedPayload, _ := json.Marshal(payload)
+	redactedPayload := telemetry.RedactInterfacePII(payload)
+	expectedPayload, _ := json.Marshal(redactedPayload)
 	if string(expectedPayload) != recordedPayload {
 		t.Errorf("Expected payload %s, got %s", string(expectedPayload), recordedPayload)
 	}
@@ -83,6 +85,7 @@ func TestLocalFSSyncTool(t *testing.T) {
 		"Action":  "write",
 		"Path":    ".agent-task/test-sandbox/test.txt",
 		"Content": "hello world",
+		"Email":   "test@example.com",
 	}
 	resWrite, err := tool.Execute(ctx, payloadWrite)
 	if err != nil {
