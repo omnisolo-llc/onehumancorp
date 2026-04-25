@@ -19,28 +19,22 @@ func TestGrowthShareWidgetRendersOnDashboard(t *testing.T) {
 	err := page.WaitForURL("**/dashboard")
 	assert.NoError(t, err)
 
-	// Scroll down to the share widget
-	page.Mouse().Wheel(0, 2000)
-	page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{
-		State: playwright.LoadStateNetworkidle,
-	})
-
 	// Wait for the share widget
-	locator := page.Locator("flt-semantics[aria-label*='Share my business']")
+	locator := page.Locator("text=Share my business")
 	err = locator.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
 	})
 	assert.NoError(t, err)
 
 	// Check if the "Copy Link" button is there
-	copyBtn := page.Locator("flt-semantics[aria-label*='Copy Link']")
+	copyBtn := page.Locator("text=Copy Link")
 	err = copyBtn.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
 	})
 	assert.NoError(t, err)
 
 	// Check if the generic built with OHC tagline is there
-	tagline := page.Locator("flt-semantics[aria-label*='built with OHC']")
+	tagline := page.Locator("text=built with OHC")
 	err = tagline.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
 	})
