@@ -3,6 +3,8 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "harness",
     srcs = [
+        "bridge.go",
+        "permission_interceptor.go",
         "ast_validator.go",
         "interceptor.go",
         "bwrap_runner.go",
@@ -28,6 +30,8 @@ go_library(
 go_test(
     name = "harness_test",
     srcs = [
+        "bridge_test.go",
+        "permission_interceptor_test.go",
         "ast_validator_test.go",
         "interceptor_test.go",
         "bwrap_runner_test.go",
