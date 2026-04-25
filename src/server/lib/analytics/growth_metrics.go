@@ -1,7 +1,6 @@
 package analytics
 
 import (
-	"context"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -56,29 +55,3 @@ func init() {
 }
 
 
-type Tracker struct {
-}
-
-func NewTracker() *Tracker {
-	return &Tracker{}
-}
-
-func (t *Tracker) TrackEvent(ctx context.Context, name string, props map[string]interface{}) {
-	if name == "invite_sent" && inviteSentCounter != nil {
-		inviteSentCounter.Add(ctx, 1)
-	} else if name == "invite_accepted" && inviteAcceptedCounter != nil {
-		inviteAcceptedCounter.Add(ctx, 1)
-	} else if name == "ab_test_impression" && abTestImpressionCounter != nil {
-		abTestImpressionCounter.Add(ctx, 1)
-	} else if name == "ab_test_conversion" && abTestConversionCounter != nil {
-		abTestConversionCounter.Add(ctx, 1)
-	} else if name == "quota_exceeded" && quotaExceededCounter != nil {
-		quotaExceededCounter.Add(ctx, 1)
-	} else if name == "quota_usage_incremented" && quotaUsageCounter != nil {
-		quotaUsageCounter.Add(ctx, 1)
-	} else if name == "team_invite_sent" && teamInviteSentCounter != nil {
-		teamInviteSentCounter.Add(ctx, 1)
-	} else if name == "team_invite_accepted" && teamInviteAcceptedCounter != nil {
-		teamInviteAcceptedCounter.Add(ctx, 1)
-	}
-}
