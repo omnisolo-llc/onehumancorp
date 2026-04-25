@@ -24,21 +24,22 @@ func (s *localSubscription) Close() error {
 	return nil
 }
 
+type localLockInfo struct {
+	expiry time.Time
+	token  string
+}
+
 type LocalMesh struct {
 	mu          sync.RWMutex
 	subscribers map[string]map[*localSubscription]struct{}
 	locks       sync.Mutex
-	activeLocks map[string]time.Time
-	lockTokens  map[string]string
-	presences   map[string]AgentPresence
+	activeLocks map[string]localLockInfo
 }
 
 func NewLocalMesh() *LocalMesh {
 	return &LocalMesh{
 		subscribers: make(map[string]map[*localSubscription]struct{}),
-		activeLocks: make(map[string]time.Time),
-		lockTokens:  make(map[string]string),
-		presences:   make(map[string]AgentPresence),
+		activeLocks: make(map[string]localLockInfo),
 	}
 }
 
@@ -107,22 +108,28 @@ func (m *LocalMesh) unsubscribe(topic string, sub *localSubscription) {
 	}
 }
 
+func generateToken() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
 func (m *LocalMesh) AcquireLock(ctx context.Context, key string, ttl time.Duration) (string, bool, error) {
 	m.locks.Lock()
 	defer m.locks.Unlock()
 
 	now := time.Now()
-	if expiry, ok := m.activeLocks[key]; ok {
-		if now.Before(expiry) {
+	if info, ok := m.activeLocks[key]; ok {
+		if now.Before(info.expiry) {
 			return "", false, nil // Lock is held
 		}
 	}
 
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	token := hex.EncodeToString(b)
-	m.activeLocks[key] = now.Add(ttl)
-	m.lockTokens[key] = token
+	token := generateToken()
+	m.activeLocks[key] = localLockInfo{
+		expiry: now.Add(ttl),
+		token:  token,
+	}
 	return token, true, nil
 }
 
@@ -130,28 +137,15 @@ func (m *LocalMesh) ReleaseLock(ctx context.Context, key string, token string) e
 	m.locks.Lock()
 	defer m.locks.Unlock()
 
-	if expectedToken, ok := m.lockTokens[key]; ok && expectedToken == token {
-		delete(m.activeLocks, key)
-		delete(m.lockTokens, key)
-		return nil
+	info, ok := m.activeLocks[key]
+	if !ok {
+		return errors.New("lock not found or expired")
 	}
-	return errors.New("lock not found or invalid token")
-}
 
-func (m *LocalMesh) RegisterPresence(ctx context.Context, agentID string, status string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.presences[agentID] = AgentPresence{AgentID: agentID, Status: status}
+	if info.token != token {
+		return errors.New("invalid token")
+	}
+
+	delete(m.activeLocks, key)
 	return nil
-}
-
-func (m *LocalMesh) GetActiveAgents(ctx context.Context) ([]AgentPresence, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	var agents []AgentPresence
-	for _, p := range m.presences {
-		agents = append(agents, p)
-	}
-	return agents, nil
 }

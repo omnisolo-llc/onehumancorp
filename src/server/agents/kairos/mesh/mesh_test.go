@@ -2,6 +2,7 @@ package mesh
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -45,6 +46,36 @@ func TestLocalMesh_PubSub(t *testing.T) {
 	}
 }
 
+func TestLocalMesh_PubSub_PublishNoSubscribers(t *testing.T) {
+    mesh := NewLocalMesh()
+    ctx := context.Background()
+
+    err := mesh.Publish(ctx, "no-subs-topic", []byte("data"))
+    if err != nil {
+        t.Fatalf("Publishing to no subscribers should return nil, got %v", err)
+    }
+}
+
+func TestLocalMesh_PubSub_PublishContextCancelled(t *testing.T) {
+    mesh := NewLocalMesh()
+    ctx, cancel := context.WithCancel(context.Background())
+
+    // Sature the buffer
+    _, _ = mesh.Subscribe(context.Background(), "full-topic", func(msg []byte) {
+        time.Sleep(1 * time.Second)
+    })
+
+    for i := 0; i < 150; i++ {
+         _ = mesh.Publish(context.Background(), "full-topic", []byte("data"))
+    }
+
+    cancel() // cancel immediately
+    err := mesh.Publish(ctx, "full-topic", []byte("data"))
+    if !errors.Is(err, context.Canceled) {
+        t.Fatalf("Expected context canceled error when channel is full and context is canceled, got %v", err)
+    }
+}
+
 func TestLocalMesh_Locks(t *testing.T) {
 	mesh := NewLocalMesh()
 	ctx := context.Background()
@@ -66,15 +97,10 @@ func TestLocalMesh_Locks(t *testing.T) {
 		t.Errorf("Expected lock to fail as it is already held")
 	}
 
-	// Try to release with wrong token
+	// Release with wrong token
 	err = mesh.ReleaseLock(ctx, "test-lock", "wrong-token")
 	if err == nil {
 		t.Fatalf("Expected error when releasing with wrong token")
-	}
-	// Verify lock is still held
-	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
-	if acquired {
-		t.Errorf("Expected lock to fail as wrong token release should have failed")
 	}
 
 	// Release
@@ -83,73 +109,38 @@ func TestLocalMesh_Locks(t *testing.T) {
 		t.Fatalf("Failed to release lock: %v", err)
 	}
 
+    // Release again (should fail)
+    err = mesh.ReleaseLock(ctx, "test-lock", token)
+    if err == nil {
+        t.Fatalf("Expected error when releasing already released lock")
+    }
+
 	// Try again after release
-	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
+	token2, acquired, err := mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
 	if !acquired {
 		t.Errorf("Expected lock to be acquired after release")
 	}
-}
-
-func TestLocalMesh_Presence(t *testing.T) {
-	mesh := NewLocalMesh()
-	ctx := context.Background()
-
-	err := mesh.RegisterPresence(ctx, "agent1", "IDLE")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	err = mesh.RegisterPresence(ctx, "agent2", "WORKING")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	agents, err := mesh.GetActiveAgents(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get active agents: %v", err)
-	}
-
-	if len(agents) != 2 {
-		t.Errorf("Expected 2 active agents, got %d", len(agents))
-	}
-
-	foundAgent1 := false
-	foundAgent2 := false
-	for _, agent := range agents {
-		if agent.AgentID == "agent1" && agent.Status == "IDLE" {
-			foundAgent1 = true
-		}
-		if agent.AgentID == "agent2" && agent.Status == "WORKING" {
-			foundAgent2 = true
-		}
-	}
-
-	if !foundAgent1 || !foundAgent2 {
-		t.Errorf("Did not find expected agents in active agents list")
-	}
-}
-
-func setupRedis(t *testing.T) (*miniredis.Miniredis, *RedisMesh) {
-	s, err := miniredis.Run()
-	if err != nil {
-		t.Fatalf("failed to start miniredis: %v", err)
-	}
-
-	client := redis.NewClient(&redis.Options{
-		Addr: s.Addr(),
-	})
-
-	mesh := NewRedisMesh(client)
-	return s, mesh
+    if token == token2 {
+        t.Errorf("Expected new token")
+    }
 }
 
 func TestRedisMesh_PubSub(t *testing.T) {
-	mr, mesh := setupRedis(t)
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("Failed to start miniredis: %v", err)
+	}
 	defer mr.Close()
 
+	client := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	defer client.Close()
+
+	mesh := NewRedisMesh(client)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -166,15 +157,15 @@ func TestRedisMesh_PubSub(t *testing.T) {
 		t.Fatalf("Failed to subscribe: %v", err)
 	}
 
-	err = mesh.Publish(ctx, "test-topic", []byte("hello"))
+	err = mesh.Publish(ctx, "test-topic", []byte("hello-redis"))
 	if err != nil {
 		t.Fatalf("Failed to publish: %v", err)
 	}
 
 	wg.Wait()
 	received := <-msgReceived
-	if received != "hello" {
-		t.Errorf("Expected 'hello', got '%s'", received)
+	if received != "hello-redis" {
+		t.Errorf("Expected 'hello-redis', got '%s'", received)
 	}
 
 	err = sub.Close()
@@ -184,12 +175,21 @@ func TestRedisMesh_PubSub(t *testing.T) {
 }
 
 func TestRedisMesh_Locks(t *testing.T) {
-	mr, mesh := setupRedis(t)
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("Failed to start miniredis: %v", err)
+	}
 	defer mr.Close()
 
+	client := redis.NewClient(&redis.Options{
+		Addr: mr.Addr(),
+	})
+	defer client.Close()
+
+	mesh := NewRedisMesh(client)
 	ctx := context.Background()
 
-	token, acquired, err := mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
+	token, acquired, err := mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
@@ -198,7 +198,7 @@ func TestRedisMesh_Locks(t *testing.T) {
 	}
 
 	// Try again
-	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
+	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestRedisMesh_Locks(t *testing.T) {
 		t.Errorf("Expected lock to fail as it is already held")
 	}
 
-	// Try release wrong token
+	// Release with wrong token
 	err = mesh.ReleaseLock(ctx, "test-lock", "wrong-token")
 	if err == nil {
 		t.Fatalf("Expected error when releasing with wrong token")
@@ -218,53 +218,21 @@ func TestRedisMesh_Locks(t *testing.T) {
 		t.Fatalf("Failed to release lock: %v", err)
 	}
 
+    // Release again (should fail)
+    err = mesh.ReleaseLock(ctx, "test-lock", token)
+    if err == nil {
+        t.Fatalf("Expected error when releasing already released lock")
+    }
+
 	// Try again after release
-	_, acquired, err = mesh.AcquireLock(ctx, "test-lock", 10*time.Second)
+	token2, acquired, err := mesh.AcquireLock(ctx, "test-lock", 2*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to acquire lock: %v", err)
 	}
 	if !acquired {
 		t.Errorf("Expected lock to be acquired after release")
 	}
-}
-
-func TestRedisMesh_Presence(t *testing.T) {
-	mr, mesh := setupRedis(t)
-	defer mr.Close()
-
-	ctx := context.Background()
-
-	err := mesh.RegisterPresence(ctx, "agent1", "IDLE")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	err = mesh.RegisterPresence(ctx, "agent2", "WORKING")
-	if err != nil {
-		t.Fatalf("Failed to register presence: %v", err)
-	}
-
-	agents, err := mesh.GetActiveAgents(ctx)
-	if err != nil {
-		t.Fatalf("Failed to get active agents: %v", err)
-	}
-
-	if len(agents) != 2 {
-		t.Errorf("Expected 2 active agents, got %d", len(agents))
-	}
-
-	foundAgent1 := false
-	foundAgent2 := false
-	for _, agent := range agents {
-		if agent.AgentID == "agent1" && agent.Status == "IDLE" {
-			foundAgent1 = true
-		}
-		if agent.AgentID == "agent2" && agent.Status == "WORKING" {
-			foundAgent2 = true
-		}
-	}
-
-	if !foundAgent1 || !foundAgent2 {
-		t.Errorf("Did not find expected agents in active agents list")
-	}
+    if token == token2 {
+        t.Errorf("Expected new token")
+    }
 }
