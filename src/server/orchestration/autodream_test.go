@@ -877,3 +877,12 @@ func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string
 	}{topic, payload})
 	return nil
 }
+
+func (m *mockMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter MeshFilter) (<-chan []byte, error) {
+	ch := make(chan []byte)
+	go func() {
+		<-ctx.Done()
+		close(ch)
+	}()
+	return ch, nil
+}

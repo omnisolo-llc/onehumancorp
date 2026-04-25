@@ -423,20 +423,28 @@ func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic stri
 }
 
 func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+	return rm.SubscribeMeshEventsWithFilter(ctx, topic, nil)
+}
+
+func (rm *RedisMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter MeshFilter) (<-chan []byte, error) {
 	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEvents", time.Since(start)) }()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEventsWithFilter", time.Since(start)) }()
 
 	ch := make(chan []byte, 100)
 	go func() {
 		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:events:"+topic).Build(), func(msg rueidis.PubSubMessage) {
+			data := []byte(msg.Message)
+			if filter != nil && !filter(data) {
+				return
+			}
 			select {
-			case ch <- []byte(msg.Message):
+			case ch <- data:
 			default:
-				slog.Warn("RedisMeshTransport.SubscribeMeshEvents channel full, dropping message")
+				slog.Warn("RedisMeshTransport.SubscribeMeshEventsWithFilter channel full, dropping message")
 			}
 		})
 		if err != nil && err != context.Canceled {
-			slog.Error("RedisMeshTransport.SubscribeMeshEvents error", "err", err)
+			slog.Error("RedisMeshTransport.SubscribeMeshEventsWithFilter error", "err", err)
 		}
 		close(ch)
 	}()
@@ -911,8 +919,12 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 }
 
 func (lm *MemoryMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
+	return lm.SubscribeMeshEventsWithFilter(ctx, topic, nil)
+}
+
+func (lm *MemoryMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter MeshFilter) (<-chan []byte, error) {
 	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEvents", time.Since(start)) }()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEventsWithFilter", time.Since(start)) }()
 
 	lm.initTopic(topic)
 	ch := make(chan []byte, 100)
@@ -920,26 +932,43 @@ func (lm *MemoryMeshTransport) SubscribeMeshEvents(ctx context.Context, topic st
 	lm.eventsGlobalMu.RLock()
 	muArray := lm.eventsMu[topic]
 	subsArray := lm.eventsSubs[topic]
+
+	// Create a wrapper channel that we actually register with the shard broadcast system
+	internalCh := make(chan []byte, 100)
+
 	for i := 0; i < numShards; i++ {
 		muArray[i].Lock()
-		subsArray[i][ch] = struct{}{}
+		subsArray[i][internalCh] = struct{}{}
 		muArray[i].Unlock()
 	}
 	lm.eventsGlobalMu.RUnlock()
 
 	go func() {
-		<-ctx.Done()
-		lm.eventsGlobalMu.RLock()
-		if muArray, ok := lm.eventsMu[topic]; ok {
-			subsArray := lm.eventsSubs[topic]
-			for i := 0; i < numShards; i++ {
-				muArray[i].Lock()
-				delete(subsArray[i], ch)
-				muArray[i].Unlock()
+		defer close(ch)
+		for {
+			select {
+			case <-ctx.Done():
+				lm.eventsGlobalMu.RLock()
+				if muArray, ok := lm.eventsMu[topic]; ok {
+					subsArray := lm.eventsSubs[topic]
+					for i := 0; i < numShards; i++ {
+						muArray[i].Lock()
+						delete(subsArray[i], internalCh)
+						muArray[i].Unlock()
+					}
+				}
+				lm.eventsGlobalMu.RUnlock()
+				return
+			case msg := <-internalCh:
+				if filter == nil || filter(msg) {
+					select {
+					case ch <- msg:
+					default:
+						// drop if full
+					}
+				}
 			}
 		}
-		lm.eventsGlobalMu.RUnlock()
-		close(ch)
 	}()
 
 	return ch, nil

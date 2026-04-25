@@ -92,6 +92,8 @@ func ProcessForecastTick(ctx context.Context, history map[string][]int64, getAct
 	}
 }
 
+type MeshFilter func(msg []byte) bool
+
 type MeshTransport interface {
 	BroadcastTask(ctx context.Context, task Task) error
 	SubscribeTasks(ctx context.Context) (<-chan Task, error)
@@ -101,6 +103,7 @@ type MeshTransport interface {
 	SubscribeCapabilities(ctx context.Context) (<-chan pb.AgentCapabilities, error)
 	BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error
 	SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error)
+	SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter MeshFilter) (<-chan []byte, error)
 	PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error
 	SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error)
 	Publish(topic string, data []byte) error

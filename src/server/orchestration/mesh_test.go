@@ -283,3 +283,72 @@ func TestRedisMeshTransport_TeammateMeshEvent(t *testing.T) {
 		t.Fatal("Timeout waiting for TeammateMeshEvent")
 	}
 }
+
+func TestSubscribeMeshEventsWithFilter(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Use MemoryMeshTransport for testing
+	mt := NewMemoryMeshTransport(nil)
+
+	topic := "filtered-topic"
+
+	// Create a filter that only allows messages containing "allow"
+	filter := func(msg []byte) bool {
+		return strings.Contains(string(msg), "allow")
+	}
+
+	// Subscribe with the filter
+	eventsCh, err := mt.SubscribeMeshEventsWithFilter(ctx, topic, filter)
+	if err != nil {
+		t.Fatalf("Failed to subscribe with filter: %v", err)
+	}
+
+	// Publish an allowed message
+	go func() {
+		err := mt.BroadcastMeshEvent(ctx, topic, []byte("this is an allow message"))
+		if err != nil {
+			t.Errorf("Failed to broadcast: %v", err)
+		}
+
+		// Publish a blocked message
+		err = mt.BroadcastMeshEvent(ctx, topic, []byte("this is a block message"))
+		if err != nil {
+			t.Errorf("Failed to broadcast: %v", err)
+		}
+
+		// Publish another allowed message
+		err = mt.BroadcastMeshEvent(ctx, topic, []byte("another allow message"))
+		if err != nil {
+			t.Errorf("Failed to broadcast: %v", err)
+		}
+	}()
+
+	// Read first allowed message
+	select {
+	case msg := <-eventsCh:
+		if string(msg) != "this is an allow message" {
+			t.Errorf("Expected 'this is an allow message', got '%s'", string(msg))
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for first allowed message")
+	}
+
+	// Read second allowed message (should skip the blocked one)
+	select {
+	case msg := <-eventsCh:
+		if string(msg) != "another allow message" {
+			t.Errorf("Expected 'another allow message', got '%s'", string(msg))
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for second allowed message")
+	}
+
+	// Ensure no more messages
+	select {
+	case msg := <-eventsCh:
+		t.Errorf("Received unexpected message: %s", string(msg))
+	case <-time.After(100 * time.Millisecond):
+		// Success
+	}
+}
