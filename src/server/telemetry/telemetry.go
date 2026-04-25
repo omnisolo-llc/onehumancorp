@@ -31,6 +31,7 @@ var (
 	SubAgentExecutionDuration  metric.Float64Histogram
 	SubAgentFailuresTotal      metric.Int64Counter
 	BubblewrapSpawnTotal       metric.Int64Counter
+	SubAgentSpawnTotal         metric.Int64Counter
 	BubblewrapExecutionLatency metric.Float64Histogram
 	HarnessInitLatency         metric.Float64Histogram
 	HarnessDbIoLatency         metric.Float64Histogram
@@ -870,6 +871,14 @@ func InitWithMeter(m mockableMeter) error {
 	BubblewrapSpawnTotal, err = m.Int64Counter(
 		"ohc_bubblewrap_spawn_total",
 		metric.WithDescription("Total number of Bubblewrap spawns"),
+	)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	SubAgentSpawnTotal, err = m.Int64Counter(
+		"sub_agent_spawn_total",
+		metric.WithDescription("Total number of sub-agents spawned"),
 	)
 	if err != nil {
 		errs = append(errs, err)
@@ -2238,4 +2247,20 @@ func RecordTelemetryBatchSize(ctx context.Context, size int64) {
 		return
 	}
 	TelemetryBatchSizeGauge.Record(ctx, size)
+}
+
+// RecordSubAgentSpawn records the spawning of a sub-agent.
+func RecordSubAgentSpawn(ctx context.Context, mode string) {
+	if BufferMetricFunc != nil {
+		payloadMap := map[string]interface{}{
+			"deployment_mode": mode,
+		}
+		payloadBytes, _ := json.Marshal(RedactInterfacePII(payloadMap))
+		_ = BufferMetricFunc(ctx, "sub_agent_spawn_total", string(payloadBytes))
+	}
+	if SubAgentSpawnTotal != nil {
+		SubAgentSpawnTotal.Add(ctx, 1, metric.WithAttributes(
+			attribute.String("deployment_mode", mode),
+		))
+	}
 }

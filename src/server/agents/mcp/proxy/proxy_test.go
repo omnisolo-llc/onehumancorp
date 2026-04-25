@@ -133,3 +133,37 @@ func TestMcpSyncProxy_Init(t *testing.T) {
 		t.Errorf("Expected standalone mode, got %s", proxy.mode)
 	}
 }
+
+func TestMcpSyncProxy_Telemetry(t *testing.T) {
+	telemetry.InitTelemetry()
+	mockDB := &mockDBProvider{}
+	var capturedMetrics []string
+	telemetry.BufferMetricFunc = func(ctx context.Context, metricType string, payload string) error {
+		capturedMetrics = append(capturedMetrics, metricType)
+		return nil
+	}
+	defer func() { telemetry.BufferMetricFunc = nil }()
+
+	proxy := NewMcpSyncProxy(mockDB, "http://dummy", nil)
+	_, err := proxy.Buffer(context.Background(), "session-1", "test-capability", "test-tool", map[string]interface{}{"key": "value"})
+	if err != nil {
+		t.Fatalf("Buffer failed: %v", err)
+	}
+
+	foundInit := false
+	foundDbIo := false
+	for _, m := range capturedMetrics {
+		if m == "harness_init_latency" {
+			foundInit = true
+		}
+		if m == "harness_db_io_latency" {
+			foundDbIo = true
+		}
+	}
+	if !foundInit {
+		t.Errorf("Expected harness_init_latency to be recorded")
+	}
+	if !foundDbIo {
+		t.Errorf("Expected harness_db_io_latency to be recorded")
+	}
+}

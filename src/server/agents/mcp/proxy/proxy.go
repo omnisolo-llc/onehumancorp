@@ -49,7 +49,8 @@ func NewMcpSyncProxy(dbProvider db.Provider, cloudGateway string, authorizer *Ca
 		authorizer:   authorizer,
 	}
 
-	telemetry.RecordHarnessInitLatency(context.Background(), float64(time.Since(start).Milliseconds()), mode)
+	// Record harness initialization latency with deployment_mode tag
+	telemetry.RecordHarnessInitLatency(context.Background(), float64(time.Since(start).Milliseconds()), proxy.mode)
 
 	return proxy
 }
@@ -60,6 +61,9 @@ func (p *McpSyncProxy) GetAuthorizer() *CapabilityAuthorizer {
 
 // Buffer buffers a tool execution request into the local SQLite database.
 func (p *McpSyncProxy) Buffer(ctx context.Context, sessionID, capability, toolName string, arguments map[string]interface{}) (string, error) {
+	// Record sub-agent spawning, assuming Buffer acts as a proxy for tool execution / sub-agent task
+	telemetry.RecordSubAgentSpawn(ctx, p.mode)
+
 	if !p.dbProvider.IsSQLite() {
 		// If we are in the cloud (Postgres), we might just directly push to the gateway or queue,
 		// but the prompt mentions "buffer integration metadata locally in SQLite during Standalone mode"
@@ -77,6 +81,7 @@ func (p *McpSyncProxy) Buffer(ctx context.Context, sessionID, capability, toolNa
 		"INSERT INTO hybrid_mcp_sync_queue (id, tool_name, arguments, status, created_at) VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)",
 		id, toolName, string(argsBytes), "PENDING")
 
+	// Record database I/O latency with deployment_mode tag
 	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
 	if err != nil {
 		return "", fmt.Errorf("failed to buffer to db: %w", err)
@@ -90,6 +95,7 @@ func (p *McpSyncProxy) Sync(ctx context.Context) (int, error) {
 	start := time.Now()
 	rows, err := p.dbProvider.Query(ctx, "SELECT id, tool_name, arguments FROM hybrid_mcp_sync_queue WHERE status = 'PENDING' LIMIT 50")
 
+	// Record database I/O latency with deployment_mode tag for Sync operation
 	telemetry.RecordHarnessDbIoLatency(ctx, float64(time.Since(start).Milliseconds()), p.mode)
 	if err != nil {
 		return 0, fmt.Errorf("failed to query queue: %w", err)
