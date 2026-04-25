@@ -119,7 +119,7 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 					"RecordAutodreamSyncErrors": true,
 					"RecordBubblewrapViolation": true,
 					"RecordHarnessInitLatency": true,
-					"RecordHarnessDBIOLatency": true,
+					"RecordHarnessDbIoLatency": true,
 					"RecordHarnessExecutionLatency": true,
 					"RecordCapabilityViolation": true,
 					"RecordBridgeMessageSent": true,
