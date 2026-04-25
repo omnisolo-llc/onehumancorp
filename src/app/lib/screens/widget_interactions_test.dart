@@ -1,3 +1,4 @@
+import 'package:ohc_app/services/health_service.dart';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
 
@@ -23,6 +24,10 @@ class MockHttpClient extends Mock implements http.Client {}
 class FakeUri extends Fake implements Uri {}
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
+  final allOverrides = [
+    healthProvider.overrideWith(() => _FakeHealthNotifier()),
+    ...overrides,
+  ];
   final router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (context, state) => child),
@@ -33,13 +38,18 @@ Widget _wrap(Widget child, {List<Override> overrides = const []}) {
     ],
   );
   return ProviderScope(
-    overrides: overrides,
+    overrides: allOverrides,
     child: MaterialApp.router(routerConfig: router),
   );
 }
 
 ApiService _mockApi(MockHttpClient client) =>
     ApiService(baseUrl: 'http://localhost', token: 'tok', client: client);
+
+class _FakeHealthNotifier extends HealthNotifier {
+  @override
+  Future<HealthStatus> build() async => HealthStatus.healthy;
+}
 
 void main() {
   setUpAll(() {

@@ -1,6 +1,7 @@
 /// Tests for Chat screen, router, and remaining uncovered screen interactions.
 library;
 
+import 'package:ohc_app/services/health_service.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -39,7 +40,11 @@ class FakeClientConfig extends Fake implements centrifuge.ClientConfig {}
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
-  return ProviderScope(overrides: overrides, child: MaterialApp(home: child));
+  final allOverrides = [
+    healthProvider.overrideWith(() => _FakeHealthNotifier()),
+    ...overrides,
+  ];
+  return ProviderScope(overrides: allOverrides, child: MaterialApp(home: child));
 }
 
 ApiService _mockApi(MockHttpClient client) =>
@@ -89,6 +94,11 @@ const _loggedInUser = AuthUser(
   token: 'tok',
 );
 
+class _FakeHealthNotifier extends HealthNotifier {
+  @override
+  Future<HealthStatus> build() async => HealthStatus.healthy;
+}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(FakeUri());
@@ -103,6 +113,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            healthProvider.overrideWith(() => _FakeHealthNotifier()),
             authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
           ],
           child: MaterialApp.router(
@@ -135,7 +146,8 @@ void main() {
     test('creates a GoRouter with routes', () {
       final container = ProviderContainer(
         overrides: [
-          authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
+          healthProvider.overrideWith(() => _FakeHealthNotifier()),
+            authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
           backendUrlProvider.overrideWith((ref) => 'http://localhost'),
         ],
       );
@@ -152,6 +164,7 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            healthProvider.overrideWith(() => _FakeHealthNotifier()),
             authStateProvider.overrideWith(() => _FakeAuthNotifier(null)),
           ],
           child: MaterialApp.router(

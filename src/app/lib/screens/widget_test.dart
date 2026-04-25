@@ -1,3 +1,4 @@
+import 'package:ohc_app/services/health_service.dart';
 import 'dart:convert';
 import 'package:go_router/go_router.dart';
 
@@ -27,6 +28,10 @@ class FakeUri extends Fake implements Uri {}
 
 // Helper: wrap a widget with ProviderScope + MaterialApp.router.
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
+  final allOverrides = [
+    healthProvider.overrideWith(() => _FakeHealthNotifier()),
+    ...overrides,
+  ];
   final router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (context, state) => child),
@@ -37,7 +42,7 @@ Widget _wrap(Widget child, {List<Override> overrides = const []}) {
     ],
   );
   return ProviderScope(
-    overrides: overrides,
+    overrides: allOverrides,
     child: MaterialApp.router(routerConfig: router),
   );
 }
@@ -51,6 +56,11 @@ const _fakeUser = AuthUser(
   organizationId: 'org-1',
   token: 'tok-test',
 );
+
+class _FakeHealthNotifier extends HealthNotifier {
+  @override
+  Future<HealthStatus> build() async => HealthStatus.healthy;
+}
 
 void main() {
   setUpAll(() {
