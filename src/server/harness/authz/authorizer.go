@@ -48,6 +48,5 @@ func (a *authorizer) Authorize(ctx context.Context, sessionID string, capability
 		}
 	}
 
-	// TODO: log violation using Violation Telemetry Engine
 	return ErrCapabilityDenied
 }
