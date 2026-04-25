@@ -23,6 +23,13 @@ type Config struct {
 	DefaultPolicy Policy `json:"defaultPolicy"`
 }
 
+// PolicyExecutor abstracts the execution methods used by the manager and bwrap runner.
+type PolicyExecutor interface {
+	Execute(ctx context.Context, command string) (Result, error)
+	ExecuteWithPolicy(ctx context.Context, command string, policy *Policy) (Result, error)
+	ExecuteStream(ctx context.Context, command string, policy *Policy, stdin io.Reader, stdout, stderr io.Writer) (Result, error)
+}
+
 // SandboxManager defines the interface for managing isolated execution contexts.
 type SandboxManager interface {
 	AgentHarness
@@ -46,20 +53,24 @@ type SandboxManager interface {
 type Manager struct {
 	config    Config
 	validator *ASTValidator
-	runner    *BwrapRunner
+	executor  PolicyExecutor
 }
 
-// NewManager creates a new SandboxManager implementation.
-func NewManager(validator *ASTValidator, runner *BwrapRunner) *Manager {
+// NewManager creates a new SandboxManager implementation, optionally wrapping the execution with a bridge.
+func NewManager(validator *ASTValidator, runner *BwrapRunner, bridge BridgeTransport) *Manager {
 	if validator == nil {
 		validator = NewASTValidator()
 	}
 	if runner == nil {
 		runner = NewBwrapRunner(validator)
 	}
+	var exec PolicyExecutor = runner
+	if bridge != nil {
+		exec = NewPermissionInterceptor(runner, bridge)
+	}
 	return &Manager{
 		validator: validator,
-		runner:    runner,
+		executor:  exec,
 	}
 }
 
@@ -100,7 +111,7 @@ func (m *Manager) ExecuteWithPolicy(ctx context.Context, command string, policy 
 
 	start := time.Now()
 	// 2. Execute via runner (which performs its own AST validation)
-	res, err := m.runner.ExecuteWithPolicy(ctx, wrapped, policy)
+	res, err := m.executor.ExecuteWithPolicy(ctx, wrapped, policy)
 
 	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {
@@ -131,7 +142,7 @@ func (m *Manager) ExecuteStream(ctx context.Context, command string, policy *Pol
 	// 2. Execute via runner with streaming I/O (assuming runner has an equivalent streaming method)
 	// Currently bridging to standard ExecuteWithPolicy, but modifying writer if implemented fully
 	// Wait, we need to add ExecuteStream to runner too. For now we use the existing method.
-	res, err := m.runner.ExecuteStream(ctx, wrapped, policy, stdin, stdout, stderr)
+	res, err := m.executor.ExecuteStream(ctx, wrapped, policy, stdin, stdout, stderr)
 
 	mode := "cloud"
 	if os.Getenv("OHC_STANDALONE") == "true" {

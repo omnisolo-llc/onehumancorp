@@ -69,7 +69,7 @@ func TestHarnessRun(t *testing.T) {
     defer h.Stop()
 
     // Just verify the method doesn't panic
-    _, _ = h.Run(context.Background(), "echo", []string{"hello"})
+    res, err := h.Run(context.Background(), "echo", []string{"hello"})
 
     if err == nil && res.ExitCode != 0 {
         // Just sanity check

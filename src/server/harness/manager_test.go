@@ -17,7 +17,7 @@ func init() {
 }
 
 func TestManager(t *testing.T) {
-	manager := NewManager(nil, nil)
+	manager := NewManager(nil, nil, nil)
 	ctx := context.Background()
 
 	t.Run("Initialize", func(t *testing.T) {
@@ -76,7 +76,7 @@ func TestManager(t *testing.T) {
 
 func TestRegistry_GetManager(t *testing.T) {
 	registry := NewRegistry()
-	manager := NewManager(nil, nil)
+	manager := NewManager(nil, nil, nil)
 	registry.Register("test", manager)
 
 	m, err := registry.GetManager("test")
