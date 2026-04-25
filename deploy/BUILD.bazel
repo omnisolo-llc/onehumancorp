@@ -110,6 +110,7 @@ oci_push(
 
 sh_test(
     name = "deploy_artifacts_test",
+    tags = ["no-remote-exec", "no-remote-cache"],
     srcs = ["tests/deploy_artifacts_test.sh"],
     data = glob([
         "docker/**/*",
