@@ -167,22 +167,6 @@ graph TD
 
 The Shared Task List handles state-machine validation and task-dependency resolution for asynchronous agent swarms.
 
-### Task Claiming Workflow
-
-```mermaid
-graph TD
-    A[Client Request] -->|POST /api/queue/subagent| B(Shared Task Queue)
-    C[Worker Agent] -->|POST /api/v1/tasks/claim| B
-    B -.->|Returns Task| C
-    C -->|POST /api/v1/tasks/{task_id}/complete| B
-    B -.->|Unlocks Dependencies| D[Dependent Tasks]
-
-    style A fill:#003366,stroke:#333,stroke-width:2px,color:#fff
-    style B fill:#006699,stroke:#333,stroke-width:2px,color:#fff
-    style C fill:#0099cc,stroke:#333,stroke-width:2px,color:#fff
-    style D fill:#00ccff,stroke:#333,stroke-width:2px,color:#111
-```
-
 ### 7.1 Enqueue Task
 **Endpoint:** `POST /api/queue/subagent`
 Queues a new task for sub-agents to claim.

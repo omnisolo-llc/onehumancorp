@@ -6,11 +6,11 @@
 - The previous docs entry point relied on embedded HTML wrappers instead of markdown-first structure.
 - The docs tree had no navigation contract, no section landing pages, and no site build configuration.
 - Local task tracking leaked into docs and runtime paths through `.agent-task` references.
-- Several legacy source trees still lived outside `srcs/`.
+- Several legacy source trees still lived outside `src/`.
 
 ## Remediation Applied
 
-- Moved the remaining first-party source trees into `srcs/`.
+- Moved the remaining first-party source trees into `src/`.
 - Moved stray design docs into `docs/archive/design/`.
 - Centralized release documentation under `docs/public/`.
 - Added `docs/index.md` and section index pages.

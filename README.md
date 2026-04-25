@@ -52,17 +52,17 @@ graph TD;
 
 | Directory | Language | Purpose |
 |-----------|----------|---------|
-| `srcs/app/` | **Flutter/Dart** | Primary client for web, iOS, Android, macOS, Windows, and Linux |
-| `srcs/server/` | **Go** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
-| `srcs/server/lib/` | **Go** | Shared backend support libraries used by benchmarks, integrations, and resilience flows |
-| `srcs/server/services/` | **Go** | Lightweight backend service packages kept alongside the server source tree |
-| `srcs/server/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
-| `srcs/server/agents/` | **Go** | Agent provider registry, worker logic, and MCP bundles |
-| `srcs/server/checkpointer/` | **Go** | LangGraph checkpoint persistence |
-| `srcs/examples/` | **Go / YAML** | Example agent binaries and supporting assets |
-| `srcs/benchmarks/` | **Go** | Performance benchmarks for coordination and messaging helpers |
-| `srcs/proto/` | **Protobuf** | gRPC service definitions |
-| `srcs/tests/` | **Python / Shell** | Repository-local validation helpers and test utilities |
+| `src/app/` | **Flutter/Dart** | Primary client for web, iOS, Android, macOS, Windows, and Linux |
+| `src/server/` | **Go** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
+| `src/server/lib/` | **Go** | Shared backend support libraries used by benchmarks, integrations, and resilience flows |
+| `src/server/services/` | **Go** | Lightweight backend service packages kept alongside the server source tree |
+| `src/server/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
+| `src/server/agents/` | **Go** | Agent provider registry, worker logic, and MCP bundles |
+| `src/server/checkpointer/` | **Go** | LangGraph checkpoint persistence |
+| `src/examples/` | **Go / YAML** | Example agent binaries and supporting assets |
+| `src/benchmarks/` | **Go** | Performance benchmarks for coordination and messaging helpers |
+| `src/proto/` | **Protobuf** | gRPC service definitions |
+| `src/tests/` | **Python / Shell** | Repository-local validation helpers and test utilities |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
 
@@ -81,7 +81,7 @@ Headless server deployments keep the API, auth, health probes, and metrics onlin
 ### Multi-tenancy
 
 In cloud-native mode (`OHC_MULTITENANT=true`) the `TenantRegistry` in
-`srcs/server/dashboard/tenant.go` lazily provisions an organisation-scoped
+`src/server/dashboard/tenant.go` lazily provisions an organisation-scoped
 `Server` per `organization_id` and routes authenticated requests to the correct
 tenant handler. Dashboard snapshots, meetings, agent operations, approvals,
 handoffs, and other server-local state are isolated per tenant handler, and the
@@ -129,8 +129,8 @@ bazelisk build //...
 bazelisk test //...
 
 # Quick Local Dev (run these in separate terminals)
-bazelisk run //srcs/server:ohc
-bazelisk run //srcs/app:start
+bazelisk run //src/server:ohc
+bazelisk run //src/app:start
 
 # Standalone desktop source launcher
 bazelisk run //:desktop
@@ -139,15 +139,15 @@ bazelisk run //:desktop
 bazelisk run //:docs_build
 
 # Linux desktop/runtime packages
-bazelisk build //srcs/app:app_deb
+bazelisk build //src/app:app_deb
 # Requires rpmbuild on the host
-bazelisk build //srcs/app:app_rpm
+bazelisk build //src/app:app_rpm
 ```
 
 ### Flutter app
 
 ```bash
-cd srcs/app
+cd src/app
 flutter pub get
 flutter run -d macos    # or -d windows / -d android / -d ios / -d chrome
 ```
@@ -155,7 +155,7 @@ flutter run -d macos    # or -d windows / -d android / -d ios / -d chrome
 ### Server binary
 
 ```bash
-bazelisk run //srcs/server:ohc
+bazelisk run //src/server:ohc
 ```
 
 ## Configuration
@@ -171,7 +171,7 @@ bazelisk run //srcs/server:ohc
 | `OHC_SERVE_UI` | Optional override to force UI serving on or off |
 | `OHC_CORE_URL` | URL of the Rust `ohc-core` sidecar |
 | `MCP_BUNDLE_DIR` | Directory for MCP bundles |
-| `FRONTEND_STATIC_DIR` | Path to compiled frontend assets (e.g. `srcs/app/build/web`) |
+| `FRONTEND_STATIC_DIR` | Path to compiled frontend assets (e.g. `src/app/build/web`) |
 | `OHC_BOOTSTRAP_ORG_ID` | Optional bootstrap tenant ID used to serve unauthenticated routes in multi-tenant mode |
 | `OHC_BOOTSTRAP_ORG_NAME` | Optional bootstrap tenant display name |
 | `OHC_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
@@ -201,13 +201,13 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 ### Build and Test
 - **Build all modules:** `bazelisk build //...`
 - **Run all tests:** `bazelisk test //...`
-- **Run the Go backend:** `bazelisk run //srcs/server:ohc`
-- **Serve the Bazel-built Flutter web app:** `bazelisk run //srcs/app:start`
+- **Run the Go backend:** `bazelisk run //src/server:ohc`
+- **Serve the Bazel-built Flutter web app:** `bazelisk run //src/app:start`
 - **Launch standalone desktop mode:** `bazelisk run //:desktop`
 - **Build the docs site:** `bazelisk run //:docs_build`
-- **Build Linux package artifacts:** `bazelisk build //srcs/app:app_deb` and `bazelisk build //srcs/app:app_rpm` (`app_rpm` requires `rpmbuild` on the host)
+- **Build Linux package artifacts:** `bazelisk build //src/app:app_deb` and `bazelisk build //src/app:app_rpm` (`app_rpm` requires `rpmbuild` on the host)
 - **Use mobile platform profiles:** `--config=android` and `--config=ios`
 - **Format Go code:** `gofmt -w ./...`
-- **Format frontend:** `cd srcs/app && flutter format .`
-- **Analyze Flutter app:** `cd srcs/app && flutter analyze`
+- **Format frontend:** `cd src/app && flutter format .`
+- **Analyze Flutter app:** `cd src/app && flutter analyze`
 - **Preview the docs site:** `bazelisk run //:docs_serve`

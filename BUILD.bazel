@@ -24,9 +24,9 @@ exports_files([
     "pubspec.yaml",
 ])
 
-# gazelle:exclude srcs/proto
-# gazelle:resolve go github.com/onehumancorp/mono/srcs/proto //srcs/proto:hub_go_proto
-# gazelle:resolve go github.com/onehumancorp/mono/srcs/proto/agentservice //srcs/proto/agentservice
+# gazelle:exclude src/proto
+# gazelle:resolve go github.com/onehumancorp/mono/src/proto //src/proto:hub_go_proto
+# gazelle:resolve go github.com/onehumancorp/mono/src/proto/agentservice //src/proto/agentservice
 gazelle(name = "gazelle")
 
 config_setting(
@@ -104,14 +104,14 @@ trap 'kill $$(jobs -p)' EXIT
 
 # Start backend (API Server)
 echo "--- Starting Go Backend (8080) ---"
-./srcs/server/ohc &
+./src/server/ohc &
 
 # Give the backend a moment to bind its port
 sleep 1
 
 # Start Flutter Web Client
 echo "--- Starting Flutter Web Client (8081) ---"
-cd srcs/app
+cd src/app
 # We use flutter run -d chrome for the best developer experience (hot restart).
 flutter run -d chrome --web-port 8081
 EOF
@@ -122,8 +122,8 @@ sh_binary(
     name = "dev",
     srcs = [":gen_dev_sh"],
     data = [
-        "//srcs/app:srcs",
-        "//srcs/server:ohc",
+        "//src/app:srcs",
+        "//src/server:ohc",
     ],
     tags = ["manual"],
 )
@@ -150,7 +150,7 @@ set -e
 # Expose the standalone wrapper as `ohc` so the app can start/stop/doctor the backend.
 OHC_BIN_DIR="$$(mktemp -d)"
 trap 'rm -rf "$$OHC_BIN_DIR"' EXIT
-ln -sf "$$PWD/srcs/server/standalone_ohc_exec" "$$OHC_BIN_DIR/ohc"
+ln -sf "$$PWD/src/server/standalone_ohc_exec" "$$OHC_BIN_DIR/ohc"
 export PATH="$$OHC_BIN_DIR:$$PATH"
 
 # Detect platform if not explicitly provided
@@ -179,7 +179,7 @@ else
   FLUTTER_CMD="../../REPLACE_ME_UNIX"
 fi
 
-cd srcs/app
+cd src/app
 "$${FLUTTER_CMD}" run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
 EOF
 sed -i "s|REPLACE_ME_UNIX|$$FLUTTER_UNIX|g" $@
@@ -192,9 +192,9 @@ sh_binary(
     srcs = [":gen_desktop_sh"],
     data = [
         "//:pubspec.yaml",
-        "//srcs/app:srcs",
-        "//srcs/server:ohc",
-        "//srcs/server:standalone_ohc_exec",
+        "//src/app:srcs",
+        "//src/server:ohc",
+        "//src/server:standalone_ohc_exec",
         "@flutter_sdk",
     ],
     tags = ["manual"],
@@ -202,24 +202,24 @@ sh_binary(
 
 sh_test(
     name = "standalone_e2e_test",
-    srcs = ["//srcs/app:test/standalone_e2e_test.sh"],
+    srcs = ["//src/app:test/standalone_e2e_test.sh"],
     data = [":desktop"],
 )
 
 sh_test(
     name = "app_deb_structure_test",
-    srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
+    srcs = ["//src/app:test/linux_package_structure_test.sh"],
     args = ["deb"],
-    data = ["//srcs/app:app_deb.deb"],
+    data = ["//src/app:app_deb.deb"],
 )
 
 sh_test(
     name = "app_rpm_structure_test",
-    srcs = ["//srcs/app:test/linux_package_structure_test.sh"],
+    srcs = ["//src/app:test/linux_package_structure_test.sh"],
     args = ["rpm"],
     data = [
-        "//srcs/app:app_rpm",
-        "//srcs/app:app_runtime_tar.tar",
+        "//src/app:app_rpm",
+        "//src/app:app_runtime_tar.tar",
     ],
     tags = ["manual"],
 )
@@ -235,5 +235,5 @@ test_suite(
 # Alias to run hello-world agent easily
 alias(
     name = "hello-world",
-    actual = "//srcs/examples/hello-world-agent:hello-world",
+    actual = "//src/examples/hello-world-agent:hello-world",
 )

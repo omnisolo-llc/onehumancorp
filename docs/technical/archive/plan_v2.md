@@ -1,8 +1,8 @@
 1. **Define `BlobProvider` interface:**
-   Create `srcs/server/agents/mcp/blob_provider.go` with the `BlobProvider` interface.
+   Create `src/server/agents/mcp/blob_provider.go` with the `BlobProvider` interface.
    Command:
    ```bash
-   cat << 'EOF' > srcs/server/agents/mcp/blob_provider.go
+   cat << 'EOF' > src/server/agents/mcp/blob_provider.go
    package mcp
 
    import "context"
@@ -12,14 +12,14 @@
        ReadBlob(ctx context.Context, key string) ([]byte, error)
    }
    EOF
-   ls -la srcs/server/agents/mcp/blob_provider.go
+   ls -la src/server/agents/mcp/blob_provider.go
    ```
 
 2. **Implement `LocalBlobProvider`:**
-   Create `srcs/server/agents/mcp/local_blob.go` which writes to `/var/tmp/ohc/blobs`.
+   Create `src/server/agents/mcp/local_blob.go` which writes to `/var/tmp/ohc/blobs`.
    Command:
    ```bash
-   cat << 'EOF' > srcs/server/agents/mcp/local_blob.go
+   cat << 'EOF' > src/server/agents/mcp/local_blob.go
    package mcp
 
    import (
@@ -49,14 +49,14 @@
        return os.ReadFile(fullPath)
    }
    EOF
-   ls -la srcs/server/agents/mcp/local_blob.go
+   ls -la src/server/agents/mcp/local_blob.go
    ```
 
 3. **Implement `S3BlobProvider`:**
-   Create `srcs/server/agents/mcp/s3_blob.go`.
+   Create `src/server/agents/mcp/s3_blob.go`.
    Command:
    ```bash
-   cat << 'EOF' > srcs/server/agents/mcp/s3_blob.go
+   cat << 'EOF' > src/server/agents/mcp/s3_blob.go
    package mcp
 
    import (
@@ -82,14 +82,14 @@
        return []byte(fmt.Sprintf("S3 content for %s", key)), nil
    }
    EOF
-   ls -la srcs/server/agents/mcp/s3_blob.go
+   ls -la src/server/agents/mcp/s3_blob.go
    ```
 
 4. **Implement Factory:**
-   Create `srcs/server/agents/mcp/factory.go`.
+   Create `src/server/agents/mcp/factory.go`.
    Command:
    ```bash
-   cat << 'EOF' > srcs/server/agents/mcp/factory.go
+   cat << 'EOF' > src/server/agents/mcp/factory.go
    package mcp
 
    import "os"
@@ -101,30 +101,30 @@
        return NewS3BlobProvider()
    }
    EOF
-   ls -la srcs/server/agents/mcp/factory.go
+   ls -la src/server/agents/mcp/factory.go
    ```
 
 5. **Update BUILD.bazel:**
    Command:
    ```bash
    cat << 'EOF' > patch_build.py
-   with open('srcs/server/agents/mcp/BUILD.bazel', 'r') as f:
+   with open('src/server/agents/mcp/BUILD.bazel', 'r') as f:
        content = f.read()
 
    content = content.replace('srcs = ["client.go"],', 'srcs = [\n        "blob_provider.go",\n        "client.go",\n        "factory.go",\n        "local_blob.go",\n        "s3_blob.go",\n    ],')
 
-   with open('srcs/server/agents/mcp/BUILD.bazel', 'w') as f:
+   with open('src/server/agents/mcp/BUILD.bazel', 'w') as f:
        f.write(content)
    EOF
    python3 patch_build.py
-   cat srcs/server/agents/mcp/BUILD.bazel
+   cat src/server/agents/mcp/BUILD.bazel
    ```
 
 6. **Write tests:**
-   Create `srcs/server/agents/mcp/blob_provider_test.go`.
+   Create `src/server/agents/mcp/blob_provider_test.go`.
    Command:
    ```bash
-   cat << 'EOF' > srcs/server/agents/mcp/blob_provider_test.go
+   cat << 'EOF' > src/server/agents/mcp/blob_provider_test.go
    package mcp
 
    import (
@@ -148,23 +148,23 @@
        }
    }
    EOF
-   ls -la srcs/server/agents/mcp/blob_provider_test.go
+   ls -la src/server/agents/mcp/blob_provider_test.go
    ```
 
 7. **Update BUILD.bazel for tests:**
    Command:
    ```bash
    cat << 'EOF' > patch_test_build.py
-   with open('srcs/server/agents/mcp/BUILD.bazel', 'r') as f:
+   with open('src/server/agents/mcp/BUILD.bazel', 'r') as f:
        content = f.read()
 
    content = content.replace('srcs = ["hybrid_mcp_bridge_test.go"],', 'srcs = [\n        "blob_provider_test.go",\n        "hybrid_mcp_bridge_test.go",\n    ],')
 
-   with open('srcs/server/agents/mcp/BUILD.bazel', 'w') as f:
+   with open('src/server/agents/mcp/BUILD.bazel', 'w') as f:
        f.write(content)
    EOF
    python3 patch_test_build.py
-   cat srcs/server/agents/mcp/BUILD.bazel
+   cat src/server/agents/mcp/BUILD.bazel
    ```
 
 8. **Update mission status:**
@@ -177,7 +177,7 @@
 9. **Run test suite:**
    Command:
    ```bash
-   bazelisk test //srcs/server/agents/mcp/...
+   bazelisk test //src/server/agents/mcp/...
    ```
 
 10. Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.

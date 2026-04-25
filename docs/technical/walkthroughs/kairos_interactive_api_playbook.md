@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+
 # KAIROS Interactive API Playbook Walkthrough
 
 Welcome to the interactive walkthrough for the KAIROS Orchestration APIs. This guide provides the ground-truth technical specifications for the OHC Hybrid Agentic OS.
@@ -128,3 +130,5 @@ sequenceDiagram
     AutoDream->>DB: Upsert Vector to autodream_memories
     AutoDream-->>Worker: Broadcast Consolidation Success
 ```
+
+</div>

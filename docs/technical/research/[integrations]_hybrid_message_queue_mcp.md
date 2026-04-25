@@ -8,7 +8,7 @@ Current agentic architectures generally hardcode their message brokers. Tools li
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/message_queue/`.
+- Create a new package `src/server/lib/integrations/message_queue/`.
 - Introduce a `MessageQueueManager` implementing the MCP Tool interface.
 - Dynamically route based on whether the deployment is Cloud or Standalone.
 - **Cloud Mode:** Utilize a distributed message broker (e.g., Redis Pub/Sub or Streams).
@@ -23,7 +23,7 @@ Current agentic architectures generally hardcode their message brokers. Tools li
 - Sanitize and apply PII redaction to message payloads before publishing.
 
 ## Implementation Prompt
-"Implement the Hybrid Message Queue MCP tool in `srcs/server/lib/integrations/message_queue/`.
+"Implement the Hybrid Message Queue MCP tool in `src/server/lib/integrations/message_queue/`.
 1. Create `message_queue.go` defining the `MessageQueueManager` and its MCP capabilities (`Publish`, `Subscribe`).
 2. Implement dynamic routing to initialize the Cloud driver or the Standalone driver based on the environment configuration.
 3. For Cloud mode, implement a distributed message broker driver (e.g., Redis Pub/Sub or Streams). Ensure tenant isolation by prefixing topics.

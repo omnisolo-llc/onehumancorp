@@ -4,7 +4,7 @@ This site is the canonical documentation root for the repository. It follows a m
 
 ## What Changed
 
-- All first-party source code now lives under `srcs/`.
+- All first-party source code now lives under `src/`.
 - Local `.agent-task` tracking has been retired.
 - GitHub issues are now the task source of truth.
 - Legacy design docs that lived outside `docs/` were moved into the archive.

@@ -36,7 +36,7 @@ To build a new capability that satisfies the OHC-SIP, adhere to the **Hybrid Arc
 1. **Start with the Interface:** Define the behavior as an abstract Go interface.
 2. **Implement Cloud-Native (`OHC_MULTITENANT=true`):** Build the PostgreSQL and Redis implementations. Ensure explicit tenant isolation (`WHERE organization_id = $1`).
 3. **Implement Standalone (`DATABASE_URL=sqlite://...`):** Build the SQLite fallback. Ensure it requires zero network calls and minimal memory overhead.
-4. **Wire the Injection:** Use the provider injection pattern in `srcs/server/` to inject the correct implementation at runtime based on the environment variables.
+4. **Wire the Injection:** Use the provider injection pattern in `src/server/` to inject the correct implementation at runtime based on the environment variables.
 
 <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #4CAF50; background: rgba(76, 175, 80, 0.1);">
   <strong>Note:</strong> Always verify your new capabilities across both the Cloud and Standalone environments using <code>bazelisk test //...</code>.

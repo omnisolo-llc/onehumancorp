@@ -10,7 +10,7 @@ Market research indicates that most Model Context Protocol (MCP) implementations
 
 ## Design Doc
 **Architecture:**
-- Add a new package `srcs/server/lib/integrations/hybrid_sync/`.
+- Add a new package `src/server/lib/integrations/hybrid_sync/`.
 - Introduce a `SyncManager` that implements the MCP Tool interface.
 - Must support both `*sql.DB` driver variants (SQLite and Postgres), dynamically inspecting the driver using `db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"`.
 
@@ -25,7 +25,7 @@ Market research indicates that most Model Context Protocol (MCP) implementations
 - Must validate `organization_id` in cloud mode.
 
 ## Implementation Prompt
-"Implement the Hybrid MCP Sync tool in `srcs/server/lib/integrations/hybrid_sync/`.
+"Implement the Hybrid MCP Sync tool in `src/server/lib/integrations/hybrid_sync/`.
 1. Create `sync.go` defining the `SyncManager` and its MCP capabilities (`PushState` and `PullState`).
 2. Implement driver-agnostic logic. To determine if the connection is SQLite, use: `db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"`. For SQLite, strip Postgres-specific prefixes, replace `NOW()` with `CURRENT_TIMESTAMP`, and remove `FOR UPDATE SKIP LOCKED`.
 3. Create tests in `sync_test.go` using `t.TempDir()` for isolated testing. Never hardcode workspace directories.

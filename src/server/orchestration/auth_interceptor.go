@@ -1,0 +1,271 @@
+package orchestration
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
+
+	pb "github.com/onehumancorp/mono/src/proto"
+)
+
+// ExtractSPIFFEID gets the SPIFFE ID from the context.
+// It extracts the ID exclusively from the mTLS peer certificate.
+// ExtractSPIFFEID gets the SPIFFE ID from the context. It extracts the ID exclusively from the mTLS peer certificate.
+// Accepts no parameters.
+//   - ctx: complex; Description
+//
+// Returns string, error.
+// Produces errors: Returns error on failure conditions.
+// Has no side effects.
+func ExtractSPIFFEID(ctx context.Context) (string, error) {
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("no peer found in context")
+	}
+
+	if tlsInfo, ok := p.AuthInfo.(credentials.TLSInfo); ok {
+		if len(tlsInfo.State.PeerCertificates) > 0 {
+			cert := tlsInfo.State.PeerCertificates[0]
+			if len(cert.URIs) > 0 {
+				if cert.URIs[0].Scheme != "spiffe" {
+					return "", fmt.Errorf("peer certificate URI scheme must be spiffe")
+				}
+				return cert.URIs[0].String(), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no SPIFFE ID found in peer certificate")
+}
+
+// SPIFFEAuthInterceptor validates SPIFFE IDs for incoming gRPC calls.
+// Accepts no parameters.
+// Returns Explicit success/failure.
+// Produces no errors.
+// Has no side effects.
+func SPIFFEAuthInterceptor() grpc.UnaryServerInterceptor {
+	return func(
+		ctx context.Context,
+		req interface{},
+		info *grpc.UnaryServerInfo,
+		handler grpc.UnaryHandler,
+	) (interface{}, error) {
+		spiffeID, err := ExtractSPIFFEID(ctx)
+		if err != nil {
+			return nil, status.Errorf(codes.Unauthenticated, "unauthenticated: %v", err)
+		}
+
+		lowerID := strings.ToLower(spiffeID)
+		if strings.Contains(lowerID, "%2f") || strings.Contains(lowerID, "%25") {
+			return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID format: %s", spiffeID)
+		}
+
+		if !strings.HasPrefix(spiffeID, "spiffe://") {
+			return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID format: %s", spiffeID)
+		}
+
+		// Authorization: ensure the caller matches the requested agent ID.
+		// Expected formats:
+		// ohc.local/org/{orgID}/agent/{agentID}
+		// onehumancorp.io/{orgID}/{agentID} (from dashboard UI logic)
+		// ohc.os/agent/{agentID} (from interop adapters)
+
+		trimmed := spiffeID[len("spiffe://"):]
+		if strings.Contains(trimmed, "..") || strings.Contains(trimmed, "//") {
+			return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID format: %s", spiffeID)
+		}
+		parts := strings.Split(trimmed, "/")
+		if len(parts) < 2 {
+			return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID lacks required path segments for agent identity: %s", spiffeID)
+		}
+
+		domain := parts[0]
+		var agentID string
+		var orgID string
+
+		if domain == "onehumancorp.io" {
+			// format: onehumancorp.io/{orgID}/{agentID}
+			if len(parts) != 3 {
+				return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain onehumancorp.io: %s", spiffeID)
+			}
+			orgID = parts[1]
+			agentID = parts[2]
+		} else if domain == "ohc.local" {
+			// format: ohc.local/org/{orgID}/agent/{agentID}
+			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+				return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain ohc.local: %s", spiffeID)
+			}
+			orgID = parts[2]
+			agentID = parts[4]
+		} else if domain == "ohc.os" {
+			// format: ohc.os/agent/{agentID}
+			if len(parts) != 3 || parts[1] != "agent" {
+				return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain ohc.os: %s", spiffeID)
+			}
+			agentID = parts[2]
+		} else if domain == "ohc.global" || strings.HasSuffix(domain, ".ohc.global") {
+			// format: {region}.ohc.global/org/{orgID}/agent/{agentID}
+			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+				return nil, status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain %s: %s", domain, spiffeID)
+			}
+			orgID = parts[2]
+			agentID = parts[4]
+		} else {
+			return nil, status.Errorf(codes.PermissionDenied, "unsupported SPIFFE trust domain in ID: %s", spiffeID)
+		}
+
+		switch v := req.(type) {
+		case *pb.RegisterAgentRequest:
+			reqAgentID := v.GetAgent().GetId()
+			if agentID != reqAgentID {
+				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot register agent %s", spiffeID, reqAgentID)
+			}
+			reqOrgID := v.GetAgent().GetOrganizationId()
+			if orgID != "" && reqOrgID != "" && orgID != reqOrgID {
+				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot register into organization %s", spiffeID, reqOrgID)
+			}
+		case *pb.PublishMessageRequest:
+			reqFromAgent := v.GetMessage().GetFromAgent()
+			if agentID != reqFromAgent {
+				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot publish as agent %s", spiffeID, reqFromAgent)
+			}
+		case *pb.DelegateTaskRequest:
+			reqFromAgent := v.GetFromAgentId()
+			if agentID != reqFromAgent {
+				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot delegate task as agent %s", spiffeID, reqFromAgent)
+			}
+		case *pb.SubTask:
+			reqFromAgent := v.GetFromAgentId()
+			if agentID != reqFromAgent {
+				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot delegate subtask as agent %s", spiffeID, reqFromAgent)
+			}
+		case *pb.ReasonRequest:
+			reqFromAgent := v.GetFromAgentId()
+			if agentID != reqFromAgent {
+				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot request reasoning as agent %s", spiffeID, reqFromAgent)
+			}
+		case *pb.OpenMeetingRequest:
+			// Ensure the calling agent is part of the meeting they are creating
+			found := false
+			for _, p := range v.GetParticipants() {
+				if p == agentID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return nil, status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot open a meeting without being a participant", spiffeID)
+			}
+		}
+
+		return handler(ctx, req)
+	}
+}
+
+// SPIFFEStreamInterceptor validates SPIFFE IDs for streaming gRPC calls.
+// Accepts no parameters.
+// Returns Explicit success/failure.
+// Produces no errors.
+// Has no side effects.
+func SPIFFEStreamInterceptor() grpc.StreamServerInterceptor {
+	return func(
+		srv interface{},
+		ss grpc.ServerStream,
+		info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler,
+	) error {
+		ctx := ss.Context()
+		spiffeID, err := ExtractSPIFFEID(ctx)
+		if err != nil {
+			return status.Errorf(codes.Unauthenticated, "unauthenticated: %v", err)
+		}
+
+		lowerID := strings.ToLower(spiffeID)
+		if strings.Contains(lowerID, "%2f") || strings.Contains(lowerID, "%25") {
+			return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID format: %s", spiffeID)
+		}
+
+		if !strings.HasPrefix(spiffeID, "spiffe://") {
+			return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID format: %s", spiffeID)
+		}
+
+		trimmed := spiffeID[len("spiffe://"):]
+		if strings.Contains(trimmed, "..") || strings.Contains(trimmed, "//") {
+			return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID format: %s", spiffeID)
+		}
+		parts := strings.Split(trimmed, "/")
+		if len(parts) < 2 {
+			return status.Errorf(codes.PermissionDenied, "SPIFFE ID lacks required path segments for agent identity: %s", spiffeID)
+		}
+
+		domain := parts[0]
+		var agentID string
+
+		if domain == "onehumancorp.io" {
+			// format: onehumancorp.io/{orgID}/{agentID}
+			if len(parts) != 3 {
+				return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain onehumancorp.io: %s", spiffeID)
+			}
+			agentID = parts[2]
+		} else if domain == "ohc.local" {
+			// format: ohc.local/org/{orgID}/agent/{agentID}
+			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+				return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain ohc.local: %s", spiffeID)
+			}
+			agentID = parts[4]
+		} else if domain == "ohc.os" {
+			// format: ohc.os/agent/{agentID}
+			if len(parts) != 3 || parts[1] != "agent" {
+				return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain ohc.os: %s", spiffeID)
+			}
+			agentID = parts[2]
+		} else if domain == "ohc.global" || strings.HasSuffix(domain, ".ohc.global") {
+			// format: {region}.ohc.global/org/{orgID}/agent/{agentID}
+			if len(parts) != 5 || parts[1] != "org" || parts[3] != "agent" {
+				return status.Errorf(codes.PermissionDenied, "invalid SPIFFE ID path structure for domain %s: %s", domain, spiffeID)
+			}
+			agentID = parts[4]
+		} else {
+			return status.Errorf(codes.PermissionDenied, "unsupported SPIFFE trust domain in ID: %s", spiffeID)
+		}
+
+		// Since StreamMessagesRequest is not directly accessible in the interceptor args,
+		// we wrap the stream to inspect the message when it's received.
+		// However, for simplicity and since it's the only stream method, we can intercept RecvMsg
+		wrapper := &recvWrapper{ServerStream: ss, spiffeID: spiffeID, agentID: agentID}
+		return handler(srv, wrapper)
+	}
+}
+
+type recvWrapper struct {
+	grpc.ServerStream
+	spiffeID string
+	agentID  string
+}
+
+// RecvMsg functionality.
+// Accepts no parameters.
+//   - m: complex; Description
+//
+// Returns error.
+// Produces errors: Returns error on failure conditions.
+// Has no side effects.
+func (w *recvWrapper) RecvMsg(m interface{}) error {
+	if err := w.ServerStream.RecvMsg(m); err != nil {
+		return err
+	}
+
+	if req, ok := m.(*pb.StreamMessagesRequest); ok {
+		reqAgentID := req.GetAgentId()
+		if w.agentID != reqAgentID {
+			return status.Errorf(codes.PermissionDenied, "SPIFFE ID %s cannot stream messages for agent %s", w.spiffeID, reqAgentID)
+		}
+	}
+	return nil
+}

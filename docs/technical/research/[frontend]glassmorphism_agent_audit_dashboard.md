@@ -14,7 +14,7 @@ Administrators and users need a "Premium" visual interface to monitor the OHC sw
 - **Cost Tracker**: A real-time counter showing USD spend across the organization.
 
 ## Implementation Prompt
-1. Build a new Flutter/React component `AgentAuditDashboard` in `srcs/app/ui/components/`.
+1. Build a new Flutter/React component `AgentAuditDashboard` in `src/app/ui/components/`.
 2. Apply `Glassmorphism` styling: `box-shadow`, `backdrop-filter: blur(20px)`, `border: 1px solid rgba(255, 255, 255, 0.1)`.
 3. Integrate with the Telemetry API to fetch real-time metrics.
 4. Implement a "Live Log" view that streams `stdout/stderr` from the `bash_sandbox` via WebSockets.

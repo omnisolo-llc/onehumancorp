@@ -1,4 +1,4 @@
-<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: \'Outfit\', \'Inter\', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; color: #fff;">
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
 # OHC Help Portal: Visual Walkthroughs
 
@@ -116,6 +116,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[KAIROS UltraPlan Deliberation Architecture: Visual Walkthrough](ultraplan_deliberation.md)**
 - **[Full-Spectrum Hybrid Observability Dashboard Walkthrough](hybrid_observability_dashboard.md)**
 - **[Edge LLM Offloading Protocol Walkthrough](edge_llm_offloading.md)**: Visual guide to dynamic inference routing.
+- **[Edge LLM Offloading Protocol Walkthrough](edge_llm_offloading.md)**: Visual guide to dynamic inference routing.
 - **[KAIROS Interactive API Playbook Walkthrough](kairos_interactive_api_playbook.md)**: Interactive guide to KAIROS API endpoints.
 - **[KAIROS API Playbook Visual Walkthrough](api_playbook_visual_walkthrough.md)**: Comprehensive visual diagrams for the API Playbook.
 - **[Hybrid Health Probe Walkthrough](hybrid_health_probe.md)**: Visual guide to the system health checks across standalone and cloud modes.
@@ -144,4 +145,5 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 *For more advanced topics, API references, and payload examples, see the [API Playbook](../api/playbook.md).*
 
 
+- **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
 </div>

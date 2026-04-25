@@ -68,12 +68,12 @@ sequenceDiagram
 The Teammate Mesh provides sub-millisecond Pub/Sub capabilities to orchestrate agents actively working on the Shared Task List.
 
 ### 3.1 Architecture
-*   **Realtime Transport (`srcs/server/orchestration/hub.go`)**: Implement generic `MeshTransport` interface with `RedisMeshTransport` (Cloud, mapping to production Redis Pub/Sub channels like `mesh:tasks`, `mesh:coordination`) and `MemoryMeshTransport` (Standalone).
+*   **Realtime Transport (`src/server/orchestration/hub.go`)**: Implement generic `MeshTransport` interface with `RedisMeshTransport` (Cloud, mapping to production Redis Pub/Sub channels like `mesh:tasks`, `mesh:coordination`) and `MemoryMeshTransport` (Standalone).
 *   **Delivery**: Up to 10k msgs/sec multiplexed down to the CEO dashboard via WebSockets and Agent-to-Agent via gRPC.
 *   **Security**: Uses SPIFFE/SPIRE for Agent SVID issuance. All internal mesh API routes explicitly demand mTLS interceptor checks.
 
 ### 3.2 API Contracts & Protobufs
-Agents interact with the Mesh using standard HTTP POSTs and updated gRPC contracts (`srcs/proto/hub.proto`):
+Agents interact with the Mesh using standard HTTP POSTs and updated gRPC contracts (`src/proto/hub.proto`):
 *   `AdvertiseCapabilities(AgentCapabilities)`
 *   `DiscoverAgents(Query)`
 *   `StreamMeshEvents(EventStreamRequest)`
@@ -103,16 +103,16 @@ Agents lack long-term coherence. AutoDream runs passively to translate ephemeral
 ### 5.1 KAIROS Shared Task List Decomposition
 **Role:** Implementer
 **Objective:** Implement the `TaskDecompositionService`.
-**Prompt:** Create the `swarm_tasks` and `state_machine_transitions` tables via Go/SQL migrations in `srcs/server/db/migrations/` (support Postgres and SQLite). Implement `TaskDecompositionService` in `srcs/server/orchestration/tasks/` providing CRUD, DAG sequence checking via dependencies, and robust status state transitions. For Postgres, ensure `FOR UPDATE SKIP LOCKED` is used when workers claim tasks; for SQLite, degrade to standard transactions. Ensure 100% test coverage using standard mocked `db.Provider`.
+**Prompt:** Create the `swarm_tasks` and `state_machine_transitions` tables via Go/SQL migrations in `src/server/db/migrations/` (support Postgres and SQLite). Implement `TaskDecompositionService` in `src/server/orchestration/tasks/` providing CRUD, DAG sequence checking via dependencies, and robust status state transitions. For Postgres, ensure `FOR UPDATE SKIP LOCKED` is used when workers claim tasks; for SQLite, degrade to standard transactions. Ensure 100% test coverage using standard mocked `db.Provider`.
 
 ### 5.2 Realtime Teammate Mesh APIs
 **Role:** Implementer
 **Objective:** Implement the Teammate Mesh backend transport.
-**Prompt:** Define the `MeshTransport` interface in `srcs/server/orchestration/hub.go` with `Publish` and `Subscribe`. Provide `RedisMeshTransport` using `rueidis` for cloud deployment, targeting `mesh:tasks` and `mesh:coordination` channels. Provide `MemoryMeshTransport` using Go channels for standalone execution. Add WebSocket handler for subscribing in `srcs/server/api/mesh_handler.go`. Implement 100% unit tests.
+**Prompt:** Define the `MeshTransport` interface in `src/server/orchestration/hub.go` with `Publish` and `Subscribe`. Provide `RedisMeshTransport` using `rueidis` for cloud deployment, targeting `mesh:tasks` and `mesh:coordination` channels. Provide `MemoryMeshTransport` using Go channels for standalone execution. Add WebSocket handler for subscribing in `src/server/api/mesh_handler.go`. Implement 100% unit tests.
 
 ### 5.3 AutoDream pgvector Pipelines
 **Role:** Implementer
 **Objective:** Architect the AutoDream long-term vector state pipeline.
-**Prompt:** Add PostgreSQL migration enabling `vector` extension and creating `consolidated_memory` in `srcs/server/db/migrations/`. Build `AutoDreamPipeline` worker in `srcs/server/autodream/` that polls finished `swarm_tasks` and session logs, requests embeddings through the injected `LLMClient` interface, and stores them in Postgres using `pgvector` operators (`<=>`). Implement 100% unit tests for the worker using mock dependencies.
+**Prompt:** Add PostgreSQL migration enabling `vector` extension and creating `consolidated_memory` in `src/server/db/migrations/`. Build `AutoDreamPipeline` worker in `src/server/autodream/` that polls finished `swarm_tasks` and session logs, requests embeddings through the injected `LLMClient` interface, and stores them in Postgres using `pgvector` operators (`<=>`). Implement 100% unit tests for the worker using mock dependencies.
 
 </div>

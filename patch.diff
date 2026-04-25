@@ -1,0 +1,59 @@
+diff --git a/srcs/server/dashboard/server.go b/srcs/server/dashboard/server.go
+index c264113e..01fc7b77 100644
+--- a/srcs/server/dashboard/server.go
++++ b/srcs/server/dashboard/server.go
+@@ -881,15 +881,13 @@ func (s *Server) bootstrapInternalDefaultAgent() {
+		region = "docker"
+	}
+
+-	s.hub.RegisterAgent(orchestration.Agent{
+-		ID:             s.org.ID + "-agent-internal-default",
+-		Name:           name,
+-		Role:           role,
+-		OrganizationID: s.org.ID,
+-		Status:         orchestration.StatusIdle,
+-		ProviderType:   string(agents.ProviderTypeBuiltin),
+-		Region:         region,
+-	})
++	s.hub.RegisterAgent(orchestration.AgentFactory(
++		s.org.ID+"-agent-internal-default",
++		name,
++		role,
++		s.org.ID,
++		region,
++	))
+ }
+
+ func (s *Server) defaultInternalAgentRole() string {
+diff --git a/srcs/server/orchestration/BUILD.bazel b/srcs/server/orchestration/BUILD.bazel
+index 1cec65ed..72f4c2cd 100644
+--- a/srcs/server/orchestration/BUILD.bazel
++++ b/srcs/server/orchestration/BUILD.bazel
+@@ -6,6 +6,7 @@ go_library(
+     name = "orchestration",
+     srcs = [
+         "agent_context.go",
++        "agent_factory.go",
+         "auth_interceptor.go",
+         "autodream.go",
+         "autodream_advanced.go",
+diff --git a/srcs/server/orchestration/agent_factory.go b/srcs/server/orchestration/agent_factory.go
+new file mode 100644
+index 00000000..5947ad55
+--- /dev/null
++++ b/srcs/server/orchestration/agent_factory.go
+@@ -0,0 +1,14 @@
++package orchestration
++
++// AgentFactory creates a new Agent configured to use the builtin AI engine by default.
++func AgentFactory(id, name, role, organizationID, region string) Agent {
++	return Agent{
++		ID:             id,
++		Name:           name,
++		Role:           role,
++		OrganizationID: organizationID,
++		Status:         StatusIdle,
++		ProviderType:   "builtin",
++		Region:         region,
++	}
++}

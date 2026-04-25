@@ -10,7 +10,7 @@ Most existing agentic frameworks configure rate limits statically or rely strict
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/rate_limiter/`.
+- Create a new package `src/server/lib/integrations/rate_limiter/`.
 - Introduce a `RateLimiterManager` implementing the MCP Tool interface.
 - Dynamically select the backend driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize Redis (e.g., via `go-redis`) to implement a distributed token bucket or sliding window algorithm.
@@ -24,7 +24,7 @@ Most existing agentic frameworks configure rate limits statically or rely strict
 - Ensure `organization_id` prefixes are rigorously applied to bucket keys in Cloud mode to enforce cross-tenant isolation.
 
 ## Implementation Prompt
-"Implement the Hybrid Rate Limiter MCP tool in `srcs/server/lib/integrations/rate_limiter/`.
+"Implement the Hybrid Rate Limiter MCP tool in `src/server/lib/integrations/rate_limiter/`.
 1. Create `rate_limiter.go` defining the `RateLimiterManager` and its MCP capabilities (`RequestTokens`, `GetRateLimitStatus`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Redis-backed token bucket algorithm ensuring `organization_id` is used as part of the cache key.

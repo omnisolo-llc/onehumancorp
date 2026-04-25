@@ -38,7 +38,7 @@ sequenceDiagram
 ```
 
 ## 2. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication via transport components defined in `srcs/server/orchestration/`.
+Realtime communication via transport components defined in `src/server/orchestration/`.
 
 - **Cloud-Native Mode:** Uses Redis Pub/Sub to manage highly concurrent distributed queues via channels like `mesh:events:task_created`.
 - **Standalone Mode:** Degrades gracefully to an in-memory channel broadcast to ensure low-latency IPC.

@@ -34,8 +34,8 @@ Key security mechanics observed in `src/tools/BashTool/bashSecurity.ts`:
 
 | Capability | OHC-HA (Current) | Claude Code (v2.1.88) | Gap Resolution |
 | :--- | :--- | :--- | :--- |
-| **Tool Integration** | Bespoke / Custom Interfaces | Native MCP (Model Context Protocol) | Implement `srcs/server/harness/mcp/` manager |
-| **Bash Execution** | Basic Shell Wrappers | Semantic AST Parsing & Validations | Implement `srcs/server/harness/bash_sandbox/` |
+| **Tool Integration** | Bespoke / Custom Interfaces | Native MCP (Model Context Protocol) | Implement `src/server/harness/mcp/` manager |
+| **Bash Execution** | Basic Shell Wrappers | Semantic AST Parsing & Validations | Implement `src/server/harness/bash_sandbox/` |
 | **Sandbox Isolation** | OS-level generic boundaries | Strict FS/Network per-command rules | Integrate scoped sandbox policies |
 | **Extensibility** | Manual Tool Porting | Zero-friction `.mcp.json` imports | Expose OHC internal tools as MCP schemas |
 

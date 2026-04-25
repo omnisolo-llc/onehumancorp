@@ -22,7 +22,7 @@ We need a Webhook Relay service in the Cloud-Native tier and a matching receiver
 4.  **Graceful Degradation**: If the local instance is offline, the Cloud Relay should queue the webhook in PostgreSQL (or Redis) and deliver it when the local instance reconnects.
 
 ## Implementation Prompt
-**Task**: Implement the Hybrid Webhook Relay in `srcs/server/lib/integrations/`.
+**Task**: Implement the Hybrid Webhook Relay in `src/server/lib/integrations/`.
 1.  **Cloud Relay**: Implement `RelayServer` in Go that exposes an ingestion endpoint. It must authenticate external webhook signatures (e.g., standard HMAC verification) if configured.
 2.  **State Management**: Implement a persistent queue mechanism using PostgreSQL to store webhooks if the target local instance is disconnected.
 3.  **Tunnel Delivery**: Implement the delivery mechanism over the existing `Teammate Mesh` reverse-tunnel infrastructure.

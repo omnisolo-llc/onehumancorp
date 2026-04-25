@@ -4,7 +4,7 @@
 
 ## 1. Overview
 
-This guide covers the Bazel-native Flutter app workflow in `srcs/app`.
+This guide covers the Bazel-native Flutter app workflow in `src/app`.
 The app's screenshots are generated from the Bazel-built Flutter web bundle by
 running Playwright with platform-specific viewport and device profiles.
 
@@ -13,7 +13,7 @@ running Playwright with platform-specific viewport and device profiles.
 Run either of the following from the repository root:
 
 ```bash
-bazelisk run //srcs/app:capture_screenshots
+bazelisk run //src/app:capture_screenshots
 ```
 
 Or use the VS Code task `App: Capture Flutter screenshots`.

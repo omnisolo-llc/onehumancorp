@@ -105,7 +105,7 @@ Large
 
 <div class="glass-card">
   <h2>Design Doc</h2>
-  <p>The new Agent Harness module will reside in <code>srcs/server/harness/</code> and consists of three core components:</p>
+  <p>The new Agent Harness module will reside in <code>src/server/harness/</code> and consists of three core components:</p>
 
   <h3>1. SandboxManager</h3>
   <p>Provides a unified <code>SandboxBackend</code> interface with implementations for Local, Docker, and K8s execution. Includes a strict validation layer for security.</p>
@@ -137,13 +137,13 @@ type HarnessLifecycle interface {
 
 <div class="glass-card">
   <h2>Implementation Prompt</h2>
-  <p>Implement the Agent Harness architecture in Go under <code>srcs/server/harness/</code>:</p>
+  <p>Implement the Agent Harness architecture in Go under <code>src/server/harness/</code>:</p>
   <ol>
     <li>Create <code>sandbox.go</code> defining the <code>SandboxBackend</code> interface and a <code>DockerBackend</code> implementation. Use <code>OHCMultitenant</code> env var to conditionally enable K8s support.</li>
     <li>Create <code>sync.go</code> for the <code>FileSyncBridge</code> using a struct that hashes files and syncs deltas. Protect the state with distributed Redis locks.</li>
     <li>Create <code>lifecycle.go</code> defining the <code>HarnessLifecycle</code> interface.</li>
     <li>Ensure 100% unit test coverage for all new files.</li>
     <li>All metrics MUST be exported using OpenTelemetry.</li>
-    <li>Verify implementation via <code>bazelisk test //srcs/server/harness/...</code>.</li>
+    <li>Verify implementation via <code>bazelisk test //src/server/harness/...</code>.</li>
   </ol>
 </div>

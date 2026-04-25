@@ -13,7 +13,7 @@ Current agentic OS implementations often rely on polling or heavy message broker
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/lib/integrations/websockets/`.
+- Create a new package `src/server/lib/integrations/websockets/`.
 - Introduce a `WebSocketManager` implementing the MCP Tool interface.
 - Dynamically select the backend driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Integrate with Redis Pub/Sub to synchronize WebSocket messages across distributed pods.
@@ -27,7 +27,7 @@ Current agentic OS implementations often rely on polling or heavy message broker
 - Enforce `organization_id` based topic isolation in Cloud mode to prevent cross-tenant data leakage.
 
 ## Implementation Prompt
-"Implement the Hybrid WebSockets MCP tool in `srcs/server/lib/integrations/websockets/`.
+"Implement the Hybrid WebSockets MCP tool in `src/server/lib/integrations/websockets/`.
 1. Create `websockets.go` defining the `WebSocketManager` and its MCP capabilities (`Broadcast`, `RegisterConnection`).
 2. Implement environment-agnostic logic, checking `os.Getenv(\"OHC_MULTITENANT\") == \"true\"` for Cloud mode.
 3. For Cloud mode, implement Redis Pub/Sub integration for message distribution, ensuring `organization_id` prefixes on topics.

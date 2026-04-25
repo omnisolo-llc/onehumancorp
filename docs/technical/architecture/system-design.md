@@ -82,7 +82,7 @@ graph TD
 - **Thin Client APIs**: All UI actions must map to identical REST or gRPC definitions regardless of the target backend. Endpoints gracefully degrade if a service is unavailable (e.g., if Redis Pub/Sub is missing, fallback to local memory channels).
 - **Verification**: Architectural changes must maintain parity across both hybrid targets.
 
-### 3.3 Orchestration Hub (`srcs/server/orchestration/`)
+### 3.3 Orchestration Hub (`src/server/orchestration/`)
 The `Hub` is the central coordinator using a thread-safe registry (`sync.RWMutex`). It manages:
 - **Agent Lifecycle**: `RegisterAgent(Agent)`, `FireAgent(id)`.
 - **Communication**: `Publish(Message)` routes events to specific agent inboxes or meeting room transcripts.
@@ -90,7 +90,7 @@ The `Hub` is the central coordinator using a thread-safe registry (`sync.RWMutex
 - **Capability Plugin Mesh**: A decentralized capability system where agents dynamically ingest "Capability Plugins" at runtime. Capabilities are hosted as standalone K8s services exposing a standardized `CapabilityManifest`, enabling agents to discover and adopt new tools and roles on the fly via the MCP Gateway.
 
 ### 3.4 Data Models (Go & Protobuf)
-#### Domain Entities (`srcs/server/domain/organization.go`)
+#### Domain Entities (`src/server/domain/organization.go`)
 ```go
 type Organization struct {
     ID           string        `json:"id"`
@@ -100,7 +100,7 @@ type Organization struct {
     RoleProfiles []RoleProfile `json:"roleProfiles"`
 }
 ```
-#### Protobuf API Contract (`srcs/proto/agent.proto`)
+#### Protobuf API Contract (`src/proto/agent.proto`)
 ```protobuf
 message AgentMessage {
   string id = 1;

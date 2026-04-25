@@ -12,7 +12,7 @@ The Hybrid Config Sync MCP Tool operates as an interface for configuration propa
 
 ### API Contracts
 ```go
-// srcs/server/integrations/mcp_config_sync/tool.go
+// src/server/integrations/mcp_config_sync/tool.go
 type ConfigSyncPayload struct {
     TenantID string            `json:"tenant_id"`
     AgentID  string            `json:"agent_id"`

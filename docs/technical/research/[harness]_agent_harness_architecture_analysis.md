@@ -53,15 +53,15 @@ graph TD
 ```
 
 ### Components
-1. **Harness API (Go):** Expand `srcs/server/agents/harness/harness.go` to support multiple backends (`LocalBwrap`, `Docker`).
-2. **Bwrap Adapter:** Create `srcs/server/agents/harness/bwrap.go` that implements the `Harness` interface. It must dynamically construct `bwrap` command-line arguments based on an `AgentHarnessPolicy`.
+1. **Harness API (Go):** Expand `src/server/agents/harness/harness.go` to support multiple backends (`LocalBwrap`, `Docker`).
+2. **Bwrap Adapter:** Create `src/server/agents/harness/bwrap.go` that implements the `Harness` interface. It must dynamically construct `bwrap` command-line arguments based on an `AgentHarnessPolicy`.
 3. **AgentHarnessPolicy:** A struct defining `WorkspaceDir`, `ReadOnlyMounts`, `TmpDir`, and `NetworkEnabled`.
 
 ## Implementation Prompt
 **Role:** Implementer Agent
 **Task:** Implement the `bwrap` backend for the OHC Agent Harness.
-1. Define the `AgentHarnessPolicy` struct in `srcs/server/agents/harness/policy.go`.
-2. Implement `bwrapHarness` in `srcs/server/agents/harness/bwrap.go`.
+1. Define the `AgentHarnessPolicy` struct in `src/server/agents/harness/policy.go`.
+2. Implement `bwrapHarness` in `src/server/agents/harness/bwrap.go`.
 3. The `Exec` method should construct a `bwrap` command. It MUST include: `--unshare-all`, `--share-net` (if network is enabled), `--ro-bind / /`, and `--bind <workspace> <workspace>`.
 4. Ensure 100% unit test coverage for `bwrap.go` using a mock exec interface.
 

@@ -42,7 +42,7 @@ The CEO wants to perform a "Deep Audit" of the entire organizational codebase us
 - **Stack:** Go 1.25, Bazel 9.0.0, Postgres, Redis.
 - **Deployment:** Kubernetes via custom OHC Operator.
 - **Communication:** Pub/Sub for async, gRPC/MCP for sync tool calls.
-- **Code Organization:** Services located in `srcs/` and proto definitions in `srcs/proto/`.
+- **Code Organization:** Services located in `src/` and proto definitions in `src/proto/`.
 
 ## 8. Edge Cases
 - **Network Partitions:** Fallback to cached state and retry logic for tool calls.

@@ -91,7 +91,7 @@ th {
 | **Parsing** | None | Regex + AST Validation | Go AST Validator |
 
 ## Implementation Prompt
-"Implement the `ohc-harness` execution environment in `srcs/server/harness/`. Utilize Bubblewrap (`bwrap`) via Go's `os/exec` for Linux isolation. Route network traffic through an injected SOCKS5 proxy to enforce `NetworkPolicy` restrictions. Add OpenTelemetry tracing to track command start, exit, stdout size, and stderr events. Achieve 100% test coverage."
+"Implement the `ohc-harness` execution environment in `src/server/harness/`. Utilize Bubblewrap (`bwrap`) via Go's `os/exec` for Linux isolation. Route network traffic through an injected SOCKS5 proxy to enforce `NetworkPolicy` restrictions. Add OpenTelemetry tracing to track command start, exit, stdout size, and stderr events. Achieve 100% test coverage."
 
 ## Priority
 P0

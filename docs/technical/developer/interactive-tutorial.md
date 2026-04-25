@@ -8,12 +8,12 @@ Welcome to the One Human Corp (OHC) interactive developer tutorial. This guide w
 
 First, define your new persona in the agent registry. This involves updating the provider configurations.
 
-Create a new file in `srcs/server/agents/` or modify an existing registry file to include your agent's profile:
+Create a new file in `src/server/agents/` or modify an existing registry file to include your agent's profile:
 
 ```go
 package agents
 
-import "github.com/onehumancorp/ohc/srcs/server/agents/types"
+import "github.com/onehumancorp/ohc/src/server/agents/types"
 
 var QualityAssurancePersona = types.AgentProfile{
     Name:     "Sentinel",
@@ -76,7 +76,7 @@ Before you commit the new agent, ensure it builds hermetically inside the Bazel 
 bazelisk run //:gazelle
 
 # Run the test suite
-bazelisk test //srcs/server/agents/...
+bazelisk test //src/server/agents/...
 ```
 
 <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #007BFF; background: rgba(0, 123, 255, 0.1);">

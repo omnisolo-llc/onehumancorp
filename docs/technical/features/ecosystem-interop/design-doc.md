@@ -20,7 +20,7 @@ The "Ecosystem Interoperability" feature establishes the One Human Corp (OHC) "A
 - Native execution environments for Python-based frameworks (adapters act as a bridge, relying on external API hooks or sidecar containers for non-Go execution).
 
 ## 3. Detailed Architecture
-### 3.1 Universal Interface (`srcs/interop/types.go`)
+### 3.1 Universal Interface (`src/interop/types.go`)
 The core OHC control plane exposes a `UniversalAgent` interface. Every supported framework has a corresponding adapter that translates framework-specific constructs into OHC events.
 
 ### 3.2 Framework Adapters

@@ -1,0 +1,126 @@
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+
+rust_library(
+    name = "core",
+    srcs = [
+        "auth.rs",
+        "budget.rs",
+        "caveman.rs",
+        "core.rs",
+        "memory.rs",
+        "pubsub.rs",
+        "types.rs",
+    ],
+    crate_name = "ohc_builtin_agent_core",
+    edition = "2024",
+    visibility = ["//src/server/agents/builtin:__subpackages__"],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:tracing",
+        "@crates//:uuid",
+        "@crates//:hmac",
+        "@crates//:once_cell",
+        "@crates//:sha2",
+        "@crates//:regex",
+    ],
+)
+
+# Main agent library.
+rust_library(
+    name = "ohc_builtin_agent_lib",
+    srcs = [
+        "agent.rs",
+        "lib.rs",
+        "service.rs",
+        "departments.rs",
+        "guardrails.rs",
+    ],
+    crate_name = "ohc_builtin_agent",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-recursion",
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":core",
+        "//src/server/agents/builtin/src/gen:proto",
+        "//src/server/agents/builtin/src/llm",
+        "//src/server/agents/builtin/src/tools",
+    ] + [
+        "@crates//:base64",
+        "@crates//:chrono",
+        "@crates//:redis",
+        "@crates//:flate2",
+        "@crates//:futures",
+        "@crates//:glob",
+        "@crates//:hex",
+        "@crates//:hmac",
+        "@crates//:once_cell",
+        "@crates//:prost",
+        "@crates//:rand",
+        "@crates//:regex",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sha2",
+        "@crates//:tokio",
+        "@crates//:tokio-stream",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:tracing-subscriber",
+        "@crates//:urlencoding",
+        "@crates//:uuid",
+    ],
+)
+
+rust_binary(
+    name = "ohc-builtin-agent",
+    srcs = ["main.rs"],
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-recursion",
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":ohc_builtin_agent_lib",
+        ":core",
+    ] + [
+        "@crates//:base64",
+        "@crates//:chrono",
+        "@crates//:redis",
+        "@crates//:flate2",
+        "@crates//:futures",
+        "@crates//:glob",
+        "@crates//:hex",
+        "@crates//:hmac",
+        "@crates//:once_cell",
+        "@crates//:prost",
+        "@crates//:rand",
+        "@crates//:regex",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sha2",
+        "@crates//:tokio",
+        "@crates//:tokio-stream",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:tracing-subscriber",
+        "@crates//:urlencoding",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "unit_tests",
+    crate = ":ohc_builtin_agent_lib",
+    edition = "2024",
+)

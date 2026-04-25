@@ -10,7 +10,7 @@ Most existing agentic frameworks configure task scheduling statically or rely st
 
 ## Design Doc
 **Architecture:**
-- Create a new package `srcs/server/integrations/task_scheduler/`.
+- Create a new package `src/server/integrations/task_scheduler/`.
 - Introduce a `TaskSchedulerManager` implementing the MCP Tool interface.
 - Dynamically select the backend driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize Redis (e.g., via `asynq`) or Postgres to implement a distributed task queue.
@@ -24,7 +24,7 @@ Most existing agentic frameworks configure task scheduling statically or rely st
 - Ensure `organization_id` prefixes are rigorously applied to queue names and task metadata in Cloud mode to enforce cross-tenant isolation.
 
 ## Implementation Prompt
-"Implement the Hybrid Task Scheduler MCP tool in `srcs/server/integrations/task_scheduler/`.
+"Implement the Hybrid Task Scheduler MCP tool in `src/server/integrations/task_scheduler/`.
 1. Create `task_scheduler.go` defining the `TaskSchedulerManager` and its MCP capabilities (`EnqueueTask`, `GetTaskStatus`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Redis-backed queue ensuring `organization_id` is used to enforce isolation.

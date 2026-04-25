@@ -1,0 +1,18 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "docs",
+    srcs = ["generator.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/docs",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "docs_test",
+    srcs = ["generator_test.go"],
+    embed = [":docs"],
+)

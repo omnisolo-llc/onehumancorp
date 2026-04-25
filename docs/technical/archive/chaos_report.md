@@ -13,6 +13,6 @@
 - Fixed missing `compressSessionContexts` PostgreSQL logic in `autodream.go`, guaranteeing ML-Resilience is fully symmetric between Standalone (SQLite) and Cloud (PostgreSQL) environments.
 
 ## Phase 4: Final Verification
-- Ran comprehensive validation suites (`bazelisk test //srcs/server/...`) simulating system failure modes.
+- Ran comprehensive validation suites (`bazelisk test //src/server/...`) simulating system failure modes.
 - **Status:** All tests are 100% green and verified under chaos load.
 </div>

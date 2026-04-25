@@ -5,7 +5,7 @@
 ## 1. Shared Task List
 - **Cloud-Native**: PostgreSQL `shared_tasks` table.
 - **Standalone**: SQLite fallback.
-- **Migrations**: Required in `srcs/server/db/migrations/`.
+- **Migrations**: Required in `src/server/db/migrations/`.
 
 ## 2. Teammate Mesh
 - **Cloud-Native**: Redis Pub/Sub channels `mesh:tasks`, `mesh:coordination`.

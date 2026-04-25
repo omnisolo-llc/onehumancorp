@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-The `srcs/integrations/registry.go` package handles connections to external services via user-provided URLs. This design document outlines the strategy for preventing Server-Side Request Forgery (SSRF) vulnerabilities in the Integrations Registry.
+The `src/integrations/registry.go` package handles connections to external services via user-provided URLs. This design document outlines the strategy for preventing Server-Side Request Forgery (SSRF) vulnerabilities in the Integrations Registry.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -46,7 +46,7 @@ The `Connect()` method in `Registry` will be updated to call `validateURL()` on 
 - **Missing Scheme:** Ensure the URL parser enforces a valid scheme (http/https).
 
 ## 5. Implementation Details
-- **Location:** `srcs/integrations/registry.go` and `srcs/integrations/registry_test.go`.
+- **Location:** `src/integrations/registry.go` and `src/integrations/registry_test.go`.
 - **Language:** Go 1.25.
 - **Dependencies:** Standard library `net` and `net/url`.
 

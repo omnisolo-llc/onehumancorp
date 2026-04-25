@@ -10,7 +10,7 @@ The **Sub-Agent Orchestration Queue** is a critical component of the OHC Hybrid 
 The queue utilizes a state-machine driven backend to coordinate jobs.
 
 ### Component Design
-- **Queue Manager (`srcs/server/orchestration/queue/queue.go`)**: Manages the ingestion, polling, and dispatch of sub-agent jobs.
+- **Queue Manager (`src/server/orchestration/queue/queue.go`)**: Manages the ingestion, polling, and dispatch of sub-agent jobs.
 - **Worker Nodes**: Isolated sub-agents spawned to execute specific payloads.
 
 ### Hybrid Strategy

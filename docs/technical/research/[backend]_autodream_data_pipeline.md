@@ -34,7 +34,7 @@ CREATE INDEX ON consolidated_memory USING ivfflat (embedding vector_cosine_ops);
 </div>
 
 ## Implementation Prompt
-Implement the AutoDream Data Pipelines in `srcs/server/orchestration/autodream/`. Create the `consolidated_memory` schema with the `embedding vector(1536)` column and the corresponding `ivfflat` index in PostgreSQL. Add SQLite fallbacks for standalone mode using local FTS/Vector extensions. Build an asynchronous worker that extracts closed Tasks, embeds them using the configured LLM API (e.g., Minimax, Cohere, or OpenAI), and stores them in the database. Implement a semantic search abstraction to query this long-term memory via cosine similarity. Ensure that the pipeline gracefully handles embedding API rate limits. Write thorough unit and integration tests covering the embedding extraction, storage, and retrieval processes.
+Implement the AutoDream Data Pipelines in `src/server/orchestration/autodream/`. Create the `consolidated_memory` schema with the `embedding vector(1536)` column and the corresponding `ivfflat` index in PostgreSQL. Add SQLite fallbacks for standalone mode using local FTS/Vector extensions. Build an asynchronous worker that extracts closed Tasks, embeds them using the configured LLM API (e.g., Minimax, Cohere, or OpenAI), and stores them in the database. Implement a semantic search abstraction to query this long-term memory via cosine similarity. Ensure that the pipeline gracefully handles embedding API rate limits. Write thorough unit and integration tests covering the embedding extraction, storage, and retrieval processes.
 
 ## Priority
 P1

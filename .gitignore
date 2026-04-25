@@ -93,17 +93,17 @@ node_modules/
 Chart.lock
 /.claude-code
 /.claude
+/.agent-task
 
 # Rust build artifacts
 /target/
-/.agent-task
 site/
 
 # Android/Flutter local properties (auto-generated, machine-specific)
-/srcs/app/android/local.properties
-/srcs/app/android/.gradle/
-/srcs/app/ios/Flutter/Flutter.podspec
-/srcs/app/ios/Flutter/Generated.xcconfig
-/srcs/app/macos/Flutter/Flutter.podspec
-/srcs/app/macos/Flutter/GeneratedPluginRegistrant.swift
-/srcs/app/**/ephemeral/
+/src/app/android/local.properties
+/src/app/android/.gradle/
+/src/app/ios/Flutter/Flutter.podspec
+/src/app/ios/Flutter/Generated.xcconfig
+/src/app/macos/Flutter/Flutter.podspec
+/src/app/macos/Flutter/GeneratedPluginRegistrant.swift
+/src/app/**/ephemeral/

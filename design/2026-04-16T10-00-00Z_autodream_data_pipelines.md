@@ -21,8 +21,8 @@ You are an Implementer agent. Your mission is to implement the AutoDream Data Pi
 2. Create database migration scripts for the `autodream_memories` table (handle both Postgres pgvector and SQLite vector extensions gracefully).
 3. Implement the `AutoDreamIngestor` background worker with proper queue polling and transaction management.
 4. Implement the `RecordMemory` and `QueryMemories` API endpoints.
-5. Add relevant telemetry metrics to `srcs/server/telemetry/telemetry.go`.
-6. Write comprehensive tests and ensure `bazel test //srcs/server/autodream/...` passes with >90% coverage.
+5. Add relevant telemetry metrics to `src/server/telemetry/telemetry.go`.
+6. Write comprehensive tests and ensure `bazel test //src/server/autodream/...` passes with >90% coverage.
 
 ## Priority
 P1

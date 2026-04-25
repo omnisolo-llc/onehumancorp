@@ -41,7 +41,7 @@ Ensure all related UI components strictly adhere to the OHC Premium Feel defined
 **To the Implementer:**
 Please implement the KAIROS Orchestration Engine per the Design Doc above.
 1. Implement the database schema changes for `mcp_tool_state`, `shared_tasks`, `state_machine_transitions`, and `autodream_memories` using the existing Go migration framework. Ensure `FOR UPDATE SKIP LOCKED` is used for Postgres and gracefully falls back for SQLite.
-2. Implement the `DynamicTaskRouter` in `srcs/server/orchestration/` to handle task claiming via Redis/Memory pub-sub.
+2. Implement the `DynamicTaskRouter` in `src/server/orchestration/` to handle task claiming via Redis/Memory pub-sub.
 3. Integrate `CentrifugeNode` for the Teammate Mesh APIs across `mesh:tasks`, `mesh:coordination`, and `mesh:ultraplan`.
 4. Build the `AutoDreamConsolidator` background worker to batch process session memories and generate embeddings.
 5. Achieve 100% unit test coverage for all new files. Add comprehensive E2E tests validating the full workflow.

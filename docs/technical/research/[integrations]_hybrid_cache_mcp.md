@@ -8,7 +8,7 @@ Market analysis shows that typical agentic frameworks hardcode caching backends,
 
 ## Design Doc
 **Architecture:**
-- Add a new package `srcs/server/lib/integrations/hybrid_cache/`.
+- Add a new package `src/server/lib/integrations/hybrid_cache/`.
 - Introduce a `CacheManager` that implements the MCP Tool interface.
 - Dynamically load the appropriate driver based on `os.Getenv("OHC_MULTITENANT") == "true"`.
   - `Standalone`: Local in-memory or SQLite-backed cache.
@@ -24,7 +24,7 @@ Market analysis shows that typical agentic frameworks hardcode caching backends,
 - Apply `RedactInterfacePII` to cache payloads to prevent PII leakage.
 
 ## Implementation Prompt
-"Implement the Hybrid Cache Manager MCP tool in `srcs/server/lib/integrations/hybrid_cache/`.
+"Implement the Hybrid Cache Manager MCP tool in `src/server/lib/integrations/hybrid_cache/`.
 1. Create `cache.go` defining the `CacheManager` and its MCP capabilities (`GetCache`, `SetCache`, `DeleteCache`).
 2. Implement environment-agnostic logic. Check `os.Getenv(\"OHC_MULTITENANT\") == \"true\"` to determine the driver.
 3. For Standalone mode, implement a basic local in-memory driver (e.g., using a thread-safe map or a lightweight LRU cache).

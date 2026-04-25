@@ -21,7 +21,7 @@ The Agent-to-Agent (A2A) Interaction Protocol defines the standardized communica
 
 ## 3. Detailed Design
 
-### 3.1 Message Schema (`srcs/proto/agent.proto`)
+### 3.1 Message Schema (`src/proto/agent.proto`)
 Messages are structured to carry both core content and administrative metadata:
 ```protobuf
 message AgentInteraction {

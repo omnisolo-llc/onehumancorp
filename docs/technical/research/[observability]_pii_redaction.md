@@ -6,8 +6,8 @@ Fix PII redaction leaks before JSON marshaling in telemetry and event logging.
 ## Problem Statement
 The OHC codebase enforces strict PII redaction across the multi-tenant architecture. Specifically, "In telemetry or logging code, always apply `RedactInterfacePII` (or an equivalent redaction function) to payload maps before calling `json.Marshal` to prevent PII leakage in multi-tenant environments."
 However, there are multiple code paths violating this rule:
-1. `srcs/server/telemetry/telemetry.go`: The `RecordQueueLength` function builds a payload string manually using `fmt.Sprintf` instead of safely constructing a map, redacting it, and JSON marshaling it.
-2. `srcs/server/orchestration/event_log.go`: The `sanitizeHubEvent` function takes a `raw interface{}`, immediately serializes it via `json.Marshal(raw)`, and only then attempts to unmarshal and redact. If the initial parsing fails, the unredacted payload leaks into the event log and persistent storage.
+1. `src/server/telemetry/telemetry.go`: The `RecordQueueLength` function builds a payload string manually using `fmt.Sprintf` instead of safely constructing a map, redacting it, and JSON marshaling it.
+2. `src/server/orchestration/event_log.go`: The `sanitizeHubEvent` function takes a `raw interface{}`, immediately serializes it via `json.Marshal(raw)`, and only then attempts to unmarshal and redact. If the initial parsing fails, the unredacted payload leaks into the event log and persistent storage.
 
 ## Research Report
 A deep code audit verified all `BufferMetricFunc` calls and `json.Marshal` usages.
@@ -21,7 +21,7 @@ A deep code audit verified all `BufferMetricFunc` calls and `json.Marshal` usage
 ## Implementation Prompt
 Hello Implementer agent! Your task is to resolve PII leakage risks in the telemetry and logging systems.
 
-1. In `srcs/server/telemetry/telemetry.go`, locate `func RecordQueueLength(ctx context.Context, delta int)`. Update the implementation to follow the pattern used by `RecordSwarmTaskQueueLength`:
+1. In `src/server/telemetry/telemetry.go`, locate `func RecordQueueLength(ctx context.Context, delta int)`. Update the implementation to follow the pattern used by `RecordSwarmTaskQueueLength`:
 ```go
 	if BufferMetricFunc != nil {
 		payloadMap := map[string]interface{}{
@@ -34,7 +34,7 @@ Hello Implementer agent! Your task is to resolve PII leakage risks in the teleme
 	}
 ```
 
-2. In `srcs/server/orchestration/event_log.go`, locate `func sanitizeHubEvent(raw interface{}) (HubEvent, error)`. Ensure the `raw` payload is redacted BEFORE it is ever converted to JSON. Modify the logic to immediately redact `raw`:
+2. In `src/server/orchestration/event_log.go`, locate `func sanitizeHubEvent(raw interface{}) (HubEvent, error)`. Ensure the `raw` payload is redacted BEFORE it is ever converted to JSON. Modify the logic to immediately redact `raw`:
 ```go
 func sanitizeHubEvent(raw interface{}) (HubEvent, error) {
 	redactedRaw := telemetry.RedactInterfacePII(raw)
@@ -50,7 +50,7 @@ func sanitizeHubEvent(raw interface{}) (HubEvent, error) {
 ```
 *(You will need to adjust the unmarshaling type-check logic accordingly, but the core invariant is `telemetry.RedactInterfacePII` must be invoked BEFORE `json.Marshal`)*.
 
-3. Run `bazelisk test //srcs/server/telemetry/...` and `bazelisk test //srcs/server/orchestration/...` to verify your changes pass the strict AST PII Linters.
+3. Run `bazelisk test //src/server/telemetry/...` and `bazelisk test //src/server/orchestration/...` to verify your changes pass the strict AST PII Linters.
 
 ## Priority
 P0

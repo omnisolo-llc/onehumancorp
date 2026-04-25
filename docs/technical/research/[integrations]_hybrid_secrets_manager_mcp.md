@@ -10,7 +10,7 @@ Existing MCP implementations generally rely on static environment variables (`.e
 
 ## Design Doc
 **Architecture:**
-- Add a new package `srcs/server/lib/integrations/hybrid_secrets/`.
+- Add a new package `src/server/lib/integrations/hybrid_secrets/`.
 - Introduce a `SecretsManager` that implements the MCP Tool interface.
 - Dynamically load the appropriate driver:
   - `Standalone`: Local encrypted SQLite or OS keyring driver.
@@ -28,7 +28,7 @@ Existing MCP implementations generally rely on static environment variables (`.e
 - Secrets MUST NEVER be logged or emitted to telemetry.
 
 ## Implementation Prompt
-"Implement the Hybrid Secrets Manager MCP tool in `srcs/server/lib/integrations/hybrid_secrets/`.
+"Implement the Hybrid Secrets Manager MCP tool in `src/server/lib/integrations/hybrid_secrets/`.
 1. Create `secrets.go` defining the `SecretsManager` and its MCP capabilities (`GetSecret`, `ListSecretKeys`).
 2. Implement environment-agnostic logic. Check `OHC_MULTITENANT` to determine the driver.
 3. For Standalone mode, implement a basic local driver (e.g., reading from an encrypted local path or OS mechanism).

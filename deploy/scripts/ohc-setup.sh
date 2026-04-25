@@ -40,13 +40,13 @@ echo -e "${DIM}[2/5] Verifying Standalone Mode...${RESET}"
 export OHC_MULTITENANT=false
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=standalone
-bazelisk test //srcs/server/api/...
+bazelisk test //src/server/api/...
 
 echo -e "${DIM}[3/5] Verifying Cloud Mode...${RESET}"
 export OHC_MULTITENANT=true
 export OHC_HEADLESS=false
 export OHC_SOURCE_MODE=cloud
-bazelisk test //srcs/server/api/...
+bazelisk test //src/server/api/...
 
 echo -e "${DIM}[X] Verifying .env setup...${RESET}"
 bash deploy/scripts/ohc-verify-setup.sh || { echo -e "${PURPLE}Verification failed.${RESET}"; false; }

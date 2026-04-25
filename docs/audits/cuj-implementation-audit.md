@@ -99,7 +99,7 @@ This audit evaluates the One Human Corp (OHC) web implementation against the Cri
 
 ### Existing Tests
 
-The existing Playwright tests in `srcs/tests/e2e/` are **stubs** that do not assert functionality:
+The existing Playwright tests in `src/tests/e2e/` are **stubs** that do not assert functionality:
 
 ```go
 func TestDashboardPageIsReachableAfterLogin(t *testing.T) {
@@ -113,7 +113,7 @@ func TestDashboardPageIsReachableAfterLogin(t *testing.T) {
 
 ### New CUJ Audit Tests
 
-Created `srcs/tests/e2e/cuj_audit_test.go` with proper assertions:
+Created `src/tests/e2e/cuj_audit_test.go` with proper assertions:
 
 - `TestCujAuditDashboardLoadMetrics` - Verifies dashboard elements
 - `TestCujAuditHireAgentWizardHasRequiredSteps` - Verifies wizard steps

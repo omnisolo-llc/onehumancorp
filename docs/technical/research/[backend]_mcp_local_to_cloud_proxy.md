@@ -36,7 +36,7 @@ graph TD
 
 ## Implementation Prompt
 **Task**: Implement the Local Proxy for the OHC Hybrid Agentic OS.
-1.  **Backend Implementation**: Create a new service in `srcs/server/agents/mcp/proxy` in Go.
+1.  **Backend Implementation**: Create a new service in `src/server/agents/mcp/proxy` in Go.
 2.  **Reverse Tunnel Server**: Implement the server-side endpoint in the Cloud Orchestrator that accepts incoming gRPC/WebSocket connections from the local proxy. Ensure strict SPIFFE ID validation based on `docs/research/spiffe_mcp_langgraph_sync.md`.
 3.  **Local Proxy Client**: Implement the client logic that runs in the Standalone Mode (embedded Go server). It should connect to the Cloud Orchestrator and multiplex the local MCP JSON-RPC traffic.
 4.  **Integration**: Update the MCP Switchboard to dynamically route requests to the reverse-tunneled MCP server when the cloud agent requests a locally-available tool.

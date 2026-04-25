@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "onboarding_legacy",
+    srcs = ["env_verifier.go", "server.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/services/onboarding_legacy",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "onboarding_legacy_test",
+    srcs = ["env_verifier_test.go", "server_test.go"],
+    embed = [":onboarding_legacy"],
+)

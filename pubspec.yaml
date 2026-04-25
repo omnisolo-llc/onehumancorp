@@ -6,7 +6,7 @@ environment:
   sdk: "^3.7.2"
 
 workspace:
-  - srcs/app
+  - src/app
 
 flutter:
   uses-material-design: true

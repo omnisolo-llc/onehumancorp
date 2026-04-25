@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "chaos_system_test",
+    srcs = ["chaos_system_test.go"],
+    deps = [
+        "//src/server/lib/resilience/chaos",
+    ],
+)

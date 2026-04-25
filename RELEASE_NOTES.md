@@ -1,17 +1,6 @@
 # Release Notes
 
 
-## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
-- Scaling (Cloud): Submit observability gap analysis report.
-- Privacy/Offline (Standalone): Fix Standalone DB path in CLI.
-
-## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
-### Cloud Scaling Improvements
-- Implement Hybrid Agent Harness with OpenTelemetry.
-
-### Privacy/Offline Improvements
-- Add AST Validation to enhance subshell obfuscation prevention.
-
 ## v0.4.5 (Cloud) / v0.4.5+1 (Standalone)
 - Scaling (Cloud): Implement Phase 3: AutoDream Vector Data Pipelines.
 - Privacy/Offline (Standalone): Enhance AutoDream Vector Data Pipelines for standalone privacy.

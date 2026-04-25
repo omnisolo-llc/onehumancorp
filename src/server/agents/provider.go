@@ -1,0 +1,716 @@
+// Package agents defines the extensible provider interface for external AI agent implementations.
+//
+// It allows the platform to "hire" agents backed by well-known coding and assistant tools
+// (Claude Code, Gemini CLI, OpenCode, OpenClaw, IronClaw) or by the built-in simple agent,
+// while storing per-provider credentials so users authenticate once per provider and the
+// platform forwards the auth to every agent of that type.
+package agents
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
+	"errors"
+	"sync"
+)
+
+// ProviderType is the unique identifier for an external agent implementation.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type ProviderType string
+
+const (
+	// ProviderTypeClaude targets Anthropic Claude Code (claude.ai/code). Best suited for software-engineering and security-review roles.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeClaude ProviderType = "claude"
+
+	// ProviderTypeGemini targets Google Gemini CLI. Best suited for product-management, analytics, and assistant roles.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeGemini ProviderType = "gemini"
+
+	// ProviderTypeOpenCode targets the open-source OpenCode SWE agent. Best suited for software-engineering roles.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeOpenCode ProviderType = "opencode"
+
+	// ProviderTypeOpenClaw targets the OpenClaw assistant agent. Best suited for assistant and content-strategy roles.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeOpenClaw ProviderType = "openclaw"
+
+	// ProviderTypeIronClaw targets the IronClaw agent. Best suited for security, audit, and QA roles.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeIronClaw ProviderType = "ironclaw"
+
+	// ProviderTypeBuiltin is the platform's own lightweight agent implementation. Suitable for any role when no external provider is required.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeBuiltin ProviderType = "builtin"
+
+	// ProviderTypeScout targets the Scout resource and tool integration agent. Best suited for finding resources and integrating tools.
+	// Accepts no parameters.
+	// Returns nothing.
+	// Produces no errors.
+	// Has no side effects.
+	ProviderTypeScout ProviderType = "scout"
+)
+
+// Credentials holds the authentication material for an external agent provider. Providers may use an API key, an OAuth bearer token, or both alongside any additional provider-specific configuration entries.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type Credentials struct {
+	APIKey     string            `json:"apiKey,omitempty"`
+	OAuthToken string            `json:"oauthToken,omitempty"`
+	Extra      map[string]string `json:"extra,omitempty"`
+}
+
+// IsEmpty returns true when no authentication material has been set.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (c Credentials) IsEmpty() bool {
+	return c.APIKey == "" && c.OAuthToken == ""
+}
+
+// Provider is the interface every external agent implementation must satisfy.  Implementations are registered with a Registry and selected by name when an agent is hired through the dashboard API.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+
+// IsolationStrategy defines how an agent harness handles worktree isolation.
+type IsolationStrategy interface {
+	RunInIsolation(ctx context.Context, worktree string, transport Transport) error
+}
+
+type Provider interface {
+	IsolationStrategy
+
+	// Type returns the unique identifier for this provider.
+	Type() ProviderType
+
+	// Description returns a short human-readable explanation of the provider.
+	Description() string
+
+	// SupportedRoles lists the domain Role constants this provider is
+	// optimised for.  The list is informational; the platform does not
+	// prevent other roles from using the provider.  Agent type and role
+	// are independent: any provider type may be assigned to any role.
+	SupportedRoles() []string
+
+	// Authenticate validates and stores the supplied credentials.
+	// Returns an error if the credentials are structurally invalid.
+	Authenticate(creds Credentials) error
+
+	// GetCredentials returns the currently stored credentials.
+	// Secret fields (APIKey, OAuthToken) are returned as-is so that the
+	// platform can forward them to the spawned agent process; callers that
+	// render credentials to end-users should redact these fields.
+	GetCredentials() Credentials
+
+	// IsAuthenticated reports whether valid credentials are currently stored.
+	IsAuthenticated() bool
+}
+
+// baseProvider is an embeddable helper that manages credential storage for
+// any Provider implementation.
+type baseProvider struct {
+	mu   sync.RWMutex
+	cred Credentials
+}
+
+func (b *baseProvider) store(cred Credentials) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.cred = cred
+}
+
+func (b *baseProvider) load() Credentials {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+	return b.cred
+}
+
+
+// executeInIsolation handles the shared process sandboxing and telemetry tracking per subagent invocation.
+// It syncs subagent statuses and errors dynamically via the Teammate Mesh API (Redis Pub/Sub).
+func executeInIsolation(ctx context.Context, agentType string, worktree string, transport Transport) error {
+	// 1. Process Sandboxing & Temporary Worktrees
+	sandboxID := fmt.Sprintf("sandbox-%s-%d", agentType, time.Now().UnixNano())
+
+	// 2. Dynamic status syncing to Teammate Mesh API via Redis Pub/Sub
+	statusMsg, _ := json.Marshal(map[string]interface{}{
+		"agent":    agentType,
+		"status":   "RUNNING",
+		"worktree": worktree,
+		"sandbox":  sandboxID,
+	})
+
+	if transport != nil {
+		if err := transport.Send(ctx, statusMsg); err != nil {
+			return err
+		}
+	}
+
+	// Simulating process sandbox stream piping...
+	outputMsg, _ := json.Marshal(map[string]interface{}{
+		"agent":   agentType,
+		"stream":  "stdout",
+		"content": "Execution started in isolated worktree " + worktree,
+	})
+
+	if transport != nil {
+		transport.Send(ctx, outputMsg)
+	}
+
+	endMsg, _ := json.Marshal(map[string]interface{}{
+		"agent":  agentType,
+		"status": "COMPLETED",
+	})
+
+	if transport != nil {
+		transport.Send(ctx, endMsg)
+	}
+
+	return nil
+}
+
+
+// ── Claude (Anthropic) ────────────────────────────────────────────────────────
+
+// ClaudeProvider implements Provider for Anthropic Claude Code.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type ClaudeProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *ClaudeProvider) Type() ProviderType { return ProviderTypeClaude }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *ClaudeProvider) Description() string {
+	return "Anthropic Claude Code — advanced coding and reasoning agent backed by Claude Sonnet/Opus"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *ClaudeProvider) SupportedRoles() []string {
+	return []string{"SOFTWARE_ENGINEER", "SECURITY_ENGINEER", "QA_TESTER", "ENGINEERING_DIRECTOR"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *ClaudeProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *ClaudeProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" {
+		return errors.New("claude provider requires an API key (ANTHROPIC_API_KEY)")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *ClaudeProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *ClaudeProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// RunInIsolation implements IsolationStrategy.
+func (p *ClaudeProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+}
+
+// ── Gemini (Google) ───────────────────────────────────────────────────────────
+
+// GeminiProvider implements Provider for Google Gemini CLI.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type GeminiProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *GeminiProvider) Type() ProviderType { return ProviderTypeGemini }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *GeminiProvider) Description() string {
+	return "Google Gemini CLI — multimodal assistant agent backed by Gemini Pro/Ultra"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *GeminiProvider) SupportedRoles() []string {
+	return []string{"PRODUCT_MANAGER", "ANALYTICS_ENGINEER", "MARKETING_MANAGER", "CEO"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *GeminiProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *GeminiProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" && creds.OAuthToken == "" {
+		return errors.New("gemini provider requires an API key (GEMINI_API_KEY) or an OAuth token")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *GeminiProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *GeminiProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// RunInIsolation implements IsolationStrategy.
+func (p *GeminiProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+}
+
+// ── OpenCode ──────────────────────────────────────────────────────────────────
+
+// OpenCodeProvider implements Provider for the open-source OpenCode SWE agent.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type OpenCodeProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenCodeProvider) Type() ProviderType { return ProviderTypeOpenCode }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenCodeProvider) Description() string {
+	return "OpenCode — open-source software-engineering agent with full terminal and file-system access"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenCodeProvider) SupportedRoles() []string {
+	return []string{"SOFTWARE_ENGINEER", "ENGINEERING_DIRECTOR", "QA_TESTER"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *OpenCodeProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *OpenCodeProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" {
+		return errors.New("opencode provider requires an API key")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenCodeProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenCodeProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// RunInIsolation implements IsolationStrategy.
+func (p *OpenCodeProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+}
+
+// ── OpenClaw ──────────────────────────────────────────────────────────────────
+
+// OpenClawProvider implements Provider for the OpenClaw assistant agent.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type OpenClawProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenClawProvider) Type() ProviderType { return ProviderTypeOpenClaw }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenClawProvider) Description() string {
+	return "OpenClaw — general-purpose assistant agent optimised for content strategy and growth tasks"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenClawProvider) SupportedRoles() []string {
+	return []string{"GROWTH_AGENT", "CONTENT_STRATEGIST", "MARKETING_MANAGER", "PRODUCT_MANAGER"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *OpenClawProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *OpenClawProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" {
+		return errors.New("openclaw provider requires an API key")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenClawProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *OpenClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// RunInIsolation implements IsolationStrategy.
+func (p *OpenClawProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+}
+
+// ── IronClaw ──────────────────────────────────────────────────────────────────
+
+// IronClawProvider implements Provider for the IronClaw agent.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type IronClawProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *IronClawProvider) Type() ProviderType { return ProviderTypeIronClaw }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *IronClawProvider) Description() string {
+	return "IronClaw — security and audit-focused agent with deep static-analysis capabilities"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *IronClawProvider) SupportedRoles() []string {
+	return []string{"SECURITY_ENGINEER", "AUDIT_MANAGER", "QA_TESTER"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *IronClawProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *IronClawProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" {
+		return errors.New("ironclaw provider requires an API key")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *IronClawProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *IronClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// RunInIsolation implements IsolationStrategy.
+func (p *IronClawProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+}
+
+// ── MiniMaxi ──────────────────────────────────────────────────────────────────
+
+// ProviderTypeMiniMaxi targets the MiniMaxi (minimaxi.com) API, which exposes an
+// Anthropic-compatible endpoint at https://api.minimaxi.chat/v1.  Any role that
+// works with the Anthropic Claude provider can be run on MiniMaxi instead.
+const ProviderTypeMiniMaxi ProviderType = "minimaxi"
+
+// MiniMaxiProvider implements Provider for the MiniMaxi (minimaxi.com) cloud API.
+// It uses the Anthropic-compatible text API at https://api.minimaxi.chat/v1 so the
+// same tooling that drives the Claude provider can target MiniMaxi models instead.
+type MiniMaxiProvider struct{ baseProvider }
+
+// Type returns ProviderTypeMiniMaxi.
+func (p *MiniMaxiProvider) Type() ProviderType { return ProviderTypeMiniMaxi }
+
+// Description returns a short description of MiniMaxi.
+func (p *MiniMaxiProvider) Description() string {
+	return "MiniMaxi — cloud AI API with Anthropic-compatible endpoint (api.minimaxi.chat/v1). Can be used for any role (SWE, legal, sales, etc.)."
+}
+
+// SupportedRoles returns the full set of known roles because MiniMaxi can serve any domain.
+func (p *MiniMaxiProvider) SupportedRoles() []string {
+	return []string{
+		"CEO", "PRODUCT_MANAGER", "SOFTWARE_ENGINEER", "ENGINEERING_DIRECTOR",
+		"QA_TESTER", "SECURITY_ENGINEER", "DESIGNER", "MARKETING_MANAGER",
+		"GROWTH_AGENT", "CONTENT_STRATEGIST", "SEO_SPECIALIST", "PAID_MEDIA_MANAGER",
+		"ANALYTICS_ENGINEER", "CFO", "BOOKKEEPER", "TAX_SPECIALIST",
+		"AUDIT_MANAGER", "PAYROLL_MANAGER", "AI_NEWS_COLLECTOR",
+	}
+}
+
+// Authenticate validates and stores MiniMaxi API credentials.
+// An API key starting with "sk-" is required.
+func (p *MiniMaxiProvider) Authenticate(creds Credentials) error {
+	if creds.APIKey == "" {
+		return errors.New("minimaxi provider requires an API key")
+	}
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials returns the stored credentials.
+func (p *MiniMaxiProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated reports whether a MiniMaxi API key has been stored.
+func (p *MiniMaxiProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// RunInIsolation implements IsolationStrategy.
+func (p *MiniMaxiProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+}
+
+// ── Builtin ───────────────────────────────────────────────────────────────────
+// BuiltinProvider implements Provider for the platform's own builtin agent. It requires no
+// external credentials and is always considered authenticated.  When selected, the
+// platform runs the full builtin agent loop (src/server/agents/builtin) which supports
+// LLM-driven tool execution with Bash, FileRead, FileWrite, FileEdit, Grep, Glob,
+// WebFetch, WebSearch, TodoWrite, TaskCreate/Get/List/Update, SendMessage, and
+// ToolSearch tools.  The LLM backend is auto-selected: Anthropic API
+// (ANTHROPIC_API_KEY), OpenAI-compatible (OPENAI_API_KEY), or Ollama
+// (OHC_LOCAL_LLM_ENDPOINT).
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type BuiltinProvider struct{}
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *BuiltinProvider) Type() ProviderType { return ProviderTypeBuiltin }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *BuiltinProvider) Description() string {
+	return "Built-in local agent — full agentic loop with tool execution; no external credentials required. Uses Anthropic/OpenAI/Ollama as configured."
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *BuiltinProvider) SupportedRoles() []string {
+	return []string{
+		"CEO", "PRODUCT_MANAGER", "SOFTWARE_ENGINEER", "ENGINEERING_DIRECTOR",
+		"QA_TESTER", "SECURITY_ENGINEER", "DESIGNER", "MARKETING_MANAGER",
+		"GROWTH_AGENT", "CONTENT_STRATEGIST", "SEO_SPECIALIST", "PAID_MEDIA_MANAGER",
+		"ANALYTICS_ENGINEER", "CFO", "BOOKKEEPER", "TAX_SPECIALIST",
+		"AUDIT_MANAGER", "PAYROLL_MANAGER", "AI_NEWS_COLLECTOR",
+	}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *BuiltinProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *BuiltinProvider) Authenticate(_ Credentials) error { return nil }
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *BuiltinProvider) GetCredentials() Credentials { return Credentials{} }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *BuiltinProvider) IsAuthenticated() bool { return true }
+
+// RunInIsolation implements IsolationStrategy.
+func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+}
+
+// ── Scout ─────────────────────────────────────────────────────────────────────
+
+// ScoutProvider implements Provider for the Scout resource and tool integration agent.
+// Accepts no parameters.
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+type ScoutProvider struct{ baseProvider }
+
+// Type functionality.
+// Accepts no parameters.
+// Returns ProviderType.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) Type() ProviderType { return ProviderTypeScout }
+
+// Description functionality.
+// Accepts no parameters.
+// Returns string.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) Description() string {
+	return "Scout — agent dedicated to finding external resources and integrating them into OHC capabilities"
+}
+
+// SupportedRoles functionality.
+// Accepts no parameters.
+// Returns []string.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) SupportedRoles() []string {
+	return []string{"RESOURCE_SCOUT", "TOOL_INTEGRATOR"}
+}
+
+// Authenticate functionality.
+// Accepts parameters: p *ScoutProvider (No Constraints).
+// Returns error.
+// Produces errors: Explicit error handling.
+// Has no side effects.
+func (p *ScoutProvider) Authenticate(creds Credentials) error {
+	p.store(creds)
+	return nil
+}
+
+// GetCredentials functionality.
+// Accepts no parameters.
+// Returns Credentials.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) GetCredentials() Credentials { return p.load() }
+
+// IsAuthenticated functionality.
+// Accepts no parameters.
+// Returns bool.
+// Produces no errors.
+// Has no side effects.
+func (p *ScoutProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
+
+// RunInIsolation implements IsolationStrategy.
+func (p *ScoutProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+}

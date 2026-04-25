@@ -8,7 +8,7 @@ Market research indicates that typical agentic frameworks (like CrewAI, AutoGen)
 
 ## Design Doc
 **Architecture:**
-- Add a new package `srcs/server/lib/integrations/vector_db/`.
+- Add a new package `src/server/lib/integrations/vector_db/`.
 - Introduce a `VectorStoreManager` that implements the MCP Tool interface.
 - Dynamically route based on `os.Getenv("OHC_MULTITENANT") == "true"`.
 - **Cloud Mode:** Utilize Postgres with `pgvector` for scalable, multi-tenant vector storage.
@@ -23,7 +23,7 @@ Market research indicates that typical agentic frameworks (like CrewAI, AutoGen)
 - Apply `RedactInterfacePII` to metadata before storing it.
 
 ## Implementation Prompt
-"Implement the Hybrid Vector DB MCP tool in `srcs/server/lib/integrations/vector_db/`.
+"Implement the Hybrid Vector DB MCP tool in `src/server/lib/integrations/vector_db/`.
 1. Create `vector_db.go` defining the `VectorStoreManager` and its MCP capabilities (`StoreEmbedding` and `SearchSimilar`).
 2. Implement driver-agnostic logic. To determine if the connection is Cloud, use: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`. For Cloud, implement the logic using `pgvector`. For Standalone, use `sqlite-vss`.
 3. Ensure `organization_id` filtering is rigidly applied in Cloud Mode.

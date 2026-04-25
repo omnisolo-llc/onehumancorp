@@ -1,3 +1,5 @@
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.03); color: #fff; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
+
 # KAIROS Interactive API Playbook Walkthrough
 
 Welcome to the interactive walkthrough for the KAIROS Orchestration APIs.
@@ -132,3 +134,5 @@ graph TD
     style D fill:#0099cc,stroke:#333,stroke-width:2px,color:#fff
     style E fill:#00ccff,stroke:#333,stroke-width:2px,color:#111
 ```
+
+</div>
