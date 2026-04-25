@@ -261,6 +261,7 @@ flutter_test(
     srcs = ["test/cuj_help_ux_e2e_test.dart"],
     test_files = ["test/cuj_help_ux_e2e_test.dart"],
     embed = [":app_for_tests"],
+    workspace_pubspec = "//:pubspec.yaml",
 )
 
 flutter_test(
