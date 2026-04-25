@@ -2,9 +2,14 @@ package db
 
 import (
 	"context"
+
+	"database/sql/driver"
+	"encoding/json"
+	"math"
+
+	"crypto/rand"
 	"database/sql"
 	"embed"
-	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io/fs"
@@ -16,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
 )
 
 var (
@@ -26,12 +31,12 @@ var (
 
 func splitSQLStatements(sqlText string) []string {
 	var (
-		statements      []string
-		current         strings.Builder
-		inSingleQuote   bool
-		inDoubleQuote   bool
-		inLineComment   bool
-		inBlockComment  bool
+		statements     []string
+		current        strings.Builder
+		inSingleQuote  bool
+		inDoubleQuote  bool
+		inLineComment  bool
+		inBlockComment bool
 	)
 
 	for i := 0; i < len(sqlText); i++ {
@@ -245,6 +250,52 @@ func New(ctx context.Context) (*DB, error) {
 		if sqliteErr != nil {
 			return nil, fmt.Errorf("db: connect to sqlite: %w", sqliteErr)
 		}
+
+		_ = sqlite.RegisterDeterministicScalarFunction("vec_distance_cosine", 2, func(ctx *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+			if args[0] == nil || args[1] == nil {
+				return nil, nil
+			}
+
+			var s1, s2 string
+			if v, ok := args[0].(string); ok {
+				s1 = v
+			} else if v, ok := args[0].([]byte); ok {
+				s1 = string(v)
+			} else {
+				return nil, fmt.Errorf("vec_distance_cosine: arg0 is not string/bytes")
+			}
+
+			if v, ok := args[1].(string); ok {
+				s2 = v
+			} else if v, ok := args[1].([]byte); ok {
+				s2 = string(v)
+			} else {
+				return nil, fmt.Errorf("vec_distance_cosine: arg1 is not string/bytes")
+			}
+
+			var v1, v2 []float32
+			if err := json.Unmarshal([]byte(s1), &v1); err != nil {
+				return nil, err
+			}
+			if err := json.Unmarshal([]byte(s2), &v2); err != nil {
+				return nil, err
+			}
+
+			if len(v1) != len(v2) {
+				return nil, fmt.Errorf("vector length mismatch")
+			}
+			var dot, mag1, mag2 float64
+			for i := range v1 {
+				dot += float64(v1[i] * v2[i])
+				mag1 += float64(v1[i] * v1[i])
+				mag2 += float64(v2[i] * v2[i])
+			}
+			if mag1 == 0 || mag2 == 0 {
+				return 1.0, nil
+			}
+			return 1.0 - (dot / (math.Sqrt(mag1) * math.Sqrt(mag2))), nil
+		})
+
 		sqliteDB.SetMaxOpenConns(1)
 
 		if pingErr := sqliteDB.PingContext(ctx); pingErr != nil {

@@ -8,6 +8,7 @@ go_library(
         "agent_context.go",
         "auth_interceptor.go",
         "autodream.go",
+        "autodream_worker.go",
         "autodream_advanced.go",
         "cached_minimax_client.go",
         "centrifuge_hub.go",
@@ -79,7 +80,8 @@ go_test(
     srcs = [
         "agent_context_test.go",
         "auth_interceptor_test.go",
-        "autodream_test.go",
+        "autodream_worker_test.go",
+        "autodream_pg_mock_test.go",
         "autodream_advanced_test.go",
         "mission_ingestion_test.go",
         "benchmark_test.go",

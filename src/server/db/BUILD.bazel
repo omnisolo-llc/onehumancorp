@@ -57,7 +57,7 @@ go_library(
         "migrations/040_kairos_mesh_and_autodream.sql",
         "migrations/041_shared_tasks_schema.sql",
         "migrations/031_agent_missions_updated_at.sql",
-        "migrations/032_hybrid_rag_sync.sql",
+        "migrations/032_hybrid_sync_metadata.sql",
         "migrations/032_telemetry_mesh.sql",
         "migrations/033_kairos_shared_tasks.sql", # issue_id: 3980
         "migrations/034_kairos_sub_agent_queue.sql", # issue_id: 4240
