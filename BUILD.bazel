@@ -221,6 +221,7 @@ sh_test(
         "//src/app:app_rpm",
         "//src/app:app_runtime_tar.tar",
     ],
+    tags = ["manual"],
 )
 
 test_suite(

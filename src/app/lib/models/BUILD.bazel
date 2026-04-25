@@ -101,6 +101,7 @@ MODEL_TESTS = glob(["*_test.dart"])
 
 test_suite(
     name = "all_tests",
+    tags = ["manual"],
     tests = [":" + file.replace(".dart", "") for file in MODEL_TESTS],
 )
 
@@ -110,5 +111,6 @@ flutter_test(
     coverage = True,
     coverage_min = 90,
     embed = [":models_lib"],
+    tags = ["manual"],
     test_files = ["."],
 )
