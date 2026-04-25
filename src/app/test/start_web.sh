@@ -46,6 +46,21 @@ find_web_artifacts() {
 	return 1
 }
 
+find_ohc_binary() {
+	local root="${1}"
+	shift
+	local candidate
+
+	for candidate in "$@"; do
+		if [[ -f "${root}/${candidate}" ]]; then
+			printf '%s\n' "${root}/${candidate}"
+			return 0
+		fi
+	done
+
+	return 1
+}
+
 runfiles_root="$(find_runfiles_root || true)"
 web_artifacts=""
 
@@ -76,12 +91,46 @@ if [[ -z "${web_artifacts}" ]]; then
 	exit 1
 fi
 
-if ! is_complete_web_bundle "${web_artifacts}"; then
-	echo "ERROR: Flutter web bundle is incomplete at ${web_artifacts}." >&2
-	echo "Run 'bazelisk build //src/app:app' to refresh the full web bundle." >&2
+# Ensure manifest.json is present (sometimes missed by build rules)
+if [[ ! -f "${web_artifacts}/manifest.json" ]]; then
+	echo "Warning: manifest.json missing in artifacts. Attempting to copy from source..."
+	cp "${workspace_root}/src/app/web/manifest.json" "${web_artifacts}/manifest.json" 2>/dev/null || true
+fi
+
+ohc_binary=""
+if [[ -n "${runfiles_root}" ]]; then
+	ohc_binary="$(find_ohc_binary "${runfiles_root}" \
+		"${TEST_WORKSPACE:-mono}/src/server/ohc_/ohc" \
+		"${TEST_WORKSPACE:-mono}/src/server/ohc" \
+		"_main/src/server/ohc_/ohc" \
+		"_main/src/server/ohc" \
+		"__main__/src/server/ohc_/ohc" \
+		"__main__/src/server/ohc" \
+		"mono/src/server/ohc_/ohc" \
+		"mono/src/server/ohc" || true)"
+fi
+
+if [[ -z "${ohc_binary}" ]]; then
+	echo "ERROR: could not locate ohc server binary." >&2
 	exit 1
 fi
 
-echo "Serving Bazel-built Flutter app from ${web_artifacts}"
+state_dir=$(mktemp -d -t ohc-start-XXXXXX)
+trap "rm -rf ${state_dir}" EXIT
+
+echo "Starting One Human Corp FULL SERVICE"
+echo "Web Artifacts: ${web_artifacts}"
+echo "Server Binary: ${ohc_binary}"
+echo "State Directory: ${state_dir}"
 echo "URL: http://127.0.0.1:${port}"
-exec python3 -m http.server "${port}" --directory "${web_artifacts}"
+
+export OHC_STANDALONE=true
+export OHC_HEADLESS=false
+export OHC_SERVE_UI=true
+export FRONTEND_STATIC_DIR="${web_artifacts}"
+export PORT="${port}"
+export STATE_DIR="${state_dir}"
+export OHC_RUNTIME_DIR="${state_dir}"
+export DATABASE_URL="sqlite://${state_dir}/ohc_state.db"
+
+exec "${ohc_binary}"
