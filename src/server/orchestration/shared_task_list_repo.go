@@ -91,46 +91,82 @@ func (r *SharedTaskListRepo) getNextAvailableTaskSQLite(ctx context.Context, age
 	}
 	defer tx.Rollback(ctx)
 
+	now := time.Now().UTC()
 	query := `
-		SELECT t.id, t.epic_id, t.title, t.status, t.payload, t.created_at, t.updated_at
-		FROM shared_task_list_tasks t
-		WHERE t.status = 'PENDING' AND (t.locked_by IS NULL OR t.locked_at < datetime('now', '-5 minutes'))
-		AND NOT EXISTS (
-			SELECT 1 FROM shared_task_list_dependencies d
-			JOIN shared_task_list_tasks dep_t ON d.depends_on_task_id = dep_t.id
-			WHERE d.task_id = t.id AND dep_t.status != 'COMPLETED'
+		UPDATE shared_task_list_tasks
+		SET status = 'IN_PROGRESS', locked_by = $1, locked_at = $2, updated_at = $2
+		WHERE id = (
+			SELECT t.id
+			FROM shared_task_list_tasks t
+			WHERE t.status = 'PENDING' AND (t.locked_by IS NULL OR t.locked_at < datetime('now', '-5 minutes'))
+			AND NOT EXISTS (
+				SELECT 1 FROM shared_task_list_dependencies d
+				JOIN shared_task_list_tasks dep_t ON d.depends_on_task_id = dep_t.id
+				WHERE d.task_id = t.id AND dep_t.status != 'COMPLETED'
+			)
+			LIMIT 1
 		)
-		LIMIT 1
+		RETURNING id, epic_id, title, status, payload, created_at, updated_at
 	`
-	row := tx.QueryRow(ctx, query)
+	row := tx.QueryRow(ctx, query, agentID, now)
 
 	var task SharedTaskListTask
 	var payloadStr *string
-	if err := row.Scan(&task.ID, &task.EpicID, &task.Title, &task.Status, &payloadStr, &task.CreatedAt, &task.UpdatedAt); err != nil {
-		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+	var createdAtStr, updatedAtStr string
+	var createdAtIface, updatedAtIface interface{}
+	if err := row.Scan(&task.ID, &task.EpicID, &task.Title, &task.Status, &payloadStr, &createdAtIface, &updatedAtIface); err != nil {
+		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" || err.Error() == "no rows in result set" {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to query pending task: %w", err)
 	}
 
+	switch v := createdAtIface.(type) {
+	case string:
+		createdAtStr = v
+	case []byte:
+		createdAtStr = string(v)
+	case time.Time:
+		task.CreatedAt = v
+	}
+
+	if createdAtStr != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05-07:00", createdAtStr); err == nil {
+			task.CreatedAt = t
+		} else if t, err := time.Parse(time.RFC3339, createdAtStr); err == nil {
+			task.CreatedAt = t
+		} else if t, err := time.Parse("2006-01-02 15:04:05", createdAtStr); err == nil {
+			task.CreatedAt = t
+		}
+	}
+
+	switch v := updatedAtIface.(type) {
+	case string:
+		updatedAtStr = v
+	case []byte:
+		updatedAtStr = string(v)
+	case time.Time:
+		task.UpdatedAt = v
+	}
+
+	if updatedAtStr != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05-07:00", updatedAtStr); err == nil {
+			task.UpdatedAt = t
+		} else if t, err := time.Parse(time.RFC3339, updatedAtStr); err == nil {
+			task.UpdatedAt = t
+		} else if t, err := time.Parse("2006-01-02 15:04:05", updatedAtStr); err == nil {
+			task.UpdatedAt = t
+		}
+	}
+
+
 	if payloadStr != nil && *payloadStr != "" {
 		task.Payload = json.RawMessage(*payloadStr)
 	}
 
-	now := time.Now().UTC()
 	task.LockedBy = &agentID
 	task.LockedAt = &now
 	task.Status = "IN_PROGRESS"
-
-	_, err = tx.Exec(ctx, `
-		UPDATE shared_task_list_tasks
-		SET status = 'IN_PROGRESS', locked_by = $1, locked_at = $2, updated_at = $2
-		WHERE id = $3
-	`, agentID, now, task.ID)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to update task: %w", err)
-	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
@@ -146,24 +182,30 @@ func (r *SharedTaskListRepo) getNextAvailableTaskPostgres(ctx context.Context, a
 	}
 	defer tx.Rollback(ctx)
 
+	now := time.Now().UTC()
 	query := `
-		SELECT t.id, t.epic_id, t.title, t.status, t.payload, t.created_at, t.updated_at
-		FROM shared_task_list_tasks t
-		WHERE t.status = 'PENDING' AND (t.locked_by IS NULL OR t.locked_at < NOW() - INTERVAL '5 minutes')
-		AND NOT EXISTS (
-			SELECT 1 FROM shared_task_list_dependencies d
-			JOIN shared_task_list_tasks dep_t ON d.depends_on_task_id = dep_t.id
-			WHERE d.task_id = t.id AND dep_t.status != 'COMPLETED'
+		UPDATE shared_task_list_tasks
+		SET status = 'IN_PROGRESS', locked_by = $1, locked_at = $2, updated_at = $2
+		WHERE id = (
+			SELECT t.id
+			FROM shared_task_list_tasks t
+			WHERE t.status = 'PENDING' AND (t.locked_by IS NULL OR t.locked_at < NOW() - INTERVAL '5 minutes')
+			AND NOT EXISTS (
+				SELECT 1 FROM shared_task_list_dependencies d
+				JOIN shared_task_list_tasks dep_t ON d.depends_on_task_id = dep_t.id
+				WHERE d.task_id = t.id AND dep_t.status != 'COMPLETED'
+			)
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
 		)
-		LIMIT 1
-		FOR UPDATE SKIP LOCKED
+		RETURNING id, epic_id, title, status, payload, created_at, updated_at
 	`
-	row := tx.QueryRow(ctx, query)
+	row := tx.QueryRow(ctx, query, agentID, now)
 
 	var task SharedTaskListTask
 	var payloadStr *string
 	if err := row.Scan(&task.ID, &task.EpicID, &task.Title, &task.Status, &payloadStr, &task.CreatedAt, &task.UpdatedAt); err != nil {
-		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" || err.Error() == "no rows in result set" {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to query pending task: %w", err)
@@ -173,20 +215,9 @@ func (r *SharedTaskListRepo) getNextAvailableTaskPostgres(ctx context.Context, a
 		task.Payload = json.RawMessage(*payloadStr)
 	}
 
-	now := time.Now().UTC()
 	task.LockedBy = &agentID
 	task.LockedAt = &now
 	task.Status = "IN_PROGRESS"
-
-	_, err = tx.Exec(ctx, `
-		UPDATE shared_task_list_tasks
-		SET status = 'IN_PROGRESS', locked_by = $1, locked_at = $2, updated_at = $2
-		WHERE id = $3
-	`, agentID, now, task.ID)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to update task: %w", err)
-	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)

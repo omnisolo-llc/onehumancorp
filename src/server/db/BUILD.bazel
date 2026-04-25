@@ -70,6 +70,8 @@ go_library(
                 "migrations/054_shared_tasks_decomposition.sql",
         "migrations/055_hub_events.sql",
         "migrations/056_langgraph_checkpoints.sql",
+        # keep
+        "migrations/060_shared_task_list.sql",
         "migrations/061_shared_tasks_v4.sql",
         "migrations/062_billing_actions.sql",
         "migrations/20260414130500_create_autodream_memories.sql",

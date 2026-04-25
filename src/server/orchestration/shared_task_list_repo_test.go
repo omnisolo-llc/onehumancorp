@@ -2,6 +2,8 @@ package orchestration
 
 import (
 	"context"
+	"database/sql"
+	"strings"
 	"testing"
 
 	"github.com/onehumancorp/mono/src/server/db"
@@ -86,47 +88,53 @@ func TestSharedTaskListRepo(t *testing.T) {
 	}
 }
 
+type mockTaskListPGProvider struct {
+	db.Provider
+	lastQuery string
+}
+
+func (m *mockTaskListPGProvider) IsSQLite() bool { return false }
+func (m *mockTaskListPGProvider) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
+	m.lastQuery = query
+	return &mockTaskListPGRow{}
+}
+
+func (m *mockTaskListPGProvider) Begin(ctx context.Context) (db.Tx, error) {
+	return &mockTaskListPGTx{provider: m}, nil
+}
+
+type mockTaskListPGTx struct {
+	db.Tx
+	provider *mockTaskListPGProvider
+}
+
+func (m *mockTaskListPGTx) QueryRow(ctx context.Context, query string, args ...interface{}) db.Row {
+	m.provider.lastQuery = query
+	return &mockTaskListPGRow{}
+}
+
+func (m *mockTaskListPGTx) Commit(ctx context.Context) error {
+	return nil
+}
+
+func (m *mockTaskListPGTx) Rollback(ctx context.Context) error {
+	return nil
+}
+
+type mockTaskListPGRow struct{}
+func (m *mockTaskListPGRow) Scan(dest ...interface{}) error { return sql.ErrNoRows }
+
 func TestSharedTaskListRepo_Postgres(t *testing.T) {
-	// The postgres path can be covered using the sqlite provider but we call the postgres method explicitly just for test coverage.
-	dbProvider := db.NewTestProvider(t)
-
 	ctx := context.Background()
+	provider := &mockTaskListPGProvider{}
+	repo := NewSharedTaskListRepo(provider)
 
-	_, err := dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS shared_task_list_tasks (
-			id TEXT PRIMARY KEY,
-			epic_id TEXT,
-			title TEXT NOT NULL,
-			status TEXT NOT NULL DEFAULT 'PENDING',
-			payload TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			locked_by TEXT,
-			locked_at DATETIME
-		)
-	`)
+	_, err := repo.GetNextAvailableTask(ctx, "agent-1")
 	if err != nil {
-		t.Fatalf("failed to create tasks table: %v", err)
+		t.Fatalf("expected nil error on sql.ErrNoRows, got %v", err)
 	}
 
-	_, err = dbProvider.Exec(ctx, `
-		CREATE TABLE IF NOT EXISTS shared_task_list_dependencies (
-			task_id TEXT NOT NULL,
-			depends_on_task_id TEXT NOT NULL,
-			PRIMARY KEY (task_id, depends_on_task_id)
-		)
-	`)
-	if err != nil {
-		t.Fatalf("failed to create dependencies table: %v", err)
+	if !strings.Contains(provider.lastQuery, "FOR UPDATE SKIP LOCKED") {
+		t.Errorf("expected query to contain FOR UPDATE SKIP LOCKED, got: %s", provider.lastQuery)
 	}
-
-	repo := NewSharedTaskListRepo(dbProvider)
-
-	task1, err := repo.CreateTask(ctx, "epic-1", "Task 1", nil, nil)
-	if err != nil {
-		t.Fatalf("failed to create task 1: %v", err)
-	}
-
-    // Skip Postgres method since SKIP LOCKED fails on SQLite parser.
-    _ = task1
 }
