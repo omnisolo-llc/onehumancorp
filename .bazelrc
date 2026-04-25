@@ -2,14 +2,14 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-# build --config=buildbuddy
-# test --config=buildbuddy
+build --config=buildbuddy
+test --config=buildbuddy
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
 # available.  Flutter test runners require the pub-cache and workspace trees
 # to be materialised on the local host since test execution uses processwrapper-sandbox.
-# build --remote_download_toplevel
+build --remote_download_toplevel
 
 # ── CGO / SQLite ──────────────────────────────────────────────────────────────
 build --action_env=CGO_ENABLED=1
@@ -56,12 +56,12 @@ build --action_env=CI
 
 # ── BuildBuddy official (default) ─────────────────────────────────────────────
 # Remote cache + executor at onehumancorp.buildbuddy.io with BES streaming.
-# common:buildbuddy --bes_timeout=600s
-# build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
-# build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
+common:buildbuddy --bes_timeout=600s
+build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
+build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
 # Upload BES data asynchronously so the build/test result is available sooner.
-# build:buildbuddy-official --bes_upload_mode=fully_async
-# build:buildbuddy-official --verbose_failures
+build:buildbuddy-official --bes_upload_mode=fully_async
+build:buildbuddy-official --verbose_failures
 common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
 # common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
 # Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
@@ -82,23 +82,23 @@ common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3Jee
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
 # Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
 # buildbuddy-official which relies on the global sandboxed,local fallback chain.
-# common:buildbuddy --bes_timeout=600s
-# common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
-# common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --bes_timeout=600s
+common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
+common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-# # common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_local_fallback
-# common:buildbuddy --remote_upload_local_results
-# # common:buildbuddy --remote_cache_compression
+# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_local_fallback
+common:buildbuddy --remote_upload_local_results
+# common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
 common:buildbuddy --experimental_remote_downloader_local_fallback
 common:buildbuddy --jobs=200
 # Read only Bazel cache
-# common:buildbuddy --remote_header=x-buildbuddy-api-key=h2FUJLgaH6D2RL7T3PAV
-# common:buildbuddy --remote_timeout=10m
-# build:buildbuddy --verbose_failures
-# build:buildbuddy --bes_upload_mode=fully_async
+common:buildbuddy --remote_header=x-buildbuddy-api-key=h2FUJLgaH6D2RL7T3PAV
+common:buildbuddy --remote_timeout=10m
+build:buildbuddy --verbose_failures
+build:buildbuddy --bes_upload_mode=fully_async
 
 # ── Local: disable remote cache/execution ─────────────────────────────────────
 build:local --remote_cache=

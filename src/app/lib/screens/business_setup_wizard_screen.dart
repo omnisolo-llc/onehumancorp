@@ -110,7 +110,7 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
           'company_name': state.companyName,
           'company_description': state.companyDescription,
           'sell_items': state.sellItems,
-                    'payment_type': state.paymentType,
+          'payment_type': state.paymentType,
           'admin_name': state.adminName,
           'admin_email': state.adminEmail,
           'admin_password': state.adminPassword,
@@ -132,6 +132,8 @@ class BusinessSetupNotifier extends Notifier<BusinessSetupState> {
     }
   }
 }
+
+
 
 final businessSetupProvider = NotifierProvider<BusinessSetupNotifier, BusinessSetupState>(() {
   return BusinessSetupNotifier();
