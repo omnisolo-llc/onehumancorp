@@ -59,6 +59,10 @@ func StartSyncDaemon(ctx context.Context, syncFunc SyncFunc, endpoint string, in
 
 					if errorCount > 0 {
 						errorCount = 0
+					}
+
+					currentBatchSize += 50
+					if currentBatchSize > baseBatchSize {
 						currentBatchSize = baseBatchSize
 					}
 
