@@ -191,8 +191,72 @@ impl Agent {
             }
 
             // Execute tool calls and collect results.
-            let mut tool_results: Vec<ToolResult> = Vec::new();
-            for tc in &tool_calls {
+            // Mechanic: Read-only operations run concurrently; mutating operations run serially.
+            // We must preserve the original order of the `tool_calls` for the LLM API.
+            let mut tool_results: Vec<ToolResult> = vec![
+                ToolResult {
+                    tool_call_id: String::new(),
+                    content: String::new(),
+                    error: String::new(),
+                };
+                tool_calls.len()
+            ];
+
+            let mut concurrent_tasks = Vec::new();
+            let mut serial_calls = Vec::new();
+
+            for (idx, tc) in tool_calls.iter().enumerate() {
+                let is_mutating = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(true);
+                if is_mutating {
+                    serial_calls.push((idx, tc.clone()));
+                } else {
+                    concurrent_tasks.push((idx, tc.clone()));
+                }
+            }
+
+            // Execute non-mutating tools concurrently
+            let mut futures = Vec::new();
+            for (idx, tc) in concurrent_tasks {
+                let tc_clone = tc.clone();
+                futures.push(async move {
+                    let res = self.execute_tool(&tc_clone).await;
+                    (idx, tc_clone, res)
+                });
+            }
+
+            let concurrent_results = futures::future::join_all(futures).await;
+            for (idx, tc, result) in concurrent_results {
+                let (content, error) = match result {
+                    Ok(r) => {
+                        self.progress.record_tool_use();
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration,
+                        });
+                        (r, String::new())
+                    }
+                    Err(e) => {
+                        let err = e.to_string();
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", err),
+                            iteration,
+                        });
+                        (String::new(), err)
+                    }
+                };
+                tool_results[idx] = ToolResult {
+                    tool_call_id: tc.id.clone(),
+                    content,
+                    error,
+                };
+            }
+
+            // Execute mutating tools serially
+            for (idx, tc) in serial_calls {
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -216,11 +280,11 @@ impl Agent {
                         (String::new(), err)
                     }
                 };
-                tool_results.push(ToolResult {
+                tool_results[idx] = ToolResult {
                     tool_call_id: tc.id.clone(),
                     content,
                     error,
-                });
+                };
             }
 
             if cfg.enable_observation_masking {
@@ -349,6 +413,7 @@ mod tests {
             description: "test".to_string(),
             parameters: Value::Null,
             execute: Arc::new(MockToolExecutor),
+            is_mutating: true,
         }];
 
         let agent = Agent::new(client, tools);

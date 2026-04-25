@@ -102,6 +102,7 @@ pub fn agent_tool() -> Tool {
             "required": ["prompt"]
         }),
         execute: Arc::new(AgentExecutor),
+        is_mutating: true,
     }
 }
 
@@ -120,6 +121,7 @@ pub fn agent_stop_tool() -> Tool {
             "required": ["task_id"]
         }),
         execute: Arc::new(TaskStopExecutor),
+        is_mutating: true,
     }
 }
 
@@ -138,5 +140,6 @@ pub fn agent_status_tool() -> Tool {
             "required": ["task_id"]
         }),
         execute: Arc::new(TaskStatusExecutor),
+        is_mutating: true,
     }
 }

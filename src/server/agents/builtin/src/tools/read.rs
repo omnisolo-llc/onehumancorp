@@ -58,5 +58,6 @@ pub fn read_tool() -> Tool {
             "required": ["path"]
         }),
         execute: Arc::new(ReadExecutor),
+        is_mutating: false,
     }
 }
