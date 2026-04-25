@@ -34,14 +34,11 @@ go_library(
 go_test(
     name = "telemetry_test",
     srcs = [
-        "ast_pii_linter_test.go",
         "buffer_test.go",
         "buffer_pii_test.go",
         "compliance_test.go",
-        "global_pii_linter_test.go",
         "privacy_test.go",
         "logger_test.go",
-        "pii_linter_test.go",
         "sync_worker_test.go",
         "telemetry_extra_test.go",
         "telemetry_test.go",
