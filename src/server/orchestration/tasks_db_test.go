@@ -278,16 +278,16 @@ func TestClaimTaskDag(t *testing.T) {
 }
 
 // mockPGProvider wraps a db.Provider to simulate Postgres
-type mockPGProvider struct {
+type mockPGProviderStruct struct {
 	db.Provider
 }
 
-func (m *mockPGProvider) IsSQLite() bool {
+func (m *mockPGProviderStruct) IsSQLite() bool {
 	return false
 }
 
 // Intercept queries with FOR UPDATE SKIP LOCKED
-func (m *mockPGProvider) Begin(ctx context.Context) (db.Tx, error) {
+func (m *mockPGProviderStruct) Begin(ctx context.Context) (db.Tx, error) {
 	tx, err := m.Provider.Begin(ctx)
 	if err != nil {
 		return nil, err

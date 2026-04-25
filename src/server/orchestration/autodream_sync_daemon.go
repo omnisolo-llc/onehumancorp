@@ -16,7 +16,7 @@ import (
 	"github.com/onehumancorp/mono/src/server/db"
 )
 
-type EmbeddingClient interface {
+type SyncEmbeddingClient interface {
 	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
 }
 
