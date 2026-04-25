@@ -93,15 +93,9 @@ func (r *UnifiedToolRegistry) ExecuteTool(ctx context.Context, name string, inpu
 	// Intercept standard metrics and logging here
 	// In a real system, you would use OpenTelemetry or a metrics package.
 	// For now, we simulate logging interception at the execution boundary.
-	fmt.Printf("[Registry Execution] Executing tool: %s\n", name)
+	// Removed fmt.Printf for hygiene.
 
 	res, err := tool.Execute(ctx, input)
-
-	if err != nil {
-		fmt.Printf("[Registry Execution] Tool %s failed: %v\n", name, err)
-	} else {
-		fmt.Printf("[Registry Execution] Tool %s executed successfully\n", name)
-	}
 
 	return res, err
 }

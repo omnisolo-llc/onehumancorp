@@ -21,7 +21,8 @@ func upAutodreamMemoriesDecomposition20260427000000(ctx context.Context, tx *sql
 	alterTasksQuery := "ALTER TABLE shared_tasks_decomposition ADD COLUMN auto_dreamed BOOLEAN DEFAULT false;"
 	_, err = tx.ExecContext(ctx, alterTasksQuery)
 	if err != nil {
-		fmt.Printf("Info: adding auto_dreamed column to shared_tasks_decomposition: %v\n", err)
+		// Removed fmt.Printf for hygiene.
+		_ = err
 	}
 
 	if !isSQLite {

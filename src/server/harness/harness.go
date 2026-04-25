@@ -53,7 +53,8 @@ func NewHarness(config *SandboxConfig) *Harness {
 		var err error
 		executionsTotal, err = otel.Meter("ohc.harness").Int64Counter("ohc_harness_executions_total")
 		if err != nil {
-			fmt.Printf("failed to initialize metric: %v\n", err)
+			// Removed fmt.Printf for hygiene.
+			_ = err
 		}
 	})
 	h.execTotal = executionsTotal
