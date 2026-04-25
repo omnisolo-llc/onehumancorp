@@ -21,6 +21,7 @@ pub mod finance;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
+    pub is_mutating: bool,
     pub name: String,
     pub description: String,
     pub parameters: Value,
@@ -36,6 +37,7 @@ impl std::fmt::Debug for Tool {
 impl Clone for Tool {
     fn clone(&self) -> Self {
         Self {
+            is_mutating: self.is_mutating,
             name: self.name.clone(),
             description: self.description.clone(),
             parameters: self.parameters.clone(),

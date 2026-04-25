@@ -168,6 +168,7 @@ impl ToolExecutor for TaskUpdateExecutor {
 
 pub fn task_create_tool(store: SharedTaskStore) -> Tool {
     Tool {
+        is_mutating: true,
         name: "TaskCreate".to_string(),
         description: "Create a new task in the task tracker.".to_string(),
         parameters: json!({
@@ -185,6 +186,7 @@ pub fn task_create_tool(store: SharedTaskStore) -> Tool {
 
 pub fn task_get_tool(store: SharedTaskStore) -> Tool {
     Tool {
+        is_mutating: false,
         name: "TaskGet".to_string(),
         description: "Get details of a specific task by ID.".to_string(),
         parameters: json!({
@@ -200,6 +202,7 @@ pub fn task_get_tool(store: SharedTaskStore) -> Tool {
 
 pub fn task_list_tool(store: SharedTaskStore) -> Tool {
     Tool {
+        is_mutating: false,
         name: "TaskList".to_string(),
         description: "List all tasks in the task tracker.".to_string(),
         parameters: json!({"type": "object", "properties": {}}),
@@ -209,6 +212,7 @@ pub fn task_list_tool(store: SharedTaskStore) -> Tool {
 
 pub fn task_update_tool(store: SharedTaskStore) -> Tool {
     Tool {
+        is_mutating: true,
         name: "TaskUpdate".to_string(),
         description: "Update a task's status or result.".to_string(),
         parameters: json!({

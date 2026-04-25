@@ -83,6 +83,7 @@ fn strip_html(html: &str) -> String {
 
 pub fn webfetch_tool() -> Tool {
     Tool {
+        is_mutating: false,
         name: "WebFetch".to_string(),
         description: "Fetch the contents of a URL. Returns text content, stripping HTML tags.".to_string(),
         parameters: json!({

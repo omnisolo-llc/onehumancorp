@@ -24,6 +24,7 @@ impl ToolExecutor for SleepExecutor {
 
 pub fn sleep_tool() -> Tool {
     Tool {
+        is_mutating: true,
         name: "Sleep".to_string(),
         description: "Sleep for a number of seconds (max 60). \
             Use when waiting for async operations."

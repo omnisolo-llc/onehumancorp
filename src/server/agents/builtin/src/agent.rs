@@ -192,35 +192,73 @@ impl Agent {
 
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
-            for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
-                    }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
-                };
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
+            let any_mutating = tool_calls.iter().any(|tc| {
+                self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(true)
+            });
+
+            if any_mutating {
+                for tc in &tool_calls {
+                    let result = self.execute_tool(&tc).await;
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
+                    };
+                    tool_results.push(ToolResult {
+                        tool_call_id: tc.id.clone(),
+                        content,
+                        error,
+                    });
+                }
+            } else {
+                // Execute all read-only tools concurrently
+                let futures_iter = tool_calls.iter().map(|tc| async {
+                    let result = self.execute_tool(tc).await;
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            // Note: Events will still be emitted in unpredictable completion order, but that's fine for observability.
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            (String::new(), err)
+                        }
+                    };
+                    (tc.id.clone(), tc.name.clone(), tc.arguments.to_string(), content, error)
                 });
+
+                let results = futures::future::join_all(futures_iter).await;
+                for (id, name, args_json, content, error) in results {
+                    on_event(AgentEvent::ToolCall {
+                        name,
+                        args_json,
+                        result: if error.is_empty() { content.clone() } else { format!("Error: {}", error) },
+                        iteration,
+                    });
+                    tool_results.push(ToolResult {
+                        tool_call_id: id,
+                        content,
+                        error,
+                    });
+                }
             }
 
             if cfg.enable_observation_masking {
@@ -310,6 +348,57 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_concurrent_execution() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall {
+                                id: "call_1".to_string(),
+                                name: "test_tool_readonly".to_string(),
+                                arguments: Value::Null,
+                            },
+                            ToolCall {
+                                id: "call_2".to_string(),
+                                name: "test_tool_readonly".to_string(),
+                                arguments: Value::Null,
+                            }
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                }
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool_readonly".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            is_mutating: false,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Since side effects (like emitting the events) happen asynchronously during join_all,
+        // their order might vary depending on thread execution. But the results array itself should
+        // maintain the original call order (1 then 2) because join_all resolves futures in the order
+        // they were given in the iter.
+        // To check that it correctly collected tool usages:
+        assert_eq!(agent.progress.tool_use_count.load(Ordering::Relaxed), 2);
+    }
+
+    #[tokio::test]
     async fn test_observation_masking() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
@@ -345,6 +434,7 @@ mod tests {
         });
 
         let tools = vec![Tool {
+            is_mutating: false,
             name: "test_tool".to_string(),
             description: "test".to_string(),
             parameters: Value::Null,
