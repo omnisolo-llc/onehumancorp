@@ -83,6 +83,7 @@ go_test(
     srcs = _SHARED_SRCS + [
         "dashboard_test.go",
         "cuj_growth_share_test.go",
+        "cuj_dashboard_ux_test.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,

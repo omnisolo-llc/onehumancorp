@@ -104,19 +104,19 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Active Agents',
+              label: 'AI Staff',
               value: data.agents.where((a) => a.isRunning).length.toString(),
               icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Active Tasks',
+              label: 'Active Orders',
               value: data.statuses.length.toString(),
               icon: Icons.pending_actions,
               color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
-              label: 'Scheduled Calls',
+              label: 'Upcoming Bookings',
               value: data.meetings.length.toString(),
               icon: Icons.video_call,
               color: Theme.of(context).colorScheme.tertiary,
@@ -631,6 +631,14 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
     final effectiveIconColor = widget.iconColor ?? widget.color;
     final colorScheme = Theme.of(context).colorScheme;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Padding 24 left + 24 right = 48. Spacing 16. We want 2 items per row.
+    // If available width is very small, we limit it. If it's very large, we can cap it at 200.
+    final availableWidth = screenWidth - 48;
+    final itemWidth = (availableWidth - 16) / 2;
+    // Provide a sensible max-width so it doesn't look stretched on larger screens.
+    final finalWidth = itemWidth < 200 ? itemWidth : 200.0;
+
     return Semantics(
       label: '${widget.label}: ${widget.value}',
       button: true,
@@ -638,7 +646,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       child: Tooltip(
         message: 'View ${widget.label}',
         child: SizedBox(
-          width: 200,
+          width: finalWidth,
           child: SlideTransition(
             position: _slideAnimation,
             child: FadeTransition(
