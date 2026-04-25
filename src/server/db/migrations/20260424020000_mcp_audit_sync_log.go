@@ -59,3 +59,4 @@ func downMCPAuditSyncLog(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, "DROP TABLE IF EXISTS mcp_audit_sync_log;")
 	return err
 }
+// Trigger CI rerun
