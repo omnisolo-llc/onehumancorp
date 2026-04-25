@@ -64,6 +64,8 @@ Widget _wrap(Widget child, {List<Override> overrides = const []}) {
         path: '/agents/hire',
         builder: (context, state) => const Scaffold(body: Text('Hire Agent')),
       ),
+      GoRoute(path: '/dashboard', builder: (context, state) => const Scaffold(body: Text('Dashboard'))),
+      GoRoute(path: '/business_setup', builder: (context, state) => const Scaffold(body: Text('Business Setup'))),
     ],
   );
   return ProviderScope(
