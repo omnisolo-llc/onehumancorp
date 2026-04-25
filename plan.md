@@ -1,35 +1,178 @@
-# Problem Description
+# Plan to Fix Final Code Review Issues
 
-The problem requests replacing the current `Business Setup Wizard` logic with a simplified version.
-The new wizard should have:
-1. **Welcome screen**: Beautiful hero animation, one-line value proposition ("Your business, live in minutes").
-2. **Business type**: Single-tap selection from friendly categories with large icons: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other. No dropdowns.
-3. **Business name & description**: Large-input text fields. AI auto-suggests a tagline and short description based on the business name. User can accept or edit.
-4. **What do you sell?**: Multi-select tiles: "Physical products", "Digital downloads", "Services / appointments", "Food & beverages", "Subscriptions". Friendly labels only.
-5. **How do you want to receive payments?**: Card tiles — Online only, In-person (POS), Both, Skip for now. Show estimated time to first payment next to each.
-6. **Administrator account**: Name, email, password (strength meter), optional SSO (Google / Apple). No username, no security questions.
-7. **Review & Launch**: Summary card with a pulsing "Launch My Business →" CTA. Clicking it provisions the tenant, selects a starter website template, pre-seeds AI agents, and lands the user in the dashboard with a "Your business is setting up…" animated progress overlay.
+1.  **Backend Route Registration**
+    *   Execute a Python script to update `src/server/dashboard/server.go`:
+        ```bash
+        cat << 'EOF' > update_server.py
+        import re
 
-# Proposed Plan
+        with open("src/server/dashboard/server.go", "r") as f:
+            content = f.read()
 
-1. **Update Frontend UI & State**
-   - Refactor `src/app/lib/screens/business_setup_wizard_screen.dart` to match the 7 new steps (Welcome, Business type, Business name & description, What do you sell, Payment preference, Administrator account, Review & Launch).
-   - Use `AnimatedSwitcher` to animate between the steps.
-   - Use `GlassCard` and OHC Premium Tokens (Glassmorphism, `Outfit`/`Inter` fonts) for styling.
-   - Update `BusinessSetupState` to store fields like `businessType`, `businessDescription`, `whatYouSell`, `paymentMethod`, etc.
-   - Make all screens responsive (down to 375px) without horizontal scrolling.
+        # Insert new handlers after configure
+        content = content.replace('mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)', 'mux.HandleFunc("/api/wizard/configure", server.handleWizardConfigure)\n\tmux.HandleFunc("/api/wizard/state", server.handleWizardStateLoad)\n\tmux.HandleFunc("/api/wizard/state/save", server.handleWizardStateSave)')
 
-2. **Backend API updates**
-   - To resume state, the system currently expects a `wizardConfigureRequest` to handle configuring. But the wizard state needs an endpoint `/api/wizard/state/save`? Wait, the problem says "All wizard state must be persisted to the OHC backend so resuming from another device works seamlessly. Implement backend API endpoints if they do not already exist."
-   - The backend `dashboard` server handles wizard config currently. I will add `handleWizardStateSave`, `handleWizardStateLoad` to `src/server/dashboard/handlers_wizard.go` and wire them up in `src/server/dashboard/server.go`.
-   - Add a `handleWizardStateSave` handler which accepts a JSON payload of the wizard state and stores it in memory (or Redis, though `dashboard` server is simpler, I'll store it in a `wizardState` map in `Server`). Or wait, `Server` has `settings.Extras`. We can just store wizard progress in `settings.Extras`. Let's just create a quick endpoint for `state/save` and `state` (load).
+        with open("src/server/dashboard/server.go", "w") as f:
+            f.write(content)
+        EOF
+        python3 update_server.py
+        rm update_server.py
+        ```
+    *   Verify the changes using `git diff src/server/dashboard/server.go`.
 
-3. **Cleanup unused code**
-   - Delete `src/server/lib/features/onboarding/business_setup_wizard.dart` and `business_setup_wizard_test.dart` as they are Flutter UI mockups misplaced in the `server` tree and unused. Or I will just replace `src/app/lib/screens/business_setup_wizard_screen.dart` and delete the server ones.
+2.  **Frontend API Payload & UI Restoration (`src/app/lib/screens/business_setup_wizard_screen.dart`)**
+    *   Execute a Python script to include `business_description`, `admin_name`, `admin_email`, and `admin_password` in the `body` JSON sent by the `launch` function, and add the missing UI requirements (password strength meter, icons, payment times):
+        ```bash
+        cat << 'EOF' > update_frontend.py
+        import re
 
-4. **Testing**
-   - Write unit tests for `src/app/lib/screens/business_setup_wizard_screen.dart` (if needed, replace existing tests like `wizard_screen_test.dart` or add `business_setup_wizard_test.dart` in `src/app/lib/screens/`).
-   - Write Go E2E tests for the flow in `src/tests/e2e/e2e_business_setup_test.go`. The test must start from home page after login, navigate the wizard, select options, and assert the final API call or UI state.
+        with open("src/app/lib/screens/business_setup_wizard_screen.dart", "r") as f:
+            content = f.read()
 
-5. **Pre-commit checks**
-   - Call `pre_commit_instructions` and follow the required validation, verification, formatting, and tests (`bazelisk test //...`).
+        # Fix launch body
+        old_body = """      final body = {
+        'extras': {
+          'business_type': state.businessType,
+          'company_name': state.companyName,
+          'what_you_sell': state.whatYouSell,
+          'payment_method': state.paymentMethod,
+        }
+      };"""
+        new_body = """      final body = {
+        'extras': {
+          'business_type': state.businessType,
+          'company_name': state.companyName,
+          'business_description': state.businessDescription,
+          'what_you_sell': state.whatYouSell,
+          'payment_method': state.paymentMethod,
+          'admin_name': state.adminName,
+          'admin_email': state.adminEmail,
+          'admin_password': state.adminPassword,
+        }
+      };"""
+        content = content.replace(old_body, new_body)
+
+        # Add icons to business types
+        old_types = """    final types = [
+      'Online Store',
+      'Service Business',
+      'Restaurant / Food',
+      'Creative / Portfolio',
+      'Local Business',
+      'Other'
+    ];"""
+        new_types = """    final types = [
+      {'label': 'Online Store', 'icon': Icons.shopping_cart},
+      {'label': 'Service Business', 'icon': Icons.build},
+      {'label': 'Restaurant / Food', 'icon': Icons.restaurant},
+      {'label': 'Creative / Portfolio', 'icon': Icons.brush},
+      {'label': 'Local Business', 'icon': Icons.store},
+      {'label': 'Other', 'icon': Icons.category}
+    ];"""
+        content = content.replace(old_types, new_types)
+
+        old_map_types = """        ...types.map((type) => Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: ListTile(
+            title: Text(type, style: const TextStyle(color: Colors.white, fontFamily: 'Inter')),
+            tileColor: Colors.white.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            onTap: () => notifier.updateBusinessType(type, ref),
+          ),
+        )),"""
+        new_map_types = """        ...types.map((type) => Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: ListTile(
+            leading: Icon(type['icon'] as IconData, size: 32, color: Colors.blueAccent),
+            title: Text(type['label'] as String, style: const TextStyle(color: Colors.white, fontFamily: 'Inter', fontSize: 18)),
+            tileColor: Colors.white.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            onTap: () => notifier.updateBusinessType(type['label'] as String, ref),
+          ),
+        )),"""
+        content = content.replace(old_map_types, new_map_types)
+
+        # Add times to payment methods
+        old_methods = """    final methods = [
+      'Online only',
+      'In-person (POS)',
+      'Both',
+      'Skip for now'
+    ];"""
+        new_methods = """    final methods = [
+      {'label': 'Online only', 'time': 'Est. 2 days to first payment'},
+      {'label': 'In-person (POS)', 'time': 'Est. instant access'},
+      {'label': 'Both', 'time': 'Varies by method'},
+      {'label': 'Skip for now', 'time': ''}
+    ];"""
+        content = content.replace(old_methods, new_methods)
+
+        old_map_methods = """        ...methods.map((method) => Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: ListTile(
+            title: Text(method, style: const TextStyle(color: Colors.white, fontFamily: 'Inter')),
+            tileColor: Colors.white.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            onTap: () => notifier.updatePaymentMethod(method, ref),
+          ),
+        )),"""
+        new_map_methods = """        ...methods.map((method) => Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: ListTile(
+            title: Text(method['label'] as String, style: const TextStyle(color: Colors.white, fontFamily: 'Inter')),
+            subtitle: (method['time'] as String).isNotEmpty ? Text(method['time'] as String, style: const TextStyle(color: Colors.white54, fontSize: 12)) : null,
+            tileColor: Colors.white.withValues(alpha: 0.1),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            onTap: () => notifier.updatePaymentMethod(method['label'] as String, ref),
+          ),
+        )),"""
+        content = content.replace(old_map_methods, new_map_methods)
+
+        # Add password strength meter
+        old_pwd = """        TextFormField(
+          initialValue: state.adminPassword,
+          onChanged: (v) => notifier.updateAdminPassword(v, ref),
+          decoration: const InputDecoration(labelText: 'Password', labelStyle: TextStyle(color: Colors.white70)),
+          style: const TextStyle(color: Colors.white, fontFamily: 'Inter'),
+          obscureText: true,
+        ),"""
+        new_pwd = """        TextFormField(
+          initialValue: state.adminPassword,
+          onChanged: (v) => notifier.updateAdminPassword(v, ref),
+          decoration: const InputDecoration(labelText: 'Password', labelStyle: TextStyle(color: Colors.white70)),
+          style: const TextStyle(color: Colors.white, fontFamily: 'Inter'),
+          obscureText: true,
+        ),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(
+          value: state.adminPassword.length > 8 ? 1.0 : (state.adminPassword.length > 4 ? 0.5 : 0.1),
+          backgroundColor: Colors.white24,
+          color: state.adminPassword.length > 8 ? Colors.green : (state.adminPassword.length > 4 ? Colors.orange : Colors.red),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          state.adminPassword.length > 8 ? 'Strong' : (state.adminPassword.length > 4 ? 'Fair' : 'Weak'),
+          style: TextStyle(color: state.adminPassword.length > 8 ? Colors.green : (state.adminPassword.length > 4 ? Colors.orange : Colors.red), fontSize: 12),
+        ),"""
+        content = content.replace(old_pwd, new_pwd)
+
+        with open("src/app/lib/screens/business_setup_wizard_screen.dart", "w") as f:
+            f.write(content)
+        EOF
+        python3 update_frontend.py
+        rm update_frontend.py
+        ```
+    *   Verify the changes using `git diff src/app/lib/screens/business_setup_wizard_screen.dart`.
+
+3.  **Verification**
+    *   Run `bazelisk test //src/app/lib/screens:business_setup_wizard_test`
+    *   Run `bazelisk test //src/tests/e2e:e2e_business_setup_test`
+
+4.  **Global Test Execution**
+    *   Run `bazelisk test //...` to ensure all tests pass.
+
+5.  **Pre-Commit Steps**
+    *   Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+
+6.  **Submit**
+    *   Submit the code.

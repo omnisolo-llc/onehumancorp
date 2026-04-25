@@ -1,6 +1,7 @@
 package dashboard
 
 import (
+	"strings"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -248,4 +249,76 @@ func (s *Server) handleWizardOnboardingVerify(w http.ResponseWriter, r *http.Req
 		"diagnostics": healthChecks,
 	}
 	writeJSON(w, resp)
+}
+
+func (s *Server) handleWizardStateSave(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := s.authStore.ValidateToken(token)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID := claims.Subject
+
+	var state map[string]interface{}
+	if err := json.NewDecoder(r.Body).Decode(&state); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	stateBytes, _ := json.Marshal(state)
+
+	_, err = s.dbProvider.Exec(r.Context(), `
+		INSERT INTO wizard_drafts (user_id, state_json, updated_at)
+		VALUES ($1, $2, CURRENT_TIMESTAMP)
+		ON CONFLICT (user_id) DO UPDATE SET state_json = $2, updated_at = CURRENT_TIMESTAMP`,
+		userID, string(stateBytes))
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"status": "saved"})
+}
+
+func (s *Server) handleWizardStateLoad(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	claims, err := s.authStore.ValidateToken(token)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	userID := claims.Subject
+
+	var stateStr string
+	err = s.dbProvider.QueryRow(r.Context(), "SELECT state_json FROM wizard_drafts WHERE user_id = $1", userID).Scan(&stateStr)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(make(map[string]interface{}))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(stateStr))
 }
