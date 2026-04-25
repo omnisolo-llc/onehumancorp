@@ -60,13 +60,22 @@ void main() {
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response(
-          jsonEncode([
-            _fakeUser('u1', 'alice', admin: true),
-            _fakeUser('u2', 'bob'),
-          ]),
-          200,
-        ),
+        (invocation) async {
+          final uri = invocation.positionalArguments[0] as Uri;
+          if (uri.path.contains('viral-coefficient/metrics')) {
+            return http.Response(jsonEncode({"viral_coefficient": 1.2}), 200);
+          }
+          if (uri.path.contains('quota')) {
+            return http.Response(jsonEncode({"used": 10, "max": 50}), 200);
+          }
+          return http.Response(
+            jsonEncode([
+              _fakeUser('u1', 'alice', admin: true),
+              _fakeUser('u2', 'bob'),
+            ]),
+            200,
+          );
+        },
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -75,6 +84,9 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pumpAndSettle();
+      // Increase pump duration to ensure mock future resolves.
+      await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('alice'), findsWidgets);
@@ -86,7 +98,16 @@ void main() {
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
+        (invocation) async {
+          final uri = invocation.positionalArguments[0] as Uri;
+          if (uri.path.contains('viral-coefficient/metrics')) {
+            return http.Response(jsonEncode({"viral_coefficient": 1.2}), 200);
+          }
+          if (uri.path.contains('quota')) {
+            return http.Response(jsonEncode({"used": 10, "max": 50}), 200);
+          }
+          return http.Response(jsonEncode(<dynamic>[]), 200);
+        },
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -95,6 +116,8 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
       expect(find.text('Invite User'), findsOneWidget);
@@ -105,7 +128,16 @@ void main() {
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response(jsonEncode(<dynamic>[]), 200),
+        (invocation) async {
+          final uri = invocation.positionalArguments[0] as Uri;
+          if (uri.path.contains('viral-coefficient/metrics')) {
+            return http.Response(jsonEncode({"viral_coefficient": 1.2}), 200);
+          }
+          if (uri.path.contains('quota')) {
+            return http.Response(jsonEncode({"used": 10, "max": 50}), 200);
+          }
+          return http.Response(jsonEncode(<dynamic>[]), 200);
+        },
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -115,11 +147,15 @@ void main() {
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
       await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Invite User'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      // We changed AlertDialog to a custom Dialog in UserManagementScreen
+      expect(find.byType(Dialog), findsWidgets);
+      expect(find.text('Invite New User'), findsOneWidget);
     });
 
     testWidgets('admin badge shown for admin users', (tester) async {
@@ -127,10 +163,19 @@ void main() {
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response(
-          jsonEncode([_fakeUser('u1', 'adminuser', admin: true)]),
-          200,
-        ),
+        (invocation) async {
+          final uri = invocation.positionalArguments[0] as Uri;
+          if (uri.path.contains('viral-coefficient/metrics')) {
+            return http.Response(jsonEncode({"viral_coefficient": 1.2}), 200);
+          }
+          if (uri.path.contains('quota')) {
+            return http.Response(jsonEncode({"used": 10, "max": 50}), 200);
+          }
+          return http.Response(
+            jsonEncode([_fakeUser('u1', 'adminuser', admin: true)]),
+            200,
+          );
+        },
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -139,6 +184,8 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('admin'), findsWidgets);
@@ -149,7 +196,16 @@ void main() {
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
       ).thenAnswer(
-        (_) async => http.Response('Server Error', 500),
+        (invocation) async {
+          final uri = invocation.positionalArguments[0] as Uri;
+          if (uri.path.contains('viral-coefficient/metrics')) {
+            return http.Response(jsonEncode({"viral_coefficient": 1.2}), 200);
+          }
+          if (uri.path.contains('quota')) {
+            return http.Response(jsonEncode({"used": 10, "max": 50}), 200);
+          }
+          return http.Response('Server Error', 500);
+        },
       );
       final api = ApiService(
         baseUrl: 'http://localhost',
@@ -158,6 +214,8 @@ void main() {
       );
 
       await tester.pumpWidget(_wrapScreen(const UserManagementScreen(), api));
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Error'), findsWidgets);

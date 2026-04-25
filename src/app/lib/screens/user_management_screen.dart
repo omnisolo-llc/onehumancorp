@@ -93,10 +93,6 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
       ),
       body: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.all(24.0),
-            child: GrowthReferralWidget(),
-          ),
           Expanded(
             child: FutureBuilder<List<UserPublic>>(
         future: _usersFuture,
