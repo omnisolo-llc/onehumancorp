@@ -1,5 +1,8 @@
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ohc_app/widgets/interactive_walkthrough.dart';
+
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
@@ -87,6 +90,7 @@ class _DashboardContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
+              const InteractiveWalkthrough(),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
