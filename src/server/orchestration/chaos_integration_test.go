@@ -174,8 +174,8 @@ func TestParity_PruneStaleBursting(t *testing.T) {
 		defer cancel()
 
 		oldTime := time.Now().Add(-48 * time.Hour).UTC().Format("2006-01-02 15:04:05")
-		_, err = dbInstance.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ($1, $2, $3, $4, $5)",
-			"old-bursting-mission-sqlite", "BURSTING", "{}", oldTime, "system")
+		_, err = dbInstance.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, $4, $5, $6)",
+			"old-bursting-mission-sqlite", "BURSTING", "{}", oldTime, oldTime, "system")
 		if err != nil {
 			t.Fatalf("failed to insert old bursting mission: %v", err)
 		}
@@ -206,8 +206,8 @@ func TestParity_PruneStaleBursting(t *testing.T) {
 		defer cancel()
 
 		oldTime := time.Now().Add(-48 * time.Hour).UTC().Format("2006-01-02 15:04:05")
-		_, err = dbInstance.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ($1, $2, $3, $4, $5)",
-			"old-bursting-mission-pg", "BURSTING", "{}", oldTime, "system")
+		_, err = dbInstance.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, $4, $5, $6)",
+			"old-bursting-mission-pg", "BURSTING", "{}", oldTime, oldTime, "system")
 		if err != nil {
 			t.Fatalf("failed to insert old bursting mission: %v", err)
 		}

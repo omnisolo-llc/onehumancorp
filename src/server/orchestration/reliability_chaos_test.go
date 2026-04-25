@@ -160,8 +160,8 @@ func TestSIPDB_PruneStaleMissions_Parity(t *testing.T) {
 
 	// Insert an old mission
 	oldTime := time.Now().Add(-48 * time.Hour).UTC().Format("2006-01-02 15:04:05")
-	_, err := sip.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ($1, $2, $3, $4, $5)",
-		"old-mission", "PENDING", "{}", oldTime, "system")
+	_, err := sip.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, $4, $5, $6)",
+		"old-mission", "PENDING", "{}", oldTime, oldTime, "system")
 	if err != nil {
 		t.Fatalf("failed to insert old mission: %v", err)
 	}
@@ -184,8 +184,8 @@ func TestSIPDB_PruneStaleMissions_Parity(t *testing.T) {
 	}
 
 	// Insert an old BURSTING mission to verify it also gets pruned
-	_, err = sip.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, organization_id) VALUES ($1, $2, $3, $4, $5)",
-		"old-bursting-mission", "BURSTING", "{}", oldTime, "system")
+	_, err = sip.db.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, $4, $5, $6)",
+		"old-bursting-mission", "BURSTING", "{}", oldTime, oldTime, "system")
 	if err != nil {
 		t.Fatalf("failed to insert old bursting mission: %v", err)
 	}
