@@ -3,6 +3,7 @@
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS agent_memory_embeddings (
+    hash_id VARCHAR(255) UNIQUE,
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
     tenant_id VARCHAR NOT NULL DEFAULT '',

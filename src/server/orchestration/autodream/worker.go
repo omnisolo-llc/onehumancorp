@@ -2,6 +2,8 @@ package autodream
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -134,6 +136,10 @@ func (w *AutoDreamWorker) processFSMemories(ctx context.Context) error {
 }
 
 func (w *AutoDreamWorker) embedAndStore(ctx context.Context, orgID, agentID, memType, content string) error {
+	hasher := sha256.New()
+	hasher.Write([]byte(fmt.Sprintf("%s-%s-%s-%s", orgID, agentID, memType, content)))
+	hashID := hex.EncodeToString(hasher.Sum(nil))
+
 	// Generate Embedding
 	embedding, err := w.llm.GenerateEmbedding(ctx, content)
 	if err != nil {
@@ -142,17 +148,17 @@ func (w *AutoDreamWorker) embedAndStore(ctx context.Context, orgID, agentID, mem
 
 
 
-	query := `INSERT INTO agent_memory_embeddings (organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6) `
+	query := `INSERT INTO agent_memory_embeddings (hash_id, organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (hash_id) DO UPDATE SET content = EXCLUDED.content, embedding = EXCLUDED.embedding `
 
 	if w.db.IsSQLite() {
-		query = `INSERT INTO agent_memory_embeddings (organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES (?, ?, ?, ?, ?, ?) `
+		query = `INSERT INTO agent_memory_embeddings (hash_id, organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (hash_id) DO UPDATE SET content = EXCLUDED.content, embedding = EXCLUDED.embedding `
 		embStr := fmt.Sprintf("%v", embedding)
-		_, err = w.db.Exec(ctx, query, orgID, orgID, agentID, memType, content, embStr)
+		_, err = w.db.Exec(ctx, query, hashID, orgID, orgID, agentID, memType, content, embStr)
 	} else {
 		embBytes, _ := json.Marshal(embedding)
 		// pgvector string format: [1,2,3]
 		embStr := string(embBytes)
-		_, err = w.db.Exec(ctx, query, orgID, orgID, agentID, memType, content, embStr)
+		_, err = w.db.Exec(ctx, query, hashID, orgID, orgID, agentID, memType, content, embStr)
 	}
 
 	if err != nil {

@@ -1,6 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS agent_memory_embeddings (
+    hash_id TEXT UNIQUE,
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     organization_id TEXT NOT NULL,
     tenant_id TEXT NOT NULL DEFAULT '',

@@ -34,6 +34,7 @@ func setupKairosTestProvider(t *testing.T) db.Provider {
 	_, err = provider.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
+			hash_id TEXT UNIQUE,
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			payload TEXT
@@ -44,6 +45,7 @@ func setupKairosTestProvider(t *testing.T) db.Provider {
 	_, err = provider.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS agent_mesh_messages (
 			id TEXT PRIMARY KEY,
+			hash_id TEXT UNIQUE,
 			tenant_id TEXT NOT NULL,
 			sender TEXT NOT NULL,
 			channel TEXT NOT NULL,
@@ -55,6 +57,7 @@ func setupKairosTestProvider(t *testing.T) db.Provider {
 	_, err = provider.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS agent_memory_embeddings (
 			id TEXT PRIMARY KEY,
+			hash_id TEXT UNIQUE,
 			organization_id TEXT NOT NULL,
 			tenant_id TEXT NOT NULL DEFAULT '',
 			agent_id TEXT NOT NULL,

@@ -2,6 +2,8 @@ package autodream
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -178,12 +180,16 @@ func (w *KairosAutoDreamWorker) processAgentMessages(ctx context.Context) error 
 }
 
 func (w *KairosAutoDreamWorker) storeEmbedding(ctx context.Context, tx db.Tx, orgID, agentID, memType, content string, embedding []float32) error {
-	query := `INSERT INTO agent_memory_embeddings (organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6) `
+	hasher := sha256.New()
+	hasher.Write([]byte(fmt.Sprintf("%s-%s-%s-%s", orgID, agentID, memType, content)))
+	hashID := hex.EncodeToString(hasher.Sum(nil))
+
+	query := `INSERT INTO agent_memory_embeddings (hash_id, organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (hash_id) DO UPDATE SET content = EXCLUDED.content, embedding = EXCLUDED.embedding `
 
 	if w.db.IsSQLite() {
-		query = `INSERT INTO agent_memory_embeddings (organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES (?, ?, ?, ?, ?, ?) `
+		query = `INSERT INTO agent_memory_embeddings (hash_id, organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (hash_id) DO UPDATE SET content = EXCLUDED.content, embedding = EXCLUDED.embedding `
 		embBytes, _ := json.Marshal(embedding)
-		_, err := tx.Exec(ctx, query, orgID, orgID, agentID, memType, content, string(embBytes))
+		_, err := tx.Exec(ctx, query, hashID, orgID, orgID, agentID, memType, content, string(embBytes))
 		return err
 	}
 
@@ -192,6 +198,6 @@ func (w *KairosAutoDreamWorker) storeEmbedding(ctx context.Context, tx db.Tx, or
 	if len(embedding) == 0 {
 		embStr = "[]"
 	}
-	_, err := tx.Exec(ctx, query, orgID, orgID, agentID, memType, content, embStr)
+	_, err := tx.Exec(ctx, query, hashID, orgID, orgID, agentID, memType, content, embStr)
 	return err
 }

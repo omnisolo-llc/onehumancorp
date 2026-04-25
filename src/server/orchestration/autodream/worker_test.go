@@ -32,6 +32,7 @@ func TestAutoDreamWorker(t *testing.T) {
 	// Create tables
 	_, err := provider.Exec(ctx, `CREATE TABLE agent_session_data (
 		session_id TEXT PRIMARY KEY,
+		hash_id TEXT UNIQUE,
 		agent_id TEXT NOT NULL,
 		context_data TEXT NOT NULL,
 		created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
@@ -43,6 +44,7 @@ func TestAutoDreamWorker(t *testing.T) {
 
 	_, err = provider.Exec(ctx, `CREATE TABLE agent_memory_embeddings (
 		id TEXT PRIMARY KEY,
+		hash_id TEXT UNIQUE,
 		organization_id TEXT NOT NULL,
 		tenant_id TEXT NOT NULL DEFAULT '',
 		agent_id TEXT NOT NULL,
