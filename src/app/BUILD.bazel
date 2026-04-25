@@ -421,3 +421,11 @@ pkg_rpm(
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
 )
+
+flutter_test(
+    name = "cuj_welcome_checklist_e2e_test",
+    srcs = ["test/dashboard_welcome_checklist_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/dashboard_welcome_checklist_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)

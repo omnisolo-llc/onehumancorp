@@ -1,4 +1,4 @@
-load("@rules_flutter//flutter:defs.bzl", "flutter_library")
+load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
 
 package(default_visibility = ["//src/app:__subpackages__"])
 
@@ -50,4 +50,12 @@ alias(
 alias(
     name = "sub_agent_queue_widget",
     actual = ":widgets_lib",
+)
+
+flutter_test(
+    name = "welcome_checklist_widget_test",
+    srcs = ["welcome_checklist_widget_test.dart"],
+    embed = ["//src/app:app_lib"],
+    test_files = ["welcome_checklist_widget_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
 )

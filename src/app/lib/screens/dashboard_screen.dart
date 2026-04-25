@@ -1,4 +1,5 @@
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
+import 'package:ohc_app/widgets/welcome_checklist_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -98,6 +99,8 @@ class _DashboardContent extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
+        const WelcomeChecklistWidget(),
+        const SizedBox(height: 24),
         Wrap(
           spacing: 16,
           runSpacing: 16,
