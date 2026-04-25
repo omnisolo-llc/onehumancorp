@@ -34,6 +34,7 @@ func setupKairosTestProvider(t *testing.T) db.Provider {
 	_, err = provider.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS shared_tasks (
 			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL DEFAULT 'tenant-1',
 			title TEXT NOT NULL,
 			status TEXT NOT NULL DEFAULT 'PENDING',
 			payload TEXT
@@ -76,7 +77,7 @@ func TestKairosAutoDreamWorker_RunConsolidation(t *testing.T) {
 
 	// insert mock task
 	_, err := provider.Exec(context.Background(), `
-		INSERT INTO shared_tasks (id, title, status, payload) VALUES ('task-1', 'Task 1', 'COMPLETED', '{}')
+		INSERT INTO shared_tasks (id, tenant_id, title, status, payload) VALUES ('task-1', 'org-1234', 'Task 1', 'COMPLETED', '{}')
 	`)
 	require.NoError(t, err)
 
@@ -125,4 +126,38 @@ func TestKairosAutoDreamWorker_RunConsolidation(t *testing.T) {
 	err = row.Scan(&count)
 	assert.NoError(t, err)
 	assert.Equal(t, 0, count)
+}
+
+func TestKairosAutoDreamWorker_TenantIsolation(t *testing.T) {
+	provider := setupKairosTestProvider(t)
+	defer provider.Close()
+
+	mockLLM := &KairosMockWorkerLLMClient{}
+	worker := NewKairosAutoDreamWorker(provider, mockLLM)
+
+	// insert mock task with specific tenant_id
+	_, err := provider.Exec(context.Background(), `
+		INSERT INTO shared_tasks (id, tenant_id, title, status, payload) VALUES ('task-sec-1', 'tenant-sec-123', 'Task Sec 1', 'COMPLETED', '{}')
+	`)
+	require.NoError(t, err)
+
+	err = worker.RunConsolidation(context.Background())
+	require.NoError(t, err)
+
+	// Verify that the memory was stored under the correct tenant_id
+	rows, err := provider.Query(context.Background(), "SELECT organization_id FROM agent_memory_embeddings WHERE memory_type = 'task_memory'")
+	require.NoError(t, err)
+	defer rows.Close()
+
+	var count int
+	var foundTenant string
+	for rows.Next() {
+		var orgID string
+		err := rows.Scan(&orgID)
+		require.NoError(t, err)
+		foundTenant = orgID
+		count++
+	}
+	require.Equal(t, 1, count, "Should have stored exactly 1 task memory")
+	require.Equal(t, "tenant-sec-123", foundTenant, "Memory should be stored under the specific tenant_id, not 'system'")
 }

@@ -11,6 +11,7 @@ go_library(
         "shared_tasks_repo.go",
         "test_provider.go",
         "migrations/20260430000000_autodream_sync_daemon.go",
+        "migrations/20260502000000_cloud_search_index.go",
     ],
     embedsrcs = [
         "migrations/001_users.sql",
