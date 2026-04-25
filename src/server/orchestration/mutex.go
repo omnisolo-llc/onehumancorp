@@ -152,15 +152,14 @@ func (m *SQLiteMutex) Lock(ctx context.Context, ttl time.Duration) error {
 	return nil
 }
 func (m *SQLiteMutex) Unlock(ctx context.Context) error {
-	query := `DELETE FROM distributed_locks WHERE lock_key = $1 AND owner_id = $2`
-	res, err := m.provider.db.Exec(ctx, query, m.key, m.ownerID)
+	query := `DELETE FROM distributed_locks WHERE lock_key = $1 AND owner_id = $2 RETURNING lock_key`
+	var key string
+	err := m.provider.db.QueryRow(ctx, query, m.key, m.ownerID).Scan(&key)
 	if err != nil {
+		if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+			return ErrLockNotOwned
+		}
 		return err
-	}
-
-	rowsAffected := res
-	if rowsAffected == 0 {
-		return ErrLockNotOwned
 	}
 	return nil
 }

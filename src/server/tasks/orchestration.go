@@ -93,32 +93,19 @@ func (o *Orchestrator) CompleteTask(ctx context.Context, missionID string, agent
         tableName = "mission_queue"
     }
 
-    query := fmt.Sprintf("UPDATE %s SET status = 'DONE' WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS'", tableName)
+    query := fmt.Sprintf("UPDATE %s SET status = 'DONE' WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS' RETURNING mission_id", tableName)
     if o.DBProvider.IsSQLite() {
         query = strings.ReplaceAll(query, "$1", "?")
         query = strings.ReplaceAll(query, "$2", "?")
     }
 
-    cmdTag, err := tx.Exec(ctx, query, missionID, agentID)
+    var returnedID string
+    err = tx.QueryRow(ctx, query, missionID, agentID).Scan(&returnedID)
     if err != nil {
+        if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+            return fmt.Errorf("task not found, not assigned to agent, or not in progress")
+        }
         return err
-    }
-    // cmdTag from tx.Exec is pgconn.CommandTag or int64 depending on the db driver.
-    // Wait, the db provider returns pgconn.CommandTag which has RowsAffected() method for Postgres,
-    // but db.Provider might just be returning pgconn.CommandTag. Let's cast it or just rely on our Provider.
-    // Let's actually use tx.Exec returning something.
-    // Wait, if it's returning int64 (because maybe it's mock / standard database/sql)
-    rowsAffected := int64(0)
-    if num, ok := interface{}(cmdTag).(int64); ok {
-        rowsAffected = num
-    } else if val, ok := interface{}(cmdTag).(interface{ RowsAffected() int64 }); ok {
-        rowsAffected = val.RowsAffected()
-    } else {
-        // Fallback for types that might be pgconn.CommandTag where RowsAffected returns int64
-        rowsAffected = 1 // Let's just assume 1 if we can't figure it out, to avoid breaking it, but we should try.
-    }
-    if rowsAffected == 0 {
-        return fmt.Errorf("task not found, not assigned to agent, or not in progress")
     }
 
     if err := tx.Commit(ctx); err != nil {
@@ -161,32 +148,19 @@ func (o *Orchestrator) FailTask(ctx context.Context, missionID string, agentID s
         tableName = "mission_queue"
     }
 
-    query := fmt.Sprintf("UPDATE %s SET status = 'BLOCKED' WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS'", tableName)
+    query := fmt.Sprintf("UPDATE %s SET status = 'BLOCKED' WHERE mission_id = $1 AND assigned_agent = $2 AND status = 'IN_PROGRESS' RETURNING mission_id", tableName)
     if o.DBProvider.IsSQLite() {
         query = strings.ReplaceAll(query, "$1", "?")
         query = strings.ReplaceAll(query, "$2", "?")
     }
 
-    cmdTag, err := tx.Exec(ctx, query, missionID, agentID)
+    var returnedID string
+    err = tx.QueryRow(ctx, query, missionID, agentID).Scan(&returnedID)
     if err != nil {
+        if err.Error() == "sql: no rows in result set" || err.Error() == "no rows in result set" {
+            return fmt.Errorf("task not found, not assigned to agent, or not in progress")
+        }
         return err
-    }
-    // cmdTag from tx.Exec is pgconn.CommandTag or int64 depending on the db driver.
-    // Wait, the db provider returns pgconn.CommandTag which has RowsAffected() method for Postgres,
-    // but db.Provider might just be returning pgconn.CommandTag. Let's cast it or just rely on our Provider.
-    // Let's actually use tx.Exec returning something.
-    // Wait, if it's returning int64 (because maybe it's mock / standard database/sql)
-    rowsAffected := int64(0)
-    if num, ok := interface{}(cmdTag).(int64); ok {
-        rowsAffected = num
-    } else if val, ok := interface{}(cmdTag).(interface{ RowsAffected() int64 }); ok {
-        rowsAffected = val.RowsAffected()
-    } else {
-        // Fallback for types that might be pgconn.CommandTag where RowsAffected returns int64
-        rowsAffected = 1 // Let's just assume 1 if we can't figure it out, to avoid breaking it, but we should try.
-    }
-    if rowsAffected == 0 {
-        return fmt.Errorf("task not found, not assigned to agent, or not in progress")
     }
 
     // Example of recording reason somewhere, omitted for brevity as there is no column currently.
