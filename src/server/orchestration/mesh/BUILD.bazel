@@ -12,6 +12,7 @@ go_library(
         "redis_mesh.go",
         "server.go",
         "mesh_coordinator.go",
+        "router.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/server/orchestration/mesh",
     visibility = ["//visibility:public"],
@@ -29,6 +30,7 @@ go_test(
         "broker_test.go",
         "mesh_test.go",
         "mesh_coordinator_test.go",
+        "router_test.go",
     ],
     embed = [":mesh"],
     deps = [
