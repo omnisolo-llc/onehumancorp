@@ -23,4 +23,5 @@ go_test(
         "tracker_test.go",
     ],
     embed = [":billing"],
+    tags = ["local"],
 )
