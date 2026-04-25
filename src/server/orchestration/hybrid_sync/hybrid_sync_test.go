@@ -356,3 +356,98 @@ func TestHybridSyncDaemon_SyncLocalToCloud(t *testing.T) {
 		t.Errorf("expected rag_context %q, got %q", expectedRagContext, ragContextStr)
 	}
 }
+
+func TestHybridSyncDaemon_ProcessMissionSync(t *testing.T) {
+	sqlDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to open sqlite db: %v", err)
+	}
+	defer sqlDB.Close()
+
+	_, err = sqlDB.Exec(`
+		CREATE TABLE agent_missions (
+			id TEXT PRIMARY KEY,
+			status TEXT NOT NULL,
+			payload TEXT NOT NULL,
+			organization_id TEXT,
+			synced_to_cloud BOOLEAN DEFAULT FALSE,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("failed to create agent_missions table: %v", err)
+	}
+
+	mockPayload := `{"details": "user email is test@example.com", "secret": "password123"}`
+	_, err = sqlDB.Exec(`
+		INSERT INTO agent_missions (id, status, payload, organization_id, synced_to_cloud)
+		VALUES ('mission1', 'PENDING', $1, 'org1', false)
+	`, mockPayload)
+	if err != nil {
+		t.Fatalf("failed to insert test data: %v", err)
+	}
+
+	sqliteProv := db.NewSqliteProvider(sqlDB)
+	dbWrapper := &db.DB{Provider: sqliteProv}
+
+	var receivedPayload map[string]interface{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/sync/missions" && r.Method == http.MethodPost {
+			if err := json.NewDecoder(r.Body).Decode(&receivedPayload); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	daemon := NewHybridSyncDaemon(dbWrapper, 1*time.Minute, srv.URL)
+
+	daemon.ProcessMissionSync(context.Background())
+
+	var synced bool
+	err = sqlDB.QueryRow("SELECT synced_to_cloud FROM agent_missions WHERE id = 'mission1'").Scan(&synced)
+	if err != nil {
+		t.Fatalf("failed to query m1 status: %v", err)
+	}
+	if !synced {
+		t.Errorf("expected mission to be synced")
+	}
+
+	if receivedPayload == nil {
+		t.Fatalf("expected payload to be received, got nil")
+	}
+
+	if receivedPayload["mission_id"] != "mission1" {
+		t.Errorf("expected mission_id 'mission1', got %v", receivedPayload["mission_id"])
+	}
+
+	payloadMap, ok := receivedPayload["payload"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected payload map, got %T", receivedPayload["payload"])
+	}
+
+	ragContextStr, ok := payloadMap["rag_context"].(string)
+	if !ok {
+		t.Fatalf("expected rag_context string, got %T", payloadMap["rag_context"])
+	}
+
+	expectedRagContext := `{"details":"user email is [REDACTED_EMAIL]","secret":"password123"}`
+
+	var actualMap map[string]interface{}
+	json.Unmarshal([]byte(ragContextStr), &actualMap)
+
+	var expectedMap map[string]interface{}
+	json.Unmarshal([]byte(expectedRagContext), &expectedMap)
+
+	actualBytes, _ := json.Marshal(actualMap)
+	expectedBytes, _ := json.Marshal(expectedMap)
+
+	if string(actualBytes) != string(expectedBytes) {
+		t.Errorf("expected rag_context %q, got %q", expectedRagContext, ragContextStr)
+	}
+}
