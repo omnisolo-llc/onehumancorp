@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -438,6 +439,59 @@ func TestRecordFunctions(t *testing.T) {
 
 	t.Run("RecordAgentCost", func(t *testing.T) {
 		RecordAgentCost(ctx, "agent-1", "org-1", "developer", "gpt-4", 0.03)
+	})
+}
+
+func TestRecordMissionCostCents(t *testing.T) {
+	t.Run("RecordMissionCostCents", func(t *testing.T) {
+		ctx := context.Background()
+
+		var called bool
+		var payloadReceived string
+		originalBufferFunc := BufferMetricFunc
+		defer func() { BufferMetricFunc = originalBufferFunc }()
+
+		BufferMetricFunc = func(ctx context.Context, metricName, payload string) error {
+			called = true
+			if metricName != "mission_cost_cents" {
+				t.Errorf("Expected metricName 'mission_cost_cents', got %v", metricName)
+			}
+			payloadReceived = payload
+			return nil
+		}
+
+		// Use typical values including what might be redacted, though here there's no PII
+		RecordMissionCostCents(ctx, "tenant-1", "mission-123", "agent-x", "planner", 150.5)
+
+		if !called {
+			t.Errorf("Expected BufferMetricFunc to be called")
+		}
+
+		if !strings.Contains(payloadReceived, `"tenant_id":"tenant-1"`) {
+			t.Errorf("Payload missing tenant_id: %s", payloadReceived)
+		}
+		if !strings.Contains(payloadReceived, `"mission_id":"mission-123"`) {
+			t.Errorf("Payload missing mission_id: %s", payloadReceived)
+		}
+		if !strings.Contains(payloadReceived, `"agent_id":"agent-x"`) {
+			t.Errorf("Payload missing agent_id: %s", payloadReceived)
+		}
+		if !strings.Contains(payloadReceived, `"role":"planner"`) {
+			t.Errorf("Payload missing role: %s", payloadReceived)
+		}
+		if !strings.Contains(payloadReceived, `"cost":150.5`) {
+			t.Errorf("Payload missing cost: %s", payloadReceived)
+		}
+	})
+
+	t.Run("RecordMissionCostCentsWithNilBuffer", func(t *testing.T) {
+		ctx := context.Background()
+		originalBufferFunc := BufferMetricFunc
+		defer func() { BufferMetricFunc = originalBufferFunc }()
+
+		BufferMetricFunc = nil
+		// Should not panic
+		RecordMissionCostCents(ctx, "tenant-1", "mission-123", "agent-x", "planner", 150.5)
 	})
 }
 

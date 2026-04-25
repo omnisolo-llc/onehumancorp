@@ -126,6 +126,7 @@ func (m *Manager) ExecuteStream(ctx context.Context, command string, policy *Pol
 	// Calculate and record cost (simplified simulation based on command length)
 	cost := float64(len(command)) * 0.0001
 	telemetry.RecordAgentCost(ctx, agentID, orgID, role, model, cost)
+	telemetry.RecordMissionCostCents(ctx, orgID, "", agentID, role, cost*100)
 
 	start := time.Now()
 	// 2. Execute via runner with streaming I/O (assuming runner has an equivalent streaming method)
