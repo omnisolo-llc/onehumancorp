@@ -73,10 +73,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isLoggedIn = authState.valueOrNull != null;
       final isLoginRoute = state.matchedLocation == '/login';
       final isLandingRoute = state.matchedLocation == '/landing';
+      final isHelpRoute = state.matchedLocation.startsWith('/help');
       final redirectTarget = safeRedirectTarget(state.uri.queryParameters['redirect']);
 
       // Allow these public routes without authentication.
-      if (!isLoggedIn && !isLoginRoute && !isLandingRoute) {
+      if (!isLoggedIn && !isLoginRoute && !isLandingRoute && !isHelpRoute) {
         final encodedTarget = Uri.encodeComponent(state.uri.toString());
         return '/login?redirect=$encodedTarget';
       }
@@ -239,7 +240,33 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Stack(children: [Row(children: [_Sidebar(), Expanded(child: child)]), const AiHelpChat()]));
+    // For mobile responsiveness (e.g. 375px), we should swap the desktop sidebar
+    // out for a bottom nav or a standard app bar with drawer to prevent the sidebar
+    // from crushing the main content.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 768;
+
+        return Scaffold(
+          drawer: isMobile ? _Sidebar() : null,
+          appBar: isMobile ? AppBar(
+            title: const Text('One Human Corp', style: TextStyle(fontFamily: 'Outfit', fontSize: 16)),
+            // A burger menu icon will automatically appear when a drawer is present
+          ) : null,
+          body: Stack(
+            children: [
+              Row(
+                children: [
+                  if (!isMobile) _Sidebar(),
+                  Expanded(child: child),
+                ],
+              ),
+              const AiHelpChat(),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 

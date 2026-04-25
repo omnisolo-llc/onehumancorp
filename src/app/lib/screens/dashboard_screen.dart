@@ -1,4 +1,5 @@
 import 'package:ohc_app/widgets/help/tooltip_registry.dart';
+import 'package:ohc_app/widgets/help/ohc_tooltip.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -30,7 +31,7 @@ class DashboardScreen extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
-        title: OhcTooltip(message: TooltipRegistry.get('dashboard_title'), child: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold))),
+        title: OhcTooltip(tooltipKey: 'dashboard_title', child: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold))),
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
@@ -502,7 +503,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                             button: true,
                             label: 'Decrease $formattedRole count',
                             child: OhcTooltip(
-                              message: TooltipRegistry.get('dashboard_fire'),
+                              tooltipKey: 'dashboard_fire',
                               child: IconButton(
                                 icon: const Icon(Icons.remove_circle_outline, size: 28),
                                 color: colors.primary,
@@ -538,7 +539,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
                             button: true,
                             label: 'Increase $formattedRole count',
                             child: OhcTooltip(
-                              message: TooltipRegistry.get('dashboard_hire'),
+                              tooltipKey: 'dashboard_hire',
                               child: IconButton(
                                 icon: const Icon(Icons.add_circle_outline, size: 28),
                                 color: colors.primary,
