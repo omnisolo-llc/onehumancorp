@@ -213,7 +213,10 @@ impl Agent {
                             result: format!("Error: {}", err),
                             iteration,
                         });
-                        (String::new(), err)
+                        // LLM-recoverable ToolMessage mechanic: Return the raw error as a
+                        // ToolMessage content directly to the model so it can self-correct.
+                        let recovery_msg = format!("Tool execution failed: {}. Please analyze this error, correct your arguments, and try again.", err);
+                        (recovery_msg, String::new())
                     }
                 };
                 tool_results.push(ToolResult {
@@ -307,6 +310,70 @@ mod tests {
         async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
+    }
+
+
+    #[tokio::test]
+    async fn test_llm_recoverable_tool_error() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_err".to_string(),
+                            name: "error_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer after error"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        struct ErrorToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for ErrorToolExecutor {
+            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+                Err("simulated tool failure".into())
+            }
+        }
+
+        let tools = vec![Tool {
+            name: "error_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(ErrorToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 5;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Trigger error", &mut on_event).await;
+        assert!(result.is_ok());
+
+        let mut found_error_call = false;
+        for event in events {
+            if let AgentEvent::ToolCall { name, result, .. } = event {
+                if name == "error_tool" {
+                    assert!(result.contains("Error: simulated tool failure"));
+                    found_error_call = true;
+                }
+            }
+        }
+        assert!(found_error_call);
     }
 
     #[tokio::test]
