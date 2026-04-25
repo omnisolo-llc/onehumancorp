@@ -125,7 +125,7 @@ func TestMain(m *testing.M) {
 		serverCmd = exec.Command(ohcBin)
 		serverCmd.Env = append(os.Environ(),
 			"OHC_STANDALONE=true",
-			"OHC_HEADLESS=true",
+			"OHC_HEADLESS=false",
 			"OHC_SERVE_UI=true",
 			fmt.Sprintf("FRONTEND_STATIC_DIR=%s", webDir),
 			fmt.Sprintf("PORT=%d", port),
