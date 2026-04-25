@@ -249,11 +249,11 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				dbInstance.PruneStaleMissions(ctx, time.Second)
+				dbInstance.SanitizeMissions(ctx, time.Second)
 			}(i)
 		}
 		wg.Wait()
-		t.Log("SQLite Parity PruneStaleMissions completed without panic")
+		t.Log("SQLite Parity SanitizeMissions completed without panic")
 	})
 
 	// Second, run with Mock Postgres DB Provider behavior
@@ -279,10 +279,10 @@ func TestSIPDB_ChaosParity(t *testing.T) {
 			wg.Add(1)
 			go func(idx int) {
 				defer wg.Done()
-				dbInstance.PruneStaleMissions(ctx, time.Second)
+				dbInstance.SanitizeMissions(ctx, time.Second)
 			}(i)
 		}
 		wg.Wait()
-		t.Log("Postgres Parity PruneStaleMissions completed without panic")
+		t.Log("Postgres Parity SanitizeMissions completed without panic")
 	})
 }

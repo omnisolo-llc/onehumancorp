@@ -12,7 +12,7 @@ import (
 	"github.com/onehumancorp/mono/src/server/db"
 )
 
-func TestPruneStaleMissions_StuckTransition(t *testing.T) {
+func TestSanitizeMissions_StuckTransition(t *testing.T) {
 	ctx := context.Background()
 	provider := db.NewTestProvider(t)
 
@@ -39,9 +39,9 @@ func TestPruneStaleMissions_StuckTransition(t *testing.T) {
 	}
 
 	// 3. Prune missions with 2h threshold
-	err = sip.PruneStaleMissions(ctx, 2*time.Hour)
+	err = sip.SanitizeMissions(ctx, 2*time.Hour)
 	if err != nil {
-		t.Fatalf("PruneStaleMissions failed: %v", err)
+		t.Fatalf("SanitizeMissions failed: %v", err)
 	}
 
 	// Verify transitions

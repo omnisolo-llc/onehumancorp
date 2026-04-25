@@ -153,7 +153,7 @@ func TestSIPDB_SQLiteLockContention_Chaos(t *testing.T) {
 	}
 }
 
-func TestSIPDB_PruneStaleMissions_Parity(t *testing.T) {
+func TestSIPDB_SanitizeMissions_Parity(t *testing.T) {
 	sip, _ := NewSIPDB(":memory:")
 	defer sip.Close()
 	ctx := context.Background()
@@ -167,13 +167,13 @@ func TestSIPDB_PruneStaleMissions_Parity(t *testing.T) {
 	}
 
 	// Prune with 24h threshold
-	err = sip.PruneStaleMissions(ctx, 24*time.Hour)
+	err = sip.SanitizeMissions(ctx, 24*time.Hour)
 	if err != nil {
-		t.Errorf("PruneStaleMissions failed: %v", err)
+		t.Errorf("SanitizeMissions failed: %v", err)
 	}
 
 	// Verify it was marked as FAILED first (sanitization) then deleted (pruning)
-	// Actually PruneStaleMissions marks as FAILED then DELETES in the same call if it matches both.
+	// Actually SanitizeMissions marks as FAILED then DELETES in the same call if it matches both.
 	var status string
 	err = sip.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'old-mission'").Scan(&status)
 	if err != nil && err.Error() != "sql: no rows in result set" {
@@ -191,9 +191,9 @@ func TestSIPDB_PruneStaleMissions_Parity(t *testing.T) {
 	}
 
 	// Prune with 24h threshold
-	err = sip.PruneStaleMissions(ctx, 24*time.Hour)
+	err = sip.SanitizeMissions(ctx, 24*time.Hour)
 	if err != nil {
-		t.Errorf("PruneStaleMissions failed for bursting: %v", err)
+		t.Errorf("SanitizeMissions failed for bursting: %v", err)
 	}
 
 	err = sip.db.QueryRow(ctx, "SELECT status FROM agent_missions WHERE id = 'old-bursting-mission'").Scan(&status)

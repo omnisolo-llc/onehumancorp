@@ -259,7 +259,7 @@ func TestSIPDB_PruneBufferedMetrics(t *testing.T) {
 	}
 }
 
-func TestSIPDB_PruneStaleMissions(t *testing.T) {
+func TestSIPDB_SanitizeMissions(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -295,7 +295,7 @@ func TestSIPDB_PruneStaleMissions(t *testing.T) {
 	}
 
 	// Prune missions older than 24 hours
-	err = db.PruneStaleMissions(ctx, 24*time.Hour)
+	err = db.SanitizeMissions(ctx, 24*time.Hour)
 	if err != nil {
 		t.Fatalf("Failed to prune stale missions: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestSIPDB_PruneTelemetryBuffer_DBError(t *testing.T) {
 	}
 }
 
-func TestSIPDB_PruneStaleMissions_DBError(t *testing.T) {
+func TestSIPDB_SanitizeMissions_DBError(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "test.db")
 	db, err := NewSIPDB(dbPath)
 	if err != nil {
@@ -383,7 +383,7 @@ func TestSIPDB_PruneStaleMissions_DBError(t *testing.T) {
 	}
 	db.Close()
 
-	err = db.PruneStaleMissions(context.Background(), 24*time.Hour)
+	err = db.SanitizeMissions(context.Background(), 24*time.Hour)
 	if err == nil {
 		t.Fatal("Expected error when pruning on closed DB")
 	}
@@ -704,7 +704,7 @@ func TestSIPDB_ScanErrors(t *testing.T) {
 	_, _ = db.db.Exec(ctx, "DELETE FROM agent_missions")
 
 	_ = db.CompleteMission(ctx, "nonexistent")
-	_ = db.PruneStaleMissions(ctx, 0)
+	_ = db.SanitizeMissions(ctx, 0)
 }
 
 func TestSIPDB_BurstMission(t *testing.T) {

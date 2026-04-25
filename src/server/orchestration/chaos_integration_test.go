@@ -101,7 +101,7 @@ func TestCUJ_StressVerification(t *testing.T) {
 	})
 }
 
-func TestParity_PruneStaleMissions(t *testing.T) {
+func TestParity_SanitizeMissions(t *testing.T) {
 	t.Run("SQLite", func(t *testing.T) {
 		t.Setenv("OHC_STANDALONE", "true")
 
@@ -123,11 +123,11 @@ func TestParity_PruneStaleMissions(t *testing.T) {
 			go func(idx int) {
 				defer wg.Done()
 				_ = idx
-				dbInstance.PruneStaleMissions(ctx, time.Second)
+				dbInstance.SanitizeMissions(ctx, time.Second)
 			}(i)
 		}
 		wg.Wait()
-		t.Log("SQLite Parity PruneStaleMissions completed without panic")
+		t.Log("SQLite Parity SanitizeMissions completed without panic")
 	})
 
 	t.Run("PostgresMock", func(t *testing.T) {
@@ -151,11 +151,11 @@ func TestParity_PruneStaleMissions(t *testing.T) {
 			go func(idx int) {
 				defer wg.Done()
 				_ = idx
-				dbInstance.PruneStaleMissions(ctx, time.Second)
+				dbInstance.SanitizeMissions(ctx, time.Second)
 			}(i)
 		}
 		wg.Wait()
-		t.Log("Postgres Parity PruneStaleMissions completed without panic")
+		t.Log("Postgres Parity SanitizeMissions completed without panic")
 	})
 }
 
@@ -180,9 +180,9 @@ func TestParity_PruneStaleBursting(t *testing.T) {
 			t.Fatalf("failed to insert old bursting mission: %v", err)
 		}
 
-		err = dbInstance.PruneStaleMissions(ctx, 24*time.Hour)
+		err = dbInstance.SanitizeMissions(ctx, 24*time.Hour)
 		if err != nil {
-			t.Errorf("PruneStaleMissions failed: %v", err)
+			t.Errorf("SanitizeMissions failed: %v", err)
 		}
 
 		var status string
@@ -212,9 +212,9 @@ func TestParity_PruneStaleBursting(t *testing.T) {
 			t.Fatalf("failed to insert old bursting mission: %v", err)
 		}
 
-		err = dbInstance.PruneStaleMissions(ctx, 24*time.Hour)
+		err = dbInstance.SanitizeMissions(ctx, 24*time.Hour)
 		if err != nil {
-			t.Errorf("PruneStaleMissions failed: %v", err)
+			t.Errorf("SanitizeMissions failed: %v", err)
 		}
 
 		var status string

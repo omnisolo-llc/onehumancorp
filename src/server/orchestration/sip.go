@@ -704,13 +704,13 @@ func (s *SIPDB) PruneBufferedMetrics(ctx context.Context, ageThreshold time.Dura
 	})
 }
 
-// PruneStaleMissions removes completed missions or missions older than a specified duration from the agent_missions table.
+// SanitizeMissions removes completed missions or missions older than a specified duration from the agent_missions table.
 // It also sanitizes stuck PENDING missions by converting them to STUCK after 1h, then FAILED if they are older than the ageThreshold.
 // Accepts parameters: ctx context.Context, ageThreshold time.Duration.
 // Returns error.
 // Produces errors: Explicit error handling.
 // Has side effects: Deletes records from the agent_missions table and updates stuck records.
-func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Duration) error {
+func (s *SIPDB) SanitizeMissions(ctx context.Context, ageThreshold time.Duration) error {
 	return withSipRetry(ctx, func() error {
 		stuckThreshold := time.Now().Add(-1 * time.Hour).UTC().Format("2006-01-02 15:04:05")
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
