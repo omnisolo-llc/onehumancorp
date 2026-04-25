@@ -6,22 +6,30 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/gorilla/websocket"
 )
 
-type MeshAPI struct {
-	mesh TeammateMesh
+type ApprovalWorkflowEngine interface {
+	GetPendingApprovalTasks(ctx context.Context, orgID string) (interface{}, error)
+	ApproveTask(ctx context.Context, taskID string, agentID string) error
+	RejectTask(ctx context.Context, taskID string, agentID string) error
 }
 
-func NewMeshAPI(mesh TeammateMesh) *MeshAPI {
-	return &MeshAPI{mesh: mesh}
+type MeshAPI struct {
+	mesh TeammateMesh
+	workflowEngine ApprovalWorkflowEngine
+}
+
+func NewMeshAPI(mesh TeammateMesh, workflowEngine ApprovalWorkflowEngine) *MeshAPI {
+	return &MeshAPI{mesh: mesh, workflowEngine: workflowEngine}
 }
 
 func (api *MeshAPI) RegisterRoutes(mux *http.ServeMux) {
 
-	mux.HandleFunc("/api/kairos/actions/pending", api.handleGetPendingActions)
-	mux.HandleFunc("/api/kairos/actions/approve", api.handleApproveAction)
-	mux.HandleFunc("/api/kairos/actions/reject", api.handleRejectAction)
+	mux.HandleFunc("/api/kairos/actions/pending", api.HandleGetPendingActions)
+	mux.HandleFunc("/api/kairos/actions/approve", api.HandleApproveAction)
+	mux.HandleFunc("/api/kairos/actions/reject", api.HandleRejectAction)
 
 	mux.HandleFunc("/api/kairos/mesh/publish", api.HandlePublish)
 	mux.HandleFunc("/api/kairos/mesh/subscribe", api.HandleSubscribe)
@@ -135,15 +143,32 @@ type approvalRequest struct {
 	TaskID string `json:"task_id"`
 }
 
-func (api *MeshAPI) handleGetPendingActions(w http.ResponseWriter, r *http.Request) {
-	// Dummy logic for fetching pending approvals
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`[]`))
+func (api *MeshAPI) HandleGetPendingActions(w http.ResponseWriter, r *http.Request) {
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil || claims.OrganizationID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tasks, err := api.workflowEngine.GetPendingApprovalTasks(r.Context(), claims.OrganizationID)
+	if err != nil {
+		http.Error(w, "failed to fetch pending actions", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tasks)
 }
 
-func (api *MeshAPI) handleApproveAction(w http.ResponseWriter, r *http.Request) {
+func (api *MeshAPI) HandleApproveAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -153,14 +178,24 @@ func (api *MeshAPI) handleApproveAction(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Logic to approve action
+	if err := api.workflowEngine.ApproveTask(r.Context(), req.TaskID, claims.Subject); err != nil {
+		http.Error(w, "failed to approve action", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"approved"}`))
 }
 
-func (api *MeshAPI) handleRejectAction(w http.ResponseWriter, r *http.Request) {
+func (api *MeshAPI) HandleRejectAction(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.ClaimsFromContext(r.Context())
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -170,7 +205,11 @@ func (api *MeshAPI) handleRejectAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Logic to reject action
+	if err := api.workflowEngine.RejectTask(r.Context(), req.TaskID, claims.Subject); err != nil {
+		http.Error(w, "failed to reject action", http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"status":"rejected"}`))
 }

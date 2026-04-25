@@ -1,6 +1,8 @@
 package kairos
 
 import (
+	"errors"
+	"github.com/onehumancorp/mono/src/server/auth"
 	"bytes"
 	"context"
 	"crypto/tls"
@@ -14,6 +16,26 @@ import (
 
 	"github.com/gorilla/websocket"
 )
+
+type mockWorkflowEngine struct {
+	pendingTasks []interface{}
+	err          error
+}
+
+func (m *mockWorkflowEngine) GetPendingApprovalTasks(ctx context.Context, orgID string) (interface{}, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.pendingTasks, nil
+}
+
+func (m *mockWorkflowEngine) ApproveTask(ctx context.Context, taskID string, agentID string) error {
+	return m.err
+}
+
+func (m *mockWorkflowEngine) RejectTask(ctx context.Context, taskID string, agentID string) error {
+	return m.err
+}
 
 type mockTeammateMesh struct {
 	TeammateMesh
@@ -45,7 +67,7 @@ func createMockTLSRequest(method, urlStr string, body []byte, hasCert bool) *htt
 
 func TestMeshAPI_HandlePublish(t *testing.T) {
 	mockMesh := &mockTeammateMesh{}
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	tests := []struct {
 		name       string
@@ -93,7 +115,7 @@ func TestMeshAPI_HandleSubscribe_Errors(t *testing.T) {
 	mockMesh := &mockTeammateMeshWithSubscribe{
 		subChan: make(chan []byte, 1),
 	}
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	req2 := httptest.NewRequest(http.MethodPost, "/api/kairos/mesh/subscribe", nil)
 	w2 := httptest.NewRecorder()
@@ -114,7 +136,7 @@ func TestMeshAPI_HandleSubscribe_Success(t *testing.T) {
 	mockMesh := &mockTeammateMeshWithSubscribe{
 		subChan: make(chan []byte, 10),
 	}
-	api := NewMeshAPI(mockMesh)
+	api := NewMeshAPI(mockMesh, nil)
 
 	mux := http.NewServeMux()
 	api.RegisterRoutes(mux)
@@ -144,5 +166,82 @@ func TestMeshAPI_HandleSubscribe_Success(t *testing.T) {
 
 	if string(msg) != string(expectedMsg) {
 		t.Errorf("expected %s, got %s", expectedMsg, msg)
+	}
+}
+
+func TestMeshAPI_HandleGetPendingActions(t *testing.T) {
+	mockEngine := &mockWorkflowEngine{pendingTasks: []interface{}{}}
+	api := NewMeshAPI(&mockTeammateMesh{}, mockEngine)
+
+	// Test unauthorized
+	req := httptest.NewRequest(http.MethodGet, "/api/kairos/actions/pending", nil)
+	w := httptest.NewRecorder()
+	api.HandleGetPendingActions(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+
+	// Test success
+	claims := &auth.Claims{OrganizationID: "test-org"}
+	req = httptest.NewRequest(http.MethodGet, "/api/kairos/actions/pending", nil)
+	req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, claims))
+	w = httptest.NewRecorder()
+	api.HandleGetPendingActions(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// Test error
+	mockEngine.err = errors.New("db error")
+	w = httptest.NewRecorder()
+	api.HandleGetPendingActions(w, req)
+	if w.Code != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestMeshAPI_HandleApproveRejectAction(t *testing.T) {
+	mockEngine := &mockWorkflowEngine{}
+	api := NewMeshAPI(&mockTeammateMesh{}, mockEngine)
+
+	tests := []struct {
+		name       string
+		method     string
+		endpoint   string
+		handler    func(w http.ResponseWriter, r *http.Request)
+	}{
+		{"Approve", http.MethodPost, "/api/kairos/actions/approve", api.HandleApproveAction},
+		{"Reject", http.MethodPost, "/api/kairos/actions/reject", api.HandleRejectAction},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test method not allowed
+			req := httptest.NewRequest(http.MethodGet, tt.endpoint, nil)
+			w := httptest.NewRecorder()
+			tt.handler(w, req)
+			if w.Code != http.StatusMethodNotAllowed {
+				t.Errorf("expected 405, got %d", w.Code)
+			}
+
+			// Test unauthorized
+			req = httptest.NewRequest(http.MethodPost, tt.endpoint, nil)
+			w = httptest.NewRecorder()
+			tt.handler(w, req)
+			if w.Code != http.StatusUnauthorized {
+				t.Errorf("expected 401, got %d", w.Code)
+			}
+
+			// Test success
+			claims := &auth.Claims{OrganizationID: "test-org", Subject: "user1"}
+			body := bytes.NewBuffer([]byte(`{"task_id":"task1"}`))
+			req = httptest.NewRequest(http.MethodPost, tt.endpoint, body)
+			req = req.WithContext(context.WithValue(req.Context(), auth.ClaimsContextKeyForTest, claims))
+			w = httptest.NewRecorder()
+			tt.handler(w, req)
+			if w.Code != http.StatusOK {
+				t.Errorf("expected 200, got %d", w.Code)
+			}
+		})
 	}
 }

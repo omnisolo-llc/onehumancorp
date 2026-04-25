@@ -15,6 +15,7 @@ go_library(
         "@com_github_gorilla_websocket//:websocket",
         "@com_github_prometheus_client_golang//prometheus",
         "@com_github_redis_go_redis_v9//:go-redis",
+        "//src/server/auth",
     ],
 )
 

@@ -455,7 +455,7 @@ func (to *TasksDB) TransitionTask(ctx context.Context, taskID, agentID, fromStat
 	return tx.Commit(ctx)
 }
 
-func (to *TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) ([]Task, error) {
+func (to *TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) (interface{}, error) {
 	query := `
 		SELECT id, status, assigned_agent_id, action_risk, approval_status, proposed_content, created_at, updated_at
 		FROM shared_tasks
@@ -467,9 +467,9 @@ func (to *TasksDB) GetPendingApprovalTasks(ctx context.Context, orgID string) ([
 	}
 	defer rows.Close()
 
-	var tasks []Task
+	var tasks []SharedTask
 	for rows.Next() {
-		var t Task
+		var t SharedTask
 		var risk, status, content *string
 		if err := rows.Scan(&t.ID, &t.Status, &t.AssignedAgentID, &risk, &status, &content, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, err
