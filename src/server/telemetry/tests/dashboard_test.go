@@ -2,20 +2,17 @@ package tests
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"path/filepath"
-	"testing"
 	"os"
+	"path/filepath"
 	"strings"
+	"testing"
 )
 
 func TestHarnessEfficiencyDashboardPanels(t *testing.T) {
-	// Adjust path for bazel test execution
-	// In bazel tests, the workspace root is the runfiles directory
 	runfilesDir := os.Getenv("TEST_SRCDIR")
 	workspaceName := os.Getenv("TEST_WORKSPACE")
 
-	dashboardPath := ""
+	var dashboardPath string
 	if runfilesDir != "" && workspaceName != "" {
 		dashboardPath = filepath.Join(runfilesDir, workspaceName, "deploy", "helm", "ohc", "dashboards", "harness_efficiency.json")
 	} else {
@@ -26,7 +23,7 @@ func TestHarnessEfficiencyDashboardPanels(t *testing.T) {
 		dashboardPath = filepath.Join(workspaceRoot, "deploy", "helm", "ohc", "dashboards", "harness_efficiency.json")
 	}
 
-	data, err := ioutil.ReadFile(dashboardPath)
+	data, err := os.ReadFile(dashboardPath)
 	if err != nil {
 		t.Fatalf("Failed to read dashboard file: %v", err)
 	}
@@ -42,8 +39,8 @@ func TestHarnessEfficiencyDashboardPanels(t *testing.T) {
 	}
 
 	expectedPanels := map[string]bool{
-		"Harness Execution Latency (P95)": false,
-		"Sync Conflicts Resolved (Rate)": false,
+		"Harness Execution Latency (P95)":       false,
+		"Sync Conflicts Resolved (Rate)":        false,
 		"Context Bytes Routed (Rate by Tenant)": false,
 	}
 
