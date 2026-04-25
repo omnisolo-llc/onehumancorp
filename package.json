@@ -5,16 +5,37 @@
     "@bufbuild/protobuf": "^2.11.0",
     "@bufbuild/protoc-gen-es": "^2.11.0",
     "@bufbuild/protoplugin": "^2.11.0",
+    "@modelcontextprotocol/server-github": "^0.6.2",
     "google-protobuf": "^3.21.4",
     "ts-proto": "^2.11.6",
     "typescript": "^5.3.3",
-    "@modelcontextprotocol/server-github": "^0.6.2",
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.51.1"
+    "@playwright/test": "^1.59.1",
+    "playwright": "^1.59.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": []
-  }
+  },
+  "description": "To begin your onboarding journey, we provide a **unified Master CLI** that handles all developer setup, environment configuration, and agent provisioning in a single interactive experience.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onehumancorp/mono.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/onehumancorp/mono/issues"
+  },
+  "homepage": "https://github.com/onehumancorp/mono#readme"
 }
