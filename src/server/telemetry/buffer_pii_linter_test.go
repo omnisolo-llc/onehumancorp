@@ -102,7 +102,7 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 
 			if callsBufferMetric && callsJsonMarshal && !callsRedactInterfacePII {
 				legacyExemptions := map[string]bool{
-					"RecordTaskProcessingLatency": true,
+					"RecordTaskProcessed": true,
 					"RecordTaskEnqueued": true,
 					"RecordTaskFailed": true,
 					"RecordCacheMiss": true,
@@ -110,23 +110,23 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 					"RecordToolAutocorrection": true,
 					"RecordDeliberationPhaseDuration": true,
 					"RecordAgentExecutionTrace": true,
-					"RecordAutodreamIngestionError": true,
-					"RecordAutodreamCompressionError": true,
+					"RecordAutoDreamIngestionError": true,
+					"RecordAutoDreamCompressionError": true,
 					"RecordSubAgentQueueDelay": true,
 					"RecordTaskClaimContention": true,
 					"RecordSandboxViolation": true,
-					"RecordAutodreamRecordsSynced": true,
-					"RecordAutodreamSyncErrors": true,
+					"RecordAutoDreamSyncSuccess": true,
+					"RecordAutoDreamSyncError": true,
 					"RecordBubblewrapViolation": true,
 					"RecordHarnessInitLatency": true,
-					"RecordHarnessDBIOLatency": true,
+					"RecordHarnessDbIoLatency": true,
 					"RecordHarnessExecutionLatency": true,
 					"RecordCapabilityViolation": true,
-					"RecordBridgeMessageSent": true,
-					"RecordBridgeMessageReceived": true,
-					"RecordBridgeStatus": true,
-					"RecordRAGRecordsSynced": true,
-					"RecordRAGSyncError": true,
+					"RecordTeammateMeshBroadcast": true,
+					"RecordTeammateMeshDirectMessage": true,
+					"RecordAgentTransitionLatency": true,
+					"RecordAutoDreamMemoryIngested": true,
+					"RecordAutoDreamMemoryCompressed": true,
 				}
 				if !legacyExemptions[fn.Name.Name] {
 					t.Errorf("PII Leak Risk in %s: Function %s calls BufferMetricFunc and json.Marshal but misses RedactInterfacePII/RedactPII", path, fn.Name.Name)
