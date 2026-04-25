@@ -9,6 +9,7 @@
 -   Examined `src/server/orchestration/auth_interceptor.go`, `mesh.go`, and hybrid sync plugins.
 -   Verified that all gRPC communications correctly use Zero Trust SPIFFE/SPIRE authentication (`SPIFFEAuthInterceptor`, `ValidateSPIFFEID`, `SPIFFE_IDENTITY_TOKEN`).
 -   Confirmed no recent commits violated Zero Trust or SPIRE principles.
+-   Verified that `CheckHealth` correctly implements probes for hybrid-mode switching and local-to-cloud mission sync.
 ## Phase 4: Verify
 -   Ran the global test suite specifically targeting `//src/server/orchestration/...` to confirm orchestration health.
 -   All test suites successfully passed.
