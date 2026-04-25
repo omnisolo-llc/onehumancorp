@@ -11,8 +11,9 @@ import (
 
 func TestQueueManagerLoop(t *testing.T) {
 	provider := db.NewTestProvider(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := context.Background()
+	pollCtx, cancelPoll := context.WithCancel(ctx)
+	defer cancelPoll()
 
 	schema := `
 	CREATE TABLE IF NOT EXISTS sub_agent_queue (
@@ -32,7 +33,13 @@ func TestQueueManagerLoop(t *testing.T) {
 		t.Fatalf("failed to create schema: %v", err)
 	}
 
-	qm := NewQueueManager(provider)
+		qm := NewQueueManager(provider)
+
+	// Keep a connection alive to prevent memory DB from disappearing in cache=shared mode
+	txKeepAlive, _ := provider.Begin(ctx)
+	if txKeepAlive != nil {
+		defer txKeepAlive.Rollback(ctx)
+	}
 
 	job1 := &SubAgentJob{
 		ID:             "job-1",
@@ -65,7 +72,7 @@ func TestQueueManagerLoop(t *testing.T) {
 		return nil
 	}
 
-	go qm.StartPolling(ctx, "worker-1", 10*time.Millisecond, handler)
+	go qm.StartPolling(pollCtx, "worker-1", 10*time.Millisecond, handler)
 
 	// Wait for jobs to be processed
 	for i := 0; i < 20; i++ {
@@ -74,7 +81,7 @@ func TestQueueManagerLoop(t *testing.T) {
 			break
 		}
 	}
-	cancel() // stop polling
+	cancelPoll() // stop polling
 	time.Sleep(50 * time.Millisecond)
 
 	if len(processedJobs) < 2 {
