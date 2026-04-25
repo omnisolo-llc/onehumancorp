@@ -3,7 +3,6 @@ package hybrid_sync
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,7 +53,6 @@ func (d *HybridSyncDaemon) Start(ctx context.Context) {
 			case <-d.ticker.C:
 				d.ProcessSync(ctx)
 				d.ProcessCRDTSync(ctx)
-				d.ProcessMissionSync(ctx)
 			case <-d.quit:
 				d.ticker.Stop()
 				return
@@ -349,50 +347,4 @@ func (d *HybridSyncDaemon) SyncLocalToCloud(ctx context.Context, mission *AgentM
 	}
 
 	return nil
-}
-
-func (d *HybridSyncDaemon) ProcessMissionSync(ctx context.Context) {
-	if !d.dbWrapper.IsSQLite() {
-		return
-	}
-
-	query := "SELECT id, organization_id, status, payload FROM agent_missions WHERE synced_to_cloud = false LIMIT 100"
-	rows, err := d.dbWrapper.Query(ctx, query)
-	if err != nil {
-		slog.Error("hybrid_sync: failed to query agent_missions", "error", err)
-		return
-	}
-	defer rows.Close()
-
-	var missions []AgentMission
-	for rows.Next() {
-		var m AgentMission
-		var orgID sql.NullString
-		if err := rows.Scan(&m.ID, &orgID, &m.Status, &m.Payload); err != nil {
-			slog.Error("hybrid_sync: failed to scan agent_missions", "error", err)
-			continue
-		}
-		if orgID.Valid {
-			m.OrganizationID = orgID.String
-		}
-		missions = append(missions, m)
-	}
-
-	if len(missions) == 0 {
-		return
-	}
-
-	for _, m := range missions {
-		mission := m
-		if err := d.SyncLocalToCloud(ctx, &mission); err != nil {
-			slog.Error("hybrid_sync: failed to sync mission to cloud", "error", err, "mission_id", mission.ID)
-			continue
-		}
-
-		updateQuery := "UPDATE agent_missions SET synced_to_cloud = true WHERE id = $1"
-		if _, err := d.dbWrapper.Exec(ctx, updateQuery, mission.ID); err != nil {
-			slog.Error("hybrid_sync: failed to update agent_missions synced_to_cloud", "error", err)
-		}
-	}
-	slog.Debug("hybrid_sync: successfully synced missions to cloud", "count", len(missions))
 }
