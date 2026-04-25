@@ -122,8 +122,6 @@ func NewCentrifugeNode() (*CentrifugeNode, error) {
 
 // SetMeshTransport configures the transport layer to use for cross-node mesh broadcasts
 // and starts listening to the transport to forward events to websocket clients.
-// SetMeshTransport configures the transport layer to use for cross-node mesh broadcasts
-// and integrates CentrifugeNode into the MeshTransport layer for pub/sub routing.
 func (cn *CentrifugeNode) SetMeshTransport(mt MeshTransport) {
 	cn.meshTransport = mt
 

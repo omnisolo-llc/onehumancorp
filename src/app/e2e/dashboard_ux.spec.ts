@@ -38,10 +38,6 @@ test('Dashboard screen uses plain language instead of technical jargon', async (
   // Wait for dashboard to load
   await page.waitForTimeout(5000);
 
-  expect(page.url()).toContain('/dashboard');
-
-  const myBusiness = page.locator('text=My Business');
-  if (await myBusiness.isVisible({ timeout: 5000 })) {
-    await expect(myBusiness).toBeVisible();
-  }
+  await expect(page.locator('text=My Business')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('text=Active Tasks')).toBeVisible();
 });

@@ -29,9 +29,8 @@ const (
 
 // apiTokenCache caches the admin JWT token so we only log in once per test run.
 var apiTokenCache struct {
-	mu      sync.Mutex
-	token   string
-	cookies []playwright.Cookie
+	mu    sync.Mutex
+	token string
 }
 
 func getEnvOr(key, def string) string {
@@ -55,12 +54,9 @@ func newPage(t *testing.T) playwright.Page {
 
 func openApp(t *testing.T, page playwright.Page) {
 	t.Helper()
-	if _, err := page.Goto(baseURL+"/"); err != nil {
+	if _, err := page.Goto(baseURL + "/"); err != nil {
 		t.Fatalf("openApp goto: %v", err)
 	}
-	// Wait for Flutter to bootstrap
-	t.Log("Waiting for flt-glass-pane...")
-	_, _ = page.WaitForSelector("flt-glass-pane", playwright.PageWaitForSelectorOptions{Timeout: playwright.Float(15000)})
 	if err := page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle}); err != nil {
 		t.Logf("openApp networkidle: %v", err)
 	}
@@ -68,34 +64,6 @@ func openApp(t *testing.T, page playwright.Page) {
 
 func loginAsAdmin(t *testing.T, page playwright.Page) {
 	t.Helper()
-
-	// Try to use cached cookies if available
-	apiTokenCache.mu.Lock()
-	if len(apiTokenCache.cookies) > 0 {
-		cookies := make([]playwright.OptionalCookie, len(apiTokenCache.cookies))
-		for i, c := range apiTokenCache.cookies {
-			cookies[i] = playwright.OptionalCookie{
-				Name:     c.Name,
-				Value:    c.Value,
-				Domain:   playwright.String(c.Domain),
-				Path:     playwright.String(c.Path),
-				Expires:  playwright.Float(c.Expires),
-				HttpOnly: playwright.Bool(c.HttpOnly),
-				Secure:   playwright.Bool(c.Secure),
-				SameSite: c.SameSite,
-			}
-		}
-		if err := page.Context().AddCookies(cookies); err != nil {
-			t.Logf("loginAsAdmin: failed to add cached cookies: %v", err)
-		} else {
-			t.Log("Using cached session cookies")
-			apiTokenCache.mu.Unlock()
-			openApp(t, page)
-			return
-		}
-	}
-	apiTokenCache.mu.Unlock()
-
 	openApp(t, page)
 
 	loginForm := page.Locator(`form, [data-testid="login-form"], [aria-label*="login" i], [aria-label*="sign in" i]`)
@@ -103,52 +71,24 @@ func loginAsAdmin(t *testing.T, page playwright.Page) {
 	formCount, _ := loginForm.Count()
 	isLoginPage := strings.Contains(url, "/login") || strings.Contains(url, "/signin") || formCount > 0
 
-	// If we're not obviously on a login page and not on dashboard, wait a bit for the form
-	if !isLoginPage && !strings.Contains(url, "/dashboard") {
-		t.Log("Neither login page nor dashboard detected immediately. Waiting for login form...")
-		_ = loginForm.First().WaitFor(playwright.LocatorWaitForOptions{Timeout: playwright.Float(10000)})
-		url = page.URL()
-		formCount, _ = loginForm.Count()
-		isLoginPage = strings.Contains(url, "/login") || strings.Contains(url, "/signin") || formCount > 0
-	}
-
 	if isLoginPage {
-		t.Logf("On login page: %s. Filling credentials...", url)
 		emailInput := page.Locator(`input[type="email"], input[name="email"], input[placeholder*="email" i], input[placeholder*="username" i]`).First()
 		passwordInput := page.Locator(`input[type="password"], input[name="password"], input[placeholder*="password" i]`).First()
 
 		if err := emailInput.Fill(adminUser); err != nil {
-			t.Logf("loginAsAdmin fill email error: %v", err)
-		} else {
-			t.Log("Email field filled")
+			t.Logf("loginAsAdmin fill email: %v", err)
 		}
 		if err := passwordInput.Fill(adminPass); err != nil {
-			t.Logf("loginAsAdmin fill password error: %v", err)
-		} else {
-			t.Log("Password field filled")
+			t.Logf("loginAsAdmin fill password: %v", err)
 		}
 
 		submitBtn := page.Locator(`button[type="submit"], button:has-text("Login"), button:has-text("Sign In"), button:has-text("Log In")`).First()
 		if err := submitBtn.Click(); err != nil {
-			t.Logf("loginAsAdmin click submit error: %v", err)
-		} else {
-			t.Log("Submit button clicked")
+			t.Logf("loginAsAdmin click submit: %v", err)
 		}
 
-		t.Log("Waiting for URL change and load state...")
 		_ = page.WaitForURL("**", playwright.PageWaitForURLOptions{Timeout: playwright.Float(15000)})
 		_ = page.WaitForLoadState(playwright.PageWaitForLoadStateOptions{State: playwright.LoadStateNetworkidle})
-		t.Logf("Login flow finished. Current URL: %s", page.URL())
-
-		// Cache cookies after successful login
-		if cks, err := page.Context().Cookies(); err == nil {
-			apiTokenCache.mu.Lock()
-			apiTokenCache.cookies = cks
-			apiTokenCache.mu.Unlock()
-			t.Log("Session cookies cached")
-		}
-	} else {
-		t.Logf("Not on login page (URL=%s, formCount=%d). Skipping login step.", url, formCount)
 	}
 }
 
