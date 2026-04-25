@@ -64,21 +64,21 @@ func TestCheckHealth_SQLite(t *testing.T) {
 	defer sqliteDB.Close()
 
 	// Ensure the agent_missions table exists
-	_, err = provider.Exec(ctx, "CREATE TABLE agent_missions (status TEXT)")
+	_, err = provider.Exec(ctx, "CREATE TABLE agent_missions (status TEXT, synced_to_cloud BOOLEAN DEFAULT false)")
 	if err != nil {
 		t.Fatalf("Failed to create table: %v", err)
 	}
 
 	// Insert some pending missions
-	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status) VALUES ('PENDING')")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status, synced_to_cloud) VALUES ('PENDING', false)")
 	if err != nil {
 		t.Fatalf("Failed to insert pending mission: %v", err)
 	}
-	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status) VALUES ('PENDING')")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status, synced_to_cloud) VALUES ('PENDING', false)")
 	if err != nil {
 		t.Fatalf("Failed to insert pending mission: %v", err)
 	}
-	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status) VALUES ('DONE')")
+	_, err = provider.Exec(ctx, "INSERT INTO agent_missions (status, synced_to_cloud) VALUES ('DONE', true)")
 	if err != nil {
 		t.Fatalf("Failed to insert done mission: %v", err)
 	}

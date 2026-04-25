@@ -362,22 +362,22 @@ func (s *SIPDB) GetPendingMissions(ctx context.Context, role string) ([]Message,
 	err := withSipRetry(ctx, func() error {
 		missions = nil
 
-		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
+		query := "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at ASC LIMIT 500"
 		var rows db.Rows
 		var err error
 
 		if role == "ANY" {
 			if s.db.IsSQLite() {
-				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500"
+				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 500"
 			} else {
-				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500 FOR UPDATE SKIP LOCKED"
+				query = "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 500 FOR UPDATE SKIP LOCKED"
 			}
 			rows, err = s.db.Query(ctx, query, s.orgID)
 		} else {
 			if s.db.IsSQLite() {
-				query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
+				query = "SELECT id, payload FROM agent_missions WHERE json_extract(payload, '$.role') = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at ASC LIMIT 500"
 			} else {
-				query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500 FOR UPDATE SKIP LOCKED"
+				query = "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at ASC LIMIT 500 FOR UPDATE SKIP LOCKED"
 			}
 			rows, err = s.db.Query(ctx, query, role, s.orgID)
 		}
@@ -716,7 +716,7 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		failThreshold := time.Now().Add(-ageThreshold).UTC().Format("2006-01-02 15:04:05")
 
 		// 1. Mark stagnant PENDING missions as STUCK after 1 hour to trigger triage visibility
-		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
+		rows, err := s.db.Query(ctx, "UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND organization_id = $2 RETURNING id, status, updated_at", stuckThreshold, s.orgID)
 		if err == nil {
 			for rows.Next() {
 				var id, prevStatus string
@@ -732,6 +732,9 @@ func (s *SIPDB) PruneStaleMissions(ctx context.Context, ageThreshold time.Durati
 		if _, errRequeue := s.db.Exec(ctx, "UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1", s.orgID); errRequeue != nil {
 			return errRequeue
 		}
+
+
+
 
 		// 2. Mark missions as FAILED if they exceed the absolute age threshold
 		// Phase 3: ML-Resilience audit guarantees both SQLite (Standalone) and Postgres (Cloud-native) execute this fallback gracefully.
