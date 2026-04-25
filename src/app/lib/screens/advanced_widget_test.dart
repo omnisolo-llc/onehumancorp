@@ -1,6 +1,7 @@
 /// Tests for Chat screen, router, and remaining uncovered screen interactions.
 library;
 
+import 'package:go_router/go_router.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -9,7 +10,6 @@ import 'package:fixnum/fixnum.dart' as fixnum;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,7 +39,20 @@ class FakeClientConfig extends Fake implements centrifuge.ClientConfig {}
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
-  return ProviderScope(overrides: overrides, child: MaterialApp(home: child));
+  final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(path: '/', builder: (context, state) => child),
+      GoRoute(path: '/dashboard', builder: (context, state) => const Text('Dashboard')),
+      GoRoute(path: '/business_setup', builder: (context, state) => const Text('Business Setup')),
+    ],
+  );
+  return ProviderScope(
+    overrides: overrides,
+    child: MaterialApp.router(
+      routerConfig: router,
+    ),
+  );
 }
 
 ApiService _mockApi(MockHttpClient client) =>

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
+import 'package:ohc_app/services/api_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -45,8 +46,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) setState(() => _loading = false);
     }
 
-    if (_error == null && _isSignUp && mounted) {
-      context.go('/business_setup');
+    if (_error == null && mounted) {
+      if (_isSignUp) {
+        context.go('/business_setup');
+      } else {
+        // Fetch wizard status to determine if onboarding is complete
+        try {
+          final api = ref.read(apiServiceProvider);
+          if (api != null) {
+            final statusRes = await api.getWizardStatus();
+            if (mounted) {
+              final isCompleted = statusRes['completed'] == true;
+              if (isCompleted) {
+                context.go('/dashboard');
+              } else {
+                context.go('/business_setup');
+              }
+            }
+          } else if (mounted) {
+            context.go('/dashboard');
+          }
+        } catch (e) {
+          // Fallback to dashboard if API fails
+          if (mounted) {
+            context.go('/dashboard');
+          }
+        }
+      }
     }
   }
 
@@ -70,8 +96,33 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (mounted) setState(() => _loading = false);
     }
 
-    if (_error == null && _isSignUp && mounted) {
-      context.go('/business_setup');
+    if (_error == null && mounted) {
+      if (_isSignUp) {
+        context.go('/business_setup');
+      } else {
+        // Fetch wizard status to determine if onboarding is complete
+        try {
+          final api = ref.read(apiServiceProvider);
+          if (api != null) {
+            final statusRes = await api.getWizardStatus();
+            if (mounted) {
+              final isCompleted = statusRes['completed'] == true;
+              if (isCompleted) {
+                context.go('/dashboard');
+              } else {
+                context.go('/business_setup');
+              }
+            }
+          } else if (mounted) {
+            context.go('/dashboard');
+          }
+        } catch (e) {
+          // Fallback to dashboard if API fails
+          if (mounted) {
+            context.go('/dashboard');
+          }
+        }
+      }
     }
   }
 
