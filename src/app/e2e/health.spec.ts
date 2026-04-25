@@ -48,12 +48,12 @@ test('Diagnostics screen displays hybrid health info', async ({ page }) => {
   }
 
   // Wait for navigation after login
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(2000);
 
   // Navigate to Diagnostics
   await page.goto('/#/diagnostics');
 
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(2000);
 
   // Make sure we actually navigated to diagnostics and aren't redirected back to login
   expect(page.url()).toContain('/diagnostics');

@@ -36,7 +36,7 @@ test('Dashboard screen uses plain language instead of technical jargon', async (
   await page.goto('/#/dashboard');
 
   // Wait for dashboard to load
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(2000);
 
   expect(page.url()).toContain('/dashboard');
 
