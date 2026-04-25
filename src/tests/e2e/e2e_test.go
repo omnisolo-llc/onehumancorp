@@ -7,11 +7,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	playwright "github.com/playwright-community/playwright-go"
 )
+
+func init() {
+	// Set up writable directories for Playwright in Bazel sandbox
+	if tmp := os.Getenv("TEST_TMPDIR"); tmp != "" {
+		home := filepath.Join(tmp, "home")
+		os.MkdirAll(home, 0755)
+		os.Setenv("HOME", home)
+		os.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, "xdg-cache"))
+		os.Setenv("PLAYWRIGHT_BROWSERS_PATH", filepath.Join(tmp, "pw_browsers"))
+	}
+}
 
 var (
 	pw      *playwright.Playwright
@@ -42,18 +54,20 @@ func findOhcBinary() string {
 }
 
 func findWebArtifacts(srcdir string) string {
-	candidates := []string{
-		filepath.Join(srcdir, "_main", "src", "app", "app_web.web_build_artifacts"),
-		filepath.Join(srcdir, "_main", "src", "app", "app_web_build_artifacts"),
-		filepath.Join(srcdir, "mono", "src", "app", "app_web.web_build_artifacts"),
-		filepath.Join(srcdir, "mono", "src", "app", "app_web_build_artifacts"),
-	}
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
-			return p
+	var found string
+	filepath.Walk(srcdir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
 		}
-	}
-	return ""
+		if info.IsDir() && (strings.HasSuffix(path, "app.web_build_artifacts") || strings.HasSuffix(path, "app_build_artifacts")) {
+			if _, err := os.Stat(filepath.Join(path, "index.html")); err == nil {
+				found = path
+				return filepath.SkipDir
+			}
+		}
+		return nil
+	})
+	return found
 }
 
 // freePort returns an available TCP port on localhost.
@@ -99,11 +113,19 @@ func TestMain(m *testing.M) {
 		// instead of a real LLM provider.
 		llmURL := startFakeLLM()
 
-		webDir := findWebArtifacts(os.Getenv("TEST_SRCDIR"))
+		srcdir := os.Getenv("TEST_SRCDIR")
+		fmt.Fprintf(os.Stderr, "e2e: TEST_SRCDIR: %s\n", srcdir)
+		webDir := findWebArtifacts(srcdir)
+		if webDir == "" {
+			fmt.Fprintf(os.Stderr, "e2e: ERROR: frontend web artifacts not found in %s\n", srcdir)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "e2e: using frontend static assets from: %s\n", webDir)
+
 		serverCmd = exec.Command(ohcBin)
 		serverCmd.Env = append(os.Environ(),
 			"OHC_STANDALONE=true",
-			"OHC_HEADLESS=true",
+			"OHC_HEADLESS=false",
 			"OHC_SERVE_UI=true",
 			fmt.Sprintf("FRONTEND_STATIC_DIR=%s", webDir),
 			fmt.Sprintf("PORT=%d", port),
@@ -189,50 +211,27 @@ func TestMain(m *testing.M) {
 		os.Exit(code)
 	}
 
-	// Use Firefox instead of Chromium for better cross-platform compatibility
-	// Firefox has fewer system library dependencies than Chromium/GTK.
-	// The hermetic playwright.Install() downloads Firefox with bundled dependencies.
-	browser, err = pw.Firefox.Launch(playwright.BrowserTypeLaunchOptions{
+	// Use Chromium (Chrome) by default everywhere.
+	browser, err = pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
 		Headless: playwright.Bool(true),
+		Args: []string{
+			"--no-sandbox",
+			"--disable-setuid-sandbox",
+			"--disable-dev-shm-usage",
+			"--disable-gpu",
+		},
 	})
 	if err != nil {
-		// If Firefox fails, try Chromium with sandbox disabled for CI environments
-		fmt.Fprintf(os.Stderr, "firefox launch: %v, trying chromium with no-sandbox\n", err)
-		browser, err = pw.Chromium.Launch(playwright.BrowserTypeLaunchOptions{
-			Headless: playwright.Bool(true),
-			Args: []string{
-				"--no-sandbox",
-				"--disable-setuid-sandbox",
-				"--disable-dev-shm-usage",
-				"--disable-gpu",
-			},
-		})
-		if err != nil {
-			// If browser launch fails entirely, continue without browser
-			// Tests that need browser will be skipped
-			fmt.Fprintf(os.Stderr, "browser launch failed (tests requiring browser will be skipped): %v\n", err)
-			browser = nil
-			bCtx = nil
-			code := m.Run()
-			if serverCmd != nil {
-				serverCmd.Process.Kill()
-			}
-			os.Exit(code)
-		}
+		fmt.Fprintf(os.Stderr, "FATAL: browser launch failed: %v. E2E tests REQUIRE a working browser.\n", err)
+		os.Exit(1)
 	}
 
 	bCtx, err = browser.NewContext(playwright.BrowserNewContextOptions{
 		BaseURL: playwright.String(baseURL),
 	})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "browser context: %v (browser tests will be skipped)\n", err)
-		browser = nil
-		bCtx = nil
-		code := m.Run()
-		if serverCmd != nil {
-			serverCmd.Process.Kill()
-		}
-		os.Exit(code)
+		fmt.Fprintf(os.Stderr, "FATAL: browser context: %v. E2E tests REQUIRE a working browser context.\n", err)
+		os.Exit(1)
 	}
 
 	code := m.Run()
