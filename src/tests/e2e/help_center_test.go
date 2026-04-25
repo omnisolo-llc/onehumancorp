@@ -16,20 +16,13 @@ func TestHelpCenter_E2E(t *testing.T) {
 	_, err := page.Goto(fmt.Sprintf("%s/dashboard", baseURL))
 	require.NoError(t, err)
 
-	// Wait for dashboard to load with a slightly longer timeout
-	t.Log("Waiting for Dashboard to appear...")
-	dashboardLocator := page.GetByRole("heading", playwright.PageGetByRoleOptions{Name: "Dashboard"}).Or(page.GetByText("Dashboard")).First()
-	require.NoError(t, dashboardLocator.WaitFor(playwright.LocatorWaitForOptions{
-		Timeout: playwright.Float(45000), // Increase to 45s for slow CI
-	}))
-	t.Log("Dashboard appeared.")
+	// Wait for dashboard to load
+	require.NoError(t, page.Locator("text=Dashboard").First().WaitFor())
 
 	// Dismiss "A new version is available!" if present
-	updateToast := page.Locator("text=A new version is available!, .update-toast")
+	updateToast := page.Locator("text=A new version is available!")
 	if count, _ := updateToast.Count(); count > 0 {
-		t.Log("Dismissing update toast")
-		closeBtn := updateToast.Locator("button, .close-icon").First()
-		_ = closeBtn.Click(playwright.LocatorClickOptions{Timeout: playwright.Float(2000)})
+		updateToast.Locator("button").Click()
 	}
 
 	// Verify AI Help Chat button is visible
