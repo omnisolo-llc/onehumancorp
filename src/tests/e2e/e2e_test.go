@@ -113,17 +113,19 @@ func TestMain(m *testing.M) {
 		// instead of a real LLM provider.
 		llmURL := startFakeLLM()
 
-		webDir := findWebArtifacts(os.Getenv("TEST_SRCDIR"))
+		srcdir := os.Getenv("TEST_SRCDIR")
+		fmt.Fprintf(os.Stderr, "e2e: TEST_SRCDIR: %s\n", srcdir)
+		webDir := findWebArtifacts(srcdir)
 		if webDir == "" {
-			fmt.Fprintf(os.Stderr, "e2e: ERROR: frontend web artifacts not found in %s\n", os.Getenv("TEST_SRCDIR"))
+			fmt.Fprintf(os.Stderr, "e2e: ERROR: frontend web artifacts not found in %s\n", srcdir)
 			os.Exit(1)
 		}
-		fmt.Fprintf(os.Stdout, "e2e: using frontend static assets from: %s\n", webDir)
+		fmt.Fprintf(os.Stderr, "e2e: using frontend static assets from: %s\n", webDir)
 
 		serverCmd = exec.Command(ohcBin)
 		serverCmd.Env = append(os.Environ(),
 			"OHC_STANDALONE=true",
-			"OHC_HEADLESS=true",
+			"OHC_HEADLESS=false",
 			"OHC_SERVE_UI=true",
 			fmt.Sprintf("FRONTEND_STATIC_DIR=%s", webDir),
 			fmt.Sprintf("PORT=%d", port),
