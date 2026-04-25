@@ -23,6 +23,7 @@ func TestDashboardDisplaysPlainLanguageMetrics(t *testing.T) {
 	aiStaff := page.Locator("text=AI Staff")
 	err = aiStaff.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
+		Timeout: playwright.Float(10000),
 	})
 	assert.NoError(t, err)
 
@@ -30,6 +31,7 @@ func TestDashboardDisplaysPlainLanguageMetrics(t *testing.T) {
 	activeOrders := page.Locator("text=Active Orders")
 	err = activeOrders.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
+		Timeout: playwright.Float(10000),
 	})
 	assert.NoError(t, err)
 
@@ -37,6 +39,7 @@ func TestDashboardDisplaysPlainLanguageMetrics(t *testing.T) {
 	upcomingBookings := page.Locator("text=Upcoming Bookings")
 	err = upcomingBookings.WaitFor(playwright.LocatorWaitForOptions{
 		State: playwright.WaitForSelectorStateVisible,
+		Timeout: playwright.Float(10000),
 	})
 	assert.NoError(t, err)
 }
