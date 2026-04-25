@@ -35,8 +35,8 @@ impl ToolExecutor for ReadExecutor {
     }
 }
 
-pub fn read_tool() -> Tool {
-    Tool {
+pub fn read_tool() -> Tool {    Tool {
+        is_mutating: false,
         name: "Read".to_string(),
         description: "Read the contents of a file. Optionally specify start_line and end_line for partial reads.".to_string(),
         parameters: json!({

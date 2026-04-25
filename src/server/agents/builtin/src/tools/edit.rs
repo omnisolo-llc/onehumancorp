@@ -50,8 +50,8 @@ impl ToolExecutor for EditExecutor {
     }
 }
 
-pub fn edit_tool() -> Tool {
-    Tool {
+pub fn edit_tool() -> Tool {    Tool {
+        is_mutating: true,
         name: "Edit".to_string(),
         description: "Replace exactly one occurrence of old_str with new_str in a file. \
             The old_str must appear exactly once in the file."

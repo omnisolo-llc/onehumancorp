@@ -59,8 +59,8 @@ impl ToolExecutor for SendMessageExecutor {
     }
 }
 
-pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
-    Tool {
+pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {    Tool {
+        is_mutating: true,
         name: "SendMessage".to_string(),
         description: "Send a message to the parent agent or coordinator. \
             Used for reporting sub-task results or requesting assistance."

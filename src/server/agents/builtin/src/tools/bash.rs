@@ -56,8 +56,8 @@ impl ToolExecutor for BashExecutor {
     }
 }
 
-pub fn bash_tool() -> Tool {
-    Tool {
+pub fn bash_tool() -> Tool {    Tool {
+        is_mutating: true,
         name: "Bash".to_string(),
         description: "Execute a bash command and return its output. \
             Use for build/test/git/shell operations. \
