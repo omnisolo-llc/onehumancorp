@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/api_docs_screen.dart';
+import 'package:ohc_app/screens/changelog_screen.dart';
+import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
 import 'package:ohc_app/screens/login_screen.dart';
@@ -81,6 +85,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
+          GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/help/api',
+            builder: (context, state) => const ApiDocsScreen(),
+          ),
+          GoRoute(
+            path: '/changelog',
+            builder: (context, state) => const ChangelogScreen(),
+          ),
       GoRoute(path: '/landing', builder: (context, state) => const LandingScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       ShellRoute(
@@ -236,6 +252,11 @@ class AppShell extends StatelessWidget {
             body: Stack(
               children: [
                 child,
+                const Positioned(
+                  bottom: 16,
+                  right: 16,
+                  child: AiHelpChatWidget(),
+                ),
                 Positioned(
                   top: 12,
                   left: 12,
@@ -263,10 +284,19 @@ class AppShell extends StatelessWidget {
           );
         } else {
           return Scaffold(
-            body: Row(
+            body: Stack(
               children: [
-                _Sidebar(),
-                Expanded(child: child),
+                Row(
+                  children: [
+                    _Sidebar(),
+                    Expanded(child: child),
+                  ],
+                ),
+                const Positioned(
+                  bottom: 16,
+                  right: 16,
+                  child: AiHelpChatWidget(),
+                ),
               ],
             ),
           );
@@ -364,6 +394,12 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.health_and_safety,
           label: 'Diagnostics',
           path: '/diagnostics',
+        ),
+        const SizedBox(height: 16),
+        _NavItem(
+          icon: Icons.help,
+          label: 'Help Center',
+          path: '/help',
         ),
         const SizedBox(height: 16),
       ],
