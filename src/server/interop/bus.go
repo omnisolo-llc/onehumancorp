@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-
 	"github.com/onehumancorp/mono/src/proto/agentservice"
 	"google.golang.org/protobuf/proto"
 )

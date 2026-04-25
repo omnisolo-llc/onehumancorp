@@ -18,7 +18,7 @@ go_library(
     deps = [
         "//src/server/telemetry",
         "//src/server/agents/grpc",
-        "//src/proto/agentservice",
+        "//src/proto:agent_service_go_proto",
         "//src/server/db",
         "//src/server/integrations/plane",
         "//src/server/orchestration",

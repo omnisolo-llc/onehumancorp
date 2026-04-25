@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-
 	"github.com/nats-io/nats.go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
