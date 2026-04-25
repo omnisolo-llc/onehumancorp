@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+
 
 use super::{SharedMailbox, Tool, ToolExecutor};
 
