@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:ohc_app/widgets/ohc_tooltip.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/models/agent.dart';
@@ -23,7 +24,7 @@ class AgentsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Agents'),
         actions: [
-          Tooltip(
+          OhcTooltip(
             message: 'Hire a new agent',
             child: FilledButton.icon(
               onPressed: () => context.go('/agents/hire'),
@@ -78,7 +79,7 @@ class _EmptyAgents extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('Hire your first AI agent to get started.'),
           const SizedBox(height: 24),
-          Tooltip(
+          OhcTooltip(
             message: 'Hire a new agent to your team',
             child: FilledButton.icon(
               onPressed: onHire,
@@ -187,7 +188,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                         onTap: () {
                           // Optional: Handle agent card tap
                         },
-                        child: Tooltip(
+                        child: OhcTooltip(
                           message: 'View details for ${widget.agent.name}',
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
@@ -224,7 +225,7 @@ class _AnimatedAgentCardState extends State<_AnimatedAgentCard> with SingleTicke
                                           ),
                                           if (widget.agent.svidVerified) ...[
                                             const SizedBox(width: 6),
-                                            Tooltip(
+                                            OhcTooltip(
                                               message: 'SPIFFE mTLS Secured',
                                               child: Icon(
                                                 Icons.verified_user,

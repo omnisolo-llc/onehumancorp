@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:ohc_app/widgets/ohc_tooltip.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
@@ -258,7 +259,7 @@ class _ObservabilityWidget extends StatelessWidget {
 
     return Semantics(
       label: 'System Observability Panel',
-      child: Tooltip(
+      child: OhcTooltip(
         message: 'View System Health & Metrics',
         child: GlassCard(
             padding: EdgeInsets.zero,
@@ -461,7 +462,7 @@ class _RoleScaleCardState extends State<_RoleScaleCard> {
 
     return Semantics(
       label: 'Scale $formattedRole role',
-      child: Tooltip(
+      child: OhcTooltip(
         message: 'Manage $formattedRole Allocation',
         child: SizedBox(
           width: 320,
@@ -635,7 +636,7 @@ class _StatCardState extends State<_StatCard> with SingleTickerProviderStateMixi
       label: '${widget.label}: ${widget.value}',
       button: true,
       excludeSemantics: true,
-      child: Tooltip(
+      child: OhcTooltip(
         message: 'View ${widget.label}',
         child: SizedBox(
           width: 200,

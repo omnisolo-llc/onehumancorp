@@ -28,6 +28,7 @@ import 'package:ohc_app/screens/agent_hire_wizard_screen.dart';
 import 'package:ohc_app/screens/prompt_tuning_wizard_screen.dart';
 import 'package:ohc_app/screens/landing_screen.dart';
 import 'package:ohc_app/screens/landing_page_experiments_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/screens/autodream_sync_walkthrough_screen.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
@@ -106,6 +107,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/dashboard',
             builder: (context, state) => const DashboardScreen(),
+          ),
+          GoRoute(
+            path: '/help-center',
+            builder: (context, state) => const HelpCenterScreen(),
           ),
           GoRoute(
             path: '/agents',
@@ -290,7 +295,8 @@ class _Sidebar extends StatelessWidget {
           ),
         ),
         const Divider(),
-        _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+                _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help-center'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(
           icon: Icons.checklist,
