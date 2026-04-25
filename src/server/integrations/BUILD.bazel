@@ -13,6 +13,7 @@ go_library(
         "//src/server/integrations/libsql",
         "//src/server/integrations/litefs",
         "//src/server/integrations/etcd",
+        "//src/server/integrations/nats",
         "//src/server/integrations/obsidian",
         "//src/server/integrations/ollama",
         "//src/server/integrations/powersync",

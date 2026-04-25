@@ -5,6 +5,7 @@ import (
 	"github.com/onehumancorp/mono/src/server/integrations/etcd"
 	"github.com/onehumancorp/mono/src/server/integrations/libsql"
 	"github.com/onehumancorp/mono/src/server/integrations/litefs"
+	"github.com/onehumancorp/mono/src/server/integrations/nats"
 	"github.com/onehumancorp/mono/src/server/integrations/obsidian"
 	"github.com/onehumancorp/mono/src/server/integrations/ollama"
 	"github.com/onehumancorp/mono/src/server/integrations/powersync"
@@ -39,6 +40,7 @@ var Catalog = []IntegrationProvider{
 	&powersync.PowerSyncIntegration{},
 	&restic.ResticIntegration{},
 	&obsidian.ObsidianIntegration{},
+	&nats.NatsIntegration{},
 }
 
 // GetCatalog returns all available integration providers.

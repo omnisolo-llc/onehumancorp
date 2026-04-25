@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/onehumancorp/mono/src/proto/agentservice"
 )
 
 // State represents shared agent state.
@@ -53,6 +55,18 @@ type UniversalAdapter interface {
 
 	// ExecuteCommand runs a generic command for the agent.
 	ExecuteCommand(ctx context.Context, cmd string) (string, error)
+}
+
+// InteropBus defines the interface for the message bus bridging Cloud and Standalone modes.
+type InteropBus interface {
+	// DispatchJob sends a RunTaskRequest to an agent asynchronously.
+	DispatchJob(ctx context.Context, req *agentservicepb.RunTaskRequest) error
+
+	// ReportStatus sends a RunTaskEvent back to the orchestrator.
+	ReportStatus(ctx context.Context, event *agentservicepb.RunTaskEvent) error
+
+	// HandoffState synchronizes agent state when switching between modes.
+	HandoffState(ctx context.Context, state *State) error
 }
 
 // ValidateSPIFFEID strictly validates SPIFFE IDs for agent identity.
