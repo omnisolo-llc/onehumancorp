@@ -57,3 +57,51 @@ func TestMemoryMeshTransport_BroadcastAndSubscribe(t *testing.T) {
 		t.Fatal("timeout waiting for broadcasted task")
 	}
 }
+
+func TestMemoryMeshTransport_SubscribeMeshEventsWithFilter(t *testing.T) {
+	provider := setupTestDB(t)
+	mesh := NewMemoryMeshTransport(provider)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	topic := "filtered-topic"
+
+	// Create filter to only accept messages containing "accept"
+	filter := func(b []byte) bool {
+		return string(b) == "accept"
+	}
+
+	sub, err := mesh.SubscribeMeshEventsWithFilter(ctx, topic, filter)
+	if err != nil {
+		t.Fatalf("SubscribeMeshEventsWithFilter failed: %v", err)
+	}
+
+	// Wait briefly for subscription to register
+	time.Sleep(50 * time.Millisecond)
+
+	if err := mesh.BroadcastMeshEvent(ctx, topic, []byte("reject")); err != nil {
+		t.Fatalf("Broadcast failed: %v", err)
+	}
+
+	if err := mesh.BroadcastMeshEvent(ctx, topic, []byte("accept")); err != nil {
+		t.Fatalf("Broadcast failed: %v", err)
+	}
+
+	// Should only receive "accept"
+	select {
+	case msg := <-sub:
+		if string(msg) != "accept" {
+			t.Errorf("Expected 'accept', got '%s'", string(msg))
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timeout waiting for filtered event")
+	}
+
+	// Ensure no more messages
+	select {
+	case msg := <-sub:
+		t.Errorf("Received unexpected message: %s", string(msg))
+	case <-time.After(50 * time.Millisecond):
+		// Success
+	}
+}

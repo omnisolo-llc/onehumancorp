@@ -443,6 +443,32 @@ func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic str
 	return ch, nil
 }
 
+
+func (rm *RedisMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter func([]byte) bool) (<-chan []byte, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEventsWithFilter", time.Since(start)) }()
+
+	ch := make(chan []byte, 100)
+	go func() {
+		err := rm.client.Receive(ctx, rm.client.B().Subscribe().Channel("mesh:events:"+topic).Build(), func(msg rueidis.PubSubMessage) {
+			b := []byte(msg.Message)
+			if filter != nil && !filter(b) {
+				return
+			}
+			select {
+			case ch <- b:
+			default:
+				slog.Warn("RedisMeshTransport.SubscribeMeshEventsWithFilter channel full, dropping message")
+			}
+		})
+		if err != nil && err != context.Canceled {
+			slog.Error("RedisMeshTransport.SubscribeMeshEventsWithFilter error", "err", err)
+		}
+		close(ch)
+	}()
+	return ch, nil
+}
+
 func NewRedisTeammateMesh(redisURL string) (*RedisTeammateMesh, error) {
 	opt, err := rueidis.ParseURL(redisURL)
 	if err != nil {
@@ -972,6 +998,28 @@ type TeammateMeshEvent struct {
 	AgentID string `json:"agent_id"`
 	Action  string `json:"action"`
 	Status  string `json:"status"`
+}
+
+
+func (lm *MemoryMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter func([]byte) bool) (<-chan []byte, error) {
+	rawChan, err := lm.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return nil, err
+	}
+	out := make(chan []byte, cap(rawChan))
+	go func() {
+		defer close(out)
+		for msg := range rawChan {
+			if filter == nil || filter(msg) {
+				select {
+				case out <- msg:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}
+	}()
+	return out, nil
 }
 
 func (rm *RedisMeshTransport) BroadcastEvent(ctx context.Context, channel string, payload map[string]interface{}) error {
