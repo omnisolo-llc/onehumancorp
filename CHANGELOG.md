@@ -1,5 +1,17 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Parallelize backend dashboard data fetching to optimize API performance.
+- Compute token burn rate dynamically and fix ProjectedMonthlyUSD calculation.
+- Upgrade built-in agent harness to support LLM-recoverable ToolMessages.
+- Ensure PostgreSQL transaction safety during migrations and handle empty string payloads.
+
+### Privacy/Offline Improvements
+- Implement PII redaction and HybridEscalation logic for MCP local tools syncing to cloud.
+- Simplify and fix login routing to properly route to dashboard or setup.
+- Link hybrid FS MCP architecture walkthrough in mkdocs.yml.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
