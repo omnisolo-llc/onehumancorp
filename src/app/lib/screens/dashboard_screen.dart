@@ -1,3 +1,4 @@
+import 'package:ohc_app/widgets/welcome_checklist_widget.dart';
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -130,6 +131,7 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
         ),
+        const WelcomeChecklistWidget(),
         // --- UPGRADE BANNER ---
         Container(
           margin: const EdgeInsets.only(bottom: 24),

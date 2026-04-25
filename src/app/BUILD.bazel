@@ -185,8 +185,18 @@ flutter_test(
 # Each target covers one critical user journey (CUJ) to enable fine-grained
 # caching: a code change in one feature only invalidates the related target.
 
+
+flutter_test(
+    name = "cuj_dashboard_checklist_e2e_test",
+    srcs = ["test/cuj_dashboard_checklist_e2e_test.dart"],
+    embed = [":app_lib"],
+    test_files = ["test/cuj_dashboard_checklist_e2e_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
 flutter_test(
     name = "cuj_auth_e2e_test",
+
     srcs = ["test/cuj_auth_e2e_test.dart"],
     embed = [":app_lib"],
     test_files = ["test/cuj_auth_e2e_test.dart"],
@@ -273,7 +283,9 @@ test_suite(
     name = "cuj_e2e_tests",
     tags = ["manual"],
     tests = [
+        ":cuj_dashboard_checklist_e2e_test",
         ":cuj_auth_e2e_test",
+
         ":cuj_agents_hire_e2e_test",
         ":cuj_cost_e2e_test",
         ":cuj_handoffs_e2e_test",
