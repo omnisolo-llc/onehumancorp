@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -121,14 +122,14 @@ func (r *taskRepositoryImpl) ClaimTask(ctx context.Context, taskID string, agent
 		return false, nil
 	}
 
-	updateQ := `UPDATE swarm_tasks SET status = 'IN_PROGRESS', agent_id = $1, updated_at = $2 WHERE id = $3 AND status = 'PENDING'`
-	affected, err := tx.Exec(ctx, updateQ, agentID, time.Now().UTC(), taskID)
+	updateQ := `UPDATE swarm_tasks SET status = 'IN_PROGRESS', agent_id = $1, updated_at = $2 WHERE id = $3 AND status = 'PENDING' RETURNING id`
+	var returnedID string
+	err = tx.QueryRow(ctx, updateQ, agentID, time.Now().UTC(), taskID).Scan(&returnedID)
 	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return false, nil
+		}
 		return false, fmt.Errorf("failed to update task status: %w", err)
-	}
-
-	if affected == 0 {
-		return false, nil
 	}
 
 	if err := tx.Commit(ctx); err != nil {

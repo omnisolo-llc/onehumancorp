@@ -21,6 +21,8 @@ type SqliteProvider struct {
 	db *sql.DB
 }
 
+
+
 func sqliteRowsAffected(res sql.Result) (rows int64, err error) {
 	if res == nil {
 		return 0, nil

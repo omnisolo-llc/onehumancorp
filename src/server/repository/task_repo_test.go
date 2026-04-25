@@ -179,7 +179,7 @@ func TestTaskRepository_UpdateTaskStatus(t *testing.T) {
 		t.Errorf("expected error when context has no organization_id")
 	}
 
-    // Test update with nonexistent task (RowsAffected == 0)
+    // Test update with nonexistent task (ErrNoRows)
     err = repo.UpdateTaskStatus(ctx, "nonexistent-id", "DONE")
     if err == nil {
         t.Errorf("expected error when updating nonexistent task")
@@ -223,7 +223,7 @@ func TestTaskRepository_GetTasksByOrg_RowsError(t *testing.T) {
     }
 }
 
-// A custom driver to test rows.Err(), res.RowsAffected() and Scan() errors
+// A custom driver to test rows.Err() and Scan() errors
 
 type mockDriver struct{}
 
@@ -252,7 +252,7 @@ func (s *mockStmt) Query(args []driver.Value) (driver.Rows, error)  {
 
 type mockResult struct{}
 func (r *mockResult) LastInsertId() (int64, error) { return 0, nil }
-func (r *mockResult) RowsAffected() (int64, error) { return 0, errors.New("mock rows affected error") }
+func (r *mockResult) RowsAffected() (int64, error) { return 0, nil }
 
 type mockRows struct{
     failScan bool
@@ -311,9 +311,9 @@ func TestTaskRepository_MockErrors(t *testing.T) {
 		t.Errorf("expected scan error, got nil")
 	}
 
-    // Test RowsAffected() error
+    // Test QueryRow error
 	err = repo.UpdateTaskStatus(ctx, "id", "status")
-	if err == nil || err.Error() != "mock rows affected error" {
-		t.Errorf("expected mock rows affected error, got %v", err)
+	if err == nil {
+		t.Errorf("expected error, got %v", err)
 	}
 }

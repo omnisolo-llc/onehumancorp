@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"errors"
 	"fmt"
+	"strings"
 	"io"
 	"sync"
 	"time"
@@ -310,13 +311,15 @@ func (m *UltraPlanManager) modifyStateMachine(ctx context.Context, planID string
 		UPDATE swarm_ultra_plans
 		SET state_machine = $1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $2
+		RETURNING id
 	`
-	rowsAffected, err := tx.Exec(ctx, updateQuery, compressedUpdatedJSON, planID)
+	var returnedID string
+	err = tx.QueryRow(ctx, updateQuery, compressedUpdatedJSON, planID).Scan(&returnedID)
 	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return fmt.Errorf("update status no rows affected")
+		}
 		return fmt.Errorf("update status: %w", err)
-	}
-	if rowsAffected == 0 {
-		return fmt.Errorf("update status no rows affected")
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -419,14 +422,15 @@ func (m *UltraPlanManager) UpdatePlanStatus(ctx context.Context, planID string, 
 		UPDATE swarm_ultra_plans
 		SET status = $1, state_machine = $2, updated_at = CURRENT_TIMESTAMP
 		WHERE id = $3
+		RETURNING id
 	`
-	rowsAffected, err := tx.Exec(ctx, updateQuery, newStatus, compressedStateMachineJSON, planID)
+	var returnedID string
+	err = tx.QueryRow(ctx, updateQuery, newStatus, compressedStateMachineJSON, planID).Scan(&returnedID)
 	if err != nil {
+		if strings.Contains(err.Error(), "no rows") {
+			return fmt.Errorf("update status no rows affected")
+		}
 		return fmt.Errorf("update status: %w", err)
-	}
-
-	if rowsAffected == 0 {
-		return fmt.Errorf("update status no rows affected")
 	}
 
 	if err := tx.Commit(ctx); err != nil {

@@ -117,18 +117,15 @@ func (r *TaskRepository) UpdateTaskStatus(ctx context.Context, taskID, status st
 		UPDATE tasks
 		SET status = $1, updated_at = $2
 		WHERE id = $3 AND organization_id = $4
+		RETURNING id
 	`
-	res, err := r.DB.ExecContext(ctx, query, status, time.Now(), taskID, orgID)
+	var returnedID string
+	err = r.DB.QueryRowContext(ctx, query, status, time.Now(), taskID, orgID).Scan(&returnedID)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("task not found or not owned by organization")
+		}
 		return err
-	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rowsAffected == 0 {
-		return errors.New("task not found or not owned by organization")
 	}
 
 	return nil
