@@ -7,10 +7,9 @@
 -- Because we just added autodream_memories in 024, let's just alter it simply.
 -- Actually, SQLite ALTER TABLE ADD COLUMN does not support IF NOT EXISTS.
 
-ALTER TABLE autodream_memories ADD COLUMN IF NOT EXISTS organization_id TEXT;
-ALTER TABLE autodream_memories ADD COLUMN IF NOT EXISTS agent_id TEXT;
-ALTER TABLE autodream_memories ADD COLUMN IF NOT EXISTS source_type TEXT;
-ALTER TABLE autodream_memories ADD COLUMN IF NOT EXISTS task_id TEXT;
+ALTER TABLE autodream_memories ADD COLUMN organization_id TEXT;
+ALTER TABLE autodream_memories ADD COLUMN agent_id TEXT;
+ALTER TABLE autodream_memories ADD COLUMN source_type TEXT;
 
 UPDATE autodream_memories SET organization_id = 'default' WHERE organization_id IS NULL;
 UPDATE autodream_memories SET source_type = 'unknown' WHERE source_type IS NULL;

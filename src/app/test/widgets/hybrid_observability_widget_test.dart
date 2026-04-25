@@ -10,9 +10,9 @@ import 'package:ohc_app/models/agent.dart';
 void main() {
   testWidgets('HybridObservabilityWidget renders correctly with OHC tokens', (WidgetTester tester) async {
     final mockSnapshot = DashboardSnapshot(
-      organization: const Organization(id: '1', name: 'Test Org', domain: 'test.com', tier: 'free', members: [], roleProfiles: []),
+      organization: const Organization(id: '1', name: 'Test Org', domain: 'test.com', members: [], roleProfiles: []),
       meetings: [],
-      costs: const CostSummary(totalCostUSD: 0, totalTokens: 0, totalActions: 0, agents: []),
+      costs: const CostSummary(totalCostUSD: 0, totalTokens: 0, agents: []),
       agents: [
         Agent(
           id: '1',
