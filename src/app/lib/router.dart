@@ -35,6 +35,10 @@ import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/api_documentation_screen.dart';
+import 'package:ohc_app/screens/release_notes_screen.dart';
+import 'package:ohc_app/widgets/ai_help_chat_widget.dart';
 
 /// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
 /// [GoRouter.refreshListenable], so the router re-evaluates its redirect
@@ -215,6 +219,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
+          GoRoute(
+            path: '/help-center',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/help-center/api',
+            builder: (context, state) => const ApiDocumentationScreen(),
+          ),
+          GoRoute(
+            path: '/help-center/release-notes',
+            builder: (context, state) => const ReleaseNotesScreen(),
+          ),
         ],
       ),
     ],
@@ -230,8 +246,9 @@ class AppShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
+        Widget bodyContent;
         if (constraints.maxWidth <= 768) {
-          return Scaffold(
+          bodyContent = Scaffold(
             drawer: _Sidebar(),
             body: Stack(
               children: [
@@ -262,7 +279,7 @@ class AppShell extends StatelessWidget {
             ),
           );
         } else {
-          return Scaffold(
+          bodyContent = Scaffold(
             body: Row(
               children: [
                 _Sidebar(),
@@ -271,6 +288,13 @@ class AppShell extends StatelessWidget {
             ),
           );
         }
+
+        return Stack(
+          children: [
+            bodyContent,
+            const AiHelpChatWidget(),
+          ],
+        );
       },
     );
   }
@@ -290,6 +314,7 @@ class _Sidebar extends StatelessWidget {
           ),
         ),
         const Divider(),
+        _NavItem(icon: Icons.help_center, label: 'Help Center', path: '/help-center'),
         _NavItem(icon: Icons.dashboard, label: 'Dashboard', path: '/dashboard'),
         _NavItem(icon: Icons.smart_toy, label: 'Agents', path: '/agents'),
         _NavItem(
