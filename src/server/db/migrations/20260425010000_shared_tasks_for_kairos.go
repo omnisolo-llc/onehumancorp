@@ -50,9 +50,8 @@ func upSharedTasksForKairos20260425010000(ctx context.Context, tx *sql.Tx) error
 			title VARCHAR NOT NULL,
 			description TEXT,
 			status VARCHAR NOT NULL DEFAULT 'PENDING',
-			agent_id VARCHAR,
-			priority VARCHAR NOT NULL DEFAULT 'P2',
-			payload JSONB,
+			assigned_agent_id VARCHAR,
+			dependencies JSONB DEFAULT '[]',
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		)`
@@ -99,9 +98,8 @@ func upSharedTasksForKairos20260425010000(ctx context.Context, tx *sql.Tx) error
 		title TEXT NOT NULL,
 		description TEXT,
 		status TEXT NOT NULL DEFAULT 'PENDING',
-		agent_id TEXT,
-		priority TEXT NOT NULL DEFAULT 'P2',
-		payload TEXT,
+		assigned_agent_id TEXT,
+		dependencies JSON DEFAULT '[]',
 		created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 		updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 	)`
