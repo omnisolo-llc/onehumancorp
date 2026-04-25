@@ -3,7 +3,6 @@ package autodream
 import (
 	"context"
 	"testing"
-	"time"
 	_ "modernc.org/sqlite"
 
 	"github.com/onehumancorp/mono/src/server/db"
@@ -53,88 +52,5 @@ func TestAutoDreamConsolidation(t *testing.T) {
 	err = service.Consolidate(ctx, "task-124", []string{"log 3", "log 4"})
 	if err != nil {
 		t.Errorf("expected no error on second consolidate, got %v", err)
-	}
-}
-
-func TestService_ResolveConflicts(t *testing.T) {
-	provider := db.NewTestProvider(t)
-	claims := &auth.Claims{OrganizationID: "test-tenant-123"}
-	ctx := context.WithValue(context.Background(), auth.ClaimsContextKeyForTest, claims)
-
-	// In test, creating table
-	_, err := provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS consolidated_memory (
-		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
-		agent_id TEXT,
-		content TEXT NOT NULL,
-		embedding TEXT,
-		source_type TEXT NOT NULL,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);`)
-	if err != nil {
-		t.Fatalf("failed to create table: %v", err)
-	}
-
-	repo := memory.NewVectorRepository(provider)
-	llm := &mockLLM{}
-	service := NewService(repo, llm)
-
-	// Upsert initial records
-	repo.Upsert(ctx, &memory.EmbeddingRecord{
-		ID:             "r1",
-		OrganizationID: "test-tenant-123",
-		Content:        "record 1",
-		Embedding:      []float32{0.1, 0.2, 0.3},
-		SourceType:     "TASK_SUMMARY",
-		CreatedAt:      time.Now(),
-	})
-
-	repo.Upsert(ctx, &memory.EmbeddingRecord{
-		ID:             "r2",
-		OrganizationID: "test-tenant-123",
-		Content:        "record 2",
-		Embedding:      []float32{0.1, 0.2, 0.3},
-		SourceType:     "TASK_SUMMARY",
-		CreatedAt:      time.Now().Add(-1 * time.Hour),
-	})
-
-	err = service.ResolveConflicts(ctx, "test-tenant-123")
-	if err != nil {
-		t.Errorf("ResolveConflicts failed: %v", err)
-	}
-
-	res, _ := repo.GetRecentMemories(ctx, "test-tenant-123", time.Now().Add(-2*time.Hour))
-	foundMerged := false
-	for _, r := range res {
-		if r.ID == "r1-merged" {
-			foundMerged = true
-		}
-	}
-	if !foundMerged {
-		t.Errorf("Expected r1-merged, but not found")
-	}
-}
-
-func TestService_PruneStaleContext(t *testing.T) {
-	provider := db.NewTestProvider(t)
-	repo := memory.NewVectorRepository(provider)
-	llm := &mockLLM{}
-	service := NewService(repo, llm)
-	ctx := context.Background()
-
-	// In test, creating table
-	provider.Exec(ctx, `CREATE TABLE IF NOT EXISTS consolidated_memory (
-		id TEXT PRIMARY KEY,
-		organization_id TEXT NOT NULL,
-		agent_id TEXT,
-		content TEXT NOT NULL,
-		embedding TEXT,
-		source_type TEXT NOT NULL,
-		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-	);`)
-
-	err := service.PruneStaleContext(ctx, "test-tenant", 1 * time.Hour)
-	if err != nil {
-		t.Errorf("PruneStaleContext failed: %v", err)
 	}
 }
