@@ -17,7 +17,7 @@ use ohc_builtin_agent_tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos,
 };
-use chrono::Utc;
+// use chrono::Utc;
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
@@ -222,7 +222,6 @@ impl AgentServiceImpl {
             max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
             max_task_tokens: 0,
             confidence_threshold,
-            enable_observation_masking: true,
         }
     }
 }
@@ -370,7 +369,6 @@ impl AgentService for AgentServiceImpl {
                 max_iterations: 100,
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
-            enable_observation_masking: true,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));

@@ -27,6 +27,7 @@ import (
 	"github.com/onehumancorp/mono/src/server/storage"
 	"github.com/onehumancorp/mono/src/server/telemetry"
 
+	"github.com/onehumancorp/mono/src/server/interop"
 	"github.com/redis/rueidis"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

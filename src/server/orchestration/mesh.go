@@ -288,13 +288,6 @@ func (rm *RedisMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task, 
 }
 
 func (rm *RedisMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "PublishTeammateMeshEvent", time.Since(start)) }()
-
-	if telemetry.BufferMetricFunc == nil {
-		telemetry.RecordMeshBroadcast(ctx, "teammate_mesh")
-	}
-
 	msg := map[string]interface{}{
 		"agent_id": agentID,
 		"action":   action,
@@ -311,9 +304,6 @@ func (rm *RedisMeshTransport) PublishTeammateMeshEvent(ctx context.Context, chan
 }
 
 func (rm *RedisMeshTransport) SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error) {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeTeammateMesh", time.Since(start)) }()
-
 	return rm.SubscribeMeshEvents(ctx, channel)
 }
 
@@ -690,13 +680,6 @@ func (lm *MemoryMeshTransport) SubscribeTasks(ctx context.Context) (<-chan Task,
 }
 
 func (lm *MemoryMeshTransport) PublishTeammateMeshEvent(ctx context.Context, channel string, agentID, action, status string, payload []byte) error {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "PublishTeammateMeshEvent", time.Since(start)) }()
-
-	if telemetry.BufferMetricFunc == nil {
-		telemetry.RecordMeshBroadcast(ctx, "teammate_mesh")
-	}
-
 	msg := map[string]interface{}{
 		"agent_id": agentID,
 		"action":   action,
@@ -713,9 +696,6 @@ func (lm *MemoryMeshTransport) PublishTeammateMeshEvent(ctx context.Context, cha
 }
 
 func (lm *MemoryMeshTransport) SubscribeTeammateMesh(ctx context.Context, channel string) (<-chan []byte, error) {
-	start := time.Now()
-	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeTeammateMesh", time.Since(start)) }()
-
 	return lm.SubscribeMeshEvents(ctx, channel)
 }
 
