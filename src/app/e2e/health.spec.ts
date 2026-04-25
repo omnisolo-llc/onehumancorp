@@ -7,20 +7,20 @@ test('Diagnostics screen displays hybrid health info', async ({ page }) => {
   await page.goto('/');
 
   // Wait for load
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(1000);
 
   // Click reload now if there's a new version banner blocking the app
   try {
-      if (await page.locator('text=A new version is available!').isVisible({ timeout: 2000 })) {
+      if (await page.locator('text=A new version is available!').isVisible({ timeout: 500 })) {
           await page.locator('button:has-text("Reload Now")').click();
-          await page.waitForTimeout(5000);
+          await page.waitForTimeout(1000);
       }
   } catch (e) { }
 
   try {
-      if (await page.locator('button:has-text("Enable accessibility")').isVisible({ timeout: 2000 })) {
+      if (await page.locator('button:has-text("Enable accessibility")').isVisible({ timeout: 500 })) {
           await page.locator('button:has-text("Enable accessibility")').click();
-          await page.waitForTimeout(5000);
+          await page.waitForTimeout(1000);
       }
   } catch (e) { }
 
@@ -32,7 +32,7 @@ test('Diagnostics screen displays hybrid health info', async ({ page }) => {
   // So we MUST login via the UI.
 
   const emailField = page.locator('input[type="email"], input[name="username"]').first();
-  await emailField.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {});
+  await emailField.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
   if (await emailField.isVisible()) {
     await emailField.fill('admin');
   }
@@ -48,12 +48,12 @@ test('Diagnostics screen displays hybrid health info', async ({ page }) => {
   }
 
   // Wait for navigation after login
-  await page.waitForTimeout(5000);
+  await page.waitForTimeout(1000);
 
   // Navigate to Diagnostics
   await page.goto('/#/diagnostics');
 
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(1000);
 
   // Make sure we actually navigated to diagnostics and aren't redirected back to login
   expect(page.url()).toContain('/diagnostics');

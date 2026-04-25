@@ -7,7 +7,7 @@ test.describe('KAIROS Distributed State Machine UI E2E', () => {
     // Wait for the app to load.
     await page.waitForLoadState('networkidle');
     // Give it a moment to render.
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
   });
 
   test('user can log in, navigate to task list, and view parent/child task relationships and workflow state', async ({ page }) => {
@@ -20,13 +20,13 @@ test.describe('KAIROS Distributed State Machine UI E2E', () => {
     await page.keyboard.press('Enter');
 
     // 2. Wait for navigation to dashboard (assumed wait time)
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(1000);
 
     // 3. Open the side menu or navigate to orchestration (simulating clicking "Tasks" or "Orchestration")
     // Assuming we can navigate to the task list directly or there is a button.
     // In OHC UI, there's usually a side navigation. Since it's a Canvas app, we might just tab to the link or route there.
     await page.goto('/#/orchestration/tasks');
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     // 4. Assert that the task list has loaded and shows the required UI tokens
     await page.waitForSelector('flt-semantics[aria-label*="Shared Task List"]', { state: 'attached', timeout: 10000 }).catch(() => {
@@ -53,7 +53,7 @@ test.describe('KAIROS Distributed State Machine UI E2E', () => {
 
     // Re-trigger navigation to load the mocked API
     await page.goto('/#/orchestration/tasks');
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(1000);
 
     // Check if the text exists in the a11y tree (using aria-label or just relying on text extraction if possible)
     // As it is a Flutter canvas app, exact text matching might require semantics enabled.
