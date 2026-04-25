@@ -3,6 +3,7 @@ package sync
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,10 +18,12 @@ import (
 )
 
 type AutoDreamPayload struct {
-	Type     string `json:"type"` // "embedding" or "mission"
-	ID       string `json:"id"`
-	Data     string `json:"data"`
-	Metadata string `json:"metadata"`
+	Type         string `json:"type"` // "embedding" or "mission"
+	ID           string `json:"id"`
+	Data         string `json:"data"`
+	Metadata     string `json:"metadata"`
+	TaskID       string `json:"task_id,omitempty"`
+	Dependencies string `json:"dependencies,omitempty"`
 }
 
 type AutoDreamSyncEngine struct {
@@ -155,7 +158,7 @@ func (e *AutoDreamSyncEngine) syncEmbeddingCache(ctx context.Context) {
 }
 
 func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
-	rows, err := e.dbWrapper.Query(ctx, "SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false LIMIT 50")
+	rows, err := e.dbWrapper.Query(ctx, "SELECT id, status, payload, task_id, dependencies FROM agent_missions WHERE synced_to_cloud = false LIMIT 50")
 	if err != nil {
 		slog.Error("sync: failed to query agent_missions", "error", err)
 		return
@@ -167,7 +170,9 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 
 	for rows.Next() {
 		var id, status, payloadData string
-		if err := rows.Scan(&id, &status, &payloadData); err != nil {
+		var taskID sql.NullString
+		var deps sql.NullString
+		if err := rows.Scan(&id, &status, &payloadData, &taskID, &deps); err != nil {
 			slog.Error("sync: failed to scan agent_missions", "error", err)
 			continue
 		}
@@ -182,12 +187,19 @@ func (e *AutoDreamSyncEngine) syncAgentMissions(ctx context.Context) {
 			payloadData = telemetry.RedactPII(payloadData)
 		}
 
-		payloads = append(payloads, AutoDreamPayload{
+		p := AutoDreamPayload{
 			Type:     "mission",
 			ID:       id,
 			Data:     payloadData,
 			Metadata: status,
-		})
+		}
+		if taskID.Valid {
+			p.TaskID = taskID.String
+		}
+		if deps.Valid {
+			p.Dependencies = deps.String
+		}
+		payloads = append(payloads, p)
 		ids = append(ids, id)
 	}
 

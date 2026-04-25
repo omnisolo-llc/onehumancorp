@@ -5,12 +5,13 @@
 
 PRAGMA foreign_keys=off;
 
-BEGIN TRANSACTION;
-
 CREATE TABLE IF NOT EXISTS agent_missions_new (
     id         TEXT PRIMARY KEY,
     status     TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'BURSTING')),
     payload    TEXT NOT NULL,
+    organization_id TEXT,
+    synced_to_cloud BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -21,19 +22,18 @@ DROP TABLE agent_missions;
 ALTER TABLE agent_missions_new RENAME TO agent_missions;
 CREATE INDEX idx_missions_status ON agent_missions (status);
 
-COMMIT;
-
 PRAGMA foreign_keys=on;
 
 -- +goose Down
 PRAGMA foreign_keys=off;
 
-BEGIN TRANSACTION;
-
 CREATE TABLE IF NOT EXISTS agent_missions_old (
     id         TEXT PRIMARY KEY,
     status     TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')),
     payload    TEXT NOT NULL,
+    organization_id TEXT,
+    synced_to_cloud BOOLEAN DEFAULT FALSE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -45,7 +45,5 @@ SELECT id, status, payload, created_at FROM agent_missions;
 DROP TABLE agent_missions;
 ALTER TABLE agent_missions_old RENAME TO agent_missions;
 CREATE INDEX idx_missions_status ON agent_missions (status);
-
-COMMIT;
 
 PRAGMA foreign_keys=on;

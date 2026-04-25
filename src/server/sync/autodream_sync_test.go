@@ -142,7 +142,7 @@ func TestAutoDreamSyncEngine_syncAgentMissions_PIIRedaction(t *testing.T) {
 
 	// Insert test data with invalid JSON containing PII
 	piiPayload := "this is an invalid json string with email test@example.com"
-	_, err = dbWrapper.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ($1, $2, $3, false)", "mission1", "failed", piiPayload)
+	_, err = dbWrapper.Exec(ctx, "INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES ($1, $2, $3, false)", "mission1", "FAILED", piiPayload)
 	if err != nil {
 		t.Fatalf("failed to insert mission: %v", err)
 	}

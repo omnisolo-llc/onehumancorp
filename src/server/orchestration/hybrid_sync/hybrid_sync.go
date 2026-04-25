@@ -290,6 +290,8 @@ type AgentMission struct {
 	OrganizationID string `json:"organization_id"`
 	Status         string `json:"status"`
 	Payload        string `json:"payload"`
+	TaskID         string `json:"task_id"`
+	Dependencies   string `json:"dependencies"`
 }
 
 type MissionSynchronizer interface {
@@ -314,6 +316,8 @@ func (d *HybridSyncDaemon) SyncLocalToCloud(ctx context.Context, mission *AgentM
 		"mission_id":      mission.ID,
 		"organization_id": mission.OrganizationID,
 		"status":          mission.Status,
+		"task_id":         mission.TaskID,
+		"dependencies":    mission.Dependencies,
 		"payload": map[string]interface{}{
 			"rag_context": redactedPayload,
 		},
@@ -356,7 +360,7 @@ func (d *HybridSyncDaemon) ProcessMissionSync(ctx context.Context) {
 		return
 	}
 
-	query := "SELECT id, organization_id, status, payload FROM agent_missions WHERE synced_to_cloud = false LIMIT 100"
+	query := "SELECT id, organization_id, status, payload, task_id, dependencies FROM agent_missions WHERE synced_to_cloud = false LIMIT 100"
 	rows, err := d.dbWrapper.Query(ctx, query)
 	if err != nil {
 		slog.Error("hybrid_sync: failed to query agent_missions", "error", err)
@@ -368,12 +372,20 @@ func (d *HybridSyncDaemon) ProcessMissionSync(ctx context.Context) {
 	for rows.Next() {
 		var m AgentMission
 		var orgID sql.NullString
-		if err := rows.Scan(&m.ID, &orgID, &m.Status, &m.Payload); err != nil {
+		var taskID sql.NullString
+		var deps sql.NullString
+		if err := rows.Scan(&m.ID, &orgID, &m.Status, &m.Payload, &taskID, &deps); err != nil {
 			slog.Error("hybrid_sync: failed to scan agent_missions", "error", err)
 			continue
 		}
 		if orgID.Valid {
 			m.OrganizationID = orgID.String
+		}
+		if taskID.Valid {
+			m.TaskID = taskID.String
+		}
+		if deps.Valid {
+			m.Dependencies = deps.String
 		}
 		missions = append(missions, m)
 	}
