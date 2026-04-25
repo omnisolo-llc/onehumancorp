@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Implement formal realtime teammate mesh APIs and Context Management with JetBrains Observation Masking.
+- Privacy/Offline (Standalone): Improve SQLite migration parsing, clean up project documentation, and serve full app via OHC binary instead of static file server.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 - Scaling (Cloud): Implement Business Setup and Website Builder wizard UI scaffolding, onboarding cross-device state, and Business Share & Embed widget.
 - Privacy/Offline (Standalone): Conduct Hybrid Privacy Audit with PII guardrails, implement in-app mobile-first Help Center with tooltips, and add Dashboard Welcome Checklist.

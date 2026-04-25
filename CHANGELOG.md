@@ -1,5 +1,14 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement formal realtime teammate mesh APIs (#461f31b6).
+- Harness Upgrade: Context Management with JetBrains Observation Masking (#8a035fa4).
+
+### Privacy/Offline Improvements
+- Improve SQLite migration parsing and clean up project documentation (#a843c0a2).
+- Serve full app via OHC binary instead of static file server (#3824aaf3).
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
