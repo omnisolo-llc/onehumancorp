@@ -2,8 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-build --config=buildbuddy-official
-test --config=buildbuddy-official
+build --config=buildbuddy
+test --config=buildbuddy
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -56,7 +56,7 @@ build --action_env=CI
 
 # ── BuildBuddy official (default) ─────────────────────────────────────────────
 # Remote cache + executor at onehumancorp.buildbuddy.io with BES streaming.
-common:buildbuddy-official --bes_timeout=600s
+common:buildbuddy --bes_timeout=600s
 build:buildbuddy-official --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
 build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
 # Upload BES data asynchronously so the build/test result is available sooner.
@@ -82,7 +82,7 @@ common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3Jee
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
 # Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
 # buildbuddy-official which relies on the global sandboxed,local fallback chain.
-common:buildbuddy-official --bes_timeout=600s
+common:buildbuddy --bes_timeout=600s
 common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
 common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
