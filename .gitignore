@@ -94,11 +94,6 @@ Chart.lock
 /.claude-code
 /.claude
 /.agent-task
-/*.md
-!/README.md
-!/CHANGELOG.md
-!/RELEASE_NOTES.md
-/*.go
 
 # Rust build artifacts
 /target/
