@@ -128,6 +128,7 @@ pub fn grep_tool() -> Tool {
             },
             "required": ["pattern"]
         }),
+        is_mutating: false,
         execute: Arc::new(GrepExecutor),
     }
 }

@@ -1,0 +1,9 @@
+--- agent.rs
++++ agent.rs
+@@ -348,6 +348,7 @@
+             name: "test_tool".to_string(),
+             description: "test".to_string(),
+             parameters: Value::Null,
++            is_mutating: false,
+             execute: Arc::new(MockToolExecutor),
+         }];

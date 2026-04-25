@@ -190,38 +190,82 @@ impl Agent {
                 return Ok(last_assistant_content);
             }
 
-            // Execute tool calls and collect results.
-            let mut tool_results: Vec<ToolResult> = Vec::new();
-            for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+            // Execute tool calls and collect results using chunking.
+            // Read-only tools can run concurrently. Mutating tools run serially.
+            // We must preserve the original order of tool_calls in tool_results.
+
+            // First, tag each tool call with its original index
+            let mut chunked_calls: Vec<Vec<(usize, &ToolCall)>> = Vec::new();
+            let mut current_ro_chunk: Vec<(usize, &ToolCall)> = Vec::new();
+
+            for (idx, tc) in tool_calls.iter().enumerate() {
+                let is_mutating = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(true);
+                if is_mutating {
+                    if !current_ro_chunk.is_empty() {
+                        chunked_calls.push(std::mem::take(&mut current_ro_chunk));
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
-                };
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
-                });
+                    chunked_calls.push(vec![(idx, tc)]);
+                } else {
+                    current_ro_chunk.push((idx, tc));
+                }
             }
+            if !current_ro_chunk.is_empty() {
+                chunked_calls.push(current_ro_chunk);
+            }
+
+            let mut unsorted_results: Vec<(usize, ToolResult)> = Vec::new();
+
+            for chunk in chunked_calls {
+                let mut futures = Vec::new();
+                for (idx, tc) in chunk {
+                    let tc_clone = tc.clone();
+                    let id_clone = tc.id.clone();
+                    let name_clone = tc.name.clone();
+                    let args_clone = tc.arguments.to_string();
+                    let iteration_clone = iteration;
+
+                    futures.push(async move {
+                        let result = self.execute_tool(&tc_clone).await;
+                        (idx, id_clone, name_clone, args_clone, iteration_clone, result)
+                    });
+                }
+
+                let chunk_results = futures::future::join_all(futures).await;
+
+                for (idx, id, name, args_json, iter, result) in chunk_results {
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: name,
+                                args_json: args_json,
+                                result: r.clone(),
+                                iteration: iter,
+                            });
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: name,
+                                args_json: args_json,
+                                result: format!("Error: {}", err),
+                                iteration: iter,
+                            });
+                            (String::new(), err)
+                        }
+                    };
+                    unsorted_results.push((idx, ToolResult {
+                        tool_call_id: id,
+                        content,
+                        error,
+                    }));
+                }
+            }
+
+            // Restore original order
+            unsorted_results.sort_by_key(|(idx, _)| *idx);
+            let tool_results: Vec<ToolResult> = unsorted_results.into_iter().map(|(_, tr)| tr).collect();
 
             if cfg.enable_observation_masking {
                 // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
@@ -348,6 +392,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "test".to_string(),
             parameters: Value::Null,
+            is_mutating: false,
             execute: Arc::new(MockToolExecutor),
         }];
 
