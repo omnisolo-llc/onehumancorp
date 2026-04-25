@@ -91,13 +91,6 @@ class _HelpCenterScreenState extends ConsumerState<HelpCenterScreen> {
       appBar: AppBar(
         title: const Text('Help Center', style: TextStyle(fontFamily: 'Outfit')),
         backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          context.go('/chat?agent=help');
-        },
-        icon: const Icon(Icons.support_agent),
-        label: const Text('Ask AI Help Agent'),
-      ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
