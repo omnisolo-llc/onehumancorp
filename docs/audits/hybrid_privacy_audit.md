@@ -1,45 +1,31 @@
-# Hybrid Privacy Audit and Compliance Guardrails
+# Hybrid Privacy Audit
 
-## Overview
-This document outlines the findings of the Hybrid Privacy Audit for the OneHumanCorp (OHC) platform. The audit contrasts data handling between the Cloud (Multi-tenant SaaS) and Standalone (Desktop mode) deployment environments to ensure privacy-by-design. We also reviewed existing compliance guardrails, specifically assessing PII redaction and local data sovereignty guarantees.
+## 1. Executive Summary
+This document outlines the privacy design constraints and implementation standards for the OHC Hybrid Agentic OS, contrasting data handling in multi-tenant Cloud mode versus Standalone Desktop mode.
 
-## Data Handling Contrast: Cloud vs Standalone
+## 2. Multi-Tenant Cloud Mode (Privacy-by-Design)
+In Cloud mode, the system handles data for multiple independent tenants. To ensure data privacy and prevent PII leakage:
 
-The OHC platform handles data logging and telemetry differently depending on whether it is deployed as a Multi-Tenant Cloud instance or a Standalone desktop application.
+- **Row-Level Security (RLS)**: Mandatory `tenant_id` column on all persistent storage. RLS policies enforce tenant isolation at the database level.
+- **Structured Logging Redaction**: PII (e.g., emails, phone numbers, API keys) must be explicitly scrubbed or hashed before being written to centralized logging systems.
+- **Telemetry Scrubbing**: Traces and metrics exported to centralized observability platforms must not contain unhashed PII.
 
-### Multi-Tenant Cloud Deployment
-In the cloud environment, row-level tenant isolation is utilized across Postgres databases (`ENABLE ROW LEVEL SECURITY`). However, to ensure PII does not leak into centralized operations logs or cross-tenant reporting, all sensitive information is scrubbed:
-1.  **PII Redacting Log Handler**: The system wraps `slog.Handler` with a custom `PIIRedactingHandler` (located in `src/server/telemetry/logger.go`). This handler explicitly iterates over log records (both the log message and its attributes) and applies `RedactPII` and `RedactInterfacePII` to replace sensitive values with safe placeholders (e.g., `[REDACTED_EMAIL]`, `[REDACTED_CREDIT_CARD]`, `[REDACTED_AWS_ACCESS_KEY]`).
-2.  **Centralized Export**: Processed logs and operational metrics are securely shipped to observability layers (e.g., OpenTelemetry, Prometheus, Grafana).
+## 3. Standalone Desktop Mode (User Data Sovereignty)
+In Standalone mode, the system runs locally on the user's hardware. The core principle is **Zero Exfiltration**:
 
-### Standalone Desktop Mode
-The standalone mode is built around local data sovereignty and user privacy:
-1.  **Local Buffering (`BufferMetricFunc`)**: In Standalone mode, `InitStandaloneBuffer` creates an SQLite DB and assigns a custom `BufferMetricFunc`.
-2.  **Explicit Redaction Before Persistence**: `BufferMetricFunc` explicitly calls `RedactInterfacePII` before persisting the metric locally into the local SQLite database. The original in-memory structure passed to the metric func is not mutated, but the persisted JSON payload is thoroughly redacted (`src/server/telemetry/buffer_pii_test.go`).
-3.  **Opt-Out Mechanisms**: Standalone telemetry can be opted-out using `OHC_TELEMETRY_ENABLED=false` or implicitly disables global reporting due to `OHC_MULTITENANT=false`. In these states, metrics exfiltration logic skips processing.
+- **Local Storage Only**: Data, including vector embeddings and agent memories, is stored in local SQLite databases.
+- **Telemetry Disabled**: By default, no metrics, traces, or logs are transmitted to central servers unless explicitly opted-in by the user for diagnostic purposes.
+- **Local Secrets**: API keys and external service credentials reside solely on the local filesystem and are not synchronized to the cloud.
 
-## Compliance Guardrails Verification
+## 4. Policy-as-Code Implementation
+To enforce these privacy constraints, we implement automated guardrails within the `src/server/telemetry` module:
 
-OHC maintains robust compliance guardrails implemented via automated tests and linters that strictly prevent regressions in the telemetry packages:
+### 4.1 PII Scrubbing Tests
+- `TestStandaloneNoTelemetry`: Verifies that telemetry export mechanisms are inert when operating in standalone mode.
+- `TestCloudLogRedaction`: Simulates logging of sensitive data in cloud mode and asserts that the output is properly redacted (e.g., `email=***@***.***`).
 
-1.  **`TestGlobalPIIRedactionLinter` (`src/server/telemetry/global_pii_linter_test.go`)**
-    *   This automated AST linter parses the entire `telemetry` (and related `log`, `bridge`) package trees to verify that `json.Marshal` is never called on sensitive data payloads without an explicit `RedactInterfacePII` or `RedactPII` wrapper being applied first.
-    *   It ensures that any custom telemetry serialization logic cannot inadvertently serialize raw PII.
+### 4.2 AST Guardrails
+To prevent accidental hardcoding or unsanitized environmental access in logging, we use Go's `go/ast` to scan the telemetry package for direct usage of `os.Getenv`, ensuring configuration values are routed through the secure configuration manager.
 
-2.  **`TestBufferMetricFuncRedactionLinter` (`src/server/telemetry/buffer_pii_linter_test.go`)**
-    *   This strict AST linter guarantees that any function invoking `BufferMetricFunc` alongside `json.Marshal` must invoke a `RedactInterfacePII` call.
-    *   While some legacy functions are excluded from explicit `RedactInterfacePII` calls directly within the function block, this is secure because the Standalone initialization (`InitStandaloneBuffer` inside `src/server/telemetry/sync_daemon.go`) natively redacts the payload string globally inside the `BufferMetricFunc` assignment itself before any local storage occurs.
-
-3.  **Extensive PII Pattern Matching (`src/server/telemetry/privacy_test.go`)**
-    *   Test cases prove the effectiveness of pattern recognition spanning Emails, Phone numbers, SSNs, Credit Cards, and API keys (AWS, OpenAI, Anthropic), mitigating the risk of inadvertent leakages into DB queries or general multi-tenant logs.
-
-## Local Sovereignty Audit Findings
-
-The audit verifies that **no non-consented telemetry or data exfiltration occurs in Standalone Mode**.
-
-*   `src/server/telemetry/compliance_test.go` confirms that if `OHC_TELEMETRY_ENABLED` is false or the system opts out, the registry does not initialize exfiltration pipelines, and the internal buffer falls back to a nil-op.
-*   The telemetry framework guarantees that all locally cached buffers in SQLite (such as those queried by the Business Advisory agent) are strictly PII-redacted, eliminating the risk that a user's standalone DB exposes plain-text secrets or payment information if a backup or diagnostic file is shared manually by the user.
-
-## Conclusion
-
-The OHC platform adequately protects privacy boundaries across both Cloud and Standalone environments. The multi-tenant Cloud is insulated by extensive log redaction wrappers (`PIIRedactingHandler`), and the Standalone agent acts autonomously with 100% locally sovereign metrics and optional, fully-scrubbed telemetry. Existing AST linters enforce strict compliance-as-code for any future modifications.
+## 5. Conclusion
+These dual-mode constraints ensure OHC meets rigorous enterprise multi-tenant privacy standards while simultaneously providing an uncompromised "air-gapped" experience for standalone desktop users.
