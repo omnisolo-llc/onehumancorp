@@ -336,7 +336,7 @@ sh_binary(
     srcs = ["test/capture_screenshots.sh"],
     data = [
         ":app",
-        "//:node_modules/@playwright/test",
+
     ],
     visibility = ["//visibility:public"],
 )
@@ -420,4 +420,16 @@ pkg_rpm(
     summary = "OHC standalone desktop runtime",
     version = APP_PACKAGE_VERSION,
     visibility = ["//visibility:public"],
+)
+
+sh_test(
+    name = "flutter_web_e2e_test",
+    srcs = ["test/flutter_web_e2e_test.sh"],
+    data = [
+        "//src/app:app",
+        "//src/server:ohc",
+
+
+    ] + glob(["e2e/**/*.ts", ]),
+    tags = ["requires-network", "e2e"],
 )

@@ -186,47 +186,28 @@ if [ -z "$CONFIG" ]; then
   exit 1
 fi
 
-SPEC_REL_FILE="src/app/e2e/web.spec.ts"
-SPEC_FILE=""
-for candidate in \
-    "${RUNFILES}/${WORKSPACE}/${SPEC_REL_FILE}" \
-    "${RUNFILES}/_main/${SPEC_REL_FILE}" \
-    "${RUNFILES}/__main__/${SPEC_REL_FILE}"; do
-  if [ -f "$candidate" ]; then
-    SPEC_FILE="$candidate"
-    break
-  fi
-done
 
-if [ -z "$SPEC_FILE" ]; then
-  echo "ERROR: web.spec.ts not found" >&2
-  exit 1
-fi
-
-NODE_MODULES_DIR=""
-for candidate in \
-    "${RUNFILES}/${WORKSPACE}/node_modules" \
-    "${RUNFILES}/_main/node_modules" \
-    "${RUNFILES}/__main__/node_modules"; do
-  if [ -d "$candidate" ]; then
-    NODE_MODULES_DIR="$candidate"
-    break
-  fi
-done
-
-if [ -z "$NODE_MODULES_DIR" ]; then
-  echo "ERROR: node_modules not found in runfiles" >&2
-  exit 1
-fi
 
 # Run tests from temporary real files to avoid symlink path resolution pulling
 # in a different @playwright/test instance from the host workspace.
 E2E_TMP_DIR="${TMPDIR}/e2e"
 mkdir -p "${E2E_TMP_DIR}"
 cp "${CONFIG}" "${E2E_TMP_DIR}/playwright.config.ts"
-cp "${SPEC_FILE}" "${E2E_TMP_DIR}/web.spec.ts"
+
+for spec_rel in src/app/e2e/*.spec.ts; do
+  for candidate in \
+      "${RUNFILES}/${WORKSPACE}/${spec_rel}" \
+      "${RUNFILES}/_main/${spec_rel}" \
+      "${RUNFILES}/__main__/${spec_rel}"; do
+    if [ -f "$candidate" ]; then
+      cp "$candidate" "${E2E_TMP_DIR}/"
+      break
+    fi
+  done
+done
+
 CONFIG="${E2E_TMP_DIR}/playwright.config.ts"
-export NODE_PATH="${NODE_MODULES_DIR}${NODE_PATH:+:${NODE_PATH}}"
+export NODE_PATH="${NODE_PATH:-}"
 
 # ── Install Playwright browsers if needed ─────────────────────────────────
 export PLAYWRIGHT_BROWSERS_PATH="${TMPDIR}/pw_browsers"
@@ -243,7 +224,7 @@ OUTPUT_DIR="${TMPDIR}/pw_results"
 mkdir -p "${OUTPUT_DIR}"
 
 echo "Running Playwright tests…"
-"${PLAYWRIGHT_CMD[@]}" test \
+npm install -g playwright && npx playwright test \
   --config="${CONFIG}" \
   --output="${OUTPUT_DIR}" \
   2>&1
