@@ -28,6 +28,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub llm_recoverable_errors: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +42,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            llm_recoverable_errors: false,
         }
     }
 }
@@ -207,13 +209,21 @@ impl Agent {
                     }
                     Err(e) => {
                         let err = e.to_string();
+                        let (content, final_error) = if cfg.llm_recoverable_errors {
+                            // LLM-Recoverable: Return the raw error as a ToolMessage directly to the model
+                            // so it can self-correct, instead of treating it as a hard error.
+                            (format!("Tool execution failed with error: {}. Please analyze the error and try again if possible.", err), String::new())
+                        } else {
+                            (String::new(), err.clone())
+                        };
+
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: format!("Error: {}", err),
                             iteration,
                         });
-                        (String::new(), err)
+                        (content, final_error)
                     }
                 };
                 tool_results.push(ToolResult {
@@ -374,5 +384,60 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    struct MockFailingToolExecutor;
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for MockFailingToolExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            Err("Some internal tool error".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_recoverable_errors() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_fail".to_string(),
+                            name: "failing_tool".to_string(),
+                            arguments: serde_json::Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer after failure"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "failing_tool".to_string(),
+            description: "fails always".to_string(),
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockFailingToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.llm_recoverable_errors = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Do something", &mut on_event).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Final answer after failure");
     }
 }
