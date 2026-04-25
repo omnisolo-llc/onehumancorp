@@ -9,6 +9,7 @@ go_library(
         "auth_interceptor.go",
         "autodream.go",
         "autodream_advanced.go",
+        "autodream_pipeline.go",
         "autodream_sync_daemon.go",
         "cached_minimax_client.go",
         "centrifuge_hub.go",

@@ -169,6 +169,7 @@ test_suite(
 sh_test(
     name = "app_layout_test",
     srcs = ["test/flutter_layout_test.sh"],
+    tags = ["no-remote-exec", "local"],
     data = [":srcs"],
 )
 

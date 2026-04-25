@@ -16,9 +16,7 @@ import (
 	"github.com/onehumancorp/mono/src/server/db"
 )
 
-type EmbeddingClient interface {
-	GenerateEmbedding(ctx context.Context, text string) ([]float32, error)
-}
+
 
 type AutoDreamSyncDaemon struct {
 	db        db.Provider
