@@ -1,3 +1,4 @@
+import 'package:ohc_app/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -48,8 +49,15 @@ class _FixThisWizardScreenState extends ConsumerState<FixThisWizardScreen> {
                           : FilledButton(
                               onPressed: () async {
                                 setState(() => _isApplying = true);
-                                await Future.delayed(const Duration(seconds: 2));
-                                if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                try {
+                                  await ref.read(apiServiceProvider)?.fixSecurityIssue(widget.agentId);
+                                  if (mounted) setState(() { _isApplying = false; _step = 2; });
+                                } catch (e) {
+                                  if (mounted) {
+                                    setState(() => _isApplying = false);
+                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to apply fix: $e')));
+                                  }
+                                }
                               },
                               child: const Text('Apply Fix'),
                             ),

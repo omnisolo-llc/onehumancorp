@@ -59,10 +59,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       // In a real app this would open a webview or use an OAuth library
       // For Thin Client mode, simulate variable-latency remote calls
-      await Future.delayed(const Duration(milliseconds: 1500));
       await ref
           .read(authStateProvider.notifier)
-          .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
+          .login(_usernameCtrl.text.trim(), _passwordCtrl.text);
     } catch (e) {
       // Handle missing context or network degradation gracefully
       setState(() => _error = "OAuth Login Unavailable: Remote endpoint unreachable ($e)");

@@ -73,7 +73,6 @@ class WebsiteBuilderNotifier extends Notifier<WebsiteBuilderState> {
       state = state.copyWith(domainChoice: choice, customDomain: domain);
 
   void publish(BuildContext context) async {
-    // Attempt real API persist logic instead of mock delay
     // Note: there is no formal wizard save endpoint for website building yet,
     // but we remove Future.delayed to ensure synchronous completion or real api call in the future.
     Clipboard.setData(const ClipboardData(text: 'https://mybusiness.ohc.app'));

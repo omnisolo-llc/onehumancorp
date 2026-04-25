@@ -8,9 +8,9 @@ import 'package:ohc_app/models/dashboard.dart';
 // Provide a mock dashboard snapshot
 final mockDashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   return DashboardSnapshot(
-    organization: const Organization(id: 'org1', name: 'Test Org', domain: 'test.com', members: [], roleProfiles: []),
+    organization: const Organization(tier: 'free', id: 'org1', name: 'Test Org', domain: 'test.com', members: [], roleProfiles: []),
     meetings: [],
-    costs: const CostSummary(totalCostUSD: 0.0, totalTokens: 0, agents: []),
+    costs: const CostSummary(totalCostUSD: 0.0, totalTokens: 0, agents: [], totalActions: 0),
     agents: [],
     statuses: [],
     updatedAt: DateTime.now(),
