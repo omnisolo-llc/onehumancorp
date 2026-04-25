@@ -56,6 +56,7 @@ func setupKairosTestProvider(t *testing.T) db.Provider {
 		CREATE TABLE IF NOT EXISTS agent_memory_embeddings (
 			id TEXT PRIMARY KEY,
 			organization_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL DEFAULT '',
 			agent_id TEXT NOT NULL,
 			memory_type TEXT NOT NULL,
 			content TEXT NOT NULL,

@@ -178,12 +178,12 @@ func (w *KairosAutoDreamWorker) processAgentMessages(ctx context.Context) error 
 }
 
 func (w *KairosAutoDreamWorker) storeEmbedding(ctx context.Context, tx db.Tx, orgID, agentID, memType, content string, embedding []float32) error {
-	query := `INSERT INTO agent_memory_embeddings (organization_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5)`
+	query := `INSERT INTO agent_memory_embeddings (organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES ($1, $2, $3, $4, $5, $6) `
 
 	if w.db.IsSQLite() {
-		query = `INSERT INTO agent_memory_embeddings (organization_id, agent_id, memory_type, content, embedding) VALUES (?, ?, ?, ?, ?)`
+		query = `INSERT INTO agent_memory_embeddings (organization_id, tenant_id, agent_id, memory_type, content, embedding) VALUES (?, ?, ?, ?, ?, ?) `
 		embBytes, _ := json.Marshal(embedding)
-		_, err := tx.Exec(ctx, query, orgID, agentID, memType, content, string(embBytes))
+		_, err := tx.Exec(ctx, query, orgID, orgID, agentID, memType, content, string(embBytes))
 		return err
 	}
 
@@ -192,6 +192,6 @@ func (w *KairosAutoDreamWorker) storeEmbedding(ctx context.Context, tx db.Tx, or
 	if len(embedding) == 0 {
 		embStr = "[]"
 	}
-	_, err := tx.Exec(ctx, query, orgID, agentID, memType, content, embStr)
+	_, err := tx.Exec(ctx, query, orgID, orgID, agentID, memType, content, embStr)
 	return err
 }

@@ -5,6 +5,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TABLE IF NOT EXISTS agent_memory_embeddings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id VARCHAR NOT NULL,
+    tenant_id VARCHAR NOT NULL DEFAULT '',
     agent_id VARCHAR NOT NULL,
     memory_type VARCHAR NOT NULL,
     content TEXT NOT NULL,
@@ -13,6 +14,9 @@ CREATE TABLE IF NOT EXISTS agent_memory_embeddings (
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_memory_embeddings ON agent_memory_embeddings USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+ALTER TABLE agent_memory_embeddings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "tenant_isolation_policy" ON agent_memory_embeddings USING (tenant_id = current_setting('app.current_tenant', true));
 -- +goose StatementEnd
 
 -- +goose Down
