@@ -223,8 +223,9 @@ fi
 # in a different @playwright/test instance from the host workspace.
 E2E_TMP_DIR="${TMPDIR}/e2e"
 mkdir -p "${E2E_TMP_DIR}"
-cp "${CONFIG}" "${E2E_TMP_DIR}/playwright.config.ts"
-cp "${SPEC_FILE}" "${E2E_TMP_DIR}/web.spec.ts"
+# Copy all .ts files from the e2e directory to handle imports correctly.
+cp "$(dirname "${CONFIG}")"/*.ts "${E2E_TMP_DIR}/"
+cp "$(dirname "${SPEC_FILE}")"/*.ts "${E2E_TMP_DIR}/"
 CONFIG="${E2E_TMP_DIR}/playwright.config.ts"
 export NODE_PATH="${NODE_MODULES_DIR}${NODE_PATH:+:${NODE_PATH}}"
 
@@ -246,6 +247,7 @@ echo "Running Playwright tests…"
 "${PLAYWRIGHT_CMD[@]}" test \
   --config="${CONFIG}" \
   --output="${OUTPUT_DIR}" \
+  "${E2E_TMP_DIR}" \
   2>&1
 
 echo "✓ Playwright web e2e tests completed"
