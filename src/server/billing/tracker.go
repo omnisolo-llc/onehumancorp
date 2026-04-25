@@ -371,13 +371,15 @@ func (t *Tracker) Summary(organizationID string) Summary {
 // ActiveOrganizations returns a list of unique organization IDs that have recorded usage.
 func (t *Tracker) ActiveOrganizations(ctx context.Context) []string {
 	if t.repo != nil {
-		// If using DB repository, this might be a more complex query.
-		// Since we only really need active ones for reporting, and right now repo isn't fully mocked for this method:
-		// We can return a default set or add a query if needed. Assuming in-memory for typical demo uses or basic repo fallbacks.
-		// Note: The system design implies "demo" and maybe "default" are usually hardcoded or retrieved from auth.
-		// For robustness, returning "demo" when repo is nil is okay, but let's implement the memory version properly.
-		// To avoid changing UsageRepository interface, we can just return a basic slice.
-		return []string{"demo", "default"}
+		orgs, err := t.repo.ActiveOrganizations(ctx)
+		if err != nil {
+			slog.Error("failed to get active organizations from repository", "error", err)
+			return []string{"demo", "default"}
+		}
+		if len(orgs) == 0 {
+			return []string{"demo", "default"}
+		}
+		return orgs
 	}
 
 	orgsMap := make(map[string]struct{})
