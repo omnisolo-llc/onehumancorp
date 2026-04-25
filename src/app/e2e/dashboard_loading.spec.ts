@@ -34,10 +34,18 @@ test('Dashboard loading shimmer displays correctly', async ({ page }) => {
 
   // Login
   try {
-      await page.fill('input[name="username"]', 'admin', { timeout: 2000 });
-      await page.fill('input[name="password"]', 'admin');
-      await page.click('button:has-text("Login")');
+      await page.fill('input[placeholder="Email or Username"]', 'test@test.com', { timeout: 2000 });
+      await page.fill('input[placeholder="Password"]', 'password');
+      await page.click('button:has-text("Sign In")');
       await page.waitForTimeout(5000);
+  } catch (e) { }
+
+  // Bypass setup
+  try {
+      await page.click('button:has-text("Get Started")', { timeout: 2000 });
+      await page.waitForTimeout(2000);
+      await page.click('button:has-text("Continue without Sync")');
+      await page.waitForTimeout(2000);
   } catch (e) { }
 
   await page.goto('/#/dashboard');

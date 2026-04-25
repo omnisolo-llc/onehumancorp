@@ -57,39 +57,38 @@ class _DashboardShimmerState extends State<DashboardShimmer> with SingleTickerPr
       builder: (context, child) {
         return Opacity(
           opacity: _opacity.value,
-          child: child,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Semantics(
+              label: 'Dashboard Loading Skeleton',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSkeletonRect(width: 150, height: 30),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: 3,
+                      separatorBuilder: (context, index) => const SizedBox(width: 16),
+                      itemBuilder: (context, index) => _buildSkeletonCard(),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  _buildSkeletonRect(width: 200, height: 30),
+                  const SizedBox(height: 24),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: List.generate(4, (index) => _buildSkeletonCard()),
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Semantics(
-          label: 'Dashboard Loading Skeleton',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSkeletonRect(width: 150, height: 30),
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 120,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: 3,
-                  separatorBuilder: (context, index) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) => _buildSkeletonCard(),
-                ),
-              ),
-              const SizedBox(height: 32),
-              _buildSkeletonRect(width: 200, height: 30),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: List.generate(4, (index) => _buildSkeletonCard()),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
