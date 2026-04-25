@@ -170,6 +170,7 @@ sh_test(
     name = "app_layout_test",
     srcs = ["test/flutter_layout_test.sh"],
     data = [":srcs"],
+    tags = ["local"],
 )
 
 flutter_test(
