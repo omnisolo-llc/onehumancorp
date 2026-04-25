@@ -15,6 +15,7 @@ import 'package:ohc_app/widgets/hybrid_telemetry_widget.dart';
 import 'package:ohc_app/widgets/sub_agent_queue_widget.dart';
 import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 import 'package:ohc_app/widgets/business_share_widget.dart';
+import 'package:ohc_app/widgets/welcome_checklist_widget.dart';
 
 final dashboardProvider = FutureProvider.autoDispose<DashboardSnapshot>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -168,7 +169,7 @@ class _DashboardContent extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 32),
+        const WelcomeChecklistWidget(),
         const SizedBox(height: 32),
         _SectionTitle('System Health'),
         const SizedBox(height: 16),
