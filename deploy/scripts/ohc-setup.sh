@@ -52,9 +52,7 @@ echo -e "${DIM}[X] Verifying .env setup...${RESET}"
 bash deploy/scripts/ohc-verify-setup.sh || { echo -e "${PURPLE}Verification failed.${RESET}"; false; }
 
 echo -e "${DIM}[4/5] Verifying Day One Audits...${RESET}"
-export PATH=$PATH:/home/jules/go/bin && bazelisk test //src/tests/e2e:e2e_cuj_audit_test || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
-
-
+bazelisk test //src/tests/e2e:e2e_cuj_audit_test || { echo -e "${PURPLE}Day One audits failed.${RESET}"; false; }
 
 echo -e "${DIM}[5/5] Generating Local Memory Log...${RESET}"
 RUNTIME_DIR="${OHC_RUNTIME_DIR:-.ohc/runtime}"
