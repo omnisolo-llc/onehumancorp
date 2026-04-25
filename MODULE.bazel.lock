@@ -495,7 +495,7 @@
   "moduleExtensions": {
     "//bazel/rules:extensions.bzl%proto_deps_extension": {
       "general": {
-        "bzlTransitiveDigest": "fqriFRbq45Y0SGRhj5dAU3t6mwYtVsworK9aBha0kho=",
+        "bzlTransitiveDigest": "dT/cKtXRfZtxQ48vsOJmeSMAAHSK5f2d62klO41LMQQ=",
         "usagesDigest": "oUw6GuSrFUfs77OVGTbgKitMUJvsMzzqPeJUgim32og=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
