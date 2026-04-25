@@ -292,6 +292,7 @@ test_suite(
 
 
         ":cuj_diagnostics_referrals_e2e_test",
+        ":cuj_help_ux_e2e_test",
 
     ],
 )
