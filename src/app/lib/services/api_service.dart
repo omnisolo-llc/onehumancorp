@@ -266,6 +266,26 @@ class ApiService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
+  // ── Wizard Setup ─────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>> getWizardStatus() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/wizard/status'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  Future<void> configureWizard(Map<String, dynamic> config) async {
+    final res = await _client.post(
+      Uri.parse('$baseUrl/api/wizard/configure'),
+      headers: _headers,
+      body: jsonEncode(config),
+    );
+    _checkStatus(res);
+  }
+
   // ── Channels ─────────────────────────────────────────────────────────────
 
   Future<List<ChatChannel>> listChannels() async {

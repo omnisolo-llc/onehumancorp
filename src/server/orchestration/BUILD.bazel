@@ -9,6 +9,7 @@ go_library(
         "auth_interceptor.go",
         "autodream.go",
         "autodream_advanced.go",
+        "autodream_sync_daemon.go",
         "cached_minimax_client.go",
         "centrifuge_hub.go",
         "delegation.go",
@@ -18,6 +19,7 @@ go_library(
         "health.go",
         "hub.go",
         "postgres_hub.go",
+        "powersync.go",
         "repository.go",
         "sanitizer.go",
         "service.go",
@@ -72,6 +74,8 @@ go_library(
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
             "//src/server/lib/resilience",
+        "//src/server/lib/sync",
+        "//src/server/integrations/sync_adapter",
 ],
 )
 
@@ -82,6 +86,7 @@ go_test(
         "auth_interceptor_test.go",
         "autodream_test.go",
         "autodream_advanced_test.go",
+        "autodream_sync_daemon_test.go",
         "mission_ingestion_test.go",
         "benchmark_test.go",
         "cached_minimax_client_test.go",

@@ -8,7 +8,7 @@ test('Dashboard and Swarm Memory screens display correct observability widgets',
   await page.click('button:has-text("Login")');
 
   // 2. Navigate to Dashboard and check widgets
-  await page.goto('/#/diagnostics');
+  await page.goto('/#/dashboard');
 
   // Verify Swarm Observability Dashboard
   await expect(page.locator('text=Teammate Mesh Live Feed')).toBeVisible();
