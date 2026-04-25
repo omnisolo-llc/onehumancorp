@@ -422,6 +422,40 @@ func (rm *RedisMeshTransport) BroadcastMeshEvent(ctx context.Context, topic stri
 	})
 }
 
+func (rm *RedisMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter func(payload []byte) bool) (<-chan []byte, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEventsWithFilter", time.Since(start)) }()
+
+	rawCh, err := rm.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return nil, err
+	}
+
+	filteredCh := make(chan []byte, 100)
+	go func() {
+		defer close(filteredCh)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case payload, ok := <-rawCh:
+				if !ok {
+					return
+				}
+				if filter(payload) {
+					select {
+					case filteredCh <- payload:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	return filteredCh, nil
+}
+
 func (rm *RedisMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {
 	start := time.Now()
 	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEvents", time.Since(start)) }()
@@ -908,6 +942,40 @@ func (lm *MemoryMeshTransport) BroadcastMeshEvent(ctx context.Context, topic str
 		slog.Warn("MemoryMeshTransport events broadcast channel full, dropping message after retries")
 	}
 	return nil
+}
+
+func (lm *MemoryMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter func(payload []byte) bool) (<-chan []byte, error) {
+	start := time.Now()
+	defer func() { telemetry.RecordMeshLatency(ctx, "SubscribeMeshEventsWithFilter", time.Since(start)) }()
+
+	rawCh, err := lm.SubscribeMeshEvents(ctx, topic)
+	if err != nil {
+		return nil, err
+	}
+
+	filteredCh := make(chan []byte, 100)
+	go func() {
+		defer close(filteredCh)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case payload, ok := <-rawCh:
+				if !ok {
+					return
+				}
+				if filter(payload) {
+					select {
+					case filteredCh <- payload:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	return filteredCh, nil
 }
 
 func (lm *MemoryMeshTransport) SubscribeMeshEvents(ctx context.Context, topic string) (<-chan []byte, error) {

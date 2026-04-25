@@ -870,6 +870,10 @@ type mockMeshTransport struct {
 	}
 }
 
+func (m *mockMeshTransport) SubscribeMeshEventsWithFilter(ctx context.Context, topic string, filter func(payload []byte) bool) (<-chan []byte, error) {
+	return make(chan []byte), nil
+}
+
 func (m *mockMeshTransport) BroadcastMeshEvent(ctx context.Context, topic string, payload []byte) error {
 	m.BroadcastMeshEvents = append(m.BroadcastMeshEvents, struct {
 		Topic   string

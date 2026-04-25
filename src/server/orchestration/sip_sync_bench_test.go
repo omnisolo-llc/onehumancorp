@@ -9,12 +9,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/orchestration"
+
 )
 
 func BenchmarkSIPDB_SyncBufferedMetrics(b *testing.B) {
 	dbPath := filepath.Join(b.TempDir(), "bench_sync_metrics.db")
-	db, err := orchestration.NewSIPDB(dbPath)
+	db, err := NewSIPDB(dbPath)
 	if err != nil {
 		b.Fatalf("Failed to create db: %v", err)
 	}
