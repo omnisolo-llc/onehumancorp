@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
+- Scaling (Cloud): Implement Business Setup and Website Builder wizard UI scaffolding, onboarding cross-device state, and Business Share & Embed widget.
+- Privacy/Offline (Standalone): Conduct Hybrid Privacy Audit with PII guardrails, implement in-app mobile-first Help Center with tooltips, and add Dashboard Welcome Checklist.
+
 ## v0.4.6 (Cloud) / v0.4.6+1 (Standalone)
 - Scaling (Cloud): Implement Sub-Agent Orchestration Queue, Realtime Teammate Mesh APIs, Draft-for-Review workflow, and enhance testing.
 - Privacy/Offline (Standalone): Simplify dashboard UI, resolve memoryLock TOCTOU race conditions, add missing rows.Err() checks, and generate architecture report.
