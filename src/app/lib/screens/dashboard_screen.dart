@@ -170,7 +170,7 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         const SizedBox(height: 32),
-        _SectionTitle('Business Health'),
+        _SectionTitle('System Health'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -257,9 +257,9 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'Business Overview Panel',
+      label: 'System Observability Panel',
       child: Tooltip(
-        message: 'View Business Health & Metrics',
+        message: 'View System Health & Metrics',
         child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
@@ -289,7 +289,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'Business Operations Status',
+                              'AI System Status',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -309,7 +309,7 @@ class _ObservabilityWidget extends StatelessWidget {
                           children: [
                             _Metric(label: 'Health Score', value: '$healthScore%', color: colors.primary, icon: Icons.health_and_safety),
                             _Metric(label: 'Current Tasks', value: '$activeMissions', color: colors.secondary, icon: Icons.rocket_launch),
-                            _Metric(label: 'Operations Speed', value: 'Fast', color: colors.tertiary, icon: Icons.speed),
+                            _Metric(label: 'System Speed', value: 'Fast', color: colors.tertiary, icon: Icons.speed),
                             _Metric(label: 'Running Agents', value: '$totalAgents', color: colors.primaryContainer, icon: Icons.smart_toy, iconColor: colors.onPrimaryContainer),
                           ],
                         ),
@@ -352,7 +352,7 @@ class _StatusBadge extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            healthy ? 'Running Smoothly' : 'Degraded',
+            healthy ? 'System Nominal' : 'Degraded',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,

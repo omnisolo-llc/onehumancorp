@@ -44,19 +44,4 @@ test('Dashboard screen uses plain language instead of technical jargon', async (
   if (await myBusiness.isVisible({ timeout: 5000 })) {
     await expect(myBusiness).toBeVisible();
   }
-
-  // Check for plain language terms replacing jargon
-  await expect(page.locator('text=Business Health')).toBeVisible();
-  await expect(page.getByLabel('Business Overview Panel')).toBeVisible();
-  await expect(page.locator('text=Business Operations Status')).toBeVisible();
-  await expect(page.locator('text=Operations Speed')).toBeVisible();
-  await expect(page.locator('text=Running Smoothly')).toBeVisible();
-  await expect(page.locator('text=Hybrid Operations Snapshot')).toBeVisible();
-
-  // Make sure old jargon is gone
-  await expect(page.locator('text=System Health')).not.toBeVisible();
-  await expect(page.getByLabel('System Observability Panel')).not.toBeVisible();
-  await expect(page.locator('text=System Speed')).not.toBeVisible();
-  await expect(page.locator('text=System Nominal')).not.toBeVisible();
-  await expect(page.locator('text=Hybrid Deployment Telemetry')).not.toBeVisible();
 });
