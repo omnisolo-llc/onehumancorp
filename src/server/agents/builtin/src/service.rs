@@ -1,3 +1,4 @@
+use crate::guardrails::GuardrailConfig;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -223,6 +224,12 @@ impl AgentServiceImpl {
             max_task_tokens: 0,
             confidence_threshold,
             enable_observation_masking: true,
+            guardrail_config: Some(GuardrailConfig {
+                blocked_keywords: vec![
+                    "TOP_SECRET_INTERNAL_OVERRIDE".to_string(),
+                    "GRANT_ROOT_ACCESS".to_string(),
+                ],
+            }),
         }
     }
 }
@@ -371,6 +378,12 @@ impl AgentService for AgentServiceImpl {
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrail_config: Some(GuardrailConfig {
+                blocked_keywords: vec![
+                    "TOP_SECRET_INTERNAL_OVERRIDE".to_string(),
+                    "GRANT_ROOT_ACCESS".to_string(),
+                ],
+            }),
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));

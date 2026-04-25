@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
+use crate::guardrails::{check_input, check_output, check_tool, GuardrailConfig};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
@@ -28,6 +29,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrail_config: Option<GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +43,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrail_config: None,
         }
     }
 }
@@ -98,6 +101,15 @@ impl Agent {
         F: FnMut(AgentEvent) + Send,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        // Hook 1: Input Guardrails (first agent)
+        if let Some(ref gc) = cfg.guardrail_config {
+            if let Err(e) = check_input(initial_message, gc) {
+                let err_msg = format!("Input Guardrail Tripped: {}", e);
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(err_msg.into());
+            }
+        }
 
         let tool_defs: Vec<ToolDefinition> = self
             .tools
@@ -184,6 +196,15 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
+                // Hook 3: Output Guardrails (final output)
+                if let Some(ref gc) = cfg.guardrail_config {
+                    if let Err(e) = check_output(&last_assistant_content, gc) {
+                        let err_msg = format!("Output Guardrail Tripped: {}", e);
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        return Err(err_msg.into());
+                    }
+                }
+
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
@@ -193,6 +214,15 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+                // Hook 2: Tool Guardrails (run on every tool invocation)
+                if let Some(ref gc) = cfg.guardrail_config {
+                    if let Err(e) = check_tool(&tc.name, &tc.arguments, gc) {
+                        let err_msg = format!("Tool Guardrail Tripped: {}", e);
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        return Err(err_msg.into());
+                    }
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -374,5 +404,93 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    #[tokio::test]
+    async fn test_agent_guardrails() {
+        let gc = GuardrailConfig {
+            blocked_keywords: vec!["classified".to_string()],
+        };
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Final answer is classified"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrail_config = Some(gc.clone());
+
+        // Test Input Guardrail
+        let mut events = vec![];
+        let result = agent.run(&cfg, "This contains classified information", &mut |e| { events.push(e); }).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Input Guardrail Tripped: Input contains blocked keyword: classified");
+
+        // Test Tool Guardrail
+        let client_tool_trip = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({"arg": "classified data"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+        let agent_tool_trip = Agent::new(client_tool_trip, vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }]);
+
+        let mut events2 = vec![];
+        let result2 = agent_tool_trip.run(&cfg, "Safe input", &mut |e| { events2.push(e); }).await;
+        assert!(result2.is_err());
+        assert_eq!(result2.unwrap_err().to_string(), "Tool Guardrail Tripped: Tool arguments contain blocked keyword: classified");
+
+        // Test Output Guardrail
+        let client_output_trip = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("The answer is classified"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+        let agent_output_trip = Agent::new(client_output_trip, vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }]);
+
+        let mut events3 = vec![];
+        let result3 = agent_output_trip.run(&cfg, "Safe input", &mut |e| { events3.push(e); }).await;
+        assert!(result3.is_err());
+        assert_eq!(result3.unwrap_err().to_string(), "Output Guardrail Tripped: Output contains blocked keyword: classified");
     }
 }
