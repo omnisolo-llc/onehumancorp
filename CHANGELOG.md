@@ -1,5 +1,12 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Architect Cross-Mode Database Schema Syncer via MCP (#8016).
+
+### Privacy/Offline Improvements
+- Harness Upgrade - Context Management: JetBrains Observation Masking (#8016).
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
