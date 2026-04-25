@@ -46,7 +46,7 @@ type SandboxManager interface {
 	// ExecuteWithPolicy runs a command within a sandboxed environment governed by the provided policy.
 	ExecuteWithPolicy(ctx context.Context, command string, policy *Policy) (Result, error)
 	// ExecuteStream runs a command within a sandboxed environment and bridges streaming I/O.
-	ExecuteStream(ctx context.Context, command string, policy *Policy, stdin io.Reader, stdout, stderr io.Writer, agentID, orgID, role, model string) (Result, error)
+	ExecuteStream(ctx context.Context, command string, policy *Policy, stdin io.Reader, stdout, stderr io.Writer) (Result, error)
 }
 
 // Manager is the concrete implementation of SandboxManager.
@@ -123,7 +123,7 @@ func (m *Manager) ExecuteWithPolicy(ctx context.Context, command string, policy 
 }
 
 // ExecuteStream runs a command within a sandboxed environment and bridges streaming I/O.
-func (m *Manager) ExecuteStream(ctx context.Context, command string, policy *Policy, stdin io.Reader, stdout, stderr io.Writer, agentID, orgID, role, model string) (Result, error) {
+func (m *Manager) ExecuteStream(ctx context.Context, command string, policy *Policy, stdin io.Reader, stdout, stderr io.Writer) (Result, error) {
 	if policy == nil {
 		policy = &m.config.DefaultPolicy
 	}
@@ -135,8 +135,8 @@ func (m *Manager) ExecuteStream(ctx context.Context, command string, policy *Pol
 	}
 
 	// Calculate and record cost (simplified simulation based on command length)
-	cost := float64(len(command)) * 0.0001
-	telemetry.RecordAgentCost(ctx, agentID, orgID, role, model, cost)
+
+
 
 	start := time.Now()
 	// 2. Execute via runner with streaming I/O (assuming runner has an equivalent streaming method)
