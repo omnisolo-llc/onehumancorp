@@ -111,6 +111,7 @@ oci_push(
 sh_test(
     name = "deploy_artifacts_test",
     srcs = ["tests/deploy_artifacts_test.sh"],
+    tags = ["local"],
     data = glob([
         "docker/**/*",
         "helm/ohc/**",
