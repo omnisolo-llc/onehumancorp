@@ -1,0 +1,43 @@
+<<<<<<< SEARCH
+    testWidgets('sign up toggle changes UI state instead of routing to register', (tester) async {
+      await tester.pumpWidget(_wrapLogin());
+      await tester.pumpAndSettle();
+
+      // Find the Sign Up text toggle button
+      final signUpButton = find.text('Don\'t have an account? Sign Up').last;
+      expect(signUpButton, findsOneWidget);
+
+      // Tap it
+      await tester.tap(signUpButton);
+      await tester.pumpAndSettle();
+
+      // Ensure that _isSignUp state toggled and UI updated to 'Sign Up'
+      expect(find.text('Sign Up'), findsWidgets);
+
+      // Ensure the 'Already have an account? Sign In' text is now present
+      expect(find.text('Already have an account? Sign In'), findsOneWidget);
+    });
+=======
+    testWidgets('sign up toggle changes UI state instead of routing to register', (tester) async {
+      await tester.pumpWidget(_wrapLogin());
+      await tester.pumpAndSettle();
+
+      // Find the Sign Up text toggle button
+      final signUpButton = find.text('Don\'t have an account? Sign Up').last;
+      expect(signUpButton, findsOneWidget);
+
+      // Scroll to the button to ensure it's visible before tapping
+      await tester.ensureVisible(signUpButton);
+      await tester.pumpAndSettle();
+
+      // Tap it
+      await tester.tap(signUpButton);
+      await tester.pumpAndSettle();
+
+      // Ensure that _isSignUp state toggled and UI updated to 'Sign Up'
+      expect(find.text('Sign Up'), findsWidgets);
+
+      // Ensure the 'Already have an account? Sign In' text is now present
+      expect(find.text('Already have an account? Sign In'), findsOneWidget);
+    });
+>>>>>>> REPLACE
