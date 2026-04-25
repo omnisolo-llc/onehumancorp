@@ -3,12 +3,16 @@ package orchestration
 import (
 	"context"
 	"database/sql"
+	"net"
 	"os"
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
+	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
+	"google.golang.org/grpc"
+
 	"github.com/onehumancorp/mono/src/server/db"
+	_ "modernc.org/sqlite"
 )
 
 func TestHybridHealthProbe(t *testing.T) {
@@ -133,8 +137,8 @@ func TestCheckHealth_MeshActive(t *testing.T) {
 
 type mockProvider struct {
 	db.Provider
-	execErr   error
-	isSqlite  bool
+	execErr  error
+	isSqlite bool
 }
 
 func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
@@ -143,7 +147,6 @@ func (m *mockProvider) Exec(ctx context.Context, sql string, arguments ...any) (
 	}
 	return 1, nil
 }
-
 
 func (m *mockProvider) Ping(ctx context.Context) error {
 	if m.execErr != nil {
@@ -213,5 +216,62 @@ func TestCheckHealth_Postgres(t *testing.T) {
 	}
 	if probe.SyncBacklog != 5 {
 		t.Errorf("Expected SyncBacklog to be 5, got %d", probe.SyncBacklog)
+	}
+}
+
+type mockHealthAgentService struct {
+	agentservicepb.UnimplementedAgentServiceServer
+}
+
+func (m *mockHealthAgentService) Ping(ctx context.Context, req *agentservicepb.PingRequest) (*agentservicepb.PingResponse, error) {
+	return &agentservicepb.PingResponse{AgentId: "test-agent"}, nil
+}
+
+func TestCheckHealth_BuiltinAgentActive(t *testing.T) {
+	hub := NewHub()
+
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Failed to listen: %v", err)
+	}
+	defer lis.Close()
+
+	grpcServer := grpc.NewServer()
+	agentservicepb.RegisterAgentServiceServer(grpcServer, &mockHealthAgentService{})
+
+	go func() {
+		_ = grpcServer.Serve(lis)
+	}()
+	defer grpcServer.Stop()
+
+	// Wait for server to start
+	time.Sleep(100 * time.Millisecond)
+
+	t.Setenv("OHC_AGENT_ADDRESS", lis.Addr().String())
+	t.Setenv("OHC_AGENT_TOKEN", "") // ensure auth works
+
+	probe, err := hub.CheckHealth(context.Background())
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if !probe.BuiltinAgentActive {
+		t.Errorf("Expected BuiltinAgentActive to be true, got false")
+	}
+}
+
+func TestCheckHealth_BuiltinAgentInactive(t *testing.T) {
+	hub := NewHub()
+
+	// Point to an invalid address
+	t.Setenv("OHC_AGENT_ADDRESS", "127.0.0.1:12345") // usually unused port
+
+	probe, err := hub.CheckHealth(context.Background())
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+
+	if probe.BuiltinAgentActive {
+		t.Errorf("Expected BuiltinAgentActive to be false, got true")
 	}
 }

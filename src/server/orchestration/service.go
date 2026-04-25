@@ -26,6 +26,8 @@ import (
 	"github.com/onehumancorp/mono/src/server/settings"
 	"github.com/onehumancorp/mono/src/server/storage"
 	"github.com/onehumancorp/mono/src/server/telemetry"
+
+	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
 	"github.com/onehumancorp/mono/src/server/interop"
 	"github.com/redis/rueidis"
 	"google.golang.org/grpc"
@@ -292,6 +294,8 @@ type Hub struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
 	taskManager    *TaskManager
+	agentClient    *agentgrpc.Client
+	agentClientMu  sync.Mutex
 }
 
 func (h *Hub) TaskManager() *TaskManager {
@@ -1378,7 +1382,6 @@ func (h *Hub) AgentsByOrg(orgID string) []Agent {
 	return agents
 }
 
-
 func RegisterHubService(s *grpc.Server, hub *Hub, mesh MeshTransport) {
 	pb.RegisterHubServiceServer(s, &HubServiceServer{hub: hub, mesh: mesh})
 }
@@ -1912,7 +1915,6 @@ func (c *minimaxClientImpl) GenerateEmbedding(ctx context.Context, text string) 
 
 	return nil, fmt.Errorf("max retries exceeded: %w", lastErr)
 }
-
 
 func requireSPIFFE(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

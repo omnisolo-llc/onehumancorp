@@ -6,30 +6,34 @@ import (
 	"net/http"
 	"os"
 	"time"
+
+	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
 )
 
 // HybridHealthProbe details the system health across standalone and cloud modes.
 type HybridHealthProbe struct {
-	Mode           string        `json:"mode"`
-	Status         string        `json:"status"`
-	DBPing         time.Duration `json:"db_ping"`
-	SyncBacklog    int           `json:"sync_backlog"`
-	StuckMissions  int           `json:"stuck_missions"`
-	LastSyncTime   time.Time     `json:"last_sync_time"`
-	MeshActive     bool          `json:"mesh_active"`
-	CloudConnected bool          `json:"cloud_connected"`
+	Mode               string        `json:"mode"`
+	Status             string        `json:"status"`
+	DBPing             time.Duration `json:"db_ping"`
+	SyncBacklog        int           `json:"sync_backlog"`
+	StuckMissions      int           `json:"stuck_missions"`
+	LastSyncTime       time.Time     `json:"last_sync_time"`
+	MeshActive         bool          `json:"mesh_active"`
+	CloudConnected     bool          `json:"cloud_connected"`
+	BuiltinAgentActive bool          `json:"builtin_agent_active"`
 }
 
 // CheckHealth returns a HybridHealthProbe detailing the system health.
 func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 	probe := HybridHealthProbe{
-		Mode:           "standalone",
-		Status:         "healthy",
-		MeshActive:     false,
-		CloudConnected: true, // Default to true for cloud mode
-		SyncBacklog:    0,
-		StuckMissions:  0,
-		LastSyncTime:   time.Time{},
+		Mode:               "standalone",
+		Status:             "healthy",
+		MeshActive:         false,
+		CloudConnected:     true, // Default to true for cloud mode
+		BuiltinAgentActive: false,
+		SyncBacklog:        0,
+		StuckMissions:      0,
+		LastSyncTime:       time.Time{},
 	}
 
 	start := time.Now()
@@ -96,5 +100,26 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 		}
 	}
 
+	// Cross-Mode Health Monitoring: Ping the builtin agent
+	h.agentClientMu.Lock()
+	if h.agentClient == nil {
+		client, err := agentgrpc.NewClient(agentgrpc.AddressFromEnv(), agentgrpc.ClientOptionsFromEnv())
+		if err == nil {
+			h.agentClient = client
+		}
+	}
+	client := h.agentClient
+	h.agentClientMu.Unlock()
+
+	if client != nil {
+		pingCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+		defer cancel()
+		_, pingErr := client.Ping(pingCtx)
+		if pingErr == nil {
+			probe.BuiltinAgentActive = true
+		}
+	}
+
 	return probe, nil
+
 }

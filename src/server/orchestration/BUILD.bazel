@@ -70,11 +70,14 @@ go_library(
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
         "@org_modernc_sqlite//:sqlite",
+        "//src/proto/agentservice",
+
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@com_github_google_uuid//:uuid",
             "//src/server/lib/resilience",
         "//src/server/lib/sync",
         "//src/server/integrations/sync_adapter",
+        "//src/server/agents/grpc",
 ],
 )
 
@@ -148,5 +151,7 @@ go_test(
         "@org_golang_google_protobuf//proto",
         "@in_gopkg_yaml_v3//:yaml_v3",
         "@org_modernc_sqlite//:sqlite",
+        "//src/proto/agentservice",
+
 ],
 )
