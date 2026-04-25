@@ -6,9 +6,8 @@ import (
 	"strings"
 )
 
-type contextKey string
-
-const claimsContextKey contextKey = "ohc_auth_claims"
+// We use a plain string key so that `db` package can retrieve it without a circular dependency.
+const claimsContextKey = "ohc_auth_claims"
 
 // publicPaths lists URL prefixes that do not require authentication.
 var publicPaths = []string{

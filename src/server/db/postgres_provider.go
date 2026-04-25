@@ -3,12 +3,29 @@ package db
 import (
 	"context"
 	"database/sql"
+	"reflect"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/telemetry"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/onehumancorp/mono/src/server/telemetry"
 )
+
+func orgIDFromContext(ctx context.Context) string {
+	if v := ctx.Value("ohc_auth_claims"); v != nil {
+		val := reflect.ValueOf(v)
+		if val.Kind() == reflect.Ptr && !val.IsNil() {
+			val = val.Elem()
+		}
+		if val.Kind() == reflect.Struct {
+			field := val.FieldByName("OrganizationID")
+			if field.IsValid() && field.Kind() == reflect.String {
+				return field.String()
+			}
+		}
+	}
+	return ""
+}
 
 // PgProvider implements the Provider interface using pgxpool.
 type PgProvider struct {
@@ -21,7 +38,25 @@ func NewPgProvider(pool *pgxpool.Pool) *PgProvider {
 
 func (p *PgProvider) Exec(ctx context.Context, sql string, arguments ...any) (int64, error) {
 	start := time.Now()
-	tag, err := p.pool.Exec(ctx, sql, arguments...)
+	conn, err := p.pool.Acquire(ctx)
+	if err != nil {
+		trackQuery(ctx, "Exec_Acquire", err, time.Since(start))
+		return 0, err
+	}
+	defer conn.Release()
+
+	orgID := orgIDFromContext(ctx)
+	if orgID == "" {
+		orgID = "sys" // Consistent 'sys' default for background queues
+	}
+
+	_, err = conn.Exec(ctx, "SELECT set_config('app.current_tenant', $1, false)", orgID)
+	if err != nil {
+		trackQuery(ctx, "Exec_SetConfig", err, time.Since(start))
+		return 0, err
+	}
+
+	tag, err := conn.Exec(ctx, sql, arguments...)
 	trackQuery(ctx, "Exec", err, time.Since(start))
 	if err != nil {
 		return 0, err
@@ -31,19 +66,58 @@ func (p *PgProvider) Exec(ctx context.Context, sql string, arguments ...any) (in
 
 func (p *PgProvider) Query(ctx context.Context, sql string, optionsAndArgs ...any) (Rows, error) {
 	start := time.Now()
-	rows, err := p.pool.Query(ctx, sql, optionsAndArgs...)
-	trackQuery(ctx, "Query", err, time.Since(start))
+
+	conn, err := p.pool.Acquire(ctx)
 	if err != nil {
+		trackQuery(ctx, "Query_Acquire", err, time.Since(start))
 		return nil, err
 	}
-	return &PgRows{rows: rows}, nil
+
+	orgID := orgIDFromContext(ctx)
+	if orgID == "" {
+		orgID = "sys" // system user bypassing or empty
+	}
+
+	_, err = conn.Exec(ctx, "SELECT set_config('app.current_tenant', $1, false)", orgID)
+	if err != nil {
+		conn.Release()
+		trackQuery(ctx, "Query_SetConfig", err, time.Since(start))
+		return nil, err
+	}
+
+	rows, err := conn.Query(ctx, sql, optionsAndArgs...)
+	trackQuery(ctx, "Query", err, time.Since(start))
+	if err != nil {
+		conn.Release()
+		return nil, err
+	}
+
+	return &PgPoolRows{rows: rows, conn: conn}, nil
 }
 
 func (p *PgProvider) QueryRow(ctx context.Context, sql string, optionsAndArgs ...any) Row {
 	start := time.Now()
-	row := p.pool.QueryRow(ctx, sql, optionsAndArgs...)
+	conn, err := p.pool.Acquire(ctx)
+	if err != nil {
+		trackQuery(ctx, "QueryRow_Acquire", err, time.Since(start))
+		return &PgRowError{err: err}
+	}
+
+	orgID := orgIDFromContext(ctx)
+	if orgID == "" {
+		orgID = "sys"
+	}
+	_, err = conn.Exec(ctx, "SELECT set_config('app.current_tenant', $1, false)", orgID)
+	if err != nil {
+		conn.Release()
+		trackQuery(ctx, "QueryRow_SetConfig", err, time.Since(start))
+		return &PgRowError{err: err}
+	}
+
+	row := conn.QueryRow(ctx, sql, optionsAndArgs...)
 	trackQuery(ctx, "QueryRow", nil, time.Since(start))
-	return &PgRow{row: row}
+
+	return &PgPoolRow{row: row, conn: conn}
 }
 
 func (p *PgProvider) Begin(ctx context.Context) (Tx, error) {
@@ -53,6 +127,18 @@ func (p *PgProvider) Begin(ctx context.Context) (Tx, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	orgID := orgIDFromContext(ctx)
+	if orgID == "" {
+		orgID = "sys" // Consistent 'sys' default
+	}
+
+	if _, err := tx.Exec(ctx, "SET LOCAL app.current_tenant = $1", orgID); err != nil {
+		tx.Rollback(ctx)
+		trackQuery(ctx, "Begin_SetTenant", err, time.Since(start))
+		return nil, err
+	}
+
 	return &PgTx{tx: tx}, nil
 }
 
@@ -168,6 +254,69 @@ func (r *PgRow) Scan(dest ...any) error {
 		return sql.ErrNoRows
 	}
 	return err
+}
+
+// PgPoolRows implements Rows using pgx.Rows and releases the underlying connection on Close.
+type PgPoolRows struct {
+	rows pgx.Rows
+	conn *pgxpool.Conn
+}
+
+func (r *PgPoolRows) Next() bool {
+	return r.rows.Next()
+}
+
+func (r *PgPoolRows) Scan(dest ...any) error {
+	return r.rows.Scan(dest...)
+}
+
+func (r *PgPoolRows) Columns() ([]string, error) {
+	var cols []string
+	for _, fd := range r.rows.FieldDescriptions() {
+		cols = append(cols, string(fd.Name))
+	}
+	return cols, nil
+}
+
+func (r *PgPoolRows) Close() {
+	r.rows.Close()
+	if r.conn != nil {
+		r.conn.Release()
+		r.conn = nil
+	}
+}
+
+func (r *PgPoolRows) Err() error {
+	return r.rows.Err()
+}
+
+// PgPoolRow implements Row using pgx.Row and releases the underlying connection on Scan.
+type PgPoolRow struct {
+	row  pgx.Row
+	conn *pgxpool.Conn
+}
+
+func (r *PgPoolRow) Scan(dest ...any) error {
+	defer func() {
+		if r.conn != nil {
+			r.conn.Release()
+			r.conn = nil
+		}
+	}()
+	err := r.row.Scan(dest...)
+	if err != nil && (err == pgx.ErrNoRows || err.Error() == "no rows in result set") {
+		return sql.ErrNoRows
+	}
+	return err
+}
+
+// PgRowError implements Row but immediately returns a stored error.
+type PgRowError struct {
+	err error
+}
+
+func (r *PgRowError) Scan(dest ...any) error {
+	return r.err
 }
 
 // PgTx implements Tx using pgx.Tx.
