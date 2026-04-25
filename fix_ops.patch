@@ -1,0 +1,11 @@
+--- src/server/dashboard/handlers_ops.go
++++ src/server/dashboard/handlers_ops.go
+@@ -437,7 +437,7 @@
+	if action == "prune_missions" {
+		// Triggers an immediate purge of STUCK and COMPLETED missions.
+		// Does not impact healthy PENDING/RUNNING missions.
+-		_ = s.hub.SIPDB().PruneStaleMissions(r.Context(), 0) // Prune all completed or stale missions immediately
++		_ = s.hub.SIPDB().SanitizeMissions(r.Context(), 0) // Prune all completed or stale missions immediately
+	}
+
+	w.WriteHeader(http.StatusOK)

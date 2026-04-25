@@ -451,7 +451,7 @@ func run(now time.Time, listen listenFunc) error {
 					return
 				case <-ticker.C:
 					// Prune missions older than 7 days or marked COMPLETED
-					if err := sipdb.PruneStaleMissions(ctx, 7*24*time.Hour); err != nil {
+					if err := sipdb.SanitizeMissions(ctx, 7*24*time.Hour); err != nil {
 						slog.Error("failed to prune stale missions", "error", err)
 					}
 					// Hygiene: Prune old telemetry buffer entries to prevent unbounded local growth
