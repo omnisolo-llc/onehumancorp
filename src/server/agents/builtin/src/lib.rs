@@ -16,9 +16,9 @@
 pub use ohc_builtin_agent_core::*;
 
 pub mod agent;
-pub mod service;
 pub mod departments;
 pub mod guardrails;
+pub mod service;
 
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;

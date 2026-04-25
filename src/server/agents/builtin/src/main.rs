@@ -1,22 +1,22 @@
 use ohc_builtin_agent::{
     auth::auth_mode_from_env,
-    proto::agent_service_server::{AgentServiceServer, AgentService},
+    proto::agent_service_server::{AgentService, AgentServiceServer},
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
 };
-use std::{env, net::SocketAddr};
-use tonic::transport::Server;
-use tracing::{info, Level};
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
-use prost::Message;
-use tokio_stream::StreamExt;
-use opentelemetry::{global, KeyValue};
+use opentelemetry::{KeyValue, global};
+use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{
+    Resource,
     propagation::TraceContextPropagator,
     runtime,
     trace::{self, Sampler},
-    Resource,
 };
-use opentelemetry_otlp::WithExportConfig;
+use prost::Message;
+use std::{env, net::SocketAddr};
+use tokio_stream::StreamExt;
+use tonic::transport::Server;
+use tracing::{Level, info};
+use tracing_subscriber::{EnvFilter, fmt, prelude::*};
 
 fn get_env(key: &str, default: &str) -> String {
     env::var(key).unwrap_or_else(|_| default.to_string())
@@ -43,7 +43,10 @@ fn init_otel() {
 
     let tracer_provider = opentelemetry_sdk::trace::TracerProvider::builder()
         .with_batch_exporter(tracer, runtime::Tokio)
-        .with_resource(Resource::new(vec![KeyValue::new("service.name", "ohc-agent")]))
+        .with_resource(Resource::new(vec![KeyValue::new(
+            "service.name",
+            "ohc-agent",
+        )]))
         .build();
 
     global::set_tracer_provider(tracer_provider.clone());
@@ -82,7 +85,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let auth = auth_mode_from_env();
-    info!("Starting OHC builtin agent (Rust) at {} (id: {})", address, agent_id);
+    info!(
+        "Starting OHC builtin agent (Rust) at {} (id: {})",
+        address, agent_id
+    );
 
     let addr: SocketAddr = address.parse()?;
     let mut svc_impl = AgentServiceImpl::new(agent_id, cfg, auth);
@@ -91,7 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let svc_for_redis = svc.clone();
 
     let redis_url = get_env("OHC_REDIS_URL", "redis://127.0.0.1:6379");
-    
+
     let redis_url_clone = redis_url.clone();
     tokio::spawn(async move {
         tracing::info!("Connecting to Redis at {}", redis_url_clone);

@@ -5,20 +5,20 @@ use tonic::{Request, Response, Status};
 
 use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
-use ohc_builtin_agent_llm::{
-    anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
-};
-use crate::memory::{inject_memories_into_prompt, PgVectorMemoryStore};
+use crate::departments::{Department, get_department_config};
+use crate::memory::{PgVectorMemoryStore, inject_memories_into_prompt};
 use crate::proto::{
-    agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
-    RunTaskRequest, SubAgentRequest, SubAgentResponse,
-};
-use ohc_builtin_agent_tools::{
-    sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
-    SharedTodos,
+    EventType, PingRequest, PingResponse, RunTaskEvent, RunTaskRequest, SubAgentRequest,
+    SubAgentResponse, agent_service_server::AgentService,
 };
 use chrono::Utc;
-use crate::departments::{Department, get_department_config};
+use ohc_builtin_agent_llm::{
+    LlmClient, anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient,
+};
+use ohc_builtin_agent_tools::{
+    SharedMailbox, SharedTaskStore, SharedTodos, sendmessage::Mailbox, task::TaskStore,
+    todowrite::TodoItem,
+};
 use std::str::FromStr;
 use tokio::sync::RwLock;
 
@@ -107,7 +107,12 @@ impl AgentServiceImpl {
         }
     }
 
-    fn resolve_llm(&self, req_provider: &str, req_model: &str, req_endpoint: &str) -> Arc<dyn LlmClient> {
+    fn resolve_llm(
+        &self,
+        req_provider: &str,
+        req_model: &str,
+        req_endpoint: &str,
+    ) -> Arc<dyn LlmClient> {
         if let Some(llm) = &self.llm_override {
             return llm.clone();
         }
@@ -125,7 +130,11 @@ impl AgentServiceImpl {
             }
             "openai" => {
                 let key = std::env::var("OPENAI_API_KEY").unwrap_or_default();
-                let _model_name = if req_model.is_empty() { &self.cfg.model } else { req_model };
+                let _model_name = if req_model.is_empty() {
+                    &self.cfg.model
+                } else {
+                    req_model
+                };
                 if !req_endpoint.is_empty() {
                     Arc::new(OpenAIClient::with_base_url(key, req_endpoint))
                 } else if !self.cfg.llm_endpoint.is_empty() {
@@ -193,7 +202,11 @@ impl AgentServiceImpl {
         };
 
         let max_tokens = if req.max_tokens == 0 {
-            if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens }
+            if self.cfg.max_tokens == 0 {
+                2048
+            } else {
+                self.cfg.max_tokens
+            }
         } else {
             req.max_tokens
         };
@@ -218,8 +231,16 @@ impl AgentServiceImpl {
             model,
             system,
             max_tokens,
-            temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
-            max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
+            temperature: if req.temperature == 0.0 {
+                self.cfg.temperature
+            } else {
+                req.temperature
+            },
+            max_iterations: if max_iterations == 0 {
+                100
+            } else {
+                max_iterations
+            },
             max_task_tokens: 0,
             confidence_threshold,
             enable_observation_masking: true,
@@ -248,7 +269,11 @@ impl AgentService for AgentServiceImpl {
         self.check_auth(&req)?;
 
         let task_req = req.into_inner();
-        let llm = self.resolve_llm(&task_req.llm_provider, &task_req.model, &task_req.llm_endpoint);
+        let llm = self.resolve_llm(
+            &task_req.llm_provider,
+            &task_req.model,
+            &task_req.llm_endpoint,
+        );
         let run_cfg = self.build_run_config(&task_req, &task_req.department).await;
         let task = task_req.task.clone();
         let memory = self.memory.clone();
@@ -256,12 +281,13 @@ impl AgentService for AgentServiceImpl {
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-        
+
         let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {
                 let dep_cfg = get_department_config(dep);
-                all_tools.into_iter()
+                all_tools
+                    .into_iter()
                     .filter(|t| dep_cfg.allowed_tools.contains(&t.name.as_str()))
                     .collect()
             } else {
@@ -338,9 +364,7 @@ impl AgentService for AgentServiceImpl {
                 let _ = tx_clone.try_send(Ok(pb));
             };
 
-            let result = agent_clone
-                .run(&run_cfg, &task, &mut on_event)
-                .await;
+            let result = agent_clone.run(&run_cfg, &task, &mut on_event).await;
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
@@ -363,14 +387,22 @@ impl AgentService for AgentServiceImpl {
         if sub_req.sub_agent_address.is_empty() {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
-                model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
+                model: if sub_req.model.is_empty() {
+                    self.cfg.model.clone()
+                } else {
+                    sub_req.model.clone()
+                },
                 system: self.cfg.system_prompt.clone(),
-                max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
+                max_tokens: if self.cfg.max_tokens == 0 {
+                    2048
+                } else {
+                    self.cfg.max_tokens
+                },
                 temperature: self.cfg.temperature,
                 max_iterations: 100,
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
-            enable_observation_masking: true,
+                enable_observation_masking: true,
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
@@ -392,17 +424,14 @@ impl AgentService for AgentServiceImpl {
         }
 
         // Remote dispatch: forward to sub-agent gRPC server.
-        use crate::proto::{
-            agent_service_client::AgentServiceClient, RunTaskRequest,
-        };
+        use crate::proto::{RunTaskRequest, agent_service_client::AgentServiceClient};
 
-        let channel = tonic::transport::Channel::from_shared(
-            format!("http://{}", sub_req.sub_agent_address),
-        )
-        .map_err(|e| Status::internal(format!("invalid sub-agent address: {}", e)))?
-        .connect()
-        .await
-        .map_err(|e| Status::internal(format!("connect to sub-agent: {}", e)))?;
+        let channel =
+            tonic::transport::Channel::from_shared(format!("http://{}", sub_req.sub_agent_address))
+                .map_err(|e| Status::internal(format!("invalid sub-agent address: {}", e)))?
+                .connect()
+                .await
+                .map_err(|e| Status::internal(format!("connect to sub-agent: {}", e)))?;
 
         let mut client = AgentServiceClient::new(channel);
         let run_req = RunTaskRequest {
@@ -459,7 +488,10 @@ impl AgentService for SharedAgentService {
         self.0.run_task(req).await
     }
 
-    async fn ping(&self, req: tonic::Request<PingRequest>) -> Result<tonic::Response<PingResponse>, tonic::Status> {
+    async fn ping(
+        &self,
+        req: tonic::Request<PingRequest>,
+    ) -> Result<tonic::Response<PingResponse>, tonic::Status> {
         self.0.ping(req).await
     }
 

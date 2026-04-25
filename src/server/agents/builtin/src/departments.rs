@@ -43,7 +43,15 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Tracks inventory and alerts when stock is low or sold out\n\
                 - Coordinates pickups and delivery schedules\n\
                 - Handles refund requests and returns",
-            allowed_tools: vec!["read", "write", "glob", "task_create", "task_update", "task_list", "task_get"],
+            allowed_tools: vec![
+                "read",
+                "write",
+                "glob",
+                "task_create",
+                "task_update",
+                "task_list",
+                "task_get",
+            ],
             confidence_threshold: 0.85,
         },
         Department::Marketing => DepartmentConfig {

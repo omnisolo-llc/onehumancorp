@@ -1,20 +1,38 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
-use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
+use crate::budget::{BudgetAction, BudgetTracker, check_token_budget};
+use ohc_builtin_agent_core::types::{
+    ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult,
+};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
 pub enum AgentEvent {
-    RunStarted { iteration: i32 },
-    TextChunk { content: String },
-    ToolCall { name: String, args_json: String, result: String, iteration: i32 },
-    TaskComplete { content: String },
-    TaskError { error: String },
-    IterationStarted { iteration: i32, message_count: usize },
+    RunStarted {
+        iteration: i32,
+    },
+    TextChunk {
+        content: String,
+    },
+    ToolCall {
+        name: String,
+        args_json: String,
+        result: String,
+        iteration: i32,
+    },
+    TaskComplete {
+        content: String,
+    },
+    TaskError {
+        error: String,
+    },
+    IterationStarted {
+        iteration: i32,
+        message_count: usize,
+    },
 }
 
 /// Configuration for a single agent run.
@@ -114,7 +132,11 @@ impl Agent {
         let mut global_turn_tokens = 0i32;
         let mut last_assistant_content = String::new();
 
-        let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
+        let max_iterations = if cfg.max_iterations <= 0 {
+            100
+        } else {
+            cfg.max_iterations
+        };
 
         for iteration in 0..max_iterations {
             on_event(AgentEvent::IterationStarted {
@@ -203,7 +225,12 @@ impl Agent {
             let mut i = 0;
             while i < tool_calls.len() {
                 let tc = &tool_calls[i];
-                let is_mut = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(true);
+                let is_mut = self
+                    .tools
+                    .iter()
+                    .find(|t| t.name == tc.name)
+                    .map(|t| t.is_mutating)
+                    .unwrap_or(true);
 
                 if is_mut {
                     // Mutating: run serially
@@ -242,7 +269,12 @@ impl Agent {
                     let mut j = i;
                     while j < tool_calls.len() {
                         let batch_tc = &tool_calls[j];
-                        let batch_is_mut = self.tools.iter().find(|t| t.name == batch_tc.name).map(|t| t.is_mutating).unwrap_or(true);
+                        let batch_is_mut = self
+                            .tools
+                            .iter()
+                            .find(|t| t.name == batch_tc.name)
+                            .map(|t| t.is_mutating)
+                            .unwrap_or(true);
                         if batch_is_mut {
                             break;
                         }
@@ -250,9 +282,9 @@ impl Agent {
                         j += 1;
                     }
 
-                    let futures = read_only_batch.iter().map(|&(_, batch_tc)| async move {
-                        self.execute_tool(batch_tc).await
-                    });
+                    let futures = read_only_batch
+                        .iter()
+                        .map(|&(_, batch_tc)| async move { self.execute_tool(batch_tc).await });
 
                     let results = futures::future::join_all(futures).await;
 
@@ -295,7 +327,11 @@ impl Agent {
                 for m in &mut messages {
                     if m.role == Role::Tool {
                         for tr in &mut m.tool_results {
-                            if tr.error.is_empty() && !tr.content.starts_with("[Observation Masked to save context.") {
+                            if tr.error.is_empty()
+                                && !tr
+                                    .content
+                                    .starts_with("[Observation Masked to save context.")
+                            {
                                 let bytes = tr.content.len();
                                 if bytes > 150 {
                                     tr.content = format!(
@@ -342,10 +378,12 @@ impl Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
-    use std::sync::Arc;
+    use ohc_builtin_agent_core::types::{
+        ChatRequest, ChatResponse, ToolDefinition, ToolResult, Usage,
+    };
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
+    use std::sync::Arc;
 
     struct MockLlmClient {
         responses: tokio::sync::Mutex<Vec<ChatResponse>>,
@@ -353,7 +391,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
                 return Ok(ChatResponse {
@@ -370,8 +411,14 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
-        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-            Ok("A very long tool output that should be masked because it is long enough".to_string())
+        async fn execute(
+            &self,
+            _args: Value,
+        ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(
+                "A very long tool output that should be masked because it is long enough"
+                    .to_string(),
+            )
         }
     }
 
@@ -424,7 +471,9 @@ mod tests {
         cfg.enable_observation_masking = true;
 
         let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
+        let mut on_event = |e| {
+            events.push(e);
+        };
 
         let result = agent.run(&cfg, "Hello", &mut on_event).await;
         assert!(result.is_ok());
