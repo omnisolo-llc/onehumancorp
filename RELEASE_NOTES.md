@@ -1,6 +1,22 @@
 # Release Notes
 
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Shared Task List (KAIROS Orchestration).
+- Consolidate TeammateMesh and implement hybrid SyncState cross-mode handoff.
+- Optimize Sync Functions for Parallelism.
+- Dynamically compute token burn rate multiplier based on tick duration.
+- Implement sign-up flow on LoginScreen with E2E test.
+
+### Privacy/Offline Improvements
+- Implement persistent memory layer, conflict resolution, and pruning.
+- Add Welcome Checklist and dashboard integration.
+- Fix SQLite in-memory memory deletion in queue_manager_loop_test.
+- Resolve Rust compiler warnings and unused imports in builtin agents.
+- Simplify loginAsAdmin flow by forcing navigation to login page and using explicit element locators.
+- Conduct hybrid privacy audit and implement PII guardrails.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 - Scaling (Cloud): Implement Business Setup and Website Builder wizard UI scaffolding, onboarding cross-device state, and Business Share & Embed widget.
 - Privacy/Offline (Standalone): Conduct Hybrid Privacy Audit with PII guardrails, implement in-app mobile-first Help Center with tooltips, and add Dashboard Welcome Checklist.
