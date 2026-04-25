@@ -932,30 +932,10 @@ func (s *Server) handleApp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if r.URL.Path != "/" {
-		cleanPath := strings.TrimPrefix(filepath.Clean(r.URL.Path), "/")
-		assetPath := filepath.Join(s.staticDir, cleanPath)
+		assetPath := filepath.Join(s.staticDir, strings.TrimPrefix(filepath.Clean(r.URL.Path), "/"))
 		if info, err := os.Stat(assetPath); err == nil && !info.IsDir() {
 			http.ServeFile(w, r, assetPath)
 			return
-		}
-
-		// Fallback 1: strip redundant "assets/" prefix if it exists (e.g. assets/assets/logo.png -> assets/logo.png)
-		if strings.HasPrefix(cleanPath, "assets/assets/") {
-			fallbackPath := filepath.Join(s.staticDir, "assets", strings.TrimPrefix(cleanPath, "assets/assets/"))
-			if info, err := os.Stat(fallbackPath); err == nil && !info.IsDir() {
-				http.ServeFile(w, r, fallbackPath)
-				return
-			}
-		}
-
-		// Fallback 2: check inside packages/ohc_app/assets (common in Bazel/Flutter web builds)
-		if strings.HasPrefix(cleanPath, "assets/") {
-			fileName := strings.TrimPrefix(cleanPath, "assets/")
-			packagePath := filepath.Join(s.staticDir, "assets/packages/ohc_app/assets", fileName)
-			if info, err := os.Stat(packagePath); err == nil && !info.IsDir() {
-				http.ServeFile(w, r, packagePath)
-				return
-			}
 		}
 	}
 
