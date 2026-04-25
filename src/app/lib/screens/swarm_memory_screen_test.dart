@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ohc_app/widgets/skeleton_loading.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:ohc_app/screens/swarm_memory_screen.dart';
 import 'package:ohc_app/services/centrifuge_service.dart';
@@ -85,7 +86,8 @@ void main() {
         ),
       );
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(ListSkeleton), findsOneWidget);
     });
 
     testWidgets('shows empty state for durable memory', (tester) async {

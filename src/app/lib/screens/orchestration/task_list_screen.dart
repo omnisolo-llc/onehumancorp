@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/skeleton_loading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:ohc_app/models/shared_task.dart';
@@ -40,7 +41,7 @@ class TaskListView extends ConsumerWidget {
         itemCount: tasks.length,
         itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const ListSkeleton(),
       error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
     );
   }

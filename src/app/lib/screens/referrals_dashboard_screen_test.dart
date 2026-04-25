@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ohc_app/widgets/skeleton_loading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:ohc_app/screens/referrals_dashboard_screen.dart';
@@ -40,9 +41,10 @@ void main() {
     );
 
     await tester.pumpWidget(buildTestWidget());
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.byType(ListSkeleton), findsOneWidget);
 
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Viral Loop Dashboard'), findsOneWidget);
     expect(find.text('Ref: JULES2026'), findsOneWidget);
@@ -57,7 +59,7 @@ void main() {
     when(() => mockApiService.listReferrals()).thenAnswer((_) async => []);
 
     await tester.pumpWidget(buildTestWidget());
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('No referrals tracked yet.'), findsOneWidget);
   });
@@ -67,7 +69,7 @@ void main() {
         .thenAnswer((_) => Future.error(Exception('API failure')));
 
     await tester.pumpWidget(buildTestWidget());
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.textContaining('API failure'), findsOneWidget);
   });

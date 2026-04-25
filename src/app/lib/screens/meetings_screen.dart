@@ -1,5 +1,6 @@
 import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/skeleton_loading.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
 
@@ -30,7 +31,7 @@ class MeetingsScreen extends ConsumerWidget {
         ],
       ),
       body: snapshot.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const ListSkeleton(),
         error: (e, _) => Center(child: Text('Error: $e')),
         data:
             (rooms) =>

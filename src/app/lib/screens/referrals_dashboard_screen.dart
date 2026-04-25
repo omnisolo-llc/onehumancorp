@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:flutter/material.dart';
+import 'package:ohc_app/widgets/skeleton_loading.dart';import 'package:ohc_app/widgets/glass_card.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
@@ -46,7 +47,7 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
         future: _referralsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const ListSkeleton();
           }
           if (snapshot.hasError) {
             return Center(

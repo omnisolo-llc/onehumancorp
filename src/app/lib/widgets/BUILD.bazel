@@ -51,3 +51,20 @@ alias(
     name = "sub_agent_queue_widget",
     actual = ":widgets_lib",
 )
+
+load("@rules_flutter//flutter:defs.bzl", "flutter_test")
+
+flutter_test(
+    name = "skeleton_loading_test",
+    srcs = ["skeleton_loading_test.dart"],
+    embed = [":widgets_lib"],
+    test_files = ["skeleton_loading_test.dart"],
+    workspace_pubspec = "//:pubspec.yaml",
+)
+
+test_suite(
+    name = "all_tests",
+    tests = [
+        ":skeleton_loading_test",
+    ],
+)

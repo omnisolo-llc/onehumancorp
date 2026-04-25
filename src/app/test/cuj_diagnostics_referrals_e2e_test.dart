@@ -65,7 +65,8 @@ void main() {
 
     testWidgets('Run Diagnostics button is tappable', (tester) async {
       await tester.pumpWidget(_wrapScreen(const DiagnosticsScreen()));
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(seconds: 1));
 
       final btn = find.text('Run Diagnostics');
       expect(btn, findsOneWidget);

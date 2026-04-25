@@ -1,12 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-test('Dashboard screen uses plain language instead of technical jargon', async ({ page }) => {
-  // Use a simulated mobile viewport
+test('Screens use skeleton loaders instead of circular spinners', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
 
   await page.goto('http://localhost:8081');
 
-  // Wait for load
+  // Wait for the app to initialize
   await page.waitForTimeout(5000);
 
   // Click reload now if there's a new version banner blocking the app
@@ -31,11 +30,7 @@ test('Dashboard screen uses plain language instead of technical jargon', async (
       }
   } catch (e) { }
 
-  // Login flow
-  // Finding inputs in Flutter Web canvas without explicit accessibility locators is hard.
-  // We can just press tab multiple times to reach the email, type, tab, type, tab, enter.
-
-  // This is a common Flutter canvas test trick
+  // Login flow via canvas clicks
   await page.mouse.click(187, 300); // Click somewhere near email input
   await page.waitForTimeout(500);
   await page.keyboard.type('test@example.com');
@@ -48,8 +43,7 @@ test('Dashboard screen uses plain language instead of technical jargon', async (
   await page.waitForTimeout(500);
   await page.keyboard.press('Enter');
 
-  // Wait for dashboard to load
-  await page.waitForTimeout(5000);
-
-  await expect(page).toHaveScreenshot('dashboard.png', { maxDiffPixelRatio: 0.2 });
+  // Immediately capture the screenshot while loading is happening
+  await page.waitForTimeout(500);
+  await expect(page).toHaveScreenshot('dashboard_load.png', { maxDiffPixelRatio: 0.2 });
 });
