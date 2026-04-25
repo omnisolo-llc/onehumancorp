@@ -14,7 +14,11 @@ func init() {
 
 func upSharedTasksForKairos20260425010000(ctx context.Context, tx *sql.Tx) error {
 	var sqliteVersion string
+	tx.ExecContext(ctx, "SAVEPOINT check_sqlite")
 	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	if err != nil {
+		tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT check_sqlite")
+	}
 	isSQLite := err == nil
 
 	if !isSQLite {

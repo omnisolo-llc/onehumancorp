@@ -14,7 +14,11 @@ func init() {
 
 func upAutodreamMemoriesMaster(ctx context.Context, tx *sql.Tx) error {
 	var isSQLite bool
+	tx.ExecContext(ctx, "SAVEPOINT check_sqlite")
 	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(new(string))
+	if err != nil {
+		tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT check_sqlite")
+	}
 	if err == nil {
 		isSQLite = true
 	}
@@ -52,8 +56,8 @@ func upAutodreamMemoriesMaster(ctx context.Context, tx *sql.Tx) error {
 		if _, err := tx.ExecContext(ctx, "ALTER TABLE autodream_memories_master ENABLE ROW LEVEL SECURITY;"); err != nil {
 			// ignore error if not postgres
 			if !strings.Contains(err.Error(), "ENABLE") {
-			    return err
-            }
+				return err
+			}
 		}
 	}
 

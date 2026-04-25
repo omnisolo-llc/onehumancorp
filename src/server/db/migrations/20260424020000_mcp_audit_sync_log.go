@@ -16,7 +16,11 @@ func upMCPAuditSyncLog(ctx context.Context, tx *sql.Tx) error {
 	// Check for sqlite
 	isSqlite := false
 	var version string
+	tx.ExecContext(ctx, "SAVEPOINT check_sqlite")
 	err := tx.QueryRowContext(ctx, "select sqlite_version()").Scan(&version)
+	if err != nil {
+		tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT check_sqlite")
+	}
 	if err == nil {
 		isSqlite = true
 	}
