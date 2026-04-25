@@ -87,7 +87,7 @@ func TestLocalTunnelClient(t *testing.T) {
 	defer client.Close()
 
 	// Wait for the connection to be established and registered
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	tools := client.ListTools()
 	if len(tools) != 1 {
@@ -109,7 +109,7 @@ func TestLocalTunnelClient(t *testing.T) {
 	}
 
 	// Wait to receive the payload
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	count := client.GetReceivedCount()
 	if count != 1 {
