@@ -79,9 +79,9 @@ func (h *Hub) CheckHealth(ctx context.Context) (HybridHealthProbe, error) {
 
 	// Health Guardianship: Implement cloud connectivity check for Standalone mode
 	if os.Getenv("OHC_STANDALONE") == "true" {
-		cloudURL := os.Getenv("OHC_CORE_URL")
-		if cloudURL == "" {
-			cloudURL = "https://core.onehumancorp.com"
+		cloudURL := "https://core.onehumancorp.com"
+		if customURL := os.Getenv("OHC_CORE_URL"); customURL != "" {
+			cloudURL = customURL
 		}
 
 		client := &http.Client{Timeout: 2 * time.Second}
