@@ -127,4 +127,5 @@ go_test(
         "@com_github_google_uuid//:uuid",
         "@org_modernc_sqlite//:sqlite"
     ],
+    tags = ["local"],
 )
