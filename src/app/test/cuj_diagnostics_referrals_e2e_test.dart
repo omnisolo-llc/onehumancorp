@@ -69,7 +69,6 @@ void main() {
 
       final btn = find.text('Run Diagnostics');
       expect(btn, findsOneWidget);
-      await tester.ensureVisible(btn);
       await tester.tap(btn);
       await tester.pump(const Duration(milliseconds: 500));
       // Screen should still be functional after tapping
