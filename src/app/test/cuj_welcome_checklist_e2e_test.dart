@@ -108,9 +108,10 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
 
-    // Verify Welcome Checklist is visible on the dashboard
     await tester.scrollUntilVisible(find.byType(WelcomeChecklistWidget), 50.0, scrollable: find.byType(Scrollable).first);
     expect(find.byType(WelcomeChecklistWidget), findsOneWidget);
+
+    // Verify Welcome Checklist is visible on the dashboard
     expect(find.text('Welcome Checklist'), findsOneWidget);
     expect(find.text('Business live'), findsOneWidget);
     expect(find.text('Add 3 more products'), findsOneWidget);
