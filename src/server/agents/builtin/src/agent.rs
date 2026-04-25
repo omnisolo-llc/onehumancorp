@@ -440,4 +440,239 @@ mod tests {
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
     }
+
+    struct MockErrorToolExecutor {
+        err_type: String,
+        attempts: tokio::sync::Mutex<i32>,
+    }
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for MockErrorToolExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            let mut attempts = self.attempts.lock().await;
+            *attempts += 1;
+
+            match self.err_type.as_str() {
+                "transient" => {
+                    Err(Box::new(ohc_builtin_agent_core::types::ToolError::Transient("network blip".to_string())))
+                }
+                "transient_recover" => {
+                    if *attempts < 3 {
+                        Err(Box::new(ohc_builtin_agent_core::types::ToolError::Transient("network blip".to_string())))
+                    } else {
+                        Ok("recovered".to_string())
+                    }
+                }
+                "llm_recoverable" => {
+                    Err(Box::new(ohc_builtin_agent_core::types::ToolError::LlmRecoverable("bad args".to_string())))
+                }
+                "user_fixable" => {
+                    Err(Box::new(ohc_builtin_agent_core::types::ToolError::UserFixable("need auth".to_string())))
+                }
+                "unexpected" => {
+                    Err(Box::new(ohc_builtin_agent_core::types::ToolError::Unexpected("db dead".to_string())))
+                }
+                _ => {
+                    Err("standard error".into())
+                }
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tool_error_handling() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall {
+                                id: "call_transient".to_string(),
+                                name: "transient_tool".to_string(),
+                                arguments: Value::Null,
+                            },
+                            ToolCall {
+                                id: "call_transient_recover".to_string(),
+                                name: "transient_recover_tool".to_string(),
+                                arguments: Value::Null,
+                            },
+                            ToolCall {
+                                id: "call_llm".to_string(),
+                                name: "llm_tool".to_string(),
+                                arguments: Value::Null,
+                            },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![
+            Tool {
+                name: "transient_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor { err_type: "transient".to_string(), attempts: tokio::sync::Mutex::new(0) }),
+            },
+            Tool {
+                name: "transient_recover_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor { err_type: "transient_recover".to_string(), attempts: tokio::sync::Mutex::new(0) }),
+            },
+            Tool {
+                name: "llm_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor { err_type: "llm_recoverable".to_string(), attempts: tokio::sync::Mutex::new(0) }),
+            },
+            Tool {
+                name: "user_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor { err_type: "user_fixable".to_string(), attempts: tokio::sync::Mutex::new(0) }),
+            },
+            Tool {
+                name: "unexpected_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor { err_type: "unexpected".to_string(), attempts: tokio::sync::Mutex::new(0) }),
+            },
+            Tool {
+                name: "standard_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor { err_type: "standard".to_string(), attempts: tokio::sync::Mutex::new(0) }),
+            }
+        ];
+
+        let agent = Agent::new(client.clone(), tools.clone());
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.max_iterations = 2; // Ensure it finishes
+
+        let mut events = vec![];
+        let mut on_event = |e: AgentEvent| { events.push(e); };
+
+        // Test the non-fatal errors first
+        let _ = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        let tool_call_events: Vec<&AgentEvent> = events.iter().filter(|e| matches!(e, AgentEvent::ToolCall { .. })).collect();
+        assert_eq!(tool_call_events.len(), 3);
+
+        // Assert transient exhausted retries
+        match tool_call_events[0] {
+            AgentEvent::ToolCall { result, .. } => {
+                assert!(result.contains("Transient error after 3 attempts"));
+            }
+            _ => panic!("unexpected event")
+        }
+
+        // Assert transient recovered
+        match tool_call_events[1] {
+            AgentEvent::ToolCall { result, .. } => {
+                assert_eq!(result, "recovered");
+            }
+            _ => panic!("unexpected event")
+        }
+
+        // Assert llm recoverable
+        match tool_call_events[2] {
+            AgentEvent::ToolCall { result, .. } => {
+                assert!(result.contains("Tool error"));
+            }
+            _ => panic!("unexpected event")
+        }
+
+        // Test UserFixable (fatal)
+        let client_user = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall {
+                                id: "call_user".to_string(),
+                                name: "user_tool".to_string(),
+                                arguments: Value::Null,
+                            },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+        let agent_user = Agent::new(client_user, tools.clone());
+        let res = agent_user.run(&cfg, "Hello", &mut |_| {}).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("User input required"));
+
+        // Test Unexpected (fatal)
+        let client_unex = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall {
+                                id: "call_unex".to_string(),
+                                name: "unexpected_tool".to_string(),
+                                arguments: Value::Null,
+                            },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+        let agent_unex = Agent::new(client_unex, tools.clone());
+        let res = agent_unex.run(&cfg, "Hello", &mut |_| {}).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("Unexpected error"));
+
+        // Test standard (non-fatal)
+        let client_std = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![
+                            ToolCall {
+                                id: "call_std".to_string(),
+                                name: "standard_tool".to_string(),
+                                arguments: Value::Null,
+                            },
+                        ],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+        let agent_std = Agent::new(client_std, tools.clone());
+        let mut std_events = vec![];
+        let res = agent_std.run(&cfg, "Hello", &mut |e| { std_events.push(e); }).await;
+        assert!(res.is_ok());
+        let std_call: Vec<&AgentEvent> = std_events.iter().filter(|e| matches!(e, AgentEvent::ToolCall { .. })).collect();
+        match std_call[0] {
+            AgentEvent::ToolCall { result, .. } => {
+                assert!(result.contains("standard error"));
+            }
+            _ => panic!("unexpected event")
+        }
+    }
+
 }
