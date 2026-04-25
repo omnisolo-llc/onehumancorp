@@ -83,7 +83,7 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
             AND NOT EXISTS (
                 SELECT 1 FROM json_each(t.dependencies) d
                 JOIN shared_tasks dep ON dep.id = d.value
-                WHERE dep.status != 'COMPLETED'
+                WHERE dep.status != 'DONE' AND dep.status != 'COMPLETED'
             )
             LIMIT 1
         `
@@ -93,9 +93,9 @@ func (to *SharedTaskOrchestrator) ClaimTask(ctx context.Context, agentID string)
             SELECT t.id FROM shared_tasks t
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
-                SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) d
+                SELECT 1 FROM jsonb_array_elements_text(COALESCE(t.dependencies, '[]'::jsonb)) d
                 JOIN shared_tasks dep ON dep.id::text = d
-                WHERE dep.status != 'COMPLETED'
+                WHERE dep.status != 'DONE' AND dep.status != 'COMPLETED'
             )
             LIMIT 1
             FOR UPDATE SKIP LOCKED
@@ -416,7 +416,7 @@ func (to *TasksDB) ClaimTask(ctx context.Context, agentID string) (*Task, error)
             WHERE t.status = 'PENDING' AND t.organization_id = $1
             AND NOT EXISTS (
                 SELECT 1 FROM jsonb_array_elements_text(COALESCE(t.dependencies, '[]'::jsonb)) d
-                JOIN shared_tasks dep ON dep.id = d
+                JOIN shared_tasks dep ON dep.id::text = d
                 WHERE dep.status != 'DONE' AND dep.status != 'COMPLETED'
             )
             LIMIT 1
