@@ -8,7 +8,7 @@ import 'package:ohc_app/models/agent.dart';
 void main() {
   testWidgets('BusinessShareWidget displays correct info and copy button', (tester) async {
     final dashboardData = DashboardSnapshot(
-      organization: Organization(
+      organization: Organization(tier: 'free',
         id: 'org-test',
         name: 'Maya Bakery',
         domain: 'maya.ohc.io',
@@ -16,7 +16,7 @@ void main() {
         roleProfiles: [],
       ),
       meetings: [],
-      costs: CostSummary(totalCostUSD: 0, totalTokens: 0, agents: []),
+      costs: CostSummary(totalCostUSD: 0, totalTokens: 0, totalActions: 0, agents: []),
       agents: [],
       statuses: [],
       updatedAt: DateTime.now(),
