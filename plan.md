@@ -1,19 +1,22 @@
-1. **Dynamic RLS Policy Enforcement**:
-   - The code review points out that tables have `tenant_id` OR `organization_id` due to an inconsistent schema migration (`20260416020000_autodream_rename_tenant_id.sql` renamed `tenant_id` to `organization_id`, but others still use `tenant_id` like `mcp_servers`, `local_mcp_rag_tasks`, `crdt_deltas`, `mcp_config_sync_log`, `agent_mesh_messages`). The system prompt says "using tenant_id column on every table".
-   - I will rewrite `src/server/db/migrations/20260430000000_tenant_isolation_policies.sql` to be dynamic: use a `DO` block to loop over all tables, check `information_schema.columns` for `tenant_id` OR `organization_id`, and generate the `CREATE POLICY` dynamically using the correct column name. This prevents crashes and handles all tables accurately.
-2. **Context-Aware Global DB Connection Wrapper Fix**:
-   - The feedback points out inconsistent "sys" defaulting. I must default an empty org ID to `"sys"` universally in `Begin`, `Exec`, `Query`, and `QueryRow` so background jobs aren't blocked.
-   - "Severe Performance Penalty": Wrapping every `Exec` in an explicit transaction (`BEGIN; SET LOCAL; EXEC; COMMIT`) forces 4 round-trips. Instead, `pgxpool` supports `Acquire`, but we need to reset the connection setting before it's returned to the pool (or ensure we use `SET LOCAL` which requires a transaction). Wait, another approach is to use `pgx.Query` and `pgx.Exec` with `set_config`. But `set_config('app.current_tenant', $1, false)` leaks into the pool connection!
-   - How can we avoid extra round-trips but prevent leakage? We can use transaction blocks if we need isolation, but for simple queries, can we clear the config? Yes, `set_config('app.current_tenant', '', false)` could be called, but what if there's an error?
-   - Wait, `pgxpool` allows `BeforeAcquire` and `AfterRelease` hooks. But the provider receives the pool from outside (e.g. from `db.New` in `database.go`). I can modify `database.go` to add `AfterRelease` that resets `app.current_tenant` to `sys` or `''`.
-   - Actually, if we ALWAYS do `set_config('app.current_tenant', orgID, false)` on every `Query` and `Exec` using `conn.Exec`, we are ALWAYS overwriting the old value. So it doesn't matter if it leaked from a previous query, because the next query will overwrite it!
-   - Is that true? `p.pool.Query` doesn't acquire a specific connection first, so we'd have to `p.pool.Acquire`, run `set_config`, run the query, and release. This is 2 round-trips instead of 1. But for `PgTx`, it's just 1 round-trip because we're already in a transaction.
-   - Wait, PostgreSQL has `current_setting('app.current_tenant', true)`. We can just use standard `Exec`/`Query` without `set_config` by relying purely on `WHERE` clauses? No, the goal is RLS.
-   - Let's check the code review again. The review states: "The patch has the right architectural idea (injecting context variables to use in RLS policies) but is fatally flawed... Unacceptable performance degradation from wrapping all writes in 4-step manual transactions."
-   - What if we modify `database.go` to use an `AfterRelease` hook in `pgxpool.Config` to reset the state, and we use `BeforeAcquire`? Or better, what if we use `pgx.Tx` for all writes, but `Exec` is already a wrapper for `pool.Exec`. Wait, can we pass the tenant as a runtime parameter via a composite query?
-   - E.g., `WITH _cfg AS (SELECT set_config('app.current_tenant', $1, true)) INSERT INTO ...` - no, you can't easily prepend that to all queries.
-   - If we use `set_config('app.current_tenant', $1, false)`, it takes 1 extra round-trip, or we can use `pgx.Batch` to send both `set_config` and the actual query in a single round-trip! Yes! `pgx.Batch` is 1 round-trip!
-   - Let's implement `pgx.Batch` for `Exec`, `Query`, and `QueryRow`. But `Query` returns `pgx.Rows`, and `pgx.Batch` returns `pgx.BatchResults`.
-   - Actually, if `pgxpool` is used, the performance issue mentioned was 4 steps instead of 1. If we just accept the 2 steps via `Acquire` -> `set_config` -> `Query`, is it okay? The reviewer said "4-step manual transactions" were the problem for `Exec`. For `Exec`, we could use `Acquire` -> `set_config` -> `Exec` (2 steps).
-   - Let's update `Exec`, `Query`, and `QueryRow` to consistently default to `"sys"` and use `Acquire` -> `set_config(..., false)`.
-   - I will modify `src/server/db/postgres_provider.go` to fix these issues.
+1. **Create `GrowMyBusinessWizardScreen`**:
+   - Create `src/app/lib/screens/grow_my_business_wizard_screen.dart` with a multi-step stepper or guided flow for the "Grow my business" wizard.
+   - Steps should reflect actions to grow a business: e.g. "Add Products", "Connect Social Media", "Launch Email Campaign".
+
+2. **Create `WebsiteBuilderWizardScreen`**:
+   - Create `src/app/lib/screens/website_builder_wizard_screen.dart` to implement the 4-step website builder.
+   - Steps: "Template Gallery", "Brand Colors & Logo", "Add your first product/service", "Connect Domain & Publish".
+
+3. **Create `AI Agent Configuration Wizard`** (`agent_config_wizard_screen.dart` or expand `agent_hire_wizard_screen.dart`):
+   - We need to implement the AI agent configuration wizard which allows users to configure an agent's capabilities without technical knowledge.
+
+4. **Update `router.dart`**:
+   - Add routes for `/wizards/grow`, `/wizards/website`, `/wizards/agent_config`, etc.
+
+5. **Update Dashboard / Navigation**:
+   - Add triggers to open these wizards from the `DashboardScreen` or side navigation as outlined in the issue. "Grow my business" from home dashboard, "Build My Website" to open the website builder wizard.
+
+6. **Add Tests**:
+   - Add E2E and widget tests for the new wizards ensuring 100% test coverage. E2E tests must follow the exact flow starting from the dashboard.
+
+7. **Pre Commit Steps**:
+   - Run `pre_commit_instructions` tool to complete pre-commit checks.
