@@ -13,6 +13,7 @@ go_library(
 go_test(
     name = "harnessdaemon_test",
     srcs = ["daemon_test.go"],
+    tags = ["local"],
     embed = [":harnessdaemon"],
     deps = [
         "@com_github_playwright_community_playwright_go//:playwright-go",
