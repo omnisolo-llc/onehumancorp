@@ -106,7 +106,7 @@ void main() {
       await tester.pumpWidget(_wrapWizard(mockClient));
       await tester.pumpAndSettle();
 
-      expect(find.byType(Stepper), findsOneWidget);
+      expect(find.text('Agent Gallery'), findsOneWidget);
     });
 
     testWidgets('wizard has a close button in AppBar', (tester) async {
@@ -134,7 +134,7 @@ void main() {
       await tester.pumpWidget(_wrapWizard(mockClient));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Hire'), findsWidgets);
+      expect(find.textContaining('Manage my AI team'), findsWidgets);
     });
 
     testWidgets('selecting a role chip enables Next button', (tester) async {
