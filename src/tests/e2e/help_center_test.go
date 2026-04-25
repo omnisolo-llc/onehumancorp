@@ -53,9 +53,7 @@ func TestHelpCenter_E2E(t *testing.T) {
 	require.NoError(t, page.Locator("text=That's a great question! For more details on this topic, please visit our Help Center articles.").WaitFor())
 
 	// Close the chat
-	require.NoError(t, page.Locator("button", playwright.PageLocatorOptions{
-		Has: page.Locator("i.material-icons:has-text('close')"), // Material icon
-	}).First().Click())
+	require.NoError(t, page.GetByRole("button", playwright.PageGetByRoleOptions{Name: "Close chat"}).Click())
 
 	// Navigate to Help Center via Sidebar
 	require.NoError(t, page.Locator("text=Help Center").Click())
