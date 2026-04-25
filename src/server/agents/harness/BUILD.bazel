@@ -4,6 +4,7 @@ go_library(
     name = "harness",
     srcs = [
         "harness.go",
+        "backend.go",
         "bwrap_linux.go",
         "sandbox_darwin.go",
         "fallback.go",
