@@ -439,7 +439,6 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
-    }
 
     struct MockErrorToolExecutor {
         err_type: String,
