@@ -142,3 +142,5 @@ sh_test(
     ],
     visibility = ["//visibility:public"],
 )
+
+exports_files(["helm/ohc/dashboards/harness_efficiency.json"])

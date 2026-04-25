@@ -3,5 +3,6 @@ load("@rules_go//go:def.bzl", "go_test")
 go_test(
     name = "dashboard_test",
     srcs = ["dashboard_test.go"],
-    data = ["//deploy/helm/ohc/dashboards:harness_efficiency.json"],
+    data = ["//deploy:helm/ohc/dashboards/harness_efficiency.json"],
+    deps = ["@rules_go//go/runfiles:go_default_library"],
 )

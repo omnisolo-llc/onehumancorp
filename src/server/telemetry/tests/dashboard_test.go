@@ -3,24 +3,17 @@ package tests
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bazelbuild/rules_go/go/runfiles"
 )
 
 func TestHarnessEfficiencyDashboardPanels(t *testing.T) {
-	runfilesDir := os.Getenv("TEST_SRCDIR")
-	workspaceName := os.Getenv("TEST_WORKSPACE")
-
-	var dashboardPath string
-	if runfilesDir != "" && workspaceName != "" {
-		dashboardPath = filepath.Join(runfilesDir, workspaceName, "deploy", "helm", "ohc", "dashboards", "harness_efficiency.json")
-	} else {
-		workspaceRoot := os.Getenv("BUILD_WORKSPACE_DIRECTORY")
-		if workspaceRoot == "" {
-			workspaceRoot = "../../../.."
-		}
-		dashboardPath = filepath.Join(workspaceRoot, "deploy", "helm", "ohc", "dashboards", "harness_efficiency.json")
+	// Use rules_go runfiles to reliably find the JSON dashboard path
+	dashboardPath, err := runfiles.Rlocation("_main/deploy/helm/ohc/dashboards/harness_efficiency.json")
+	if err != nil {
+		t.Fatalf("Failed to locate runfile harness_efficiency.json: %v", err)
 	}
 
 	data, err := os.ReadFile(dashboardPath)
