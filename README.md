@@ -68,9 +68,9 @@ graph TD;
 
 ### KAIROS Orchestration Documentation
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
-- **[Distributed State Machine](docs/features/kairos/state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
+- **[Distributed State Machine](docs/features/kairos/distributed_state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
 - **[Sub-Agent Queue](docs/features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
-- **[AutoDream Pipeline](docs/features/kairos/autodream_pipeline.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
+- **[AutoDream Pipeline](docs/features/kairos/autodream_pipelines.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ### Remote clients and standalone mode
 
