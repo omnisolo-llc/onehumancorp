@@ -2,8 +2,8 @@
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
 # Provides remote cache, remote execution, and build event streaming.
-build --config=buildbuddy-official
-test --config=buildbuddy-official
+build --config=buildbuddy
+test --config=buildbuddy
 
 # ── Download strategy ─────────────────────────────────────────────────────────
 # Download all outputs so that local test wrappers and generated scripts are
@@ -83,11 +83,11 @@ common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3Jee
 # Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
 # buildbuddy-official which relies on the global sandboxed,local fallback chain.
 common:buildbuddy --bes_timeout=600s
-common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --bes_results_url=https://onehumancorp.buildbuddy.io/invocation/
+common:buildbuddy --bes_backend=grpcs://onehumancorp.buildbuddy.io
+common:buildbuddy --remote_cache=grpcs://onehumancorp.buildbuddy.io
+common:buildbuddy --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
+# common:buildbuddy --remote_executor=grpcs://onehumancorp.buildbuddy.io
 common:buildbuddy --remote_local_fallback
 common:buildbuddy --remote_upload_local_results
 # common:buildbuddy --remote_cache_compression
@@ -95,7 +95,7 @@ common:buildbuddy --remote_upload_local_results
 common:buildbuddy --experimental_remote_downloader_local_fallback
 common:buildbuddy --jobs=200
 # Read only Bazel cache
-common:buildbuddy --remote_header=x-buildbuddy-api-key=h2FUJLgaH6D2RL7T3PAV
+common:buildbuddy --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
 common:buildbuddy --remote_timeout=10m
 build:buildbuddy --verbose_failures
 build:buildbuddy --bes_upload_mode=fully_async
