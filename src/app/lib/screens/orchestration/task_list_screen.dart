@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'package:ohc_app/models/shared_task.dart';
 import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 final sharedTasksProvider = FutureProvider<List<SharedTask>>((ref) async {
   final api = ref.watch(apiServiceProvider);
@@ -41,12 +40,8 @@ class TaskListView extends ConsumerWidget {
         itemCount: tasks.length,
         itemBuilder: (context, index) => _AnimatedTaskGlassCard(task: tasks[index], index: index),
       ),
-      loading: () => ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        itemBuilder: (context, index) => const ShimmerListTile(),
-      ),
-      error: (err, stack) => Center(child: Text('Error: $err', style: const TextStyle(color: Colors.white))),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err', style: TextStyle(color: Colors.white))),
     );
   }
 }

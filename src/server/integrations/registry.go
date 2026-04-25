@@ -56,12 +56,6 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	CategoryIssues Category = "issues"
-	// CategoryPayments classifies the integration module under the Payments domain taxonomy for structured discovery.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	CategoryPayments Category = "payments"
 )
 
 // IntegrationType identifies the specific external service platform (e.g., github, slack).
@@ -144,12 +138,6 @@ const (
 	// Produces no errors.
 	// Has no side effects.
 	IntegrationTypeGitHubIssues IntegrationType = "github_issues"
-	// IntegrationTypeMercadoPago provides domain-specific context and typed constraints for Mercado Pago operations across the application.
-	// Accepts no parameters.
-	// Returns nothing.
-	// Produces no errors.
-	// Has no side effects.
-	IntegrationTypeMercadoPago IntegrationType = "mercadopago"
 )
 
 // ConnectionStatus reflects whether an integration is currently active and reachable.

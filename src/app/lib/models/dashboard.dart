@@ -6,6 +6,7 @@ class DashboardSnapshot {
   final Organization organization;
   final List<dynamic> meetings; // Generic for now, can be specialized later
   final CostSummary costs;
+  final StorageSummary? storage;
   final List<Agent> agents;
   final List<StatusBucket> statuses;
   final DateTime updatedAt;
@@ -15,6 +16,7 @@ class DashboardSnapshot {
     required this.organization,
     required this.meetings,
     required this.costs,
+    this.storage,
     required this.agents,
     required this.statuses,
     required this.updatedAt,
@@ -32,6 +34,9 @@ class DashboardSnapshot {
             json['costSummary'] as Map<String, dynamic>? ??
             {},
       ),
+      storage: json['storage'] != null
+          ? StorageSummary.fromJson(json['storage'] as Map<String, dynamic>)
+          : null,
       agents:
           (json['agents'] as List<dynamic>?)
               ?.map((e) => Agent.fromJson(e as Map<String, dynamic>))
@@ -88,6 +93,7 @@ class Organization {
   final String id;
   final String name;
   final String domain;
+  final String tier;
   final List<OrganizationMember> members;
   final List<RoleProfile> roleProfiles;
 
@@ -95,15 +101,29 @@ class Organization {
     required this.id,
     required this.name,
     required this.domain,
+    required this.tier,
     required this.members,
     required this.roleProfiles,
   });
+
+  int get actionLimit {
+    switch (tier) {
+      case 'Starter':
+        return 1000;
+      case 'Pro':
+        return -1;
+      case 'Free':
+      default:
+        return 100;
+    }
+  }
 
   factory Organization.fromJson(Map<String, dynamic> json) {
     return Organization(
       id: json['id'] as String? ?? '',
       name: json['name'] as String? ?? '',
       domain: json['domain'] as String? ?? '',
+      tier: json['tier'] as String? ?? 'Free',
       members:
           (json['members'] as List<dynamic>?)
               ?.map(
@@ -163,11 +183,13 @@ class OrganizationMember {
 class CostSummary {
   final double totalCostUSD;
   final int totalTokens;
+  final int totalActions;
   final List<AgentCost> agents;
 
   const CostSummary({
     required this.totalCostUSD,
     required this.totalTokens,
+    required this.totalActions,
     required this.agents,
   });
 
@@ -176,11 +198,26 @@ class CostSummary {
       totalCostUSD:
           (json['totalCostUSD'] ?? json['total_cost_usd'] ?? 0.0).toDouble(),
       totalTokens: json['totalTokens'] ?? json['total_tokens'] ?? 0,
+      totalActions: json['totalActions'] ?? json['total_actions'] ?? 0,
       agents:
           (json['agents'] as List<dynamic>?)
               ?.map((e) => AgentCost.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
+    );
+  }
+}
+
+class StorageSummary {
+  final int usedBytes;
+  final int limitBytes;
+
+  const StorageSummary({required this.usedBytes, required this.limitBytes});
+
+  factory StorageSummary.fromJson(Map<String, dynamic> json) {
+    return StorageSummary(
+      usedBytes: json['usedBytes'] as int? ?? 0,
+      limitBytes: json['limitBytes'] as int? ?? 500000000,
     );
   }
 }

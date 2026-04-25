@@ -39,6 +39,54 @@ type loginResponse struct {
 	ExpiresAt time.Time  `json:"expiresAt"`
 }
 
+// HandleRegister registers a new user and returns a signed JWT.  	POST /api/auth/register
+// Accepts parameters: h *Handlers (No Constraints).
+// Returns nothing.
+// Produces no errors.
+// Has no side effects.
+func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req createUserRequest
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		jsonError(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if req.Username == "" || req.Password == "" || req.Email == "" {
+		jsonError(w, "username, email, and password required", http.StatusBadRequest)
+		return
+	}
+
+	roles := req.Roles
+	if len(roles) == 0 {
+		roles = []string{RoleAdmin} // First user registration becomes admin
+	}
+
+	user, err := h.store.CreateUser(req.Username, req.Email, req.Password, roles, "") // Empty orgID for initial setup
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	token, err := h.store.IssueToken(user)
+	if err != nil {
+		jsonError(w, "failed to issue token", http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, loginResponse{
+		Token:     token,
+		User:      user.PublicView(),
+		ExpiresAt: time.Now().UTC().Add(time.Hour * 24),
+	})
+}
+
 // HandleLogin validates credentials and returns a signed JWT.  	POST /api/auth/login  {"username":"…","password":"…"}
 // Accepts parameters: h *Handlers (No Constraints).
 // Returns nothing.

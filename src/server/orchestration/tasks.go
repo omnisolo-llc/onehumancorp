@@ -392,7 +392,7 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to check pending task: %w", queryErr)
 	}
 
-	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", statemachine.StateInProgress, agentID, "Claimed task")
+	targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, fetchedTaskID, "SHARED_TASK", statemachine.StateInProgress, agentID, "Claimed task")
 	if err != nil {
 		return nil, fmt.Errorf("failed to transition state: %w", err)
 	}
@@ -443,8 +443,8 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	if broadcastFunc != nil {
-		broadcastFunc()
+	if targetStateTransitionFn != nil {
+		targetStateTransitionFn()
 	}
 
 	task.Status = "IN_PROGRESS"
@@ -548,7 +548,7 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	defer tx.Rollback(ctx)
 
 	_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = NULL WHERE id = $1", taskID)
-	broadcast, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
+	targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, taskID, "SHARED_TASK", statemachine.StateCompleted, agentID, "Task completed successfully")
 	if err != nil {
 		if strings.Contains(err.Error(), "database is locked") || strings.Contains(err.Error(), "SQLITE_BUSY") {
 			return fmt.Errorf("database is locked: %w", err)
@@ -563,8 +563,8 @@ func (tm *TaskManager) CompleteTaskWithResult(ctx context.Context, taskID, agent
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit completed task: %w", err)
 	}
-	if broadcast != nil {
-		broadcast()
+	if targetStateTransitionFn != nil {
+		targetStateTransitionFn()
 	}
 
 	telemetry.RecordSwarmTaskTransition(ctx, claims.OrganizationID, currentStatus, "COMPLETED")
@@ -673,9 +673,13 @@ func (tm *TaskManager) PeekTasks(ctx context.Context, limit int) ([]*SharedTask,
 		return nil, errors.New("unauthorized: missing claims")
 	}
 
+	return tm.PeekTasksByOrg(ctx, claims.OrganizationID, limit)
+}
+
+func (tm *TaskManager) PeekTasksByOrg(ctx context.Context, orgID string, limit int) ([]*SharedTask, error) {
 	var query string
 	var args []interface{}
-	args = append(args, claims.OrganizationID)
+	args = append(args, orgID)
 
 	if tm.db.IsSQLite() {
 		query = `
@@ -786,11 +790,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 		for _, id := range taskIDs {
 			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
-			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
+			targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
 			}
-			broadcastFuncs = append(broadcastFuncs, broadcastFunc)
+			broadcastFuncs = append(broadcastFuncs, targetStateTransitionFn)
 
 			// Fetch updated task data
 			readQuery := `
@@ -851,11 +855,11 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 
 		for _, id := range taskIDs {
 			_, _ = tx.Exec(ctx, "UPDATE shared_tasks SET locked_until = datetime('now', '+15 minutes') WHERE id = $1", id)
-			broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
+			targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, id, "SHARED_TASK", statemachine.StateInProgress, agentID, "Polled task")
 			if err != nil {
 				return nil, fmt.Errorf("failed to transition state: %w", err)
 			}
-			broadcastFuncs = append(broadcastFuncs, broadcastFunc)
+			broadcastFuncs = append(broadcastFuncs, targetStateTransitionFn)
 
 			// Fetch updated task data
 			readQuery := `
@@ -1065,7 +1069,7 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 		return fmt.Errorf("failed to update task: %w", err)
 	}
 
-	broadcastFunc, err := tm.stateMachine.TransitionWithTx(ctx, tx, task.ID, "SHARED_TASK", task.Status, task.AssignedAgentID, "Task updated via UpdateTask")
+	targetStateTransitionFn, err := tm.stateMachine.TransitionWithTx(ctx, tx, task.ID, "SHARED_TASK", task.Status, task.AssignedAgentID, "Task updated via UpdateTask")
 	if err != nil {
 		return fmt.Errorf("failed to transition state: %w", err)
 	}
@@ -1084,8 +1088,8 @@ func (tm *TaskManager) UpdateTask(ctx context.Context, task *SharedTask) error {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	if broadcastFunc != nil {
-		broadcastFunc()
+	if targetStateTransitionFn != nil {
+		targetStateTransitionFn()
 	}
 
 	// Broadcast update

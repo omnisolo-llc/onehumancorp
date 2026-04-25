@@ -118,20 +118,17 @@ func (r *TaskRepository) UpdateTaskStatus(ctx context.Context, taskID, status st
 		SET status = $1, updated_at = $2
 		WHERE id = $3 AND organization_id = $4
 	`
-	// Verify current state before update to avoid relying on RowsAffected
-	var count int
-	checkQuery := "SELECT COUNT(*) FROM tasks WHERE id = $1 AND organization_id = $2"
-	err = r.DB.QueryRowContext(ctx, checkQuery, taskID, orgID).Scan(&count)
-	if err != nil {
-		return errors.New("task not found or not owned by organization")
-	}
-	if count == 0 {
-		return errors.New("task not found or not owned by organization")
-	}
-
-	_, err = r.DB.ExecContext(ctx, query, status, time.Now(), taskID, orgID)
+	res, err := r.DB.ExecContext(ctx, query, status, time.Now(), taskID, orgID)
 	if err != nil {
 		return err
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return errors.New("task not found or not owned by organization")
 	}
 
 	return nil

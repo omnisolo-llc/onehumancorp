@@ -2,7 +2,6 @@ import '../widgets/glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:ohc_app/services/api_service.dart';
-import 'package:ohc_app/widgets/shimmer_loading.dart';
 
 final _meetingsProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
@@ -31,11 +30,7 @@ class MeetingsScreen extends ConsumerWidget {
         ],
       ),
       body: snapshot.when(
-        loading: () => ListView.builder(
-          padding: const EdgeInsets.all(24),
-          itemCount: 4,
-          itemBuilder: (context, index) => const ShimmerCard(height: 120),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Error: $e')),
         data:
             (rooms) =>

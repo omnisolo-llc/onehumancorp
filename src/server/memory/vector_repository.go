@@ -12,11 +12,11 @@ import (
 type EmbeddingRecord struct {
 	ID             string
 	OrganizationID string
-	MemoryType     string
+	AgentID        string
 	Content        string
 	Embedding      []float32
+	SourceType     string
 	CreatedAt      time.Time
-	SourceTaskID   string
 }
 
 type VectorRepository struct {
@@ -33,124 +33,127 @@ func (r *VectorRepository) Upsert(ctx context.Context, record *EmbeddingRecord) 
 		return fmt.Errorf("failed to marshal embedding: %w", err)
 	}
 
-	query := `
-		INSERT INTO consolidated_memory (id, organization_id, source_type, content, embedding, created_at, agent_id)
-		VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
-		ON CONFLICT (id) DO UPDATE SET
-			content = EXCLUDED.content,
-			embedding = EXCLUDED.embedding,
-			source_type = EXCLUDED.source_type,
-			updated_at = CURRENT_TIMESTAMP
-	`
+	var query string
 	if r.db.IsSQLite() {
 		query = `
-			INSERT INTO consolidated_memory (id, organization_id, source_type, content, embedding, created_at, agent_id)
+			INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7)
-			ON CONFLICT (id) DO UPDATE SET
-				content = EXCLUDED.content,
-				embedding = EXCLUDED.embedding,
-				source_type = EXCLUDED.source_type
+			ON CONFLICT(id) DO UPDATE SET
+				content=excluded.content,
+				embedding=excluded.embedding,
+				created_at=excluded.created_at
+		`
+	} else {
+		// Postgres uses pgvector which accepts a string formatted as '[1,2,3]'
+		query = `
+			INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at)
+			VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
+			ON CONFLICT(id) DO UPDATE SET
+				content=excluded.content,
+				embedding=excluded.embedding,
+				created_at=excluded.created_at
 		`
 	}
-	_, err = r.db.Exec(ctx, query, record.ID, record.OrganizationID, record.MemoryType, record.Content, string(embBytes), record.CreatedAt, record.SourceTaskID)
+
+	_, err = r.db.Exec(ctx, query, record.ID, record.OrganizationID, record.AgentID, record.Content, string(embBytes), record.SourceType, record.CreatedAt)
 	return err
 }
 
 func (r *VectorRepository) SemanticSearch(ctx context.Context, organizationID string, queryEmbedding []float32, limit int) ([]*EmbeddingRecord, error) {
-	embBytes, err := json.Marshal(queryEmbedding)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal embedding: %w", err)
+	if r.db.IsSQLite() {
+		// Fallback for SQLite: return latest memories since vector similarity is unavailable.
+		query := `
+			SELECT id, organization_id, COALESCE(agent_id, ''), content, embedding, source_type, created_at
+			FROM consolidated_memory
+			WHERE organization_id = $1
+			ORDER BY created_at DESC
+			LIMIT $2
+		`
+		rows, err := r.db.Query(ctx, query, organizationID, limit)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query sqlite memory: %w", err)
+		}
+		defer rows.Close()
+
+		var results []*EmbeddingRecord
+		for rows.Next() {
+			var rec EmbeddingRecord
+			var embStr string
+			if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.AgentID, &rec.Content, &embStr, &rec.SourceType, &rec.CreatedAt); err != nil {
+				continue
+			}
+			json.Unmarshal([]byte(embStr), &rec.Embedding)
+			results = append(results, &rec)
+		}
+		return results, nil
 	}
 
+	embBytes, err := json.Marshal(queryEmbedding)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal query embedding: %w", err)
+	}
+	embStr := string(embBytes)
+
 	query := `
-		SELECT id, organization_id, source_type, content, created_at
+		SELECT id, organization_id, COALESCE(agent_id, ''), content, embedding, source_type, created_at
 		FROM consolidated_memory
 		WHERE organization_id = $1
 		ORDER BY embedding <-> $2::vector
 		LIMIT $3
 	`
-	if r.db.IsSQLite() {
-		query = `
-			SELECT id, organization_id, source_type, content, created_at
-			FROM consolidated_memory
-			WHERE organization_id = $1
-			ORDER BY vec_distance_cosine(embedding, $2)
-			LIMIT $3
-		`
-	}
-
-	rows, err := r.db.Query(ctx, query, organizationID, string(embBytes), limit)
+	rows, err := r.db.Query(ctx, query, organizationID, embStr, limit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to query pgvector memory: %w", err)
 	}
 	defer rows.Close()
 
-	var records []*EmbeddingRecord
+	var results []*EmbeddingRecord
 	for rows.Next() {
 		var rec EmbeddingRecord
-		if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.MemoryType, &rec.Content, &rec.CreatedAt); err != nil {
-			return nil, err
+		var embStrRes string
+		if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.AgentID, &rec.Content, &embStrRes, &rec.SourceType, &rec.CreatedAt); err != nil {
+			continue
 		}
-		records = append(records, &rec)
+		json.Unmarshal([]byte(embStrRes), &rec.Embedding)
+		results = append(results, &rec)
 	}
-	return records, rows.Err()
+	return results, nil
 }
 
-type Conflict struct {
-	ID1      string
-	ID2      string
-	Content1 string
-	Content2 string
+func (r *VectorRepository) PruneStale(ctx context.Context, olderThan time.Time) error {
+	// Only prune records explicitly marked as TASK_SUMMARY to be safe,
+	// or prune records that haven't been accessed recently (if we had last_accessed_at)
+	// Given the schema, we prune explicitly task summaries that are older than threshold.
+	query := `DELETE FROM consolidated_memory WHERE created_at < $1 AND source_type = 'TASK_SUMMARY'`
+	_, err := r.db.Exec(ctx, query, olderThan)
+	return err
 }
 
-func (r *VectorRepository) FindConflicts(ctx context.Context, organizationID string, threshold float64) ([]Conflict, error) {
-	query := `
-		SELECT a.id, b.id, a.content, b.content
-		FROM consolidated_memory a
-		JOIN consolidated_memory b ON a.id < b.id AND a.organization_id = b.organization_id
-		WHERE a.organization_id = $1 AND (a.embedding <-> b.embedding) < $2
-	`
-	if r.db.IsSQLite() {
-		query = `
-			SELECT a.id, b.id, a.content, b.content
-			FROM consolidated_memory a
-			JOIN consolidated_memory b ON a.id < b.id AND a.organization_id = b.organization_id
-			WHERE a.organization_id = $1 AND vec_distance_cosine(a.embedding, b.embedding) < $2
-		`
-	}
+func (r *VectorRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM consolidated_memory WHERE id = $1`
+	_, err := r.db.Exec(ctx, query, id)
+	return err
+}
 
-	rows, err := r.db.Query(ctx, query, organizationID, threshold)
+func (r *VectorRepository) GetOrganizationIDs(ctx context.Context) ([]string, error) {
+	query := "SELECT DISTINCT organization_id FROM users WHERE organization_id != ''"
+	rows, err := r.db.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find conflicts: %w", err)
+		return nil, fmt.Errorf("failed to get organization IDs: %w", err)
 	}
 	defer rows.Close()
 
-	var conflicts []Conflict
+	var orgIDs []string
 	for rows.Next() {
-		var c Conflict
-		if err := rows.Scan(&c.ID1, &c.ID2, &c.Content1, &c.Content2); err != nil {
-			return nil, err
+		var orgID string
+		if err := rows.Scan(&orgID); err != nil {
+			return nil, fmt.Errorf("failed to scan organization ID: %w", err)
 		}
-		conflicts = append(conflicts, c)
+		orgIDs = append(orgIDs, orgID)
 	}
-	return conflicts, nil
-}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 
-func (r *VectorRepository) DeleteMemories(ctx context.Context, ids []string) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	// Simple deletion assuming few IDs
-	for _, id := range ids {
-		_, err := r.db.Exec(ctx, "DELETE FROM consolidated_memory WHERE id = $1", id)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (r *VectorRepository) PruneOlderThan(ctx context.Context, organizationID string, cutoff time.Time) error {
-	_, err := r.db.Exec(ctx, "DELETE FROM consolidated_memory WHERE organization_id = $1 AND created_at < $2", organizationID, cutoff)
-	return err
+	return orgIDs, nil
 }
