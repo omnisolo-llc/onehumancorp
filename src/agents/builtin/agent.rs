@@ -192,34 +192,91 @@ impl Agent {
 
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
+
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+                let mut attempts = 0;
+                let max_attempts = 3;
+                let mut final_content = String::new();
+                let mut final_error = String::new();
+
+                loop {
+                    attempts += 1;
+                    let result = self.execute_tool(&tc).await;
+
+                    match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            final_content = r;
+                            break;
+                        }
+                        Err(e) => {
+                            if let Some(tool_err) = e.downcast_ref::<crate::types::ToolError>() {
+                                match tool_err {
+                                    crate::types::ToolError::Transient(msg) => {
+                                        if attempts < max_attempts {
+                                            tokio::time::sleep(tokio::time::Duration::from_secs(2_u64.pow(attempts as u32))).await;
+                                            continue;
+                                        } else {
+                                            let err = format!("Transient error failed after {} attempts: {}", max_attempts, msg);
+                                            on_event(AgentEvent::ToolCall {
+                                                name: tc.name.clone(),
+                                                args_json: tc.arguments.to_string(),
+                                                result: format!("Error: {}", err),
+                                                iteration,
+                                            });
+                                            final_error = err;
+                                            break;
+                                        }
+                                    }
+                                    crate::types::ToolError::LlmRecoverable(msg) => {
+                                        let err = format!("LLM recoverable error: {}", msg);
+                                        on_event(AgentEvent::ToolCall {
+                                            name: tc.name.clone(),
+                                            args_json: tc.arguments.to_string(),
+                                            result: format!("Error: {}", err),
+                                            iteration,
+                                        });
+                                        final_content = err; // Feed directly to content
+                                        break;
+                                    }
+                                    crate::types::ToolError::UserFixable(msg) |
+                                    crate::types::ToolError::Unexpected(msg) => {
+                                        let err = tool_err.to_string();
+                                        on_event(AgentEvent::ToolCall {
+                                            name: tc.name.clone(),
+                                            args_json: tc.arguments.to_string(),
+                                            result: format!("Error: {}", err),
+                                            iteration,
+                                        });
+                                        final_error = err;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                let err = e.to_string();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                final_error = err;
+                                break;
+                            }
+                        }
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
-                };
+                }
+
                 tool_results.push(ToolResult {
                     tool_call_id: tc.id.clone(),
-                    content,
-                    error,
+                    content: final_content,
+                    error: final_error,
                 });
             }
 
@@ -375,4 +432,120 @@ mod tests {
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
     }
+
+    struct MockErrorToolExecutor {
+        error_type: String,
+        attempts: tokio::sync::Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for MockErrorToolExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            let mut attempts = self.attempts.lock().await;
+            *attempts += 1;
+            match self.error_type.as_str() {
+                "transient" => Err(Box::new(crate::types::ToolError::Transient("network timeout".to_string()))),
+                "llm_recoverable" => Err(Box::new(crate::types::ToolError::LlmRecoverable("missing required parameter 'xyz'".to_string()))),
+                "user_fixable" => Err(Box::new(crate::types::ToolError::UserFixable("please authenticate".to_string()))),
+                _ => Err(Box::new(crate::types::ToolError::Unexpected("boom".to_string()))),
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_langgraph_error_handling_transient() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool_transient".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tool_exec = Arc::new(MockErrorToolExecutor {
+            error_type: "transient".to_string(),
+            attempts: tokio::sync::Mutex::new(0),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool_transient".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: tool_exec.clone(),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Should have attempted 3 times
+        let final_attempts = *tool_exec.attempts.lock().await;
+        assert_eq!(final_attempts, 3);
+    }
+
+    #[tokio::test]
+    async fn test_langgraph_error_handling_llm_recoverable() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool_llm".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tool_exec = Arc::new(MockErrorToolExecutor {
+            error_type: "llm_recoverable".to_string(),
+            attempts: tokio::sync::Mutex::new(0),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool_llm".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: tool_exec.clone(),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        let final_attempts = *tool_exec.attempts.lock().await;
+        assert_eq!(final_attempts, 1);
+
+        // We can't directly check the internal messages array in this test structure,
+        // but we know it compiles and runs without panicking.
+    }
+
 }
