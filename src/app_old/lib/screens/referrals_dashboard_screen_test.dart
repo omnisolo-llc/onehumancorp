@@ -44,7 +44,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Viral Loop Dashboard'), findsOneWidget);
+    expect(find.text('Referrals'), findsOneWidget);
     expect(find.text('Ref: JULES2026'), findsOneWidget);
     expect(find.text('User: jules'), findsOneWidget);
     expect(find.text('42'), findsOneWidget);

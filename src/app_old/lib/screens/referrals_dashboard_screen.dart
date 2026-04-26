@@ -34,7 +34,7 @@ class _ReferralsDashboardScreenState extends ConsumerState<ReferralsDashboardScr
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Viral Loop Dashboard'),
+        title: const Text('Referrals'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

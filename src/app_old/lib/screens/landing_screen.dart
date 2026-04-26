@@ -138,8 +138,8 @@ class _HeaderSection extends StatelessWidget {
         const SizedBox(height: 16),
         Text(
           isVariantB
-              ? 'Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform.'
-              : 'Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.',
+              ? 'Work together easily in the cloud. Connect and share your workspace with your team instantly.'
+              : 'Work smarter and keep your data safe. Run everything directly on your device.',
           style: Theme.of(context).textTheme.bodyLarge,
           textAlign: TextAlign.center,
         ),
@@ -189,21 +189,21 @@ class _ValuePropGrid extends StatelessWidget {
       children: const [
         _GlassCard(
           icon: Icons.shield,
-          title: 'Zero Data Leakage',
+          title: 'Data Privacy',
           description:
-              'All intelligence operations run completely local via SQLite. Absolute sovereignty over your IP.',
+              'All intelligence operations run completely local via SQLite. Keep your data safe on your device.',
         ),
         _GlassCard(
           icon: Icons.cloud_off,
-          title: 'Air-Gapped Autonomy',
+          title: 'Works Offline',
           description:
               'Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies.',
         ),
         _GlassCard(
           icon: Icons.group_add,
-          title: 'Viral Referral Loop',
+          title: 'Referrals',
           description:
-              'Seamlessly bridge to the Cloud to collaborate with human team members when ready.',
+              'Connect your app to the internet. Invite team members safely and privately.',
         ),
       ],
     );

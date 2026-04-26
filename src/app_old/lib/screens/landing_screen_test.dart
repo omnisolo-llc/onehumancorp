@@ -14,9 +14,9 @@ void main() {
     );
 
     expect(find.text('The Hybrid Agentic OS'), findsOneWidget);
-    expect(find.text('Zero Data Leakage'), findsOneWidget);
-    expect(find.text('Air-Gapped Autonomy'), findsOneWidget);
-    expect(find.text('Viral Referral Loop'), findsOneWidget);
+    expect(find.text('Data Privacy'), findsOneWidget);
+    expect(find.text('Works Offline'), findsOneWidget);
+    expect(find.text('Referrals'), findsOneWidget);
     expect(find.text('Download for Mac'), findsOneWidget);
     expect(find.text('Download for Windows'), findsOneWidget);
     expect(find.text('Download for Linux'), findsOneWidget);

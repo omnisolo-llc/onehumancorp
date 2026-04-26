@@ -57,7 +57,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Grow Your Swarm. Maintain Sovereignty.',
+                          'Grow Your Team. Stay in Control.',
                           style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 20,
@@ -67,7 +67,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
+                          'Connect your app to the internet. Invite team members safely and privately.',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
@@ -82,7 +82,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text(
-                        'Free Tier Quota',
+                        'Free Plan Usage',
                         style: TextStyle(
                           fontFamily: 'Outfit',
                           color: Colors.white,
@@ -101,7 +101,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                           }
                           final data = snapshot.data!;
                           return Text(
-                            '${data['used']} / ${data['max']} missions used',
+                            '${data['used']} / ${data['max']} tasks used',
                             style: const TextStyle(
                               fontFamily: 'Inter',
                               color: Colors.white70,
@@ -116,12 +116,12 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                           try {
                             await ref.read(apiServiceProvider)?.createReferral(
                               "anonymous",
-                              "xYz8vQ_local_sovereign",
+                              "xYz8vQ_secure_invite",
                             );
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    'Secure invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_secure_invite',
                                     style: TextStyle(
                                       color: colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',
@@ -143,7 +143,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                             }
                           }
                         },
-                        child: const Text('Invite Team to Expand Quota', style: TextStyle(fontFamily: 'Outfit')),
+                        child: const Text('Invite Team for More Tasks', style: TextStyle(fontFamily: 'Outfit')),
                       ),
                     ],
                   ),

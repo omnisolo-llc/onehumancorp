@@ -33,15 +33,15 @@ void main() {
 
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Free Tier Quota'), findsOneWidget);
-    expect(find.text('10 / 100 missions used'), findsOneWidget);
-    expect(find.text('Invite Team to Expand Quota'), findsOneWidget);
+    expect(find.text('Free Plan Usage'), findsOneWidget);
+    expect(find.text('10 / 100 tasks used'), findsOneWidget);
+    expect(find.text('Invite Team for More Tasks'), findsOneWidget);
 
-    await tester.tap(find.text('Invite Team to Expand Quota'));
+    await tester.tap(find.text('Invite Team for More Tasks'));
     await tester.pumpAndSettle();
 
-    verify(() => mockApiService.createReferral("anonymous", "xYz8vQ_local_sovereign")).called(1);
+    verify(() => mockApiService.createReferral("anonymous", "xYz8vQ_secure_invite")).called(1);
     expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.textContaining('Cloud-Bridge invite link copied'), findsOneWidget);
+    expect(find.textContaining('Secure invite link copied'), findsOneWidget);
   });
 }

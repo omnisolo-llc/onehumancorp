@@ -3,7 +3,7 @@
 // Covers diagnostics and referrals critical user journeys:
 //   1. Diagnostics screen renders health check rows
 //   2. Run Diagnostics button is present and tappable
-//   3. Referrals dashboard renders "Viral Loop Dashboard" title
+//   3. Referrals dashboard renders "Referrals" title
 //   4. Referral list renders when data returned
 //   5. Referrals refresh button reloads data
 
@@ -77,7 +77,7 @@ void main() {
   });
 
   group('CUJ: Referrals Dashboard', () {
-    testWidgets('renders Viral Loop Dashboard title', (tester) async {
+    testWidgets('renders Referrals title', (tester) async {
       final mockClient = MockHttpClient();
       when(
         () => mockClient.get(any(), headers: any(named: 'headers')),
@@ -93,7 +93,7 @@ void main() {
       await tester.pumpWidget(_wrapScreen(const ReferralsDashboardScreen(), api: api));
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.textContaining('Viral Loop'), findsOneWidget);
+      expect(find.textContaining('Referrals'), findsOneWidget);
     });
 
     testWidgets('referral entries are rendered when API returns data', (tester) async {

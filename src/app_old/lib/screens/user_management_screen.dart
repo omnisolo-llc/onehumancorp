@@ -219,7 +219,7 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Expand your sovereign swarm. This will generate a Cloud-Bridge invite link.',
+                    'Add people to your team. This will create a secure invite link.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Inter',
@@ -256,12 +256,12 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
                           try {
                             await ref.read(apiServiceProvider)!.createReferral(
                               usernameController.text.isNotEmpty ? usernameController.text : "anonymous",
-                              "xYz8vQ_local_sovereign",
+                              "xYz8vQ_secure_invite",
                             );
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    'Secure invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_secure_invite',
                                     style: TextStyle(
                                       color: Theme.of(context).colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',
