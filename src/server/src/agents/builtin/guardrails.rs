@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct GuardrailConfig {
     pub blocked_keywords: Vec<&'static str>,
 }

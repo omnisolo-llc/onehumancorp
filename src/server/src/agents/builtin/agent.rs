@@ -4,6 +4,8 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
+use crate::guardrails::{check_input, check_output, GuardrailConfig};
+
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
 /// Events emitted by the agent run loop.
@@ -28,6 +30,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrail_config: Option<GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +44,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrail_config: None,
         }
     }
 }
@@ -98,6 +102,13 @@ impl Agent {
         F: FnMut(AgentEvent) + Send,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        if let Some(ref gc) = cfg.guardrail_config {
+            if let Err(e) = check_input(initial_message, gc) {
+                on_event(AgentEvent::TaskError { error: e.clone() });
+                return Err(e.into());
+            }
+        }
 
         let tool_defs: Vec<ToolDefinition> = self
             .tools
@@ -184,6 +195,13 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
+                if let Some(ref gc) = cfg.guardrail_config {
+                    if let Err(e) = check_output(&last_assistant_content, gc) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into());
+                    }
+                }
+
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
@@ -193,6 +211,17 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+                // OpenAI Mechanic: 3 distinct hooks: input guardrails, output guardrails, and tool guardrails.
+                // Run tool guardrail check before invoking the tool.
+                if let Some(ref gc) = cfg.guardrail_config {
+                    let tool_args_str = tc.arguments.to_string();
+                    if let Err(e) = check_input(&tool_args_str, gc) {
+                        let err = format!("Guardrail blocked tool call ({}): {}", tc.name, e);
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(err.into());
+                    }
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -253,6 +282,12 @@ impl Agent {
         }
 
         // Hit max iterations.
+        if let Some(ref gc) = cfg.guardrail_config {
+            if let Err(e) = check_output(&last_assistant_content, gc) {
+                on_event(AgentEvent::TaskError { error: e.clone() });
+                return Err(e.into());
+            }
+        }
         on_event(AgentEvent::TaskComplete {
             content: last_assistant_content.clone(),
         });
@@ -307,6 +342,99 @@ mod tests {
         async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
+    }
+
+    #[tokio::test]
+    async fn test_guardrails_input_blocked() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![]),
+        });
+
+        let tools = vec![];
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrail_config = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["bannedword"],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello bannedword there", &mut on_event).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Input contains blocked keyword: bannedword"));
+    }
+
+    #[tokio::test]
+    async fn test_guardrails_output_blocked() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Final answer with bannedword"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                }
+            ]),
+        });
+
+        let tools = vec![];
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrail_config = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["bannedword"],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Output contains blocked keyword: bannedword"));
+    }
+
+    #[tokio::test]
+    async fn test_guardrails_tool_blocked() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::String("bannedword".to_string()),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrail_config = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["bannedword"],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Input contains blocked keyword: bannedword"));
     }
 
     #[tokio::test]
