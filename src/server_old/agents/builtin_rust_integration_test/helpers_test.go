@@ -128,7 +128,7 @@ func startAgent(t *testing.T) (*grpc.ClientConn, func()) {
 			_, pingErr := client.Ping(ctx, &agentservicepb.PingRequest{})
 			cancel()
 			if pingErr == nil {
-				return conn, cleanup
+				return conn, func() { conn.Close(); cleanup() }
 			}
 			conn.Close()
 		}
