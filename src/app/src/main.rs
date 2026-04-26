@@ -9,7 +9,6 @@ pub mod ohc {
 }
 
 slint::include_modules!();
-use crate::BusinessSetup;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
