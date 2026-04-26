@@ -110,15 +110,6 @@ impl Agent {
             }
         }
 
-
-        if let Some(cfg_guard) = &cfg.guardrails {
-            if let Err(e) = crate::guardrails::check_input(initial_message, cfg_guard) {
-                let err_str = e.to_string();
-                on_event(AgentEvent::TaskError { error: err_str.clone() });
-                return Err(err_str.into());
-            }
-        }
-
         let tool_defs: Vec<ToolDefinition> = self
             .tools
             .iter()
@@ -445,9 +436,9 @@ mod tests {
     async fn test_guardrails_output_tripped() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
+                ohc_builtin_agent_core::types::ChatResponse {
                     message: Message::assistant("Here is the evil_word you asked for."),
-                    usage: Usage::default(),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "stop".to_string(),
                 }
             ]),
@@ -470,7 +461,7 @@ mod tests {
     async fn test_guardrails_tool_tripped() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
+                ohc_builtin_agent_core::types::ChatResponse {
                     message: Message {
                         role: Role::Assistant,
                         content: "".to_string(),
@@ -481,7 +472,7 @@ mod tests {
                         }],
                         tool_results: vec![],
                     },
-                    usage: Usage::default(),
+                    usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "tool_calls".to_string(),
                 }
             ]),
@@ -505,5 +496,4 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Tool call contains blocked keyword"));
     }
-
-    }
+}
