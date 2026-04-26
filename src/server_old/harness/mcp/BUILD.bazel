@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "mcp",
     srcs = ["client_manager.go"],
-    importpath = "github.com/onehumancorp/mono/src/server/harness/mcp",
+    importpath = "github.com/onehumancorp/mono/src/server_old/harness/mcp",
     visibility = ["//visibility:public"],
 )
 
