@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component SwarmMemory inherits Window {
     width: 900px;
     height: 600px;
-    title: "Swarm Memory Mesh";
+    title: "Team Memory";
 
     background: #f8fafc;
 
@@ -11,13 +11,13 @@ export component SwarmMemory inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        // Left Column: Live Mesh
+        // Left Column: Live Team
         VerticalBox {
             spacing: 10px;
             width: 270px;
             
-            Text { text: "Live Mesh Activity"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Text { text: "Real-time websocket feed"; color: #64748b; }
+            Text { text: "Live Activity"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Real-time updates"; color: #64748b; }
             
             Rectangle {
                 background: white;
@@ -49,8 +49,8 @@ export component SwarmMemory inherits Window {
             spacing: 10px;
             width: 270px;
             
-            Text { text: "Durable Swarm Memory"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Text { text: "Offline-to-Cloud State Sync"; color: #64748b; }
+            Text { text: "Saved Memories"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Cloud Backup"; color: #64748b; }
             
             Rectangle {
                 background: white;
@@ -82,8 +82,8 @@ export component SwarmMemory inherits Window {
             spacing: 10px;
             width: 270px;
             
-            Text { text: "AutoDream Pipelines"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Text { text: "Vector Memory Observability"; color: #64748b; }
+            Text { text: "Automated Goals"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Memory Overview"; color: #64748b; }
             
             Rectangle {
                 background: white;
@@ -94,8 +94,8 @@ export component SwarmMemory inherits Window {
                 VerticalBox {
                     padding: 16px;
                     spacing: 10px;
-                    Text { text: "[ Swarm Velocity Chart ]"; color: #64748b; horizontal-alignment: center; }
-                    Text { text: "[ Vector Memory Visualizer ]"; color: #64748b; horizontal-alignment: center; }
+                    Text { text: "[ Team Speed Chart ]"; color: #64748b; horizontal-alignment: center; }
+                    Text { text: "[ Memory Overview ]"; color: #64748b; horizontal-alignment: center; }
                     Button { text: "View Walkthrough"; }
                 }
             }

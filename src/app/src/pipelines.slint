@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component Pipelines inherits Window {
     width: 500px;
     height: 600px;
-    title: "SDLC Pipelines";
+    title: "Business Processes";
 
     background: #f8fafc;
 
@@ -12,7 +12,7 @@ export component Pipelines inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "SDLC Pipelines"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Business Processes"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             Button { text: "Refresh"; }
         }
@@ -32,14 +32,14 @@ export component Pipelines inherits Window {
                     
                     HorizontalBox {
                         VerticalBox {
-                            Text { text: "Main Pipeline"; font-weight: 700; color: #1e293b; }
-                            Text { text: "branch: main"; color: #64748b; }
+                            Text { text: "Main Process"; font-weight: 700; color: #1e293b; }
+                            Text { text: "Main Version"; color: #64748b; }
                         }
                         Rectangle {}
-                        Text { text: "STAGING"; color: #06b6d4; horizontal-alignment: center; }
+                        Text { text: "TESTING"; color: #06b6d4; horizontal-alignment: center; }
                     }
                     
-                    Text { text: "Initiated by: System"; color: #64748b; }
+                    Text { text: "Initiated by: Business"; color: #64748b; }
                     
                     Rectangle {
                         background: #e2e8f0;
