@@ -36,6 +36,7 @@ pub struct Hub {
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
+    pub(crate) wizard_state: RwLock<HashMap<String, serde_json::Value>>,
 }
 
 impl Hub {
@@ -60,6 +61,7 @@ impl Hub {
             get_token_usage: None,
             auto_cor_track: RwLock::new(std::collections::HashSet::new()),
             event_log_tx,
+            wizard_state: RwLock::new(HashMap::new()),
         }
     }
 
