@@ -211,3 +211,11 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 - **Format frontend:** `cd src/app && flutter format .`
 - **Analyze Flutter app:** `cd src/app && flutter analyze`
 - **Preview the docs site:** `bazelisk run //:docs_serve`
+
+## 💰 Bounty Contribution
+
+- **Task:** Research Report: Business Journey Architecture
+- **Reward:** $100
+- **Source:** GitHub-Paid
+- **Date:** 2026-04-27
+
