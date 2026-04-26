@@ -149,6 +149,104 @@ impl HubService for MyHubService {
         }
     }
 
+    async fn create_task(
+        &self,
+        request: Request<CreateTaskRequest>,
+    ) -> Result<Response<SharedTask>, Status> {
+        let req = request.into_inner();
+        let task = self.hub.task_manager().create_task(
+            "default_org".to_string(),
+            req.mission_id,
+            req.title,
+            req.description,
+            req.priority,
+        ).map_err(|e| Status::internal(e))?;
+        
+        Ok(Response::new(SharedTask {
+            id: task.id,
+            organization_id: task.organization_id,
+            parent_plan_id: task.parent_plan_id,
+            dependencies: task.dependencies,
+            title: task.title,
+            description: task.description.unwrap_or_default(),
+            status: task.status,
+            assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
+            priority: task.priority,
+            payload: task.payload,
+            locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
+            created_at_unix: task.created_at.timestamp(),
+            updated_at_unix: task.updated_at.timestamp(),
+            action_risk: task.action_risk.unwrap_or_default(),
+            approval_status: task.approval_status.unwrap_or_default(),
+            proposed_content: task.proposed_content.unwrap_or_default(),
+        }))
+    }
+
+    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<SharedTask, Status>> + Send>>;
+    
+    async fn poll_tasks(
+        &self,
+        request: Request<PollTasksRequest>,
+    ) -> Result<Response<Self::PollTasksStream>, Status> {
+        let req = request.into_inner();
+        let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
+        
+        let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
+            Ok(SharedTask {
+                id: task.id,
+                organization_id: task.organization_id,
+                parent_plan_id: task.parent_plan_id,
+                dependencies: task.dependencies,
+                title: task.title,
+                description: task.description.unwrap_or_default(),
+                status: task.status,
+                assigned_agent_id: task.assigned_agent_id.unwrap_or_default(),
+                priority: task.priority,
+                payload: task.payload,
+                locked_until_unix: task.locked_until.map(|t| t.timestamp()).unwrap_or(0),
+                created_at_unix: task.created_at.timestamp(),
+                updated_at_unix: task.updated_at.timestamp(),
+                action_risk: task.action_risk.unwrap_or_default(),
+                approval_status: task.approval_status.unwrap_or_default(),
+                proposed_content: task.proposed_content.unwrap_or_default(),
+            })
+        }).collect();
+        
+        let stream = tokio_stream::iter(mapped_tasks);
+        Ok(Response::new(Box::pin(stream) as Self::PollTasksStream))
+    }
+
+    async fn update_task_status(
+        &self,
+        request: Request<UpdateTaskStatusRequest>,
+    ) -> Result<Response<UpdateTaskStatusResponse>, Status> {
+        let req = request.into_inner();
+        
+        match req.status.as_str() {
+            "REVIEW" => {
+                self.hub.task_manager().review_task(&req.task_id, &req.agent_id)
+                    .map_err(|e| Status::internal(e))?;
+            }
+            "COMPLETED" => {
+                self.hub.task_manager().complete_task(&req.task_id, &req.agent_id, req.result)
+                    .map_err(|e| Status::internal(e))?;
+            }
+            _ => {
+                self.hub.task_manager().update_task_status(&req.task_id, req.status)
+                    .map_err(|e| Status::internal(e))?;
+            }
+        }
+        
+        Ok(Response::new(UpdateTaskStatusResponse { success: true }))
+    }
+
+    async fn decompose_task(
+        &self,
+        _request: Request<DecomposeTaskRequest>,
+    ) -> Result<Response<DecomposeTaskResponse>, Status> {
+         Err(Status::unimplemented("decompose_task not implemented yet"))
+    }
+
     type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
 
     async fn stream_messages(
@@ -264,7 +362,7 @@ impl HubService for MyHubService {
 
     async fn discover_agents(
         &self,
-        request: Request<Query>,
+        _request: Request<Query>,
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
         

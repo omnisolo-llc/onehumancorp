@@ -142,6 +142,26 @@ impl TaskManager {
         }
         Err("task not found".to_string())
     }
+
+    pub fn poll_tasks(&self, agent_id: &str, limit: usize) -> Vec<SharedTask> {
+        let mut tasks = self.tasks.write().unwrap();
+        let mut claimed_tasks = Vec::new();
+        
+        for task in tasks.values_mut() {
+            if task.status == "PENDING" {
+                task.status = "IN_PROGRESS".to_string();
+                task.assigned_agent_id = Some(agent_id.to_string());
+                task.updated_at = Utc::now();
+                claimed_tasks.push(task.clone());
+                
+                if claimed_tasks.len() >= limit {
+                    break;
+                }
+            }
+        }
+        
+        claimed_tasks
+    }
 }
 
 impl Default for TaskManager {
