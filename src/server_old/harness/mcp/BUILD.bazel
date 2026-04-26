@@ -5,12 +5,12 @@ go_library(
     srcs = ["client_manager.go"],
     importpath = "github.com/onehumancorp/mono/src/server/harness/mcp",
     visibility = ["//visibility:public"],
-    deps = ["//src/server_old/agents/local"],
+    deps = ["//src/server/agents/builtin"],
 )
 
 go_test(
     name = "mcp_test",
     srcs = ["client_manager_test.go"],
     embed = [":mcp"],
-    deps = ["//src/server_old/agents/local"],
+    deps = ["//src/server/agents/builtin"],
 )
