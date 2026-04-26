@@ -1,5 +1,8 @@
 use std::sync::Arc;
+
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
+use opentelemetry::{global, KeyValue};
+use opentelemetry::metrics::Counter;
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use ohc_builtin_agent_llm::LlmClient;
@@ -71,20 +74,34 @@ impl AgentProgress {
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
+
 pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
+
+    // Telemetry instruments
+    pub token_counter: Counter<u64>,
+    pub cost_estimator: Counter<f64>,
+    pub tool_execution_counter: Counter<u64>,
 }
 
+
 impl Agent {
+
     pub fn new(llm: Arc<dyn LlmClient>, tools: Vec<Tool>) -> Self {
+        let meter = global::meter("ohc_agent");
+
         Self {
             llm,
             tools,
             progress: Arc::new(AgentProgress::default()),
+            token_counter: meter.u64_counter("ohc_agent_token_usage_total").build(),
+            cost_estimator: meter.f64_counter("ohc_agent_cost_estimate_usd").build(),
+            tool_execution_counter: meter.u64_counter("ohc_agent_tool_execution_total").build(),
         }
     }
+
 
     /// Run the agent loop. Calls `on_event` for each event.
     #[tracing::instrument(skip(self, on_event, cfg), fields(model = %cfg.model))]
@@ -142,7 +159,28 @@ impl Agent {
 
             let input_tokens = resp.usage.input_tokens;
             let output_tokens = resp.usage.output_tokens;
+
             let total_tokens = (input_tokens + output_tokens) as i64;
+
+            // Simple cost estimation using a generic model pricing table
+            let (input_cost_per_1k, output_cost_per_1k) = match cfg.model.as_str() {
+                "gpt-4o" => (0.005, 0.015),
+                "gpt-4-turbo" => (0.01, 0.03),
+                "gemini-1.5-pro" => (0.0035, 0.0105),
+                _ => (0.005, 0.015), // fallback average
+            };
+
+            let estimated_cost = (input_tokens as f64 / 1000.0) * input_cost_per_1k
+                               + (output_tokens as f64 / 1000.0) * output_cost_per_1k;
+
+            let labels = [
+                KeyValue::new("model", cfg.model.clone()),
+                KeyValue::new("agent_type", "builtin"),
+            ];
+
+            self.token_counter.add(total_tokens as u64, &labels);
+            self.cost_estimator.add(estimated_cost, &labels);
+
             self.progress.add_tokens(total_tokens);
             global_turn_tokens += output_tokens;
 
@@ -195,9 +233,18 @@ impl Agent {
             for tc in &tool_calls {
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
+
                     Ok(r) => {
                         self.progress.record_tool_use();
+
+                        let tool_labels = [
+                            KeyValue::new("tool_name", tc.name.clone()),
+                            KeyValue::new("model", cfg.model.clone()),
+                        ];
+                        self.tool_execution_counter.add(1, &tool_labels);
+
                         on_event(AgentEvent::ToolCall {
+
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
                             result: r.clone(),
@@ -275,9 +322,102 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_telemetry_tracking() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "Final answer".to_string(),
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                    },
+                    usage: Usage {
+                        input_tokens: 100,
+                        output_tokens: 50,
+                    },
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![];
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig { model: "test-model".to_string(), ..Default::default() };
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Test verifies we didn't panic and the flow completes successfully with token recording
+        // In a real application we would use the opentelemetry test tools to verify the recorded metrics
+        assert_eq!(agent.progress.token_count(), 150);
+    }
+
+    #[tokio::test]
+    async fn test_telemetry_tracking_tool() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage {
+                        input_tokens: 10,
+                        output_tokens: 5,
+                    },
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "Final answer".to_string(),
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                    },
+                    usage: Usage {
+                        input_tokens: 20,
+                        output_tokens: 10,
+                    },
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig { model: "test-model".to_string(), ..Default::default() };
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+
+        assert_eq!(agent.progress.token_count(), 45); // (10+5) + (20+10)
+        assert_eq!(agent.progress.tool_use_count(), 1);
+    }
+
+
     use super::*;
     use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
+
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
 
