@@ -25,7 +25,6 @@ mod agents;
 mod domain;
 pub mod pricing;
 pub mod analytics;
-pub mod integrations;
 pub mod services {
     pub mod wizard;
     pub mod billing {
