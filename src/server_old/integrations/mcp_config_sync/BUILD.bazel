@@ -6,6 +6,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/integrations/mcp_config_sync",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server_old/agents:agents",
         "//src/server_old/auth",
         "//src/server_old/db",
 
