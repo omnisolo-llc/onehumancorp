@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server_old/agents/harness"
+	"github.com/onehumancorp/mono/src/server/agents/harness"
 )
 
 func TestExecutor_E2E_ShadowAccess(t *testing.T) {

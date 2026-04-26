@@ -584,7 +584,7 @@ func (p *MiniMaxiProvider) RunInIsolation(ctx context.Context, worktree string, 
 // ── Builtin ───────────────────────────────────────────────────────────────────
 // BuiltinProvider implements Provider for the platform's own builtin agent. It requires no
 // external credentials and is always considered authenticated.  When selected, the
-// platform runs the full builtin agent loop (src/server/src/agents/builtin) which supports
+// platform runs the full builtin agent loop (src/server/agents/builtin) which supports
 // LLM-driven tool execution with Bash, FileRead, FileWrite, FileEdit, Grep, Glob,
 // WebFetch, WebSearch, TodoWrite, TaskCreate/Get/List/Update, SendMessage, and
 // ToolSearch tools.  The LLM backend is auto-selected: Anthropic API
