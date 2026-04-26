@@ -84,6 +84,23 @@ impl Hub {
         inbox.remove(id);
     }
 
+    pub fn get_agents(&self) -> Vec<Agent> {
+        let agents = self.agents.read().unwrap();
+        let mut agents_vec: Vec<Agent> = agents.values().cloned().collect();
+        agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
+        agents_vec
+    }
+
+    pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
+        let agents = self.agents.read().unwrap();
+        let mut agents_vec: Vec<Agent> = agents.values()
+            .filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id)))
+            .cloned()
+            .collect();
+        agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
+        agents_vec
+    }
+
     pub fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
         let mut meetings = self.meetings.write().unwrap();
         let mut agents = self.agents.write().unwrap();
@@ -172,6 +189,11 @@ impl Hub {
         }
         
         Ok(())
+    }
+
+    pub fn get_meetings(&self) -> Vec<MeetingRoom> {
+        let meetings = self.meetings.read().unwrap();
+        meetings.values().cloned().collect()
     }
 
     pub fn get_inbox(&self, agent_id: &str) -> Vec<Message> {
