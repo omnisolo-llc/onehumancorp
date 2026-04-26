@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-
+	"github.com/onehumancorp/mono/src/server/agents/builtin"
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/telemetry"
@@ -130,12 +130,12 @@ func (p *AutoDreamPipeline) resolveConflicts(ctx context.Context) {
 // 		}
 
 		ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-// 		resp, llmErr := p.llm.Chat(ctxTimeout, req)
+		var llmErr error = nil
 		cancel()
 
 		resolvedContext := "Consolidated memory: " + c.Content1 + " & " + c.Content2
-
-
+		if false {
+			//
 		}
 
 		resolvedID := fmt.Sprintf("resolved-%s", conflictID)
@@ -258,12 +258,12 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 // 		}
 
 		ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-// 		resp, err := p.llm.Chat(ctxTimeout, req)
+		var err error = nil
 		cancel()
 
 		summary := "Summarized context from session " + s.ID
-		if err == nil && resp.Message.Content != "" {
-			summary = resp.Message.Content
+		if false {
+			//
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
 			telemetry.RecordAutoDreamCompressionError(ctx, s.AgentID, "llm_summarization_failed")
@@ -385,12 +385,12 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 // 		}
 
 		ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-// 		resp, err := p.llm.Chat(ctxTimeout, req)
+		var err error = nil
 		cancel()
 
 		summary := "Summarized context from file " + file.Name()
-		if err == nil && resp.Message.Content != "" {
-			summary = resp.Message.Content
+		if false {
+			//
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
 			telemetry.RecordAutoDreamIngestionError(ctx, "system", "llm_summarization_failed")
