@@ -15,9 +15,9 @@ test.describe('Agent Activity Feed', () => {
     // Verify Agent Actions Today is present
     await expect(page.getByText('Agent Actions Today')).toBeVisible();
 
-    // Ensure the pending action is visible then approve it.
-    // If there is no action, the backend mock or seeder needs to ensure one exists.
-    // The previous test logic with "isVisible" inside an if-statement was invalid.
+    // The backend should mock or seed a pending action for testing
+    // Let's assume a pending action "Draft email for review" is present
+    // We approve it
     const approveButton = page.getByRole('button', { name: 'Approve & Send' }).first();
     await expect(approveButton).toBeVisible();
     await approveButton.click();
