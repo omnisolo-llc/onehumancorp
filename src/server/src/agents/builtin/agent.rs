@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
+use crate::guardrails::{check_input, check_output, check_tool, GuardrailConfig};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
@@ -28,6 +29,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrails: Option<GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +43,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrails: None,
         }
     }
 }
@@ -98,6 +101,13 @@ impl Agent {
         F: FnMut(AgentEvent) + Send,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        if let Some(ref gc) = cfg.guardrails {
+            if let Err(e) = check_input(initial_message, gc) {
+                on_event(AgentEvent::TaskError { error: e.to_string() });
+                return Err(e);
+            }
+        }
 
         let tool_defs: Vec<ToolDefinition> = self
             .tools
@@ -184,6 +194,13 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
+                if let Some(ref gc) = cfg.guardrails {
+                    if let Err(e) = check_output(&last_assistant_content, gc) {
+                        on_event(AgentEvent::TaskError { error: e.to_string() });
+                        return Err(e);
+                    }
+                }
+
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
@@ -193,6 +210,13 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+                if let Some(ref gc) = cfg.guardrails {
+                    if let Err(e) = check_tool(&tc.name, &tc.arguments.to_string(), gc) {
+                        on_event(AgentEvent::TaskError { error: e.to_string() });
+                        return Err(e);
+                    }
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -253,6 +277,13 @@ impl Agent {
         }
 
         // Hit max iterations.
+        if let Some(ref gc) = cfg.guardrails {
+            if let Err(e) = check_output(&last_assistant_content, gc) {
+                on_event(AgentEvent::TaskError { error: e.to_string() });
+                return Err(e);
+            }
+        }
+
         on_event(AgentEvent::TaskComplete {
             content: last_assistant_content.clone(),
         });
@@ -276,7 +307,7 @@ impl Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;

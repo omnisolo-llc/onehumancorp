@@ -17,7 +17,6 @@ use ohc_builtin_agent_tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos,
 };
-use chrono::Utc;
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
@@ -215,6 +214,7 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            guardrails: None,
             model,
             system,
             max_tokens,
@@ -363,6 +363,7 @@ impl AgentService for AgentServiceImpl {
         if sub_req.sub_agent_address.is_empty() {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                guardrails: None,
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 system: self.cfg.system_prompt.clone(),
                 max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
