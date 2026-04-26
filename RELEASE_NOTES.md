@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Migrated legacy onboarding, team, growth, and hybrid discovery services to Rust. Migrated remaining onboarding legacy HTTP handlers to gRPC. Fixed cloud auto-detection bug in env_verifier.
+- Privacy/Offline (Standalone): Verified Hybrid Discovery service and legacy services with unit tests.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 - Scaling (Cloud): Implement Business Setup and Website Builder wizard UI scaffolding, onboarding cross-device state, and Business Share & Embed widget.
 - Privacy/Offline (Standalone): Conduct Hybrid Privacy Audit with PII guardrails, implement in-app mobile-first Help Center with tooltips, and add Dashboard Welcome Checklist.

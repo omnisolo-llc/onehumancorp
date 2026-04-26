@@ -1,5 +1,14 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Migrated legacy onboarding, team, growth, and hybrid discovery services to Rust.
+- Migrated remaining onboarding legacy HTTP handlers to gRPC.
+- Fixed cloud auto-detection bug in env_verifier.
+
+### Privacy/Offline Improvements
+- Verified Hybrid Discovery service and legacy services with unit tests.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
