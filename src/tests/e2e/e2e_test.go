@@ -21,7 +21,10 @@ func init() {
 		os.MkdirAll(home, 0755)
 		os.Setenv("HOME", home)
 		os.Setenv("XDG_CACHE_HOME", filepath.Join(tmp, "xdg-cache"))
-		os.Setenv("PLAYWRIGHT_BROWSERS_PATH", filepath.Join(tmp, "pw_browsers"))
+
+		pw_browsers := filepath.Join(tmp, "pw_browsers")
+		os.MkdirAll(pw_browsers, 0755)
+		os.Setenv("PLAYWRIGHT_BROWSERS_PATH", pw_browsers)
 	}
 }
 
@@ -36,10 +39,10 @@ var (
 func findOhcBinary() string {
 	if srcdir := os.Getenv("TEST_SRCDIR"); srcdir != "" {
 		candidates := []string{
-			filepath.Join(srcdir, "_main", "src", "server", "ohc_", "ohc"),
-			filepath.Join(srcdir, "_main", "src", "server", "ohc"),
-			filepath.Join(srcdir, "mono", "src", "server", "ohc_", "ohc"),
-			filepath.Join(srcdir, "mono", "src", "server", "ohc"),
+			filepath.Join(srcdir, "_main", "src", "server_old", "ohc_", "ohc"),
+			filepath.Join(srcdir, "_main", "src", "server_old", "ohc"),
+			filepath.Join(srcdir, "mono", "src", "server_old", "ohc_", "ohc"),
+			filepath.Join(srcdir, "mono", "src", "server_old", "ohc"),
 		}
 		for _, p := range candidates {
 			if _, err := os.Stat(p); err == nil {
@@ -179,7 +182,7 @@ func TestMain(m *testing.M) {
 	// Failure is non-fatal: browser-based tests will be skipped automatically
 	// via newPage() which calls t.Skip() when bCtx is nil.
 	os.Setenv("PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS", "1")
-	playwrightReady := true
+	playwrightReady := false
 	if os.Getenv("PLAYWRIGHT_SKIP_INSTALL") == "" {
 		if installErr := playwright.Install(); installErr != nil {
 			fmt.Fprintf(os.Stderr, "playwright install: %v (browser tests will be skipped)\n", installErr)

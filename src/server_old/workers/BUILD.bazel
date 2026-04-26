@@ -1,0 +1,35 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "workers",
+    srcs = [
+        "mission_ingestion.go",
+        "autodream.go",
+        "competitor_audit.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/workers",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server_old/db",
+        "//src/server_old/orchestration",
+        "@com_github_google_uuid//:uuid",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "workers_test",
+    srcs = [
+        "mission_ingestion_test.go",
+        "autodream_test.go",
+        "competitor_audit_test.go",
+    ],
+    embed = [":workers"],
+    deps = [
+        "//src/server_old/db",
+        "//src/server_old/orchestration",
+        "@com_github_stretchr_testify//assert",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)

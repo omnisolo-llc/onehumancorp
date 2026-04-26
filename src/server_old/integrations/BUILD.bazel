@@ -1,0 +1,29 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "integrations",
+    srcs = [
+        "catalog.go",
+        "providers.go",
+        "registry.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/integrations",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server_old/integrations/libsql",
+        "//src/server_old/integrations/litefs",
+        "//src/server_old/integrations/etcd",
+        "//src/server_old/integrations/obsidian",
+        "//src/server_old/integrations/ollama",
+        "//src/server_old/integrations/powersync",
+        "//src/server_old/integrations/restic",
+        "//src/proto:hub_go_proto",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "integrations_test",
+    srcs = ["registry_test.go"],
+    embed = [":integrations"],
+)

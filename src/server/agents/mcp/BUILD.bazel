@@ -31,7 +31,7 @@ go_library(
     ],
     importpath = "github.com/onehumancorp/mono/src/server/agents/mcp",
     visibility = ["//visibility:public"],
-    deps = ["//src/server/telemetry"],
+    deps = ["//src/server_old/telemetry"],
 )
 
 go_test(
@@ -45,5 +45,5 @@ go_test(
         "hybrid_sync_test.go",
     ],
     embed = [":mcp"],
-    deps = ["//src/server/telemetry"],
+    deps = ["//src/server_old/telemetry"],
 )

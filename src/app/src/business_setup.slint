@@ -1,0 +1,101 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+
+export component BusinessSetup inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "Business Setup";
+
+    property <int> step: 0;
+    property <string> business_type: "";
+    property <string> company_name: "";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        // Step 0: Welcome
+        if (step == 0) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
+        }
+
+        // Step 1: Type & Name
+        if (step == 1) : VerticalBox {
+            spacing: 10px;
+            LineEdit {
+                placeholder-text: "Business Type (e.g. Baker, Handyman)";
+                text: business_type;
+            }
+            LineEdit {
+                placeholder-text: "Company Name";
+                text: company_name;
+            }
+        }
+
+        // Step 2: Products & Payment
+        if (step == 2) : VerticalBox {
+            spacing: 10px;
+            LineEdit {
+                placeholder-text: "What do you sell?";
+            }
+            Text { text: "Payment Preference: Stripe"; color: #1e293b; }
+            HorizontalBox {
+                Button { text: "Stripe"; }
+                Button { text: "PayPal"; }
+            }
+        }
+
+        // Step 3: Template
+        if (step == 3) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Template Selection"; color: #1e293b; }
+            HorizontalBox {
+                Button { text: "Modern"; }
+                Button { text: "Classic"; }
+                Button { text: "Bold"; }
+            }
+        }
+
+        // Step 4: First Product
+        if (step == 4) : VerticalBox {
+            spacing: 10px;
+            LineEdit { placeholder-text: "First Product Name"; }
+            LineEdit { placeholder-text: "Product Description"; }
+            LineEdit { placeholder-text: "Price"; }
+        }
+
+        // Step 5: Domain
+        if (step == 5) : VerticalBox {
+            spacing: 10px;
+            HorizontalBox {
+                LineEdit { placeholder-text: "Domain Name"; }
+                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {} // Spacer
+            Button {
+                text: step == 5 ? "Launch My AI Team" : "Next";
+                clicked => {
+                    if (step < 5) {
+                        step = step + 1;
+                    } else {
+                        // Handle launch
+                    }
+                }
+            }
+        }
+    }
+}

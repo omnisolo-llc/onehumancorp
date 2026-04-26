@@ -1,0 +1,68 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Meetings inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Meeting Rooms";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Meeting Rooms"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "New Room"; }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "📹"; font-size: 32px; horizontal-alignment: center; } 
+                    VerticalBox {
+                        Text { text: "Stand-up"; font-weight: 700; color: #1e293b; }
+                        HorizontalBox {
+                            spacing: 5px;
+                            Rectangle { background: #10b981; border-radius: 4px; width: 8px; height: 8px; } 
+                            Text { text: "active"; color: #10b981; font-size: 12px; }
+                            Text { text: "👥 3"; color: #64748b; font-size: 12px; }
+                        }
+                    }
+                    Rectangle {} 
+                    Button { text: "Join"; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "📹"; font-size: 32px; horizontal-alignment: center; } 
+                    VerticalBox {
+                        Text { text: "Sprint Review"; font-weight: 700; color: #1e293b; }
+                        HorizontalBox {
+                            spacing: 5px;
+                            Rectangle { background: #a855f7; border-radius: 4px; width: 8px; height: 8px; } 
+                            Text { text: "scheduled"; color: #a855f7; font-size: 12px; }
+                        }
+                    }
+                    Rectangle {} 
+                    Button { text: "Join"; }
+                }
+            }
+        }
+    }
+}

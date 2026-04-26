@@ -1,0 +1,70 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Handoffs inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Handoffs & Escalations";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Handoffs & Escalations"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Refresh"; }
+        }
+
+        VerticalBox {
+            spacing: 16px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    
+                    HorizontalBox {
+                        Rectangle {
+                            background: #a855f7;
+                            border-radius: 4px;
+                            
+                            HorizontalBox {
+                                padding: 4px;
+                                Text { text: "Intent: REFUND"; color: white; font-size: 10px; font-weight: 700; }
+                            }
+                        }
+                        Rectangle {}
+                        Text { text: "Apr 25, 2026"; color: #64748b; font-size: 12px; horizontal-alignment: center; }
+                    }
+                    
+                    Text { text: "Escalated by Agent: support_agent"; color: #1e293b; font-weight: 700; }
+                    Text { text: "Customer is asking for a refund outside of policy."; color: #1e293b; wrap: word-wrap; }
+                    
+                    Rectangle {
+                        height: 100px;
+                        background: #f1f5f9;
+                        border-radius: 8px;
+                        
+                        HorizontalBox {
+                            padding: 16px;
+                            Text { text: "[ Image Placeholder ]"; color: #64748b; horizontal-alignment: center; }
+                        }
+                    }
+                    
+                    HorizontalBox {
+                        spacing: 10px;
+                        Button { text: "Reject"; }
+                        Button { text: "Approve"; }
+                    }
+                }
+            }
+        }
+    }
+}
