@@ -536,4 +536,21 @@ impl SipDB {
         
         Ok(())
     }
+
+    pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: Vec<f32>) -> Result<(), sqlx::Error> {
+        let mut bytes = Vec::with_capacity(embedding.len() * 4);
+        for f in embedding {
+            bytes.extend_from_slice(&f.to_le_bytes());
+        }
+        
+        sqlx::query("INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, created_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, vector_embedding=EXCLUDED.vector_embedding")
+            .bind(memory_id)
+            .bind(context)
+            .bind(bytes)
+            .bind(&self.org_id)
+            .execute(&self.pool)
+            .await?;
+            
+        Ok(())
+    }
 }
