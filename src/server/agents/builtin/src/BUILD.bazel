@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "src",
+    srcs = ["agent.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/agents/builtin/src",
+    visibility = ["//visibility:public"],
+)
+
+alias(
+    name = "ohc-builtin-agent",
+    actual = ":src",
+    visibility = ["//visibility:public"],
+)
