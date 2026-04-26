@@ -1,79 +1,110 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component BusinessSetup inherits Window {
-    width: 600px;
-    height: 500px;
+    width: 375px;
+    height: 700px;
     title: "Business Setup";
 
     property <int> step: 0;
     property <string> business_type: "";
     property <string> company_name: "";
+    property <string> admin_name: "";
+    property <string> admin_email: "";
+    property <string> admin_password: "";
+    property <bool> advanced_mode: false;
 
-    background: #f8fafc;
+    background: rgba(255, 255, 255, 0.03);
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        HorizontalBox {
+            Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Rectangle {}
+            CheckBox { text: "Advanced"; checked: advanced_mode; toggled => { advanced_mode = !advanced_mode; } }
+        }
 
         // Step 0: Welcome
         if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
+            spacing: 16px;
+            Text { text: "Your business, live in minutes."; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Text { text: "Let's get started. We'll set up your AI team behind the scenes."; font-family: "Inter"; color: #64748b; }
         }
 
-        // Step 1: Type & Name
+        // Step 1: Type
         if (step == 1) : VerticalBox {
-            spacing: 10px;
-            LineEdit {
-                placeholder-text: "Business Type (e.g. Baker, Handyman)";
-                text: business_type;
-            }
-            LineEdit {
-                placeholder-text: "Company Name";
-                text: company_name;
+            spacing: 16px;
+            Text { text: "What kind of business?"; font-size: 18px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: "Online Store"; clicked => { business_type = "Online Store"; } }
+            Button { text: "Service Business"; clicked => { business_type = "Service Business"; } }
+            Button { text: "Restaurant / Food"; clicked => { business_type = "Restaurant / Food"; } }
+            Button { text: "Creative / Portfolio"; clicked => { business_type = "Creative / Portfolio"; } }
+            Button { text: "Local Business"; clicked => { business_type = "Local Business"; } }
+            Button { text: "Other"; clicked => { business_type = "Other"; } }
+            Text { text: "Selected: " + business_type; color: #a855f7; font-family: "Inter"; }
+
+            if (advanced_mode) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Raw Backend Tenant config"; font-size: 12px; color: #94a3b8; font-family: "Inter"; }
+                LineEdit { placeholder-text: "Tenant ID (Auto-generated)"; }
             }
         }
 
-        // Step 2: Products & Payment
+        // Step 2: Name & Description
         if (step == 2) : VerticalBox {
-            spacing: 10px;
-            LineEdit {
-                placeholder-text: "What do you sell?";
-            }
-            Text { text: "Payment Preference: Stripe"; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Stripe"; }
-                Button { text: "PayPal"; }
-            }
+            spacing: 16px;
+            Text { text: "Name & Description"; font-size: 18px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            LineEdit { placeholder-text: "Company Name"; text: company_name; }
+            LineEdit { placeholder-text: "Short Description"; }
         }
 
-        // Step 3: Template
+        // Step 3: What do you sell?
         if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Template Selection"; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Modern"; }
-                Button { text: "Classic"; }
-                Button { text: "Bold"; }
-            }
+            spacing: 16px;
+            Text { text: "What do you sell?"; font-size: 18px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            CheckBox { text: "Physical products"; }
+            CheckBox { text: "Digital downloads"; }
+            CheckBox { text: "Services / appointments"; }
+            CheckBox { text: "Food & beverages"; }
+            CheckBox { text: "Subscriptions"; }
         }
 
-        // Step 4: First Product
+        // Step 4: Payments
         if (step == 4) : VerticalBox {
-            spacing: 10px;
-            LineEdit { placeholder-text: "First Product Name"; }
-            LineEdit { placeholder-text: "Product Description"; }
-            LineEdit { placeholder-text: "Price"; }
+            spacing: 16px;
+            Text { text: "How do you want to receive payments?"; font-size: 18px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: "Online only"; }
+            Button { text: "In-person (POS)"; }
+            Button { text: "Both"; }
+            Button { text: "Skip for now"; }
         }
 
-        // Step 5: Domain
+        // Step 5: Admin Account
         if (step == 5) : VerticalBox {
-            spacing: 10px;
-            HorizontalBox {
-                LineEdit { placeholder-text: "Domain Name"; }
-                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
+            spacing: 16px;
+            Text { text: "Administrator account"; font-size: 18px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            LineEdit { placeholder-text: "Full Name"; text: admin_name; }
+            LineEdit { placeholder-text: "Email Address"; text: admin_email; }
+            LineEdit { placeholder-text: "Password"; text: admin_password; }
+            Button { text: "Sign in with Google"; }
+            Button { text: "Sign in with Apple"; }
+        }
+
+        // Step 6: Review & Launch
+        if (step == 6) : VerticalBox {
+            spacing: 16px;
+            Text { text: "Review & Launch"; font-size: 18px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Rectangle {
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 12px;
+                border-width: 1px; border-color: #e2e8f0;
+                VerticalBox {
+                    padding: 16px; spacing: 8px;
+                    Text { text: "Business: " + company_name; font-family: "Inter"; color: #1e293b; }
+                    Text { text: "Type: " + business_type; font-family: "Inter"; color: #1e293b; }
+                    Text { text: "Admin: " + admin_email; font-family: "Inter"; color: #1e293b; }
+                }
             }
         }
 
@@ -87,9 +118,9 @@ export component BusinessSetup inherits Window {
             }
             Rectangle {} // Spacer
             Button {
-                text: step == 5 ? "Launch My AI Team" : "Next";
+                text: step == 6 ? "Launch My Business →" : "Next";
                 clicked => {
-                    if (step < 5) {
+                    if (step < 6) {
                         step = step + 1;
                     } else {
                         // Handle launch

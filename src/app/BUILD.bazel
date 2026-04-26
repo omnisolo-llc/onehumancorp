@@ -37,3 +37,12 @@ exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+rust_test(
+    name = "business_setup_test",
+    srcs = ["tests/business_setup_test.rs"],
+    edition = "2021",
+    deps = [
+    ],
+)
