@@ -106,7 +106,6 @@ func TestBufferMetricFuncRedactionLinter(t *testing.T) {
 					"RecordTaskEnqueued": true,
 					"RecordTaskFailed": true,
 					"RecordCacheMiss": true,
-					"RecordSubAgentQueueLength": true,
 					"RecordToolAutocorrection": true,
 					"RecordDeliberationPhaseDuration": true,
 					"RecordAgentExecutionTrace": true,
