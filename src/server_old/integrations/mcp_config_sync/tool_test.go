@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"encoding/json"
 	"testing"
 
 	"github.com/onehumancorp/mono/src/server/auth"
@@ -236,20 +237,20 @@ func TestConfigTool_GetConfigTool(t *testing.T) {
 	mcpTool := tool.GetConfigTool()
 
 	// test invalid JSON
-	_, err = mcpTool.Execute(context.Background(), []byte(`invalid`))
+	_, err = mcpTool.Execute(context.Background(), "", func() map[string]interface{} { var m map[string]interface{}; json.Unmarshal([]byte(`invalid`), &m); return m }())
 	require.Error(t, err)
 
 	// test missing key
-	_, err = mcpTool.Execute(context.Background(), []byte(`{}`))
+	_, err = mcpTool.Execute(context.Background(), "", func() map[string]interface{} { var m map[string]interface{}; json.Unmarshal([]byte(`{}`), &m); return m }())
 	require.Error(t, err)
 
 	// test success
-	res, err := mcpTool.Execute(context.Background(), []byte(`{"key":"my_key"}`))
+	res, err := mcpTool.Execute(context.Background(), "", func() map[string]interface{} { var m map[string]interface{}; json.Unmarshal([]byte(`{"key":"my_key"}`), &m); return m }())
 	require.NoError(t, err)
 	assert.Equal(t, "local_value", res)
 
     // test execution error (key not found)
-    _, err = mcpTool.Execute(context.Background(), []byte(`{"key":"other_key"}`))
+    _, err = mcpTool.Execute(context.Background(), "", func() map[string]interface{} { var m map[string]interface{}; json.Unmarshal([]byte(`{"key":"other_key"}`), &m); return m }())
 	require.Error(t, err)
 }
 
@@ -261,19 +262,19 @@ func TestConfigTool_SyncConfigToCloudTool(t *testing.T) {
 	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
 
 	// test invalid JSON
-	_, err := mcpTool.Execute(ctx, []byte(`invalid`))
+	_, err := mcpTool.Execute(ctx, "", func() map[string]interface{} { var m map[string]interface{}; json.Unmarshal([]byte(`invalid`), &m); return m }())
 	require.Error(t, err)
 
 	// test missing fields
-	_, err = mcpTool.Execute(ctx, []byte(`{"tenant_id":"org1"}`))
+	_, err = mcpTool.Execute(ctx, "", func() map[string]interface{} { var m map[string]interface{}; json.Unmarshal([]byte(`{"tenant_id":"org1"}`), &m); return m }())
 	require.Error(t, err)
 
 	// test success
-	res, err := mcpTool.Execute(ctx, []byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`))
+	res, err := mcpTool.Execute(ctx, "", func() map[string]interface{} { var m map[string]interface{}; json.Unmarshal([]byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`), &m); return m }())
 	require.NoError(t, err)
 	assert.Equal(t, "Successfully synced config to cloud", res)
 
     // test execution error (no auth)
-    _, err = mcpTool.Execute(context.Background(), []byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`))
+    _, err = mcpTool.Execute(context.Background(), "", func() map[string]interface{} { var m map[string]interface{}; json.Unmarshal([]byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`), &m); return m }())
 	require.Error(t, err)
 }
