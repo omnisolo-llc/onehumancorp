@@ -28,6 +28,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrail_config: Option<crate::guardrails::GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +42,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrail_config: None,
         }
     }
 }
@@ -108,6 +110,14 @@ impl Agent {
                 parameters: t.parameters.clone(),
             })
             .collect();
+
+
+        if let Some(cfg) = &cfg.guardrail_config {
+            if let Err(e) = crate::guardrails::check_input(initial_message, cfg) {
+                on_event(AgentEvent::TaskError { error: e.clone() });
+                return Err(e.into());
+            }
+        }
 
         let mut messages: Vec<Message> = vec![Message::user(initial_message)];
         let mut budget_tracker = BudgetTracker::default();
@@ -178,8 +188,16 @@ impl Agent {
             // Add assistant message to history (including tool calls).
             messages.push(resp.message.clone());
 
+
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
+                if let Some(cfg) = &cfg.guardrail_config {
+                    if let Err(e) = crate::guardrails::check_output(&last_assistant_content, cfg) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into());
+                    }
+                }
+
                 // In a production-grade agent, we might use a separate LLM pass
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
@@ -193,6 +211,13 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+                if let Some(cfg) = &cfg.guardrail_config {
+                    if let Err(e) = crate::guardrails::check_tool(&tc.arguments, cfg) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into());
+                    }
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -252,7 +277,14 @@ impl Agent {
             });
         }
 
+
         // Hit max iterations.
+        if let Some(cfg) = &cfg.guardrail_config {
+            if let Err(e) = crate::guardrails::check_output(&last_assistant_content, cfg) {
+                on_event(AgentEvent::TaskError { error: e.clone() });
+                return Err(e.into());
+            }
+        }
         on_event(AgentEvent::TaskComplete {
             content: last_assistant_content.clone(),
         });
@@ -374,5 +406,55 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    #[tokio::test]
+    async fn test_guardrails_tripwire() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({"query": "DANGEROUS_KEYWORD"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrail_config = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["DANGEROUS_KEYWORD".to_string()],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        // Ensure the run failed due to the keyword
+        assert!(result.is_err());
+        let err_msg = result.unwrap_err().to_string();
+        assert!(err_msg.contains("blocked keyword: DANGEROUS_KEYWORD"));
+
+        // Ensure a TaskError event was emitted
+        let has_task_error = events.iter().any(|e| matches!(e, AgentEvent::TaskError { .. }));
+        assert!(has_task_error);
     }
 }
