@@ -25,6 +25,8 @@ toc:
     path: /docs/research/[backend]_nats_hybrid_event_mesh.md
   - title: Proactive RAG MCP
     path: /docs/technical/research/[backend]_scribe_proactive_rag_mcp.md
+  - title: OHC Business Journey Architecture
+    path: /docs/research/[architecture]_business_journey.md
   - title: Reports
     path: /docs/technical/reports/index.md
   - title: Walkthroughs
