@@ -26,13 +26,13 @@ type ServerConfig struct {
 }
 
 // ConvertToMCPTool maps an internal tool to the MCP Tool specification.
-/* func ConvertToMCPTool(t builtin.Tool) Tool {
-	return Tool{
-		Name:        t.Name,
-		Description: t.Description,
-		InputSchema: t.Parameters,
-	}
-} */
+// func ConvertToMCPTool(t builtin.Tool) Tool {
+// 	return Tool{
+// 		Name:        t.Name,
+// 		Description: t.Description,
+// 		InputSchema: t.Parameters,
+// 	}
+// }
 
 // ClientManager manages connections to MCP servers.
 type ClientManager struct {
