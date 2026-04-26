@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_binary")
+load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_test")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 
 cargo_build_script(
@@ -7,6 +7,7 @@ cargo_build_script(
     edition = "2021",
     data = [
         "src/ongoing_management.slint",
+        "src/business_setup.slint",
         "//src/proto:hub.proto",
         "@protobuf//:protoc",
     ],
@@ -21,7 +22,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     edition = "2021",
     visibility = ["//visibility:public"],
-    data = ["src/ongoing_management.slint"],
+    data = ["src/ongoing_management.slint", "src/business_setup.slint"],
     deps = [
         ":build_script",
         "@crates//:slint",
@@ -37,3 +38,19 @@ exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
+
+rust_test(
+    name = "app-rust-test",
+    srcs = ["src/test.rs"],
+    edition = "2021",
+    data = ["src/ongoing_management.slint", "src/business_setup.slint"],
+    deps = [
+        ":build_script",
+        "@crates//:slint",
+        "@crates//:tokio",
+        "@crates//:tonic",
+        "@crates//:prost",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
+)

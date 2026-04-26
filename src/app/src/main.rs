@@ -8,6 +8,8 @@ pub mod ohc {
     }
 }
 
+use ohc::orchestration::SaveWizardStateRequest;
+use std::collections::HashMap;
 slint::include_modules!();
 
 #[tokio::main]
@@ -39,7 +41,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = FixAgent::new()?;
+    let ui = BusinessSetup::new()?;
+    let ui_handle = ui.as_weak();
+
+    ui.on_launch(move |name: slint::SharedString, btype: slint::SharedString, email: slint::SharedString| {
+        println!("Launch triggered: {} {} {}", name, btype, email);
+        tokio::spawn(async move {
+            if let Ok(mut client) = HubServiceClient::connect("http://127.0.0.1:18789").await {
+                let mut state = HashMap::new();
+                state.insert("company_name".to_string(), name.to_string());
+                state.insert("business_type".to_string(), btype.to_string());
+                state.insert("admin_email".to_string(), email.to_string());
+
+                let req = tonic::Request::new(SaveWizardStateRequest { state });
+                let _ = client.save_wizard_state(req).await;
+            }
+        });
+    });
+
     ui.run()?;
     
     Ok(())

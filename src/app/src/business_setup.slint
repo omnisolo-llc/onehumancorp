@@ -1,13 +1,30 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component BusinessSetup inherits Window {
     width: 600px;
-    height: 500px;
+    height: 700px;
     title: "Business Setup";
 
-    property <int> step: 0;
-    property <string> business_type: "";
-    property <string> company_name: "";
+    in-out property <int> step: 0;
+    in-out property <string> business_type: "";
+    in-out property <string> company_name: "";
+    property <string> company_desc: "";
+
+    property <bool> sell_physical: false;
+    property <bool> sell_digital: false;
+    property <bool> sell_services: false;
+    property <bool> sell_food: false;
+    property <bool> sell_subs: false;
+
+    property <string> payment_pref: "";
+
+    property <string> admin_name: "";
+    in-out property <string> admin_email: "";
+    property <string> admin_password: "";
+
+    in-out property <bool> is_launching: false;
+    callback launch(string, string, string);
+    callback save_state(int, string, string, string, string);
 
     background: #f8fafc;
 
@@ -20,79 +37,113 @@ export component BusinessSetup inherits Window {
         // Step 0: Welcome
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
+            alignment: center;
+            Text { text: "Your business, live in minutes."; font-size: 20px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
         }
 
-        // Step 1: Type & Name
+        // Step 1: Business Type
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            LineEdit {
-                placeholder-text: "Business Type (e.g. Baker, Handyman)";
-                text: business_type;
-            }
-            LineEdit {
-                placeholder-text: "Company Name";
-                text: company_name;
-            }
+            Text { text: "What kind of business are you building?"; color: #1e293b; font-size: 16px; }
+            Button { text: "Online Store"; clicked => { business_type = "Online Store"; } }
+            Button { text: "Service Business"; clicked => { business_type = "Service Business"; } }
+            Button { text: "Restaurant / Food"; clicked => { business_type = "Restaurant / Food"; } }
+            Button { text: "Creative / Portfolio"; clicked => { business_type = "Creative / Portfolio"; } }
+            Button { text: "Local Business"; clicked => { business_type = "Local Business"; } }
+            Button { text: "Other"; clicked => { business_type = "Other"; } }
+            Text { text: "Selected: " + business_type; color: #a855f7; }
         }
 
-        // Step 2: Products & Payment
+        // Step 2: Name & Description
         if (step == 2) : VerticalBox {
             spacing: 10px;
+            Text { text: "Tell us about your business"; color: #1e293b; font-size: 16px; }
             LineEdit {
-                placeholder-text: "What do you sell?";
+                placeholder-text: "Business Name";
+                text: company_name;
             }
-            Text { text: "Payment Preference: Stripe"; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Stripe"; }
-                Button { text: "PayPal"; }
+            LineEdit {
+                placeholder-text: "Short Description";
+                text: company_desc;
             }
         }
 
-        // Step 3: Template
+        // Step 3: What do you sell?
         if (step == 3) : VerticalBox {
             spacing: 10px;
-            Text { text: "Template Selection"; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Modern"; }
-                Button { text: "Classic"; }
-                Button { text: "Bold"; }
-            }
+            Text { text: "What do you sell?"; color: #1e293b; font-size: 16px; }
+            HorizontalBox { Text { text: "Physical products"; color: #1e293b; } CheckBox { checked: sell_physical; toggled => { sell_physical = !sell_physical; } } }
+            HorizontalBox { Text { text: "Digital downloads"; color: #1e293b; } CheckBox { checked: sell_digital; toggled => { sell_digital = !sell_digital; } } }
+            HorizontalBox { Text { text: "Services / appointments"; color: #1e293b; } CheckBox { checked: sell_services; toggled => { sell_services = !sell_services; } } }
+            HorizontalBox { Text { text: "Food & beverages"; color: #1e293b; } CheckBox { checked: sell_food; toggled => { sell_food = !sell_food; } } }
+            HorizontalBox { Text { text: "Subscriptions"; color: #1e293b; } CheckBox { checked: sell_subs; toggled => { sell_subs = !sell_subs; } } }
         }
 
-        // Step 4: First Product
+        // Step 4: Payments
         if (step == 4) : VerticalBox {
             spacing: 10px;
-            LineEdit { placeholder-text: "First Product Name"; }
-            LineEdit { placeholder-text: "Product Description"; }
-            LineEdit { placeholder-text: "Price"; }
+            Text { text: "How do you want to receive payments?"; color: #1e293b; font-size: 16px; }
+            Button { text: "Online only"; clicked => { payment_pref = "Online only"; } }
+            Button { text: "In-person (POS)"; clicked => { payment_pref = "In-person (POS)"; } }
+            Button { text: "Both"; clicked => { payment_pref = "Both"; } }
+            Button { text: "Skip for now"; clicked => { payment_pref = "Skip for now"; } }
+            Text { text: "Selected: " + payment_pref; color: #a855f7; }
         }
 
-        // Step 5: Domain
+        // Step 5: Administrator Account
         if (step == 5) : VerticalBox {
             spacing: 10px;
-            HorizontalBox {
-                LineEdit { placeholder-text: "Domain Name"; }
-                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
+            Text { text: "Administrator Account"; color: #1e293b; font-size: 16px; }
+            LineEdit { placeholder-text: "Full Name"; text: admin_name; }
+            LineEdit { placeholder-text: "Email Address"; text: admin_email; }
+            LineEdit { placeholder-text: "Password"; text: admin_password; }
+            Button { text: "Continue with Google"; }
+            Button { text: "Continue with Apple"; }
+        }
+
+        // Step 6: Review & Launch
+        if (step == 6) : VerticalBox {
+            spacing: 10px;
+            if (!is_launching) : VerticalBox {
+                Text { text: "Review & Launch"; color: #1e293b; font-size: 16px; font-weight: 700; }
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Business: " + company_name; color: #1e293b; }
+                        Text { text: "Type: " + business_type; color: #1e293b; }
+                        Text { text: "Admin: " + admin_name; color: #1e293b; }
+                    }
+                }
+            }
+            if (is_launching) : VerticalBox {
+                alignment: center;
+                Text { text: "Your business is setting up…"; font-size: 18px; color: #a855f7; horizontal-alignment: center; }
             }
         }
 
         Rectangle {} // Spacer
 
         // Navigation
-        HorizontalBox {
+        if (!is_launching) : HorizontalBox {
             if (step > 0) : Button {
                 text: "Back";
                 clicked => { step = step - 1; }
             }
             Rectangle {} // Spacer
             Button {
-                text: step == 5 ? "Launch My AI Team" : "Next";
+                text: step == 6 ? "Launch My Business →" : "Next";
                 clicked => {
-                    if (step < 5) {
+                    if (step < 6) {
                         step = step + 1;
+                        root.save_state(step, root.business_type, root.company_name, root.payment_pref, root.admin_email);
                     } else {
-                        // Handle launch
+                        is_launching = true;
+                        root.launch(root.company_name, root.business_type, root.admin_email);
                     }
                 }
             }
