@@ -1,3 +1,4 @@
+load("@rules_rust//rust:defs.bzl", "rust_test")
 load("@rules_rust//rust:defs.bzl", "rust_binary")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 
@@ -37,3 +38,9 @@ exports_files([
     "Cargo.toml",
     "Cargo.lock",
 ])
+
+rust_test(
+    name = "app-rust_test",
+    crate = ":app-rust",
+    data = ["src/ongoing_management.slint"],
+)
