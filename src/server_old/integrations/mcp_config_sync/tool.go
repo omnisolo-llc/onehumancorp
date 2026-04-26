@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	"github.com/onehumancorp/mono/src/server/agents/local"
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/db"
 	"go.opentelemetry.io/otel"
@@ -115,51 +115,68 @@ func (t *ConfigTool) SyncConfigToCloud(ctx context.Context, payload ConfigSyncPa
 	return nil
 }
 
-// GetConfigTool returns the MCP tool definition for getting a config value.
-func (t *ConfigTool) GetConfigTool() builtin.Tool {
-	return builtin.Tool{
+
+
+
+
+type getConfigTool struct {
+	tool *ConfigTool
+}
+
+func (t *getConfigTool) Definition() local.ToolDefinition {
+	var inputSchema map[string]interface{}
+	json.Unmarshal([]byte(`{"type":"object","properties":{"key":{"type":"string","description":"The configuration key to read"}},"required":["key"]}`), &inputSchema)
+	return local.ToolDefinition{
 		Name:        "get_config",
 		Description: "Reads a configuration value securely from either the local file system (Standalone mode) or the multi-tenant Enterprise Vault (Cloud mode).",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{"key":{"type":"string","description":"The configuration key to read"}},"required":["key"]}`),
-		Execute: func(ctx context.Context, args json.RawMessage) (string, error) {
-			var input struct {
-				Key string `json:"key"`
-			}
-			if err := json.Unmarshal(args, &input); err != nil {
-				return "", fmt.Errorf("invalid arguments: %w", err)
-			}
-			if input.Key == "" {
-				return "", errors.New("key is required")
-			}
-
-			val, err := t.GetConfig(ctx, input.Key)
-			if err != nil {
-				return "", err
-			}
-			return val, nil
-		},
+		InputSchema: inputSchema,
 	}
 }
 
-// SyncConfigToCloudTool returns the MCP tool definition for syncing a config value to the cloud.
-func (t *ConfigTool) SyncConfigToCloudTool() builtin.Tool {
-	return builtin.Tool{
+func (t *getConfigTool) Execute(ctx context.Context, workDir string, input map[string]interface{}) (string, error) {
+	key, ok := input["key"].(string)
+	if !ok || key == "" {
+		return "", errors.New("key is required")
+	}
+	return t.tool.GetConfig(ctx, key)
+}
+
+func (t *ConfigTool) GetConfigTool() local.Tool {
+	return &getConfigTool{tool: t}
+}
+
+type syncConfigToCloudTool struct {
+	tool *ConfigTool
+}
+
+func (t *syncConfigToCloudTool) Definition() local.ToolDefinition {
+	var inputSchema map[string]interface{}
+	json.Unmarshal([]byte(`{"type":"object","properties":{"tenant_id":{"type":"string"},"agent_id":{"type":"string"},"key":{"type":"string"},"value":{"type":"string"},"metadata":{"type":"object","additionalProperties":{"type":"string"}}},"required":["tenant_id","agent_id","key","value"]}`), &inputSchema)
+	return local.ToolDefinition{
 		Name:        "sync_config_to_cloud",
 		Description: "Syncs a local configuration value back to the multi-tenant Enterprise Vault in the Cloud via an MCP interface.",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{"tenant_id":{"type":"string"},"agent_id":{"type":"string"},"key":{"type":"string"},"value":{"type":"string"},"metadata":{"type":"object","additionalProperties":{"type":"string"}}},"required":["tenant_id","agent_id","key","value"]}`),
-		Execute: func(ctx context.Context, args json.RawMessage) (string, error) {
-			var input ConfigSyncPayload
-			if err := json.Unmarshal(args, &input); err != nil {
-				return "", fmt.Errorf("invalid arguments: %w", err)
-			}
-			if input.TenantID == "" || input.AgentID == "" || input.Key == "" || input.Value == "" {
-				return "", errors.New("tenant_id, agent_id, key, and value are required")
-			}
-
-			if err := t.SyncConfigToCloud(ctx, input); err != nil {
-				return "", err
-			}
-			return "Successfully synced config to cloud", nil
-		},
+		InputSchema: inputSchema,
 	}
+}
+
+func (t *syncConfigToCloudTool) Execute(ctx context.Context, workDir string, input map[string]interface{}) (string, error) {
+	b, err := json.Marshal(input)
+	if err != nil {
+		return "", err
+	}
+	var payload ConfigSyncPayload
+	if err := json.Unmarshal(b, &payload); err != nil {
+		return "", err
+	}
+	if payload.TenantID == "" || payload.AgentID == "" || payload.Key == "" || payload.Value == "" {
+		return "", errors.New("tenant_id, agent_id, key, and value are required")
+	}
+	if err := t.tool.SyncConfigToCloud(ctx, payload); err != nil {
+		return "", err
+	}
+	return "Successfully synced config to cloud", nil
+}
+
+func (t *ConfigTool) SyncConfigToCloudTool() local.Tool {
+	return &syncConfigToCloudTool{tool: t}
 }

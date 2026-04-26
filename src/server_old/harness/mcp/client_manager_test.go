@@ -6,14 +6,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onehumancorp/mono/src/server/agents/local"
 )
 
 func TestConvertToMCPTool(t *testing.T) {
-	internalTool := BuiltinTool{
-		Name:        "test_tool",
-		Description: "A test tool",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
-	}
+	internalTool := &mockLocalTool{}
 
 	mcpTool := ConvertToMCPTool(internalTool)
 
@@ -23,8 +20,8 @@ func TestConvertToMCPTool(t *testing.T) {
 	if mcpTool.Description != "A test tool" {
 		t.Errorf("Expected Description 'A test tool', got %s", mcpTool.Description)
 	}
-	if string(mcpTool.InputSchema) != `{"type":"object","properties":{}}` {
-		t.Errorf("Expected InputSchema `{\"type\":\"object\",\"properties\":{}}`, got %s", string(mcpTool.InputSchema))
+	if string(mcpTool.InputSchema) != `{"properties":{},"type":"object"}` {
+		t.Errorf("Expected InputSchema `{\"properties\":{},\"type\":\"object\"}`, got %s", string(mcpTool.InputSchema))
 	}
 }
 
@@ -47,4 +44,18 @@ func TestClientManagerConnectStdio(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to disconnect: %v", err)
 	}
+}
+
+type mockLocalTool struct{}
+func (m *mockLocalTool) Definition() local.ToolDefinition {
+	var s map[string]interface{}
+	json.Unmarshal([]byte(`{"type":"object","properties":{}}`), &s)
+	return local.ToolDefinition{
+		Name:        "test_tool",
+		Description: "A test tool",
+		InputSchema: s,
+	}
+}
+func (m *mockLocalTool) Execute(ctx context.Context, workDir string, input map[string]interface{}) (string, error) {
+	return "", nil
 }
