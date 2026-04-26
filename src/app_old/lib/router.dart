@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
 import 'package:ohc_app/screens/login_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
@@ -212,6 +213,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
           GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
@@ -233,6 +238,7 @@ class AppShell extends StatelessWidget {
         if (constraints.maxWidth <= 768) {
           return Scaffold(
             drawer: _Sidebar(),
+            floatingActionButton: _HelpChatFab(),
             body: Stack(
               children: [
                 child,
@@ -269,6 +275,7 @@ class AppShell extends StatelessWidget {
                 Expanded(child: child),
               ],
             ),
+            floatingActionButton: _HelpChatFab(),
           );
         }
       },
@@ -366,6 +373,12 @@ class _Sidebar extends StatelessWidget {
           path: '/diagnostics',
         ),
         const SizedBox(height: 16),
+        _NavItem(
+          icon: Icons.help_center,
+          label: 'Help Center',
+          path: '/help',
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -387,6 +400,118 @@ class _NavItem extends StatelessWidget {
       title: Text(label),
       selected: selected,
       onTap: () => context.go(path),
+    );
+  }
+}
+
+
+class _HelpChatFab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Colors.transparent,
+          isScrollControlled: true,
+          builder: (context) => const _HelpChatSheet(),
+        );
+      },
+      child: const Icon(Icons.help_outline),
+    );
+  }
+}
+
+class _HelpChatSheet extends StatelessWidget {
+  const _HelpChatSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 16),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[400],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Ask OHC Help Agent',
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const Divider(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Hi there! I am the OHC Help Agent. How can I help you manage your business today?',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Type your question...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: () {},
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
