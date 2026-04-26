@@ -1,3 +1,5 @@
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/changelog_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
@@ -212,6 +214,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const LandingPageExperimentsScreen(),
           ),
           GoRoute(
+            path: '/help',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/changelog',
+            builder: (context, state) => const ChangelogScreen(),
+          ),
+          GoRoute(
             path: '/referrals',
             builder: (context, state) => const ReferralsDashboardScreen(),
           ),
@@ -358,6 +368,16 @@ class _Sidebar extends StatelessWidget {
           icon: Icons.auto_fix_high,
           label: 'Setup Wizard',
           path: '/wizard',
+        ),
+        _NavItem(
+          icon: Icons.help,
+          label: 'Help Center',
+          path: '/help',
+        ),
+        _NavItem(
+          icon: Icons.new_releases,
+          label: "What's New",
+          path: '/changelog',
         ),
         const SizedBox(height: 16),
         _NavItem(

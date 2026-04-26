@@ -70,6 +70,8 @@ flutter_library(
 #   all others            — need screens + mocktail → use screens_for_tests
 _SCREEN_TEST_EMBEDS = {
     "advanced_widget_test.dart": ["//src/app_old:app_for_tests"],
+    "help_center_screen_test.dart": ["//src/app_old:app_for_tests"],
+    "changelog_screen_test.dart": ["//src/app_old:app_for_tests"],
 }
 
 _DEFAULT_SCREEN_TEST_EMBED = [":screens_for_tests"]
