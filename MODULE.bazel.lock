@@ -1519,7 +1519,7 @@
           "REPO_MAPPING:rules_rust+,rules_cc rules_cc+",
           "REPO_MAPPING:rules_rust+,rules_rust rules_rust+",
           "FILE:@@//src/server/src/agents/builtin/Cargo.lock cf94f0152b9ab97cc41b308748eb0672f737a43c80de5c1106850c9f6c52e380",
-          "FILE:@@//src/server/src/agents/builtin/Cargo.toml feeefe31c195858c347c1db59706f74af090bcf93735c637f8f1c8d311d4b753",
+          "FILE:@@//src/server/src/agents/builtin/Cargo.toml 7d3964535376043d2f1ee2eaff4bb5a6522fb52090574756dbc74f4803222c57",
           "FILE:@@//src/app/Cargo.toml 74c685b247661b4331efc0512a397476d9018e9399ad9b4370903512a4093263",
           "FILE:@@//src/server/Cargo.toml dbbf0a90d5809275f1c3e57e5fc17dbe1d0bcd87bca3dc767452f2f12ad8c40b"
         ],
