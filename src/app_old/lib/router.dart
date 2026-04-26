@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'screens/help_center_screen.dart';
+import 'screens/api_documentation_screen.dart';
+import 'screens/changelog_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
@@ -35,6 +38,7 @@ import 'package:ohc_app/screens/orchestration/task_list_screen.dart';
 
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'widgets/ai_help_chat_button.dart';
 
 /// A [ChangeNotifier] that bridges Riverpod [authStateProvider] changes to
 /// [GoRouter.refreshListenable], so the router re-evaluates its redirect
@@ -228,50 +232,57 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth <= 768) {
-          return Scaffold(
-            drawer: _Sidebar(),
-            body: Stack(
-              children: [
-                child,
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Builder(
-                    builder: (context) {
-                      return SafeArea(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: IconButton(
-                            icon: const Icon(Icons.menu),
-                            onPressed: () {
-                              Scaffold.of(context).openDrawer();
-                            },
-                          ),
+    return Scaffold(
+      body: Stack(
+        children: [
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth <= 768) {
+                return Scaffold(
+                  drawer: _Sidebar(),
+                  body: Stack(
+                    children: [
+                      child,
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        child: Builder(
+                          builder: (context) {
+                            return SafeArea(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.8),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.menu),
+                                  onPressed: () {
+                                    Scaffold.of(context).openDrawer();
+                                  },
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          );
-        } else {
-          return Scaffold(
-            body: Row(
-              children: [
-                _Sidebar(),
-                Expanded(child: child),
-              ],
-            ),
-          );
-        }
-      },
+                );
+              } else {
+                return Scaffold(
+                  body: Row(
+                    children: [
+                      _Sidebar(),
+                      Expanded(child: child),
+                    ],
+                  ),
+                );
+              }
+            },
+          ),
+          const AiHelpChatButton(),
+        ],
+      ),
     );
   }
 }
@@ -348,6 +359,11 @@ class _Sidebar extends StatelessWidget {
         _NavItem(icon: Icons.security, label: 'Security', path: '/security'),
         _NavItem(icon: Icons.terminal, label: 'Logs', path: '/logs'),
         const SizedBox(height: 8),
+        _NavItem(
+          icon: Icons.help_outline,
+          label: 'Help Center',
+          path: '/help',
+        ),
         _NavItem(icon: Icons.settings, label: 'Settings', path: '/settings'),
         _NavItem(
           icon: Icons.computer,
