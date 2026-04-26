@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/onehumancorp/mono/src/server/agents"
+	"github.com/onehumancorp/mono/src/server_old/agents"
 )
 
 func main() {

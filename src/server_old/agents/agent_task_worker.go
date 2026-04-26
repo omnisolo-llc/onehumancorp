@@ -11,7 +11,7 @@ import (
 	"time"
 
 	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
-	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
+	agentgrpc "github.com/onehumancorp/mono/src/server_old/agents/grpc"
 	"github.com/onehumancorp/mono/src/server/integrations/plane"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 )

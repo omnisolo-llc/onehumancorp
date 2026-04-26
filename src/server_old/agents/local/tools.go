@@ -16,6 +16,14 @@ import (
 )
 
 // Tool is a named callable that the agent can invoke.
+// ToolDefinition represents a legacy tool definition.
+type OldToolDefinition struct {
+	Name        string
+	Description string
+	Parameters  []byte
+}
+
+// Tool is a named callable that the agent can invoke.
 type Tool interface {
 	Definition() ToolDefinition
 	Execute(ctx context.Context, workDir string, input map[string]interface{}) (string, error)
