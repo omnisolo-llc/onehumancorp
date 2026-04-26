@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	binaryRunpath = "src/server/agents/builtin/src/ohc-builtin-agent"
+	binaryRunpath = "src/server/src/agents/builtin/ohc-builtin-agent"
 	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
@@ -42,7 +43,6 @@ func findFreePort(t *testing.T) string {
 func locateBinary(t *testing.T) string {
 	t.Helper()
 
-	// 1. Bazel runfiles mechanism.
 	if rf := os.Getenv("RUNFILES_DIR"); rf != "" {
 		p := filepath.Join(rf, binaryRunpath)
 		if _, err := os.Stat(p); err == nil {
@@ -50,11 +50,39 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 
-	// 2. TEST_SRCDIR (Bazel test sandbox).
 	if sd := os.Getenv("TEST_SRCDIR"); sd != "" {
 		p := filepath.Join(sd, os.Getenv("TEST_WORKSPACE"), binaryRunpath)
 		if _, err := os.Stat(p); err == nil {
 			return p
+		}
+		p = filepath.Join(sd, os.Getenv("TEST_WORKSPACE"), "src/server/src/agents/builtin/ohc-builtin-agent")
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+		p = filepath.Join(sd, "mono/src/server/src/agents/builtin/ohc-builtin-agent")
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+
+	cmd := exec.Command("find", "..", "-name", "ohc-builtin-agent", "-type", "f")
+	out, err := cmd.Output()
+	if err == nil && len(out) > 0 {
+		outStr := string(out)
+		lines := strings.Split(strings.TrimSpace(outStr), "\n")
+		if len(lines) > 0 {
+			return strings.TrimSpace(lines[0])
+		}
+	}
+
+	// Try finding it outside of test context
+	cmd = exec.Command("find", ".", "-name", "ohc-builtin-agent", "-type", "f")
+	out, err = cmd.Output()
+	if err == nil && len(out) > 0 {
+		outStr := string(out)
+		lines := strings.Split(strings.TrimSpace(outStr), "\n")
+		if len(lines) > 0 {
+			return strings.TrimSpace(lines[0])
 		}
 	}
 
@@ -71,9 +99,9 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 	candidates := []string{
-		filepath.Join(root, "src/server/agents/builtin/target/debug/ohc-builtin-agent"),
-		filepath.Join(root, "src/server/agents/builtin/target/release/ohc-builtin-agent"),
-		filepath.Join(root, "bazel-bin/src/server/agents/builtin/ohc-builtin-agent"),
+		filepath.Join(root, "src/server/src/agents/builtin/target/debug/ohc-builtin-agent"),
+		filepath.Join(root, "src/server/src/agents/builtin/target/release/ohc-builtin-agent"),
+		filepath.Join(root, "bazel-bin/src/server/src/agents/builtin/ohc-builtin-agent"),
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
@@ -81,7 +109,7 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 
-	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //src/server/agents/builtin:ohc-builtin-agent`")
+	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //src/server/src/agents/builtin:ohc-builtin-agent`")
 	return ""
 }
 
