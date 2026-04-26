@@ -50,21 +50,30 @@ impl AutoDreamWorker {
     async fn prune_stale_sessions(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::hours(24);
         
-        let stale_sessions = db.delete_stale_sessions(threshold).await?;
+        let mut tx = db.pool.begin().await?;
+        db.set_organization_context(&mut *tx, "system").await?;
+
+        let stale_sessions = db.delete_stale_sessions(&mut *tx, threshold).await?;
         
         for (id, data) in stale_sessions {
              println!("AutoDream: pruned session {}: {}", id, data);
              
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
-             db.inject_truth(&format!("session-summary-{}", id), &summary, "[0.0]").await?;
+             db.inject_truth(&mut *tx, &format!("session-summary-{}", id), &summary, "[0.0]").await?;
         }
         
+        db.delete_stale_sessions_cleanup(&mut *tx, threshold).await?;
+        tx.commit().await?;
+
         Ok(())
     }
 
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
-        let tasks = db.get_completed_tasks().await?;
+        let mut tx = db.pool.begin().await?;
+        db.set_organization_context(&mut *tx, "system").await?;
+
+        let tasks = db.get_completed_tasks(&mut *tx).await?;
         
         for (id, org_id, payload) in tasks {
             let summary = format!("Summary of task: {}", payload);
@@ -73,12 +82,14 @@ impl AutoDreamWorker {
             // Mock embedding
             let embedding = "[0.1]"; 
             
-            db.insert_agent_memory(&mem_id, &org_id, &id, &summary, embedding).await?;
-            db.mark_task_auto_dreamed(&id).await?;
+            db.insert_agent_memory(&mut *tx, &mem_id, &org_id, &id, &summary, embedding).await?;
+            db.mark_task_auto_dreamed(&mut *tx, &id).await?;
             
             println!("AutoDream: ingested completed task {}", id);
         }
         
+        tx.commit().await?;
+
         Ok(())
     }
 }

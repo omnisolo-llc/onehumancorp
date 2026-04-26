@@ -1,0 +1,2 @@
+load("@rules_go//go:def.bzl", "go_library")
+go_library(name = "telemetry", srcs = ["telemetry.go"], importpath = "github.com/onehumancorp/mono/src/server/telemetry", visibility = ["//visibility:public"])

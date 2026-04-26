@@ -1,0 +1,2 @@
+load("@rules_go//go:def.bzl", "go_library")
+go_library(name = "proxy", srcs = ["agent.go"], importpath = "github.com/onehumancorp/mono/src/server/agents/mcp/proxy", visibility = ["//visibility:public"])

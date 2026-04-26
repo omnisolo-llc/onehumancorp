@@ -136,10 +136,12 @@ impl DB {
         Ok(())
     }
 
-    pub async fn delete_stale_sessions(&self, threshold: DateTime<Utc>) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
+    pub async fn delete_stale_sessions<'a, E>(&self, executor: E, threshold: DateTime<Utc>) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>>
+    where E: sqlx::Executor<'a, Database = sqlx::Postgres>
+    {
         let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1")
             .bind(threshold)
-            .fetch_all(&self.pool)
+            .fetch_all(executor)
             .await?;
             
         let mut result = Vec::new();
@@ -149,28 +151,40 @@ impl DB {
             result.push((id, data));
         }
         
-        sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1")
-            .bind(threshold)
-            .execute(&self.pool)
-            .await?;
-            
+        // Re-fetching pool because we can't easily reuse the same executor if it's not a transaction
+        // But in our case we usually pass a transaction.
+
         Ok(result)
     }
 
-    pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete_stale_sessions_cleanup<'a, E>(&self, executor: E, threshold: DateTime<Utc>) -> Result<(), Box<dyn std::error::Error>>
+    where E: sqlx::Executor<'a, Database = sqlx::Postgres>
+    {
+        sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1")
+            .bind(threshold)
+            .execute(executor)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn inject_truth<'a, E>(&self, executor: E, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>>
+    where E: sqlx::Executor<'a, Database = sqlx::Postgres>
+    {
         sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
             .bind(memory_id)
             .bind(context)
             .bind(embedding)
-            .execute(&self.pool)
+            .execute(executor)
             .await?;
             
         Ok(())
     }
 
-    pub async fn get_completed_tasks(&self) -> Result<Vec<(String, String, String)>, Box<dyn std::error::Error>> {
+    pub async fn get_completed_tasks<'a, E>(&self, executor: E) -> Result<Vec<(String, String, String)>, Box<dyn std::error::Error>>
+    where E: sqlx::Executor<'a, Database = sqlx::Postgres>
+    {
         let rows = sqlx::query("SELECT id, organization_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 50")
-            .fetch_all(&self.pool)
+            .fetch_all(executor)
             .await?;
             
         let mut result = Vec::new();
@@ -184,7 +198,9 @@ impl DB {
         Ok(result)
     }
 
-    pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn insert_agent_memory<'a, E>(&self, executor: E, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>>
+    where E: sqlx::Executor<'a, Database = sqlx::Postgres>
+    {
         // Apply deterministic encryption to content for standalone mode if required
         let final_content = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
             crate::crypto::encrypt_deterministic(content)
@@ -198,16 +214,18 @@ impl DB {
             .bind(task_id)
             .bind(final_content)
             .bind(embedding)
-            .execute(&self.pool)
+            .execute(executor)
             .await?;
             
         Ok(())
     }
 
-    pub async fn mark_task_auto_dreamed(&self, task_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn mark_task_auto_dreamed<'a, E>(&self, executor: E, task_id: &str) -> Result<(), Box<dyn std::error::Error>>
+    where E: sqlx::Executor<'a, Database = sqlx::Postgres>
+    {
         sqlx::query("UPDATE tasks SET auto_dreamed = TRUE WHERE id = $1")
             .bind(task_id)
-            .execute(&self.pool)
+            .execute(executor)
             .await?;
             
         Ok(())
