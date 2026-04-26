@@ -6,7 +6,7 @@ go_library(
         "sandbox.go",
         "session.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server_old/agents/sandbox",
+    importpath = "github.com/onehumancorp/mono/src/server/agents/sandbox",
     visibility = ["//visibility:public"],
 )
 

@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server_old/agents/local"
+	"github.com/onehumancorp/mono/src/server/agents/local"
 	"github.com/onehumancorp/mono/src/server/db"
 )
 

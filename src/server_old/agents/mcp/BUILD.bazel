@@ -29,7 +29,7 @@ go_library(
         "client.go",
         "hybrid_sync.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server_old/agents/mcp",
+    importpath = "github.com/onehumancorp/mono/src/server/agents/mcp",
     visibility = ["//visibility:public"],
     deps = ["//src/server_old/telemetry"],
 )
