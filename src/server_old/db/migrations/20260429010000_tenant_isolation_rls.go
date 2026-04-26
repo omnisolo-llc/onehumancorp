@@ -113,6 +113,11 @@ func upTenantIsolationRLS(ctx context.Context, tx *sql.Tx) error {
 			return fmt.Errorf("failed to enable RLS on %s: %w", table, err)
 		}
 
+		_, err = tx.ExecContext(ctx, fmt.Sprintf(`ALTER TABLE %s FORCE ROW LEVEL SECURITY;`, table))
+		if err != nil {
+			return fmt.Errorf("failed to enable RLS on %s: %w", table, err)
+		}
+
 		// 3. Recreate Policy
 		_, err = tx.ExecContext(ctx, fmt.Sprintf(`DROP POLICY IF EXISTS tenant_isolation_policy ON %s;`, table))
 		if err != nil {

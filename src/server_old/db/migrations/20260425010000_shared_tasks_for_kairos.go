@@ -3,7 +3,6 @@ package migrations
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
 	"github.com/pressly/goose/v3"
 )
@@ -14,7 +13,17 @@ func init() {
 
 func upSharedTasksForKairos20260425010000(ctx context.Context, tx *sql.Tx) error {
 	var sqliteVersion string
-	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	_, err := tx.ExecContext(ctx, "SAVEPOINT dialect_check")
+	if err == nil {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+		if err != nil {
+			_, _ = tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT dialect_check")
+		} else {
+			_, _ = tx.ExecContext(ctx, "RELEASE SAVEPOINT dialect_check")
+		}
+	} else {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	}
 	isSQLite := err == nil
 
 	if !isSQLite {

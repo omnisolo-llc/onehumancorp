@@ -14,7 +14,17 @@ func init() {
 
 func upAutodreamSyncDaemon20260430000000(ctx context.Context, tx *sql.Tx) error {
 	var sqliteVersion string
-	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	_, err := tx.ExecContext(ctx, "SAVEPOINT dialect_check")
+	if err == nil {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+		if err != nil {
+			_, _ = tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT dialect_check")
+		} else {
+			_, _ = tx.ExecContext(ctx, "RELEASE SAVEPOINT dialect_check")
+		}
+	} else {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	}
 	isSQLite := err == nil
 
 	if !isSQLite {
@@ -33,7 +43,7 @@ func upAutodreamSyncDaemon20260430000000(ctx context.Context, tx *sql.Tx) error 
 			created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE INDEX IF NOT EXISTS idx_autodream_memories_embedding ON autodream_memories USING hnsw (embedding vector_cosine_ops);
-		ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY;
+		ALTER TABLE autodream_memories ENABLE ROW LEVEL SECURITY; ALTER TABLE autodream_memories FORCE ROW LEVEL SECURITY;
 		CREATE POLICY tenant_isolation_policy ON autodream_memories
 			USING (tenant_id = current_setting('app.current_tenant', true))
 			WITH CHECK (tenant_id = current_setting('app.current_tenant', true));

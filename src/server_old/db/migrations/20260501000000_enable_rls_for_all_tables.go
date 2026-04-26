@@ -13,12 +13,21 @@ func init() {
 	goose.AddMigrationContext(upEnableRLS, downEnableRLS)
 }
 
-func isSQLiteDialect() bool {
-	return goose.GetDialect() == "sqlite3" || goose.GetDialect() == "sqlite"
-}
-
 func upEnableRLS(ctx context.Context, tx *sql.Tx) error {
-	if isSQLiteDialect() {
+	var sqliteVersion string
+	_, err := tx.ExecContext(ctx, "SAVEPOINT dialect_check")
+	if err == nil {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+		if err != nil {
+			_, _ = tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT dialect_check")
+		} else {
+			_, _ = tx.ExecContext(ctx, "RELEASE SAVEPOINT dialect_check")
+		}
+	} else {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	}
+	isSQLite := err == nil
+	if isSQLite {
 		return nil
 	}
 
@@ -101,6 +110,11 @@ func upEnableRLS(ctx context.Context, tx *sql.Tx) error {
 			return fmt.Errorf("failed to enable rls on %s: %w", table, err)
 		}
 
+		_, err = tx.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s FORCE ROW LEVEL SECURITY", table))
+		if err != nil {
+			return fmt.Errorf("failed to enable rls on %s: %w", table, err)
+		}
+
 		_, err = tx.ExecContext(ctx, fmt.Sprintf("DROP POLICY IF EXISTS tenant_isolation_policy ON %s", table))
 		if err != nil {
 			return fmt.Errorf("failed to drop old policy on %s: %w", table, err)
@@ -116,7 +130,20 @@ func upEnableRLS(ctx context.Context, tx *sql.Tx) error {
 }
 
 func downEnableRLS(ctx context.Context, tx *sql.Tx) error {
-	if isSQLiteDialect() {
+	var sqliteVersion string
+	_, err := tx.ExecContext(ctx, "SAVEPOINT dialect_check")
+	if err == nil {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+		if err != nil {
+			_, _ = tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT dialect_check")
+		} else {
+			_, _ = tx.ExecContext(ctx, "RELEASE SAVEPOINT dialect_check")
+		}
+	} else {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	}
+	isSQLite := err == nil
+	if isSQLite {
 		return nil
 	}
 

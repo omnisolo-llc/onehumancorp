@@ -14,7 +14,17 @@ func init() {
 
 func upAutodreamMemoriesDecomposition20260427000000(ctx context.Context, tx *sql.Tx) error {
 	var sqliteVersion string
-	err := tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	_, err := tx.ExecContext(ctx, "SAVEPOINT dialect_check")
+	if err == nil {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+		if err != nil {
+			_, _ = tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT dialect_check")
+		} else {
+			_, _ = tx.ExecContext(ctx, "RELEASE SAVEPOINT dialect_check")
+		}
+	} else {
+		err = tx.QueryRowContext(ctx, "SELECT sqlite_version()").Scan(&sqliteVersion)
+	}
 	isSQLite := err == nil
 
 	// Add auto_dreamed column to shared_tasks_decomposition
