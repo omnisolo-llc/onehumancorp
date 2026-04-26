@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	binaryRunpath = "_main/src/server/src/agents/builtin/ohc-builtin-agent"
+	binaryRunpath = "mono/src/server/src/agents/builtin/ohc-builtin-agent"
 	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
