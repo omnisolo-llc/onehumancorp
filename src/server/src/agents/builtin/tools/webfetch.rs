@@ -105,5 +105,6 @@ pub fn webfetch_tool() -> Tool {
                 .build()
                 .unwrap(),
         }),
+        is_mutating: false,
     }
 }

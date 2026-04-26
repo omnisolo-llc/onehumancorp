@@ -115,5 +115,6 @@ pub fn websearch_tool() -> Tool {
                 .build()
                 .unwrap(),
         }),
+        is_mutating: false,
     }
 }

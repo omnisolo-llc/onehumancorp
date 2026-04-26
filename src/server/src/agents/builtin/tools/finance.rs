@@ -59,6 +59,7 @@ pub fn finance_report_tool() -> Tool {
             }
         }),
         execute: Arc::new(FinanceReportExecutor),
+        is_mutating: false,
     }
 }
 
