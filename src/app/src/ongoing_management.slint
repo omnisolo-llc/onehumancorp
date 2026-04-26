@@ -66,7 +66,7 @@ export component Upgrade inherits Window {
 
         if (!is_upgrading && !done) : VerticalBox {
             spacing: 10px;
-            Text { text: "What's new:\n• Improved agent reasoning\n• 2x faster Task handling\n• New Overview metrics"; color: #1e293b; }
+            Text { text: "What's new:\n• Improved agent reasoning\n• 2x faster orchestration\n• New observability metrics"; color: #1e293b; }
             Button { text: "Upgrade in 1 click"; clicked => { is_upgrading = true; /* simulate */ done = true; is_upgrading = false; } }
         }
 
