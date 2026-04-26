@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/pipeline",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server_old/agents",
+        "//src/server_old/agents/local",
         "//src/server_old/db",
         "//src/server_old/orchestration",
         "//src/server_old/telemetry",
@@ -25,7 +25,7 @@ go_test(
     ],
     embed = [":pipeline"],
     deps = [
-        "//src/server_old/agents",
+        "//src/server_old/agents/local",
         "//src/server_old/db",
         "//src/server_old/orchestration",
     ],
