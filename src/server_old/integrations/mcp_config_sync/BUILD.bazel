@@ -8,7 +8,8 @@ go_library(
     deps = [
         "//src/server_old/auth",
         "//src/server_old/db",
-        "//src/server/src/agents/builtin",
+        "//src/server_old/agents",
+        "//src/server_old/agents/local",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
         "@in_gopkg_yaml_v3//:yaml_v3",
@@ -22,7 +23,8 @@ go_test(
     deps = [
         "//src/server_old/auth",
         "//src/server_old/db",
-        "//src/server/src/agents/builtin",
+        "//src/server_old/agents",
+        "//src/server_old/agents/local",
         "@com_github_stretchr_testify//assert",
         "@com_github_stretchr_testify//require",
     ],
