@@ -1518,7 +1518,7 @@
           "REPO_MAPPING:rules_rust+,bazel_tools bazel_tools",
           "REPO_MAPPING:rules_rust+,rules_cc rules_cc+",
           "REPO_MAPPING:rules_rust+,rules_rust rules_rust+",
-          "FILE:@@//src/server/src/agents/builtin/Cargo.lock ce80dff963bde3e73bf888e8edbc63464eab8edd51e6a38e85b10ede184f88ab",
+          "FILE:@@//src/server/src/agents/builtin/Cargo.lock 59f34b15330efa5e6d8bb3b5918bc15dea0123c8f421341d14ced19645bccf56",
           "FILE:@@//src/server/src/agents/builtin/Cargo.toml 7d3964535376043d2f1ee2eaff4bb5a6522fb52090574756dbc74f4803222c57",
           "FILE:@@//src/app/Cargo.toml 74c685b247661b4331efc0512a397476d9018e9399ad9b4370903512a4093263",
           "FILE:@@//src/server/Cargo.toml dbbf0a90d5809275f1c3e57e5fc17dbe1d0bcd87bca3dc767452f2f12ad8c40b"
