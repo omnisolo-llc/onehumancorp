@@ -155,7 +155,7 @@ exports_files(
 # Android – APK (side-loadable)
 alias(
     name = "flutter-build-android-apk",
-    actual = "//src/app:app.apk",
+    actual = "//src/app_old:app.apk",
     visibility = ["//visibility:public"],
 )
 
@@ -164,42 +164,42 @@ alias(
 # alias to APK for now or wait for rules_flutter update.
 alias(
     name = "flutter-build-android-aab",
-    actual = "//src/app:app.apk",
+    actual = "//src/app_old:app.apk",
     visibility = ["//visibility:public"],
 )
 
 # iOS (requires macOS + Xcode)
 alias(
     name = "flutter-build-ios",
-    actual = "//src/app:app.ios",
+    actual = "//src/app_old:app.ios",
     visibility = ["//visibility:public"],
 )
 
 # macOS desktop (requires macOS + Xcode)
 alias(
     name = "flutter-build-macos",
-    actual = "//src/app:app.macos",
+    actual = "//src/app_old:app.macos",
     visibility = ["//visibility:public"],
 )
 
 # Windows desktop (requires Windows + MSVC)
 alias(
     name = "flutter-build-windows",
-    actual = "//src/app:app.windows",
+    actual = "//src/app_old:app.windows",
     visibility = ["//visibility:public"],
 )
 
 # Linux desktop
 alias(
     name = "flutter-build-linux",
-    actual = "//src/app:app.linux",
+    actual = "//src/app_old:app.linux",
     visibility = ["//visibility:public"],
 )
 
 # Web
 alias(
     name = "flutter-build-web",
-    actual = "//src/app:app.web",
+    actual = "//src/app_old:app.web",
     visibility = ["//visibility:public"],
 )
 
