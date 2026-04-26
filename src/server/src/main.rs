@@ -22,6 +22,7 @@ mod orchestrator;
 mod spawner;
 mod queue;
 mod agents;
+mod domain;
 
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
@@ -86,6 +87,12 @@ pub mod ohc {
         pub mod service {
             tonic::include_proto!("ohc.agent.service");
         }
+    }
+    pub mod organization {
+        tonic::include_proto!("ohc.organization");
+    }
+    pub mod common {
+        tonic::include_proto!("ohc.common");
     }
 }
 
