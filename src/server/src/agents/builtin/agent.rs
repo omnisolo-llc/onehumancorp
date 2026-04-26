@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
+use crate::guardrails::{check_input, check_output, check_tool, GuardrailConfig};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
@@ -28,6 +29,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrails: Option<GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +43,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrails: None,
         }
     }
 }
@@ -97,6 +100,13 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send,
     {
+        // 1. Input Guardrail
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = check_input(initial_message, guardrails) {
+                on_event(AgentEvent::TaskError { error: format!("Input guardrail tripped: {}", e) });
+                return Err(e.into());
+            }
+        }
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         let tool_defs: Vec<ToolDefinition> = self
@@ -184,6 +194,14 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
+                // 3. Output Guardrail
+                if let Some(guardrails) = &cfg.guardrails {
+                    if let Err(e) = check_output(&last_assistant_content, guardrails) {
+                        on_event(AgentEvent::TaskError { error: format!("Output guardrail tripped: {}", e) });
+                        return Err(e.into());
+                    }
+                }
+
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
@@ -193,6 +211,14 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+                // 2. Tool Guardrail
+                if let Some(guardrails) = &cfg.guardrails {
+                    if let Err(e) = check_tool(&tc.name, &tc.arguments.to_string(), guardrails) {
+                        on_event(AgentEvent::TaskError { error: format!("Tool guardrail tripped: {}", e) });
+                        return Err(e.into());
+                    }
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -253,6 +279,15 @@ impl Agent {
         }
 
         // Hit max iterations.
+
+        // 3. Output Guardrail
+        if let Some(guardrails) = &cfg.guardrails {
+            if let Err(e) = check_output(&last_assistant_content, guardrails) {
+                on_event(AgentEvent::TaskError { error: format!("Output guardrail tripped: {}", e) });
+                return Err(e.into());
+            }
+        }
+
         on_event(AgentEvent::TaskComplete {
             content: last_assistant_content.clone(),
         });
@@ -374,5 +409,79 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+    #[tokio::test]
+    async fn test_guardrails() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: serde_json::Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client.clone(), tools.clone());
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
+            blocked_keywords: vec!["bad_word".to_string()],
+        });
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        // Test Input Guardrail
+        let res = agent.run(&cfg, "This is a bad_word task", &mut on_event).await;
+        let err_str = res.unwrap_err().to_string();
+        assert!(err_str.contains("Input contains blocked keyword"), "Expected input guardrail, got: {}", err_str);
+
+        // Test Output Guardrail
+        // We give a good task, but the LLM returns a final answer containing "bad_word".
+        let client2 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message::assistant("This contains a bad_word"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+        let agent2 = Agent::new(client2, tools.clone());
+        let res_out = agent2.run(&cfg, "Good task", &mut on_event).await;
+        let err_str_out = res_out.unwrap_err().to_string();
+        assert!(err_str_out.contains("Output contains blocked keyword"), "Expected output guardrail, got: {}", err_str_out);
+
+        // Test Tool Guardrail
+        let client3 = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({"cmd": "bad_word"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+        let agent3 = Agent::new(client3, tools.clone());
+        let res_tool = agent3.run(&cfg, "Good task", &mut on_event).await;
+        let err_str_tool = res_tool.unwrap_err().to_string();
+        assert!(err_str_tool.contains("Tool test_tool arguments contain blocked keyword"), "Expected tool guardrail, got: {}", err_str_tool);
     }
 }
