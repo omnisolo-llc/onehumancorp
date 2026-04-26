@@ -19,7 +19,7 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         // OpenAI — GPT-4 family
         "gpt-4" => ModelPricing { input_cost: 30.00, output_cost: 60.00, cached_cost: 0.0 },
         "gpt-4-turbo" => ModelPricing { input_cost: 10.00, output_cost: 30.00, cached_cost: 0.0 },
-        "gpt-4o" => ModelPricing { input_cost: 5.00, output_cost: 15.00, cached_cost: 2.50 },
+        "gpt-4o" => ModelPricing { input_cost: 2.50, output_cost: 10.00, cached_cost: 1.25 },
         "gpt-4o-mini" => ModelPricing { input_cost: 0.15, output_cost: 0.60, cached_cost: 0.075 },
         // OpenAI — GPT-4.1 family
         "gpt-4.1" => ModelPricing { input_cost: 2.00, output_cost: 8.00, cached_cost: 0.0 },

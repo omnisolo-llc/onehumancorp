@@ -24,7 +24,7 @@ func TestCalculateCost(t *testing.T) {
 			promptTokens:     1000000,
 			completionTokens: 1000000,
 			cachedTokens:     1000000,
-			expected:         22.50, // 5.00 + 15.00 + 2.50
+			expected:         13.75, // 2.50 + 10.00 + 1.25
 		},
 		{
 			model:            "unknown-model",

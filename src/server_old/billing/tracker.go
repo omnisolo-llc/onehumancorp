@@ -43,7 +43,7 @@ DefaultCatalog = map[string]Price{
 	// OpenAI — GPT-4 family
 	"gpt-4":       {InputPerMillionUSD: 30.00, OutputPerMillionUSD: 60.00},
 	"gpt-4-turbo": {InputPerMillionUSD: 10.00, OutputPerMillionUSD: 30.00},
-	"gpt-4o":      {InputPerMillionUSD: 5.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 2.50},
+	"gpt-4o":      {InputPerMillionUSD: 2.50, OutputPerMillionUSD: 10.00, CachedPerMillionUSD: 1.25},
 	"gpt-4o-mini": {InputPerMillionUSD: 0.15, OutputPerMillionUSD: 0.60, CachedPerMillionUSD: 0.075},
 	// OpenAI — GPT-4.1 family
 	"gpt-4.1":      {InputPerMillionUSD: 2.00, OutputPerMillionUSD: 8.00},

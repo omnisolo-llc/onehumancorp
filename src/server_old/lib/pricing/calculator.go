@@ -23,7 +23,7 @@ var ModelRegistry = map[string]ModelPricing{
 	// OpenAI — GPT-4 family
 	"gpt-4":       {InputCost: 30.00, OutputCost: 60.00},
 	"gpt-4-turbo": {InputCost: 10.00, OutputCost: 30.00},
-	"gpt-4o":      {InputCost: 5.00, OutputCost: 15.00, CachedCost: 2.50},
+	"gpt-4o":      {InputCost: 2.50, OutputCost: 10.00, CachedCost: 1.25},
 	"gpt-4o-mini": {InputCost: 0.15, OutputCost: 0.60, CachedCost: 0.075},
 	// OpenAI — GPT-4.1 family
 	"gpt-4.1":      {InputCost: 2.00, OutputCost: 8.00},

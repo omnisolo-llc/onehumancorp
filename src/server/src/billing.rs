@@ -57,9 +57,9 @@ impl Tracker {
             cached_per_million_usd: 0.0,
         });
         catalog.insert("gpt-4o".to_string(), Price {
-            input_per_million_usd: 5.0,
-            output_per_million_usd: 15.0,
-            cached_per_million_usd: 2.5,
+            input_per_million_usd: 2.5,
+            output_per_million_usd: 10.0,
+            cached_per_million_usd: 1.25,
         });
         
         Tracker {
@@ -159,15 +159,15 @@ mod tests {
         let tracked = t.track(usage).unwrap();
         
         // Expected cost:
-        // (1000 / 1_000_000) * 5.0 = 0.005
-        // (2000 / 1_000_000) * 15.0 = 0.03
-        // (500 / 1_000_000) * 2.5 = 0.00125
-        // Total = 0.03625
+        // (1000 / 1_000_000) * 2.50 = 0.0025
+        // (2000 / 1_000_000) * 10.0 = 0.02
+        // (500 / 1_000_000) * 1.25 = 0.000625
+        // Total = 0.023125
         
-        assert_eq!(tracked.cost_usd, 0.03625);
+        assert_eq!(tracked.cost_usd, 0.023125);
         
         let summary = t.summary("org1");
-        assert_eq!(summary.total_cost_usd, 0.03625);
+        assert_eq!(summary.total_cost_usd, 0.023125);
         assert_eq!(summary.total_tokens, 3500);
         assert_eq!(summary.total_actions, 1);
         assert_eq!(summary.agents.len(), 1);
