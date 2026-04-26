@@ -1,0 +1,103 @@
+load("@rules_flutter//flutter:defs.bzl", "flutter_library", "flutter_test")
+
+package(default_visibility = ["//src/app_old:__subpackages__"])
+
+filegroup(
+    name = "srcs",
+    srcs = glob(
+        ["**/*.dart"],
+        allow_empty = True,
+    ) + ["BUILD.bazel"],
+    visibility = ["//src/app_old:__pkg__"],
+)
+
+filegroup(
+    name = "dart_srcs",
+    srcs = glob(
+        ["**/*.dart"],
+        allow_empty = True,
+        exclude = ["**/*_test.dart"],
+    ),
+    visibility = ["//src/app_old:__pkg__"],
+)
+
+# All screen sources in ONE library → single pub-prepare action instead of
+# one per screen file.  This is the main speed-up: ~15 separate pub-prepare
+# actions (each 60-70 s) become 1.
+SCREEN_SRCS = glob(
+    [
+        "*.dart",
+        "orchestration/*.dart",
+    ],
+    exclude = ["*_test.dart"],
+)
+
+# Base dependencies shared by all screens
+SCREEN_DEPS = [
+    "//src/app_old/lib/models:models_lib",
+    "//src/app_old/lib/services:services_lib",
+    "//src/app_old/lib/widgets:widgets_lib",
+    "@flutter_sdk//flutter/packages/flutter",
+    "@pub_flutter_riverpod//:flutter_riverpod",
+    "@pub_go_router//:go_router",
+    "@pub_intl//:intl",
+]
+
+flutter_library(
+    name = "screens_lib",
+    srcs = SCREEN_SRCS,
+    pubspec = "//src/app_old:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    deps = SCREEN_DEPS,
+)
+
+# ── Test-only aggregate library ───────────────────────────────────────────────
+# screens_lib + mocktail for tests that need mock support but not the full router.
+
+flutter_library(
+    name = "screens_for_tests",
+    srcs = [],
+    pubspec = "//src/app_old:pubspec.yaml",
+    workspace_pubspec = "//:pubspec.yaml",
+    deps = [
+        ":screens_lib",
+        "@pub_mocktail//:mocktail",
+    ],
+)
+
+# Per-test embed configuration: each test uses the smallest sufficient library.
+#   advanced_widget_test  — needs router.dart (AppShell) → use app_for_tests
+#   all others            — need screens + mocktail → use screens_for_tests
+_SCREEN_TEST_EMBEDS = {
+    "advanced_widget_test.dart": ["//src/app_old:app_for_tests"],
+}
+
+_DEFAULT_SCREEN_TEST_EMBED = [":screens_for_tests"]
+
+SCREEN_TESTS = glob(["**/*_test.dart"])
+
+[
+    flutter_test(
+        name = file.replace(".dart", "").replace("/", "_"),
+        srcs = [file],
+        embed = _SCREEN_TEST_EMBEDS.get(file, _DEFAULT_SCREEN_TEST_EMBED),
+        test_files = [file],
+        workspace_pubspec = "//:pubspec.yaml",
+    )
+    for file in SCREEN_TESTS
+]
+
+test_suite(
+    name = "all_tests",
+    tests = [":" + file.replace(".dart", "").replace("/", "_") for file in SCREEN_TESTS],
+)
+
+flutter_test(
+    name = "coverage_test",
+    srcs = SCREEN_TESTS,
+    coverage = True,
+    coverage_min = 90,
+    embed = ["//src/app_old:app_for_tests"],
+    test_files = ["."],
+    workspace_pubspec = "//:pubspec.yaml",
+)

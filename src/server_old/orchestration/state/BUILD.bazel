@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "state",
+    srcs = [
+        "cloud_state_manager.go",
+        "standalone_state_manager.go",
+        "state_manager.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/orchestration/state",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server_old/db",
+        "@com_github_redis_rueidis//:rueidis",
+    ],
+)
+
+go_test(
+    name = "state_test",
+    srcs = [
+        "state_manager_test.go",
+    ],
+    embed = [":state"],
+    deps = [
+        "//src/server_old/db",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)

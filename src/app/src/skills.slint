@@ -1,0 +1,67 @@
+import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+
+export component Skills inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Skills & Plugins";
+
+    property <string> selected_category: "all";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Skills & Plugins"; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+        HorizontalBox {
+            spacing: 10px;
+            Button { text: "All"; }
+            Button { text: "Builtin"; }
+            Button { text: "Official"; }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: "Web Search"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Rectangle {}
+                        Text { text: "v1.0.0"; color: #64748b; horizontal-alignment: center; }
+                        CheckBox { checked: true; }
+                        Button { text: "Remove"; }
+                    }
+                    Text { text: "Allows the agent to search the web for information."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: "Python Executor"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Rectangle {}
+                        Text { text: "v0.5.0"; color: #64748b; horizontal-alignment: center; }
+                        Button { text: "Install"; }
+                    }
+                    Text { text: "Run Python scripts in a secure sandbox."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+        }
+    }
+}

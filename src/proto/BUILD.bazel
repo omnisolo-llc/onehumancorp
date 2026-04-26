@@ -3,6 +3,18 @@ load("//bazel/rules:proto_go_grpc_library.bzl", "proto_go_grpc_library", "go_pro
 load("//bazel/rules:proto_ts_library.bzl", "proto_ts_library")
 load("//bazel/rules:proto_dart_library.bzl", "proto_dart_library")
 
+exports_files([
+    "agent.proto",
+    "agent_service.proto",
+    "app.proto",
+    "billing.proto",
+    "common.proto",
+    "hub.proto",
+    "model.proto",
+    "organization.proto",
+    "skills.proto",
+], visibility = ["//visibility:public"])
+
 # ── Hub / Orchestration ────────────────────────────────────────────────────────
 
 proto_library(

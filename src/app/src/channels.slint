@@ -1,0 +1,59 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Channels inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Chat Channels";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Chat Channels"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Add Channel"; }
+        }
+
+        VerticalBox {
+            spacing: 10px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "⚡"; font-size: 24px; horizontal-alignment: center; }
+                    VerticalBox {
+                        Text { text: "General"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Centrifuge"; color: #64748b; }
+                    }
+                    Rectangle {} 
+                    Text { text: "Enabled"; color: #10b981; horizontal-alignment: center; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "✈️"; font-size: 24px; horizontal-alignment: center; }
+                    VerticalBox {
+                        Text { text: "Telegram Alerts"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Telegram"; color: #64748b; }
+                    }
+                    Rectangle {} 
+                    Text { text: "Disabled"; color: #9ca3af; horizontal-alignment: center; }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,62 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Agents inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Agents";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Agents"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Hire Agent"; }
+        }
+
+        VerticalBox {
+            spacing: 10px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; }
+                    VerticalBox {
+                        Text { text: "Alice"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Product Manager"; color: #64748b; }
+                    }
+                    Rectangle {} 
+                    Text { text: "Running"; color: #10b981; horizontal-alignment: center; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; }
+                    VerticalBox {
+                        Text { text: "Bob"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Software Engineer"; color: #64748b; }
+                    }
+                    Rectangle {} 
+                    VerticalBox {
+                        Text { text: "Stopped"; color: #ef4444; horizontal-alignment: center; }
+                        Button { text: "Help me fix this"; }
+                    }
+                }
+            }
+        }
+    }
+}
