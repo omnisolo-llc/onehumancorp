@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	"github.com/onehumancorp/mono/src/server_old/agents/builtin"
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/db"
 	"go.opentelemetry.io/otel"

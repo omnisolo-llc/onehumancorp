@@ -7,7 +7,7 @@ go_library(
         "mesh.go",
         "redis_mesh.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server/agents/kairos/mesh",
+    importpath = "github.com/onehumancorp/mono/src/server_old/agents/kairos/mesh",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_redis_go_redis_v9//:go-redis",
