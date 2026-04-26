@@ -89,7 +89,7 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
                 children: [
                   const Text('AutoDream Pipelines', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('Vector Memory Observability', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
+                  const Text('AI Memory Tracking', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
                   const SizedBox(height: 16),
                   const SwarmVelocityWidget(),
                   const SizedBox(height: 16),

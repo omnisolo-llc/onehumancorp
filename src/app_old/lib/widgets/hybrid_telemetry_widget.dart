@@ -40,7 +40,7 @@ class HybridTelemetryWidget extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Hybrid Deployment Telemetry',
+                    'AI Team Network Stats',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

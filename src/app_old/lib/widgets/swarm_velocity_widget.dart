@@ -42,7 +42,7 @@ class _SwarmVelocityWidgetState extends ConsumerState<SwarmVelocityWidget> {
     });
 
     return Semantics(
-      label: 'Swarm Velocity Widget',
+      label: 'AI Team Speed Widget',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
@@ -78,7 +78,7 @@ class _SwarmVelocityWidgetState extends ConsumerState<SwarmVelocityWidget> {
                     ),
                     const SizedBox(width: 12),
                     const Text(
-                      'Swarm Velocity',
+                      'AI Team Speed',
                       style: TextStyle(
                         fontFamily: 'Outfit',
                         fontSize: 20,
