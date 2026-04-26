@@ -80,6 +80,7 @@ pub fn ollama_tool() -> Tool {
             },
             "required": ["action"]
         }),
+        is_mutating: false,
         execute: Arc::new(OllamaExecutor),
     }
 }

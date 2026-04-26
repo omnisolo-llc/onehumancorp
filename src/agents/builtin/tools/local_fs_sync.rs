@@ -64,6 +64,7 @@ pub fn local_fs_sync_tool() -> Tool {
             },
             "required": ["Action", "Path"]
         }),
+        is_mutating: true,
         execute: Arc::new(LocalFSSyncExecutor),
     }
 }

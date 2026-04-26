@@ -192,35 +192,99 @@ impl Agent {
 
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
+
+            // Group tool calls by execution type: contiguous blocks of non-mutating calls,
+            // or single mutating calls.
+            let mut blocks = Vec::new();
+            let mut current_block = Vec::new();
+
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+                let is_mutating = self.tools.iter().find(|t| t.name == tc.name).map_or(false, |t| t.is_mutating);
+                if is_mutating {
+                    if !current_block.is_empty() {
+                        blocks.push((current_block, false));
+                        current_block = Vec::new();
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
+                    blocks.push((vec![tc.clone()], true));
+                } else {
+                    current_block.push(tc.clone());
+                }
+            }
+            if !current_block.is_empty() {
+                blocks.push((current_block, false));
+            }
+
+            for (block, is_mutating) in blocks {
+                if is_mutating {
+                    // Execute serially
+                    let tc = &block[0];
+                    let result = self.execute_tool(tc).await;
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
+                    };
+                    tool_results.push(ToolResult {
+                        tool_call_id: tc.id.clone(),
+                        content,
+                        error,
+                    });
+                } else {
+                    // Execute concurrently
+                    let futures = block.iter().map(|tc| async move {
+                        let result = self.execute_tool(tc).await;
+                        (tc.clone(), result)
+                    });
+
+                    let executed_results = futures::future::join_all(futures).await;
+
+                    for (tc, result) in executed_results {
+                        let (content, error) = match result {
+                            Ok(r) => {
+                                self.progress.record_tool_use();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: r.clone(),
+                                    iteration,
+                                });
+                                (r, String::new())
+                            }
+                            Err(e) => {
+                                let err = e.to_string();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                (String::new(), err)
+                            }
+                        };
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error,
                         });
-                        (String::new(), err)
                     }
-                };
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
-                });
+                }
             }
 
             if cfg.enable_observation_masking {
@@ -348,6 +412,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "test".to_string(),
             parameters: Value::Null,
+            is_mutating: false,
             execute: Arc::new(MockToolExecutor),
         }];
 

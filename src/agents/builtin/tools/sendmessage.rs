@@ -79,6 +79,7 @@ pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
             },
             "required": ["message"]
         }),
+        is_mutating: true,
         execute: Arc::new(SendMessageExecutor { mailbox }),
     }
 }
