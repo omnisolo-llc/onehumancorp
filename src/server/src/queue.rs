@@ -469,6 +469,112 @@ impl QueueManager {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SharedTaskModel {
+    pub id: String,
+    pub organization_id: String,
+    pub parent_id: Option<String>,
+    pub epic_id: Option<String>,
+    pub title: String,
+    pub status: String,
+    pub assigned_agent: Option<String>,
+    pub payload: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+pub struct TaskQueueService {
+    pool: sqlx::PgPool,
+}
+
+impl TaskQueueService {
+    pub fn new(pool: sqlx::PgPool) -> Self {
+        TaskQueueService { pool }
+    }
+
+    pub async fn push_task(&self, task: SharedTaskModel) -> Result<(), sqlx::Error> {
+        let payload_str = serde_json::to_string(&task.payload).unwrap_or_default();
+        
+        sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, organization_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
+            .bind(task.id)
+            .bind(task.parent_id)
+            .bind(task.epic_id)
+            .bind(task.title)
+            .bind("PENDING")
+            .bind(task.assigned_agent)
+            .bind(payload_str)
+            .bind(task.organization_id)
+            .execute(&self.pool)
+            .await?;
+            
+        Ok(())
+    }
+
+    pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT id FROM shared_tasks WHERE status = 'PENDING' AND (assigned_agent IS NULL OR assigned_agent = $1) ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at")
+            .bind(agent_id)
+            .fetch_optional(&self.pool)
+            .await?;
+            
+        if let Some(row) = row {
+            let payload_str: String = row.get("payload");
+            let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+            
+            Ok(Some(SharedTaskModel {
+                id: row.get("id"),
+                organization_id: row.get("organization_id"),
+                parent_id: row.get("parent_id"),
+                epic_id: row.get("epic_id"),
+                title: row.get("title"),
+                status: row.get("status"),
+                assigned_agent: row.get("assigned_agent"),
+                payload,
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub async fn complete_task(&self, task_id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+            .bind(task_id)
+            .execute(&self.pool)
+            .await?;
+            
+        Ok(())
+    }
+
+    pub async fn get_completed_tasks(&self, limit: i64) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
+        let rows = sqlx::query("SELECT id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
+            .bind(limit)
+            .fetch_all(&self.pool)
+            .await?;
+            
+        let mut tasks = Vec::new();
+        for row in rows {
+            let payload_str: String = row.get("payload");
+            let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+            
+            tasks.push(SharedTaskModel {
+                id: row.get("id"),
+                organization_id: row.get("organization_id"),
+                parent_id: row.get("parent_id"),
+                epic_id: row.get("epic_id"),
+                title: row.get("title"),
+                status: row.get("status"),
+                assigned_agent: row.get("assigned_agent"),
+                payload,
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+            });
+        }
+        
+        Ok(tasks)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
