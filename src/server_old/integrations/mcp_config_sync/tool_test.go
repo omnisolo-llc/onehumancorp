@@ -3,7 +3,7 @@ package mcp_config_sync
 import (
 	"context"
 	"encoding/json"
-
+	"github.com/onehumancorp/mono/src/server/agents/local"
 	"os"
 	"path/filepath"
 	"testing"
@@ -47,6 +47,15 @@ func (m *mockRow) Scan(dest ...any) error {
 	return nil
 }
 
+
+func executeHelper(ctx context.Context, tool local.Tool, args []byte) (string, error) {
+    if string(args) == "invalid" {
+        return tool.Execute(ctx, "", nil) // mock invalid JSON behavior since Execute expects map
+    }
+    var m map[string]interface{}
+    json.Unmarshal(args, &m)
+    return tool.Execute(ctx, "", m)
+}
 func contextWithClaims(ctx context.Context, claims *auth.Claims) context.Context {
 	return context.WithValue(ctx, auth.ClaimsContextKeyForTest, claims)
 }
