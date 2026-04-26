@@ -101,6 +101,7 @@ func startAgent(t *testing.T) (*grpc.ClientConn, func()) {
 		"RUST_LOG=error",
 	)
 	cmd.Stdout = os.Stdout
+	t.Logf("Agent binary: %s", bin)
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Start(); err != nil {
