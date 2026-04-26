@@ -23,7 +23,7 @@ type SharedTaskListRepository interface {
 type SubAgentQueueRepository interface {
 	Enqueue(ctx context.Context, job *models.SubAgentJob) error
 	ClaimJob(ctx context.Context, organizationID, workerID string) (*models.SubAgentJob, error)
-	UpdateJobStatus(ctx context.Context, id, status, workerID, reason string) error
+	UpdateJobStatus(ctx context.Context, id, fromStatus, toStatus, workerID, reason string) error
 }
 
 type sharedTaskListRepoImpl struct {
@@ -218,13 +218,15 @@ func (r *sharedTaskListRepoImpl) UpdateTaskStatus(ctx context.Context, id, fromS
 }
 
 type subAgentQueueRepoImpl struct {
-	dbProvider db.Provider
-	mu         sync.Mutex
+	dbProvider  db.Provider
+	redisClient rueidis.Client
+	mu          sync.Mutex
 }
 
-func NewSubAgentQueueRepository(dbProvider db.Provider) SubAgentQueueRepository {
+func NewSubAgentQueueRepository(dbProvider db.Provider, redisClient rueidis.Client) SubAgentQueueRepository {
 	return &subAgentQueueRepoImpl{
-		dbProvider: dbProvider,
+		dbProvider:  dbProvider,
+		redisClient: redisClient,
 	}
 }
 
@@ -249,6 +251,16 @@ func (r *subAgentQueueRepoImpl) ClaimJob(ctx context.Context, organizationID, wo
 	if r.dbProvider.IsSQLite() {
 		r.mu.Lock()
 		defer r.mu.Unlock()
+	} else if r.redisClient != nil {
+		lockKey := "ohc:lock:claim_job:" + organizationID
+		cmd := r.redisClient.B().Set().Key(lockKey).Value(workerID).Nx().Ex(10 * time.Second).Build()
+		err := r.redisClient.Do(ctx, cmd).Error()
+		if err == nil {
+			defer func() {
+				delCmd := r.redisClient.B().Del().Key(lockKey).Build()
+				_ = r.redisClient.Do(ctx, delCmd)
+			}()
+		}
 	}
 
 	tx, err := r.dbProvider.Begin(ctx)
@@ -314,29 +326,25 @@ func (r *subAgentQueueRepoImpl) ClaimJob(ctx context.Context, organizationID, wo
 	return &job, nil
 }
 
-func (r *subAgentQueueRepoImpl) UpdateJobStatus(ctx context.Context, id, status, workerID, reason string) error {
+func (r *subAgentQueueRepoImpl) UpdateJobStatus(ctx context.Context, id, fromStatus, toStatus, workerID, reason string) error {
 	tx, err := r.dbProvider.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	// Get current status for audit log
-	var currentStatus string
-	err = tx.QueryRow(ctx, "SELECT status FROM sub_agent_queue WHERE id = $1", id).Scan(&currentStatus)
+	query := `UPDATE sub_agent_queue SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND status = $3`
+	affected, err := tx.Exec(ctx, query, toStatus, id, fromStatus)
 	if err != nil {
 		return err
 	}
-
-	query := `UPDATE sub_agent_queue SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`
-	_, err = tx.Exec(ctx, query, status, id)
-	if err != nil {
-		return err
+	if affected == 0 {
+		return fmt.Errorf("job %s not found or status changed from %s", id, fromStatus)
 	}
 
 	auditQuery := `INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, reason)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`
-	_, err = tx.Exec(ctx, auditQuery, uuid.NewString(), id, "SUB_AGENT_JOB", currentStatus, status, workerID, reason)
+	_, err = tx.Exec(ctx, auditQuery, uuid.NewString(), id, "SUB_AGENT_JOB", fromStatus, toStatus, workerID, reason)
 	if err != nil {
 		return err
 	}

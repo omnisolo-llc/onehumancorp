@@ -140,7 +140,7 @@ func TestSharedTaskListRepository(t *testing.T) {
 
 func TestSubAgentQueueRepository(t *testing.T) {
 	provider := setupSharedTaskTestDB(t)
-	repo := NewSubAgentQueueRepository(provider)
+	repo := NewSubAgentQueueRepository(provider, nil)
 	ctx := context.Background()
 
 	t.Run("Enqueue and Claim Job", func(t *testing.T) {
@@ -168,7 +168,7 @@ func TestSubAgentQueueRepository(t *testing.T) {
 	})
 
 	t.Run("Update Job Status", func(t *testing.T) {
-		err := repo.UpdateJobStatus(ctx, "job-1", "COMPLETED", "worker-1", "Finished")
+		err := repo.UpdateJobStatus(ctx, "job-1", "IN_PROGRESS", "COMPLETED", "worker-1", "Finished")
 		assert.NoError(t, err)
 
 		var status string
