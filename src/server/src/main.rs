@@ -23,6 +23,9 @@ mod spawner;
 mod queue;
 mod agents;
 mod domain;
+pub mod services {
+    pub mod wizard;
+}
 
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
@@ -125,6 +128,24 @@ impl HubService for MyHubService {
         } else {
             Err(Status::invalid_argument("agent is required"))
         }
+    }
+
+    async fn handle_config_wizard(
+        &self,
+        request: tonic::Request<crate::ohc::orchestration::AgentConfig>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let resp = services::wizard::handle_config_wizard(req);
+        Ok(tonic::Response::new(resp))
+    }
+
+    async fn handle_prompt_tuning(
+        &self,
+        request: tonic::Request<crate::ohc::orchestration::PromptTuningConfig>,
+    ) -> Result<tonic::Response<crate::ohc::orchestration::WizardResponse>, tonic::Status> {
+        let req = request.into_inner();
+        let resp = services::wizard::handle_prompt_tuning(req);
+        Ok(tonic::Response::new(resp))
     }
 
     async fn open_meeting(

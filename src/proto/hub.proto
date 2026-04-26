@@ -208,6 +208,25 @@ service HubService {
   rpc PollTasks(PollTasksRequest) returns (stream SharedTask);
   rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
   rpc DecomposeTask(DecomposeTaskRequest) returns (DecomposeTaskResponse);
+  rpc HandleConfigWizard(AgentConfig) returns (WizardResponse);
+  rpc HandlePromptTuning(PromptTuningConfig) returns (WizardResponse);
+}
+
+message AgentConfig {
+  string role = 1;
+  string provider = 2;
+  map<string, bool> capabilities = 3;
+  double work_hours = 4;
+}
+
+message PromptTuningConfig {
+  string personality = 1;
+  repeated string domain_focus = 2;
+}
+
+message WizardResponse {
+  bool success = 1;
+  string message = 2;
 }
 
 message LoginRequest {
