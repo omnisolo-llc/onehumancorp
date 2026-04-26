@@ -28,6 +28,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrail_config: Option<crate::guardrails::GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +42,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrail_config: None,
         }
     }
 }
@@ -99,6 +101,12 @@ impl Agent {
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
+        // --- Input Guardrail Hook ---
+        if let Err(e) = crate::guardrails::check_input(initial_message, &cfg.guardrail_config) {
+            on_event(AgentEvent::TaskError { error: e.clone() });
+            return Err(e.into());
+        }
+
         let tool_defs: Vec<ToolDefinition> = self
             .tools
             .iter()
@@ -148,6 +156,14 @@ impl Agent {
 
             let stop_reason = resp.stop_reason.as_str();
 
+            // --- Output Guardrail Hook ---
+            if !resp.message.content.is_empty() {
+                if let Err(e) = crate::guardrails::check_output(&resp.message.content, &cfg.guardrail_config) {
+                    on_event(AgentEvent::TaskError { error: e.clone() });
+                    return Err(e.into());
+                }
+            }
+
             // Text content from assistant
             if !resp.message.content.is_empty() {
                 last_assistant_content = resp.message.content.clone();
@@ -193,6 +209,12 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+                // --- Tool Guardrail Hook ---
+                if let Err(e) = crate::guardrails::check_tool(&tc.name, &tc.arguments.to_string(), &cfg.guardrail_config) {
+                    on_event(AgentEvent::TaskError { error: e.clone() });
+                    return Err(e.into());
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -374,5 +396,31 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    #[tokio::test]
+    async fn test_guardrails_tripwire() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrail_config = Some(crate::guardrails::GuardrailConfig {
+            input_blocked_keywords: vec!["FORBIDDEN_INPUT".to_string()],
+            output_blocked_keywords: vec!["FORBIDDEN_OUTPUT".to_string()],
+            tool_blocked_keywords: vec!["FORBIDDEN_TOOL".to_string()],
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![]),
+        });
+        let agent = Agent::new(client, tools);
+        let mut on_event = |_| {};
+
+        let res = agent.run(&cfg, "This contains FORBIDDEN_INPUT", &mut on_event).await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().to_string().contains("Input contains blocked keyword"));
     }
 }
