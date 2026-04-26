@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	"github.com/onehumancorp/mono/src/server/agents/local"
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/telemetry"
@@ -18,10 +18,43 @@ import (
 
 // AutoDreamPipeline orchestrates the background processing of agent memories.
 // It extracts raw memory, consolidates it, embeds it via LLM clients, and loads it into pgvector for long-term memory consolidation.
+
+type PipelineLLM interface {
+	Reason(ctx context.Context, prompt string) (string, error)
+}
+
+type minimaxLLM struct {
+	client orchestration.MinimaxClient
+}
+func (m *minimaxLLM) Reason(ctx context.Context, prompt string) (string, error) {
+	return m.client.Reason(ctx, prompt)
+}
+
+type localLLM struct {
+	client local.LLMClient
+}
+func (l *localLLM) Reason(ctx context.Context, prompt string) (string, error) {
+	req := local.CompletionRequest{
+		SystemPrompt: "You are an AI Memory Consolidator.",
+		Messages: []local.ConversationMessage{
+			{Role: "user", Content: []local.ContentPart{{Type: "text", Text: prompt}}},
+		},
+		MaxTokens: 500,
+	}
+	resp, err := l.client.Complete(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	if resp != nil && resp.Text != "" {
+		return resp.Text, nil
+	}
+	return "", nil
+}
+
 type AutoDreamPipeline struct {
 	pool          db.Provider
 	worker        *orchestration.AutoDreamWorker
-	llm           builtin.LLMClient
+	llm           PipelineLLM
 	minimaxClient orchestration.MinimaxClient
 }
 
@@ -30,13 +63,13 @@ func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDre
 	worker := orchestration.NewAutoDreamWorker(pool)
 
 	// Determine LLM client based on env vars
-	var llmClient builtin.LLMClient
+	var llmClient PipelineLLM
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
-		llmClient = builtin.NewAnthropicClient(key)
+		llmClient = &localLLM{client: local.NewAnthropicClient(key, "", "")}
 	} else if key := os.Getenv("OPENAI_API_KEY"); key != "" {
-		llmClient = builtin.NewOpenAIClient(key)
+		llmClient = &minimaxLLM{client: orchestration.NewMinimaxClient(key)}
 	} else {
-		llmClient = builtin.NewOllamaClient("")
+		llmClient = &localLLM{client: local.NewOllamaClient("", "")}
 	}
 
 
@@ -121,21 +154,13 @@ func (p *AutoDreamPipeline) resolveConflicts(ctx context.Context) {
 		slog.Info("AutoDreamPipeline: detected memory conflict via pgvector", "id1", c.ID1, "id2", c.ID2)
 
 		prompt := fmt.Sprintf("You are an AI Memory Consolidator. Resolve these two conflicting memories into a single truth.\nMemory 1: %s\nMemory 2: %s", c.Content1, c.Content2)
-		req := builtin.ChatRequest{
-			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
-			},
-			MaxTokens: 500,
-		}
-
 		ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-		resp, llmErr := p.llm.Chat(ctxTimeout, req)
+		resp, llmErr := p.llm.Reason(ctxTimeout, prompt)
 		cancel()
 
 		resolvedContext := "Consolidated memory: " + c.Content1 + " & " + c.Content2
-		if llmErr == nil && resp.Message.Content != "" {
-			resolvedContext = resp.Message.Content
+		if llmErr == nil && resp != "" {
+			resolvedContext = resp
 		}
 
 		resolvedID := fmt.Sprintf("resolved-%s", conflictID)
@@ -249,21 +274,13 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 	for _, s := range sessions {
 		prompt := fmt.Sprintf("Summarize and consolidate this agent session memory:\n%s", s.ContextData)
 
-		req := builtin.ChatRequest{
-			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
-			},
-			MaxTokens: 500,
-		}
-
 		ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-		resp, err := p.llm.Chat(ctxTimeout, req)
+		resp, err := p.llm.Reason(ctxTimeout, prompt)
 		cancel()
 
 		summary := "Summarized context from session " + s.ID
-		if err == nil && resp.Message.Content != "" {
-			summary = resp.Message.Content
+		if err == nil && resp != "" {
+			summary = resp
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
 			telemetry.RecordAutoDreamCompressionError(ctx, s.AgentID, "llm_summarization_failed")
@@ -376,21 +393,13 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 
 		prompt := fmt.Sprintf("Summarize and consolidate this file memory:\n%s", content)
 
-		req := builtin.ChatRequest{
-			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
-			},
-			MaxTokens: 500,
-		}
-
 		ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
-		resp, err := p.llm.Chat(ctxTimeout, req)
+		resp, err := p.llm.Reason(ctxTimeout, prompt)
 		cancel()
 
 		summary := "Summarized context from file " + file.Name()
-		if err == nil && resp.Message.Content != "" {
-			summary = resp.Message.Content
+		if err == nil && resp != "" {
+			summary = resp
 		} else {
 			slog.Warn("AutoDreamPipeline: LLM summarization failed", "error", err)
 			telemetry.RecordAutoDreamIngestionError(ctx, "system", "llm_summarization_failed")

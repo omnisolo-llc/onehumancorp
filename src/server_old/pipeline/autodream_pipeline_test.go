@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
 	"github.com/onehumancorp/mono/src/server/db"
 )
 
@@ -15,10 +14,10 @@ type mockLLM struct {
 	response string
 }
 
-func (m *mockLLM) Chat(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error) {
-	return builtin.ChatResponse{
-		Message: builtin.Message{Content: m.response,
-	}}, nil
+func (m *mockLLM) GenerateEmbedding(ctx context.Context, text string) ([]float32, error) { return nil, nil }
+func (m *mockLLM) Reason(ctx context.Context, prompt string) (string, error) {
+
+		return m.response, nil
 }
 
 func TestAutoDreamPipeline_Batch(t *testing.T) {
