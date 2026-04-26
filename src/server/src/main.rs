@@ -125,7 +125,7 @@ impl HubService for MyHubService {
     ) -> Result<Response<PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(msg) = req.message {
-            match self.hub.publish(msg) {
+            match self.hub.clone().publish(msg) {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -140,7 +140,7 @@ impl HubService for MyHubService {
     ) -> Result<Response<DelegateTaskResponse>, Status> {
         let req = request.into_inner();
         if let Some(task) = req.task {
-            match self.hub.delegate_task(req.from_agent_id, req.to_agent_id, task) {
+            match self.hub.clone().delegate_task(req.from_agent_id, req.to_agent_id, task) {
                 Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
@@ -239,7 +239,7 @@ impl HubService for MyHubService {
             meeting_id: String::new(),
         };
         
-        match self.hub.publish(msg) {
+        match self.hub.clone().publish(msg) {
             Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
         }
@@ -393,7 +393,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     meeting_id: String::new(),
                 };
                 
-                match hub_for_sched.publish(msg) {
+                match hub_for_sched.clone().publish(msg) {
                     Ok(_) => {
                         let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
                     }

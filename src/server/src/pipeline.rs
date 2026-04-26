@@ -98,7 +98,7 @@ impl Orchestrator {
             meeting_id: String::new(),
         };
         
-        self.hub.publish(task_msg).map_err(|e| e.to_string())?;
+        self.hub.clone().publish(task_msg).map_err(|e| e.to_string())?;
         
         Ok(())
     }
@@ -159,7 +159,7 @@ impl Orchestrator {
                 meeting_id: String::new(),
             };
             
-            self.hub.publish(approval_msg).map_err(|e| e.to_string())?;
+            self.hub.clone().publish(approval_msg).map_err(|e| e.to_string())?;
         } else if msg.r#type == "TestsFailed" {
             pipeline.state = PipelineState::Implementing;
             let swe_id = pipeline.agent_id.clone();
@@ -174,7 +174,7 @@ impl Orchestrator {
                 meeting_id: String::new(),
             };
             
-            self.hub.publish(fail_msg).map_err(|e| e.to_string())?;
+            self.hub.clone().publish(fail_msg).map_err(|e| e.to_string())?;
         }
         
         Ok(())
@@ -197,7 +197,7 @@ impl Orchestrator {
             meeting_id: String::new(),
         };
         
-        self.hub.publish(reject_msg).map_err(|e| e.to_string())?;
+        self.hub.clone().publish(reject_msg).map_err(|e| e.to_string())?;
         
         Ok(())
     }
@@ -222,7 +222,7 @@ impl Orchestrator {
             meeting_id: String::new(),
         };
         
-        self.hub.publish(merge_msg).map_err(|e| e.to_string())?;
+        self.hub.clone().publish(merge_msg).map_err(|e| e.to_string())?;
         
         Ok(())
     }
