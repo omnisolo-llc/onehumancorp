@@ -7,7 +7,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/agents/harness/terminal",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server/agents/harness",
+
         "//src/server_old/orchestration",
     ],
 )
@@ -16,5 +16,5 @@ go_test(
     name = "terminal_test",
     srcs = ["executor_test.go", "validator_test.go"],
     embed = [":terminal"],
-    deps = ["//src/server/agents/harness"],
+    deps = ["//src/server_old/agents/harness"],
 )

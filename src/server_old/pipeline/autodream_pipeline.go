@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	"github.com/onehumancorp/mono/src/server/agents/local"
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/telemetry"
@@ -21,7 +21,7 @@ import (
 type AutoDreamPipeline struct {
 	pool          db.Provider
 	worker        *orchestration.AutoDreamWorker
-	llm           builtin.LLMClient
+	llm           local.LLMClient
 	minimaxClient orchestration.MinimaxClient
 }
 
@@ -30,13 +30,13 @@ func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDre
 	worker := orchestration.NewAutoDreamWorker(pool)
 
 	// Determine LLM client based on env vars
-	var llmClient builtin.LLMClient
+	var llmClient local.LLMClient
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
-		llmClient = builtin.NewAnthropicClient(key)
+		llmClient = local.NewAnthropicClient(key)
 	} else if key := os.Getenv("OPENAI_API_KEY"); key != "" {
-		llmClient = builtin.NewOpenAIClient(key)
+		llmClient = local.NewOpenAIClient(key)
 	} else {
-		llmClient = builtin.NewOllamaClient("")
+		llmClient = local.NewOllamaClient("")
 	}
 
 
@@ -121,10 +121,10 @@ func (p *AutoDreamPipeline) resolveConflicts(ctx context.Context) {
 		slog.Info("AutoDreamPipeline: detected memory conflict via pgvector", "id1", c.ID1, "id2", c.ID2)
 
 		prompt := fmt.Sprintf("You are an AI Memory Consolidator. Resolve these two conflicting memories into a single truth.\nMemory 1: %s\nMemory 2: %s", c.Content1, c.Content2)
-		req := builtin.ChatRequest{
+		req := local.ChatRequest{
 			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
+			Messages: []local.Message{
+				{Role: local.RoleUser, Content: prompt},
 			},
 			MaxTokens: 500,
 		}
@@ -249,10 +249,10 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 	for _, s := range sessions {
 		prompt := fmt.Sprintf("Summarize and consolidate this agent session memory:\n%s", s.ContextData)
 
-		req := builtin.ChatRequest{
+		req := local.ChatRequest{
 			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
+			Messages: []local.Message{
+				{Role: local.RoleUser, Content: prompt},
 			},
 			MaxTokens: 500,
 		}
@@ -376,10 +376,10 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 
 		prompt := fmt.Sprintf("Summarize and consolidate this file memory:\n%s", content)
 
-		req := builtin.ChatRequest{
+		req := local.ChatRequest{
 			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
+			Messages: []local.Message{
+				{Role: local.RoleUser, Content: prompt},
 			},
 			MaxTokens: 500,
 		}
