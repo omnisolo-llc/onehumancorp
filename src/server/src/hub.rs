@@ -401,6 +401,53 @@ impl Hub {
         
         Ok(())
     }
+
+    pub fn fork_agent(self: std::sync::Arc<Self>, parent_id: &str, directive: &str) -> Result<String, String> {
+        let mut agents = self.agents.write().unwrap();
+        
+        let parent = agents.get(parent_id).ok_or_else(|| format!("parent agent not found: {}", parent_id))?.clone();
+        
+        let child_id = format!("{}-fork-{}", parent_id, uuid::Uuid::new_v4());
+        let child = Agent {
+            id: child_id.clone(),
+            name: format!("{} (Fork)", parent.name),
+            role: parent.role.clone(),
+            organization_id: parent.organization_id.clone(),
+            status: "IDLE".to_string(),
+            provider_type: parent.provider_type.clone(),
+        };
+        
+        agents.insert(child_id.clone(), child);
+        drop(agents); // Release lock before calling publish!
+        
+        // Copy history
+        let history = {
+            let inbox = self.inbox.read().unwrap();
+            inbox.get(parent_id).cloned().unwrap_or_default()
+        };
+        
+        for msg in history {
+            let mut child_msg = msg.clone();
+            child_msg.id = format!("msg-{}", uuid::Uuid::new_v4());
+            child_msg.to_agent = child_id.clone();
+            self.clone().publish(child_msg)?;
+        }
+        
+        // Send directive
+        let directive_msg = Message {
+            id: format!("msg-{}", uuid::Uuid::new_v4()),
+            from_agent: "SYSTEM".to_string(),
+            to_agent: child_id.clone(),
+            r#type: "TaskAssignment".to_string(),
+            content: format!("<task-notification>\nDirective: {}\n</task-notification>", directive),
+            occurred_at_unix: Utc::now().timestamp(),
+            meeting_id: String::new(),
+        };
+        
+        self.clone().publish(directive_msg)?;
+        
+        Ok(child_id)
+    }
 }
 
 impl Default for Hub {

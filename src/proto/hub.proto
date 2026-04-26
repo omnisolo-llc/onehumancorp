@@ -154,8 +154,17 @@ message UpdateTaskStatusResponse {
   bool success = 1;
 }
 
+message DecomposedSubTask {
+  string title = 1;
+  string description = 2;
+  string priority = 3;
+  repeated string dependencies = 4;
+}
+
 message DecomposeTaskRequest {
-  string task_id = 1;
+  string organization_id = 1;
+  string task_id = 2;
+  repeated DecomposedSubTask sub_tasks = 3;
 }
 
 message DecomposeTaskResponse {
