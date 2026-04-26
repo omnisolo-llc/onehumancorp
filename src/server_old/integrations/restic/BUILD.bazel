@@ -2,7 +2,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "restic",
-    srcs = ["provider.go"],
+    srcs = [
+        "provider.go",
+        "tools.go",
+    ],
     importpath = "github.com/onehumancorp/mono/src/server/integrations/restic",
     visibility = ["//visibility:public"],
     deps = [
@@ -13,6 +16,9 @@ go_library(
 
 go_test(
     name = "restic_test",
-    srcs = ["provider_test.go"],
+    srcs = [
+        "provider_test.go",
+        "tools_test.go",
+    ],
     embed = [":restic"],
 )
