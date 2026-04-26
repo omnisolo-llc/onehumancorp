@@ -29,6 +29,7 @@ pub mod services {
     pub mod billing {
         pub mod auditor;
     }
+    pub mod growth;
 }
 
 use tokio::sync::mpsc;
