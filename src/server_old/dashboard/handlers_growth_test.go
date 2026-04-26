@@ -518,7 +518,7 @@ func TestHandleQuota(t *testing.T) {
 		t.Fatalf("failed to decode response: %v", err)
 	}
 	// user1 has 2 conversions: Base 100 + (2 * 50) = 200
-	if metrics.Used != 10 || metrics.Max != 200 {
-		t.Errorf("expected 10/200, got %d/%d", metrics.Used, metrics.Max)
+	if metrics.Used != 2 || metrics.Max != 200 {
+		t.Errorf("expected 2/200, got %d/%d", metrics.Used, metrics.Max)
 	}
 }

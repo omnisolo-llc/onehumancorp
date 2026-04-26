@@ -529,5 +529,5 @@ func (s *Server) handleQuota(w http.ResponseWriter, r *http.Request) {
 	tracker := growth.NewQuotaTracker(100, 50)
 	maxQuota := tracker.CalculateQuota(totalConversions)
 
-	writeJSON(w, QuotaMetrics{Used: 10, Max: maxQuota})
+	writeJSON(w, QuotaMetrics{Used: totalConversions, Max: maxQuota})
 }
