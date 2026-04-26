@@ -1,0 +1,65 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component ServiceManager inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Local Service Manager";
+
+    property <bool> is_running: false;
+    property <string> doctor_output: "";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            VerticalBox {
+                padding: 24px;
+                spacing: 16px;
+                alignment: center;
+                
+                Text { text: is_running ? "✓" : "✗"; font-size: 48px; color: is_running ? #10b981 : #ef4444; horizontal-alignment: center; }
+                Text { text: is_running ? "Service is Running" : "Service is Stopped"; font-size: 20px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                Text { text: "Default Port: 18789"; color: #64748b; horizontal-alignment: center; }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 16px;
+            alignment: center;
+            
+            Button {
+                text: is_running ? "Stop Service" : "Start Service";
+                clicked => { is_running = !is_running; }
+            }
+            Button {
+                text: "Run Health Check";
+                clicked => { doctor_output = "Running doctor...\nAll systems green."; }
+            }
+            Button {
+                text: "Force Restart";
+            }
+        }
+
+        if (doctor_output != "") : VerticalBox {
+            spacing: 8px;
+            Text { text: "Diagnostics"; font-size: 16px; font-weight: 700; color: #1e293b; }
+            Rectangle {
+                background: #0f172a;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: doctor_output; color: #94a3b8; font-family: "monospace"; }
+                }
+            }
+        }
+    }
+}

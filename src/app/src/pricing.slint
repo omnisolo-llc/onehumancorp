@@ -1,0 +1,52 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Pricing inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Pricing & Billing";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Pricing & Billing"; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+        VerticalBox {
+            spacing: 16px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "Free"; font-size: 24px; font-weight: 700; color: #1e293b; }
+                    Text { text: "$0/mo"; font-size: 20px; color: #64748b; }
+                    Text { text: "Up to 100 AI Actions, 500MB storage."; color: #64748b; wrap: word-wrap; }
+                    Button { text: "Select Plan"; }
+                }
+            }
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "Pro"; font-size: 24px; font-weight: 700; color: #1e293b; }
+                    Text { text: "$99/mo"; font-size: 20px; color: #64748b; }
+                    Text { text: "Unlimited AI Actions, 50GB storage."; color: #64748b; wrap: word-wrap; }
+                    Button { text: "Select Plan"; }
+                }
+            }
+        }
+    }
+}

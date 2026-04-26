@@ -1,0 +1,104 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component SwarmMemory inherits Window {
+    width: 900px;
+    height: 600px;
+    title: "Swarm Memory Mesh";
+
+    background: #f8fafc;
+
+    HorizontalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Left Column: Live Mesh
+        VerticalBox {
+            spacing: 10px;
+            width: 270px;
+            
+            Text { text: "Live Mesh Activity"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Real-time websocket feed"; color: #64748b; }
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 10px;
+                    alignment: start;
+                    
+                    Rectangle {
+                        background: #f1f5f9;
+                        border-radius: 8px;
+                        
+                        VerticalBox {
+                            padding: 8px;
+                            Text { text: "Agent Alice"; font-weight: 700; color: #a855f7; }
+                            Text { text: "Processed task 123"; color: #1e293b; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Center Column: Durable Memory
+        VerticalBox {
+            spacing: 10px;
+            width: 270px;
+            
+            Text { text: "Durable Swarm Memory"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Offline-to-Cloud State Sync"; color: #64748b; }
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 10px;
+                    alignment: start;
+                    
+                    Rectangle {
+                        background: #f1f5f9;
+                        border-radius: 8px;
+                        
+                        VerticalBox {
+                            padding: 8px;
+                            Text { text: "Project goal defined"; color: #1e293b; }
+                            Text { text: "2026-04-25 12:00"; color: #64748b; font-size: 12px; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Right Column: AutoDream
+        VerticalBox {
+            spacing: 10px;
+            width: 270px;
+            
+            Text { text: "AutoDream Pipelines"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Vector Memory Observability"; color: #64748b; }
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 10px;
+                    Text { text: "[ Swarm Velocity Chart ]"; color: #64748b; horizontal-alignment: center; }
+                    Text { text: "[ Vector Memory Visualizer ]"; color: #64748b; horizontal-alignment: center; }
+                    Button { text: "View Walkthrough"; }
+                }
+            }
+        }
+    }
+}

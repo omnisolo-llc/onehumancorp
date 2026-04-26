@@ -1,0 +1,78 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Integrations inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Integrations & Tools";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "External Channels"; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+        HorizontalBox {
+            spacing: 16px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "✈️ Telegram"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Connect your bot for mobile alerts"; color: #64748b; wrap: word-wrap; }
+                    Button { text: "Configure"; }
+                }
+            }
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "👾 Discord"; font-weight: 700; color: #1e293b; }
+                    Text { text: "Stream agent logs to a channel"; color: #64748b; wrap: word-wrap; }
+                    Button { text: "Configure"; }
+                }
+            }
+        }
+
+        Text { text: "MCP Tool Gateway"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        Text { text: "Manually invoke tools bridged via the Model Context Protocol."; color: #64748b; }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            VerticalBox {
+                padding: 16px;
+                spacing: 10px;
+                
+                HorizontalBox {
+                    Text { text: "🛠️ Tool: Web Search"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                    Rectangle {} 
+                    Button { text: "Invoke"; }
+                }
+                HorizontalBox {
+                    Text { text: "🛠️ Tool: File Reader"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                    Rectangle {} 
+                    Button { text: "Invoke"; }
+                }
+            }
+        }
+    }
+}

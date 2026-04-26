@@ -1,4 +1,4 @@
-edition = "2024";
+syntax = "proto3";
 
 package ohc.organization;
 
@@ -21,6 +21,7 @@ message Organization {
   int64 created_at_unix = 5;
   repeated TeamMember members = 6;
   repeated RoleProfile role_profiles = 7;
+  string tier = 8;
 }
 
 message TeamMember {

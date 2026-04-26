@@ -1,0 +1,38 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "growth",
+    srcs = [
+        "referrals.go",
+        "referral_api.go",
+        "invites.go",
+        "invites_repo.go",
+        "experiments.go",
+        "quota.go",
+        "viral_loop.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/services/growth",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server_old/db",
+        "//src/server_old/lib/analytics",
+        "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel_metric//:metric",
+    ],
+)
+
+go_test(
+    name = "growth_test",
+    srcs = [
+        "referrals_test.go",
+        "referral_api_test.go",
+        "invites_test.go",
+        "experiments_test.go",
+        "quota_test.go",
+        "viral_loop_test.go",
+    ],
+    embed = [":growth"],
+    deps = [
+        "//src/server_old/lib/analytics",
+    ],
+)

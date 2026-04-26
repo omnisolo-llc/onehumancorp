@@ -1,0 +1,95 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component UserManagement inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "User Management";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "User Management"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Invite User"; }
+        }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            HorizontalBox {
+                padding: 16px;
+                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
+            }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Rectangle {
+                        background: #a855f7;
+                        border-radius: 16px;
+                        width: 32px;
+                        height: 32px;
+                        HorizontalBox { padding: 2px; Text { text: "A"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    }
+                    VerticalBox {
+                        HorizontalBox {
+                            Text { text: "admin_user"; font-weight: 700; color: #1e293b; }
+                            Rectangle { 
+                                background: rgba(168, 85, 247, 0.2); 
+                                border-radius: 4px; 
+                                HorizontalBox {
+                                    padding: 2px;
+                                    Text { text: "ADMIN"; color: #a855f7; font-size: 10px; } 
+                                }
+                            }
+                        }
+                        Text { text: "admin@example.com"; color: #64748b; }
+                        Text { text: "Joined: Apr 25, 2026"; color: #9ca3af; font-size: 12px; }
+                    }
+                    Rectangle {} 
+                    Button { text: "Delete"; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Rectangle {
+                        background: #64748b;
+                        border-radius: 16px;
+                        width: 32px;
+                        height: 32px;
+                        HorizontalBox { padding: 2px; Text { text: "U"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    }
+                    VerticalBox {
+                        Text { text: "regular_user"; font-weight: 700; color: #1e293b; }
+                        Text { text: "user@example.com"; color: #64748b; }
+                        Text { text: "Joined: Apr 25, 2026"; color: #9ca3af; font-size: 12px; }
+                    }
+                    Rectangle {} 
+                    Button { text: "Delete"; }
+                }
+            }
+        }
+    }
+}

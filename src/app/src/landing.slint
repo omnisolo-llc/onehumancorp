@@ -1,0 +1,150 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Landing inherits Window {
+    width: 800px;
+    height: 600px;
+    title: "One Human Corp";
+
+    property <bool> is_variant_b: false;
+
+    background: #f8fafc;
+
+    VerticalBox {
+        alignment: center;
+        spacing: 30px;
+        padding: 32px;
+
+        // Header
+        VerticalBox {
+            alignment: center;
+            spacing: 10px;
+            
+            // Logo fallback
+            Text {
+                text: "🌀";
+                font-size: 60px;
+                horizontal-alignment: center;
+                color: #a855f7;
+            }
+            
+            Text {
+                text: "One Human Corp";
+                font-size: 32px;
+                font-weight: 700;
+                horizontal-alignment: center;
+                color: #1e293b;
+            }
+            
+            Text {
+                text: is_variant_b ? "The Cloud-Native Agentic OS" : "The Hybrid Agentic OS";
+                font-size: 24px;
+                horizontal-alignment: center;
+                color: #a855f7;
+            }
+            
+            Text {
+                text: is_variant_b ? 
+                    "Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform." :
+                    "Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.";
+                font-size: 16px;
+                horizontal-alignment: center;
+                color: #64748b;
+                wrap: word-wrap;
+            }
+        }
+
+        // Value Props
+        HorizontalBox {
+            spacing: 20px;
+            alignment: center;
+
+            // Card 1
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    spacing: 8px;
+                    padding: 16px;
+                    Text { text: "⚡"; font-size: 24px; }
+                    Text { text: is_variant_b ? "Global Performance" : "Zero Data Leakage"; font-weight: 700; color: #1e293b; }
+                    Text { text: is_variant_b ? "Deploy agents in a horizontally scalable multi-tenant environment." : "All intelligence operations run completely local via SQLite."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+            // Card 2
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    spacing: 8px;
+                    padding: 16px;
+                    Text { text: "👥"; font-size: 24px; }
+                    Text { text: is_variant_b ? "Instant Collaboration" : "Air-Gapped Autonomy"; font-weight: 700; color: #1e293b; }
+                    Text { text: is_variant_b ? "Invite team members instantly. Shared intelligence across your entire organization." : "Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+            // Card 3
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    spacing: 8px;
+                    padding: 16px;
+                    Text { text: "🔄"; font-size: 24px; }
+                    Text { text: is_variant_b ? "Always Connected" : "Viral Referral Loop"; font-weight: 700; color: #1e293b; }
+                    Text { text: is_variant_b ? "Never worry about host machine resources. Our cloud manages everything seamlessly." : "Seamlessly bridge to the Cloud to collaborate with human team members when ready."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+        }
+
+        // Download Buttons
+        HorizontalBox {
+            spacing: 16px;
+            alignment: center;
+            
+            Button { text: "Download for Mac"; }
+            Button { text: "Download for Windows"; }
+            Button { text: "Download for Linux"; }
+        }
+
+        // Actions
+        VerticalBox {
+            alignment: center;
+            spacing: 10px;
+            
+            Button {
+                text: "Start Business Setup";
+            }
+            
+            Text {
+                text: "Or continue to Cloud Dashboard";
+                color: #a855f7;
+                horizontal-alignment: center;
+            }
+        }
+        
+        // Debug Toggle
+        HorizontalBox {
+            alignment: center;
+            spacing: 10px;
+            Text { text: "A/B Test Variant:"; color: #1e293b; }
+            Button {
+                text: is_variant_b ? "Variant B" : "Variant A";
+                clicked => {
+                    is_variant_b = !is_variant_b;
+                }
+            }
+        }
+    }
+}
