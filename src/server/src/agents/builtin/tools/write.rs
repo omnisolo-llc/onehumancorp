@@ -50,6 +50,7 @@ pub fn write_tool() -> Tool {
             },
             "required": ["path", "content"]
         }),
+        is_mutating: true,
         execute: Arc::new(WriteExecutor),
     }
 }

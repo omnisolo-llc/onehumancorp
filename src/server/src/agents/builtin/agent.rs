@@ -190,9 +190,65 @@ impl Agent {
                 return Ok(last_assistant_content);
             }
 
-            // Execute tool calls and collect results.
-            let mut tool_results: Vec<ToolResult> = Vec::new();
+            // Separate tool calls into read-only (concurrent) and mutating (serial).
+            let mut read_only_calls = Vec::new();
+            let mut mutating_calls = Vec::new();
+
             for tc in &tool_calls {
+                let is_mutating = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(true);
+                if is_mutating {
+                    mutating_calls.push(tc.clone());
+                } else {
+                    read_only_calls.push(tc.clone());
+                }
+            }
+
+            let mut tool_results: Vec<ToolResult> = Vec::new();
+
+            // Execute read-only tools concurrently
+            if !read_only_calls.is_empty() {
+                let mut futures = Vec::new();
+                for tc in read_only_calls {
+                    futures.push(async move {
+                        let result = self.execute_tool(&tc).await;
+                        (tc, result)
+                    });
+                }
+
+                let results = futures::future::join_all(futures).await;
+                for (tc, result) in results {
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
+                    };
+                    tool_results.push(ToolResult {
+                        tool_call_id: tc.id.clone(),
+                        content,
+                        error,
+                    });
+                }
+            }
+
+            // Execute mutating tools serially
+            for tc in mutating_calls {
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -348,6 +404,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "test".to_string(),
             parameters: Value::Null,
+            is_mutating: false,
             execute: Arc::new(MockToolExecutor),
         }];
 
