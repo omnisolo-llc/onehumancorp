@@ -68,6 +68,18 @@ impl DB {
             .execute(&self.pool)
             .await?;
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (id TEXT PRIMARY KEY, organization_id TEXT, parent_task_id TEXT, payload TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, worker_id TEXT)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("ALTER TABLE sub_agent_queue ADD COLUMN IF NOT EXISTS scheduled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("ALTER TABLE sub_agent_queue ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP")
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
