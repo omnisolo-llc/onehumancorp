@@ -76,6 +76,14 @@ impl Hub {
         agents.len()
     }
 
+    pub fn fire_agent(&self, id: &str) {
+        let mut agents = self.agents.write().unwrap();
+        let mut inbox = self.inbox.write().unwrap();
+        
+        agents.remove(id);
+        inbox.remove(id);
+    }
+
     pub fn open_meeting(&self, id: String, participants: Vec<String>, agenda: String) -> MeetingRoom {
         let mut meetings = self.meetings.write().unwrap();
         let mut agents = self.agents.write().unwrap();
@@ -98,7 +106,7 @@ impl Hub {
         meeting
     }
 
-    pub fn publish(&self, msg: Message) -> Result<(), String> {
+    pub fn publish(self: std::sync::Arc<Self>, msg: Message) -> Result<(), String> {
         let mut inbox = self.inbox.write().unwrap();
         let mut meetings = self.meetings.write().unwrap();
         let subs = self.subs.read().unwrap();
@@ -113,12 +121,54 @@ impl Hub {
         if !msg.meeting_id.is_empty() {
             if let Some(meeting) = meetings.get_mut(&msg.meeting_id) {
                 meeting.transcript.push(msg.clone());
+                
+                // Aggressive AI Context Summarization
+                if meeting.transcript.len() > 10 && !self.minimax_api_key.is_empty() {
+                    let api_key = self.minimax_api_key.clone();
+                    let m_id = msg.meeting_id.clone();
+                    let transcript = meeting.transcript.clone();
+                    let hub = self.clone();
+                    
+                    tokio::spawn(async move {
+                        let client = crate::minimax::MinimaxClient::new(api_key);
+                        let mut prompt = "Extract and summarize ONLY the exact parameters, architectural decisions, and required next steps from this transcript. Discard all conversational filler, pleasantries, and non-actionable text. Output MUST be an ultra-dense, bulleted technical brief optimized for minimal token footprint:\n".to_string();
+                        
+                        for m in &transcript {
+                            prompt.push_str(&format!("{}: {}\n", m.from_agent, m.content));
+                        }
+                        
+                        match client.reason(&prompt).await {
+                            Ok(summary) => {
+                                let mut meetings = hub.meetings.write().unwrap();
+                                if let Some(mtg) = meetings.get_mut(&m_id) {
+                                    let mut new_transcript = vec![Message {
+                                        id: format!("summary-{}", Utc::now().timestamp()),
+                                        from_agent: "SYSTEM_SUMMARIZER".to_string(),
+                                        to_agent: "all".to_string(),
+                                        r#type: "status".to_string(),
+                                        content: format!("[CONTEXT SUMMARIZED]: {}", summary),
+                                        meeting_id: m_id.clone(),
+                                        occurred_at_unix: Utc::now().timestamp(),
+                                    }];
+                                    
+                                    if mtg.transcript.len() > 3 {
+                                        new_transcript.extend(mtg.transcript.iter().cloned().skip(mtg.transcript.len() - 3));
+                                    } else {
+                                        new_transcript.extend(mtg.transcript.iter().cloned());
+                                    }
+                                    mtg.transcript = new_transcript;
+                                }
+                            }
+                            Err(e) => println!("Summarization failed: {}", e),
+                        }
+                    });
+                }
             }
         }
         
         // Notify subscribers
         if let Some(tx) = subs.get(&to_agent) {
-            let _ = tx.send(msg); // Ignore error if no active receivers
+            let _ = tx.send(msg);
         }
         
         Ok(())
@@ -138,15 +188,13 @@ impl Hub {
         tx.subscribe()
     }
 
-    pub fn delegate_task(&self, from_agent_id: String, to_agent_id: String, mut task: Message) -> Result<(), String> {
+    pub fn delegate_task(self: std::sync::Arc<Self>, from_agent_id: String, to_agent_id: String, mut task: Message) -> Result<(), String> {
         check_documentation_gate(&task.content)?;
         
-        let agents = self.agents.read().unwrap();
-        
-        if !agents.contains_key(&from_agent_id) {
+        if !self.agents.read().unwrap().contains_key(&from_agent_id) {
             return Err("sender agent is not registered".to_string());
         }
-        if !agents.contains_key(&to_agent_id) {
+        if !self.agents.read().unwrap().contains_key(&to_agent_id) {
             return Err("recipient agent is not registered".to_string());
         }
         
