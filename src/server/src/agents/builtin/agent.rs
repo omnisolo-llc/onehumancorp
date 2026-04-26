@@ -5,6 +5,7 @@ use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
+use crate::guardrails::{GuardrailConfig, check_input, check_output, check_tool_invocation, check_tool_result};
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
@@ -28,6 +29,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrails: GuardrailConfig,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +43,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrails: GuardrailConfig::default(),
         }
     }
 }
@@ -99,6 +102,18 @@ impl Agent {
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
+        if let Err(e) = check_input(initial_message, &cfg.guardrails) {
+            let err = format!("Input guardrail error: {}", e);
+            on_event(AgentEvent::TaskError { error: err.clone() });
+            return Err(err.into());
+        }
+
+        if let Err(e) = check_input(&cfg.system, &cfg.guardrails) {
+            let err = format!("System prompt guardrail error: {}", e);
+            on_event(AgentEvent::TaskError { error: err.clone() });
+            return Err(err.into());
+        }
+
         let tool_defs: Vec<ToolDefinition> = self
             .tools
             .iter()
@@ -150,6 +165,11 @@ impl Agent {
 
             // Text content from assistant
             if !resp.message.content.is_empty() {
+                if let Err(e) = check_output(&resp.message.content, &cfg.guardrails) {
+                    let err = format!("Output guardrail error: {}", e);
+                    on_event(AgentEvent::TaskError { error: err.clone() });
+                    return Err(err.into());
+                }
                 last_assistant_content = resp.message.content.clone();
                 on_event(AgentEvent::TextChunk {
                     content: resp.message.content.clone(),
@@ -193,9 +213,21 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+                if let Err(e) = check_tool_invocation(&tc.name, &tc.arguments.to_string(), &cfg.guardrails) {
+                    let err = format!("Tool invocation guardrail error: {}", e);
+                    on_event(AgentEvent::TaskError { error: err.clone() });
+                    return Err(err.into());
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
+                        if let Err(e) = check_tool_result(&r, &cfg.guardrails) {
+                            let err = format!("Tool result guardrail error: {}", e);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
+
                         self.progress.record_tool_use();
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
@@ -276,7 +308,7 @@ impl Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
+    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
@@ -307,6 +339,39 @@ mod tests {
         async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
+    }
+
+
+    #[tokio::test]
+    async fn test_openai_guardrails() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "I am going to use a blocked keyword: SECRETS_DUMP".to_string(),
+                        tool_calls: vec![],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![];
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails.blocked_keywords = vec!["SECRETS_DUMP".to_string()];
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Output guardrail error"));
     }
 
     #[tokio::test]
