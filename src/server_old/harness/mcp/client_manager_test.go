@@ -2,19 +2,28 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	"github.com/onehumancorp/mono/src/server/agents/local"
 )
 
-func TestConvertToMCPTool(t *testing.T) {
-	internalTool := builtin.Tool{
+type testTool struct{}
+
+func (t *testTool) Definition() local.ToolDefinition {
+	return local.ToolDefinition{
 		Name:        "test_tool",
 		Description: "A test tool",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
+		InputSchema: map[string]interface{}{"type":"object","properties":map[string]interface{}{}},
 	}
+}
+
+func (t *testTool) Execute(ctx context.Context, workDir string, input map[string]interface{}) (string, error) {
+	return "", nil
+}
+
+func TestConvertToMCPTool(t *testing.T) {
+	internalTool := &testTool{}
 
 	mcpTool := ConvertToMCPTool(internalTool)
 
@@ -24,7 +33,10 @@ func TestConvertToMCPTool(t *testing.T) {
 	if mcpTool.Description != "A test tool" {
 		t.Errorf("Expected Description 'A test tool', got %s", mcpTool.Description)
 	}
-	if string(mcpTool.InputSchema) != `{"type":"object","properties":{}}` {
+
+	// Workaround to test both stringified json combinations because object properties order is undetermined
+	if string(mcpTool.InputSchema) != `{"type":"object","properties":{}}` && string(mcpTool.InputSchema) != `{"properties":{},"type":"object"}` {
+
 		t.Errorf("Expected InputSchema `{\"type\":\"object\",\"properties\":{}}`, got %s", string(mcpTool.InputSchema))
 	}
 }
