@@ -115,7 +115,6 @@ pub fn todowrite_tool(todos: SharedTodos) -> Tool {
             "required": ["todos"]
         }),
         execute: Arc::new(TodoWriteExecutor { todos }),
-        requires_permission: false,
     }
 }
 
@@ -128,6 +127,5 @@ pub fn todoread_tool(todos: SharedTodos) -> Tool {
             "properties": {}
         }),
         execute: Arc::new(TodoReadExecutor { todos }),
-        requires_permission: false,
     }
 }

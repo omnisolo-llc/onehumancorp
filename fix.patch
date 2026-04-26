@@ -1,0 +1,119 @@
+--- src/server_old/agents/BUILD.bazel
++++ src/server_old/agents/BUILD.bazel
+@@ -16,7 +16,7 @@ go_library(
+     visibility = ["//visibility:public"],
+     deps = [
+         "//src/server_old/telemetry",
+-        "//src/server/agents/grpc",
++        "//src/server_old/agents/grpc",
+         "//src/proto/agentservice",
+         "//src/server_old/db",
+         "//src/server_old/integrations/plane",
+--- src/server_old/agents/harness/terminal/BUILD.bazel
++++ src/server_old/agents/harness/terminal/BUILD.bazel
+@@ -6,7 +6,7 @@ go_library(
+     importpath = "github.com/onehumancorp/mono/src/server/agents/harness/terminal",
+     visibility = ["//visibility:public"],
+     deps = [
+-        "//src/server/agents/harness",
++        "//src/server_old/agents/harness",
+         "//src/server_old/orchestration",
+     ],
+ )
+@@ -15,5 +15,5 @@ go_test(
+     name = "terminal_test",
+     srcs = ["executor_test.go", "validator_test.go"],
+     embed = [":terminal"],
+-    deps = ["//src/server/agents/harness"],
++    deps = ["//src/server_old/agents/harness"],
+ )
+--- src/server_old/dashboard/BUILD.bazel
++++ src/server_old/dashboard/BUILD.bazel
+@@ -29,7 +29,7 @@ go_library(
+         "//src/server_old/api/mesh",
+         "//src/server_old/orchestration/mesh",
+         "//src/server_old/services/growth",
+-        "//src/server/agents",
++        "//src/server_old/agents",
+         "//src/server_old/auth",
+         "//src/server_old/billing",
+         "//src/server_old/domain",
+--- src/server_old/harness/mcp/BUILD.bazel
++++ src/server_old/harness/mcp/BUILD.bazel
+@@ -4,12 +4,12 @@ go_library(
+     srcs = ["client_manager.go"],
+     importpath = "github.com/onehumancorp/mono/src/server/harness/mcp",
+     visibility = ["//visibility:public"],
+-    deps = ["//src/server/agents/builtin"],
++    deps = ["//src/server_old/agents/builtin"],
+ )
+
+ go_test(
+     name = "mcp_test",
+     srcs = ["client_manager_test.go"],
+     embed = [":mcp"],
+-    deps = ["//src/server/agents/builtin"],
++    deps = ["//src/server_old/agents/builtin"],
+ )
+--- src/server_old/integrations/mcp_config_sync/BUILD.bazel
++++ src/server_old/integrations/mcp_config_sync/BUILD.bazel
+@@ -7,7 +7,7 @@ go_library(
+     deps = [
+         "//src/server_old/auth",
+         "//src/server_old/db",
+-        "//src/server/agents/builtin",
++        "//src/server_old/agents/builtin",
+         "@io_opentelemetry_go_otel//:otel",
+         "@io_opentelemetry_go_otel//attribute",
+         "@in_gopkg_yaml_v3//:yaml_v3",
+@@ -21,7 +21,7 @@ go_test(
+     deps = [
+         "//src/server_old/auth",
+         "//src/server_old/db",
+-        "//src/server/agents/builtin",
++        "//src/server_old/agents/builtin",
+         "@com_github_stretchr_testify//assert",
+         "@com_github_stretchr_testify//require",
+     ],
+--- src/server_old/ironclaw/BUILD.bazel
++++ src/server_old/ironclaw/BUILD.bazel
+@@ -4,7 +4,7 @@ go_library(
+     srcs = ["main.go"],
+     importpath = "github.com/onehumancorp/mono/src/server/ironclaw",
+     visibility = ["//visibility:private"],
+-    deps = ["//src/server/agents"],
++    deps = ["//src/server_old/agents"],
+ )
+
+ # ── Host binary ────────────────────────────────────────────────────────────────
+--- src/server_old/pipeline/BUILD.bazel
++++ src/server_old/pipeline/BUILD.bazel
+@@ -8,7 +8,7 @@ go_library(
+     importpath = "github.com/onehumancorp/mono/src/server/pipeline",
+     visibility = ["//visibility:public"],
+     deps = [
+-        "//src/server/agents/builtin",
++        "//src/server_old/agents/builtin",
+         "//src/server_old/db",
+         "//src/server_old/orchestration",
+         "//src/server_old/telemetry",
+@@ -24,7 +24,7 @@ go_test(
+     ],
+     embed = [":pipeline"],
+     deps = [
+-        "//src/server/agents/builtin",
++        "//src/server_old/agents/builtin",
+         "//src/server_old/db",
+         "//src/server_old/orchestration",
+     ],
+--- src/server_old/tools/hybridfsmcp/BUILD.bazel
++++ src/server_old/tools/hybridfsmcp/BUILD.bazel
+@@ -5,7 +5,7 @@ go_library(
+     importpath = "github.com/onehumancorp/mono/src/server/tools/hybridfsmcp",
+     visibility = ["//visibility:public"],
+     deps = [
+-        "//src/server/agents/mcp/proxy",
++        "//src/server_old/agents/mcp/proxy",
+         "//src/server_old/auth",
+         "//src/server_old/utils",
+         "@com_github_minio_minio_go_v7//:minio-go",

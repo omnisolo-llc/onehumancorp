@@ -102,7 +102,6 @@ pub fn agent_tool() -> Tool {
             "required": ["prompt"]
         }),
         execute: Arc::new(AgentExecutor),
-        requires_permission: false,
     }
 }
 
@@ -121,7 +120,6 @@ pub fn agent_stop_tool() -> Tool {
             "required": ["task_id"]
         }),
         execute: Arc::new(TaskStopExecutor),
-        requires_permission: false,
     }
 }
 
@@ -140,6 +138,5 @@ pub fn agent_status_tool() -> Tool {
             "required": ["task_id"]
         }),
         execute: Arc::new(TaskStatusExecutor),
-        requires_permission: false,
     }
 }

@@ -70,6 +70,5 @@ pub fn toolsearch_tool() -> Tool {
             "required": ["query"]
         }),
         execute: Arc::new(ToolSearchExecutor),
-        requires_permission: false,
     }
 }

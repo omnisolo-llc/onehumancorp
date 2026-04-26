@@ -25,7 +25,6 @@ pub struct Tool {
     pub description: String,
     pub parameters: Value,
     pub execute: Arc<dyn ToolExecutor>,
-    pub requires_permission: bool,
 }
 
 impl std::fmt::Debug for Tool {
@@ -41,7 +40,6 @@ impl Clone for Tool {
             description: self.description.clone(),
             parameters: self.parameters.clone(),
             execute: self.execute.clone(),
-            requires_permission: self.requires_permission,
         }
     }
 }

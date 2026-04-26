@@ -51,6 +51,5 @@ pub fn write_tool() -> Tool {
             "required": ["path", "content"]
         }),
         execute: Arc::new(WriteExecutor),
-        requires_permission: false,
     }
 }

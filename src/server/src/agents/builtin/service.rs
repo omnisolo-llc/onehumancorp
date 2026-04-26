@@ -3,7 +3,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status};
 
-use crate::agent::{Agent, AgentEvent, AgentRunConfig, GuardrailConfig};
+use crate::agent::{Agent, AgentEvent, AgentRunConfig};
 use crate::auth::AuthMode;
 use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
@@ -223,7 +223,6 @@ impl AgentServiceImpl {
             max_task_tokens: 0,
             confidence_threshold,
             enable_observation_masking: true,
-            guardrails: GuardrailConfig::default(),
         }
     }
 }
@@ -372,7 +371,6 @@ impl AgentService for AgentServiceImpl {
                 max_task_tokens: 0,
                 confidence_threshold: 0.0,
             enable_observation_masking: true,
-                guardrails: GuardrailConfig::default(),
             };
 
             let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));

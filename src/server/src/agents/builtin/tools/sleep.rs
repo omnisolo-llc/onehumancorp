@@ -39,6 +39,5 @@ pub fn sleep_tool() -> Tool {
             "required": ["seconds"]
         }),
         execute: Arc::new(SleepExecutor),
-        requires_permission: false,
     }
 }

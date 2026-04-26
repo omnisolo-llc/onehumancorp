@@ -59,7 +59,6 @@ pub fn finance_report_tool() -> Tool {
             }
         }),
         execute: Arc::new(FinanceReportExecutor),
-        requires_permission: false,
     }
 }
 
