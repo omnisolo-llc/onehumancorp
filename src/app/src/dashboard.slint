@@ -1,7 +1,7 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Dashboard inherits Window {
-    width: 800px;
+    width: 375px;
     height: 800px;
     title: "Dashboard";
 
@@ -19,55 +19,46 @@ export component Dashboard inherits Window {
         }
 
         // Stat Cards
-        HorizontalBox {
+        VerticalBox {
             spacing: 16px;
             
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Agents"; color: #64748b; }
-                    Text { text: "5"; font-size: 32px; font-weight: 700; color: #a855f7; }
+            if (root.width < 768px): VerticalBox {
+                spacing: 16px;
+                Rectangle {
+                    background: white; border-color: #e2e8f0; border-width: 1px; border-radius: 8px;
+                    VerticalBox { padding: 16px; Text { text: "Active Agents"; color: #64748b; } Text { text: "5"; font-size: 32px; font-weight: 700; color: #a855f7; } }
+                }
+                Rectangle {
+                    background: white; border-color: #e2e8f0; border-width: 1px; border-radius: 8px;
+                    VerticalBox { padding: 16px; Text { text: "Active Tasks"; color: #64748b; } Text { text: "12"; font-size: 32px; font-weight: 700; color: #06b6d4; } }
+                }
+                Rectangle {
+                    background: white; border-color: #e2e8f0; border-width: 1px; border-radius: 8px;
+                    VerticalBox { padding: 16px; Text { text: "Scheduled Calls"; color: #64748b; } Text { text: "3"; font-size: 32px; font-weight: 700; color: #10b981; } }
+                }
+                Rectangle {
+                    background: white; border-color: #e2e8f0; border-width: 1px; border-radius: 8px;
+                    VerticalBox { padding: 16px; Text { text: "Team Members"; color: #64748b; } Text { text: "8"; font-size: 32px; font-weight: 700; color: #f59e0b; } }
                 }
             }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Tasks"; color: #64748b; }
-                    Text { text: "12"; font-size: 32px; font-weight: 700; color: #06b6d4; }
+
+            if (root.width >= 768px): HorizontalBox {
+                spacing: 16px;
+                Rectangle {
+                    background: white; border-color: #e2e8f0; border-width: 1px; border-radius: 8px; width: 180px;
+                    VerticalBox { padding: 16px; Text { text: "Active Agents"; color: #64748b; } Text { text: "5"; font-size: 32px; font-weight: 700; color: #a855f7; } }
                 }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Scheduled Calls"; color: #64748b; }
-                    Text { text: "3"; font-size: 32px; font-weight: 700; color: #10b981; }
+                Rectangle {
+                    background: white; border-color: #e2e8f0; border-width: 1px; border-radius: 8px; width: 180px;
+                    VerticalBox { padding: 16px; Text { text: "Active Tasks"; color: #64748b; } Text { text: "12"; font-size: 32px; font-weight: 700; color: #06b6d4; } }
                 }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Team Members"; color: #64748b; }
-                    Text { text: "8"; font-size: 32px; font-weight: 700; color: #f59e0b; }
+                Rectangle {
+                    background: white; border-color: #e2e8f0; border-width: 1px; border-radius: 8px; width: 180px;
+                    VerticalBox { padding: 16px; Text { text: "Scheduled Calls"; color: #64748b; } Text { text: "3"; font-size: 32px; font-weight: 700; color: #10b981; } }
+                }
+                Rectangle {
+                    background: white; border-color: #e2e8f0; border-width: 1px; border-radius: 8px; width: 180px;
+                    VerticalBox { padding: 16px; Text { text: "Team Members"; color: #64748b; } Text { text: "8"; font-size: 32px; font-weight: 700; color: #f59e0b; } }
                 }
             }
         }
