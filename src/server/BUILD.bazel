@@ -8,6 +8,8 @@ cargo_build_script(
     data = [
         "//src/proto:hub.proto",
         "//src/proto:agent_service.proto",
+        "//src/proto:organization.proto",
+        "//src/proto:common.proto",
         "@protobuf//:protoc",
     ],
     deps = [

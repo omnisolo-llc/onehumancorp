@@ -10,8 +10,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tonic_build::configure()
         .compile_protos(
-            &["../proto/hub.proto", "../proto/agent_service.proto"],
-            &["../proto"],
+            &["../proto/hub.proto", "../proto/agent_service.proto", "../proto/organization.proto"],
+            &["../proto", "../.."],
         )?;
     Ok(())
 }
