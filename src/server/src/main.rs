@@ -30,6 +30,7 @@ pub mod services {
         pub mod auditor;
     }
     pub mod growth;
+    pub mod onboarding;
 }
 
 use tokio::sync::mpsc;
