@@ -6,3 +6,4 @@ pub mod plane;
 pub mod worker;
 pub mod checkpointer;
 pub mod harness;
+pub mod memory;
