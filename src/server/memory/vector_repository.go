@@ -135,8 +135,47 @@ func (r *VectorRepository) Delete(ctx context.Context, id string) error {
 	return err
 }
 
+func (r *VectorRepository) GetOrganizationIDs(ctx context.Context) ([]string, error) {
+	query := "SELECT DISTINCT organization_id FROM users WHERE organization_id != ''"
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get organization IDs: %w", err)
+	}
+	defer rows.Close()
 
+	var orgIDs []string
+	for rows.Next() {
+		var orgID string
+		if err := rows.Scan(&orgID); err != nil {
+			return nil, fmt.Errorf("failed to scan organization ID: %w", err)
+		}
+		orgIDs = append(orgIDs, orgID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
 
+	return orgIDs, nil
+}
+
+func (r *VectorRepository) GetRecentMemories(ctx context.Context, organizationID string, since time.Time) ([]*EmbeddingRecord, error) {
+	query := `
+		SELECT id, organization_id, COALESCE(agent_id, ''), content, embedding, source_type, created_at
+		FROM consolidated_memory
+		WHERE organization_id = $1 AND created_at > $2
+		ORDER BY created_at DESC
+	`
+	rows, err := r.db.Query(ctx, query, organizationID, since)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query recent memories: %w", err)
+	}
+	defer rows.Close()
+
+	var results []*EmbeddingRecord
+	for rows.Next() {
+		var rec EmbeddingRecord
+		var embStr string
+		if err := rows.Scan(&rec.ID, &rec.OrganizationID, &rec.AgentID, &rec.Content, &embStr, &rec.SourceType, &rec.CreatedAt); err != nil {
 			continue
 		}
 		json.Unmarshal([]byte(embStr), &rec.Embedding)
