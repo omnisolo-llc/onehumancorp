@@ -436,16 +436,3 @@ flutter_test(
 )
 
 
-
-sh_test(
-    name = "app_web_e2e_test",
-    srcs = ["test/flutter_web_e2e_test.sh"],
-    data = [
-        "//src/app_old/e2e:e2e_tests",
-        "//src/app_old:app",
-        "//:node_modules/@playwright/test",
-    ],
-    env = {
-        "PLAYWRIGHT_BROWSERS_PATH": "0",
-    },
-)

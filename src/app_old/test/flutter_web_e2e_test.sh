@@ -224,13 +224,13 @@ fi
 E2E_TMP_DIR="${TMPDIR}/e2e"
 mkdir -p "${E2E_TMP_DIR}"
 # Copy all .ts files from the e2e directory to handle imports correctly.
-cp -f "$(dirname "${CONFIG}")"/*.ts "${E2E_TMP_DIR}/"
-cp -f "$(dirname "${SPEC_FILE}")"/*.ts "${E2E_TMP_DIR}/"
+cp "$(dirname "${CONFIG}")"/*.ts "${E2E_TMP_DIR}/"
+cp "$(dirname "${SPEC_FILE}")"/*.ts "${E2E_TMP_DIR}/"
 CONFIG="${E2E_TMP_DIR}/playwright.config.ts"
 export NODE_PATH="${NODE_MODULES_DIR}${NODE_PATH:+:${NODE_PATH}}"
 
 # ── Install Playwright browsers if needed ─────────────────────────────────
-# export PLAYWRIGHT_BROWSERS_PATH="${TMPDIR}/pw_browsers"
+export PLAYWRIGHT_BROWSERS_PATH="${TMPDIR}/pw_browsers"
 mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}"
 
 # In sandboxed environments, --with-deps may fail due lack of root privileges.

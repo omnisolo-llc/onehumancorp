@@ -29,7 +29,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], executablePath: process.env.CHROME_BIN },
+      use: { ...devices['Desktop Chrome'], launchOptions: { executablePath: '/usr/bin/google-chrome' } },
     },
   ],
 });
