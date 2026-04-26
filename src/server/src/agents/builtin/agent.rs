@@ -192,35 +192,130 @@ impl Agent {
 
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
+
+            // Partition tools into concurrent (read-only) and sequential (mutating) blocks.
+            // We'll iterate through `tool_calls`. Read-only tools are accumulated and executed
+            // concurrently. Whenever a mutating tool is encountered, we await the current
+            // concurrent batch, then execute the mutating tool sequentially, then continue.
+            let mut concurrent_batch = Vec::new();
+
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+                let is_mutating = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(true);
+
+                if is_mutating {
+                    // Flush concurrent batch
+                    if !concurrent_batch.is_empty() {
+                        let futures: Vec<_> = concurrent_batch.into_iter().map(|c_tc| {
+                            async move {
+                                let res = self.execute_tool(&c_tc).await;
+                                (c_tc, res)
+                            }
+                        }).collect();
+                        let results = futures::future::join_all(futures).await;
+                        for (c_tc, result) in results {
+                            let (content, error) = match result {
+                                Ok(r) => {
+                                    self.progress.record_tool_use();
+                                    on_event(AgentEvent::ToolCall {
+                                        name: c_tc.name.clone(),
+                                        args_json: c_tc.arguments.to_string(),
+                                        result: r.clone(),
+                                        iteration,
+                                    });
+                                    (r, String::new())
+                                }
+                                Err(e) => {
+                                    let err = e.to_string();
+                                    on_event(AgentEvent::ToolCall {
+                                        name: c_tc.name.clone(),
+                                        args_json: c_tc.arguments.to_string(),
+                                        result: format!("Error: {}", err),
+                                        iteration,
+                                    });
+                                    (String::new(), err)
+                                }
+                            };
+                            tool_results.push(ToolResult {
+                                tool_call_id: c_tc.id.clone(),
+                                content,
+                                error,
+                            });
+                        }
+                        concurrent_batch = Vec::new();
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
+
+                    // Execute mutating tool sequentially
+                    let result = self.execute_tool(tc).await;
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
+                    };
+                    tool_results.push(ToolResult {
+                        tool_call_id: tc.id.clone(),
+                        content,
+                        error,
+                    });
+                } else {
+                    concurrent_batch.push(tc.clone());
+                }
+            }
+
+            // Flush any remaining concurrent batch
+            if !concurrent_batch.is_empty() {
+                let futures: Vec<_> = concurrent_batch.into_iter().map(|c_tc| {
+                    async move {
+                        let res = self.execute_tool(&c_tc).await;
+                        (c_tc, res)
                     }
-                };
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
-                });
+                }).collect();
+                let results = futures::future::join_all(futures).await;
+                for (c_tc, result) in results {
+                    let (content, error) = match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: c_tc.name.clone(),
+                                args_json: c_tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            (r, String::new())
+                        }
+                        Err(e) => {
+                            let err = e.to_string();
+                            on_event(AgentEvent::ToolCall {
+                                name: c_tc.name.clone(),
+                                args_json: c_tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            (String::new(), err)
+                        }
+                    };
+                    tool_results.push(ToolResult {
+                        tool_call_id: c_tc.id.clone(),
+                        content,
+                        error,
+                    });
+                }
             }
 
             if cfg.enable_observation_masking {
@@ -348,6 +443,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "test".to_string(),
             parameters: Value::Null,
+            is_mutating: false,
             execute: Arc::new(MockToolExecutor),
         }];
 
