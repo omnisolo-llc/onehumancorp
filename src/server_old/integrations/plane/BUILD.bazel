@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "plane",
+    srcs = [
+        "client.go",
+        "setup.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/integrations/plane",
+    visibility = ["//visibility:public"],
+    deps = ["//src/server_old/integrations"],
+)

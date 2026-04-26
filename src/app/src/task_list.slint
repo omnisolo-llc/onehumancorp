@@ -1,0 +1,56 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component TaskList inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Shared Task List";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Shared Task List"; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+        VerticalBox {
+            spacing: 12px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "Implement new feature"; font-size: 18px; font-weight: 700; color: #1e293b; }
+                    HorizontalBox {
+                        Text { text: "Status: IN_PROGRESS"; color: #0284c7; } 
+                        Rectangle {}
+                        Text { text: "Agent: agent_1"; color: #64748b; }
+                    }
+                    Text { text: "Dependencies: task_1, task_2"; color: #9ca3af; font-size: 12px; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "Fix bug #404"; font-size: 18px; font-weight: 700; color: #1e293b; }
+                    HorizontalBox {
+                        Text { text: "Status: COMPLETED"; color: #10b981; } 
+                        Rectangle {}
+                        Text { text: "Agent: agent_2"; color: #64748b; }
+                    }
+                }
+            }
+        }
+    }
+}

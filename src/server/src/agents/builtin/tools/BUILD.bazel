@@ -1,0 +1,27 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "tools",
+    srcs = glob(["**/*.rs"]),
+    crate_name = "ohc_builtin_agent_tools",
+    edition = "2024",
+    crate_root = "mod.rs",
+    visibility = ["//src/server/src/agents/builtin:__subpackages__"],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+        "@crates//:async-recursion",
+    ],
+    deps = [
+        "@crates//:serde_json",
+        "@crates//:tokio",
+        "@crates//:reqwest",
+        "@crates//:urlencoding",
+        "@crates//:regex",
+        "@crates//:serde",
+        "@crates//:chrono",
+        "@crates//:uuid",
+        "@crates//:glob",
+        "@crates//:tracing",
+        "@crates//:qrcode",
+    ],
+)

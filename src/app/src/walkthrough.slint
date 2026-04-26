@@ -1,0 +1,102 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Walkthrough inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "AutoDream Sync Walkthrough";
+
+    property <int> current_step: 0;
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+        alignment: center;
+
+        Text { text: "Interactive Guide: Sync Lifecycle"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 16px;
+            width: 500px;
+            
+            VerticalBox {
+                padding: 32px;
+                spacing: 16px;
+                
+                Text {
+                    text: current_step == 0 ? "1. Generate & Insert Vector" :
+                          current_step == 1 ? "2. Query Pending Vectors" :
+                          current_step == 2 ? "3. Return Batched Vectors" :
+                          current_step == 3 ? "4. Push over mTLS" :
+                          current_step == 4 ? "5. Upsert to Global" :
+                          current_step == 5 ? "6. Acknowledge Success" :
+                          "7. Update sync_status";
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #0284c7;
+                }
+                
+                Text {
+                    text: current_step == 0 ? "Worker generates an intelligence vector and inserts it into Local SQLite DB with sync_status='pending'." :
+                          current_step == 1 ? "Sync Daemon periodically queries the Local SQLite DB for any vectors pending synchronization." :
+                          current_step == 2 ? "Local SQLite DB returns the pending intelligence vectors in a batch format to the Sync Daemon." :
+                          current_step == 3 ? "Sync Daemon securely pushes the batched vectors to the Cloud API Gateway using SPIFFE Identity over mTLS." :
+                          current_step == 4 ? "Cloud API Gateway upserts the received vectors into the Global Cloud PostgreSQL (autodream_memories)." :
+                          current_step == 5 ? "Cloud API Gateway sends an acknowledgment of successful storage back to the Sync Daemon." :
+                          "Sync Daemon updates the local records in SQLite, marking them as sync_status='synced'.";
+                    color: #1e293b;
+                    wrap: word-wrap;
+                }
+                
+                Rectangle {
+                    background: #f1f5f9;
+                    border-radius: 8px;
+                    
+                    HorizontalBox {
+                        padding: 12px;
+                        spacing: 12px;
+                        Text { text: "🔄"; color: #0284c7; }
+                        Text {
+                            text: current_step == 0 ? "Standalone AutoDreamWorker -> Local SQLite DB" :
+                                  current_step == 1 ? "Sync Daemon -> Local SQLite DB" :
+                                  current_step == 2 ? "Local SQLite DB -> Sync Daemon" :
+                                  current_step == 3 ? "Sync Daemon -> Cloud API Gateway" :
+                                  current_step == 4 ? "Cloud API Gateway -> Cloud PostgreSQL" :
+                                  current_step == 5 ? "Cloud API Gateway -> Sync Daemon" :
+                                  "Sync Daemon -> Local SQLite DB";
+                            color: #0284c7;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+                
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 20px;
+                    
+                    Button {
+                        text: "Previous Step";
+                        enabled: current_step > 0;
+                        clicked => { current_step = current_step - 1; }
+                    }
+                    
+                    Text {
+                        text: "Step " + (current_step + 1) + " of 7";
+                        color: #9ca3af;
+                        horizontal-alignment: center;
+                    }
+                    
+                    Button {
+                        text: "Next Step";
+                        enabled: current_step < 6;
+                        clicked => { current_step = current_step + 1; }
+                    }
+                }
+            }
+        }
+    }
+}

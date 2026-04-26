@@ -1,0 +1,105 @@
+import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+
+export component AgentConfig inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "Configure AI Agent";
+
+    property <int> step: 0;
+    property <string> selected_agent: "";
+    property <bool> can_reply: false;
+    property <bool> can_social: false;
+    property <string> frequency: "Daily";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        // Step 0: Choose Agent
+        if (step == 0) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Choose an agent to add to your team"; color: #1e293b; }
+            
+            HorizontalBox {
+                spacing: 10px;
+                Button { text: "Customer Support"; clicked => { selected_agent = "Customer Support"; } }
+                Button { text: "Social Media Manager"; clicked => { selected_agent = "Social Media Manager"; } }
+            }
+            Text { text: "Selected: " + selected_agent; color: #a855f7; }
+        }
+
+        // Step 1: Capabilities
+        if (step == 1) : VerticalBox {
+            spacing: 10px;
+            Text { text: "What should this agent do?"; color: #1e293b; }
+            
+            HorizontalBox {
+                Text { text: "Reply to customer messages"; color: #1e293b; }
+                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+            }
+            HorizontalBox {
+                Text { text: "Post to Instagram & Facebook"; color: #1e293b; }
+                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+            }
+        }
+
+        // Step 2: Frequency
+        if (step == 2) : VerticalBox {
+            spacing: 10px;
+            Text { text: "How often should this agent work?"; color: #1e293b; }
+            Text { text: frequency; font-size: 24px; color: #a855f7; horizontal-alignment: center; }
+            
+            HorizontalBox {
+                alignment: center;
+                Button { text: "Weekly"; clicked => { frequency = "Weekly"; } }
+                Button { text: "Daily"; clicked => { frequency = "Daily"; } }
+                Button { text: "Hourly"; clicked => { frequency = "Hourly"; } }
+            }
+        }
+
+        // Step 3: Review
+        if (step == 3) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Review & Activate"; color: #1e293b; }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Agent: " + selected_agent; color: #1e293b; }
+                    Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #1e293b; }
+                    Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #1e293b; }
+                    Text { text: "Schedule: " + frequency; color: #1e293b; }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {} // Spacer
+            Button {
+                text: step == 3 ? "Activate" : "Next";
+                clicked => {
+                    if (step < 3) {
+                        step = step + 1;
+                    } else {
+                        // Handle activation
+                    }
+                }
+            }
+        }
+    }
+}

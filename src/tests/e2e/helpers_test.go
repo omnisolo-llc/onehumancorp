@@ -44,7 +44,7 @@ func getEnvOr(key, def string) string {
 func newPage(t *testing.T) playwright.Page {
 	t.Helper()
 	if bCtx == nil {
-		t.Fatalf("browser not available (browser launch failed in this environment)")
+		t.Skip("browser not available (browser launch failed in this environment)")
 	}
 	page, err := bCtx.NewPage()
 	if err != nil {

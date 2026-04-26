@@ -1,0 +1,20 @@
+import { Button, VerticalBox } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    width: 400px;
+    height: 300px;
+    title: "New Rust + Slint App";
+
+    VerticalBox {
+        alignment: center;
+        spacing: 20px;
+        Text {
+            text: "Hello from Slint!";
+            horizontal-alignment: center;
+            font-size: 20px;
+        }
+        Button {
+            text: "Click me";
+        }
+    }
+}

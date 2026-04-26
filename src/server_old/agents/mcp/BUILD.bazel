@@ -1,0 +1,49 @@
+load("@aspect_rules_js//js:defs.bzl", "js_binary")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+write_file(
+    name = "write_index",
+    out = "index.js",
+    content = ["require('@modelcontextprotocol/server-github/dist/index.js');"],
+)
+
+js_binary(
+    name = "github",
+    data = [
+        "//:node_modules/@modelcontextprotocol/server-github",
+        "//:node_modules/zod",
+    ],
+    entry_point = "index.js",
+    visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "mcp",
+    srcs = [
+        "secret_provider.go",
+        "local_secret_provider.go",
+        "cloud_secret_provider.go",
+        "blob_provider.go",
+        "crdt_provider.go",
+        "client.go",
+        "hybrid_sync.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/agents/mcp",
+    visibility = ["//visibility:public"],
+    deps = ["//src/server_old/telemetry"],
+)
+
+go_test(
+    name = "mcp_test",
+    srcs = [
+        "secret_provider_test.go",
+        "blob_provider_test.go",
+        "client_test.go",
+        "crdt_provider_test.go",
+        "hybrid_mcp_bridge_test.go",
+        "hybrid_sync_test.go",
+    ],
+    embed = [":mcp"],
+    deps = ["//src/server_old/telemetry"],
+)

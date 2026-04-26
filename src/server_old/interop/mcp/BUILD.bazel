@@ -1,0 +1,52 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcp",
+    srcs = [
+        "blob_sync.go",
+        "log_tool.go",
+        "proxy.go",
+        "config_sync.go",
+        "config_sync_api.go",
+        "secrets.go",
+        "tools.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/interop/mcp",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server_old/db",
+        "//src/server_old/auth",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "mcp_test",
+    srcs = [
+        "blob_sync_test.go",
+        "log_tool_test.go",
+        "log_tool_coverage_test.go",
+        "proxy_test.go",
+        "config_sync_test.go",
+        "config_sync_api_test.go",
+        "config_sync_coverage_test.go",
+        "config_sync_e2e_test.go",
+        "secrets_test.go",
+    ],
+    embed = [":mcp"],
+    deps = [
+        "//src/server_old/db",
+        "//src/server_old/auth",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "tools_test",
+    srcs = ["tools_test.go"],
+    embed = [":mcp"],
+    deps = [
+        "//src/server_old/db",
+        "@com_github_google_uuid//:uuid",
+    ],
+)

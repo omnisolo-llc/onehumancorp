@@ -1,0 +1,125 @@
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
+
+export component AgentHire inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "Hire New Agent";
+
+    property <int> step: 0;
+    property <string> selected_role: "";
+    property <string> selected_provider: "";
+    property <string> agent_name: "";
+    property <bool> cap_email: false;
+    property <bool> cap_message: false;
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Hire New Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        // Step 0: Role
+        if (step == 0) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Step 1 — Select Agent Role"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            
+            HorizontalBox {
+                spacing: 10px;
+                Button { text: "Product Manager"; clicked => { selected_role = "Product Manager"; agent_name = "Senior Product Manager"; } }
+                Button { text: "Software Engineer"; clicked => { selected_role = "Software Engineer"; agent_name = "Senior Software Engineer"; } }
+            }
+            Text { text: "Selected: " + selected_role; color: #a855f7; }
+        }
+
+        // Step 1: Provider
+        if (step == 1) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Step 2 — Choose AI Provider"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            
+            Button { text: "OpenAI"; clicked => { selected_provider = "OpenAI"; } }
+            Button { text: "Anthropic"; clicked => { selected_provider = "Anthropic"; } }
+            Text { text: "Selected: " + selected_provider; color: #a855f7; }
+        }
+
+        // Step 2: Details
+        if (step == 2) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Step 3 — Agent Details"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit {
+                placeholder-text: "Agent Name";
+                text: agent_name;
+            }
+        }
+
+        // Step 3: Topology
+        if (step == 3) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Step 4 — Sub-agent Topology"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Text { text: "[ Topology visualization placeholder ]"; color: #64748b; horizontal-alignment: center; }
+        }
+
+        // Step 4: Capabilities
+        if (step == 4) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Step 5 — Select Capabilities"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            HorizontalBox {
+                Text { text: "Read my emails"; color: #1e293b; }
+                CheckBox { checked: cap_email; toggled => { cap_email = !cap_email; } }
+            }
+            HorizontalBox {
+                Text { text: "Send messages on my behalf"; color: #1e293b; }
+                CheckBox { checked: cap_message; toggled => { cap_message = !cap_message; } }
+            }
+        }
+
+        // Step 5: Limits
+        if (step == 5) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Step 6 — Resource Limits"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Text { text: "Max sessions per day: 50"; color: #1e293b; }
+            Text { text: "[ Slider ]"; color: #64748b; horizontal-alignment: center; }
+        }
+
+        // Step 6: Confirm
+        if (step == 6) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Step 7 — Confirm Deployment"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Name: " + agent_name; color: #1e293b; }
+                    Text { text: "Role: " + selected_role; color: #1e293b; }
+                    Text { text: "Provider: " + selected_provider; color: #1e293b; }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {} // Spacer
+            Button {
+                text: step == 6 ? "Deploy Agent" : "Next";
+                clicked => {
+                    if (step < 6) {
+                        step = step + 1;
+                    } else {
+                        // Handle deployment
+                    }
+                }
+            }
+        }
+    }
+}
