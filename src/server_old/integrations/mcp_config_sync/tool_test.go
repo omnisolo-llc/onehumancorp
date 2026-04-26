@@ -233,47 +233,45 @@ func TestConfigTool_GetConfigTool(t *testing.T) {
 	defer os.Unsetenv("OHC_CONFIG_PATH")
 
 	tool := NewConfigTool(nil)
-	mcpTool := tool.GetConfigTool()
 
 	// test invalid JSON
-	_, err = mcpTool.Execute(context.Background(), []byte(`invalid`))
+	_, err = tool.ExecuteGetConfigTool(context.Background(), []byte(`invalid`))
 	require.Error(t, err)
 
 	// test missing key
-	_, err = mcpTool.Execute(context.Background(), []byte(`{}`))
+	_, err = tool.ExecuteGetConfigTool(context.Background(), []byte(`{}`))
 	require.Error(t, err)
 
 	// test success
-	res, err := mcpTool.Execute(context.Background(), []byte(`{"key":"my_key"}`))
+	res, err := tool.ExecuteGetConfigTool(context.Background(), []byte(`{"key":"my_key"}`))
 	require.NoError(t, err)
 	assert.Equal(t, "local_value", res)
 
     // test execution error (key not found)
-    _, err = mcpTool.Execute(context.Background(), []byte(`{"key":"other_key"}`))
+    _, err = tool.ExecuteGetConfigTool(context.Background(), []byte(`{"key":"other_key"}`))
 	require.Error(t, err)
 }
 
 func TestConfigTool_SyncConfigToCloudTool(t *testing.T) {
 	provider := &mockProvider{}
 	tool := NewConfigTool(provider)
-	mcpTool := tool.SyncConfigToCloudTool()
 
 	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
 
 	// test invalid JSON
-	_, err := mcpTool.Execute(ctx, []byte(`invalid`))
+	_, err := tool.ExecuteSyncConfigToCloudTool(ctx, []byte(`invalid`))
 	require.Error(t, err)
 
 	// test missing fields
-	_, err = mcpTool.Execute(ctx, []byte(`{"tenant_id":"org1"}`))
+	_, err = tool.ExecuteSyncConfigToCloudTool(ctx, []byte(`{"tenant_id":"org1"}`))
 	require.Error(t, err)
 
 	// test success
-	res, err := mcpTool.Execute(ctx, []byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`))
+	res, err := tool.ExecuteSyncConfigToCloudTool(ctx, []byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`))
 	require.NoError(t, err)
 	assert.Equal(t, "Successfully synced config to cloud", res)
 
     // test execution error (no auth)
-    _, err = mcpTool.Execute(context.Background(), []byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`))
+    _, err = tool.ExecuteSyncConfigToCloudTool(context.Background(), []byte(`{"tenant_id":"org1","agent_id":"a1","key":"k1","value":"v1","metadata":{"k":"v"}}`))
 	require.Error(t, err)
 }

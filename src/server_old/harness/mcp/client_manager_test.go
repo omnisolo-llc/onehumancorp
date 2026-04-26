@@ -2,18 +2,20 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server_old/agents/builtin"
+	"github.com/onehumancorp/mono/src/server/agents/local"
 )
 
 func TestConvertToMCPTool(t *testing.T) {
-	internalTool := builtin.Tool{
+	internalTool := local.ToolDefinition{
 		Name:        "test_tool",
 		Description: "A test tool",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
+		InputSchema: map[string]interface{}{
+			"type":       "object",
+			"properties": map[string]interface{}{},
+		},
 	}
 
 	mcpTool := ConvertToMCPTool(internalTool)
