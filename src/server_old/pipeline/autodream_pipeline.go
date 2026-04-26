@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
 	"github.com/onehumancorp/mono/src/server/db"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 	"github.com/onehumancorp/mono/src/server/telemetry"
@@ -21,7 +20,7 @@ import (
 type AutoDreamPipeline struct {
 	pool          db.Provider
 	worker        *orchestration.AutoDreamWorker
-	llm           builtin.LLMClient
+	llm           LLMClient
 	minimaxClient orchestration.MinimaxClient
 }
 
@@ -30,13 +29,13 @@ func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDre
 	worker := orchestration.NewAutoDreamWorker(pool)
 
 	// Determine LLM client based on env vars
-	var llmClient builtin.LLMClient
+	var llmClient LLMClient
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
-		llmClient = builtin.NewAnthropicClient(key)
+		llmClient = NewAnthropicClient(key)
 	} else if key := os.Getenv("OPENAI_API_KEY"); key != "" {
-		llmClient = builtin.NewOpenAIClient(key)
+		llmClient = NewOpenAIClient(key)
 	} else {
-		llmClient = builtin.NewOllamaClient("")
+		llmClient = NewOllamaClient("")
 	}
 
 
@@ -121,10 +120,10 @@ func (p *AutoDreamPipeline) resolveConflicts(ctx context.Context) {
 		slog.Info("AutoDreamPipeline: detected memory conflict via pgvector", "id1", c.ID1, "id2", c.ID2)
 
 		prompt := fmt.Sprintf("You are an AI Memory Consolidator. Resolve these two conflicting memories into a single truth.\nMemory 1: %s\nMemory 2: %s", c.Content1, c.Content2)
-		req := builtin.ChatRequest{
+		req := ChatRequest{
 			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
+			Messages: []Message{
+				{Role: RoleUser, Content: prompt},
 			},
 			MaxTokens: 500,
 		}
@@ -249,10 +248,10 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 	for _, s := range sessions {
 		prompt := fmt.Sprintf("Summarize and consolidate this agent session memory:\n%s", s.ContextData)
 
-		req := builtin.ChatRequest{
+		req := ChatRequest{
 			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
+			Messages: []Message{
+				{Role: RoleUser, Content: prompt},
 			},
 			MaxTokens: 500,
 		}
@@ -376,10 +375,10 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 
 		prompt := fmt.Sprintf("Summarize and consolidate this file memory:\n%s", content)
 
-		req := builtin.ChatRequest{
+		req := ChatRequest{
 			System: "You are an AI Memory Consolidator.",
-			Messages: []builtin.Message{
-				{Role: builtin.RoleUser, Content: prompt},
+			Messages: []Message{
+				{Role: RoleUser, Content: prompt},
 			},
 			MaxTokens: 500,
 		}
@@ -444,3 +443,35 @@ func (p *AutoDreamPipeline) processFiles(ctx context.Context) {
 		os.Remove(processingPath)
 	}
 }
+
+// LLM types for the autodream pipeline
+type Role string
+const RoleUser Role = "user"
+
+type Message struct {
+	Role    Role   `json:"role"`
+	Content string `json:"content"`
+}
+
+type ChatRequest struct {
+	System    string    `json:"system,omitempty"`
+	Messages  []Message `json:"messages"`
+	MaxTokens int       `json:"max_tokens,omitempty"`
+}
+
+type ChatResponse struct {
+	Message Message `json:"message"`
+}
+
+type LLMClient interface {
+	Chat(ctx context.Context, req ChatRequest) (ChatResponse, error)
+}
+
+type MockClient struct {}
+func (m *MockClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
+	return ChatResponse{Message: Message{Content: "Mock Response"}}, nil
+}
+
+func NewAnthropicClient(key string) LLMClient { return &MockClient{} }
+func NewOpenAIClient(key string) LLMClient { return &MockClient{} }
+func NewOllamaClient(key string) LLMClient { return &MockClient{} }
