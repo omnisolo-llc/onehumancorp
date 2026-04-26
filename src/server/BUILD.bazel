@@ -58,9 +58,6 @@ rust_test(
     srcs = glob(["src/**/*.rs"]),
     crate_root = "src/main.rs",
     edition = "2021",
-    env = {
-        "RUST_TEST_THREADS": "1",
-    },
     deps = [
         ":build_script",
         "@crates//:tokio",
