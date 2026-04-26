@@ -58,6 +58,46 @@ pub fn calculate_cost(model: &str, prompt_tokens: i64, completion_tokens: i64, c
     (cached_tokens as f64 * pricing.cached_cost / 1_000_000.0)
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+pub struct CostConfig {
+    pub cost_per_input_token: f64,
+    pub cost_per_output_token: f64,
+    pub cost_per_cached_input_token: f64,
+    pub cost_per_local_embedding: f64,
+    pub discount_factor: f64,
+    pub cost_per_gb_month: f64,
+    pub cost_per_compute_hour: f64,
+    pub cost_per_network_gb: f64,
+}
+
+pub fn calculate_cost_with_config(input_tokens: i64, output_tokens: i64, cached_input_tokens: i64, local_embedding_tokens: i64, config: &CostConfig) -> f64 {
+    let input_cost = input_tokens as f64 * config.cost_per_input_token;
+    let output_cost = output_tokens as f64 * config.cost_per_output_token;
+    let cached_cost = cached_input_tokens as f64 * config.cost_per_cached_input_token;
+    let embedding_cost = local_embedding_tokens as f64 * config.cost_per_local_embedding;
+    let total = (input_cost + output_cost + cached_cost + embedding_cost) * (1.0 - config.discount_factor);
+    (total * 10000.0).round() / 10000.0
+}
+
+pub fn calculate_storage_savings(original_bytes: i64, compressed_bytes: i64, config: &CostConfig) -> f64 {
+    let saved_bytes = (original_bytes - compressed_bytes) as f64;
+    let saved_bytes = if saved_bytes < 0.0 { 0.0 } else { saved_bytes };
+    let saved_gb = saved_bytes / (1024.0 * 1024.0 * 1024.0);
+    let savings = saved_gb * config.cost_per_gb_month;
+    (savings * 10000.0).round() / 10000.0
+}
+
+pub fn calculate_compute_cost(hours: f64, config: &CostConfig) -> f64 {
+    let cost = hours * config.cost_per_compute_hour;
+    (cost * 10000.0).round() / 10000.0
+}
+
+pub fn calculate_network_cost(bytes: i64, config: &CostConfig) -> f64 {
+    let gb = bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+    let cost = gb * config.cost_per_network_gb;
+    (cost * 10000.0).round() / 10000.0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
