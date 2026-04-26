@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:ohc_app/widgets/agent_activity_feed_widget.dart';
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
@@ -98,6 +99,8 @@ class _DashboardContent extends StatelessWidget {
             ),
           ],
         ),
+        const AgentActivityFeedWidget(),
+        const SizedBox(height: 24),
         const SizedBox(height: 16),
         Wrap(
           spacing: 16,
@@ -225,6 +228,8 @@ class _DashboardContent extends StatelessWidget {
                 fontFamily: 'Inter',
               ),
         ),
+        const AgentActivityFeedWidget(),
+        const SizedBox(height: 24),
         const SizedBox(height: 16),
         Wrap(
           spacing: 16,

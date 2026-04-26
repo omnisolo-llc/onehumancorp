@@ -8,6 +8,7 @@ import 'package:ohc_app/models/channel.dart';
 import 'package:ohc_app/models/security_issue.dart';
 import 'package:ohc_app/models/skill.dart';
 import 'package:ohc_app/models/handoff.dart';
+import 'package:ohc_app/models/approval.dart';
 import 'package:ohc_app/models/pipeline.dart';
 import 'package:ohc_app/models/dashboard.dart';
 import 'package:ohc_app/models/settings.dart';
@@ -114,6 +115,19 @@ class ApiService {
   }
 
   // ── Handoffs & Approvals ─────────────────────────────────────────────────
+
+  Future<List<ApprovalRequest>> getApprovals() async {
+    final res = await _client.get(
+      Uri.parse('$baseUrl/api/approvals'),
+      headers: _headers,
+    );
+    _checkStatus(res);
+    final list = jsonDecode(res.body) as List<dynamic>;
+    return list
+        .map((e) => ApprovalRequest.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
 
   Future<List<HandoffPackage>> listHandoffs() async {
     final res = await _client.get(
