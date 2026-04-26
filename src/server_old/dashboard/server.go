@@ -99,11 +99,18 @@ type dashboardSnapshot struct {
 	Organization domain.Organization         `json:"organization"`
 	Meetings     []orchestration.MeetingRoom `json:"meetings"`
 	Costs        billing.Summary             `json:"costs"`
+	Storage      *StorageSummary             `json:"storage"`
 	Agents       []orchestration.Agent       `json:"agents"`
 	Statuses     []statusCount               `json:"statuses"`
 	TaskQueue    []orchestration.SharedTask  `json:"taskQueue,omitempty"`
 	QueueLength  int                         `json:"queueLength"`
 	UpdatedAt    time.Time                   `json:"updatedAt"`
+}
+
+
+type StorageSummary struct {
+	UsedBytes  int `json:"usedBytes"`
+	LimitBytes int `json:"limitBytes"`
 }
 
 type seedRequest struct {
@@ -1350,6 +1357,10 @@ func (s *Server) snapshotLocked() dashboardSnapshot {
 		Organization: s.org,
 		Meetings:     s.orgMeetingsLocked(),
 		Costs:        s.tracker.Summary(s.org.ID),
+		Storage: &StorageSummary{
+			UsedBytes:  104857600,
+			LimitBytes: 5000000000,
+		},
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
