@@ -1,0 +1,55 @@
+[package]
+name = "ohc-mono"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "server-rust"
+path = "src/server/main.rs"
+
+[[bin]]
+name = "ohc-builtin-agent"
+path = "src/agents/builtin/main.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["full"] }
+tonic = { version = "0.12", features = ["transport"] }
+prost = "0.13"
+serde_yaml = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+aes-gcm = "0.10"
+jsonwebtoken = "9"
+base64 = "0.22"
+hmac = "0.12"
+sha2 = "0.10"
+bcrypt = "0.15"
+rand = "0.8"
+hex = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
+ed25519-dalek = "2"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+flate2 = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+regex = "1"
+config = "0.14"
+redis = { version = "0.25", features = ["tokio-comp"] }
+glob = "0.3"
+once_cell = "1"
+async-trait = "0.1"
+futures = "0.3"
+urlencoding = "2"
+qrcode = { version = "0.14", default-features = false }
+async-recursion = "1"
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+opentelemetry = { version = "0.27", features = ["metrics", "trace"] }
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.28"
+tonic-build = "0.12"
+
+[build-dependencies]
+tonic-build = "0.12"
