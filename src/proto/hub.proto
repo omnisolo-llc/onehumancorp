@@ -219,6 +219,9 @@ service HubService {
   rpc AuditSetup(AuditSetupRequest) returns (AuditSetupResponse);
   rpc Diagnostics(DiagnosticsRequest) returns (DiagnosticsResponse);
   rpc GetWizardProfile(GetWizardProfileRequest) returns (GetWizardProfileResponse);
+  rpc Invite(InviteRequest) returns (InviteResponse);
+  rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
+  rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
 }
 
 message AgentConfig {
@@ -379,4 +382,1028 @@ message GetWizardProfileResponse {
   string status = 1;
   EnvConfig profile = 2;
   string error = 3;
+}
+
+message SyncMissionItem {
+  string id = 1;
+  string status = 2;
+  string payload = 3;
+}
+
+message HybridSyncMissionsRequest {
+  repeated SyncMissionItem payloads = 1;
+}
+
+message HybridSyncMissionsResponse {
+  string status = 1;
+  string message = 2;
+  int32 synced_count = 3;
+}
+
+message VectorSyncRequest {}
+message VectorSyncResponse {
+  string status = 1;
+  string message = 2;
+}
+
+message PowerSyncPushRequest {
+  string payload = 1;
+}
+
+message PowerSyncPushResponse {
+  string status = 1;
+}
+
+message PowerSyncPullRequest {}
+
+message PowerSyncPullResponse {
+  string payload = 1;
+}
+
+message DeltaItem {
+  string id = 1;
+  string entity_id = 2;
+  string data = 3;
+  string updated_at = 4;
+}
+
+message SyncMCPDeltasRequest {
+  string tenant_id = 1;
+  repeated DeltaItem deltas = 2;
+}
+
+message SyncMCPDeltasResponse {
+  string status = 1;
+  string message = 2;
+  int32 synced_count = 3;
+}
+
+message SyncPayloadItem {
+  string memory_id = 1;
+  string context = 2;
+}
+
+message SyncEscalationRequest {
+  repeated SyncPayloadItem payloads = 1;
+}
+
+message SyncEscalationResponse {
+  string status = 1;
+  string message = 2;
+  int32 synced_count = 3;
+}
+
+service SyncService {
+  rpc HybridSyncMissions(HybridSyncMissionsRequest) returns (HybridSyncMissionsResponse);
+  rpc VectorSync(VectorSyncRequest) returns (VectorSyncResponse);
+  rpc PowerSyncPush(PowerSyncPushRequest) returns (PowerSyncPushResponse);
+  rpc PowerSyncPull(PowerSyncPullRequest) returns (PowerSyncPullResponse);
+  rpc SyncMCPDeltas(SyncMCPDeltasRequest) returns (SyncMCPDeltasResponse);
+  rpc SyncEscalation(SyncEscalationRequest) returns (SyncEscalationResponse);
+}
+
+message InviteRequest {
+  string team_id = 1;
+  string inviter_id = 2;
+  string invitee_id = 3;
+}
+
+message InviteResponse {
+  bool success = 1;
+}
+
+message AcceptInviteRequest {
+  string invitee_id = 1;
+}
+
+message AcceptInviteResponse {
+  bool success = 1;
+}
+
+message EmptyRequest {}
+
+message LandingPageExperiment {
+  string id = 1;
+  string title = 2;
+  double traffic_split = 3;
+  string status = 4;
+  int64 created_at_unix = 5;
+}
+
+message CreateExperimentRequest {
+  string title = 1;
+  double traffic_split = 2;
+}
+
+message LandingPageExperimentsResponse {
+  repeated LandingPageExperiment experiments = 1;
+}
+
+message Referral {
+  string id = 1;
+  string user_id = 2;
+  string referral_code = 3;
+  int32 clicks = 4;
+  int32 conversions = 5;
+  int64 created_at_unix = 6;
+}
+
+message CreateReferralRequest {
+  string user_id = 1;
+  string referral_code = 2;
+}
+
+message ReferralsResponse {
+  repeated Referral referrals = 1;
+}
+
+message GrowthIdRequest {
+  string id = 1;
+}
+
+message Download {
+  string id = 1;
+  string os = 2;
+  string version = 3;
+  int64 created_at_unix = 4;
+}
+
+message CreateDownloadRequest {
+  string os = 1;
+  string version = 2;
+}
+
+message DownloadsResponse {
+  repeated Download downloads = 1;
+}
+
+message TeamInviteProto {
+  string id = 1;
+  string inviter_id = 2;
+  string invitee_id = 3;
+  string status = 4;
+  int64 created_at_unix = 5;
+}
+
+message CreateTeamInviteRequest {
+  string inviter_id = 1;
+  string invitee_id = 2;
+}
+
+message TeamInvitesResponse {
+  repeated TeamInviteProto invites = 1;
+}
+
+message ViralCoefficientResponse {
+  int32 total_referrals = 1;
+  int32 total_conversions = 2;
+  int32 unique_inviters = 3;
+  double k_factor = 4;
+}
+
+message ViralCoefficientMetricsResponse {
+  double viral_coefficient = 1;
+  string organization_id = 2;
+}
+
+message OnboardingFunnel {
+  string id = 1;
+  string user_id = 2;
+  string step = 3;
+  int64 created_at_unix = 4;
+}
+
+message CreateOnboardingRequest {
+  string user_id = 1;
+  string step = 2;
+}
+
+message OnboardingFunnelsResponse {
+  repeated OnboardingFunnel funnels = 1;
+}
+
+message OnboardingMetric {
+  string step = 1;
+  int32 count = 2;
+}
+
+message OnboardingMetricsResponse {
+  repeated OnboardingMetric metrics = 1;
+}
+
+message GetQuotaRequest {
+  string user_id = 1;
+}
+
+message QuotaMetrics {
+  int32 used = 1;
+  int32 max = 2;
+}
+
+message WaitlistEntry {
+  string id = 1;
+  string email = 2;
+  int64 created_at_unix = 3;
+}
+
+message CreateWaitlistRequest {
+  string email = 1;
+}
+
+message WaitlistResponse {
+  repeated WaitlistEntry entries = 1;
+}
+
+service GrowthService {
+  rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
+  rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
+
+  rpc GetReferrals(EmptyRequest) returns (ReferralsResponse);
+  rpc CreateReferral(CreateReferralRequest) returns (Referral);
+  rpc ClickReferral(GrowthIdRequest) returns (Referral);
+  rpc ConvertReferral(GrowthIdRequest) returns (Referral);
+
+  rpc GetDownloads(EmptyRequest) returns (DownloadsResponse);
+  rpc CreateDownload(CreateDownloadRequest) returns (Download);
+
+  rpc GetTeamInvites(EmptyRequest) returns (TeamInvitesResponse);
+  rpc CreateTeamInvite(CreateTeamInviteRequest) returns (TeamInviteProto);
+  rpc AcceptTeamInvite(GrowthIdRequest) returns (TeamInviteProto);
+
+  rpc GetViralCoefficient(EmptyRequest) returns (ViralCoefficientResponse);
+  rpc GetViralCoefficientMetrics(EmptyRequest) returns (ViralCoefficientMetricsResponse);
+
+  rpc GetOnboardingFunnel(EmptyRequest) returns (OnboardingFunnelsResponse);
+  rpc CreateOnboardingFunnel(CreateOnboardingRequest) returns (OnboardingFunnel);
+  rpc GetOnboardingMetrics(EmptyRequest) returns (OnboardingMetricsResponse);
+
+  rpc GetQuota(GetQuotaRequest) returns (QuotaMetrics);
+
+  rpc GetWaitlist(EmptyRequest) returns (WaitlistResponse);
+  rpc CreateWaitlistEntry(CreateWaitlistRequest) returns (WaitlistEntry);
+}
+
+message ApprovalRequest {
+  string id = 1;
+  string agent_id = 2;
+  string action = 3;
+  string reason = 4;
+  double estimated_cost_usd = 5;
+  string risk_level = 6;
+  string status = 7;
+  int64 created_at_unix = 8;
+  int64 decided_at_unix = 9;
+  string decided_by = 10;
+}
+
+message CreateApprovalReq {
+  string agent_id = 1;
+  string action = 2;
+  string reason = 3;
+  double estimated_cost_usd = 4;
+  string risk_level = 5;
+}
+
+message DecideApprovalRequest {
+  string approval_id = 1;
+  string decision = 2;
+  string decided_by = 3;
+}
+
+message ApprovalsResponse {
+  repeated ApprovalRequest approvals = 1;
+}
+
+message HandoffPackage {
+  string id = 1;
+  string from_agent_id = 2;
+  string to_human_role = 3;
+  string intent = 4;
+  int32 failed_attempts = 5;
+  string current_state = 6;
+  string visual_ground_truth = 7;
+  string status = 8;
+  int64 created_at_unix = 9;
+}
+
+message CreateHandoffRequest {
+  string from_agent_id = 1;
+  string to_human_role = 2;
+  string intent = 3;
+  int32 failed_attempts = 4;
+  string current_state = 5;
+  string visual_ground_truth = 6;
+}
+
+message ResolveHandoffRequest {
+  string handoff_id = 1;
+  string status = 2;
+}
+
+message HandoffsResponse {
+  repeated HandoffPackage handoffs = 1;
+}
+
+message TrustAgreement {
+  string id = 1;
+  string partner_org = 2;
+  string partner_jwks = 3;
+  repeated string allowed_roles = 4;
+  string status = 5;
+  int64 created_at_unix = 6;
+}
+
+message B2BAgreementsResponse {
+  repeated TrustAgreement agreements = 1;
+}
+
+message B2BHandshakeRequest {
+  string partner_org = 1;
+  string partner_jwks = 2;
+  repeated string allowed_roles = 3;
+}
+
+message B2BRevokeRequest {
+  string agreement_id = 1;
+}
+
+service B2BService {
+  rpc GetApprovals(EmptyRequest) returns (ApprovalsResponse);
+  rpc CreateApprovalRequest(CreateApprovalReq) returns (ApprovalRequest);
+  rpc DecideApproval(DecideApprovalRequest) returns (ApprovalsResponse);
+
+  rpc GetHandoffs(EmptyRequest) returns (HandoffsResponse);
+  rpc CreateHandoff(CreateHandoffRequest) returns (HandoffPackage);
+  rpc ResolveHandoff(ResolveHandoffRequest) returns (HandoffsResponse);
+
+  rpc GetB2BAgreements(EmptyRequest) returns (B2BAgreementsResponse);
+  rpc B2BHandshake(B2BHandshakeRequest) returns (TrustAgreement);
+  rpc B2BRevoke(B2BRevokeRequest) returns (TrustAgreement);
+}
+
+message Incident {
+  string id = 1;
+  string severity = 2;
+  string summary = 3;
+  string rca = 4;
+  string status = 5;
+  int64 created_at_unix = 6;
+  int64 updated_at_unix = 7;
+  string resolution_plan_id = 8;
+}
+
+message CreateIncidentRequest {
+  string severity = 1;
+  string summary = 2;
+  string rca = 3;
+}
+
+message IncidentStatusRequest {
+  string incident_id = 1;
+  string status = 2;
+  string resolution_plan_id = 3;
+  string rca = 4;
+}
+
+message IncidentsResponse {
+  repeated Incident incidents = 1;
+}
+
+message ComputeProfile {
+  string role_id = 1;
+  int32 min_vram_gb = 2;
+  string preferred_gpu_type = 3;
+  int32 scheduling_priority = 4;
+  int64 created_at_unix = 5;
+}
+
+message CreateComputeProfileRequest {
+  string role_id = 1;
+  int32 min_vram_gb = 2;
+  string preferred_gpu_type = 3;
+  int32 scheduling_priority = 4;
+}
+
+message ComputeProfilesResponse {
+  repeated ComputeProfile profiles = 1;
+}
+
+message GetClusterStatusRequest {
+  string region = 1;
+}
+
+message ClusterStatus {
+  string region = 1;
+  string status = 2;
+  int32 latency_ms = 3;
+  int32 available_nodes = 4;
+  int64 checked_at_unix = 5;
+}
+
+message BudgetAlert {
+  string id = 1;
+  string organization_id = 2;
+  double threshold_usd = 3;
+  double notify_at_pct = 4;
+  bool predictive = 5;
+  int32 forecast_hours = 6;
+  bool triggered = 7;
+  int64 created_at_unix = 8;
+}
+
+message CreateBudgetAlertRequest {
+  string organization_id = 1;
+  double threshold_usd = 2;
+  double notify_at_pct = 3;
+  bool predictive = 4;
+  int32 forecast_hours = 5;
+}
+
+message BudgetAlertsResponse {
+  repeated BudgetAlert alerts = 1;
+}
+
+message Pipeline {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+  string branch = 4;
+  string initiated_by = 5;
+  string staging_url = 6;
+  int64 created_at_unix = 7;
+  int64 updated_at_unix = 8;
+}
+
+message CreatePipelineRequest {
+  string name = 1;
+  string branch = 2;
+  string initiated_by = 3;
+}
+
+message PipelinePromoteRequest {
+  string pipeline_id = 1;
+}
+
+message UpdatePipelineStatusRequest {
+  string pipeline_id = 1;
+  string status = 2;
+  string staging_url = 3;
+}
+
+message PipelinesResponse {
+  repeated Pipeline pipelines = 1;
+}
+
+message ScaleRequest {
+  string role = 1;
+  int32 count = 2;
+}
+
+message ScaleResponse {
+  string status = 1;
+  string role = 2;
+  int32 count = 3;
+}
+
+message ScaleEvent {
+  string event = 1;
+  string status = 2;
+}
+
+message PruneMissionsResponse {
+  string status = 1;
+  string message = 2;
+}
+
+service OpsService {
+  rpc GetIncidents(EmptyRequest) returns (IncidentsResponse);
+  rpc CreateIncident(CreateIncidentRequest) returns (Incident);
+  rpc UpdateIncidentStatus(IncidentStatusRequest) returns (Incident);
+
+  rpc GetComputeProfiles(EmptyRequest) returns (ComputeProfilesResponse);
+  rpc CreateComputeProfile(CreateComputeProfileRequest) returns (ComputeProfile);
+
+  rpc GetClusterStatus(GetClusterStatusRequest) returns (ClusterStatus);
+
+  rpc GetBudgetAlerts(EmptyRequest) returns (BudgetAlertsResponse);
+  rpc CreateBudgetAlert(CreateBudgetAlertRequest) returns (BudgetAlert);
+
+  rpc GetPipelines(EmptyRequest) returns (PipelinesResponse);
+  rpc CreatePipeline(CreatePipelineRequest) returns (Pipeline);
+  rpc PromotePipeline(PipelinePromoteRequest) returns (Pipeline);
+  rpc UpdatePipelineStatus(UpdatePipelineStatusRequest) returns (Pipeline);
+
+  rpc Scale(ScaleRequest) returns (ScaleResponse);
+  rpc StreamScaleEvents(EmptyRequest) returns (stream ScaleEvent);
+
+  rpc PruneMissions(EmptyRequest) returns (PruneMissionsResponse);
+}
+
+message DomainInfoProto {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+}
+
+message DomainsResponse {
+  repeated DomainInfoProto domains = 1;
+}
+
+message SettingsResponse {
+  string minimax_api_key = 1;
+  map<string, string> extras = 2;
+}
+
+message UpdateSettingsRequest {
+  string minimax_api_key = 1;
+  map<string, string> extras = 2;
+}
+
+message MarketplaceItemProto {
+  string id = 1;
+  string name = 2;
+  string type = 3;
+  string author = 4;
+  string description = 5;
+  int32 downloads = 6;
+  double rating = 7;
+  repeated string tags = 8;
+}
+
+message MarketplaceItemsResponse {
+  repeated MarketplaceItemProto items = 1;
+}
+
+message AnalyticsSummaryResponse {
+  double human_agent_ratio = 1;
+  int32 total_agents = 2;
+  int32 total_humans = 3;
+  double audit_fidelity_pct = 4;
+  int32 resumption_latency_ms = 5;
+  int32 pending_approvals = 6;
+  int32 active_handoffs = 7;
+  int64 token_velocity = 8;
+}
+
+service OrgService {
+  rpc GetDomains(EmptyRequest) returns (DomainsResponse);
+  rpc GetSettings(EmptyRequest) returns (SettingsResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (SettingsResponse);
+  rpc GetMarketplaceItems(EmptyRequest) returns (MarketplaceItemsResponse);
+  rpc GetAnalytics(EmptyRequest) returns (AnalyticsSummaryResponse);
+}
+
+message ProtoSchedule {
+  string type = 1;
+  int64 at_unix = 2;
+  uint64 interval_s = 3;
+  string expression = 4;
+}
+
+message ProtoTask {
+  string id = 1;
+  string organization_id = 2;
+  string agent_id = 3;
+  string name = 4;
+  ProtoSchedule schedule = 5;
+  string status = 6;
+  int64 created_at_unix = 7;
+  int64 last_run_at_unix = 8;
+  int64 next_run_at_unix = 9;
+  string payload = 10;
+}
+
+message ScheduledTasksResponse {
+  repeated ProtoTask tasks = 1;
+}
+
+message CreateScheduledTaskRequest {
+  string agent_id = 1;
+  string name = 2;
+  ProtoSchedule schedule = 3;
+  string payload = 4;
+}
+
+message CancelScheduledTaskRequest {
+  string id = 1;
+}
+
+service SchedulerService {
+  rpc GetScheduledTasks(EmptyRequest) returns (ScheduledTasksResponse);
+  rpc CreateScheduledTask(CreateScheduledTaskRequest) returns (ProtoTask);
+  rpc CancelScheduledTask(CancelScheduledTaskRequest) returns (EmptyResponse);
+}
+
+message EmptyResponse {}
+
+message AutoDreamSyncRequest {
+  bool force_reindex = 1;
+}
+
+message AutoDreamSyncResponse {
+  string status = 1;
+}
+
+message AutoDreamQueryRequest {
+  string query_text = 1;
+  int32 limit = 2;
+}
+
+message TruthSearchResult {
+  string id = 1;
+  string content = 2;
+  double score = 3;
+}
+
+message AutoDreamQueryResult {
+  repeated TruthSearchResult results = 1;
+}
+
+service AutoDreamService {
+  rpc SyncAutoDream(AutoDreamSyncRequest) returns (AutoDreamSyncResponse);
+  rpc QueryAutoDream(AutoDreamQueryRequest) returns (AutoDreamQueryResult);
+}
+
+message StatusCount {
+  string status = 1;
+  int32 count = 2;
+}
+
+message Summary {
+  double total_cost_usd = 1;
+  int64 total_tokens = 2;
+}
+
+message DashboardSnapshot {
+  repeated MeetingRoom meetings = 1;
+  Summary costs = 2;
+  repeated Agent agents = 3;
+  repeated StatusCount statuses = 4;
+  repeated SharedTask task_queue = 5;
+  int32 queue_length = 6;
+  int64 updated_at_unix = 7;
+}
+
+message HireAgentRequest {
+  string name = 1;
+  string role = 2;
+  string model = 3;
+  string provider_type = 4;
+  string region = 5;
+}
+
+message FireAgentRequest {
+  string agent_id = 1;
+}
+
+
+
+message AgentProviderInfo {
+  string type = 1;
+  string name = 2;
+  bool authenticated = 3;
+}
+
+message AgentProvidersResponse {
+  repeated AgentProviderInfo providers = 1;
+}
+
+message AuthAgentProviderRequest {
+  string provider_type = 1;
+  string api_key = 2;
+  string oauth_token = 3;
+  map<string, string> extra = 4;
+}
+
+message AgentIdentity {
+  string agent_id = 1;
+  string svid = 2;
+  string trust_domain = 3;
+  int64 issued_at_unix = 4;
+  int64 expires_at_unix = 5;
+}
+
+message IdentitiesResponse {
+  repeated AgentIdentity identities = 1;
+}
+
+message SkillPackRole {
+  string role = 1;
+  string base_prompt = 2;
+}
+
+message SkillPack {
+  string id = 1;
+  string name = 2;
+  string domain = 3;
+  string description = 4;
+  string source = 5;
+  string author = 6;
+  repeated SkillPackRole roles = 7;
+  int64 imported_at_unix = 8;
+}
+
+message SkillsResponse {
+  repeated SkillPack skills = 1;
+}
+
+message ImportSkillRequest {
+  string name = 1;
+  string domain = 2;
+  string description = 3;
+  string source = 4;
+  string author = 5;
+  repeated SkillPackRole roles = 6;
+}
+
+message OrgSnapshot {
+  string id = 1;
+  string label = 2;
+  string org_id = 3;
+  string org_name = 4;
+  string domain = 5;
+  int32 agent_count = 6;
+  int32 meeting_count = 7;
+  int32 message_count = 8;
+  int64 created_at_unix = 9;
+}
+
+message SnapshotsResponse {
+  repeated OrgSnapshot snapshots = 1;
+}
+
+message CreateSnapshotRequest {
+  string label = 1;
+}
+
+message RestoreSnapshotRequest {
+  string snapshot_id = 1;
+}
+
+service AgentManagerService {
+  rpc HireAgent(HireAgentRequest) returns (DashboardSnapshot);
+  rpc FireAgent(FireAgentRequest) returns (DashboardSnapshot);
+  rpc DelegateTask(DelegateTaskRequest) returns (DashboardSnapshot);
+
+  rpc GetAgentProviders(EmptyRequest) returns (AgentProvidersResponse);
+  rpc AuthAgentProvider(AuthAgentProviderRequest) returns (AgentProvidersResponse);
+
+  rpc GetIdentities(EmptyRequest) returns (IdentitiesResponse);
+
+  rpc GetSkills(EmptyRequest) returns (SkillsResponse);
+  rpc ImportSkill(ImportSkillRequest) returns (SkillPack);
+
+  rpc GetSnapshots(EmptyRequest) returns (SnapshotsResponse);
+  rpc CreateSnapshot(CreateSnapshotRequest) returns (OrgSnapshot);
+  rpc RestoreSnapshot(RestoreSnapshotRequest) returns (DashboardSnapshot);
+}
+
+message WizardStepsProto {
+  bool server = 1;
+  bool ai_provider = 2;
+  bool centrifuge = 3;
+}
+
+message WizardStatusProtoResponse {
+  bool configured = 1;
+  WizardStepsProto steps = 2;
+}
+
+message AiProviderConfigProto {
+  string name = 1;
+  bool enabled = 2;
+}
+
+message WizardConfigureRequest {
+  string listen_addr = 1;
+  string db_path = 2;
+  string postgres_url = 3;
+  string redis_url = 4;
+  string centrifuge_url = 5;
+  string minimax_api_key = 6;
+  map<string, string> extras = 7;
+  repeated AiProviderConfigProto ai_providers = 8;
+}
+
+message DiagnosticCheckProto {
+  string check = 1;
+  string status = 2;
+  string message = 3;
+}
+
+message OnboardingVerifyResponse {
+  string status = 1;
+  string mode = 2;
+  repeated DiagnosticCheckProto diagnostics = 3;
+}
+
+service WizardService {
+  rpc GetWizardStatus(EmptyRequest) returns (WizardStatusProtoResponse);
+  rpc ConfigureWizard(WizardConfigureRequest) returns (WizardStatusProtoResponse);
+  rpc VerifyOnboarding(EmptyRequest) returns (OnboardingVerifyResponse);
+}
+
+message GetMeetingsResponse {
+  repeated MeetingRoom meetings = 1;
+}
+
+message ChatTestRequest {
+  string integration_id = 1;
+  string bot_token = 2;
+  string chat_id = 3;
+  string webhook_url = 4;
+  string api_token = 5;
+}
+
+message ChatTestResponse {
+  bool success = 1;
+}
+
+message ChatMessage {
+  string id = 1;
+  string channel = 2;
+  string from_agent = 3;
+  string content = 4;
+  string thread_id = 5;
+  int64 timestamp_unix = 6;
+}
+
+message GetChatMessagesRequest {
+  string integration_id = 1;
+}
+
+message GetChatMessagesResponse {
+  repeated ChatMessage messages = 1;
+}
+
+message ChatSendRequest {
+  string integration_id = 1;
+  string channel = 2;
+  string from_agent = 3;
+  string content = 4;
+  string thread_id = 5;
+}
+
+service ChatService {
+  rpc TestConnection(ChatTestRequest) returns (ChatTestResponse);
+  rpc GetChatMessages(GetChatMessagesRequest) returns (GetChatMessagesResponse);
+  rpc SendChatMessage(ChatSendRequest) returns (ChatMessage);
+}
+
+message GetIntegrationsRequest {
+  string category = 1;
+}
+
+message IntegrationInstance {
+  string id = 1;
+  string name = 2;
+  string category = 3;
+  string status = 4;
+  string base_url = 5;
+}
+
+message GetIntegrationsResponse {
+  repeated IntegrationInstance instances = 1;
+}
+
+message ConnectIntegrationRequest {
+  string integration_id = 1;
+  string base_url = 2;
+  string bot_token = 3;
+  string chat_id = 4;
+  string webhook_url = 5;
+  string api_token = 6;
+}
+
+message DisconnectIntegrationRequest {
+  string integration_id = 1;
+}
+
+message PullRequest {
+  string id = 1;
+  string title = 2;
+  string body = 3;
+  string source_branch = 4;
+  string target_branch = 5;
+  string status = 6;
+  string created_by = 7;
+  int64 created_at_unix = 8;
+}
+
+message GetPullRequestsRequest {
+  string integration_id = 1;
+}
+
+message GetPullRequestsResponse {
+  repeated PullRequest pull_requests = 1;
+}
+
+message CreatePRRequest {
+  string integration_id = 1;
+  string repository = 2;
+  string title = 3;
+  string body = 4;
+  string source_branch = 5;
+  string target_branch = 6;
+  string created_by = 7;
+}
+
+message PRActionRequest {
+  string pr_id = 1;
+}
+
+message Issue {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string status = 4;
+  string priority = 5;
+  repeated string labels = 6;
+  string assigned_agent = 7;
+  string created_by = 8;
+  int64 created_at_unix = 9;
+}
+
+message GetIssuesRequest {
+  string integration_id = 1;
+}
+
+message GetIssuesResponse {
+  repeated Issue issues = 1;
+}
+
+message CreateIssueRequest {
+  string integration_id = 1;
+  string project = 2;
+  string title = 3;
+  string description = 4;
+  string created_by = 5;
+  string priority = 6;
+  repeated string labels = 7;
+}
+
+message IssueStatusRequest {
+  string issue_id = 1;
+  string status = 2;
+}
+
+message IssueAssignRequest {
+  string issue_id = 1;
+  string assignee = 2;
+}
+
+service IntegrationService {
+  rpc GetIntegrations(GetIntegrationsRequest) returns (GetIntegrationsResponse);
+  rpc ConnectIntegration(ConnectIntegrationRequest) returns (IntegrationInstance);
+  rpc DisconnectIntegration(DisconnectIntegrationRequest) returns (IntegrationInstance);
+
+  rpc GetPullRequests(GetPullRequestsRequest) returns (GetPullRequestsResponse);
+  rpc CreatePullRequest(CreatePRRequest) returns (PullRequest);
+  rpc MergePullRequest(PRActionRequest) returns (PullRequest);
+  rpc ClosePullRequest(PRActionRequest) returns (PullRequest);
+
+  rpc GetIssues(GetIssuesRequest) returns (GetIssuesResponse);
+  rpc CreateIssue(CreateIssueRequest) returns (Issue);
+  rpc UpdateIssueStatus(IssueStatusRequest) returns (Issue);
+  rpc AssignIssue(IssueAssignRequest) returns (Issue);
+}
+
+message McpToolProto {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string category = 4;
+  string status = 5;
+}
+
+message McpRegisterRequest {
+  McpToolProto tool = 1;
+  string spiffe_id = 2;
+}
+
+message McpRegisterResponse {
+  string status = 1;
+  McpToolProto tool = 2;
+}
+
+message McpToolsResponse {
+  repeated McpToolProto tools = 1;
+}
+
+message McpInvokeRequest {
+  string tool_id = 1;
+  string action = 2;
+  string agent_id = 3;
+  string spiffe_id = 4;
+  string params = 5;
+}
+
+message McpInvokeResponse {
+  string payload = 1;
+}
+
+service McpService {
+  rpc RegisterTool(McpRegisterRequest) returns (McpRegisterResponse);
+  rpc GetTools(EmptyRequest) returns (McpToolsResponse);
+  rpc InvokeTool(McpInvokeRequest) returns (McpInvokeResponse);
 }
