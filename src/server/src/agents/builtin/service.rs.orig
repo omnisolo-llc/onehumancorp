@@ -17,7 +17,7 @@ use ohc_builtin_agent_tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos,
 };
-
+use chrono::Utc;
 use crate::departments::{Department, get_department_config};
 use std::str::FromStr;
 use tokio::sync::RwLock;
@@ -256,7 +256,7 @@ impl AgentService for AgentServiceImpl {
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
         let mailbox: SharedMailbox = Arc::new(RwLock::new(Mailbox::default()));
-        
+
         let all_tools = ohc_builtin_agent_tools::all_tools(todos, task_store, mailbox);
         let tools = if !task_req.department.is_empty() {
             if let Ok(dep) = Department::from_str(&task_req.department) {

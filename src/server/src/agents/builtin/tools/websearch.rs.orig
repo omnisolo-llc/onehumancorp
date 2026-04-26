@@ -109,7 +109,6 @@ pub fn websearch_tool() -> Tool {
             },
             "required": ["query"]
         }),
-        is_mutating: false,
         execute: Arc::new(WebSearchExecutor {
             client: Client::builder()
                 .timeout(std::time::Duration::from_secs(15))

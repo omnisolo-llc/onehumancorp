@@ -1,0 +1,21 @@
+--- ./src/server/src/agents/builtin/agent.rs
++++ ./src/server/src/agents/builtin/agent.rs
+@@ -308,7 +308,7 @@
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+-    use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
++    use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Usage};
+     use std::sync::Arc;
+     use ohc_builtin_agent_tools::ToolExecutor;
+     use serde_json::Value;
+--- ./src/server/src/agents/builtin/service.rs
++++ ./src/server/src/agents/builtin/service.rs
+@@ -17,7 +17,6 @@
+ use tracing::{error, info, instrument};
+ use uuid::Uuid;
+
+-use chrono::Utc;
+ use flate2::read::GzDecoder;
+ use flate2::write::GzEncoder;
+ use flate2::Compression;
