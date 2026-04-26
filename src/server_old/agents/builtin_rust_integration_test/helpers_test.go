@@ -98,7 +98,7 @@ func startAgent(t *testing.T) (*grpc.ClientConn, func()) {
 		"OHC_AGENT_ADDRESS="+addr,
 		"OHC_AGENT_ID=test-rust-agent",
 		"OHC_AGENT_AUTH_DISABLED=true",
-		"RUST_LOG=error",
+		"RUST_LOG=debug",
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
