@@ -242,9 +242,30 @@ impl HubService for MyHubService {
 
     async fn decompose_task(
         &self,
-        _request: Request<DecomposeTaskRequest>,
+        request: Request<DecomposeTaskRequest>,
     ) -> Result<Response<DecomposeTaskResponse>, Status> {
-         Err(Status::unimplemented("decompose_task not implemented yet"))
+        let req = request.into_inner();
+        
+        for st in req.sub_tasks {
+            let mut filtered_deps = Vec::new();
+            for dep in st.dependencies {
+                if dep != req.task_id {
+                    filtered_deps.push(dep);
+                }
+            }
+            
+            self.hub.task_manager().create_task_with_plan(
+                req.organization_id.clone(),
+                String::new(),
+                req.task_id.clone(),
+                filtered_deps,
+                st.title,
+                st.description,
+                st.priority,
+            ).map_err(|e| Status::internal(e))?;
+        }
+        
+        Ok(Response::new(DecomposeTaskResponse { success: true }))
     }
 
     type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
