@@ -7,7 +7,7 @@ go_library(
         "client.go",
         "doc.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server/agents/grpc",
+    importpath = "github.com/onehumancorp/mono/src/server_old/agents/grpc",
     visibility = ["//visibility:public"],
     deps = [
         "//src/proto/agentservice",

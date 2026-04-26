@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	binaryRunpath = "src/server/src/agents/builtin/ohc-builtin-agent"
+	binaryRunpath = "src/server_old/agents/builtin/ohc-builtin-agent"
 	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
@@ -71,9 +71,9 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 	candidates := []string{
-		filepath.Join(root, "src/server/src/agents/builtin/target/debug/ohc-builtin-agent"),
-		filepath.Join(root, "src/server/src/agents/builtin/target/release/ohc-builtin-agent"),
-		filepath.Join(root, "bazel-bin/src/server/src/agents/builtin/ohc-builtin-agent"),
+		filepath.Join(root, "src/server_old/agents/builtin/target/debug/ohc-builtin-agent"),
+		filepath.Join(root, "src/server_old/agents/builtin/target/release/ohc-builtin-agent"),
+		filepath.Join(root, "bazel-bin/src/server_old/agents/builtin/ohc-builtin-agent"),
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
@@ -81,7 +81,7 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 
-	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //src/server/src/agents/builtin:ohc-builtin-agent`")
+	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //src/server_old/agents/builtin:ohc-builtin-agent`")
 	return ""
 }
 

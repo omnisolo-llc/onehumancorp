@@ -1,5 +1,5 @@
 // Deprecated: Package local has been superseded by package builtin
-// (src/server/agents/builtin). New code should use builtin instead.
+// (src/server_old/agents/builtin). New code should use builtin instead.
 // This package is kept for backward compatibility only.
 //
 // Package local implements a full agentic loop as the default local agent.

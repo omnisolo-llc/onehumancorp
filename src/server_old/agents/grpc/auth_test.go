@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
-	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
+	agentgrpc "github.com/onehumancorp/mono/src/server_old/agents/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
