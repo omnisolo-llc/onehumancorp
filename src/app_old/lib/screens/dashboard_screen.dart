@@ -1,6 +1,8 @@
 import 'package:ohc_app/widgets/growth_referral_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ohc_app/widgets/ohc_tooltip.dart';
+
 
 import 'package:ohc_app/widgets/glass_card.dart';
 import 'dart:ui';
@@ -30,7 +32,7 @@ class DashboardScreen extends ConsumerWidget {
     final snapshot = ref.watch(dashboardProvider);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: const OhcTooltip(message: 'Your central hub for tracking business health.', child: Text('Dashboard', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold))),
         leading: const Padding(
           padding: EdgeInsets.all(10.0),
           child: Icon(Icons.person),
