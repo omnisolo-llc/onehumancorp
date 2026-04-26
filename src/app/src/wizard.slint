@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
 
 export component Wizard inherits Window {
     width: 600px;
@@ -6,6 +6,7 @@ export component Wizard inherits Window {
     title: "Setup Wizard";
 
     property <int> step: 0;
+    property <bool> is_advanced: false;
 
     background: #f8fafc;
 
@@ -59,21 +60,39 @@ export component Wizard inherits Window {
         if (step == 0) : VerticalBox {
             spacing: 10px;
             Text { text: "Server Settings"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Listen Address"; text: "0.0.0.0:18789"; }
-            LineEdit { placeholder-text: "Database Path"; text: "ohc.db"; }
+            if (is_advanced) : VerticalBox {
+                spacing: 10px;
+                LineEdit { placeholder-text: "Listen Address"; text: "0.0.0.0:18789"; }
+                LineEdit { placeholder-text: "Database Path"; text: "ohc.db"; }
+            }
+            if (!is_advanced) : VerticalBox {
+                Text { text: "Default server settings will be used. They are optimized for the easiest experience."; color: #64748b; wrap: word-wrap; }
+            }
         }
 
         if (step == 1) : VerticalBox {
             spacing: 10px;
             Text { text: "AI Provider — Minimax"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Minimax API Key"; }
-            LineEdit { placeholder-text: "Default Model"; text: "abab6.5s"; }
+            if (is_advanced) : VerticalBox {
+                spacing: 10px;
+                LineEdit { placeholder-text: "Minimax API Key"; }
+                LineEdit { placeholder-text: "Default Model"; text: "abab6.5s"; }
+            }
+            if (!is_advanced) : VerticalBox {
+                Text { text: "Default AI provider settings will be applied. Your agents are ready to help."; color: #64748b; wrap: word-wrap; }
+            }
         }
 
         if (step == 2) : VerticalBox {
             spacing: 10px;
             Text { text: "Real-time Messaging (Centrifuge)"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Centrifuge WebSocket URL"; text: "ws://localhost:8000/connection/websocket"; }
+            if (is_advanced) : VerticalBox {
+                spacing: 10px;
+                LineEdit { placeholder-text: "Centrifuge WebSocket URL"; text: "ws://localhost:8000/connection/websocket"; }
+            }
+            if (!is_advanced) : VerticalBox {
+                Text { text: "Real-time messaging is enabled by default to keep you updated instantly."; color: #64748b; wrap: word-wrap; }
+            }
         }
 
         Rectangle {} 
@@ -93,6 +112,15 @@ export component Wizard inherits Window {
                         // Handle save
                     }
                 }
+            }
+        }
+
+        HorizontalBox {
+            alignment: start;
+            CheckBox {
+                text: "Show advanced settings";
+                checked: is_advanced;
+                toggled => { is_advanced = !is_advanced; }
             }
         }
     }

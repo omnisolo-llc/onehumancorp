@@ -170,7 +170,7 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         const SizedBox(height: 32),
-        _SectionTitle('System Health'),
+        _SectionTitle('Business Health'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -257,9 +257,9 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'System Observability Panel',
+      label: 'Business Status Panel',
       child: Tooltip(
-        message: 'View System Health & Metrics',
+        message: 'View Business Health & Metrics',
         child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
