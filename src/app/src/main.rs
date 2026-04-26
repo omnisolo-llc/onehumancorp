@@ -39,7 +39,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = FixAgent::new()?;
+    let ui = BusinessSetup::new()?;
+    ui.on_launch_business(move |name, btype, desc, prod, digi, serv, food, sub, pay, email| {
+        println!("Launch Business: {} - {}", name, btype);
+        // Call backend API here
+    });
     ui.run()?;
     
     Ok(())
