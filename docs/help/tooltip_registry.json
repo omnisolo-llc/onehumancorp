@@ -1,0 +1,12 @@
+{
+  "tooltips": {
+    "dashboard_revenue": "This shows all the money you made today before any fees are taken out.",
+    "add_product_variant": "Use this if your item comes in different sizes or colors.",
+    "ai_reply_toggle": "Turn this on to let your AI assistant answer common questions from customers.",
+    "stripe_connect": "Connect your bank account here so we can send you your money.",
+    "inventory_tracking": "Turn this on, and we will hide this item from your store when it sells out.",
+    "seo_title": "This is the title people will see when they find you on Google.",
+    "deposit_amount": "The amount a customer must pay right now to hold their booking or order.",
+    "link_in_bio": "A single web link you can put on your Instagram or TikTok that shows all your products."
+  }
+}

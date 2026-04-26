@@ -27,6 +27,14 @@ validation:
         omitted_files: ignore
 nav:
   - Home: index.md
+  - Help Center:
+      - Overview: help/index.md
+      - Getting Started: help/getting_started.md
+      - My Store: help/my_store.md
+      - Payments: help/payments.md
+      - AI Agents: help/ai_agents.md
+      - Marketing: help/marketing.md
+      - Account & Billing: help/account_billing.md
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
       - Universal Transport Bridge: architecture/universal_transport_bridge.md
