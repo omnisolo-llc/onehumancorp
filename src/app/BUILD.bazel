@@ -6,7 +6,10 @@ cargo_build_script(
     srcs = ["build.rs"],
     edition = "2021",
     data = [
-        "src/ongoing_management.slint",
+        "src/app.slint",
+        "src/login.slint",
+        "src/business_setup.slint",
+        "src/welcome_checklist.slint",
         "//src/proto:hub.proto",
         "@protobuf//:protoc",
     ],
@@ -21,7 +24,12 @@ rust_binary(
     srcs = ["src/main.rs"],
     edition = "2021",
     visibility = ["//visibility:public"],
-    data = ["src/ongoing_management.slint"],
+    data = [
+        "src/app.slint",
+        "src/login.slint",
+        "src/business_setup.slint",
+        "src/welcome_checklist.slint",
+    ],
     deps = [
         ":build_script",
         "@crates//:slint",
