@@ -20,6 +20,7 @@ mod oidc;
 mod sip;
 mod orchestrator;
 mod spawner;
+mod queue;
 
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
