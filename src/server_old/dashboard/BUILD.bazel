@@ -18,7 +18,7 @@ go_library(
         "server.go",
         "tenant.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server/dashboard",
+    importpath = "github.com/onehumancorp/mono/src/server_old/dashboard",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server_old/db",
@@ -30,7 +30,7 @@ go_library(
         "//src/server_old/api/mesh",
         "//src/server_old/orchestration/mesh",
         "//src/server_old/services/growth",
-        "//src/server/agents",
+        "//src/server_old/agents",
         "//src/server_old/auth",
         "//src/server_old/billing",
         "//src/server_old/domain",

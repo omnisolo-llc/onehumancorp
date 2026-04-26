@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents"
+	"github.com/onehumancorp/mono/src/server_old/agents"
 	"github.com/onehumancorp/mono/src/server/orchestration"
 )
 
