@@ -471,7 +471,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let addr = "[::1]:50051".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
-    let hub = Arc::new(Hub::new(event_tx));
+    let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
     
     // Start event log worker
     let hub_clone = hub.clone();

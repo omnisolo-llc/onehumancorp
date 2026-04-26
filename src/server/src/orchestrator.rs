@@ -50,6 +50,50 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
 
     async fn complete_task(&self, task_id: &str, agent_id: &str, result: &str) -> Result<(), String> {
         self.hub.task_manager().complete_task(task_id, agent_id, result.to_string())?;
+        
+        // Trigger AutoDream embedding in background
+        let task_id = task_id.to_string();
+        let result = result.to_string();
+        let hub = self.hub.clone();
+        
+        tokio::spawn(async move {
+            println!("AutoDream: Triggering embedding for completed task: {}", task_id);
+            
+            let context_str = format!("Task ID: {}, Result: {}", task_id, result);
+            
+            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+            if api_key.is_empty() {
+                println!("AutoDream: MINIMAX_API_KEY not set, skipping embedding");
+                return;
+            }
+            let client = crate::minimax::MinimaxClient::new(api_key);
+            
+            match client.generate_embedding(&context_str).await {
+                Ok(embedding) => {
+                    println!("AutoDream: Generated embedding for task: {}", task_id);
+                    
+                    let org_id = match hub.task_manager().get_task(&task_id) {
+                        Ok(task) => task.organization_id.clone(),
+                        Err(_) => {
+                            println!("AutoDream: Failed to get task {} to find org_id", task_id);
+                            "system".to_string() // Fallback
+                        }
+                    };
+                    
+                    let sip_db = crate::sip::SipDB::new(hub.pool.clone(), org_id);
+                    let mem_id = format!("task-completion-{}", task_id);
+                    
+                    match sip_db.inject_truth(&mem_id, &context_str, embedding).await {
+                        Ok(_) => println!("AutoDream: Successfully injected truth for task: {}", task_id),
+                        Err(e) => println!("AutoDream: Failed to inject truth for task: {}, error: {}", task_id, e),
+                    }
+                }
+                Err(e) => {
+                    println!("AutoDream: Failed to generate embedding: {}", e);
+                }
+            }
+        });
+        
         Ok(())
     }
 }

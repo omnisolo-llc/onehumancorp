@@ -35,10 +35,11 @@ pub struct Hub {
     get_token_usage: Option<Box<dyn Fn() -> HashMap<String, i64> + Send + Sync>>,
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
+    pub(crate) pool: sqlx::PgPool,
 }
 
 impl Hub {
-    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>) -> Self {
+    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
         Hub {
@@ -48,6 +49,7 @@ impl Hub {
             subs: RwLock::new(HashMap::new()),
             minimax_api_key,
             caps_tx,
+            pool,
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
@@ -450,12 +452,7 @@ impl Hub {
     }
 }
 
-impl Default for Hub {
-    fn default() -> Self {
-        let (tx, _) = mpsc::channel(100);
-        Self::new(tx)
-    }
-}
+
 
 fn get_feature_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
