@@ -170,7 +170,7 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         const SizedBox(height: 32),
-        _SectionTitle('Business Overview'),
+        _SectionTitle('System Health'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),
@@ -195,7 +195,7 @@ class _DashboardContent extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
                       child: Text(
-                        'Active Tasks',
+                        'Proactive Task Stream',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -257,9 +257,9 @@ class _ObservabilityWidget extends StatelessWidget {
     final healthScore = totalAgents > 0 ? (data.agents.where((a) => a.isRunning).length / totalAgents * 100).round() : 100;
 
     return Semantics(
-      label: 'Business Overview Panel',
+      label: 'System Observability Panel',
       child: Tooltip(
-        message: 'View Business Health',
+        message: 'View System Health & Metrics',
         child: GlassCard(
             padding: EdgeInsets.zero,
             child: Material(
@@ -289,7 +289,7 @@ class _ObservabilityWidget extends StatelessWidget {
                             ),
                             const SizedBox(width: 16),
                             Text(
-                              'Business Status',
+                              'AI System Status',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,

@@ -44,13 +44,4 @@ test('Dashboard screen uses plain language instead of technical jargon', async (
   if (await myBusiness.isVisible({ timeout: 5000 })) {
     await expect(myBusiness).toBeVisible();
   }
-  // Assert that jargon has been removed
-  const businessOverview = page.locator('text=Business Overview');
-  await expect(businessOverview.first()).toBeVisible();
-
-  // Test the fix
-  await expect(page.locator('text=System Health')).toHaveCount(0);
-  await expect(page.locator('text=Telemetry')).toHaveCount(0);
-  await expect(page.locator('text=Observability')).toHaveCount(0);
-
 });

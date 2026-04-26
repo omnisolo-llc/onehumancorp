@@ -45,7 +45,7 @@ class HybridObservabilityWidget extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    'AI Team Activity',
+                    'Hybrid Swarm Observability',
                     style: TextStyle(
                       fontFamily: 'Outfit',
                       fontSize: 24,

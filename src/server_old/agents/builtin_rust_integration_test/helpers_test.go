@@ -81,7 +81,7 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 
-	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //src/server/src/agents/builtin:ohc-builtin-agent`")
+	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //src/server/agents/builtin:ohc-builtin-agent`")
 	return ""
 }
 

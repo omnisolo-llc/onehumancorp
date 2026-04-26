@@ -119,7 +119,7 @@ class _SubAgentQueueWidgetState extends State<SubAgentQueueWidget> with SingleTi
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'Pending Tasks',
+                'Sub-Agent Orchestration Queue',
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 18,

@@ -69,7 +69,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
     });
 
     return Semantics(
-      label: 'AI Team Activity',
+      label: 'Swarm Observability Dashboard',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
