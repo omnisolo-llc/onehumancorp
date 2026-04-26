@@ -5,7 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/onehumancorp/mono/src/examples/hello-world-agent",
     visibility = ["//visibility:private"],
-    deps = ["//src/server/src/agents/builtin"],
+    deps = ["//src/server/agents"],
 )
 
 go_binary(
