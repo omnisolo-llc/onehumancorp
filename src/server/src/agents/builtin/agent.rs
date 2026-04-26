@@ -28,6 +28,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrail_config: Option<crate::guardrails::GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +42,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrail_config: None,
         }
     }
 }
@@ -108,6 +110,14 @@ impl Agent {
                 parameters: t.parameters.clone(),
             })
             .collect();
+
+
+        if let Some(guard_cfg) = &cfg.guardrail_config {
+            if let Err(e) = crate::guardrails::check_input(initial_message, guard_cfg) {
+                on_event(AgentEvent::TaskError { error: e.clone() });
+                return Err(e.into());
+            }
+        }
 
         let mut messages: Vec<Message> = vec![Message::user(initial_message)];
         let mut budget_tracker = BudgetTracker::default();
@@ -184,6 +194,14 @@ impl Agent {
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
 
+
+                if let Some(guard_cfg) = &cfg.guardrail_config {
+                    if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into());
+                    }
+                }
+
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
@@ -193,6 +211,27 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
+
+                if let Some(guard_cfg) = &cfg.guardrail_config {
+                    if let Err(e) = crate::guardrails::check_tool(&tc.name, &tc.arguments.to_string(), guard_cfg) {
+                        let err_msg = format!("Guardrail triggered: {}", e);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: err_msg.clone(),
+                            iteration,
+                        });
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: err_msg.clone(),
+                        });
+                        // Tripwire: halt the loop completely on guardrail error
+                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        return Err(err_msg.into());
+                    }
+                }
+
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -253,6 +292,14 @@ impl Agent {
         }
 
         // Hit max iterations.
+
+                if let Some(guard_cfg) = &cfg.guardrail_config {
+                    if let Err(e) = crate::guardrails::check_output(&last_assistant_content, guard_cfg) {
+                        on_event(AgentEvent::TaskError { error: e.clone() });
+                        return Err(e.into());
+                    }
+                }
+
         on_event(AgentEvent::TaskComplete {
             content: last_assistant_content.clone(),
         });
