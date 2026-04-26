@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "pipeline",
@@ -9,7 +9,7 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/pipeline",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server/agents/builtin",
+
         "//src/server_old/db",
         "//src/server_old/orchestration",
         "//src/server_old/telemetry",
