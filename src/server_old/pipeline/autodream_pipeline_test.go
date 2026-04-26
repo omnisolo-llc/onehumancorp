@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+
 	"github.com/onehumancorp/mono/src/server/db"
 )
 
@@ -15,9 +15,9 @@ type mockLLM struct {
 	response string
 }
 
-func (m *mockLLM) Chat(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error) {
-	return builtin.ChatResponse{
-		Message: builtin.Message{Content: m.response,
+func (m *mockLLM) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
+	return ChatResponse{
+		Message: Message{Content: m.response,
 	}}, nil
 }
 
