@@ -24,15 +24,23 @@ class AuthUser {
 
   factory AuthUser.fromJson(Map<String, dynamic> json, String token) {
     final roles = json['roles'];
-    final role = (roles is List && roles.isNotEmpty)
-        ? roles.first as String
-        : json['role'] as String? ?? 'viewer';
+    final role =
+        (roles is List && roles.isNotEmpty)
+            ? roles.first as String
+            : json['role'] as String? ?? 'viewer';
     return AuthUser(
       id: json['id'] as String,
       email: json['email'] as String? ?? '',
-      name: json['username'] as String? ?? json['name'] as String? ?? json['email'] as String? ?? '',
+      name:
+          json['username'] as String? ??
+          json['name'] as String? ??
+          json['email'] as String? ??
+          '',
       role: role,
-      organizationId: json['organizationId'] as String? ?? json['organization_id'] as String? ?? '',
+      organizationId:
+          json['organizationId'] as String? ??
+          json['organization_id'] as String? ??
+          '',
       token: token,
     );
   }
@@ -46,14 +54,18 @@ class AuthService {
   AuthService({required this.baseUrl, http.Client? client})
     : _client = client ?? http.Client();
 
-  Future<AuthUser> register(String username, String email, String password) async {
+  Future<AuthUser> register(
+    String username,
+    String email,
+    String password,
+  ) async {
     final response = await _client.post(
       Uri.parse('$baseUrl/api/auth/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'username': username,
         'email': email,
-        'password': password
+        'password': password,
       }),
     );
     if (response.statusCode == 200) {
