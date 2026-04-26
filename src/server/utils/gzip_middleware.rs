@@ -19,13 +19,13 @@ mod tests {
     fn test_gzip_compress() {
         let data = b"hello world";
         let compressed = gzip_compress(data).unwrap();
-        
+
         assert!(compressed.len() > 0);
-        
+
         let mut decoder = GzDecoder::new(&compressed[..]);
         let mut decompressed = Vec::new();
         decoder.read_to_end(&mut decompressed).unwrap();
-        
+
         assert_eq!(decompressed, data);
     }
 }

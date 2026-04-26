@@ -36,13 +36,13 @@ impl SandboxViolationStore for InMemoryViolationStore {
             tool_name
         );
         violations.entry(session_id.to_string()).or_default().push(entry);
-        
+
         let capability = capability.to_string();
         let session_id = session_id.to_string();
         crate::record_telemetry(move || {
              println!("Telemetry: Sandbox violation - capability_denied, session={}, capability={}", session_id, capability);
         });
-        
+
         Ok(())
     }
 
@@ -121,7 +121,7 @@ mod tests {
 
         assert!(authorizer.authorize(session_id, "read", "test_tool").is_ok());
         assert!(authorizer.authorize(session_id, "write", "test_tool").is_ok());
-        
+
         let err = authorizer.authorize(session_id, "delete", "test_tool").unwrap_err();
         assert!(err.contains("denied explicitly"));
 

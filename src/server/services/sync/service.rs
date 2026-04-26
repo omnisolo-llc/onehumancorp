@@ -188,7 +188,7 @@ impl SyncService for MySyncService {
             };
 
             let q = crate::queue::PostgresTaskQueue::new(self.pool.clone());
-            
+
             match crate::queue::TaskQueue::enqueue(&q, job).await {
                 Ok(_) => {
                     synced_count += 1;

@@ -43,7 +43,7 @@ impl AuthConfig {
         let md = req.metadata();
         let auth_header = md.get("authorization")
             .ok_or_else(|| Status::unauthenticated("missing authorization header"))?;
-        
+
         let auth_str = auth_header.to_str()
             .map_err(|_| Status::unauthenticated("invalid authorization header"))?;
 
@@ -52,11 +52,11 @@ impl AuthConfig {
         }
 
         let token = &auth_str["Bearer ".len()..];
-        
+
         let app_key = b"ohc-builtin-agent-2025";
         let mut mac = Hmac::<Sha256>::new_from_slice(app_key).expect("HMAC can take key of any size");
         mac.update(token.as_bytes());
-        
+
         if mac.verify(expected_hash.into()).is_ok() {
              Ok(())
         } else {
@@ -110,13 +110,13 @@ fn validate_spiffe_id(id: &str) -> Result<(), Status> {
         return Err(Status::permission_denied(format!("SPIFFE ID too short: {}", id)));
     }
     let domain = parts[0];
-    
+
     match domain {
         "onehumancorp.io" | "ohc.local" | "ohc.os" => {}
         _ if domain == "ohc.global" || domain.ends_with(".ohc.global") => {}
         _ => return Err(Status::permission_denied(format!("untrusted SPIFFE domain {:?} in {}", domain, id))),
     }
-    
+
     Ok(())
 }
 

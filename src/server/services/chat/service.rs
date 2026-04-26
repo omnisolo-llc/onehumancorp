@@ -20,7 +20,7 @@ impl ChatService for MyChatService {
         request: Request<ChatTestRequest>,
     ) -> Result<Response<ChatTestResponse>, Status> {
         let req = request.into_inner();
-        
+
         match self.registry.test_connection(&req.integration_id, req.clone()) {
             Ok(_) => Ok(Response::new(ChatTestResponse { success: true })),
             Err(e) => Err(Status::invalid_argument(e)),
@@ -41,7 +41,7 @@ impl ChatService for MyChatService {
         request: Request<ChatSendRequest>,
     ) -> Result<Response<ChatMessage>, Status> {
         let req = request.into_inner();
-        
+
         match self.registry.send_chat_message(&req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
             Ok(msg) => Ok(Response::new(msg)),
             Err(e) => Err(Status::internal(e)),

@@ -37,10 +37,10 @@ impl ShellSession {
 
         let mut cmd = Command::new("bash");
         cmd.arg("-c").arg(wrapper_cmd);
-        
+
         let cwd = self.current_cwd.read().await.clone();
         cmd.current_dir(cwd);
-        
+
         cmd.env_clear();
         cmd.env("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
 
@@ -56,7 +56,7 @@ impl ShellSession {
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        
+
         if output.status.success() {
             Ok(stdout)
         } else {

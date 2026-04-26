@@ -776,7 +776,7 @@ impl HubService for MyHubService {
         request: Request<InviteRequest>,
     ) -> Result<Response<InviteResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing required fields"));
         }
@@ -794,7 +794,7 @@ impl HubService for MyHubService {
         request: Request<AcceptInviteRequest>,
     ) -> Result<Response<AcceptInviteResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.invitee_id.is_empty() {
             return Err(Status::invalid_argument("Missing invitee_id"));
         }

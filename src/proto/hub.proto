@@ -617,28 +617,28 @@ message WaitlistResponse {
 service GrowthService {
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
-  
+
   rpc GetReferrals(EmptyRequest) returns (ReferralsResponse);
   rpc CreateReferral(CreateReferralRequest) returns (Referral);
   rpc ClickReferral(GrowthIdRequest) returns (Referral);
   rpc ConvertReferral(GrowthIdRequest) returns (Referral);
-  
+
   rpc GetDownloads(EmptyRequest) returns (DownloadsResponse);
   rpc CreateDownload(CreateDownloadRequest) returns (Download);
-  
+
   rpc GetTeamInvites(EmptyRequest) returns (TeamInvitesResponse);
   rpc CreateTeamInvite(CreateTeamInviteRequest) returns (TeamInviteProto);
   rpc AcceptTeamInvite(GrowthIdRequest) returns (TeamInviteProto);
-  
+
   rpc GetViralCoefficient(EmptyRequest) returns (ViralCoefficientResponse);
   rpc GetViralCoefficientMetrics(EmptyRequest) returns (ViralCoefficientMetricsResponse);
-  
+
   rpc GetOnboardingFunnel(EmptyRequest) returns (OnboardingFunnelsResponse);
   rpc CreateOnboardingFunnel(CreateOnboardingRequest) returns (OnboardingFunnel);
   rpc GetOnboardingMetrics(EmptyRequest) returns (OnboardingMetricsResponse);
-  
+
   rpc GetQuota(GetQuotaRequest) returns (QuotaMetrics);
-  
+
   rpc GetWaitlist(EmptyRequest) returns (WaitlistResponse);
   rpc CreateWaitlistEntry(CreateWaitlistRequest) returns (WaitlistEntry);
 }
@@ -731,11 +731,11 @@ service B2BService {
   rpc GetApprovals(EmptyRequest) returns (ApprovalsResponse);
   rpc CreateApprovalRequest(CreateApprovalReq) returns (ApprovalRequest);
   rpc DecideApproval(DecideApprovalRequest) returns (ApprovalsResponse);
-  
+
   rpc GetHandoffs(EmptyRequest) returns (HandoffsResponse);
   rpc CreateHandoff(CreateHandoffRequest) returns (HandoffPackage);
   rpc ResolveHandoff(ResolveHandoffRequest) returns (HandoffsResponse);
-  
+
   rpc GetB2BAgreements(EmptyRequest) returns (B2BAgreementsResponse);
   rpc B2BHandshake(B2BHandshakeRequest) returns (TrustAgreement);
   rpc B2BRevoke(B2BRevokeRequest) returns (TrustAgreement);
@@ -879,23 +879,23 @@ service OpsService {
   rpc GetIncidents(EmptyRequest) returns (IncidentsResponse);
   rpc CreateIncident(CreateIncidentRequest) returns (Incident);
   rpc UpdateIncidentStatus(IncidentStatusRequest) returns (Incident);
-  
+
   rpc GetComputeProfiles(EmptyRequest) returns (ComputeProfilesResponse);
   rpc CreateComputeProfile(CreateComputeProfileRequest) returns (ComputeProfile);
-  
+
   rpc GetClusterStatus(GetClusterStatusRequest) returns (ClusterStatus);
-  
+
   rpc GetBudgetAlerts(EmptyRequest) returns (BudgetAlertsResponse);
   rpc CreateBudgetAlert(CreateBudgetAlertRequest) returns (BudgetAlert);
-  
+
   rpc GetPipelines(EmptyRequest) returns (PipelinesResponse);
   rpc CreatePipeline(CreatePipelineRequest) returns (Pipeline);
   rpc PromotePipeline(PipelinePromoteRequest) returns (Pipeline);
   rpc UpdatePipelineStatus(UpdatePipelineStatusRequest) returns (Pipeline);
-  
+
   rpc Scale(ScaleRequest) returns (ScaleResponse);
   rpc StreamScaleEvents(EmptyRequest) returns (stream ScaleEvent);
-  
+
   rpc PruneMissions(EmptyRequest) returns (PruneMissionsResponse);
 }
 
@@ -1144,15 +1144,15 @@ service AgentManagerService {
   rpc HireAgent(HireAgentRequest) returns (DashboardSnapshot);
   rpc FireAgent(FireAgentRequest) returns (DashboardSnapshot);
   rpc DelegateTask(DelegateTaskRequest) returns (DashboardSnapshot);
-  
+
   rpc GetAgentProviders(EmptyRequest) returns (AgentProvidersResponse);
   rpc AuthAgentProvider(AuthAgentProviderRequest) returns (AgentProvidersResponse);
-  
+
   rpc GetIdentities(EmptyRequest) returns (IdentitiesResponse);
-  
+
   rpc GetSkills(EmptyRequest) returns (SkillsResponse);
   rpc ImportSkill(ImportSkillRequest) returns (SkillPack);
-  
+
   rpc GetSnapshots(EmptyRequest) returns (SnapshotsResponse);
   rpc CreateSnapshot(CreateSnapshotRequest) returns (OrgSnapshot);
   rpc RestoreSnapshot(RestoreSnapshotRequest) returns (DashboardSnapshot);
@@ -1356,12 +1356,12 @@ service IntegrationService {
   rpc GetIntegrations(GetIntegrationsRequest) returns (GetIntegrationsResponse);
   rpc ConnectIntegration(ConnectIntegrationRequest) returns (IntegrationInstance);
   rpc DisconnectIntegration(DisconnectIntegrationRequest) returns (IntegrationInstance);
-  
+
   rpc GetPullRequests(GetPullRequestsRequest) returns (GetPullRequestsResponse);
   rpc CreatePullRequest(CreatePRRequest) returns (PullRequest);
   rpc MergePullRequest(PRActionRequest) returns (PullRequest);
   rpc ClosePullRequest(PRActionRequest) returns (PullRequest);
-  
+
   rpc GetIssues(GetIssuesRequest) returns (GetIssuesResponse);
   rpc CreateIssue(CreateIssueRequest) returns (Issue);
   rpc UpdateIssueStatus(IssueStatusRequest) returns (Issue);

@@ -10,20 +10,20 @@ use std::os::unix::fs::PermissionsExt;
 pub fn write_file_atomic<P: AsRef<Path>>(filename: P, data: &[u8], mode: u32) -> io::Result<()> {
     let filename = filename.as_ref();
     let dir = filename.parent().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid filename"))?;
-    
+
     fs::create_dir_all(dir)?;
 
     let base_name = filename.file_name().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "Invalid filename"))?;
     let base_name_str = base_name.to_string_lossy();
-    
+
     let random_suffix: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
         .take(10)
         .map(char::from)
         .collect();
-    
+
     let tmp_name = dir.join(format!("{}.{}.tmp", base_name_str, random_suffix));
-    
+
     let mut file = fs::File::create(&tmp_name)?;
     file.write_all(data)?;
     file.sync_all()?;

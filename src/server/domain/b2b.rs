@@ -16,9 +16,9 @@ pub struct TrustManager;
 impl TrustManager {
     pub fn parse_jwks(&self, partner_org: &str, jwks_json: &str, allowed_roles: Vec<String>) -> Result<TrustAgreement, serde_json::Error> {
         let _jwks: HashMap<String, serde_json::Value> = serde_json::from_str(jwks_json)?;
-        
+
         let id = format!("b2b-trust-{}", Utc::now().format("%Y%m%d%H%M%S%.3f"));
-        
+
         Ok(TrustAgreement {
             id,
             partner_org: partner_org.to_string(),
@@ -42,7 +42,7 @@ impl EgressFilter {
     pub fn scan(&self, message: &str, keywords: &[String]) -> B2BMessage {
         let lower_msg = message.to_lowercase();
         let blocked = keywords.iter().any(|kw| lower_msg.contains(&kw.to_lowercase()));
-        
+
         B2BMessage {
             content: message.to_string(),
             cross_org: true,

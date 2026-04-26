@@ -21,7 +21,7 @@ impl LocalProvider {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "Path traversal detected (..)"));
         }
         let path = self.base_path.join(key);
-        
+
         if !path.starts_with(&self.base_path) {
             return Err(io::Error::new(io::ErrorKind::InvalidInput, "Path traversal detected"));
         }
@@ -37,7 +37,7 @@ impl Provider for LocalProvider {
 
     async fn list_blobs(&self, prefix: &str) -> io::Result<Vec<BlobMetadata>> {
         let mut blobs = Vec::new();
-        
+
         fn walk_dir(dir: &Path, base_path: &Path, prefix: &str, blobs: &mut Vec<BlobMetadata>) -> io::Result<()> {
             if dir.is_dir() {
                 for entry in fs::read_dir(dir)? {
@@ -64,7 +64,7 @@ impl Provider for LocalProvider {
         }
 
         walk_dir(&self.base_path, &self.base_path, prefix, &mut blobs)?;
-        
+
         Ok(blobs)
     }
 
