@@ -57,6 +57,22 @@ where
     let _ = tx.try_send(Box::new(f));
 }
 
+fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+    if let Some(spiffe_id) = req.metadata().get("x-spiffe-id") {
+        if let Ok(spiffe_id_str) = spiffe_id.to_str() {
+             match crate::auth::parse_spiffe_id(spiffe_id_str) {
+                 Ok((org_id, agent_id)) => {
+                     println!("Authenticated SPIFFE ID: org={}, agent={}", org_id, agent_id);
+                 }
+                 Err(e) => return Err(tonic::Status::permission_denied(e)),
+             }
+        } else {
+             return Err(tonic::Status::invalid_argument("invalid x-spiffe-id header"));
+        }
+    }
+    Ok(req)
+}
+
 pub mod ohc {
     pub mod orchestration {
         tonic::include_proto!("ohc.orchestration");
@@ -393,7 +409,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Server listening on {}", addr);
 
     Server::builder()
-        .add_service(HubServiceServer::new(hub_service))
+        .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(store))
         .serve(addr)
         .await?;

@@ -534,4 +534,76 @@ mod tests {
         
         assert!(s.validate_token(&token).await.is_err());
     }
+
+    #[test]
+    fn test_parse_spiffe_id() {
+        let (org, agent) = parse_spiffe_id("spiffe://onehumancorp.io/org-1/agent-1").unwrap();
+        assert_eq!(org, "org-1");
+        assert_eq!(agent, "agent-1");
+
+        let (org, agent) = parse_spiffe_id("spiffe://ohc.local/org/org-2/agent/agent-2").unwrap();
+        assert_eq!(org, "org-2");
+        assert_eq!(agent, "agent-2");
+
+        let (org, agent) = parse_spiffe_id("spiffe://ohc.os/agent/agent-3").unwrap();
+        assert_eq!(org, "");
+        assert_eq!(agent, "agent-3");
+
+        let (org, agent) = parse_spiffe_id("spiffe://us-east.ohc.global/org/org-4/agent/agent-4").unwrap();
+        assert_eq!(org, "org-4");
+        assert_eq!(agent, "agent-4");
+
+        assert!(parse_spiffe_id("invalid").is_err());
+        assert!(parse_spiffe_id("spiffe://invalid.com/x").is_err());
+    }
+}
+
+pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
+    if !spiffe_id.starts_with("spiffe://") {
+        return Err(format!("invalid SPIFFE ID format: {}", spiffe_id));
+    }
+    
+    let trimmed = &spiffe_id["spiffe://".len()..];
+    if trimmed.contains("..") || trimmed.contains("//") {
+        return Err(format!("invalid SPIFFE ID format: {}", spiffe_id));
+    }
+    
+    let parts: Vec<&str> = trimmed.split('/').collect();
+    if parts.len() < 2 {
+        return Err(format!("SPIFFE ID lacks required path segments for agent identity: {}", spiffe_id));
+    }
+    
+    let domain = parts[0];
+    let agent_id: String;
+    let org_id: String;
+    
+    if domain == "onehumancorp.io" {
+        if parts.len() != 3 {
+            return Err(format!("invalid SPIFFE ID path structure for domain onehumancorp.io: {}", spiffe_id));
+        }
+        org_id = parts[1].to_string();
+        agent_id = parts[2].to_string();
+    } else if domain == "ohc.local" {
+        if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
+            return Err(format!("invalid SPIFFE ID path structure for domain ohc.local: {}", spiffe_id));
+        }
+        org_id = parts[2].to_string();
+        agent_id = parts[4].to_string();
+    } else if domain == "ohc.os" {
+        if parts.len() != 3 || parts[1] != "agent" {
+            return Err(format!("invalid SPIFFE ID path structure for domain ohc.os: {}", spiffe_id));
+        }
+        org_id = String::new();
+        agent_id = parts[2].to_string();
+    } else if domain == "ohc.global" || domain.ends_with(".ohc.global") {
+        if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
+            return Err(format!("invalid SPIFFE ID path structure for domain {}: {}", domain, spiffe_id));
+        }
+        org_id = parts[2].to_string();
+        agent_id = parts[4].to_string();
+    } else {
+        return Err(format!("unsupported SPIFFE trust domain in ID: {}", spiffe_id));
+    }
+    
+    Ok((org_id, agent_id))
 }
