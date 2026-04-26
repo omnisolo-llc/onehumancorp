@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	agentservicepb "github.com/onehumancorp/mono/src/proto/agentservice"
-	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
+	agentgrpc "github.com/onehumancorp/mono/src/server_old/agents/grpc"
 	"github.com/onehumancorp/mono/src/server/orchestration/mesh"
 	"google.golang.org/grpc"
 	"net"

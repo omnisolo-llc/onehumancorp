@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
-	agentgrpc "github.com/onehumancorp/mono/src/server/agents/grpc"
+	agentgrpc "github.com/onehumancorp/mono/src/server_old/agents/grpc"
 	"github.com/onehumancorp/mono/src/server/orchestration/mesh"
 )
 

@@ -13,11 +13,11 @@ go_library(
         "redis_transport.go",
         "registry.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server/agents",
+    importpath = "github.com/onehumancorp/mono/src/server_old/agents",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server_old/telemetry",
-        "//src/server/agents/grpc",
+        "//src/server_old/agents/grpc",
         "//src/proto/agentservice",
         "//src/server_old/db",
         "//src/server_old/integrations/plane",
