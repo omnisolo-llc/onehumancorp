@@ -21,6 +21,7 @@ mod sip;
 mod orchestrator;
 mod spawner;
 mod queue;
+mod agents;
 
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
@@ -80,6 +81,11 @@ fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, ton
 pub mod ohc {
     pub mod orchestration {
         tonic::include_proto!("ohc.orchestration");
+    }
+    pub mod agent {
+        pub mod service {
+            tonic::include_proto!("ohc.agent.service");
+        }
     }
 }
 
