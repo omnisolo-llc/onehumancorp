@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:ohc_app/screens/ongoing_management_wizards.dart';
 
 import 'package:ohc_app/screens/login_screen.dart';
+import 'package:ohc_app/screens/help_center_screen.dart';
+import 'package:ohc_app/screens/help_chat_screen.dart';
+
 import 'package:ohc_app/screens/dashboard_screen.dart';
 import 'package:ohc_app/screens/agents_screen.dart';
 import 'package:ohc_app/screens/meetings_screen.dart';
@@ -87,6 +90,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => AppShell(child: child),
         routes: [
           // Business setup requires authentication — moved inside the shell.
+          GoRoute(
+            path: '/help-center',
+            builder: (context, state) => const HelpCenterScreen(),
+          ),
+          GoRoute(
+            path: '/help-chat',
+            builder: (context, state) => const HelpChatScreen(),
+          ),
           GoRoute(
             path: '/business_setup',
             builder: (context, state) => const BusinessSetupWizardScreen(),
@@ -232,6 +243,11 @@ class AppShell extends StatelessWidget {
       builder: (context, constraints) {
         if (constraints.maxWidth <= 768) {
           return Scaffold(
+            floatingActionButton: Builder(builder: (context) => FloatingActionButton(
+              onPressed: () => context.push('/help-chat'),
+              tooltip: 'Ask Anything',
+              child: const Icon(Icons.help),
+            )),
             drawer: _Sidebar(),
             body: Stack(
               children: [
@@ -263,6 +279,11 @@ class AppShell extends StatelessWidget {
           );
         } else {
           return Scaffold(
+            floatingActionButton: Builder(builder: (context) => FloatingActionButton(
+              onPressed: () => context.push('/help-chat'),
+              tooltip: 'Ask Anything',
+              child: const Icon(Icons.help),
+            )),
             body: Row(
               children: [
                 _Sidebar(),
@@ -359,6 +380,8 @@ class _Sidebar extends StatelessWidget {
           label: 'Setup Wizard',
           path: '/wizard',
         ),
+        const SizedBox(height: 16),
+        _NavItem(icon: Icons.help_outline, label: 'Help Center', path: '/help-center'),
         const SizedBox(height: 16),
         _NavItem(
           icon: Icons.health_and_safety,

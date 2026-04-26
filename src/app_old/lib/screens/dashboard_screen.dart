@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:ohc_app/widgets/glass_card.dart';
+import 'package:ohc_app/widgets/tooltip_registry.dart';
+
 import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_svg/flutter_svg.dart'; // Temporarily disabled for Bazel build
@@ -90,7 +92,7 @@ class _DashboardContent extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _SectionTitle('My Business'),
+            ContextualTooltip(tooltipKey: 'dashboard_my_business', child: _SectionTitle('My Business')),
             OutlinedButton.icon(
               onPressed: () => context.go('/wizards/billing'),
               icon: const Icon(Icons.credit_card),
