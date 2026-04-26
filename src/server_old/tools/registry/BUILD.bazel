@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "registry",
+    srcs = ["registry.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/tools/registry",
+    visibility = ["//visibility:public"],
+    deps = [],
+)
+
+go_test(
+    name = "registry_test",
+    srcs = ["registry_test.go", "e2e_test.go"],
+    embed = [":registry"],
+    deps = [
+        "//src/server_old/tools/hybridfsmcp",
+        "//src/server_old/tools/localstatefulproxy",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

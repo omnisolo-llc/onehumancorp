@@ -1,0 +1,25 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "obsidian",
+    srcs = [
+        "provider.go",
+        "tools.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/integrations/obsidian",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:hub_go_proto",
+        "//src/server_old/db",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "obsidian_test",
+    srcs = [
+        "provider_test.go",
+        "tools_test.go",
+    ],
+    embed = [":obsidian"],
+)

@@ -1,0 +1,91 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Diagnostics inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Diagnostics Dashboard";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Day One Setup Health Check"; font-size: 20px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+
+        VerticalBox {
+            spacing: 10px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 12px;
+                    Text { text: "🗄️ Database"; color: #1e293b; }
+                    Rectangle {}
+                    Text { text: "Connected"; color: #10b981; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 12px;
+                    Text { text: "🧠 Redis Cache"; color: #1e293b; }
+                    Rectangle {}
+                    Text { text: "Connected"; color: #10b981; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 12px;
+                    Text { text: "🧠 AI Provider APIs"; color: #1e293b; }
+                    Rectangle {}
+                    Text { text: "Connected"; color: #10b981; }
+                }
+            }
+        }
+
+        Text { text: "Hybrid Health Status"; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+        VerticalBox {
+            spacing: 8px;
+            
+            HorizontalBox {
+                Text { text: "Execution Mode"; color: #64748b; }
+                Rectangle {}
+                Text { text: "STANDALONE"; color: #a855f7; font-weight: 700; }
+            }
+            HorizontalBox {
+                Text { text: "Cloud Connectivity"; color: #64748b; }
+                Rectangle {}
+                Text { text: "CONNECTED"; color: #10b981; font-weight: 700; }
+            }
+            HorizontalBox {
+                Text { text: "Mesh Status"; color: #64748b; }
+                Rectangle {}
+                Text { text: "ACTIVE"; color: #10b981; font-weight: 700; }
+            }
+            HorizontalBox {
+                Text { text: "Stuck Missions"; color: #64748b; }
+                Rectangle {}
+                Text { text: "0"; color: #1e293b; font-weight: 700; }
+            }
+        }
+
+        Button {
+            text: "Run Diagnostics";
+        }
+    }
+}

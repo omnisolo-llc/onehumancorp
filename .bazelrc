@@ -18,6 +18,10 @@ build --action_env=CGO_ENABLED=1
 build --spawn_strategy=remote,sandboxed,local
 build --incompatible_strict_action_env
 build --announce_rc
+build --linkopt=-fuse-ld=bfd
+build --host_linkopt=-fuse-ld=bfd
+build --features=-supports_start_end_lib
+build --host_features=-supports_start_end_lib
 
 # ── Remote execution resilience ───────────────────────────────────────────────
 # Automatically rewind and retry actions when their remote inputs are lost
@@ -28,7 +32,7 @@ build --rewind_lost_inputs
 # Show test output only on failure
 test --test_output=errors
 test --build_tests_only
-test --test_timeout=300,600,900,1800
+test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
 # Flutter tests in particular copy large pub_cache trees into TEST_TMPDIR.
 test --local_test_jobs=4

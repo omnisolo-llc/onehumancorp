@@ -1,0 +1,28 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "mcpwebhooktunnel",
+    srcs = ["mcp.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/tools/mcpwebhooktunnel",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server_old/db",
+        "//src/server_old/integrations/mcp_webhook_tunnel",
+        "@@gazelle++go_deps+org_golang_google_grpc//:grpc",
+    ],
+)
+
+go_test(
+    name = "mcpwebhooktunnel_test",
+    srcs = ["mcp_test.go"],
+    deps = [
+        ":mcpwebhooktunnel",
+        "//src/server_old/db",
+        "//src/server_old/integrations/mcp_webhook_tunnel",
+        "@@gazelle++go_deps+org_golang_google_grpc//:grpc",
+        "@@gazelle++go_deps+org_golang_google_grpc//credentials",
+        "@@gazelle++go_deps+org_golang_google_grpc//credentials/insecure",
+        "@@gazelle++go_deps+org_golang_google_grpc//peer",
+        "@@gazelle++go_deps+org_golang_google_grpc//test/bufconn",
+    ],
+)

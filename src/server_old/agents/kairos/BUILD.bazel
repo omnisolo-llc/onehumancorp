@@ -1,0 +1,22 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "kairos",
+    srcs = ["autodream_worker.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/agents/kairos",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server_old/db",
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "kairos_test",
+    srcs = ["autodream_worker_test.go"],
+    embed = [":kairos"],
+    deps = [
+        "//src/server_old/db",
+        "@com_github_google_uuid//:uuid",
+    ],
+)

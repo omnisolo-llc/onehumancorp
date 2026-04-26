@@ -1,0 +1,115 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+
+export component Settings inherits Window {
+    width: 500px;
+    height: 700px;
+    title: "Settings";
+
+    property <bool> standalone_mode: true;
+    property <bool> expert_mode: false;
+    property <string> backend_url: "http://localhost:8080";
+    property <string> user_name: "John Doe";
+    property <string> user_email: "john.doe@example.com";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // User Info
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            HorizontalBox {
+                spacing: 16px;
+                padding: 16px;
+                Text { text: "👤"; font-size: 32px; }
+                VerticalBox {
+                    Text { text: user_name; font-weight: 700; color: #1e293b; }
+                    Text { text: user_email; color: #64748b; }
+                }
+            }
+        }
+
+        // Communication Section
+        Text { text: "COMMUNICATION"; color: #7c3aed; font-weight: 700; }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            VerticalBox {
+                spacing: 12px;
+                padding: 16px;
+                
+                HorizontalBox {
+                    Text { text: standalone_mode ? "💻 Desktop Standalone Mode" : "☁️ Remote Client Mode"; font-weight: 700; color: #1e293b; }
+                }
+                
+                Text {
+                    text: standalone_mode ? 
+                        "This device manages a local backend and lightweight local services." :
+                        "This app acts as a UI for a remote OHC server.";
+                    color: #64748b;
+                    wrap: word-wrap;
+                }
+            }
+        }
+
+        HorizontalBox {
+            Text { text: "Backend URL:"; color: #1e293b; horizontal-alignment: center; }
+            LineEdit { text: backend_url; }
+        }
+
+        HorizontalBox {
+            Text { text: "Standalone Mode"; color: #1e293b; }
+            CheckBox {
+                checked: standalone_mode;
+                toggled => { standalone_mode = !standalone_mode; }
+            }
+        }
+
+        // Local Backend Section (Conditional)
+        if (standalone_mode) : VerticalBox {
+            spacing: 10px;
+            Text { text: "LOCAL BACKEND"; color: #7c3aed; font-weight: 700; }
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "Service Status: Running"; color: #1e293b; horizontal-alignment: center; }
+                    Button { text: "Stop"; }
+                }
+            }
+            Button { text: "Run Doctor Diagnostics"; }
+        }
+
+        // Other Settings
+        HorizontalBox {
+            Text { text: "Expert Mode"; color: #1e293b; }
+            CheckBox {
+                checked: expert_mode;
+                toggled => { expert_mode = !expert_mode; }
+            }
+        }
+
+        Button {
+            text: "Trigger Hybrid Sync";
+        }
+
+        Button {
+            text: "Sign Out";
+        }
+    }
+}
