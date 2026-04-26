@@ -24,6 +24,7 @@ rust_binary(
     visibility = ["//visibility:public"],
     deps = [
         ":build_script",
+        "@crates//:redis",
         "@crates//:tokio",
         "@crates//:tokio-stream",
         "@crates//:tonic",
@@ -63,6 +64,7 @@ rust_test(
     },
     deps = [
         ":build_script",
+        "@crates//:redis",
         "@crates//:tokio",
         "@crates//:tokio-stream",
         "@crates//:tonic",
