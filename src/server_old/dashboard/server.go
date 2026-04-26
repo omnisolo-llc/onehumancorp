@@ -64,7 +64,7 @@ type Server struct {
 	authHandlers          *auth.Handlers
 	dbProvider            db.Provider
 	settings              settings.AppSettings
-	agentProviderRegistry *agents.Registry
+	agentProviderRegistry agents.Registry
 	dynamicMCPTools       []MCPTool
 	rateLimitStates       map[string]*RateLimitState
 	staticDir             string

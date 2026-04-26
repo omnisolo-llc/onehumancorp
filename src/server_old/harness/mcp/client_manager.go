@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/onehumancorp/mono/src/server_old/agents/local"
+	"github.com/onehumancorp/mono/src/server/agents/local"
 )
 
 // Tool represents a Model Context Protocol tool spec.
@@ -30,7 +30,7 @@ func ConvertToMCPTool(t local.ToolDefinition) Tool {
 	return Tool{
 		Name:        t.Name,
 		Description: t.Description,
-		InputSchema: t.InputSchema,
+		InputSchema: marshalOrEmpty(t.InputSchema),
 	}
 }
 
@@ -107,4 +107,11 @@ func (cm *ClientManager) Disconnect(id string) error {
 
 	delete(cm.servers, id)
 	return nil
+}
+func marshalOrEmpty(v map[string]interface{}) json.RawMessage {
+	b, _ := json.Marshal(v)
+	if len(b) == 0 {
+		return json.RawMessage("{}")
+	}
+	return json.RawMessage(b)
 }

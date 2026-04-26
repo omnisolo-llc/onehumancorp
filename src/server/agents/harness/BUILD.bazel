@@ -1,6 +1,7 @@
 load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "harness",
+    srcs = ["harness.go"],
     importpath = "github.com/onehumancorp/mono/src/server/agents/harness",
     visibility = ["//visibility:public"],
 )
