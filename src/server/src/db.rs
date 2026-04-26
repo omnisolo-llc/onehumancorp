@@ -80,6 +80,10 @@ impl DB {
             .execute(&self.pool)
             .await?;
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id TEXT PRIMARY KEY, parent_id TEXT, epic_id TEXT, title TEXT NOT NULL, status TEXT NOT NULL, assigned_agent TEXT, payload TEXT NOT NULL, organization_id TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 
