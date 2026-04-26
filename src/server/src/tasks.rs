@@ -75,6 +75,11 @@ impl TaskManager {
         Ok(task)
     }
 
+    pub fn insert_task(&self, task: SharedTask) {
+        let mut tasks = self.tasks.write().unwrap();
+        tasks.insert(task.id.clone(), task);
+    }
+
     pub fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
         let tasks = self.tasks.read().unwrap();
         tasks.get(task_id).cloned().ok_or_else(|| "task not found".to_string())

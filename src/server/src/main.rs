@@ -18,6 +18,7 @@ mod msgbus;
 mod pipeline;
 mod oidc;
 mod sip;
+mod orchestrator;
 
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
