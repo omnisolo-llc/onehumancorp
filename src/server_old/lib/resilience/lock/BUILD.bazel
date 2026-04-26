@@ -2,13 +2,17 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "lock",
-    srcs = ["lock.go"],
+    srcs = [
+        "lock.go",
+        "redis_lock.go",
+    ],
     importpath = "github.com/onehumancorp/mono/src/server/lib/resilience/lock",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server_old/db",
         "@com_github_google_uuid//:uuid",
         "@com_github_jackc_pgx_v5//:pgx",
+        "@com_github_redis_rueidis//:rueidis",
     ],
 )
 
@@ -17,7 +21,12 @@ go_test(
     srcs = [
         "lock_postgres_test.go",
         "lock_test.go",
+        "redis_lock_test.go",
     ],
     embed = [":lock"],
-    deps = ["//src/server_old/db"],
+    deps = [
+        "//src/server_old/db",
+        "@com_github_alicebob_miniredis_v2//:miniredis",
+        "@com_github_redis_rueidis//:rueidis",
+    ],
 )
