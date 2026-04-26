@@ -1,112 +1,193 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox, ScrollView, LineEdit, TextEdit } from "std-widgets.slint";
 
 export component PromptTuning inherits Window {
-    width: 700px;
-    height: 500px;
+    width: 375px;
+    height: 812px;
     title: "Tune Agent";
 
     property <int> step: 0;
     property <string> tone: "Friendly";
+    property <bool> focus_business_only: false;
+    property <bool> focus_avoid_competitors: false;
+    property <string> focus_language: "English";
+
+    property <string> example_q: "";
+    property <string> example_a: "";
+
     property <bool> show_raw: false;
+    property <bool> is_advanced: false;
 
     background: #f8fafc;
+    default-font-family: "Inter";
 
-    HorizontalBox {
-        spacing: 20px;
-        padding: 24px;
+    VerticalBox {
+        spacing: 16px;
+        padding: 20px;
 
-        // Left Column: Wizard Steps
-        VerticalBox {
-            width: 320px;
-            spacing: 20px;
-            
-            Text { text: "Prompt Tuning"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        HorizontalBox {
+            alignment: space-between;
+            Text { text: "Tune Agent"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: is_advanced ? "Simple" : "Advanced"; clicked => { is_advanced = !is_advanced; } }
+        }
 
+        ScrollView {
             // Step 0: Tone
             if (step == 0) : VerticalBox {
-                spacing: 10px;
-                Text { text: "Personality & tone"; color: #1e293b; }
-                Button { text: "Formal"; clicked => { tone = "Formal"; } }
-                Button { text: "Friendly"; clicked => { tone = "Friendly"; } }
-                Button { text: "Concise"; clicked => { tone = "Concise"; } }
-                Text { text: "Selected: " + tone; color: #a855f7; }
+                spacing: 16px;
+                Text { text: "Personality & tone"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+
+                VerticalBox {
+                    spacing: 12px;
+                    Rectangle {
+                        background: tone == "Friendly & Warm" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: tone == "Friendly & Warm" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px;
+                        VerticalBox {
+                            Text { text: "Friendly & Warm"; font-weight: 700; }
+                            Text { text: "Uses emojis, very welcoming."; color: #64748b; font-size: 12px; }
+                            Button { text: "Select"; clicked => { tone = "Friendly & Warm"; } primary: tone == "Friendly & Warm"; }
+                        }
+                    }
+                    Rectangle {
+                        background: tone == "Professional" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: tone == "Professional" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px;
+                        VerticalBox {
+                            Text { text: "Professional"; font-weight: 700; }
+                            Text { text: "Polite, structured, no emojis."; color: #64748b; font-size: 12px; }
+                            Button { text: "Select"; clicked => { tone = "Professional"; } primary: tone == "Professional"; }
+                        }
+                    }
+                    Rectangle {
+                        background: tone == "Energetic" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: tone == "Energetic" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px;
+                        VerticalBox {
+                            Text { text: "Energetic"; font-weight: 700; }
+                            Text { text: "Enthusiastic, uses exclamation marks."; color: #64748b; font-size: 12px; }
+                            Button { text: "Select"; clicked => { tone = "Energetic"; } primary: tone == "Energetic"; }
+                        }
+                    }
+                    Rectangle {
+                        background: tone == "Concise" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: tone == "Concise" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px;
+                        VerticalBox {
+                            Text { text: "Concise"; font-weight: 700; }
+                            Text { text: "Short, direct, to the point."; color: #64748b; font-size: 12px; }
+                            Button { text: "Select"; clicked => { tone = "Concise"; } primary: tone == "Concise"; }
+                        }
+                    }
+                }
+
+                if (is_advanced) : LineEdit { placeholder-text: "Custom System Prompt Override"; }
             }
 
-            // Step 1: Focus
+            // Step 1: Focus Topics
             if (step == 1) : VerticalBox {
-                spacing: 10px;
-                Text { text: "Domain focus"; color: #1e293b; }
-                CheckBox { text: "Only discuss business"; }
-                CheckBox { text: "Avoid competitors"; }
+                spacing: 16px;
+                Text { text: "Domain focus"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+
+                VerticalBox {
+                    spacing: 12px;
+                    CheckBox { text: "Only discuss my products/services"; checked: focus_business_only; toggled => { focus_business_only = !focus_business_only; } }
+                    CheckBox { text: "Avoid mentioning competitors"; checked: focus_avoid_competitors; toggled => { focus_avoid_competitors = !focus_avoid_competitors; } }
+
+                    Text { text: "Always reply in:"; color: #1e293b; }
+                    LineEdit { placeholder-text: "Language (e.g. English, Arabic)"; text: focus_language; edited => { focus_language = self.text; } }
+                }
             }
 
             // Step 2: Examples
             if (step == 2) : VerticalBox {
-                spacing: 10px;
-                Text { text: "Example interactions"; color: #1e293b; }
+                spacing: 16px;
+                Text { text: "Example interactions"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+                Text { text: "Teach the agent how to answer specific questions."; color: #64748b; font-size: 14px; wrap: word-wrap; }
+
+                LineEdit { placeholder-text: "Question (e.g. Do you do vegan cakes?)"; text: example_q; edited => { example_q = self.text; } }
+                TextEdit { text: example_a; } // Use TextEdit for multiline, text binding varies in std-widgets but assumed standard here or just use LineEdit for simplicity if TextEdit missing
+
                 Button { text: "Add Example"; }
-                Text { text: "Q: Sample Q\nA: Sample A"; color: #64748b; }
-            }
 
-            // Step 3: Review
-            if (step == 3) : VerticalBox {
-                spacing: 10px;
-                Text { text: "Review & Save"; color: #1e293b; }
-                Text { text: "Ready to update the agent?"; color: #64748b; }
-            }
-
-            Rectangle {} // Spacer
-
-            // Navigation
-            HorizontalBox {
-                if (step > 0) : Button {
-                    text: "Back";
-                    clicked => { step = step - 1; }
+                if (example_q != "") : Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    padding: 8px;
+                    VerticalBox {
+                        Text { text: "Q: " + example_q; font-weight: 600; }
+                        Text { text: "A: " + example_a; color: #64748b; }
+                    }
                 }
-                Rectangle {} // Spacer
-                Button {
-                    text: step == 3 ? "Save" : "Next";
-                    clicked => {
-                        if (step < 3) {
-                            step = step + 1;
-                        } else {
-                            // Handle save
+            }
+
+            // Step 3: Live Preview & Save
+            if (step == 3) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Live Preview"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+
+                Button { text: show_raw ? "Show Chat UI" : "View Raw Prompt"; clicked => { show_raw = !show_raw; } }
+
+                Rectangle {
+                    background: rgba(255, 255, 255, 0.7);
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: rgba(255, 255, 255, 0.2);
+                    drop-shadow-blur: 20px;
+                    drop-shadow-color: rgba(0, 0, 0, 0.05);
+                    height: 300px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        if (show_raw) : Text {
+                            text: "SYSTEM PROMPT:\nYou are an AI agent with a " + tone + " personality.\n" + (focus_business_only ? "Only discuss the business.\n" : "") + (focus_avoid_competitors ? "Do not mention competitors.\n" : "") + "Language: " + focus_language;
+                            color: #1e293b;
+                            wrap: word-wrap;
+                            font-family: "monospace";
+                            font-size: 12px;
+                        }
+                        if (!show_raw) : VerticalBox {
+                            alignment: end;
+                            spacing: 8px;
+                            Rectangle { background: #e2e8f0; border-radius: 12px; padding: 8px; HorizontalBox { alignment: end; Text { text: "Hi, do you have vegan options?"; } } }
+                            Rectangle { background: #a855f7; border-radius: 12px; padding: 8px; HorizontalBox { alignment: start; Text { text: "Yes! We have delicious vegan chocolate cake! 🎂"; color: white; } } }
+                            LineEdit { placeholder-text: "Test your agent here..."; }
                         }
                     }
                 }
             }
         }
 
-        // Right Column: Preview
-        VerticalBox {
-            width: 320px;
-            spacing: 10px;
-            
-            HorizontalBox {
-                Text { text: "Live Preview"; font-size: 18px; font-weight: 700; color: #1e293b; }
-                Rectangle {}
-                Button { text: show_raw ? "Hide raw" : "Show raw"; clicked => { show_raw = !show_raw; } }
+        Rectangle { height: 16px; } // Spacer
+
+        // Navigation
+        HorizontalBox {
+            alignment: space-between;
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
             }
+            if (step == 0) : Rectangle {}
             
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    if (show_raw) : Text {
-                        text: "You are an AI agent with a " + tone + " personality.";
-                        color: #1e293b;
-                        wrap: word-wrap;
-                    }
-                    if (!show_raw) : Text {
-                        text: "Chat sandbox placeholder";
-                        color: #64748b;
-                        horizontal-alignment: center;
+            Button {
+                text: step == 3 ? "Save & Update Agent" : "Next";
+                clicked => {
+                    if (step < 3) {
+                        step = step + 1;
+                    } else {
+                        // Handle save
                     }
                 }
+                primary: true;
             }
         }
     }

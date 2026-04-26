@@ -1,106 +1,162 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
 export component WebsiteBuilder inherits Window {
-    width: 600px;
-    height: 600px;
+    width: 375px;
+    height: 812px;
     title: "Build My Website";
 
     property <int> step: 0;
     property <string> selected_template: "";
     property <string> primary_color: "#FF3B30";
     property <string> product_name: "";
+    property <string> product_desc: "";
+    property <string> product_price: "";
     property <string> domain_choice: "subdomain";
+    property <string> custom_domain: "";
+
+    property <bool> is_advanced: false;
 
     background: #f8fafc;
+    default-font-family: "Inter";
 
     VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+        spacing: 16px;
+        padding: 20px;
 
-        Text { text: "Website Builder"; font-size: 24px; font-weight: 700; color: #1e293b; }
-
-        // Step 0: Template
-        if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Choose a template"; color: #1e293b; }
-            
-            HorizontalBox {
-                spacing: 10px;
-                Button { text: "E-commerce"; clicked => { selected_template = "E-commerce"; } }
-                Button { text: "Portfolio"; clicked => { selected_template = "Portfolio"; } }
-            }
-            Text { text: "Selected: " + selected_template; color: #a855f7; }
+        HorizontalBox {
+            alignment: space-between;
+            Text { text: "Website"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: is_advanced ? "Simple" : "Advanced"; clicked => { is_advanced = !is_advanced; } }
         }
 
-        // Step 1: Colors
-        if (step == 1) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Brand Colors & Logo"; color: #1e293b; }
-            Text { text: "Selected Color: " + primary_color; color: #64748b; }
-            HorizontalBox {
-                spacing: 10px;
-                Button { text: "Red"; clicked => { primary_color = "#FF3B30"; } }
-                Button { text: "Green"; clicked => { primary_color = "#34C759"; } }
-                Button { text: "Blue"; clicked => { primary_color = "#007AFF"; } }
-            }
-        }
+        ScrollView {
+            // Step 0: Template Gallery
+            if (step == 0) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Choose a template"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
 
-        // Step 2: Product
-        if (step == 2) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Add your first product or service"; color: #1e293b; }
-            LineEdit {
-                placeholder-text: "Product Name";
-                text: product_name;
-            }
-            LineEdit {
-                placeholder-text: "Price";
-            }
-            LineEdit {
-                placeholder-text: "Description";
-            }
-        }
-
-        // Step 3: Domain
-        if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Connect a domain"; color: #1e293b; }
-            Button { text: "Use free subdomain"; clicked => { domain_choice = "subdomain"; } }
-            Button { text: "Use my own domain"; clicked => { domain_choice = "custom"; } }
-            Text { text: "Choice: " + domain_choice; color: #a855f7; }
-        }
-
-        // Step 4: Review
-        if (step == 4) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Go Live: Review your site"; color: #1e293b; }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
                 VerticalBox {
-                    padding: 16px;
-                    Text { text: "Template: " + selected_template; color: #1e293b; }
-                    Text { text: "Color: " + primary_color; color: #1e293b; }
-                    Text { text: "Product: " + product_name; color: #1e293b; }
-                    Text { text: "Domain: " + domain_choice; color: #1e293b; }
+                    spacing: 12px;
+                    Rectangle {
+                        height: 120px;
+                        background: selected_template == "E-commerce" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: selected_template == "E-commerce" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        VerticalBox {
+                            alignment: center;
+                            Text { text: "E-commerce"; font-weight: 600; horizontal-alignment: center; }
+                            Button { text: "Use this template →"; clicked => { selected_template = "E-commerce"; } primary: selected_template == "E-commerce"; }
+                        }
+                    }
+                    Rectangle {
+                        height: 120px;
+                        background: selected_template == "Portfolio" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: selected_template == "Portfolio" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        VerticalBox {
+                            alignment: center;
+                            Text { text: "Portfolio"; font-weight: 600; horizontal-alignment: center; }
+                            Button { text: "Use this template →"; clicked => { selected_template = "Portfolio"; } primary: selected_template == "Portfolio"; }
+                        }
+                    }
+                }
+            }
+
+            // Step 1: Colors & Logo
+            if (step == 1) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Brand Colors & Logo"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+
+                Text { text: "Pick a primary color:"; color: #64748b; }
+                HorizontalBox {
+                    spacing: 10px;
+                    Button { text: "Red"; clicked => { primary_color = "#FF3B30"; } }
+                    Button { text: "Green"; clicked => { primary_color = "#34C759"; } }
+                    Button { text: "Blue"; clicked => { primary_color = "#007AFF"; } }
+                }
+                Text { text: "Selected: " + primary_color; color: #a855f7; font-weight: 600; }
+
+                Text { text: "Logo:"; color: #64748b; }
+                Button { text: "Upload Logo"; }
+                Button { text: "Generate a logo for me"; }
+
+                if (is_advanced) : LineEdit { placeholder-text: "Custom CSS HEX"; text: primary_color; edited => { primary_color = self.text; } }
+            }
+
+            // Step 2: Product
+            if (step == 2) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Add your first product or service"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+
+                LineEdit { placeholder-text: "Name"; text: product_name; edited => { product_name = self.text; } }
+
+                if (product_name != "") : Text { text: "AI Suggestion for description available"; color: #10b981; font-size: 14px; }
+
+                LineEdit { placeholder-text: "Description"; text: product_desc; edited => { product_desc = self.text; } }
+                LineEdit { placeholder-text: "Price"; text: product_price; edited => { product_price = self.text; } }
+
+                Button { text: "Add Photo"; }
+
+                if (is_advanced) : LineEdit { placeholder-text: "SKU / Inventory ID"; }
+            }
+
+            // Step 3: Domain
+            if (step == 3) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Connect a domain"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+
+                Button { text: "Use a free OHC subdomain"; clicked => { domain_choice = "subdomain"; } primary: domain_choice == "subdomain"; }
+                Button { text: "Use my own domain"; clicked => { domain_choice = "custom"; } primary: domain_choice == "custom"; }
+                Button { text: "Buy a new domain"; clicked => { domain_choice = "buy"; } primary: domain_choice == "buy"; }
+
+                if (domain_choice == "custom") : LineEdit { placeholder-text: "Enter your domain"; text: custom_domain; edited => { custom_domain = self.text; } }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "DNS Records Setup (A, CNAME)"; color: #64748b; font-size: 12px; }
+                }
+            }
+
+            // Step 4: Review & Go Live
+            if (step == 4) : VerticalBox {
+                spacing: 20px;
+                Text { text: "Ready to go live!"; font-size: 24px; font-weight: 700; font-family: "Outfit"; }
+                
+                Rectangle {
+                    background: rgba(255, 255, 255, 0.7);
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: rgba(255, 255, 255, 0.2);
+                    drop-shadow-blur: 20px;
+                    drop-shadow-color: rgba(0, 0, 0, 0.05);
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "Template: " + selected_template; font-weight: 600; }
+                        Text { text: "Color: " + primary_color; }
+                        Text { text: "Product: " + product_name; }
+                        Text { text: "Domain: " + (domain_choice == "custom" ? custom_domain : "mybusiness.ohc.app"); }
+                    }
                 }
             }
         }
 
-        Rectangle {} // Spacer
+        Rectangle { height: 16px; } // Spacer
 
         // Navigation
         HorizontalBox {
+            alignment: space-between;
             if (step > 0) : Button {
                 text: "Back";
                 clicked => { step = step - 1; }
             }
-            Rectangle {} // Spacer
+            if (step == 0) : Rectangle {}
+
             Button {
-                text: step == 4 ? "Publish" : "Next";
+                text: step == 4 ? "Publish Site" : "Next";
                 clicked => {
                     if (step < 4) {
                         step = step + 1;
@@ -108,6 +164,7 @@ export component WebsiteBuilder inherits Window {
                         // Handle publish
                     }
                 }
+                primary: true;
             }
         }
     }

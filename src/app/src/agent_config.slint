@@ -1,95 +1,178 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox, ScrollView } from "std-widgets.slint";
 
 export component AgentConfig inherits Window {
-    width: 600px;
-    height: 500px;
+    width: 375px;
+    height: 812px;
     title: "Configure AI Agent";
 
     property <int> step: 0;
     property <string> selected_agent: "";
     property <bool> can_reply: false;
     property <bool> can_social: false;
+    property <bool> can_write_desc: false;
+    property <bool> can_send_updates: false;
     property <string> frequency: "Daily";
 
+    property <bool> is_advanced: false;
+
     background: #f8fafc;
+    default-font-family: "Inter";
 
     VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+        spacing: 16px;
+        padding: 20px;
 
-        Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
-
-        // Step 0: Choose Agent
-        if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Choose an agent to add to your team"; color: #1e293b; }
-            
-            HorizontalBox {
-                spacing: 10px;
-                Button { text: "Customer Support"; clicked => { selected_agent = "Customer Support"; } }
-                Button { text: "Social Media Manager"; clicked => { selected_agent = "Social Media Manager"; } }
-            }
-            Text { text: "Selected: " + selected_agent; color: #a855f7; }
+        HorizontalBox {
+            alignment: space-between;
+            Text { text: "AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: is_advanced ? "Simple" : "Advanced"; clicked => { is_advanced = !is_advanced; } }
         }
 
-        // Step 1: Capabilities
-        if (step == 1) : VerticalBox {
-            spacing: 10px;
-            Text { text: "What should this agent do?"; color: #1e293b; }
-            
-            HorizontalBox {
-                Text { text: "Reply to customer messages"; color: #1e293b; }
-                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
-            }
-            HorizontalBox {
-                Text { text: "Post to Instagram & Facebook"; color: #1e293b; }
-                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
-            }
-        }
+        ScrollView {
+            // Step 0: Choose Agent
+            if (step == 0) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Choose an agent to add to your team"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
 
-        // Step 2: Frequency
-        if (step == 2) : VerticalBox {
-            spacing: 10px;
-            Text { text: "How often should this agent work?"; color: #1e293b; }
-            Text { text: frequency; font-size: 24px; color: #a855f7; horizontal-alignment: center; }
-            
-            HorizontalBox {
-                alignment: center;
-                Button { text: "Weekly"; clicked => { frequency = "Weekly"; } }
-                Button { text: "Daily"; clicked => { frequency = "Daily"; } }
-                Button { text: "Hourly"; clicked => { frequency = "Hourly"; } }
-            }
-        }
+                VerticalBox {
+                    spacing: 12px;
 
-        // Step 3: Review
-        if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Review & Activate"; color: #1e293b; }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+                    Rectangle {
+                        background: selected_agent == "Customer Support" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: selected_agent == "Customer Support" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px;
+                        VerticalBox {
+                            spacing: 8px;
+                            HorizontalBox {
+                                Text { text: "💬"; font-size: 24px; }
+                                VerticalBox {
+                                    Text { text: "Customer Support"; font-weight: 700; font-size: 16px; }
+                                    Text { text: "Replies to messages, handles refunds."; color: #64748b; font-size: 12px; }
+                                }
+                            }
+                            Button { text: "Add to my team"; clicked => { selected_agent = "Customer Support"; } primary: selected_agent == "Customer Support"; }
+                        }
+                    }
+
+                    Rectangle {
+                        background: selected_agent == "Social Media Manager" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: selected_agent == "Social Media Manager" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px;
+                        VerticalBox {
+                            spacing: 8px;
+                            HorizontalBox {
+                                Text { text: "📱"; font-size: 24px; }
+                                VerticalBox {
+                                    Text { text: "Social Media Manager"; font-weight: 700; font-size: 16px; }
+                                    Text { text: "Posts to IG/FB, engages followers."; color: #64748b; font-size: 12px; }
+                                }
+                            }
+                            Button { text: "Add to my team"; clicked => { selected_agent = "Social Media Manager"; } primary: selected_agent == "Social Media Manager"; }
+                        }
+                    }
+
+                    Rectangle {
+                        background: selected_agent == "Order Manager" ? #f3e8ff : white;
+                        border-width: 2px;
+                        border-color: selected_agent == "Order Manager" ? #a855f7 : #e2e8f0;
+                        border-radius: 12px;
+                        padding: 12px;
+                        VerticalBox {
+                            spacing: 8px;
+                            HorizontalBox {
+                                Text { text: "📦"; font-size: 24px; }
+                                VerticalBox {
+                                    Text { text: "Order Manager"; font-weight: 700; font-size: 16px; }
+                                    Text { text: "Tracks inventory, order status."; color: #64748b; font-size: 12px; }
+                                }
+                            }
+                            Button { text: "Add to my team"; clicked => { selected_agent = "Order Manager"; } primary: selected_agent == "Order Manager"; }
+                        }
+                    }
+                }
+            }
+
+            // Step 1: Capabilities
+            if (step == 1) : VerticalBox {
+                spacing: 16px;
+                Text { text: "What should this agent do?"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+
+                VerticalBox {
+                    spacing: 12px;
+                    CheckBox { text: "Reply to customer messages"; checked: can_reply; toggled => { can_reply = !can_reply; } }
+                    CheckBox { text: "Post to Instagram & Facebook"; checked: can_social; toggled => { can_social = !can_social; } }
+                    CheckBox { text: "Write product descriptions"; checked: can_write_desc; toggled => { can_write_desc = !can_write_desc; } }
+                    CheckBox { text: "Send order updates"; checked: can_send_updates; toggled => { can_send_updates = !can_send_updates; } }
+                }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Raw Permissions JSON:"; color: #64748b; font-size: 12px; }
+                    Text { text: "{\"reply\": " + (can_reply ? "true" : "false") + ", ...}"; color: #10b981; font-family: "monospace"; font-size: 12px; }
+                }
+            }
+
+            // Step 2: Frequency
+            if (step == 2) : VerticalBox {
+                spacing: 16px;
+                Text { text: "How often should this agent work?"; font-size: 20px; font-weight: 700; font-family: "Outfit"; }
+
+                Text { text: frequency; font-size: 32px; color: #a855f7; font-weight: 700; horizontal-alignment: center; font-family: "Outfit"; }
                 
                 VerticalBox {
-                    padding: 16px;
-                    Text { text: "Agent: " + selected_agent; color: #1e293b; }
-                    Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #1e293b; }
-                    Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #1e293b; }
-                    Text { text: "Schedule: " + frequency; color: #1e293b; }
+                    spacing: 10px;
+                    Button { text: "Real-time"; clicked => { frequency = "Real-time"; } }
+                    Button { text: "Hourly"; clicked => { frequency = "Hourly"; } }
+                    Button { text: "Daily"; clicked => { frequency = "Daily"; } }
+                    Button { text: "Weekly"; clicked => { frequency = "Weekly"; } }
+                }
+
+                if (is_advanced) : VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Cron Expression:"; color: #64748b; font-size: 12px; }
+                    Text { text: "0 * * * *"; color: #10b981; font-family: "monospace"; font-size: 12px; }
+                }
+            }
+
+            // Step 3: Review
+            if (step == 3) : VerticalBox {
+                spacing: 20px;
+                Text { text: "Review & Activate"; font-size: 24px; font-weight: 700; font-family: "Outfit"; }
+
+                Rectangle {
+                    background: rgba(255, 255, 255, 0.7);
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: rgba(255, 255, 255, 0.2);
+                    drop-shadow-blur: 20px;
+                    drop-shadow-color: rgba(0, 0, 0, 0.05);
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: "Agent: " + selected_agent; font-weight: 700; }
+                        Text { text: "Capabilities: " + (can_reply ? "Reply, " : "") + (can_social ? "Social" : ""); }
+                        Text { text: "Schedule: " + frequency; }
+                    }
                 }
             }
         }
 
-        Rectangle {} // Spacer
+        Rectangle { height: 16px; } // Spacer
 
         // Navigation
         HorizontalBox {
+            alignment: space-between;
             if (step > 0) : Button {
                 text: "Back";
                 clicked => { step = step - 1; }
             }
-            Rectangle {} // Spacer
+            if (step == 0) : Rectangle {}
+
             Button {
                 text: step == 3 ? "Activate" : "Next";
                 clicked => {
@@ -99,6 +182,7 @@ export component AgentConfig inherits Window {
                         // Handle activation
                     }
                 }
+                primary: true;
             }
         }
     }
