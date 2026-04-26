@@ -8,7 +8,7 @@ go_test(
         "helpers_test.go",
         "ping_test.go",
     ],
-    data = ["//src/server/agents/builtin/src:ohc-builtin-agent"],
+    data = ["//src/server/src/agents/builtin:ohc-builtin-agent"],
     tags = ["integration"],
     deps = [
         "//src/proto/agentservice",
@@ -23,7 +23,7 @@ go_test(
         "helpers_test.go",
         "runtask_test.go",
     ],
-    data = ["//src/server/agents/builtin/src:ohc-builtin-agent"],
+    data = ["//src/server/src/agents/builtin:ohc-builtin-agent"],
     tags = ["integration"],
     deps = [
         "//src/proto/agentservice",
@@ -38,7 +38,7 @@ go_test(
         "helpers_test.go",
         "subagent_test.go",
     ],
-    data = ["//src/server/agents/builtin/src:ohc-builtin-agent"],
+    data = ["//src/server/src/agents/builtin:ohc-builtin-agent"],
     tags = ["integration"],
     deps = [
         "//src/proto/agentservice",

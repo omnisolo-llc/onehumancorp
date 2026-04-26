@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	"github.com/onehumancorp/mono/src/server/src/agents/builtin"
 )
 
 func TestConvertToMCPTool(t *testing.T) {
