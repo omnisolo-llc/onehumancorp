@@ -5,18 +5,14 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
-
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
 )
 
 func TestConvertToMCPTool(t *testing.T) {
-	internalTool := builtin.Tool{
-		Name:        "test_tool",
-		Description: "A test tool",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
-	}
-
-	mcpTool := ConvertToMCPTool(internalTool)
+	mcpTool := ConvertToMCPTool(
+		"test_tool",
+		"A test tool",
+		json.RawMessage(`{"type":"object","properties":{}}`),
+	)
 
 	if mcpTool.Name != "test_tool" {
 		t.Errorf("Expected Name test_tool, got %s", mcpTool.Name)
