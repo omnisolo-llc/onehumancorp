@@ -1331,7 +1331,29 @@ func (s *Server) snapshot() dashboardSnapshot {
 }
 
 func (s *Server) snapshotLocked() dashboardSnapshot {
-	agents := s.orgAgentsLocked()
+	var agents []orchestration.Agent
+	var meetings []orchestration.MeetingRoom
+	var costs billing.Summary
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	go func() {
+		defer wg.Done()
+		agents = s.orgAgentsLocked()
+	}()
+
+	go func() {
+		defer wg.Done()
+		meetings = s.orgMeetingsLocked()
+	}()
+
+	go func() {
+		defer wg.Done()
+		if s.tracker != nil {
+			costs = s.tracker.Summary(s.org.ID)
+		}
+	}()
 
 	queue := make([]orchestration.SharedTask, 0)
 	queueLen := 0
@@ -1346,10 +1368,12 @@ func (s *Server) snapshotLocked() dashboardSnapshot {
 		}
 	}
 
+	wg.Wait()
+
 	return dashboardSnapshot{
 		Organization: s.org,
-		Meetings:     s.orgMeetingsLocked(),
-		Costs:        s.tracker.Summary(s.org.ID),
+		Meetings:     meetings,
+		Costs:        costs,
 		Agents:       agents,
 		Statuses:     summarizeStatuses(agents),
 		TaskQueue:    queue,
