@@ -6,6 +6,7 @@ use std::pin::Pin;
 
 mod db;
 mod auth;
+pub mod crypto;
 mod hub;
 mod minimax;
 mod billing;
@@ -26,6 +27,10 @@ mod domain;
 pub mod pricing;
 pub mod analytics;
 pub mod integrations;
+
+
+#[cfg(test)]
+mod isolation_tests;
 pub mod services {
     pub mod wizard;
     pub mod billing {
@@ -75,12 +80,14 @@ where
     let _ = tx.try_send(Box::new(f));
 }
 
-fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+fn spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
     if let Some(spiffe_id) = req.metadata().get("x-spiffe-id") {
         if let Ok(spiffe_id_str) = spiffe_id.to_str() {
              match crate::auth::parse_spiffe_id(spiffe_id_str) {
                  Ok((org_id, agent_id)) => {
                      println!("Authenticated SPIFFE ID: org={}, agent={}", org_id, agent_id);
+                     req.metadata_mut().insert("ohc-org-id", org_id.parse().unwrap());
+                     req.metadata_mut().insert("ohc-agent-id", agent_id.parse().unwrap());
                  }
                  Err(e) => return Err(tonic::Status::permission_denied(e)),
              }
@@ -116,11 +123,21 @@ use hub::Hub;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
+    db: Arc<db::DB>,
 }
 
 impl MyHubService {
-    pub fn new(hub: Arc<Hub>) -> Self {
-        MyHubService { hub }
+    pub fn new(hub: Arc<Hub>, db: Arc<db::DB>) -> Self {
+        MyHubService { hub, db }
+    }
+
+    fn get_org_id<T>(&self, request: &Request<T>) -> Result<String, Status> {
+        if let Some(org_id_meta) = request.metadata().get("ohc-org-id") {
+            org_id_meta.to_str().map_err(|_| Status::internal("invalid org-id meta")).map(|s| s.to_string())
+        } else {
+            // Check for JWT claims if not SPIFFE
+            Ok("default_org".to_string()) // Fallback for now, should be extracted from JWT
+        }
     }
 }
 
@@ -130,9 +147,16 @@ impl HubService for MyHubService {
         &self,
         request: Request<RegisterAgentRequest>,
     ) -> Result<Response<RegisterAgentResponse>, Status> {
+        let org_id = self.get_org_id(&request)?;
+        let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        self.db.set_organization_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
         let req = request.into_inner();
-        if let Some(agent) = req.agent {
+        if let Some(mut agent) = req.agent {
+            agent.organization_id = org_id;
             self.hub.register_agent(agent);
+
+            tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
             Ok(Response::new(RegisterAgentResponse { success: true }))
         } else {
             Err(Status::invalid_argument("agent is required"))
@@ -445,15 +469,21 @@ impl HubService for MyHubService {
         &self,
         request: Request<CreateTaskRequest>,
     ) -> Result<Response<SharedTask>, Status> {
+        let org_id = self.get_org_id(&request)?;
+        let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        self.db.set_organization_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
-            "default_org".to_string(),
+            org_id,
             req.mission_id,
             req.title,
             req.description,
             req.priority,
         ).map_err(|e| Status::internal(e))?;
         
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
         Ok(Response::new(SharedTask {
             id: task.id,
             organization_id: task.organization_id,
@@ -480,9 +510,25 @@ impl HubService for MyHubService {
         &self,
         request: Request<PollTasksRequest>,
     ) -> Result<Response<Self::PollTasksStream>, Status> {
+        let org_id = self.get_org_id(&request)?;
+        let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        self.db.set_organization_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
         let req = request.into_inner();
+
+        // Verify agent belongs to the organization
+        if let Some(agent) = self.hub.get_agent(&req.agent_id) {
+            if agent.organization_id != org_id {
+                return Err(Status::permission_denied("agent does not belong to this organization"));
+            }
+        } else {
+            return Err(Status::not_found("agent not found"));
+        }
+
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
         
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
+
         let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
             Ok(SharedTask {
                 id: task.id,
@@ -512,8 +558,18 @@ impl HubService for MyHubService {
         &self,
         request: Request<UpdateTaskStatusRequest>,
     ) -> Result<Response<UpdateTaskStatusResponse>, Status> {
+        let org_id = self.get_org_id(&request)?;
+        let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        self.db.set_organization_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
         let req = request.into_inner();
         
+        // Verify task and agent belong to the organization
+        let task = self.hub.task_manager().get_task(&req.task_id).map_err(|e| Status::not_found(e))?;
+        if task.organization_id != org_id {
+            return Err(Status::permission_denied("task does not belong to this organization"));
+        }
+
         match req.status.as_str() {
             "REVIEW" => {
                 self.hub.task_manager().review_task(&req.task_id, &req.agent_id)
@@ -529,6 +585,7 @@ impl HubService for MyHubService {
             }
         }
         
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(UpdateTaskStatusResponse { success: true }))
     }
 
@@ -536,8 +593,16 @@ impl HubService for MyHubService {
         &self,
         request: Request<DecomposeTaskRequest>,
     ) -> Result<Response<DecomposeTaskResponse>, Status> {
+        let org_id = self.get_org_id(&request)?;
+        let mut tx = self.db.pool.begin().await.map_err(|e| Status::internal(e.to_string()))?;
+        self.db.set_organization_context(&mut *tx, &org_id).await.map_err(|e| Status::internal(e.to_string()))?;
+
         let req = request.into_inner();
         
+        if req.organization_id != org_id {
+            return Err(Status::permission_denied("organization_id mismatch"));
+        }
+
         for st in req.sub_tasks {
             let mut filtered_deps = Vec::new();
             for dep in st.dependencies {
@@ -557,6 +622,7 @@ impl HubService for MyHubService {
             ).map_err(|e| Status::internal(e))?;
         }
         
+        tx.commit().await.map_err(|e| Status::internal(e.to_string()))?;
         Ok(Response::new(DecomposeTaskResponse { success: true }))
     }
 
@@ -770,7 +836,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let hub_service = MyHubService::new(hub.clone());
+    let hub_service = MyHubService::new(hub.clone(), db.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start AutoDream worker

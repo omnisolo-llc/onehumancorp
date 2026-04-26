@@ -1,5 +1,6 @@
 use std::fs;
 use std::path::Path;
+use std::os::unix::fs::PermissionsExt;
 
 pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
@@ -10,8 +11,17 @@ pub fn provision_environment(is_cloud: bool) -> Result<(), String> {
         format!("{}/config", base_dir),
     ];
 
-    for dir in dirs {
+    for dir in &dirs {
         fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+
+        // Harden file permissions for standalone/local data: owner read/write/execute only (0700)
+        if !is_cloud {
+            let metadata = fs::metadata(dir).map_err(|e| e.to_string())?;
+            let mut permissions = metadata.permissions();
+            permissions.set_mode(0o700);
+            fs::set_permissions(dir, permissions).map_err(|e| e.to_string())?;
+            println!("Hardened permissions for {}", dir);
+        }
     }
 
     // TODO: Increment metrics

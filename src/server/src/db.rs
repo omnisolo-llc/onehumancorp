@@ -28,11 +28,11 @@ impl DB {
             .execute(&self.pool)
             .await?;
             
-        sqlx::query("CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, context_data TEXT, last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_session_data (session_id TEXT PRIMARY KEY, context_data TEXT, last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')")
             .execute(&self.pool)
             .await?;
             
-        sqlx::query("CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (memory_id TEXT PRIMARY KEY, context TEXT, embedding TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        sqlx::query("CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (memory_id TEXT PRIMARY KEY, context TEXT, embedding TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')")
             .execute(&self.pool)
             .await?;
 
@@ -41,6 +41,10 @@ impl DB {
             .await?;
             
         sqlx::query("CREATE TABLE IF NOT EXISTS agent_memories (id TEXT PRIMARY KEY, organization_id TEXT, task_id TEXT, raw_content TEXT, summary_embedding TEXT)")
+            .execute(&self.pool)
+            .await?;
+
+        sqlx::query("ALTER TABLE agent_memories ADD COLUMN IF NOT EXISTS organization_id TEXT DEFAULT 'system'")
             .execute(&self.pool)
             .await?;
 
@@ -84,6 +88,51 @@ impl DB {
             .execute(&self.pool)
             .await?;
 
+        self.enable_rls_all().await?;
+
+        Ok(())
+    }
+
+    async fn enable_rls_all(&self) -> Result<(), Box<dyn std::error::Error>> {
+        let tables = vec![
+            "agent_session_data", "swarm_truth_embeddings", "tasks", "agent_memories",
+            "swarm_memory", "agent_missions", "agent_status", "capability_plugins",
+            "swarm_memory_embeddings", "telemetry_buffer", "sub_agent_queue", "shared_tasks"
+        ];
+
+        for table in tables {
+            sqlx::query(&format!("ALTER TABLE {} ADD COLUMN IF NOT EXISTS organization_id TEXT DEFAULT 'system'", table))
+                .execute(&self.pool)
+                .await?;
+
+            println!("Enabling RLS on {}", table);
+            sqlx::query(&format!("ALTER TABLE {} ENABLE ROW LEVEL SECURITY", table))
+                .execute(&self.pool)
+                .await?;
+
+            sqlx::query(&format!("DROP POLICY IF EXISTS {}_tenant_isolation ON {}", table, table))
+                .execute(&self.pool)
+                .await?;
+
+            // Allow access if organization_id matches OR if context is 'system'
+            sqlx::query(&format!(
+                "CREATE POLICY {}_tenant_isolation ON {} USING (organization_id = current_setting('ohc.current_organization_id', true) OR current_setting('ohc.current_organization_id', true) = 'system')",
+                table, table
+            ))
+            .execute(&self.pool)
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn set_organization_context<'a, E>(&self, executor: E, org_id: &str) -> Result<(), Box<dyn std::error::Error>>
+    where E: sqlx::Executor<'a, Database = sqlx::Postgres>
+    {
+        sqlx::query("SELECT set_config('ohc.current_organization_id', $1, true)")
+            .bind(org_id)
+            .execute(executor)
+            .await?;
         Ok(())
     }
 
@@ -136,11 +185,18 @@ impl DB {
     }
 
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+        // Apply deterministic encryption to content for standalone mode if required
+        let final_content = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+            crate::crypto::encrypt_deterministic(content)
+        } else {
+            content.to_string()
+        };
+
         sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
             .bind(id)
             .bind(org_id)
             .bind(task_id)
-            .bind(content)
+            .bind(final_content)
             .bind(embedding)
             .execute(&self.pool)
             .await?;

@@ -555,6 +555,12 @@ mod tests {
 
         assert!(parse_spiffe_id("invalid").is_err());
         assert!(parse_spiffe_id("spiffe://invalid.com/x").is_err());
+
+        // Attack vectors
+        assert!(parse_spiffe_id("spiffe://onehumancorp.io/org-1/../agent-1").is_err());
+        assert!(parse_spiffe_id("spiffe://onehumancorp.io/org-1//agent-1").is_err());
+        assert!(parse_spiffe_id("spiffe://onehumancorp.io/org-1\0/agent-1").is_err());
+        assert!(parse_spiffe_id("spiffe://onehumancorp.io/org#1/agent-1").is_err());
     }
 }
 
@@ -564,8 +570,10 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
     }
     
     let trimmed = &spiffe_id["spiffe://".len()..];
-    if trimmed.contains("..") || trimmed.contains("//") {
-        return Err(format!("invalid SPIFFE ID format: {}", spiffe_id));
+
+    // Strict validation against path traversal and other injection attempts
+    if trimmed.contains("..") || trimmed.contains("//") || trimmed.contains('\\') || trimmed.contains('\0') {
+        return Err(format!("malformed SPIFFE ID detected: {}", spiffe_id));
     }
     
     let parts: Vec<&str> = trimmed.split('/').collect();
@@ -576,10 +584,16 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
     let domain = parts[0];
     let agent_id: String;
     let org_id: String;
+
+    // Helper to validate ID segments (alphanumeric, hyphens, underscores)
+    let is_valid_segment = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_');
     
     if domain == "onehumancorp.io" {
         if parts.len() != 3 {
             return Err(format!("invalid SPIFFE ID path structure for domain onehumancorp.io: {}", spiffe_id));
+        }
+        if !is_valid_segment(parts[1]) || !is_valid_segment(parts[2]) {
+            return Err(format!("invalid segments in SPIFFE ID: {}", spiffe_id));
         }
         org_id = parts[1].to_string();
         agent_id = parts[2].to_string();
@@ -587,17 +601,26 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
         if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
             return Err(format!("invalid SPIFFE ID path structure for domain ohc.local: {}", spiffe_id));
         }
+        if !is_valid_segment(parts[2]) || !is_valid_segment(parts[4]) {
+            return Err(format!("invalid segments in SPIFFE ID: {}", spiffe_id));
+        }
         org_id = parts[2].to_string();
         agent_id = parts[4].to_string();
     } else if domain == "ohc.os" {
         if parts.len() != 3 || parts[1] != "agent" {
             return Err(format!("invalid SPIFFE ID path structure for domain ohc.os: {}", spiffe_id));
         }
+        if !is_valid_segment(parts[2]) {
+            return Err(format!("invalid segments in SPIFFE ID: {}", spiffe_id));
+        }
         org_id = String::new();
         agent_id = parts[2].to_string();
     } else if domain == "ohc.global" || domain.ends_with(".ohc.global") {
         if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
             return Err(format!("invalid SPIFFE ID path structure for domain {}: {}", domain, spiffe_id));
+        }
+        if !is_valid_segment(parts[2]) || !is_valid_segment(parts[4]) {
+            return Err(format!("invalid segments in SPIFFE ID: {}", spiffe_id));
         }
         org_id = parts[2].to_string();
         agent_id = parts[4].to_string();
