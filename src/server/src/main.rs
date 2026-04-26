@@ -23,6 +23,7 @@ mod spawner;
 mod queue;
 mod agents;
 mod domain;
+pub mod pricing;
 pub mod services {
     pub mod wizard;
 }
