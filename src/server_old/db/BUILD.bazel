@@ -90,6 +90,7 @@ go_library(
         "migrations/20260424020000_mcp_audit_sync_log.go",
 
         "migrations/20260424030000_crdt_deltas.sql",
+        "migrations/20260424040000_mcp_config_sync_log.sql",
         "migrations/20260425000000_autodream_memories.go",
         "migrations/20260426000000_local_mcp_rag_tasks.go",
         "migrations/20260427000000_autodream_memories_decomposition.go",

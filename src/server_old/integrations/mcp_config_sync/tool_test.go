@@ -100,7 +100,7 @@ func TestConfigTool_GetConfig_Cloud_Success(t *testing.T) {
 
 	tool := NewConfigTool(provider)
 
-	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
 	val, err := tool.GetConfig(ctx, "my_key")
 	require.NoError(t, err)
 	assert.Equal(t, "cloud_value", val)
@@ -115,7 +115,7 @@ func TestConfigTool_SyncConfigToCloud_NoAuth(t *testing.T) {
 
 func TestConfigTool_SyncConfigToCloud_MismatchTenant(t *testing.T) {
 	tool := NewConfigTool(nil)
-	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
 	err := tool.SyncConfigToCloud(ctx, ConfigSyncPayload{TenantID: "org2"})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "tenant ID mismatch")
@@ -126,7 +126,7 @@ func TestConfigTool_SyncConfigToCloud_Success(t *testing.T) {
 
 	tool := NewConfigTool(provider)
 
-	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
 	err := tool.SyncConfigToCloud(ctx, ConfigSyncPayload{
 		TenantID: "org1",
 		AgentID:  "agent1",
@@ -180,7 +180,7 @@ func TestConfigTool_GetConfig_Cloud_QueryError(t *testing.T) {
 	provider := &mockProvider{queryRowErr: os.ErrPermission}
 	tool := NewConfigTool(provider)
 
-	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
 	_, err := tool.GetConfig(ctx, "my_key")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get config")
@@ -190,7 +190,7 @@ func TestConfigTool_SyncConfigToCloud_ExecError(t *testing.T) {
 	provider := &mockProvider{execErr: os.ErrPermission}
 	tool := NewConfigTool(provider)
 
-	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
 	err := tool.SyncConfigToCloud(ctx, ConfigSyncPayload{
 		TenantID: "org1",
 		AgentID:  "agent1",
@@ -258,7 +258,7 @@ func TestConfigTool_SyncConfigToCloudTool(t *testing.T) {
 	tool := NewConfigTool(provider)
 	mcpTool := tool.SyncConfigToCloudTool()
 
-	ctx := contextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
+	ctx := auth.ContextWithClaims(context.Background(), &auth.Claims{OrganizationID: "org1"})
 
 	// test invalid JSON
 	_, err := mcpTool.Execute(ctx, []byte(`invalid`))
