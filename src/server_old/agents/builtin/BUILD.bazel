@@ -1,0 +1,13 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "builtin",
+    srcs = [
+        "agent.go",
+        "llm.go",
+        "models.go",
+        "tools.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/agents/builtin",
+    visibility = ["//visibility:public"],
+)

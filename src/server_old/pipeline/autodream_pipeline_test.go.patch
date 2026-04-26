@@ -1,0 +1,43 @@
+--- src/server_old/pipeline/autodream_pipeline_test.go
++++ src/server_old/pipeline/autodream_pipeline_test.go
+@@ -16,11 +16,11 @@
+
+ type mockLLM struct {
+-	chatFunc func(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error)
++	chatFunc func(ctx context.Context, req builtin.ChatRequest) (*builtin.ChatResponse, error)
+ }
+
+-func (m *mockLLM) Chat(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error) {
++func (m *mockLLM) Chat(ctx context.Context, req builtin.ChatRequest) (*builtin.ChatResponse, error) {
+	if m.chatFunc != nil {
+		return m.chatFunc(ctx, req)
+	}
+-	return builtin.ChatResponse{}, nil
++	return &builtin.ChatResponse{}, nil
+ }
+
+@@ -47,11 +47,11 @@
+		llm: &mockLLM{
+-			chatFunc: func(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error) {
++			chatFunc: func(ctx context.Context, req builtin.ChatRequest) (*builtin.ChatResponse, error) {
+				chatCalls++
+-				return builtin.ChatResponse{
++				return &builtin.ChatResponse{
+					Message: builtin.Message{Content: `{"tags":["event","follow-up","lead"]}`},
+				}, nil
+			},
+		},
+	}
+
+@@ -94,11 +94,11 @@
+		llm: &mockLLM{
+-			chatFunc: func(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error) {
++			chatFunc: func(ctx context.Context, req builtin.ChatRequest) (*builtin.ChatResponse, error) {
+				chatCalls++
+-				return builtin.ChatResponse{
++				return &builtin.ChatResponse{
+					Message: builtin.Message{Content: `{"tags":["action_item","urgent"]}`},
+				}, nil
+			},
+		},
+	}

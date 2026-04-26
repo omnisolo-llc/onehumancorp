@@ -1,0 +1,17 @@
+--- src/server_old/pipeline/autodream_pipeline_test.go
++++ src/server_old/pipeline/autodream_pipeline_test.go
+@@ -16,11 +16,11 @@
+
+ type mockLLM struct {
+-	chatFunc func(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error)
++	chatFunc func(ctx context.Context, req builtin.ChatRequest) (*builtin.ChatResponse, error)
+ }
+
+-func (m *mockLLM) Chat(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error) {
++func (m *mockLLM) Chat(ctx context.Context, req builtin.ChatRequest) (*builtin.ChatResponse, error) {
+	if m.chatFunc != nil {
+		return m.chatFunc(ctx, req)
+	}
+-	return builtin.ChatResponse{}, nil
++	return &builtin.ChatResponse{}, nil
+ }
