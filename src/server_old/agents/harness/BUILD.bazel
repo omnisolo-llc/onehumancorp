@@ -9,7 +9,7 @@ go_library(
         "fallback.go",
         "interceptor.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server/agents/harness",
+    importpath = "github.com/onehumancorp/mono/src/server_old/agents/harness",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server_old/telemetry",
