@@ -56,7 +56,7 @@ pkg_tar(
     name = "agent_pkg",
     srcs = [
         "//src/server:ohc",
-        "//src/server/agents/mcp:github",
+        "//src/server_old/agents/mcp:github",
         "//src/server/ironclaw",
     ],
     package_dir = "/usr/local/bin",
