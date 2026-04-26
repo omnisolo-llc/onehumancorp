@@ -114,7 +114,7 @@ class _UpgradeWizardScreenState extends ConsumerState<UpgradeWizardScreen> {
                     Text('Upgrade to v2.4 ✨', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
                     const SizedBox(height: 16),
                     if (!_isUpgrading && !_done) ...[
-                      const Text("What's new:\n• Improved agent reasoning\n• 2x faster orchestration\n• New observability metrics", style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                      const Text("What's new:\n• Improved agent reasoning\n• 2x faster task handling\n• New overview metrics", style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
                       const SizedBox(height: 24),
                       FilledButton(
                         onPressed: _startUpgrade,

@@ -87,9 +87,9 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('AutoDream Pipelines', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
+                  const Text('Automatic Tasks Pipelines', style: TextStyle(fontFamily: 'Outfit', fontSize: 24, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  const Text('Vector Memory Observability', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
+                  const Text('Business Memory Overview', style: TextStyle(fontFamily: 'Inter', color: Colors.grey)),
                   const SizedBox(height: 16),
                   const SwarmVelocityWidget(),
                   const SizedBox(height: 16),
@@ -97,7 +97,7 @@ class _SwarmMemoryScreenState extends ConsumerState<SwarmMemoryScreen> {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () => context.go('/autodream-sync'),
-                    child: const Text('View AutoDream Sync Walkthrough'),
+                    child: const Text('View Automatic Tasks Sync Walkthrough'),
                   ),
                 ],
               ),

@@ -110,7 +110,7 @@ class _AutoDreamPipelineWidgetState extends State<AutoDreamPipelineWidget> with 
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'AutoDream Pipeline Stream',
+                'Automatic Tasks Pipeline Stream',
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 18,

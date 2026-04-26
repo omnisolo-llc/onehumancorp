@@ -25,7 +25,7 @@ final meshStreamProvider = StreamProvider.autoDispose<MeshMessage>((ref) {
 
     // Extract agent name and action from the payload
     // The payload format from Hub.PublishTaskBroadcast must be parsed precisely via `agent_id`, `action`, and `status`.
-    final agentName = json['agent_id'] as String? ?? 'System';
+    final agentName = json['agent_id'] as String? ?? 'Business';
     final action = json['action'] as String? ?? json['status'] as String? ?? 'Task Update';
 
     return MeshMessage(
@@ -69,7 +69,7 @@ class _SwarmObservabilityWidgetState extends ConsumerState<SwarmObservabilityWid
     });
 
     return Semantics(
-      label: 'Swarm Observability Dashboard',
+      label: 'Swarm Overview Dashboard',
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(

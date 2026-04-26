@@ -69,7 +69,7 @@ class _SwarmObservabilityDashboardState extends State<SwarmObservabilityDashboar
               const AutoDreamPipelineWidget(),
               const SizedBox(height: 24),
               const Text(
-                'Swarm Observability',
+                'Swarm Overview',
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 24,

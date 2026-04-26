@@ -298,7 +298,7 @@ class _Sidebar extends StatelessWidget {
           path: '/orchestration/tasks',
         ),
         _NavItem(icon: Icons.memory, label: 'Swarm Memory', path: '/swarm-memory'),
-        _NavItem(icon: Icons.sync, label: 'AutoDream Sync', path: '/autodream-sync'),
+        _NavItem(icon: Icons.sync, label: 'Automatic Tasks Sync', path: '/autodream-sync'),
         _NavItem(icon: Icons.video_call, label: 'Meetings', path: '/meetings'),
         _NavItem(icon: Icons.chat, label: 'Chat', path: '/chat'),
         _NavItem(

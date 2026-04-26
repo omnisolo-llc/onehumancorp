@@ -53,7 +53,7 @@ void main() {
       expect(find.text('Swarm Memory Mesh'), findsOneWidget);
       expect(find.text('Live Mesh Activity'), findsOneWidget);
       expect(find.text('Durable Swarm Memory'), findsOneWidget);
-      expect(find.text('AutoDream Pipelines'), findsOneWidget);
+      expect(find.text('Automatic Tasks Pipelines'), findsOneWidget);
 
       // Verify Scaffold and AppBar are transparent for Glassmorphism
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));

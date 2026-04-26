@@ -15,38 +15,38 @@ class _AutoDreamSyncWalkthroughScreenState extends State<AutoDreamSyncWalkthroug
   final List<Map<String, String>> _steps = [
     {
       'title': '1. Generate & Insert Vector',
-      'description': 'Worker generates an intelligence vector and inserts it into Local SQLite DB with sync_status=\'pending\'.',
-      'participant': 'Standalone AutoDreamWorker -> Local SQLite DB'
+      'description': 'Worker generates an intelligence business context item and inserts it into local device storage with sync_status=\'pending\'.',
+      'participant': 'Standalone Automatic Tasks Worker -> local device storage'
     },
     {
       'title': '2. Query Pending Vectors',
-      'description': 'Sync Daemon periodically queries the Local SQLite DB for any vectors pending synchronization.',
-      'participant': 'Sync Daemon -> Local SQLite DB'
+      'description': 'Background Sync Task periodically queries the local device storage for any business context items pending synchronization.',
+      'participant': 'Background Sync Task -> local device storage'
     },
     {
       'title': '3. Return Batched Vectors',
-      'description': 'Local SQLite DB returns the pending intelligence vectors in a batch format to the Sync Daemon.',
-      'participant': 'Local SQLite DB -> Sync Daemon'
+      'description': 'local device storage returns the pending intelligence business context items in a batch format to the Background Sync Task.',
+      'participant': 'local device storage -> Background Sync Task'
     },
     {
       'title': '4. Push over mTLS',
-      'description': 'Sync Daemon securely pushes the batched vectors to the Cloud API Gateway using SPIFFE Identity over mTLS.',
-      'participant': 'Sync Daemon -> Cloud API Gateway'
+      'description': 'Background Sync Task securely pushes the batched business context items to the Cloud API Gateway using secure encrypted connection.',
+      'participant': 'Background Sync Task -> Cloud API Gateway'
     },
     {
       'title': '5. Upsert to Global',
-      'description': 'Cloud API Gateway upserts the received vectors into the Global Cloud PostgreSQL (autodream_memories).',
+      'description': 'Cloud API Gateway upserts the received business context items into the Global Cloud PostgreSQL (automatic_tasks_memories).',
       'participant': 'Cloud API Gateway -> Cloud PostgreSQL'
     },
     {
       'title': '6. Acknowledge Success',
-      'description': 'Cloud API Gateway sends an acknowledgment of successful storage back to the Sync Daemon.',
-      'participant': 'Cloud API Gateway -> Sync Daemon'
+      'description': 'Cloud API Gateway sends an acknowledgment of successful storage back to the Background Sync Task.',
+      'participant': 'Cloud API Gateway -> Background Sync Task'
     },
     {
       'title': '7. Update sync_status',
-      'description': 'Sync Daemon updates the local records in SQLite, marking them as sync_status=\'synced\'.',
-      'participant': 'Sync Daemon -> Local SQLite DB'
+      'description': 'Background Sync Task updates the local records in SQLite, marking them as sync_status=\'synced\'.',
+      'participant': 'Background Sync Task -> local device storage'
     },
   ];
 
@@ -72,7 +72,7 @@ class _AutoDreamSyncWalkthroughScreenState extends State<AutoDreamSyncWalkthroug
       backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        title: const Text('AutoDream Sync Daemon Walkthrough', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
+        title: const Text('Automatic Tasks Background Sync Task Walkthrough', style: TextStyle(fontFamily: 'Outfit', fontWeight: FontWeight.bold)),
       ),
       body: Center(
         child: Padding(

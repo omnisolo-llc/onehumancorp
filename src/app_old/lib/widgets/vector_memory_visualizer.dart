@@ -57,7 +57,7 @@ class _VectorMemoryVisualizerWidgetState extends State<VectorMemoryVisualizerWid
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'AutoDream Consolidation',
+                'Automatic Tasks Consolidation',
                 style: TextStyle(
                   fontFamily: 'Outfit',
                   fontSize: 20,

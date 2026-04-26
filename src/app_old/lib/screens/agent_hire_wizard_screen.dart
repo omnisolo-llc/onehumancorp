@@ -179,7 +179,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                   Semantics(
                     label: 'Deploy the configured agent',
                     child: Tooltip(
-                      message: 'Deploy agent to orchestration hub',
+                      message: 'Deploy agent to task handling hub',
                       child: ElevatedButton(
                         onPressed: _isDeploying ? null : _handleDeploy,
                         child:
@@ -628,7 +628,7 @@ class _AgentHireWizardScreenState extends ConsumerState<AgentHireWizardScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'This agent will be immediately provisioned with a SPIFFE identity, connected to the orchestration hub, and assigned to the default org chart branch.',
+                  'This agent will be immediately provisioned with a SPIFFE identity, connected to the task handling hub, and assigned to the default org chart branch.',
                   style: TextStyle(
                     color: Theme.of(
                       context,

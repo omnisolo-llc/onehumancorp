@@ -395,7 +395,7 @@ class _LocalBackendStatusCardState
                                     context: context,
                                     builder:
                                         (context) => AlertDialog(
-                                          title: const Text('System Doctor'),
+                                          title: const Text('Business Doctor'),
                                           content: SingleChildScrollView(
                                             child: Text(report),
                                           ),

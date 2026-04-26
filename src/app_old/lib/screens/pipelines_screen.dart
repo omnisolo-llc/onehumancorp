@@ -184,7 +184,7 @@ class _PipelineCardState extends State<_PipelineCard> {
                           const Icon(Icons.person_outline, size: 16),
                           const SizedBox(width: 8),
                           Text(
-                            'Initiated by: ${pipeline.initiatedBy ?? "System"}',
+                            'Initiated by: ${pipeline.initiatedBy ?? "Business"}',
                             style: const TextStyle(fontSize: 12),
                           ),
                           const Spacer(),
