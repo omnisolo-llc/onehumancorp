@@ -61,16 +61,6 @@ impl Tracker {
             output_per_million_usd: 15.0,
             cached_per_million_usd: 2.5,
         });
-        catalog.insert("claude-3.5-sonnet".to_string(), Price {
-            input_per_million_usd: 3.0,
-            output_per_million_usd: 15.0,
-            cached_per_million_usd: 0.30,
-        });
-        catalog.insert("gemini-1.5-flash".to_string(), Price {
-            input_per_million_usd: 0.35,
-            output_per_million_usd: 1.05,
-            cached_per_million_usd: 0.0,
-        });
         
         Tracker {
             catalog,
@@ -182,50 +172,5 @@ mod tests {
         assert_eq!(summary.total_actions, 1);
         assert_eq!(summary.agents.len(), 1);
         assert_eq!(summary.agents[0].agent_id, "agent1");
-    }
-
-    #[test]
-    fn test_tracker_track_claude_and_gemini() {
-        let t = Tracker::new();
-
-        let usage_claude = Usage {
-            agent_id: "agent2".to_string(),
-            agent_role: "editor".to_string(),
-            organization_id: "org2".to_string(),
-            model: "claude-3.5-sonnet".to_string(),
-            prompt_tokens: 1000000,
-            completion_tokens: 2000000,
-            cached_tokens: 500000,
-            is_action: true,
-            occurred_at: Utc::now(),
-            cost_usd: 0.0,
-        };
-
-        let tracked_claude = t.track(usage_claude).unwrap();
-        // claude-3.5-sonnet cost: (1 * 3.0) + (2 * 15.0) + (0.5 * 0.3) = 3.0 + 30.0 + 0.15 = 33.15
-        assert_eq!(tracked_claude.cost_usd, 33.15);
-
-        let usage_gemini = Usage {
-            agent_id: "agent3".to_string(),
-            agent_role: "assistant".to_string(),
-            organization_id: "org2".to_string(),
-            model: "gemini-1.5-flash".to_string(),
-            prompt_tokens: 1000000,
-            completion_tokens: 2000000,
-            cached_tokens: 500000,
-            is_action: true,
-            occurred_at: Utc::now(),
-            cost_usd: 0.0,
-        };
-
-        let tracked_gemini = t.track(usage_gemini).unwrap();
-        // gemini-1.5-flash cost: (1 * 0.35) + (2 * 1.05) + (0.5 * 0.0) = 0.35 + 2.10 + 0.0 = 2.45
-        assert_eq!(tracked_gemini.cost_usd, 2.45);
-
-        let summary = t.summary("org2");
-        assert_eq!(summary.total_cost_usd, 33.15 + 2.45);
-        assert_eq!(summary.total_tokens, 3500000 + 3500000);
-        assert_eq!(summary.total_actions, 2);
-        assert_eq!(summary.agents.len(), 2);
     }
 }
