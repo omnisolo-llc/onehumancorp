@@ -104,25 +104,25 @@ class _DashboardContent extends StatelessWidget {
           runSpacing: 16,
           children: [
             _StatCard(
-              label: 'Active Agents',
+              label: 'Active Helpers',
               value: data.agents.where((a) => a.isRunning).length.toString(),
               icon: Icons.smart_toy,
               color: Theme.of(context).colorScheme.primary,
             ),
             _StatCard(
-              label: 'Active Tasks',
+              label: 'Tasks in Progress',
               value: data.statuses.length.toString(),
               icon: Icons.pending_actions,
               color: Theme.of(context).colorScheme.secondary,
             ),
             _StatCard(
-              label: 'Scheduled Calls',
+              label: 'Upcoming Calls',
               value: data.meetings.length.toString(),
               icon: Icons.video_call,
               color: Theme.of(context).colorScheme.tertiary,
             ),
             _StatCard(
-              label: 'Team Members',
+              label: 'Team Size',
               value: data.organization.members.length.toString(),
               icon: Icons.people,
               color: Theme.of(context).colorScheme.primaryContainer,
@@ -170,7 +170,7 @@ class _DashboardContent extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         const SizedBox(height: 32),
-        _SectionTitle('System Health'),
+        _SectionTitle('Running Smoothly'),
         const SizedBox(height: 16),
         _ObservabilityWidget(data: data),
         const SizedBox(height: 16),

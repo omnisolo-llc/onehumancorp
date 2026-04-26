@@ -44,4 +44,9 @@ test('Dashboard screen uses plain language instead of technical jargon', async (
   if (await myBusiness.isVisible({ timeout: 5000 })) {
     await expect(myBusiness).toBeVisible();
   }
+  await expect(page.locator('text=Active Helpers').first()).toBeVisible();
+  await expect(page.locator('text=Tasks in Progress').first()).toBeVisible();
+  await expect(page.locator('text=Upcoming Calls').first()).toBeVisible();
+  await expect(page.locator('text=Team Size').first()).toBeVisible();
+  await expect(page.locator('text=Running Smoothly').first()).toBeVisible();
 });

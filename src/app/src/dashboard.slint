@@ -1,8 +1,8 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
 export component Dashboard inherits Window {
-    width: 800px;
-    height: 800px;
+    width: 375px;
+    height: 100%;
     title: "Dashboard";
 
     background: #f8fafc;
@@ -15,11 +15,11 @@ export component Dashboard inherits Window {
         HorizontalBox {
             Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { text: "Billing & Credits"; }
+            Button { text: "Billing & Credits"; height: 44px; }
         }
 
         // Stat Cards
-        HorizontalBox {
+        VerticalBox {
             spacing: 16px;
             
             Rectangle {
@@ -30,7 +30,7 @@ export component Dashboard inherits Window {
                 width: 180px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Active Agents"; color: #64748b; }
+                    Text { text: "Active Helpers"; color: #64748b; }
                     Text { text: "5"; font-size: 32px; font-weight: 700; color: #a855f7; }
                 }
             }
@@ -42,7 +42,7 @@ export component Dashboard inherits Window {
                 width: 180px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Active Tasks"; color: #64748b; }
+                    Text { text: "Tasks in Progress"; color: #64748b; }
                     Text { text: "12"; font-size: 32px; font-weight: 700; color: #06b6d4; }
                 }
             }
@@ -54,7 +54,7 @@ export component Dashboard inherits Window {
                 width: 180px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Scheduled Calls"; color: #64748b; }
+                    Text { text: "Upcoming Calls"; color: #64748b; }
                     Text { text: "3"; font-size: 32px; font-weight: 700; color: #10b981; }
                 }
             }
@@ -66,7 +66,7 @@ export component Dashboard inherits Window {
                 width: 180px;
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Team Members"; color: #64748b; }
+                    Text { text: "Team Size"; color: #64748b; }
                     Text { text: "8"; font-size: 32px; font-weight: 700; color: #f59e0b; }
                 }
             }
@@ -82,7 +82,7 @@ export component Dashboard inherits Window {
             
             VerticalBox {
                 padding: 16px;
-                Text { text: "System Health & Observability"; font-size: 20px; font-weight: 700; color: #1e293b; }
+                Text { text: "Running Smoothly"; font-size: 20px; font-weight: 700; color: #1e293b; }
                 Rectangle {}
                 Text { text: "[ Charts and metrics will go here ]"; color: #64748b; horizontal-alignment: center; }
                 Rectangle {}
@@ -105,9 +105,9 @@ export component Dashboard inherits Window {
                     padding: 16px;
                     Text { text: "Product Manager"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                     Rectangle {}
-                    Button { text: "-"; }
+                    Button { text: "-"; height: 44px; }
                     Text { text: "1"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Button { text: "+"; }
+                    Button { text: "+"; height: 44px; }
                 }
             }
             Rectangle {
@@ -120,9 +120,9 @@ export component Dashboard inherits Window {
                     padding: 16px;
                     Text { text: "Software Engineer"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                     Rectangle {}
-                    Button { text: "-"; }
+                    Button { text: "-"; height: 44px; }
                     Text { text: "3"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Button { text: "+"; }
+                    Button { text: "+"; height: 44px; }
                 }
             }
         }
