@@ -4131,3 +4131,19 @@ func TestHandleSyncRAG(t *testing.T) {
 		t.Errorf("Expected context to contain 'test sensitive context', got '%s'", memories[0].Context)
 	}
 }
+
+func BenchmarkSnapshotLocked(b *testing.B) {
+	org, hub, tracker, _ := seededScenario("perf", time.Now().UTC())
+	srv := &Server{
+		org:       org,
+		hub:       hub,
+		tracker:   tracker,
+		pipelines: make([]Pipeline, 0),
+		handoffs:  make([]HandoffPackage, 0),
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		srv.snapshotLocked()
+	}
+}
