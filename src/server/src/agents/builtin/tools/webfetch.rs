@@ -99,6 +99,7 @@ pub fn webfetch_tool() -> Tool {
             },
             "required": ["url"]
         }),
+        is_mutating: false,
         execute: Arc::new(WebFetchExecutor {
             client: Client::builder()
                 .timeout(std::time::Duration::from_secs(30))

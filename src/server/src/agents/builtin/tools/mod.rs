@@ -24,12 +24,13 @@ pub struct Tool {
     pub name: String,
     pub description: String,
     pub parameters: Value,
+    pub is_mutating: bool,
     pub execute: Arc<dyn ToolExecutor>,
 }
 
 impl std::fmt::Debug for Tool {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Tool({})", self.name)
+        write!(f, "Tool({}, mut={})", self.name, self.is_mutating)
     }
 }
 
@@ -39,6 +40,7 @@ impl Clone for Tool {
             name: self.name.clone(),
             description: self.description.clone(),
             parameters: self.parameters.clone(),
+            is_mutating: self.is_mutating,
             execute: self.execute.clone(),
         }
     }
