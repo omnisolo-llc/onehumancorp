@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"github.com/onehumancorp/mono/src/server_old/domain"
 
 )
 
@@ -472,7 +471,7 @@ func TestHandleWaitlist(t *testing.T) {
 }
 
 func TestHandleViralCoefficientMetrics(t *testing.T) {
-	server := &Server{org: domain.Organization{ID: "default"}}
+	server := &Server{}
 
 	// Add mock referrals
 	server.referrals = []Referral{

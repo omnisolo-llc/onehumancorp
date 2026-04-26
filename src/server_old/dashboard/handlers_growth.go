@@ -497,7 +497,7 @@ func (s *Server) handleViralCoefficientMetrics(w http.ResponseWriter, r *http.Re
 		OrganizationID   string  `json:"organization_id"`
 	}
 
-	res := ViralCoefficientMetricsResponse{ViralCoefficient: kFactor, OrganizationID: s.org.ID}
+	res := ViralCoefficientMetricsResponse{ViralCoefficient: kFactor, OrganizationID: "default"}
 	writeJSON(w, res)
 }
 
