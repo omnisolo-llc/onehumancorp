@@ -37,15 +37,15 @@ is_complete_web_bundle() {
 #   src/app/app.web_build_artifacts/
 #   src/app/app_web_build_artifacts/
 WEB_ARTIFACTS=""
-WORKSPACE_WEB_BUNDLE="${WORKSPACE_ROOT}/src/app/build/web"
+WORKSPACE_WEB_BUNDLE="${WORKSPACE_ROOT}/src/app_old/build/web"
 if is_complete_web_bundle "${WORKSPACE_WEB_BUNDLE}"; then
   WEB_ARTIFACTS="${WORKSPACE_WEB_BUNDLE}"
 fi
 
 WEB_ARTIFACTS_RELS=(
-  "src/app/app.web_build_artifacts"
-  "src/app/app_web_build_artifacts"
-  "src/app/app_web.web_build_artifacts"
+  "src/app_old/app.web_build_artifacts"
+  "src/app_old/app_web_build_artifacts"
+  "src/app_old/app_web.web_build_artifacts"
 )
 
 if [ -z "$WEB_ARTIFACTS" ]; then
@@ -169,7 +169,7 @@ else
   exit 1
 fi
 
-CONFIG_REL="src/app/e2e/playwright.config.ts"
+CONFIG_REL="src/app_old/e2e/playwright.config.ts"
 CONFIG=""
 for candidate in \
     "${RUNFILES}/${WORKSPACE}/${CONFIG_REL}" \
@@ -186,7 +186,7 @@ if [ -z "$CONFIG" ]; then
   exit 1
 fi
 
-SPEC_REL_FILE="src/app/e2e/web.spec.ts"
+SPEC_REL_FILE="src/app_old/e2e/web.spec.ts"
 SPEC_FILE=""
 for candidate in \
     "${RUNFILES}/${WORKSPACE}/${SPEC_REL_FILE}" \
@@ -224,13 +224,13 @@ fi
 E2E_TMP_DIR="${TMPDIR}/e2e"
 mkdir -p "${E2E_TMP_DIR}"
 # Copy all .ts files from the e2e directory to handle imports correctly.
-cp "$(dirname "${CONFIG}")"/*.ts "${E2E_TMP_DIR}/"
-cp "$(dirname "${SPEC_FILE}")"/*.ts "${E2E_TMP_DIR}/"
+cp -f "$(dirname "${CONFIG}")"/*.ts "${E2E_TMP_DIR}/"
+cp -f "$(dirname "${SPEC_FILE}")"/*.ts "${E2E_TMP_DIR}/"
 CONFIG="${E2E_TMP_DIR}/playwright.config.ts"
 export NODE_PATH="${NODE_MODULES_DIR}${NODE_PATH:+:${NODE_PATH}}"
 
 # ── Install Playwright browsers if needed ─────────────────────────────────
-export PLAYWRIGHT_BROWSERS_PATH="${TMPDIR}/pw_browsers"
+# export PLAYWRIGHT_BROWSERS_PATH="${TMPDIR}/pw_browsers"
 mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}"
 
 # In sandboxed environments, --with-deps may fail due lack of root privileges.
