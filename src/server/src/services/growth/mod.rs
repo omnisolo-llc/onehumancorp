@@ -4,8 +4,3 @@ pub mod invites;
 pub mod quota;
 pub mod viral_loop;
 pub mod referral_api;
-pub mod legacy_ab;
-pub mod legacy_referral;
-pub mod legacy_repo;
-pub mod legacy_quota;
-pub mod legacy_team;
