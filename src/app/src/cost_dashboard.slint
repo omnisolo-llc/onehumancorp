@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component CostDashboard inherits Window {
     width: 500px;
     height: 600px;
-    title: "Cost & Token Usage";
+    title: "Cost & AI Actions";
 
     background: #f8fafc;
 
@@ -12,7 +12,7 @@ export component CostDashboard inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Cost & Token Usage"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Cost & AI Actions"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             Button { text: "Refresh"; }
         }
@@ -43,7 +43,7 @@ export component CostDashboard inherits Window {
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total Tokens"; color: #64748b; }
+                    Text { text: "Total Actions"; color: #64748b; }
                     Text { text: "1.2M"; font-size: 24px; font-weight: 700; color: #06b6d4; }
                 }
             }
