@@ -12,6 +12,7 @@ pub struct EmbeddingRecord {
     pub created_at: DateTime<Utc>,
 }
 
+#[allow(dead_code)]
 pub struct VectorRepository {
     pool: sqlx::PgPool,
 }

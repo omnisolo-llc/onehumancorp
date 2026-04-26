@@ -4,6 +4,7 @@ use std::sync::Arc;
 use sqlx::Row;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[allow(dead_code)]
 pub struct Checkpoint {
     pub thread_id: String,
     pub checkpoint_id: String,
@@ -14,12 +15,14 @@ pub struct Checkpoint {
 }
 
 #[async_trait]
+#[allow(dead_code)]
 pub trait CheckpointSaver: Send + Sync {
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String>;
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String>;
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
 }
 
+#[allow(dead_code)]
 pub struct PgCheckpointer {
     pool: sqlx::PgPool,
 }

@@ -4,6 +4,7 @@ use crate::agents::plane::Client as PlaneClient;
 use crate::hub::Hub;
 use crate::agents::plane::Issue;
 
+#[allow(dead_code)]
 pub struct TaskWorker {
     plane_client: Arc<PlaneClient>,
     hub: Arc<Hub>,

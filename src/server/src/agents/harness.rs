@@ -17,6 +17,7 @@ pub struct Policy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[allow(dead_code)]
 pub struct Config {
     #[serde(rename = "defaultPolicy")]
     pub default_policy: Policy,
@@ -118,12 +119,14 @@ impl BwrapRunner {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ResultModel {
     pub stdout: String,
     pub stderr: String,
     pub exit_code: i32,
 }
 
+#[allow(dead_code)]
 pub struct Manager {
     config: Config,
     validator: Arc<ASTValidator>,

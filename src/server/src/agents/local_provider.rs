@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use crate::minimax::MinimaxClient;
 
+#[allow(dead_code)]
 pub struct LocalLLMProvider {
     endpoint: String,
     embed_endpoint: String,
@@ -84,6 +85,7 @@ impl LocalLLMProvider {
     }
 }
 
+#[allow(dead_code)]
 pub struct ResilientProvider {
     primary: Arc<MinimaxClient>,
     fallback: Arc<LocalLLMProvider>,
@@ -127,6 +129,7 @@ impl ResilientProvider {
     }
 }
 
+#[allow(dead_code)]
 fn is_network_error(err: &str) -> bool {
     // Simplified check based on string matching, as we don't have typed errors from gRPC or HTTP client here yet in this simplified version.
     err.contains("timeout") || err.contains("connection refused") || err.contains("closed") || err.contains("503")
