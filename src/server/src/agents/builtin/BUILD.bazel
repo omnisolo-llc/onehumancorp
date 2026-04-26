@@ -134,6 +134,7 @@ rust_binary(
 
 rust_test(
     name = "unit_tests",
+    tags = ["local"],
     crate = ":ohc_builtin_agent_lib",
     edition = "2024",
 )

@@ -24,6 +24,7 @@ pub struct Tool {
     pub name: String,
     pub description: String,
     pub parameters: Value,
+    pub is_mutating: bool,
     pub execute: Arc<dyn ToolExecutor>,
 }
 
@@ -39,6 +40,7 @@ impl Clone for Tool {
             name: self.name.clone(),
             description: self.description.clone(),
             parameters: self.parameters.clone(),
+            is_mutating: self.is_mutating,
             execute: self.execute.clone(),
         }
     }
