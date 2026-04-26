@@ -29,7 +29,7 @@ class _BusinessShareWidgetState extends ConsumerState<BusinessShareWidget> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Storefront link copied to clipboard: $url'),
+          content: Text('Business link copied to clipboard: $url'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -38,14 +38,14 @@ class _BusinessShareWidgetState extends ConsumerState<BusinessShareWidget> {
 
   Future<void> _shareToX() async {
     // In a real implementation this would use url_launcher:
-    // final tweetText = Uri.encodeComponent('Check out my new storefront built with OHC! $url');
+    // final tweetText = Uri.encodeComponent('Check out my new business built with OHC! $url');
     // launchUrl(Uri.parse('https://twitter.com/intent/tweet?text=$tweetText'));
     _copyLink();
   }
 
   Future<void> _shareToWhatsApp() async {
     // In a real implementation this would use url_launcher:
-    // final text = Uri.encodeComponent('Check out my new storefront built with OHC! $url');
+    // final text = Uri.encodeComponent('Check out my new business built with OHC! $url');
     // launchUrl(Uri.parse('https://wa.me/?text=$text'));
     _copyLink();
   }
@@ -89,7 +89,7 @@ class _BusinessShareWidgetState extends ConsumerState<BusinessShareWidget> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.storefront, color: colors.primary, size: 28),
+                      Icon(Icons.business, color: colors.primary, size: 28),
                       const SizedBox(width: 12),
                       Text(
                         'Share my business',
@@ -146,7 +146,7 @@ class _BusinessShareWidgetState extends ConsumerState<BusinessShareWidget> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Check out my new storefront built with OHC!',
+                                'Check out my new business built with OHC!',
                                 style: TextStyle(
                                   color: colors.onSurfaceVariant,
                                   fontSize: 14,

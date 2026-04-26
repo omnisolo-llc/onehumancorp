@@ -57,7 +57,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Grow Your Swarm. Maintain Sovereignty.',
+                          'Share OHC with a friend',
                           style: TextStyle(
                             fontFamily: 'Outfit',
                             fontSize: 20,
@@ -67,7 +67,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Bridge your Standalone Mode to the Cloud. Invite team members securely with zero data leakage.',
+                          'Both get 1 month free Pro when they sign up.',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 14,
@@ -121,7 +121,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                             if (context.mounted) {
                               final snackBar = SnackBar(
                                 content: Text(
-                                    'Cloud-Bridge invite link copied: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
+                                    'Business link copied to clipboard: https://cloud.ohc.io/invite?token=xYz8vQ_local_sovereign',
                                     style: TextStyle(
                                       color: colorScheme.onPrimaryContainer,
                                       fontFamily: 'Inter',
@@ -143,7 +143,7 @@ class _GrowthReferralWidgetState extends ConsumerState<GrowthReferralWidget> {
                             }
                           }
                         },
-                        child: const Text('Invite Team to Expand Quota', style: TextStyle(fontFamily: 'Outfit')),
+                        child: const Text('Share my business', style: TextStyle(fontFamily: 'Outfit')),
                       ),
                     ],
                   ),
