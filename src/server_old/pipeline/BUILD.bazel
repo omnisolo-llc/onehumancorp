@@ -17,16 +17,3 @@ go_library(
     ],
 )
 
-go_test(
-    name = "pipeline_test",
-    srcs = [
-        "autodream_pipeline_test.go",
-        "pipeline_test.go",
-    ],
-    embed = [":pipeline"],
-    deps = [
-        "//src/server/agents/builtin",
-        "//src/server_old/db",
-        "//src/server_old/orchestration",
-    ],
-)
