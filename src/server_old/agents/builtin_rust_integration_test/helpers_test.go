@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	binaryRunpath = "src/server/agents/builtin/src/ohc-builtin-agent"
+	binaryRunpath = "mono/src/server/src/agents/builtin/ohc-builtin-agent"
 	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
@@ -44,7 +44,10 @@ func locateBinary(t *testing.T) string {
 
 	// 1. Bazel runfiles mechanism.
 	if rf := os.Getenv("RUNFILES_DIR"); rf != "" {
-		p := filepath.Join(rf, binaryRunpath)
+		p := filepath.Join(rf, "mono/src/server/src/agents/builtin/ohc-builtin-agent")
+		if _, err := os.Stat(p); err != nil {
+			p = filepath.Join(rf, "_main/src/server/src/agents/builtin/ohc-builtin-agent")
+		}
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
@@ -52,7 +55,10 @@ func locateBinary(t *testing.T) string {
 
 	// 2. TEST_SRCDIR (Bazel test sandbox).
 	if sd := os.Getenv("TEST_SRCDIR"); sd != "" {
-		p := filepath.Join(sd, os.Getenv("TEST_WORKSPACE"), binaryRunpath)
+		p := filepath.Join(sd, os.Getenv("TEST_WORKSPACE"), "src/server/src/agents/builtin/ohc-builtin-agent")
+		if _, err := os.Stat(p); err != nil {
+			p = filepath.Join(sd, "_main/src/server/src/agents/builtin/ohc-builtin-agent")
+		}
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
