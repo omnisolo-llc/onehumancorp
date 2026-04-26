@@ -22,7 +22,7 @@ go_test(
         "minimax_e2e_test.go",
     ],
     env = {
-        "MINIMAX_API_KEY": "//src/server_old/agents/local",
+        "MINIMAX_API_KEY": "",
     },
     deps = [
         "//src/server/auth",
