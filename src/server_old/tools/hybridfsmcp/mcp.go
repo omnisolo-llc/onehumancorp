@@ -14,7 +14,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	"github.com/onehumancorp/mono/src/server/agents/mcp/proxy"
+	"github.com/onehumancorp/mono/src/server_old/agents/mcp/proxy"
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/utils"
 )

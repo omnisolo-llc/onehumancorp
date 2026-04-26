@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	"github.com/onehumancorp/mono/src/server_old/agents/builtin"
 )
 
 // Tool represents a Model Context Protocol tool spec.

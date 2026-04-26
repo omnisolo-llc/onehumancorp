@@ -20,7 +20,7 @@ func TestProxyCapture_Success(t *testing.T) {
 	otel.SetMeterProvider(provider)
 
 	// Need to re-init the metrics with the new provider
-	meter = provider.Meter("onehumancorp/mono/src/server/agents/proxy")
+	meter = provider.Meter("onehumancorp/mono/src/server_old/agents/proxy")
 	var err error
 	requestsCounter, err = meter.Int64Counter("ohc_agent_outbound_requests_total")
 	require.NoError(t, err)
@@ -78,7 +78,7 @@ func TestProxyCapture_Failure(t *testing.T) {
 	otel.SetMeterProvider(provider)
 
 	// Need to re-init the metrics with the new provider
-	meter = provider.Meter("onehumancorp/mono/src/server/agents/proxy")
+	meter = provider.Meter("onehumancorp/mono/src/server_old/agents/proxy")
 	var err error
 	requestsCounter, err = meter.Int64Counter("ohc_agent_outbound_requests_total")
 	require.NoError(t, err)

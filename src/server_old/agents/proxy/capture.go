@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	meter           = otel.Meter("onehumancorp/mono/src/server/agents/proxy")
+	meter           = otel.Meter("onehumancorp/mono/src/server_old/agents/proxy")
 	requestsCounter metric.Int64Counter
 	latencyHisto    metric.Float64Histogram
 )
