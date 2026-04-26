@@ -17,7 +17,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server_old/telemetry",
-        "//src/server_old/agents/grpc",
+        "//src/server/agents/grpc",
         "//src/proto/agentservice",
         "//src/server_old/db",
         "//src/server_old/integrations/plane",
