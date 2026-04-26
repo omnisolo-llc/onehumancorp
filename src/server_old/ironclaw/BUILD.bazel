@@ -5,7 +5,7 @@ go_library(
     srcs = ["main.go"],
     importpath = "github.com/onehumancorp/mono/src/server/ironclaw",
     visibility = ["//visibility:private"],
-    deps = ["//src/server/agents"],
+    deps = ["//src/server_old/agents:agents"],
 )
 
 # ── Host binary ────────────────────────────────────────────────────────────────
