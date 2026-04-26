@@ -131,6 +131,56 @@ message PublishTeammateMeshEventRequest {
   TeammateMeshEvent event = 2;
 }
 
+message CreateTaskRequest {
+  string mission_id = 1;
+  string title = 2;
+  string description = 3;
+  string priority = 4;
+}
+
+message PollTasksRequest {
+  string agent_id = 1;
+  int32 limit = 2;
+}
+
+message UpdateTaskStatusRequest {
+  string task_id = 1;
+  string status = 2;
+  string agent_id = 3;
+  string result = 4;
+}
+
+message UpdateTaskStatusResponse {
+  bool success = 1;
+}
+
+message DecomposeTaskRequest {
+  string task_id = 1;
+}
+
+message DecomposeTaskResponse {
+  bool success = 1;
+}
+
+message SharedTask {
+  string id = 1;
+  string organization_id = 2;
+  string parent_plan_id = 3;
+  repeated string dependencies = 4;
+  string title = 5;
+  string description = 6;
+  string status = 7;
+  string assigned_agent_id = 8;
+  string priority = 9;
+  string payload = 10;
+  int64 locked_until_unix = 11;
+  int64 created_at_unix = 12;
+  int64 updated_at_unix = 13;
+  string action_risk = 14;
+  string approval_status = 15;
+  string proposed_content = 16;
+}
+
 service HubService {
   rpc RegisterAgent(RegisterAgentRequest) returns (RegisterAgentResponse);
   rpc OpenMeeting(OpenMeetingRequest) returns (MeetingRoom);
@@ -144,6 +194,11 @@ service HubService {
   rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
   rpc PublishTeammateMeshEvent(PublishTeammateMeshEventRequest) returns (PublishMessageResponse);
   rpc StreamTeammateMesh(EventStreamRequest) returns (stream TeammateMeshEvent);
+  
+  rpc CreateTask(CreateTaskRequest) returns (SharedTask);
+  rpc PollTasks(PollTasksRequest) returns (stream SharedTask);
+  rpc UpdateTaskStatus(UpdateTaskStatusRequest) returns (UpdateTaskStatusResponse);
+  rpc DecomposeTask(DecomposeTaskRequest) returns (DecomposeTaskResponse);
 }
 
 message LoginRequest {

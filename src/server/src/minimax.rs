@@ -109,35 +109,114 @@ impl MinimaxClient {
             }],
         };
 
-        let response = client
-            .post(&self.url)
-            .header("Content-Type", "application/json")
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(&request_body)
-            .send()
-            .await;
+        let mut last_err = String::new();
+        for _ in 0..5 {
+            let response = client
+                .post(&self.url)
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", self.api_key))
+                .json(&request_body)
+                .send()
+                .await;
 
-        match response {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
-                    cb.record_success();
-                    if let Some(choice) = result.choices.first() {
-                        Ok(choice.message.content.clone())
+            match response {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
+                        cb.record_success();
+                        if let Some(choice) = result.choices.first() {
+                            return Ok(choice.message.content.clone());
+                        } else {
+                            last_err = "empty response from minimax".to_string();
+                            cb.record_failure();
+                            tokio::time::sleep(Duration::from_secs(1)).await;
+                            continue;
+                        }
                     } else {
-                        Err("empty response from minimax".to_string())
+                        if resp.status().as_u16() >= 500 {
+                            last_err = format!("API overloaded (status {})", resp.status());
+                            tokio::time::sleep(Duration::from_secs(2)).await;
+                            continue;
+                        }
+                        cb.record_failure();
+                        let status = resp.status();
+                        let text = resp.text().await.unwrap_or_default();
+                        last_err = format!("API error (status {}): {}", status, text);
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                        continue;
                     }
-                } else {
+                }
+                Err(e) => {
                     cb.record_failure();
-                    let status = resp.status();
-                    let text = resp.text().await.unwrap_or_default();
-                    Err(format!("API error (status {}): {}", status, text))
+                    last_err = e.to_string();
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    continue;
                 }
             }
-            Err(e) => {
-                cb.record_failure();
-                Err(e.to_string())
+        }
+
+        Err(format!("failed after 5 retries: {}", last_err))
+    }
+
+    pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
+        let cb = get_circuit_breaker();
+        if !cb.allow() {
+            return Err("circuit breaker open".to_string());
+        }
+
+        let client = reqwest::Client::new();
+
+        let request_body = serde_json::json!({
+            "model": "embo-01",
+            "type": "db",
+            "texts": [text]
+        });
+
+        let mut last_err = String::new();
+        for _ in 0..5 {
+            let response = client
+                .post("https://api.minimax.chat/v1/embeddings")
+                .header("Content-Type", "application/json")
+                .header("Authorization", format!("Bearer {}", self.api_key))
+                .json(&request_body)
+                .send()
+                .await;
+
+            match response {
+                Ok(resp) => {
+                    if resp.status().is_success() {
+                        let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+                        cb.record_success();
+                        if let Some(vectors) = result["vectors"].as_array() {
+                            if let Some(vector) = vectors.first() {
+                                if let Some(array) = vector.as_array() {
+                                    let f32_vec: Vec<f32> = array.iter().map(|v| v.as_f64().unwrap() as f32).collect();
+                                    return Ok(f32_vec);
+                                }
+                            }
+                        }
+                        return Err("invalid response format".to_string());
+                    } else {
+                        if resp.status().as_u16() >= 500 {
+                            last_err = format!("API overloaded (status {})", resp.status());
+                            tokio::time::sleep(Duration::from_secs(2)).await;
+                            continue;
+                        }
+                        cb.record_failure();
+                        last_err = format!("API error (status {})", resp.status());
+                        tokio::time::sleep(Duration::from_secs(1)).await;
+                        continue;
+                    }
+                }
+                Err(e) => {
+                    cb.record_failure();
+                    last_err = e.to_string();
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    continue;
+                }
             }
         }
+
+        Err(format!("failed after 5 retries: {}", last_err))
     }
 }
