@@ -127,6 +127,8 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[AutoDream Sync Daemon Walkthrough](autodream_sync.md)**: Visual guide to the Hybrid AutoDream Synchronization.
 - **[Distributed State Machine Walkthrough](distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
 - **[Hybrid MCP RAG Protocol Walkthrough](hybrid_mcp_rag.md)**: Explore the architectural flow between Standalone and Cloud states.
+- **[Hybrid MCP RAG Dynamic Escalation Walkthrough](hybrid_mcp_rag_escalation.md)**: Visual guide to dynamic workload handoff.
+- **[Hybrid MCP RAG Protocol API Playbook](../../api/hybrid_mcp_rag_api.md)**: Interactive playbook for Hybrid MCP RAG API endpoints.
 - **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
 - **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
 - **[AutoDream Pipeline Walkthrough](autodream_pipeline.md)**: Visual guide to the memory consolidation engine.
