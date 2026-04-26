@@ -59,6 +59,7 @@ pub fn toolsearch_tool() -> Tool {
     Tool {
         name: "ToolSearch".to_string(),
         description: "Search available tools by name or description.".to_string(),
+        is_mutating: false,
         parameters: json!({
             "type": "object",
             "properties": {

@@ -88,6 +88,7 @@ pub fn todowrite_tool(todos: SharedTodos) -> Tool {
         description: "Write the task todo list. Replaces the entire list with the provided items. \
             Use to track progress on multi-step tasks."
             .to_string(),
+        is_mutating: true,
         parameters: json!({
             "type": "object",
             "properties": {
@@ -122,6 +123,7 @@ pub fn todoread_tool(todos: SharedTodos) -> Tool {
     Tool {
         name: "TodoRead".to_string(),
         description: "Read the current todo list.".to_string(),
+        is_mutating: false,
         parameters: json!({
             "type": "object",
             "properties": {}

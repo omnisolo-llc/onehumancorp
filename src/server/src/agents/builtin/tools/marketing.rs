@@ -43,6 +43,7 @@ pub fn qr_generate_tool() -> Tool {
     Tool {
         name: "qr_generate".to_string(),
         description: "Generate a QR code for a given URL or text content.".to_string(),
+        is_mutating: false,
         parameters: json!({
             "type": "object",
             "properties": {

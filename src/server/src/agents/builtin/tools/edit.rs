@@ -56,6 +56,7 @@ pub fn edit_tool() -> Tool {
         description: "Replace exactly one occurrence of old_str with new_str in a file. \
             The old_str must appear exactly once in the file."
             .to_string(),
+        is_mutating: true,
         parameters: json!({
             "type": "object",
             "properties": {
