@@ -3,10 +3,10 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "hybridfsmcp",
     srcs = ["mcp.go"],
-    importpath = "github.com/onehumancorp/mono/src/server/tools/hybridfsmcp",
+    importpath = "github.com/onehumancorp/mono/src/server_old/tools/hybridfsmcp",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server/agents/mcp/proxy",
+        "//src/server_old/agents/mcp/proxy",
         "//src/server_old/auth",
         "//src/server_old/utils",
         "@com_github_minio_minio_go_v7//:minio-go",
