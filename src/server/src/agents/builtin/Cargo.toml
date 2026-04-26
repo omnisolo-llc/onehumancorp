@@ -5,7 +5,7 @@ edition = "2024"
 
 [[bin]]
 name = "ohc-builtin-agent"
-path = "src/main.rs"
+path = "main.rs"
 
 [dependencies]
 # async runtime
