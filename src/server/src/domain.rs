@@ -87,6 +87,7 @@ impl OrganizationExt for Organization {
     }
 }
 
+#[allow(dead_code)]
 pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let director_id = format!("{}-director-mkt", id);
@@ -130,6 +131,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
     }
 }
 
+#[allow(dead_code)]
 pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<Utc>) -> Organization {
     let ceo_id = format!("{}-ceo", id);
     let cfo_id = format!("{}-cfo", id);

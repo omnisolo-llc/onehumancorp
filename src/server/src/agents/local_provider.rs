@@ -84,11 +84,13 @@ impl LocalLLMProvider {
     }
 }
 
+#[allow(dead_code)]
 pub struct ResilientProvider {
     primary: Arc<MinimaxClient>,
     fallback: Arc<LocalLLMProvider>,
 }
 
+#[allow(dead_code)]
 impl ResilientProvider {
     pub fn new(primary: Arc<MinimaxClient>, fallback: Option<Arc<LocalLLMProvider>>) -> Self {
         let fallback = fallback.unwrap_or_else(|| Arc::new(LocalLLMProvider::new()));
@@ -127,6 +129,7 @@ impl ResilientProvider {
     }
 }
 
+#[allow(dead_code)]
 fn is_network_error(err: &str) -> bool {
     // Simplified check based on string matching, as we don't have typed errors from gRPC or HTTP client here yet in this simplified version.
     err.contains("timeout") || err.contains("connection refused") || err.contains("closed") || err.contains("503")

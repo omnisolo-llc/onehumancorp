@@ -17,6 +17,7 @@ pub struct Policy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[allow(dead_code)]
 pub struct Config {
     #[serde(rename = "defaultPolicy")]
     pub default_policy: Policy,
@@ -41,10 +42,12 @@ impl ASTValidator {
     }
 }
 
+#[allow(dead_code)]
 pub struct BwrapRunner {
     validator: Arc<ASTValidator>,
 }
 
+#[allow(dead_code)]
 impl BwrapRunner {
     pub fn new(validator: Arc<ASTValidator>) -> Self {
         BwrapRunner { validator }
@@ -118,18 +121,21 @@ impl BwrapRunner {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ResultModel {
     pub stdout: String,
     pub stderr: String,
     pub exit_code: i32,
 }
 
+#[allow(dead_code)]
 pub struct Manager {
     config: Config,
     validator: Arc<ASTValidator>,
     runner: Arc<BwrapRunner>,
 }
 
+#[allow(dead_code)]
 impl Manager {
     pub fn new(config: Config) -> Self {
         let validator = Arc::new(ASTValidator::new());
