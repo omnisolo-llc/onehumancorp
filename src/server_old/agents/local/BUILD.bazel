@@ -12,7 +12,7 @@ go_library(
         "tools.go",
         "playwright_tool.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server/agents/local",
+    importpath = "github.com/onehumancorp/mono/src/server_old/agents/local",
     visibility = ["//visibility:public"],
     deps = [
         "//src/server_old/db",

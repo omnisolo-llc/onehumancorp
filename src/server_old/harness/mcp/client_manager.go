@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/onehumancorp/mono/src/server/agents/local"
+	"github.com/onehumancorp/mono/src/server_old/agents/local"
 )
 
 // Tool represents a Model Context Protocol tool spec.

@@ -6,7 +6,7 @@ export component ServiceManager inherits Window {
     title: "Local Service Manager";
 
     property <bool> is_running: false;
-    property <string> health_output: "";
+    property <string> doctor_output: "";
 
     background: #f8fafc;
 
@@ -41,14 +41,14 @@ export component ServiceManager inherits Window {
             }
             Button {
                 text: "Run Health Check";
-                clicked => { health_output = "Running health check...\nEverything is running smoothly."; }
+                clicked => { doctor_output = "Running doctor...\nAll systems green."; }
             }
             Button {
                 text: "Force Restart";
             }
         }
 
-        if (health_output != "") : VerticalBox {
+        if (doctor_output != "") : VerticalBox {
             spacing: 8px;
             Text { text: "Diagnostics"; font-size: 16px; font-weight: 700; color: #1e293b; }
             Rectangle {
@@ -57,7 +57,7 @@ export component ServiceManager inherits Window {
                 
                 HorizontalBox {
                     padding: 16px;
-                    Text { text: health_output; color: #94a3b8; font-family: "monospace"; }
+                    Text { text: doctor_output; color: #94a3b8; font-family: "monospace"; }
                 }
             }
         }

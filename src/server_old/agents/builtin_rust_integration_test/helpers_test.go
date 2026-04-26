@@ -16,7 +16,8 @@ import (
 )
 
 const (
-	binaryRunpath = "src/server/agents/builtin/src/ohc-builtin-agent"
+	binaryRunpath = "_main/src/server/src/agents/builtin/ohc-builtin-agent"
+
 	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
@@ -40,6 +41,51 @@ func findFreePort(t *testing.T) string {
 // locateBinary finds the Rust binary either via Bazel runfiles or by scanning
 // the workspace build output directory.
 func locateBinary(t *testing.T) string {
+	t.Helper()
+
+	// 0. Locate binary by walking the test workspace.
+	if rf := os.Getenv("RUNFILES_DIR"); rf != "" {
+		var foundPath string
+		filepath.Walk(rf, func(path string, info os.FileInfo, err error) error {
+			if err == nil && !info.IsDir() && info.Name() == "ohc-builtin-agent" {
+				foundPath = path
+			}
+			return nil
+		})
+		if foundPath != "" {
+			return foundPath
+		}
+	}
+	t.Helper()
+
+	// 0. Locate binary by walking the test workspace.
+	if rf := os.Getenv("RUNFILES_DIR"); rf != "" {
+		var foundPath string
+		filepath.Walk(rf, func(path string, info os.FileInfo, err error) error {
+			if err == nil && !info.IsDir() && info.Name() == "ohc-builtin-agent" {
+				foundPath = path
+			}
+			return nil
+		})
+		if foundPath != "" {
+			return foundPath
+		}
+	}
+	t.Helper()
+
+	// 0. Walk RUNFILES_DIR if we can't find it directly
+	if rf := os.Getenv("RUNFILES_DIR"); rf != "" {
+		var foundPath string
+		filepath.Walk(rf, func(path string, info os.FileInfo, err error) error {
+			if !info.IsDir() && info.Name() == "ohc-builtin-agent" {
+				foundPath = path
+			}
+			return nil
+		})
+		if foundPath != "" {
+			return foundPath
+		}
+	}
 	t.Helper()
 
 	// 1. Bazel runfiles mechanism.

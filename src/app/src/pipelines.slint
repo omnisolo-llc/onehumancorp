@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component Pipelines inherits Window {
     width: 500px;
     height: 600px;
-    title: "Business Workflows";
+    title: "SDLC Pipelines";
 
     background: #f8fafc;
 
@@ -12,7 +12,7 @@ export component Pipelines inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Business Workflows"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "SDLC Pipelines"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             Button { text: "Refresh"; }
         }
@@ -32,14 +32,14 @@ export component Pipelines inherits Window {
                     
                     HorizontalBox {
                         VerticalBox {
-                            Text { text: "Main Workflow"; font-weight: 700; color: #1e293b; }
-                            Text { text: "version: current"; color: #64748b; }
+                            Text { text: "Main Pipeline"; font-weight: 700; color: #1e293b; }
+                            Text { text: "branch: main"; color: #64748b; }
                         }
                         Rectangle {}
-                        Text { text: "DRAFT"; color: #06b6d4; horizontal-alignment: center; }
+                        Text { text: "STAGING"; color: #06b6d4; horizontal-alignment: center; }
                     }
                     
-                    Text { text: "Initiated by: Business Automation"; color: #64748b; }
+                    Text { text: "Initiated by: System"; color: #64748b; }
                     
                     Rectangle {
                         background: #e2e8f0;
@@ -51,7 +51,7 @@ export component Pipelines inherits Window {
                         }
                     }
                     
-                    Text { text: "Publish to Live"; color: #1e293b; font-weight: 700; }
+                    Text { text: "Promote to Production"; color: #1e293b; font-weight: 700; }
                     
                     Button {
                         text: "Slide to Approve (Tap)";
