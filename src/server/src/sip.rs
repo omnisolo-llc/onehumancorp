@@ -2,6 +2,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use sqlx::Row;
 use chrono::{DateTime, Utc};
+use std::collections::HashMap;
+use std::sync::RwLock;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CapabilityPlugin {
@@ -36,30 +39,80 @@ struct MessageModel {
 pub struct SipDB {
     pool: PgPool,
     org_id: String,
+    local_cache: RwLock<HashMap<String, String>>,
+    cache_expirations: RwLock<HashMap<String, Instant>>,
 }
 
 impl SipDB {
     pub fn new(pool: PgPool, org_id: String) -> Self {
-        SipDB { pool, org_id }
+        SipDB {
+            pool,
+            org_id,
+            local_cache: RwLock::new(HashMap::new()),
+            cache_expirations: RwLock::new(HashMap::new()),
+        }
+    }
+
+    fn get_cache(&self, key: &str) -> Option<String> {
+        let expirations = self.cache_expirations.read().unwrap();
+        if let Some(exp) = expirations.get(key) {
+            if exp.elapsed() > Duration::from_secs(3600) {
+                drop(expirations);
+                let mut expirations = self.cache_expirations.write().unwrap();
+                let mut cache = self.local_cache.write().unwrap();
+                expirations.remove(key);
+                cache.remove(key);
+                return None;
+            }
+        }
+        
+        let cache = self.local_cache.read().unwrap();
+        cache.get(key).cloned()
+    }
+
+    fn set_cache(&self, key: String, value: String) {
+        let mut cache = self.local_cache.write().unwrap();
+        let mut expirations = self.cache_expirations.write().unwrap();
+        cache.insert(key.clone(), value);
+        expirations.insert(key, Instant::now());
+    }
+
+    fn invalidate_cache(&self, key: &str) {
+        let mut cache = self.local_cache.write().unwrap();
+        let mut expirations = self.cache_expirations.write().unwrap();
+        cache.remove(key);
+        expirations.remove(key);
     }
 
     pub async fn sync_memory(&self, key: &str) -> Result<Option<String>, sqlx::Error> {
+        let cache_key = format!("sip:memory:{}:{}", self.org_id, key);
+        if let Some(val) = self.get_cache(&cache_key) {
+            return Ok(Some(val));
+        }
+
         let row = sqlx::query("SELECT value FROM swarm_memory WHERE key = $1 AND organization_id = $2")
             .bind(key)
             .bind(&self.org_id)
             .fetch_optional(&self.pool)
             .await?;
             
-        Ok(row.map(|r| r.get("value")))
+        let value: Option<String> = row.map(|r| r.get("value"));
+        if let Some(ref val) = value {
+            self.set_cache(cache_key, val.clone());
+        }
+        
+        Ok(value)
     }
 
     pub async fn update_memory(&self, key: &str, value: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT INTO swarm_memory (key, value, updated_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3) ON CONFLICT(key) DO UPDATE SET value=EXCLUDED.value, updated_at=CURRENT_TIMESTAMP")
+        sqlx::query("INSERT INTO swarm_memory (key, value, updated_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP")
             .bind(key)
             .bind(value)
             .bind(&self.org_id)
             .execute(&self.pool)
             .await?;
+            
+        self.invalidate_cache(&format!("sip:memory:{}:{}", self.org_id, key));
             
         Ok(())
     }
