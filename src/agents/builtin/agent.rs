@@ -193,8 +193,48 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
+                // Implement LangGraph 4-Type Error Handling Mechanics with backoff
+                let max_retries = 3;
+                let mut attempts = 0;
+
+                let current_result = loop {
+                    let res = self.execute_tool(&tc).await;
+
+                    if let Err(ref e) = res {
+                        if let Some(tool_err) = e.downcast_ref::<crate::types::ToolError>() {
+                            match tool_err {
+                                crate::types::ToolError::Transient(_) => {
+                                    attempts += 1;
+                                    if attempts < max_retries {
+                                        tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempts as u32))).await;
+                                        continue;
+                                    }
+                                    // if exhausted, just break with error (treat as unexpected)
+                                }
+                                crate::types::ToolError::UserFixable(_) => {
+                                    // Suspend execution / wait for user intervention
+                                    on_event(AgentEvent::TaskError { error: e.to_string() });
+                                    return Err(format!("UserFixable Error: {}. Agent requires intervention.", e.to_string()).into());
+                                }
+                                crate::types::ToolError::Unexpected(_) => {
+                                    on_event(AgentEvent::TaskError { error: e.to_string() });
+                                    return Err(format!("Unexpected Error: {}", e.to_string()).into());
+                                }
+                                crate::types::ToolError::LlmRecoverable(_) => {
+                                    // Treat as a normal result but inject the error into the LLM context
+                                    break res;
+                                }
+                            }
+                        } else {
+                            // Non-ToolError should be treated as Unexpected and bubble up
+                            on_event(AgentEvent::TaskError { error: e.to_string() });
+                            return Err(format!("Unexpected Error: {}", e.to_string()).into());
+                        }
+                    }
+                    break res;
+                };
+
+                let (content, error) = match current_result {
                     Ok(r) => {
                         self.progress.record_tool_use();
                         on_event(AgentEvent::ToolCall {
@@ -206,14 +246,15 @@ impl Agent {
                         (r, String::new())
                     }
                     Err(e) => {
-                        let err = e.to_string();
+                        let err_str = e.to_string();
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
+                            result: format!("Error: {}", err_str),
                             iteration,
                         });
-                        (String::new(), err)
+                        // Inject error into LLM context for it to self-correct
+                        (String::new(), err_str)
                     }
                 };
                 tool_results.push(ToolResult {
@@ -304,10 +345,187 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
-        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-            Ok("A very long tool output that should be masked because it is long enough".to_string())
+        async fn execute(&self, args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            let mode = args["mode"].as_str().unwrap_or("ok");
+            match mode {
+                "ok" => Ok("A very long tool output that should be masked because it is long enough".to_string()),
+                "transient" => Err(Box::new(crate::types::ToolError::Transient("network timeout".to_string()))),
+                "llm_recoverable" => Err(Box::new(crate::types::ToolError::LlmRecoverable("invalid syntax".to_string()))),
+                "user_fixable" => Err(Box::new(crate::types::ToolError::UserFixable("missing permission".to_string()))),
+                "unexpected" => Err(Box::new(crate::types::ToolError::Unexpected("system fault".to_string()))),
+                "raw" => Err(Box::new(std::io::Error::new(std::io::ErrorKind::Other, "raw error")) as Box<dyn std::error::Error + Send + Sync>),
+                _ => Ok("done".to_string()),
+            }
         }
     }
+
+    #[tokio::test]
+    async fn test_tool_error_handling_llm_recoverable() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({"mode": "llm_recoverable"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+
+        let result = agent.run(&cfg, "Hello", &mut |e| events.push(e)).await;
+
+        // LLM Recoverable should inject the error into tool call and finish successfully
+        assert!(result.is_ok());
+
+        let tool_call_events: Vec<_> = events.iter().filter_map(|e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                Some(result)
+            } else {
+                None
+            }
+        }).collect();
+        assert_eq!(tool_call_events.len(), 1);
+        assert!(tool_call_events[0].contains("LlmRecoverable: invalid syntax"));
+    }
+
+    #[tokio::test]
+    async fn test_tool_error_handling_user_fixable() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({"mode": "user_fixable"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+
+        let result = agent.run(&cfg, "Hello", &mut |e| events.push(e)).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("UserFixable Error"));
+    }
+
+    #[tokio::test]
+    async fn test_tool_error_handling_unexpected() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({"mode": "unexpected"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+
+        let result = agent.run(&cfg, "Hello", &mut |e| events.push(e)).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unexpected Error"));
+    }
+
+    #[tokio::test]
+    async fn test_tool_error_handling_raw_error() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({"mode": "raw"}),
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+
+        let result = agent.run(&cfg, "Hello", &mut |e| events.push(e)).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unexpected Error: raw error"));
+    }
+
 
     #[tokio::test]
     async fn test_observation_masking() {

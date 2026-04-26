@@ -104,3 +104,24 @@ pub struct ToolDefinition {
     pub description: String,
     pub parameters: serde_json::Value,
 }
+
+#[derive(Debug, Clone)]
+pub enum ToolError {
+    Transient(String),
+    LlmRecoverable(String),
+    UserFixable(String),
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Transient(msg) => write!(f, "Transient: {}", msg),
+            Self::LlmRecoverable(msg) => write!(f, "LlmRecoverable: {}", msg),
+            Self::UserFixable(msg) => write!(f, "UserFixable: {}", msg),
+            Self::Unexpected(msg) => write!(f, "Unexpected: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}
