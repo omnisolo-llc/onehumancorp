@@ -53,7 +53,7 @@ impl Hub {
             mesh_events: RwLock::new(HashMap::new()),
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
-            task_manager: TaskManager::new(),
+            task_manager: TaskManager::new(event_log_tx.clone()),
             scheduler: Scheduler::new(),
             recent_events: RwLock::new(Vec::new()),
             token_usage_history: RwLock::new(HashMap::new()),
