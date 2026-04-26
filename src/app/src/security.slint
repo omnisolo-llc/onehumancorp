@@ -1,0 +1,74 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Security inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Security";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Security"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Re-scan"; }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: "⚠️ Insecure SPIFFE Token"; font-weight: 700; color: #ef4444; horizontal-alignment: center; } 
+                        Rectangle {}
+                        Rectangle { 
+                            background: rgba(239, 68, 68, 0.2); 
+                            border-radius: 4px; 
+                            HorizontalBox {
+                                padding: 4px;
+                                Text { text: "HIGH"; color: #ef4444; font-size: 10px; font-weight: 700; } 
+                            }
+                        }
+                    }
+                    Text { text: "The enrollment token is transmitted over an unencrypted channel."; color: #1e293b; wrap: word-wrap; }
+                    Button { text: "Auto-fix"; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: "✓ Firewall Configured"; font-weight: 700; color: #10b981; horizontal-alignment: center; } 
+                        Rectangle {}
+                        Rectangle { 
+                            background: rgba(16, 185, 129, 0.2); 
+                            border-radius: 4px; 
+                            HorizontalBox {
+                                padding: 4px;
+                                Text { text: "LOW"; color: #10b981; font-size: 10px; font-weight: 700; } 
+                            }
+                        }
+                    }
+                    Text { text: "Firewall rules have been successfully applied."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+        }
+    }
+}

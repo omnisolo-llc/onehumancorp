@@ -1,0 +1,113 @@
+import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+
+export component PromptTuning inherits Window {
+    width: 700px;
+    height: 500px;
+    title: "Tune Agent";
+
+    property <int> step: 0;
+    property <string> tone: "Friendly";
+    property <bool> show_raw: false;
+
+    background: #f8fafc;
+
+    HorizontalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Left Column: Wizard Steps
+        VerticalBox {
+            width: 320px;
+            spacing: 20px;
+            
+            Text { text: "Prompt Tuning"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+            // Step 0: Tone
+            if (step == 0) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Personality & tone"; color: #1e293b; }
+                Button { text: "Formal"; clicked => { tone = "Formal"; } }
+                Button { text: "Friendly"; clicked => { tone = "Friendly"; } }
+                Button { text: "Concise"; clicked => { tone = "Concise"; } }
+                Text { text: "Selected: " + tone; color: #a855f7; }
+            }
+
+            // Step 1: Focus
+            if (step == 1) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Domain focus"; color: #1e293b; }
+                CheckBox { text: "Only discuss business"; }
+                CheckBox { text: "Avoid competitors"; }
+            }
+
+            // Step 2: Examples
+            if (step == 2) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Example interactions"; color: #1e293b; }
+                Button { text: "Add Example"; }
+                Text { text: "Q: Sample Q\nA: Sample A"; color: #64748b; }
+            }
+
+            // Step 3: Review
+            if (step == 3) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Review & Save"; color: #1e293b; }
+                Text { text: "Ready to update the agent?"; color: #64748b; }
+            }
+
+            Rectangle {} // Spacer
+
+            // Navigation
+            HorizontalBox {
+                if (step > 0) : Button {
+                    text: "Back";
+                    clicked => { step = step - 1; }
+                }
+                Rectangle {} // Spacer
+                Button {
+                    text: step == 3 ? "Save" : "Next";
+                    clicked => {
+                        if (step < 3) {
+                            step = step + 1;
+                        } else {
+                            // Handle save
+                        }
+                    }
+                }
+            }
+        }
+
+        // Right Column: Preview
+        VerticalBox {
+            width: 320px;
+            spacing: 10px;
+            
+            HorizontalBox {
+                Text { text: "Live Preview"; font-size: 18px; font-weight: 700; color: #1e293b; }
+                Rectangle {}
+                Button { text: show_raw ? "Hide raw" : "Show raw"; clicked => { show_raw = !show_raw; } }
+            }
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    if (show_raw) : Text {
+                        text: "You are an AI agent with a " + tone + " personality.";
+                        color: #1e293b;
+                        wrap: word-wrap;
+                    }
+                    if (!show_raw) : Text {
+                        text: "Chat sandbox placeholder";
+                        color: #64748b;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,4 +1,4 @@
-edition = "2024";
+syntax = "proto3";
 
 package ohc.orchestration;
 
@@ -144,6 +144,21 @@ service HubService {
   rpc StreamMeshEvents(EventStreamRequest) returns (stream MeshEvent);
   rpc PublishTeammateMeshEvent(PublishTeammateMeshEventRequest) returns (PublishMessageResponse);
   rpc StreamTeammateMesh(EventStreamRequest) returns (stream TeammateMeshEvent);
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+  string organization_id = 3;
+}
+
+message LoginResponse {
+  string token = 1;
+  int64 expires_at = 2;
+}
+
+service AuthService {
+  rpc Login(LoginRequest) returns (LoginResponse);
 }
 
 message WizardField {

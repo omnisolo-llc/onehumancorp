@@ -1,0 +1,59 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Referrals inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Viral Loop Dashboard";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Viral Loop Dashboard"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Refresh"; }
+        }
+
+        VerticalBox {
+            spacing: 16px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    
+                    HorizontalBox {
+                        Text { text: "Ref: ABC123"; font-weight: 700; color: #1e293b; font-size: 18px; }
+                        Rectangle {}
+                        Text { text: "👥"; font-size: 24px; horizontal-alignment: center; }
+                    }
+                    
+                    Text { text: "User: user_1"; color: #64748b; }
+                    
+                    HorizontalBox {
+                        spacing: 20px;
+                        alignment: center;
+                        VerticalBox {
+                            Text { text: "10"; font-size: 24px; font-weight: 700; color: #a855f7; horizontal-alignment: center; }
+                            Text { text: "Clicks"; color: #64748b; font-size: 12px; horizontal-alignment: center; }
+                        }
+                        VerticalBox {
+                            Text { text: "2"; font-size: 24px; font-weight: 700; color: #a855f7; horizontal-alignment: center; }
+                            Text { text: "Conversions"; color: #64748b; font-size: 12px; horizontal-alignment: center; }
+                        }
+                    }
+                    
+                    Text { text: "Created: Apr 25, 2026"; color: #9ca3af; font-size: 12px; }
+                }
+            }
+        }
+    }
+}

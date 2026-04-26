@@ -1,0 +1,88 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+
+export component Login inherits Window {
+    width: 400px;
+    height: 600px;
+    title: "One Human Corp - Login";
+
+    property <bool> loading: false;
+    property <bool> is_sign_up: false;
+    property <string> error_message: "";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        alignment: center;
+        spacing: 20px;
+        padding: 32px;
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 12px;
+
+            VerticalBox {
+                spacing: 16px;
+                padding: 24px;
+
+                Text {
+                    text: "✨";
+                    font-size: 64px;
+                    horizontal-alignment: center;
+                    color: #a855f7;
+                }
+
+                Text {
+                    text: "One Human Corp";
+                    font-size: 28px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    color: #1e293b;
+                }
+
+                Text {
+                    text: "Sign in to orchestrate your swarm";
+                    font-size: 14px;
+                    horizontal-alignment: center;
+                    color: #64748b;
+                }
+
+                LineEdit {
+                    placeholder-text: "Email or Username";
+                }
+
+                LineEdit {
+                    placeholder-text: "Password";
+                    input-type: password;
+                }
+
+                if (error_message != "") : Text {
+                    text: error_message;
+                    color: #ef4444;
+                    horizontal-alignment: center;
+                }
+
+                Button {
+                    text: is_sign_up ? "Sign Up" : "Sign In";
+                }
+
+                Button {
+                    text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+                    clicked => {
+                        is_sign_up = !is_sign_up;
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    Text { text: "OR"; color: #9ca3af; font-weight: 700; }
+                }
+
+                Button {
+                    text: "Continue with SSO";
+                }
+            }
+        }
+    }
+}
