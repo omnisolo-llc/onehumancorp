@@ -7,8 +7,6 @@ import (
 	"io"
 	"os/exec"
 	"sync"
-
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
 )
 
 // Tool represents a Model Context Protocol tool spec.
@@ -26,7 +24,13 @@ type ServerConfig struct {
 }
 
 // ConvertToMCPTool maps an internal tool to the MCP Tool specification.
-func ConvertToMCPTool(t builtin.Tool) Tool {
+type BuiltinTool struct {
+	Name        string
+	Description string
+	Parameters  json.RawMessage
+}
+
+func ConvertToMCPTool(t BuiltinTool) Tool {
 	return Tool{
 		Name:        t.Name,
 		Description: t.Description,
