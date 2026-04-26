@@ -9,6 +9,7 @@ pub mod ohc {
 }
 
 slint::include_modules!();
+use crate::BusinessSetup;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let ui = BusinessSetup::new()?;
-    ui.on_launch_business(move |name, btype, desc, prod, digi, serv, food, sub, pay, email| {
+    ui.on_launch_business(move |name, btype, _desc, _prod, _digi, _serv, _food, _sub, _pay, _email| {
         println!("Launch Business: {} - {}", name, btype);
         // Call backend API here
     });

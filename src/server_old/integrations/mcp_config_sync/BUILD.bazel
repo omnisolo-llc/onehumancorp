@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "mcp_config_sync",
@@ -6,13 +6,24 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/integrations/mcp_config_sync",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server_old/agents:agents",
         "//src/server_old/auth",
         "//src/server_old/db",
-
+        "//src/server/agents/builtin",
         "@io_opentelemetry_go_otel//:otel",
         "@io_opentelemetry_go_otel//attribute",
         "@in_gopkg_yaml_v3//:yaml_v3",
     ],
 )
 
+go_test(
+    name = "mcp_config_sync_test",
+    srcs = ["tool_test.go"],
+    embed = [":mcp_config_sync"],
+    deps = [
+        "//src/server_old/auth",
+        "//src/server_old/db",
+        "//src/server/agents/builtin",
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
+)

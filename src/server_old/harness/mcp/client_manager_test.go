@@ -2,15 +2,15 @@ package mcp
 
 import (
 	"context"
-		"testing"
+	"encoding/json"
+	"testing"
 	"time"
 
-
+	"github.com/onehumancorp/mono/src/server/agents/builtin"
 )
 
 func TestConvertToMCPTool(t *testing.T) {
-/*
-// 	internalTool := builtin.Tool{
+	internalTool := builtin.Tool{
 		Name:        "test_tool",
 		Description: "A test tool",
 		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
@@ -27,7 +27,6 @@ func TestConvertToMCPTool(t *testing.T) {
 	if string(mcpTool.InputSchema) != `{"type":"object","properties":{}}` {
 		t.Errorf("Expected InputSchema `{\"type\":\"object\",\"properties\":{}}`, got %s", string(mcpTool.InputSchema))
 	}
-*/
 }
 
 func TestClientManagerConnectStdio(t *testing.T) {

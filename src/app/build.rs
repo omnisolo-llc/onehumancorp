@@ -1,6 +1,5 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     slint_build::compile("src/ongoing_management.slint").unwrap();
-    slint_build::compile("src/business_setup.slint").unwrap();
     
     // Set PROTOC environment variable to point to the built protoc in runfiles
     let protoc_path = std::path::PathBuf::from("../../../protobuf+/protoc");
