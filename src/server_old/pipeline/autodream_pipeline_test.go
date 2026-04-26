@@ -15,8 +15,8 @@ type mockLLM struct {
 	response string
 }
 
-func (m *mockLLM) Chat(ctx context.Context, req builtin.ChatRequest) (builtin.ChatResponse, error) {
-	return builtin.ChatResponse{
+func (m *mockLLM) Chat(ctx context.Context, req builtin.ChatRequest) (*builtin.ChatResponse, error) {
+	return &builtin.ChatResponse{
 		Message: builtin.Message{Content: m.response,
 	}}, nil
 }

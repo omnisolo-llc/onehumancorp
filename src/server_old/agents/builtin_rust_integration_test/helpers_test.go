@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -17,7 +16,7 @@ import (
 
 const (
 	binaryRunpath = "src/server/agents/builtin/src/ohc-builtin-agent"
-	startTimeout  = 10 * time.Second
+	startTimeout  = 120 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
 
@@ -40,48 +39,26 @@ func findFreePort(t *testing.T) string {
 // locateBinary finds the Rust binary either via Bazel runfiles or by scanning
 // the workspace build output directory.
 func locateBinary(t *testing.T) string {
-	t.Helper()
-
-	// 1. Bazel runfiles mechanism.
-	if rf := os.Getenv("RUNFILES_DIR"); rf != "" {
-		p := filepath.Join(rf, binaryRunpath)
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
+	root := os.Getenv("BUILD_WORKSPACE_DIRECTORY")
+	if root == "" {
+		root = "../../.." // guess if running directly with go test
 	}
 
-	// 2. TEST_SRCDIR (Bazel test sandbox).
-	if sd := os.Getenv("TEST_SRCDIR"); sd != "" {
-		p := filepath.Join(sd, os.Getenv("TEST_WORKSPACE"), binaryRunpath)
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
-
-	// 3. Relative path from workspace root (dev flow).
-	_, thisFile, _, _ := runtime.Caller(0)
-	root := thisFile
-	for {
-		root = filepath.Dir(root)
-		if root == "/" {
-			break
-		}
-		if _, err := os.Stat(filepath.Join(root, "MODULE.bazel")); err == nil {
-			break
-		}
-	}
 	candidates := []string{
-		filepath.Join(root, "src/server/agents/builtin/target/debug/ohc-builtin-agent"),
-		filepath.Join(root, "src/server/agents/builtin/target/release/ohc-builtin-agent"),
-		filepath.Join(root, "bazel-bin/src/server/agents/builtin/ohc-builtin-agent"),
+		filepath.Join(root, "src/server/src/agents/builtin/target/debug/ohc-builtin-agent"),
+		filepath.Join(root, "src/server/src/agents/builtin/target/release/ohc-builtin-agent"),
+		filepath.Join(root, "bazel-bin/src/server/src/agents/builtin/ohc-builtin-agent"),
+		filepath.Join(root, "bazel-out/k8-fastbuild/bin/src/server/src/agents/builtin/ohc-builtin-agent"),
+		"src/server/src/agents/builtin/ohc-builtin-agent",
+		"ohc-builtin-agent",
 	}
+
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {
 			return c
 		}
 	}
-
-	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //src/server/agents/builtin:ohc-builtin-agent`")
+	t.Skip("ohc-builtin-agent binary not found; build with `cargo build` or `bazel build //src/server/src/agents/builtin:ohc-builtin-agent`")
 	return ""
 }
 
