@@ -40,11 +40,11 @@ impl ToolExecutor for SendMessageExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, super::ToolError> {
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let to = args["to"].as_str().unwrap_or("coordinator").to_string();
         let content = args["message"]
             .as_str()
-            .ok_or_else(|| super::ToolError::LlmRecoverable("sendmessage: message is required".to_string()))?
+            .ok_or("sendmessage: message is required")?
             .to_string();
 
         let msg = MailboxMessage {

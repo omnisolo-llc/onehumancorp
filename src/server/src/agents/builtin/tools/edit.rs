@@ -11,32 +11,40 @@ impl ToolExecutor for EditExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, super::ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| super::ToolError::LlmRecoverable("edit: path is required".to_string()))?;
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let path = args["path"].as_str().ok_or("edit: path is required")?;
         let old_str = args["old_str"]
             .as_str()
-            .ok_or_else(|| super::ToolError::LlmRecoverable("edit: old_str is required".to_string()))?;
+            .ok_or("edit: old_str is required")?;
         let new_str = args["new_str"]
             .as_str()
-            .ok_or_else(|| super::ToolError::LlmRecoverable("edit: new_str is required".to_string()))?;
+            .ok_or("edit: new_str is required")?;
 
         let content = fs::read_to_string(path)
             .await
-            .map_err(|e| super::ToolError::LlmRecoverable(format!("edit: read {}: {}", path, e)))?;
+            .map_err(|e| format!("edit: read {}: {}", path, e))?;
 
         // Ensure exactly one occurrence.
         let count = content.matches(old_str).count();
         if count == 0 {
-            return Err(super::ToolError::LlmRecoverable(format!("edit: old_str not found in {} (must match exactly once)", path)));
+            return Err(format!(
+                "edit: old_str not found in {} (must match exactly once)",
+                path
+            )
+            .into());
         }
         if count > 1 {
-            return Err(super::ToolError::LlmRecoverable(format!("edit: old_str found {} times in {} (must match exactly once)", count, path)));
+            return Err(format!(
+                "edit: old_str found {} times in {} (must match exactly once)",
+                count, path
+            )
+            .into());
         }
 
         let new_content = content.replacen(old_str, new_str, 1);
         fs::write(path, &new_content)
             .await
-            .map_err(|e| super::ToolError::LlmRecoverable(format!("edit: write {}: {}", path, e)))?;
+            .map_err(|e| format!("edit: write {}: {}", path, e))?;
 
         Ok(format!("File edited: {}", path))
     }

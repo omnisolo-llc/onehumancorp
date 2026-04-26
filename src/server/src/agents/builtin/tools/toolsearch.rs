@@ -10,10 +10,10 @@ impl ToolExecutor for ToolSearchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, super::ToolError> {
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let query = args["query"]
             .as_str()
-            .ok_or_else(|| super::ToolError::LlmRecoverable("toolsearch: query is required".to_string()))?
+            .ok_or("toolsearch: query is required")?
             .to_lowercase();
 
         let all_tools = &[

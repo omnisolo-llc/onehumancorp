@@ -12,10 +12,10 @@ impl ToolExecutor for GrepExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, super::ToolError> {
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let pattern = args["pattern"]
             .as_str()
-            .ok_or_else(|| super::ToolError::LlmRecoverable("grep: pattern is required".to_string()))?;
+            .ok_or("grep: pattern is required")?;
         let path = args["path"].as_str().unwrap_or(".");
         let case_insensitive = args["case_insensitive"].as_bool().unwrap_or(false);
         let include_pattern = args["include"].as_str().map(str::to_string);
@@ -25,10 +25,10 @@ impl ToolExecutor for GrepExecutor {
         } else {
             Regex::new(pattern)
         }
-        .map_err(|e| super::ToolError::LlmRecoverable(format!("grep: invalid regex: {}", e)))?;
+        .map_err(|e| format!("grep: invalid regex: {}", e))?;
 
         let mut results = Vec::new();
-        search_directory(path, &re, include_pattern.as_deref(), &mut results).await.map_err(|e| super::ToolError::LlmRecoverable(e.to_string()))?;
+        search_directory(path, &re, include_pattern.as_deref(), &mut results).await?;
 
         if results.is_empty() {
             return Ok("No matches found.".to_string());

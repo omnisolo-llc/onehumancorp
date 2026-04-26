@@ -26,10 +26,10 @@ impl ToolExecutor for TodoWriteExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, super::ToolError> {
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let todos_arr = args["todos"]
             .as_array()
-            .ok_or_else(|| super::ToolError::LlmRecoverable("todowrite: todos must be an array".to_string()))?;
+            .ok_or("todowrite: todos must be an array")?;
 
         let items: Vec<TodoItem> = todos_arr
             .iter()
@@ -71,7 +71,7 @@ impl ToolExecutor for TodoReadExecutor {
     async fn execute(
         &self,
         _args: Value,
-    ) -> Result<String, super::ToolError> {
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let todos = self.todos.read().await;
         if todos.is_empty() {
             return Ok("Todo list is empty.".to_string());

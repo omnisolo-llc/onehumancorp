@@ -13,10 +13,10 @@ impl ToolExecutor for WebSearchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, super::ToolError> {
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let query = args["query"]
             .as_str()
-            .ok_or_else(|| super::ToolError::LlmRecoverable("websearch: query is required".to_string()))?;
+            .ok_or("websearch: query is required")?;
 
         // Use DuckDuckGo HTML endpoint (no API key required).
         let url = format!(
@@ -30,7 +30,7 @@ impl ToolExecutor for WebSearchExecutor {
             .header("User-Agent", "OHC-Agent/1.0")
             .send()
             .await
-            .map_err(|e| super::ToolError::LlmRecoverable(format!("websearch: {}", e)))?;
+            .map_err(|e| format!("websearch: {}", e))?;
 
         if !resp.status().is_success() {
             return Ok(format!(
