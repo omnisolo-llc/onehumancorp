@@ -19,8 +19,9 @@ cargo_build_script(
 
 rust_binary(
     name = "server-rust",
-    srcs = glob(["src/**/*.rs"]),
+    srcs = glob(["**/*.rs"]),
     edition = "2021",
+    data = glob(["migrations/*.sql"]),
     visibility = ["//visibility:public"],
     deps = [
         ":build_script",
@@ -45,8 +46,11 @@ rust_binary(
         "@crates//:bcrypt",
         "@crates//:reqwest",
         "@crates//:flate2",
+        "@crates//:serde_yaml",
         "@crates//:uuid",
         "@crates//:regex",
+        "@crates//:config",
+        "@crates//:redis",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -55,9 +59,10 @@ rust_binary(
 
 rust_test(
     name = "server_test",
-    srcs = glob(["src/**/*.rs"]),
-    crate_root = "src/main.rs",
+    srcs = glob(["**/*.rs"]),
+    crate_root = "main.rs",
     edition = "2021",
+    data = glob(["migrations/*.sql"]),
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -84,8 +89,11 @@ rust_test(
         "@crates//:bcrypt",
         "@crates//:reqwest",
         "@crates//:flate2",
+        "@crates//:serde_yaml",
         "@crates//:uuid",
         "@crates//:regex",
+        "@crates//:config",
+        "@crates//:redis",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
