@@ -69,6 +69,7 @@ nav:
       - Teammate Mesh Walkthrough: technical/walkthroughs/teammate_mesh.md
       - AutoDream CLI Guide: walkthroughs/autodream_cli_interactive_guide.md
       - Virtual Meeting Room Walkthrough: walkthroughs/virtual_meeting_room_walkthrough.md
+      - KAIROS Orchestration Walkthrough: walkthroughs/kairos_orchestration.md
       - walkthroughs/index.md
   - Operations:
       - operations/index.md
