@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/glass_card.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,15 +17,27 @@ class LoginScreen extends ConsumerStatefulWidget {
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
   bool _isSignUp = false;
   String? _error;
 
+  bool _showVerification = false;
+
+  void _resendVerification() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Verification email resent!')),
+    );
+  }
+
+
+
   @override
   void dispose() {
     _usernameCtrl.dispose();
+    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -207,6 +220,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+    if (_showVerification) {
+      return Scaffold(
+        body: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0D0D1A), Color(0xFF1A1A33)],
+            ),
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: GlassCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.mark_email_read, size: 64, color: Colors.greenAccent),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Check your email',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, fontFamily: 'Outfit'),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'We sent a verification link to ${_emailCtrl.text}.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontFamily: 'Inter', color: Colors.white70),
+                      ),
+                      const SizedBox(height: 32),
+                      FilledButton(
+                        onPressed: () {
+                          // Simulate successful verification and auto-login
+                          context.go('/business_setup');
+                        },
+                        child: const Text('I have verified my email'),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: _resendVerification,
+                        child: const Text('Resend verification email'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       floatingActionButton: Semantics(
         label: 'Remote Connection Settings',
@@ -281,11 +349,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
+                                                if (_isSignUp) ...[
+                          TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: const Icon(Icons.email_outlined),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty || !v.contains('@'))
+                                ? 'Enter a valid email'
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                        ],
                         TextFormField(
                           controller: _usernameCtrl,
                           keyboardType: TextInputType.text,
                           decoration: InputDecoration(
-                            labelText: 'Email or Username',
+                            labelText: _isSignUp ? 'Username' : 'Email or Username',
                             prefixIcon: const Icon(Icons.person_outline),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -434,10 +519,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () => context.go('/register'),
-                          child: const Text('Don\'t have an account? Sign Up'),
-                        ),
+
                         ],
                       ),
                     ),

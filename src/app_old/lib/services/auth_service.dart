@@ -46,6 +46,25 @@ class AuthService {
   AuthService({required this.baseUrl, http.Client? client})
     : _client = client ?? http.Client();
 
+  Future<AuthUser> register(String username, String email, String password) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'username': username,
+        'email': email,
+        'password': password
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = data['token'] as String;
+      final user = data['user'] as Map<String, dynamic>;
+      return AuthUser.fromJson(user, token);
+    }
+    throw Exception('Registration failed: ${response.statusCode}');
+  }
+
   Future<AuthUser> login(String usernameOrEmail, String password) async {
     final response = await _client.post(
       Uri.parse('$baseUrl/api/auth/login'),
