@@ -13,7 +13,7 @@ rust_library(
     ],
     crate_name = "ohc_builtin_agent_core",
     edition = "2024",
-    visibility = ["//src/server/agents/builtin:__subpackages__"],
+    visibility = ["//src/server/src/agents/builtin:__subpackages__"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -51,9 +51,9 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         ":core",
-        "//src/server/agents/builtin/src/gen:proto",
-        "//src/server/agents/builtin/src/llm",
-        "//src/server/agents/builtin/src/tools",
+        "//src/server/src/agents/builtin/gen:proto",
+        "//src/server/src/agents/builtin/llm",
+        "//src/server/src/agents/builtin/tools",
     ] + [
         "@crates//:base64",
         "@crates//:chrono",

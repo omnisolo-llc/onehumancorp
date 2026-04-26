@@ -6,7 +6,7 @@ rust_library(
     crate_name = "ohc_builtin_agent_tools",
     edition = "2024",
     crate_root = "mod.rs",
-    visibility = ["//src/server/agents/builtin:__subpackages__"],
+    visibility = ["//src/server/src/agents/builtin:__subpackages__"],
     proc_macro_deps = [
         "@crates//:async-trait",
         "@crates//:async-recursion",
