@@ -13,7 +13,7 @@ impl ToolExecutor for WebSearchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, super::ToolError> {
         let query = args["query"]
             .as_str()
             .ok_or("websearch: query is required")?;

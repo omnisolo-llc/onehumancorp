@@ -11,7 +11,7 @@ impl ToolExecutor for WriteExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, super::ToolError> {
         let path = args["path"].as_str().ok_or("write: path is required")?;
         let content = args["content"]
             .as_str()

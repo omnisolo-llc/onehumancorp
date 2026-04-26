@@ -93,7 +93,7 @@ impl Agent {
         cfg: &AgentRunConfig,
         initial_message: &str,
         on_event: &mut F,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    ) -> Result<String, ohc_builtin_agent_tools::ToolError>
     where
         F: FnMut(AgentEvent) + Send,
     {
@@ -205,8 +205,7 @@ impl Agent {
                         });
                         (r, String::new())
                     }
-                    Err(e) => {
-                        let err = e.to_string();
+                    Err(ohc_builtin_agent_tools::ToolError::LlmRecoverable(err)) => {
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -214,6 +213,19 @@ impl Agent {
                             iteration,
                         });
                         (String::new(), err)
+                    }
+                    Err(ohc_builtin_agent_tools::ToolError::UserFixable(err)) => {
+                        let msg = format!("User intervention required: {}", err);
+                        on_event(AgentEvent::TaskError { error: msg.clone() });
+                        return Err(ohc_builtin_agent_tools::ToolError::UserFixable(msg));
+                    }
+                    Err(ohc_builtin_agent_tools::ToolError::Unexpected(err)) => {
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(ohc_builtin_agent_tools::ToolError::Unexpected(err));
+                    }
+                    Err(ohc_builtin_agent_tools::ToolError::Transient(err)) => {
+                        on_event(AgentEvent::TaskError { error: err.clone() });
+                        return Err(ohc_builtin_agent_tools::ToolError::Transient(err));
                     }
                 };
                 tool_results.push(ToolResult {
@@ -262,14 +274,32 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ohc_builtin_agent_tools::ToolError> {
         let tool = self
             .tools
             .iter()
             .find(|t| t.name == tc.name)
-            .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
+            .ok_or_else(|| ohc_builtin_agent_tools::ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
-        tool.execute.execute(tc.arguments.clone()).await
+        let mut attempts = 0;
+        let max_retries = 2;
+
+        loop {
+            match tool.execute.execute(tc.arguments.clone()).await {
+                Ok(result) => return Ok(result),
+                Err(ohc_builtin_agent_tools::ToolError::Transient(msg)) => {
+                    if attempts >= max_retries {
+                        return Err(ohc_builtin_agent_tools::ToolError::Unexpected(format!(
+                            "Transient error failed after {} retries: {}",
+                            max_retries, msg
+                        )));
+                    }
+                    attempts += 1;
+                    tokio::time::sleep(std::time::Duration::from_millis(2u64.pow(attempts) * 100)).await;
+                }
+                Err(e) => return Err(e),
+            }
+        }
     }
 }
 
@@ -304,7 +334,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
-        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        async fn execute(&self, _args: Value) -> Result<String, ohc_builtin_agent_tools::ToolError> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
     }
