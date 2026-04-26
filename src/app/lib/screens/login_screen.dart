@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'dart:ui';
 import 'package:ohc_app/services/auth_service.dart';
 import 'package:ohc_app/services/settings_service.dart';
@@ -17,6 +19,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
+  bool _isSignUp = false;
   String? _error;
 
   @override
@@ -41,9 +44,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+
+    if (_error == null && _isSignUp && mounted) {
+      context.go('/business_setup');
+    }
   }
 
+  Future<void> _oauthLogin(String provider) async {
+    // Simulated OAuth flow with Graceful Degradation / Loading states for Thin Client
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      // In a real app this would open a webview or use an OAuth library
+      // For Thin Client mode, simulate variable-latency remote calls
+      await Future.delayed(const Duration(milliseconds: 1500));
+      await ref
+          .read(authStateProvider.notifier)
+          .login('oauth@onehumancorp.com', 'dummy_password'); // Simulated login for demo
+    } catch (e) {
+      // Handle missing context or network degradation gracefully
+      setState(() => _error = "OAuth Login Unavailable: Remote endpoint unreachable ($e)");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
 
+    if (_error == null && _isSignUp && mounted) {
+      context.go('/business_setup');
+    }
+  }
 
   Future<void> _showSettings(BuildContext context) async {
     final settingsAsync = ref.read(clientSettingsProvider);
@@ -329,15 +359,84 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                         color: Colors.white,
                                       ),
                                     )
-                                    : const Text(
-                                        'Sign In',
-                                        style: TextStyle(
+                                    : Text(
+                                        _isSignUp ? 'Sign Up' : 'Sign In',
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                           fontFamily: 'Inter',
                                         ),
                                       ),
                           ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isSignUp = !_isSignUp;
+                            });
+                          },
+                          child: Text(
+                            _isSignUp ? 'Already have an account? Sign In' : 'Don\'t have an account? Sign Up',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            const Expanded(child: Divider()),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'OR',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ),
+                            const Expanded(child: Divider()),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Semantics(
+                          button: true,
+                          label: 'Sign in with SSO',
+                          child: OutlinedButton.icon(
+                            onPressed: _loading ? null : () => _oauthLogin('SSO'),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            icon: _loading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.shield_outlined),
+                            label: const Text(
+                              'Continue with SSO',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Inter',
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () => context.go('/register'),
+                          child: const Text('Don\'t have an account? Sign Up'),
                         ),
                         ],
                       ),

@@ -311,9 +311,9 @@ func TestTaskRepository_MockErrors(t *testing.T) {
 		t.Errorf("expected scan error, got nil")
 	}
 
-    // Test update task status error
+    // Test RowsAffected() error
 	err = repo.UpdateTaskStatus(ctx, "id", "status")
-	if err == nil {
-		t.Errorf("expected error, got nil")
+	if err == nil || err.Error() != "mock rows affected error" {
+		t.Errorf("expected mock rows affected error, got %v", err)
 	}
 }

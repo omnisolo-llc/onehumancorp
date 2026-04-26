@@ -80,10 +80,16 @@ go_test(
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_dashboard_test",
-    srcs = _SHARED_SRCS + ["dashboard_test.go"],
+    srcs = _SHARED_SRCS + [
+        "dashboard_test.go",
+        "cuj_growth_share_test.go",
+    ],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
+    deps = _COMMON_DEPS + [
+        "@com_github_stretchr_testify//assert",
+        "@com_github_stretchr_testify//require",
+    ],
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
@@ -196,12 +202,15 @@ go_test(
     srcs = _SHARED_SRCS + [
         "cuj_extended_test.go",
         "cuj_integration_test.go",
-        "cuj_experiments_test.go",
+        "cuj_autodream_extra_test.go",
     ],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
     deps = _COMMON_DEPS + [
-        "@com_github_stretchr_testify//require",
+        "//src/server/autodream",
+        "//src/server/db",
+        "@com_github_stretchr_testify//assert",
+        "@org_modernc_sqlite//:sqlite",
     ],
     env = _COMMON_ENV,
     size = "large",
@@ -215,34 +224,30 @@ go_test(
     srcs = _SHARED_SRCS + ["cuj_accessibility_extra_test.go"],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
+    deps = _COMMON_DEPS + [
+        "//src/server/autodream",
+        "//src/server/db",
+        "@com_github_stretchr_testify//assert",
+        "@org_modernc_sqlite//:sqlite",
+    ],
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
     tags = _COMMON_TAGS,
-)
-
-
-# ── Business Setup ────────────────────────────────────────────────────────────
-go_test(
-    name = "e2e_business_setup_test",
-    size = "large",
-    timeout = "eternal",
-    srcs = _SHARED_SRCS + ["e2e_business_setup_test.go"],
-    data = _COMMON_DATA,
-    env = _COMMON_ENV,
-    importpath = "github.com/onehumancorp/mono/src/tests/e2e",
-    tags = _COMMON_TAGS,
-    deps = _COMMON_DEPS,
 )
 
 # ── Misc ──────────────────────────────────────────────────────────────────────
 go_test(
     name = "e2e_misc_test",
-    srcs = _SHARED_SRCS + ["misc_test.go"],
+    srcs = _SHARED_SRCS + [
+        "misc_test.go",
+        "help_center_test.go",
+    ],
     importpath = "github.com/onehumancorp/mono/src/tests/e2e",
     data = _COMMON_DATA,
-    deps = _COMMON_DEPS,
+    deps = _COMMON_DEPS + [
+        "@com_github_stretchr_testify//require",
+    ],
     env = _COMMON_ENV,
     size = "large",
     timeout = "eternal",
@@ -260,7 +265,6 @@ test_suite(
         ":e2e_dashboard_test",
         ":e2e_budget_test",
         ":e2e_business_test",
-        ":e2e_business_setup_test",
         ":e2e_settings_test",
         ":e2e_hybrid_sync_test",
         ":e2e_wizard_test",

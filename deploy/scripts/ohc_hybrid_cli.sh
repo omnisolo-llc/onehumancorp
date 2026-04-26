@@ -49,4 +49,3 @@ while true; do
     esac
 done
 # Trivial comment to generate diff
-# Trivial comment to generate diff
