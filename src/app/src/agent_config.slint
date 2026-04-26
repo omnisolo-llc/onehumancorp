@@ -1,105 +1,88 @@
-import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, Switch, Slider } from "std-widgets.slint";
 
-export component AgentConfig inherits Window {
-    width: 600px;
-    height: 500px;
-    title: "Configure AI Agent";
+export component AgentCard inherits Rectangle {
+    in property <string> role_name;
+    in property <string> description;
+    in property <bool> active;
+    callback toggle;
 
-    property <int> step: 0;
-    property <string> selected_agent: "";
-    property <bool> can_reply: false;
-    property <bool> can_social: false;
-    property <string> frequency: "Daily";
+    background: white;
+    border-color: active ? #a855f7 : #e2e8f0;
+    border-width: 2px;
+    border-radius: 16px;
+    height: 140px;
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 8px;
+        HorizontalBox {
+            Text { text: root.role_name; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Switch { checked: root.active; changed => { root.toggle(); } }
+        }
+        Text { text: root.description; color: #64748b; font-size: 14px; wrap: word-wrap; }
+    }
+}
+
+export component AgentGallery inherits Window {
+    width: 800px;
+    height: 600px;
+    title: "Your AI Team";
+
+    property <bool> show_config: false;
+    property <string> selected_role: "";
 
     background: #f8fafc;
 
     VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+        spacing: 24px;
+        padding: 32px;
 
-        Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Manage Your AI Team"; font-size: 28px; font-weight: 800; color: #1e293b; }
+        Text { text: "Turn on the departments you need. They work in the background 24/7."; color: #64748b; }
 
-        // Step 0: Choose Agent
-        if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Choose an agent to add to your team"; color: #1e293b; }
-            
+        if (!show_config) : VerticalBox {
+            spacing: 16px;
             HorizontalBox {
-                spacing: 10px;
-                Button { text: "Customer Support"; clicked => { selected_agent = "Customer Support"; } }
-                Button { text: "Social Media Manager"; clicked => { selected_agent = "Social Media Manager"; } }
-            }
-            Text { text: "Selected: " + selected_agent; color: #a855f7; }
-        }
-
-        // Step 1: Capabilities
-        if (step == 1) : VerticalBox {
-            spacing: 10px;
-            Text { text: "What should this agent do?"; color: #1e293b; }
-            
-            HorizontalBox {
-                Text { text: "Reply to customer messages"; color: #1e293b; }
-                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+                spacing: 16px;
+                AgentCard { role_name: "Customer Success"; description: "Replies to messages and handles support while you sleep."; active: true; toggle => { selected_role = "Customer Success"; show_config = true; } }
+                AgentCard { role_name: "Marketing"; description: "Creates social posts and optimizes your SEO."; active: false; toggle => { selected_role = "Marketing"; show_config = true; } }
             }
             HorizontalBox {
-                Text { text: "Post to Instagram & Facebook"; color: #1e293b; }
-                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+                spacing: 16px;
+                AgentCard { role_name: "Operations"; description: "Manages orders, inventory, and bookings."; active: true; toggle => { selected_role = "Operations"; show_config = true; } }
+                AgentCard { role_name: "Finance"; description: "Tracks sales, costs, and sends plain-language reports."; active: false; toggle => { selected_role = "Finance"; show_config = true; } }
             }
         }
 
-        // Step 2: Frequency
-        if (step == 2) : VerticalBox {
-            spacing: 10px;
-            Text { text: "How often should this agent work?"; color: #1e293b; }
-            Text { text: frequency; font-size: 24px; color: #a855f7; horizontal-alignment: center; }
-            
+        if (show_config) : VerticalBox {
+            spacing: 24px;
             HorizontalBox {
-                alignment: center;
-                Button { text: "Weekly"; clicked => { frequency = "Weekly"; } }
-                Button { text: "Daily"; clicked => { frequency = "Daily"; } }
-                Button { text: "Hourly"; clicked => { frequency = "Hourly"; } }
+                Button { text: "← Back"; clicked => { show_config = false; } }
+                Text { text: "Configure " + selected_role; font-size: 20px; font-weight: 700; vertical-alignment: center; }
             }
-        }
 
-        // Step 3: Review
-        if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Review & Activate"; color: #1e293b; }
             Rectangle {
                 background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
+                border-radius: 16px;
+                padding: 24px;
                 VerticalBox {
-                    padding: 16px;
-                    Text { text: "Agent: " + selected_agent; color: #1e293b; }
-                    Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #1e293b; }
-                    Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #1e293b; }
-                    Text { text: "Schedule: " + frequency; color: #1e293b; }
-                }
-            }
-        }
+                    spacing: 20px;
+                    Text { text: "What should this agent do?"; font-weight: 600; }
+                    HorizontalBox { Text { text: "Reply to customer messages"; } Rectangle {} Switch { checked: true; } }
+                    HorizontalBox { Text { text: "Draft order confirmations"; } Rectangle {} Switch { checked: true; } }
+                    HorizontalBox { Text { text: "Ask for reviews"; } Rectangle {} Switch { checked: false; } }
 
-        Rectangle {} // Spacer
-
-        // Navigation
-        HorizontalBox {
-            if (step > 0) : Button {
-                text: "Back";
-                clicked => { step = step - 1; }
-            }
-            Rectangle {} // Spacer
-            Button {
-                text: step == 3 ? "Activate" : "Next";
-                clicked => {
-                    if (step < 3) {
-                        step = step + 1;
-                    } else {
-                        // Handle activation
+                    Text { text: "Work Frequency"; font-weight: 600; }
+                    HorizontalBox {
+                        Text { text: "Quiet"; color: #64748b; }
+                        Slider { minimum: 0; maximum: 100; value: 50; }
+                        Text { text: "Always On"; color: #a855f7; font-weight: 600; }
                     }
                 }
             }
+
+            Button { text: "Save Changes"; clicked => { show_config = false; } }
         }
     }
 }

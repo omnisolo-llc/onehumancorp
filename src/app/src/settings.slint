@@ -1,115 +1,61 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, Switch } from "std-widgets.slint";
 
 export component Settings inherits Window {
-    width: 500px;
-    height: 700px;
+    width: 600px;
+    height: 500px;
     title: "Settings";
 
-    property <bool> standalone_mode: true;
-    property <bool> expert_mode: false;
-    property <string> backend_url: "http://localhost:8080";
-    property <string> user_name: "John Doe";
-    property <string> user_email: "john.doe@example.com";
+    property <bool> advanced_mode: false;
 
     background: #f8fafc;
 
     VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+        spacing: 24px;
+        padding: 32px;
 
-        // User Info
-        Rectangle {
-            background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-            
-            HorizontalBox {
-                spacing: 16px;
-                padding: 16px;
-                Text { text: "👤"; font-size: 32px; }
-                VerticalBox {
-                    Text { text: user_name; font-weight: 700; color: #1e293b; }
-                    Text { text: user_email; color: #64748b; }
-                }
-            }
-        }
-
-        // Communication Section
-        Text { text: "COMMUNICATION"; color: #7c3aed; font-weight: 700; }
+        Text { text: "Settings"; font-size: 28px; font-weight: 800; color: #1e293b; }
 
         Rectangle {
             background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-
+            border-radius: 16px;
+            padding: 24px;
             VerticalBox {
-                spacing: 12px;
-                padding: 16px;
+                spacing: 20px;
                 
                 HorizontalBox {
-                    Text { text: standalone_mode ? "💻 Desktop Standalone Mode" : "☁️ Remote Client Mode"; font-weight: 700; color: #1e293b; }
+                    VerticalBox {
+                        spacing: 4px;
+                        Text { text: "Advanced Mode"; font-weight: 700; color: #1e293b; }
+                        Text { text: "Show technical fields and raw configurations."; color: #64748b; font-size: 14px; }
+                    }
+                    Rectangle {}
+                    Switch { checked: advanced_mode; changed => { advanced_mode = self.checked; } }
                 }
-                
-                Text {
-                    text: standalone_mode ? 
-                        "This device manages a local backend and lightweight local services." :
-                        "This app acts as a UI for a remote OHC server.";
-                    color: #64748b;
-                    wrap: word-wrap;
+
+                Rectangle { height: 1px; background: #e2e8f0; }
+
+                HorizontalBox {
+                    Text { text: "Language"; vertical-alignment: center; }
+                    Rectangle {}
+                    Text { text: "English (US)"; color: #64748b; vertical-alignment: center; }
                 }
             }
         }
 
-        HorizontalBox {
-            Text { text: "Backend URL:"; color: #1e293b; horizontal-alignment: center; }
-            LineEdit { text: backend_url; }
-        }
-
-        HorizontalBox {
-            Text { text: "Standalone Mode"; color: #1e293b; }
-            CheckBox {
-                checked: standalone_mode;
-                toggled => { standalone_mode = !standalone_mode; }
-            }
-        }
-
-        // Local Backend Section (Conditional)
-        if (standalone_mode) : VerticalBox {
-            spacing: 10px;
-            Text { text: "LOCAL BACKEND"; color: #7c3aed; font-weight: 700; }
-            
+        if (advanced_mode) : VerticalBox {
+            spacing: 12px;
+            Text { text: "Expert Settings"; font-weight: 700; color: #a855f7; }
             Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
+                background: #fef2f2;
                 border-radius: 8px;
-                
-                HorizontalBox {
-                    padding: 16px;
-                    Text { text: "Service Status: Running"; color: #1e293b; horizontal-alignment: center; }
-                    Button { text: "Stop"; }
-                }
+                padding: 12px;
+                Text { text: "Careful: Changes here can affect agent stability."; color: #b91c1c; font-size: 12px; }
             }
-            Button { text: "Run Doctor Diagnostics"; }
-        }
-
-        // Other Settings
-        HorizontalBox {
-            Text { text: "Expert Mode"; color: #1e293b; }
-            CheckBox {
-                checked: expert_mode;
-                toggled => { expert_mode = !expert_mode; }
+            HorizontalBox {
+                Text { text: "Developer Mode"; }
+                Rectangle {}
+                Switch { checked: false; }
             }
-        }
-
-        Button {
-            text: "Trigger Hybrid Sync";
-        }
-
-        Button {
-            text: "Sign Out";
         }
     }
 }

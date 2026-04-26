@@ -18,19 +18,20 @@ export component FixAgent inherits Window {
         Text { text: "Help me fix this"; font-size: 24px; font-weight: 700; color: #1e293b; }
 
         if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "We detected a connection timeout with the primary database. The agent was unable to read the required state."; color: #1e293b; wrap: word-wrap; }
+            spacing: 16px;
+            Text { text: "We detected a connection timeout with the primary database. The agent was unable to read the required state."; color: #1e293b; wrap: word-wrap; horizontal-alignment: center; }
             Button { text: "View Suggested Fix"; clicked => { step = 1; } }
         }
 
         if (step == 1) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Suggested fix: Restart the agent process and clear local cache to reconnect."; color: #1e293b; wrap: word-wrap; }
+            spacing: 16px;
+            Text { text: "Suggested fix: Restart the agent process and clear local cache to reconnect."; color: #1e293b; wrap: word-wrap; horizontal-alignment: center; }
             Button {
-                text: "Apply Fix";
+                text: is_applying ? "Applying..." : "Apply Fix";
+                enabled: !is_applying;
                 clicked => {
                     is_applying = true;
-                    // Simulate delay or just transition
+                    // In a real app, this would trigger an async backend call
                     step = 2;
                     is_applying = false;
                 }
@@ -38,7 +39,7 @@ export component FixAgent inherits Window {
         }
 
         if (step == 2) : VerticalBox {
-            spacing: 10px;
+            spacing: 16px;
             Text { text: "✓"; font-size: 48px; color: #10b981; horizontal-alignment: center; }
             Text { text: "Fix applied successfully! The agent is healthy again."; color: #1e293b; horizontal-alignment: center; }
             Button { text: "Return to Agents"; }
@@ -46,49 +47,35 @@ export component FixAgent inherits Window {
     }
 }
 
-export component Upgrade inherits Window {
+export component GrowBusiness inherits Window {
     width: 500px;
-    height: 400px;
-    title: "Platform Upgrade";
-
-    property <int> progress: 0;
-    property <bool> is_upgrading: false;
-    property <bool> done: false;
+    height: 450px;
+    title: "Grow My Business";
 
     background: #f8fafc;
 
     VerticalBox {
-        spacing: 20px;
+        spacing: 24px;
         padding: 32px;
         alignment: center;
 
-        Text { text: "Upgrade to v2.4 ✨"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Grow your business 🚀"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Based on your activity, here's what to do next:"; color: #64748b; horizontal-alignment: center; }
 
-        if (!is_upgrading && !done) : VerticalBox {
-            spacing: 10px;
-            Text { text: "What's new:\n• Improved agent reasoning\n• 2x faster orchestration\n• New observability metrics"; color: #1e293b; }
-            Button { text: "Upgrade in 1 click"; clicked => { is_upgrading = true; /* simulate */ done = true; is_upgrading = false; } }
-        }
-
-        if (is_upgrading) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Upgrading..."; color: #1e293b; horizontal-alignment: center; }
-            // Progress bar placeholder
-            Rectangle { 
-                height: 8px; 
-                background: #e2e8f0; 
-                HorizontalBox {
-                    alignment: start;
-                    Rectangle { width: 100px; background: #a855f7; } 
-                }
+        VerticalBox {
+            spacing: 12px;
+            Rectangle {
+                background: white; border-radius: 12px; border-color: #e2e8f0; border-width: 1px;
+                HorizontalBox { padding: 16px; Text { text: "Add 5 more products"; font-weight: 600; } Rectangle {} Button { text: "Do it"; } }
             }
-        }
-
-        if (done) : VerticalBox {
-            spacing: 10px;
-            Text { text: "🎉"; font-size: 48px; horizontal-alignment: center; }
-            Text { text: "Upgrade complete!"; font-size: 18px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-            Button { text: "Go to Dashboard"; }
+            Rectangle {
+                background: white; border-radius: 12px; border-color: #e2e8f0; border-width: 1px;
+                HorizontalBox { padding: 16px; Text { text: "Connect Instagram"; font-weight: 600; } Rectangle {} Button { text: "Connect"; } }
+            }
+            Rectangle {
+                background: white; border-radius: 12px; border-color: #e2e8f0; border-width: 1px;
+                HorizontalBox { padding: 16px; Text { text: "Enable AI Auto-reply"; font-weight: 600; } Rectangle {} Button { text: "Enable"; } }
+            }
         }
     }
 }
@@ -101,7 +88,7 @@ export component Billing inherits Window {
     background: #f8fafc;
 
     VerticalBox {
-        spacing: 20px;
+        spacing: 24px;
         padding: 32px;
         alignment: center;
 
@@ -109,24 +96,24 @@ export component Billing inherits Window {
 
         Rectangle {
             background: #e0f2fe;
-            border-radius: 12px;
+            border-radius: 16px;
             border-color: #bae6fd;
             border-width: 1px;
             
             VerticalBox {
-                padding: 16px;
+                padding: 24px;
                 spacing: 8px;
                 alignment: center;
                 Text { text: "Current Usage"; color: #0369a1; }
-                Text { text: "$42.50"; font-size: 32px; font-weight: 700; color: #0c4a6e; }
+                Text { text: "$42.50"; font-size: 32px; font-weight: 800; color: #0c4a6e; }
                 Text { text: "Projected monthly cost: $85.00"; color: #0369a1; font-size: 12px; }
             }
         }
 
-        Text { text: "Your current plan includes 1000 AI tasks per day. You have used 450 today."; color: #1e293b; wrap: word-wrap; }
+        Text { text: "Your current plan includes 1,000 AI tasks per day. You have used 450 today."; color: #1e293b; wrap: word-wrap; horizontal-alignment: center; }
 
         HorizontalBox {
-            spacing: 10px;
+            spacing: 12px;
             alignment: center;
             Button { text: "Add Credits"; }
             Button { text: "Switch Plan"; }

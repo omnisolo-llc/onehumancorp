@@ -1,5 +1,31 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
 
+export component TemplateCard inherits Rectangle {
+    in property <string> name;
+    in property <bool> selected;
+    callback clicked;
+
+    background: selected ? #f3e8ff : white;
+    border-color: selected ? #a855f7 : #e2e8f0;
+    border-width: 2px;
+    border-radius: 12px;
+    height: 120px;
+    width: 140px;
+
+    TouchArea { clicked => { root.clicked(); } }
+
+    VerticalBox {
+        padding: 8px;
+        Rectangle {
+            background: #cbd5e1;
+            border-radius: 8px;
+            height: 70px;
+            Text { text: "Preview"; color: #64748b; horizontal-alignment: center; vertical-alignment: center; }
+        }
+        Text { text: root.name; horizontal-alignment: center; font-weight: 600; color: #1e293b; }
+    }
+}
+
 export component WebsiteBuilder inherits Window {
     width: 600px;
     height: 600px;
@@ -14,100 +40,123 @@ export component WebsiteBuilder inherits Window {
     background: #f8fafc;
 
     VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+        spacing: 24px;
+        padding: 32px;
 
-        Text { text: "Website Builder"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        // Progress
+        HorizontalBox {
+            spacing: 4px;
+            height: 4px;
+            for i in 5 : Rectangle {
+                background: step >= i ? #10b981 : #e2e8f0;
+                border-radius: 2px;
+            }
+        }
 
         // Step 0: Template
         if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Choose a template"; color: #1e293b; }
-            
+            spacing: 20px;
+            Text { text: "Pick a starter design"; font-size: 20px; font-weight: 700; color: #1e293b; }
             HorizontalBox {
-                spacing: 10px;
-                Button { text: "E-commerce"; clicked => { selected_template = "E-commerce"; } }
-                Button { text: "Portfolio"; clicked => { selected_template = "Portfolio"; } }
+                spacing: 12px;
+                alignment: center;
+                TemplateCard { name: "Modern Shop"; selected: selected_template == "Modern Shop"; clicked => { selected_template = "Modern Shop"; } }
+                TemplateCard { name: "Elegant Port"; selected: selected_template == "Elegant Port"; clicked => { selected_template = "Elegant Port"; } }
+                TemplateCard { name: "Bold Menu"; selected: selected_template == "Bold Menu"; clicked => { selected_template = "Bold Menu"; } }
             }
-            Text { text: "Selected: " + selected_template; color: #a855f7; }
         }
 
-        // Step 1: Colors
+        // Step 1: Colors & Logo
         if (step == 1) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Brand Colors & Logo"; color: #1e293b; }
-            Text { text: "Selected Color: " + primary_color; color: #64748b; }
+            spacing: 20px;
+            Text { text: "Your Brand Colors"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "AI suggests these based on your business type:"; color: #64748b; font-size: 14px; }
             HorizontalBox {
-                spacing: 10px;
-                Button { text: "Red"; clicked => { primary_color = "#FF3B30"; } }
-                Button { text: "Green"; clicked => { primary_color = "#34C759"; } }
-                Button { text: "Blue"; clicked => { primary_color = "#007AFF"; } }
+                spacing: 16px;
+                alignment: center;
+                Rectangle { width: 40px; height: 40px; border-radius: 20px; background: #FF3B30; TouchArea { clicked => { primary_color = "#FF3B30"; } } border-width: primary_color == "#FF3B30" ? 3px : 0px; border-color: #a855f7; }
+                Rectangle { width: 40px; height: 40px; border-radius: 20px; background: #34C759; TouchArea { clicked => { primary_color = "#34C759"; } } border-width: primary_color == "#34C759" ? 3px : 0px; border-color: #a855f7; }
+                Rectangle { width: 40px; height: 40px; border-radius: 20px; background: #007AFF; TouchArea { clicked => { primary_color = "#007AFF"; } } border-width: primary_color == "#007AFF" ? 3px : 0px; border-color: #a855f7; }
+                Rectangle { width: 40px; height: 40px; border-radius: 20px; background: #5856D6; TouchArea { clicked => { primary_color = "#5856D6"; } } border-width: primary_color == "#5856D6" ? 3px : 0px; border-color: #a855f7; }
             }
+            Button { text: "Upload Logo"; }
         }
 
-        // Step 2: Product
+        // Step 2: First Product
         if (step == 2) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Add your first product or service"; color: #1e293b; }
-            LineEdit {
-                placeholder-text: "Product Name";
-                text: product_name;
-            }
-            LineEdit {
-                placeholder-text: "Price";
-            }
-            LineEdit {
-                placeholder-text: "Description";
-            }
+            spacing: 20px;
+            Text { text: "Add your first product"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Product Name"; text: product_name; }
+            LineEdit { placeholder-text: "Price ($)"; }
+            Text { text: "AI is generating a description..."; color: #a855f7; font-size: 12px; italic: true; }
+            LineEdit { placeholder-text: "Description"; }
+            Button { text: "Add Photo"; }
         }
 
         // Step 3: Domain
         if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Connect a domain"; color: #1e293b; }
-            Button { text: "Use free subdomain"; clicked => { domain_choice = "subdomain"; } }
-            Button { text: "Use my own domain"; clicked => { domain_choice = "custom"; } }
-            Text { text: "Choice: " + domain_choice; color: #a855f7; }
-        }
-
-        // Step 4: Review
-        if (step == 4) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Go Live: Review your site"; color: #1e293b; }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Template: " + selected_template; color: #1e293b; }
-                    Text { text: "Color: " + primary_color; color: #1e293b; }
-                    Text { text: "Product: " + product_name; color: #1e293b; }
-                    Text { text: "Domain: " + domain_choice; color: #1e293b; }
+            spacing: 20px;
+            Text { text: "Choose your web address"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            VerticalBox {
+                spacing: 12px;
+                Rectangle {
+                    background: domain_choice == "subdomain" ? #f0fdf4 : white;
+                    border-color: domain_choice == "subdomain" ? #10b981 : #e2e8f0;
+                    border-width: 2px;
+                    border-radius: 12px;
+                    height: 60px;
+                    TouchArea { clicked => { domain_choice = "subdomain"; } }
+                    HorizontalBox {
+                        padding: 16px;
+                        Text { text: "mybusiness.ohc.app"; vertical-alignment: center; font-weight: 600; color: #1e293b; }
+                        Rectangle {}
+                        Text { text: "FREE"; color: #10b981; vertical-alignment: center; font-weight: 700; }
+                    }
+                }
+                Rectangle {
+                    background: domain_choice == "custom" ? #f0fdf4 : white;
+                    border-color: domain_choice == "custom" ? #10b981 : #e2e8f0;
+                    border-width: 2px;
+                    border-radius: 12px;
+                    height: 60px;
+                    TouchArea { clicked => { domain_choice = "custom"; } }
+                    HorizontalBox {
+                        padding: 16px;
+                        Text { text: "Use my own domain"; vertical-alignment: center; font-weight: 600; color: #1e293b; }
+                        Rectangle {}
+                    }
                 }
             }
+        }
+
+        // Step 4: Preview & Publish
+        if (step == 4) : VerticalBox {
+            spacing: 20px;
+            Text { text: "Almost there!"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {
+                background: white;
+                border-radius: 16px;
+                height: 200px;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                Text { text: "Site Preview: " + selected_template + " with " + primary_color; horizontal-alignment: center; vertical-alignment: center; color: #64748b; }
+            }
+            Button { text: "Publish Website ✨"; }
         }
 
         Rectangle {} // Spacer
 
         // Navigation
         HorizontalBox {
+            spacing: 20px;
             if (step > 0) : Button {
                 text: "Back";
                 clicked => { step = step - 1; }
             }
             Rectangle {} // Spacer
-            Button {
-                text: step == 4 ? "Publish" : "Next";
-                clicked => {
-                    if (step < 4) {
-                        step = step + 1;
-                    } else {
-                        // Handle publish
-                    }
-                }
+            if (step < 4) : Button {
+                text: "Next";
+                clicked => { step = step + 1; }
             }
         }
     }

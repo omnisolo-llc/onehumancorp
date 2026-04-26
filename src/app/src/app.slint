@@ -1,20 +1,206 @@
-import { Button, VerticalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, Switch, Slider } from "std-widgets.slint";
 
-export component AppWindow inherits Window {
-    width: 400px;
-    height: 300px;
-    title: "New Rust + Slint App";
+export component GlassPanel inherits Rectangle {
+    background: white.with-alpha(0.2);
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: white.with-alpha(0.3);
+}
+
+export component BusinessTypeTile inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    callback clicked;
+
+    background: selected ? #f3e8ff.with-alpha(0.4) : white.with-alpha(0.1);
+    border-color: selected ? #a855f7 : white.with-alpha(0.2);
+    border-width: 2px;
+    border-radius: 12px;
+    height: 80px;
+    width: 100px;
+
+    TouchArea { clicked => { root.clicked(); } }
 
     VerticalBox {
         alignment: center;
-        spacing: 20px;
+        spacing: 4px;
+        Rectangle {
+            background: root.selected ? #a855f7 : #94a3b8;
+            width: 24px; height: 24px; border-radius: 12px;
+        }
         Text {
-            text: "Hello from Slint!";
-            horizontal-alignment: center;
-            font-size: 20px;
+            text: root.text; horizontal-alignment: center; font-size: 11px; font-weight: 600;
+            color: root.selected ? #f8fafc : #cbd5e1;
         }
-        Button {
-            text: "Click me";
+    }
+}
+
+export component AppWindow inherits Window {
+    width: 375px;
+    height: 667px;
+    title: "OHC";
+
+    property <string> current_view: "setup"; // "setup", "builder", "agents", "tuning", "settings", "dashboard"
+    property <int> setup_step: 0;
+    property <int> builder_step: 0;
+
+    background: #0f172a; // Dark background to make glass pop
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        // View: Setup
+        if (current_view == "setup") : VerticalBox {
+            spacing: 20px;
+            if (setup_step == 0) : VerticalBox {
+                spacing: 24px;
+                alignment: center;
+                Rectangle {
+                    height: 160px;
+                    background: #a855f7; // Simplified from gradient for syntax compatibility
+                    border-radius: 24px;
+                    Text { text: "✨"; font-size: 64px; horizontal-alignment: center; vertical-alignment: center; }
+                }
+                Text { text: "Your business, live in minutes."; font-size: 24px; font-weight: 800; color: white; horizontal-alignment: center; wrap: word-wrap; }
+                Button { text: "Get Started →"; clicked => { setup_step = 1; } }
+            }
+
+            if (setup_step == 1) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Business Type"; font-size: 20px; font-weight: 700; color: white; }
+                HorizontalBox {
+                    spacing: 8px;
+                    BusinessTypeTile { text: "Store"; clicked => { setup_step = 2; } }
+                    BusinessTypeTile { text: "Service"; clicked => { setup_step = 2; } }
+                    BusinessTypeTile { text: "Food"; clicked => { setup_step = 2; } }
+                }
+            }
+
+            if (setup_step == 2) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Name your business"; font-size: 20px; font-weight: 700; color: white; }
+                LineEdit { placeholder-text: "Business Name"; }
+                Button { text: "Next"; clicked => { setup_step = 3; } }
+            }
+
+            if (setup_step == 3) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Ready to Launch"; font-size: 20px; font-weight: 700; color: white; }
+                GlassPanel {
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "We'll set up your website and AI agents automatically."; color: #cbd5e1; wrap: word-wrap; }
+                    }
+                }
+                Button { text: "Launch! 🚀"; clicked => { current_view = "dashboard"; } }
+            }
         }
+
+        // View: Dashboard
+        if (current_view == "dashboard") : VerticalBox {
+            spacing: 16px;
+            Text { text: "Dashboard"; font-size: 24px; font-weight: 800; color: white; }
+
+            GlassPanel {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: "Welcome back!"; color: white; font-weight: 700; }
+                    Text { text: "Your business is live at mybiz.ohc.app"; color: #cbd5e1; font-size: 12px; }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 8px;
+                Button { text: "Website"; clicked => { current_view = "builder"; } }
+                Button { text: "Agents"; clicked => { current_view = "agents"; } }
+            }
+            Button { text: "Settings"; clicked => { current_view = "settings"; } }
+        }
+
+        // View: Builder
+        if (current_view == "builder") : VerticalBox {
+            spacing: 16px;
+            HorizontalBox {
+                Button { text: "←"; clicked => { current_view = "dashboard"; } }
+                Text { text: "Website Builder"; font-size: 20px; font-weight: 700; color: white; vertical-alignment: center; }
+            }
+            GlassPanel {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    Text { text: "Theme Color"; color: white; }
+                    HorizontalBox {
+                        spacing: 8px;
+                        Rectangle { width: 32px; height: 32px; background: #FF3B30; border-radius: 16px; }
+                        Rectangle { width: 32px; height: 32px; background: #34C759; border-radius: 16px; }
+                        Rectangle { width: 32px; height: 32px; background: #007AFF; border-radius: 16px; }
+                    }
+                    Button { text: "Save Website"; clicked => { current_view = "dashboard"; } }
+                }
+            }
+        }
+
+        // View: Agents
+        if (current_view == "agents") : VerticalBox {
+            spacing: 16px;
+            HorizontalBox {
+                Button { text: "←"; clicked => { current_view = "dashboard"; } }
+                Text { text: "AI Agents"; font-size: 20px; font-weight: 700; color: white; vertical-alignment: center; }
+            }
+
+            GlassPanel {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    HorizontalBox {
+                        Text { text: "Customer Success"; color: white; font-weight: 600; }
+                        Rectangle {}
+                        Switch { checked: true; }
+                    }
+                    Button { text: "Tune Personality"; clicked => { current_view = "tuning"; } }
+                }
+            }
+        }
+
+        // View: Tuning
+        if (current_view == "tuning") : VerticalBox {
+            spacing: 16px;
+            HorizontalBox {
+                Button { text: "←"; clicked => { current_view = "agents"; } }
+                Text { text: "Tune Agent"; font-size: 20px; font-weight: 700; color: white; vertical-alignment: center; }
+            }
+            Text { text: "Tone"; color: white; }
+            HorizontalBox {
+                spacing: 8px;
+                Button { text: "Friendly"; }
+                Button { text: "Formal"; }
+            }
+            Text { text: "Work Frequency"; color: white; }
+            Slider { value: 80; }
+            Button { text: "Save"; clicked => { current_view = "agents"; } }
+        }
+
+        // View: Settings
+        if (current_view == "settings") : VerticalBox {
+            spacing: 16px;
+            HorizontalBox {
+                Button { text: "←"; clicked => { current_view = "dashboard"; } }
+                Text { text: "Settings"; font-size: 20px; font-weight: 700; color: white; vertical-alignment: center; }
+            }
+            GlassPanel {
+                VerticalBox {
+                    padding: 16px;
+                    HorizontalBox {
+                        Text { text: "Advanced Mode"; color: white; }
+                        Rectangle {}
+                        Switch { checked: false; }
+                    }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
     }
 }
