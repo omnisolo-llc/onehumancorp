@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component Walkthrough inherits Window {
     width: 600px;
     height: 500px;
-    title: "AutoDream Sync Walkthrough";
+    title: "Automatic Task Sync Walkthrough";
 
     property <int> current_step: 0;
 
@@ -28,26 +28,26 @@ export component Walkthrough inherits Window {
                 spacing: 16px;
                 
                 Text {
-                    text: current_step == 0 ? "1. Generate & Insert Vector" :
-                          current_step == 1 ? "2. Query Pending Vectors" :
-                          current_step == 2 ? "3. Return Batched Vectors" :
-                          current_step == 3 ? "4. Push over mTLS" :
-                          current_step == 4 ? "5. Upsert to Global" :
+                    text: current_step == 0 ? "1. Create & Save Memory" :
+                          current_step == 1 ? "2. Check Pending Memories" :
+                          current_step == 2 ? "3. Return Batched Memories" :
+                          current_step == 3 ? "4. Securely Send to Cloud" :
+                          current_step == 4 ? "5. Save to Global Cloud" :
                           current_step == 5 ? "6. Acknowledge Success" :
-                          "7. Update sync_status";
+                          "7. Update Sync Status";
                     font-size: 20px;
                     font-weight: 700;
                     color: #0284c7;
                 }
                 
                 Text {
-                    text: current_step == 0 ? "Worker generates an intelligence vector and inserts it into Local SQLite DB with sync_status='pending'." :
-                          current_step == 1 ? "Sync Daemon periodically queries the Local SQLite DB for any vectors pending synchronization." :
-                          current_step == 2 ? "Local SQLite DB returns the pending intelligence vectors in a batch format to the Sync Daemon." :
-                          current_step == 3 ? "Sync Daemon securely pushes the batched vectors to the Cloud API Gateway using SPIFFE Identity over mTLS." :
-                          current_step == 4 ? "Cloud API Gateway upserts the received vectors into the Global Cloud PostgreSQL (autodream_memories)." :
-                          current_step == 5 ? "Cloud API Gateway sends an acknowledgment of successful storage back to the Sync Daemon." :
-                          "Sync Daemon updates the local records in SQLite, marking them as sync_status='synced'.";
+                    text: current_step == 0 ? "Worker creates a memory and saves it locally, marking it as pending." :
+                          current_step == 1 ? "Automatic Sync Task checks the Local Business Memory for any new memories to sync." :
+                          current_step == 2 ? "Local Business Memory provides the new memories to the Automatic Sync Task." :
+                          current_step == 3 ? "Automatic Sync Task securely sends the new memories to the Global Cloud Server." :
+                          current_step == 4 ? "Global Cloud Server securely stores the memories in the Global Cloud Server." :
+                          current_step == 5 ? "Global Cloud Server confirms the memories are saved to the Automatic Sync Task." :
+                          "Automatic Sync Task updates the local records, marking them as fully synced.";
                     color: #1e293b;
                     wrap: word-wrap;
                 }
@@ -61,13 +61,13 @@ export component Walkthrough inherits Window {
                         spacing: 12px;
                         Text { text: "🔄"; color: #0284c7; }
                         Text {
-                            text: current_step == 0 ? "Standalone AutoDreamWorker -> Local SQLite DB" :
-                                  current_step == 1 ? "Sync Daemon -> Local SQLite DB" :
-                                  current_step == 2 ? "Local SQLite DB -> Sync Daemon" :
-                                  current_step == 3 ? "Sync Daemon -> Cloud API Gateway" :
-                                  current_step == 4 ? "Cloud API Gateway -> Cloud PostgreSQL" :
-                                  current_step == 5 ? "Cloud API Gateway -> Sync Daemon" :
-                                  "Sync Daemon -> Local SQLite DB";
+                            text: current_step == 0 ? "Standalone Automatic Worker -> Local Business Memory" :
+                                  current_step == 1 ? "Automatic Sync Task -> Local Business Memory" :
+                                  current_step == 2 ? "Local Business Memory -> Automatic Sync Task" :
+                                  current_step == 3 ? "Automatic Sync Task -> Global Cloud Server" :
+                                  current_step == 4 ? "Global Cloud Server -> Global Cloud Server" :
+                                  current_step == 5 ? "Global Cloud Server -> Automatic Sync Task" :
+                                  "Automatic Sync Task -> Local Business Memory";
                             color: #0284c7;
                             wrap: word-wrap;
                         }
