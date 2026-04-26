@@ -44,6 +44,30 @@ impl DB {
             .execute(&self.pool)
             .await?;
 
+        sqlx::query("CREATE TABLE IF NOT EXISTS swarm_memory (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_missions (id TEXT PRIMARY KEY, status TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system', synced_to_cloud BOOLEAN DEFAULT FALSE)")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE TABLE IF NOT EXISTS agent_status (agent_id TEXT PRIMARY KEY, role TEXT NOT NULL, status TEXT NOT NULL, last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE TABLE IF NOT EXISTS capability_plugins (plugin_id TEXT PRIMARY KEY, name TEXT NOT NULL, version TEXT NOT NULL, manifest_url TEXT NOT NULL, status TEXT NOT NULL, registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (memory_id TEXT PRIMARY KEY, context TEXT NOT NULL, vector_embedding BYTEA, source_plugin TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE TABLE IF NOT EXISTS telemetry_buffer (id SERIAL PRIMARY KEY, metric_type TEXT NOT NULL, payload TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, organization_id TEXT DEFAULT 'system')")
+            .execute(&self.pool)
+            .await?;
+
         Ok(())
     }
 

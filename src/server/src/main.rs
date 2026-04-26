@@ -17,6 +17,7 @@ mod scheduler;
 mod msgbus;
 mod pipeline;
 mod oidc;
+mod sip;
 
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
