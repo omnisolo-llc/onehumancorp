@@ -30,7 +30,7 @@ go_library(
         "//src/server_old/api/mesh",
         "//src/server_old/orchestration/mesh",
         "//src/server_old/services/growth",
-        "//src/server/agents",
+        "//src/server/src/agents/builtin",
         "//src/server_old/auth",
         "//src/server_old/billing",
         "//src/server_old/domain",
