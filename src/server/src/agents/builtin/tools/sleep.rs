@@ -38,7 +38,6 @@ pub fn sleep_tool() -> Tool {
             },
             "required": ["seconds"]
         }),
-        is_mutating: true,
         execute: Arc::new(SleepExecutor),
     }
 }

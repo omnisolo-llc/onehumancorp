@@ -77,7 +77,6 @@ pub fn bash_tool() -> Tool {
             },
             "required": ["command"]
         }),
-        is_mutating: true,
         execute: Arc::new(BashExecutor),
     }
 }

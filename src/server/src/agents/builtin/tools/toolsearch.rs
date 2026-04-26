@@ -69,7 +69,6 @@ pub fn toolsearch_tool() -> Tool {
             },
             "required": ["query"]
         }),
-        is_mutating: false,
         execute: Arc::new(ToolSearchExecutor),
     }
 }
