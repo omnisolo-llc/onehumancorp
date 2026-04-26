@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	binaryRunpath = "src/server/agents/builtin/src/ohc-builtin-agent"
+	binaryRunpath = "src/server/src/agents/builtin/ohc-builtin-agent"
 	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
@@ -63,7 +63,7 @@ func locateBinary(t *testing.T) string {
 	root := thisFile
 	for {
 		root = filepath.Dir(root)
-		if root == "/" {
+		if root == "/" || root == "." || root == "" {
 			break
 		}
 		if _, err := os.Stat(filepath.Join(root, "MODULE.bazel")); err == nil {
