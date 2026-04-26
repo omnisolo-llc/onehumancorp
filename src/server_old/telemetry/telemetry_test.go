@@ -717,11 +717,26 @@ func (e errorRegisterer) Unregister(prometheus.Collector) bool {
 	return true
 }
 
+func TestAutoDreamErrorMetrics_WithMock(t *testing.T) {
+	mockMeter := &mockMeter{}
+	err := InitWithMeter(mockMeter)
+	if err != nil {
+		t.Fatalf("InitWithMeter failed: %v", err)
+	}
+
+	ctx := context.Background()
+	RecordAutoDreamIngestionError(ctx, "agent-1", "timeout")
+	RecordAutoDreamCompressionError(ctx, "agent-1", "timeout")
+	RecordAutoDreamMemoryCompressed(ctx, "agent-1")
+}
+
 func TestAutoDreamErrorMetrics(t *testing.T) {
 	AutoDreamIngestionErrorCounter = nil
 	AutoDreamCompressionErrorCounter = nil
+	AutoDreamMemoriesCompressedCounter = nil
 	RecordAutoDreamIngestionError(context.Background(), "agent-1", "timeout")
 	RecordAutoDreamCompressionError(context.Background(), "agent-1", "timeout")
+	RecordAutoDreamMemoryCompressed(context.Background(), "agent-1")
 }
 
 func TestInitTelemetry_PrometheusError(t *testing.T) {
