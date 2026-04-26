@@ -19,6 +19,7 @@ mod pipeline;
 mod oidc;
 mod sip;
 mod orchestrator;
+mod spawner;
 
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
