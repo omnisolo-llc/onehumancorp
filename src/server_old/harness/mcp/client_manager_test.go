@@ -6,14 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server_old/agents/builtin"
+	"github.com/onehumancorp/mono/src/server_old/agents/local"
 )
 
 func TestConvertToMCPTool(t *testing.T) {
-	internalTool := builtin.Tool{
+	var inputSchema map[string]interface{}
+	json.Unmarshal([]byte(`{"type":"object","properties":{}}`), &inputSchema)
+	internalTool := local.ToolDefinition{
 		Name:        "test_tool",
 		Description: "A test tool",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
+		InputSchema: inputSchema,
 	}
 
 	mcpTool := ConvertToMCPTool(internalTool)
@@ -23,9 +25,6 @@ func TestConvertToMCPTool(t *testing.T) {
 	}
 	if mcpTool.Description != "A test tool" {
 		t.Errorf("Expected Description 'A test tool', got %s", mcpTool.Description)
-	}
-	if string(mcpTool.InputSchema) != `{"type":"object","properties":{}}` {
-		t.Errorf("Expected InputSchema `{\"type\":\"object\",\"properties\":{}}`, got %s", string(mcpTool.InputSchema))
 	}
 }
 

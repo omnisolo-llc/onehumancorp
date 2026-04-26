@@ -34,9 +34,10 @@ func NewAutoDreamPipeline(pool db.Provider, redisClient rueidis.Client) *AutoDre
 	if key := os.Getenv("ANTHROPIC_API_KEY"); key != "" {
 		llmClient = local.NewAnthropicClient(key, "", "")
 	} else if key := os.Getenv("OPENAI_API_KEY"); key != "" {
+		// Openai client doesn't exist, fallback to anthropic
 		llmClient = local.NewAnthropicClient(key, "", "")
 	} else {
-
+		llmClient = local.NewAnthropicClient("", "", "")
 	}
 
 
@@ -254,7 +255,6 @@ func (p *AutoDreamPipeline) processBatch(ctx context.Context) {
 			Messages: []local.ConversationMessage{
 				{Role: "user", Content: []local.ContentPart{{Type: "text", Text: prompt}}},
 			},
-			MaxTokens: 500,
 		}
 
 		ctxTimeout, cancel := context.WithTimeout(ctx, 30*time.Second)
