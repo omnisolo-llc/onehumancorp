@@ -2,12 +2,7 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "models",
-    srcs = [
-        "mesh_models.go",
-        "session.go",
-        "shared_tasks_v4.go",
-        "tasks.go",
-    ],
+    srcs = ["tasks.go", "mesh_models.go", "session.go"],
     importpath = "github.com/onehumancorp/mono/src/server/db/models",
     visibility = ["//visibility:public"],
 )
