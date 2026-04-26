@@ -22,6 +22,7 @@ build --linkopt=-fuse-ld=bfd
 build --host_linkopt=-fuse-ld=bfd
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
+build --@rules_rust//rust/toolchain/channel=nightly
 
 # ── Remote execution resilience ───────────────────────────────────────────────
 # Automatically rewind and retry actions when their remote inputs are lost
