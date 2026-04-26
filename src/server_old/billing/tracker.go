@@ -36,8 +36,10 @@ DefaultCatalog = map[string]Price{
 	"claude-3-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00},
 	"claude-3-haiku":  {InputPerMillionUSD: 0.25, OutputPerMillionUSD: 1.25},
 	// Anthropic — Claude 3.5 family
-	"claude-3.5-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
-	"claude-3.5-haiku":  {InputPerMillionUSD: 0.80, OutputPerMillionUSD: 4.00, CachedPerMillionUSD: 0.08},
+	"claude-3.5-sonnet":          {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
+	"claude-3.5-haiku":           {InputPerMillionUSD: 0.80, OutputPerMillionUSD: 4.00, CachedPerMillionUSD: 0.08},
+	"claude-3-5-sonnet-20241022": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
+	"claude-3-5-sonnet-20240620": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
 	// Anthropic — Claude 3.7 family
 	"claude-3.7-sonnet": {InputPerMillionUSD: 3.00, OutputPerMillionUSD: 15.00, CachedPerMillionUSD: 0.30},
 	// OpenAI — GPT-4 family

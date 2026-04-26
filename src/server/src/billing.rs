@@ -50,17 +50,32 @@ pub struct Summary {
 impl Tracker {
     pub fn new() -> Self {
         let mut catalog = HashMap::new();
-        // Add a few default prices from Go code
-        catalog.insert("minimax-m2.7".to_string(), Price {
-            input_per_million_usd: 1.0,
-            output_per_million_usd: 1.0,
-            cached_per_million_usd: 0.0,
-        });
-        catalog.insert("gpt-4o".to_string(), Price {
-            input_per_million_usd: 5.0,
-            output_per_million_usd: 15.0,
-            cached_per_million_usd: 2.5,
-        });
+        catalog.insert("claude-3-opus".to_string(), Price { input_per_million_usd: 15.00, output_per_million_usd: 75.00, cached_per_million_usd: 0.0 });
+        catalog.insert("claude-3-sonnet".to_string(), Price { input_per_million_usd: 3.00, output_per_million_usd: 15.00, cached_per_million_usd: 0.0 });
+        catalog.insert("claude-3-haiku".to_string(), Price { input_per_million_usd: 0.25, output_per_million_usd: 1.25, cached_per_million_usd: 0.0 });
+        catalog.insert("claude-3.5-sonnet".to_string(), Price { input_per_million_usd: 3.00, output_per_million_usd: 15.00, cached_per_million_usd: 0.30 });
+        catalog.insert("claude-3-5-sonnet-20241022".to_string(), Price { input_per_million_usd: 3.00, output_per_million_usd: 15.00, cached_per_million_usd: 0.30 });
+        catalog.insert("claude-3-5-sonnet-20240620".to_string(), Price { input_per_million_usd: 3.00, output_per_million_usd: 15.00, cached_per_million_usd: 0.30 });
+        catalog.insert("claude-3.5-haiku".to_string(), Price { input_per_million_usd: 0.80, output_per_million_usd: 4.00, cached_per_million_usd: 0.08 });
+        catalog.insert("claude-3.7-sonnet".to_string(), Price { input_per_million_usd: 3.00, output_per_million_usd: 15.00, cached_per_million_usd: 0.30 });
+        catalog.insert("gpt-4".to_string(), Price { input_per_million_usd: 30.00, output_per_million_usd: 60.00, cached_per_million_usd: 0.0 });
+        catalog.insert("gpt-4-turbo".to_string(), Price { input_per_million_usd: 10.00, output_per_million_usd: 30.00, cached_per_million_usd: 0.0 });
+        catalog.insert("gpt-4o".to_string(), Price { input_per_million_usd: 5.00, output_per_million_usd: 15.00, cached_per_million_usd: 2.50 });
+        catalog.insert("gpt-4o-mini".to_string(), Price { input_per_million_usd: 0.15, output_per_million_usd: 0.60, cached_per_million_usd: 0.075 });
+        catalog.insert("gpt-4.1".to_string(), Price { input_per_million_usd: 2.00, output_per_million_usd: 8.00, cached_per_million_usd: 0.0 });
+        catalog.insert("gpt-4.1-mini".to_string(), Price { input_per_million_usd: 0.40, output_per_million_usd: 1.60, cached_per_million_usd: 0.0 });
+        catalog.insert("gpt-4.1-nano".to_string(), Price { input_per_million_usd: 0.10, output_per_million_usd: 0.40, cached_per_million_usd: 0.0 });
+        catalog.insert("o1".to_string(), Price { input_per_million_usd: 15.00, output_per_million_usd: 60.00, cached_per_million_usd: 0.0 });
+        catalog.insert("o1-mini".to_string(), Price { input_per_million_usd: 3.00, output_per_million_usd: 12.00, cached_per_million_usd: 0.0 });
+        catalog.insert("o3-mini".to_string(), Price { input_per_million_usd: 1.10, output_per_million_usd: 4.40, cached_per_million_usd: 0.0 });
+        catalog.insert("gemini-1.5-pro".to_string(), Price { input_per_million_usd: 3.50, output_per_million_usd: 10.50, cached_per_million_usd: 0.0 });
+        catalog.insert("gemini-1.5-flash".to_string(), Price { input_per_million_usd: 0.35, output_per_million_usd: 1.05, cached_per_million_usd: 0.0 });
+        catalog.insert("gemini-2.0-flash".to_string(), Price { input_per_million_usd: 0.10, output_per_million_usd: 0.40, cached_per_million_usd: 0.0 });
+        catalog.insert("gemini-2.0-flash-lite".to_string(), Price { input_per_million_usd: 0.075, output_per_million_usd: 0.30, cached_per_million_usd: 0.0 });
+        catalog.insert("gemini-2.5-pro".to_string(), Price { input_per_million_usd: 1.25, output_per_million_usd: 10.00, cached_per_million_usd: 0.0 });
+        catalog.insert("gemini-2.5-flash".to_string(), Price { input_per_million_usd: 0.15, output_per_million_usd: 0.60, cached_per_million_usd: 0.0 });
+        catalog.insert("minimax-m2.7".to_string(), Price { input_per_million_usd: 1.00, output_per_million_usd: 1.00, cached_per_million_usd: 0.0 });
+        catalog.insert("minimax-m2.7-turbo".to_string(), Price { input_per_million_usd: 0.50, output_per_million_usd: 0.50, cached_per_million_usd: 0.0 });
         
         Tracker {
             catalog,
