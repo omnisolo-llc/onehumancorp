@@ -2,15 +2,12 @@ import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint"
 
 export component Login inherits Window {
     width: 400px;
-    height: 700px;
+    height: 600px;
     title: "One Human Corp - Login";
 
     property <bool> loading: false;
     property <bool> is_sign_up: false;
-    property <bool> email_sent: false;
     property <string> error_message: "";
-
-    callback go_to_setup();
 
     background: #f8fafc;
 
@@ -55,25 +52,9 @@ export component Login inherits Window {
                     placeholder-text: "Email or Username";
                 }
 
-                if (!email_sent) : LineEdit {
+                LineEdit {
                     placeholder-text: "Password";
                     input-type: password;
-                }
-
-                if (email_sent && is_sign_up) : VerticalBox {
-                    spacing: 8px;
-                    Text {
-                        text: "Please check your email to verify your account.";
-                        color: #1e293b;
-                        horizontal-alignment: center;
-                        wrap: word-wrap;
-                    }
-                    Button {
-                        text: "Resend link";
-                        clicked => {
-                            // simulate resend
-                        }
-                    }
                 }
 
                 if (error_message != "") : Text {
@@ -82,46 +63,24 @@ export component Login inherits Window {
                     horizontal-alignment: center;
                 }
 
-                if (!email_sent) : Button {
+                Button {
                     text: is_sign_up ? "Sign Up" : "Sign In";
-                    clicked => {
-                        if (is_sign_up) {
-                            email_sent = true;
-                        } else {
-                            go_to_setup();
-                        }
-                    }
                 }
 
-                if (email_sent) : Button {
-                    text: "Continue to Setup";
-                    clicked => {
-                        go_to_setup();
-                    }
-                }
-
-                if (!email_sent) : Button {
+                Button {
                     text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
                     clicked => {
                         is_sign_up = !is_sign_up;
                     }
                 }
 
-                if (!email_sent) : HorizontalBox {
+                HorizontalBox {
                     alignment: center;
                     Text { text: "OR"; color: #9ca3af; font-weight: 700; }
                 }
 
-                if (!email_sent) : VerticalBox {
-                    spacing: 10px;
-                    Button {
-                        text: "Continue with Google";
-                        clicked => { go_to_setup(); }
-                    }
-                    Button {
-                        text: "Continue with Apple";
-                        clicked => { go_to_setup(); }
-                    }
+                Button {
+                    text: "Continue with SSO";
                 }
             }
         }
