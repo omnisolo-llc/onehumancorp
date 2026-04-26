@@ -5,3 +5,4 @@ pub mod local_provider;
 pub mod plane;
 pub mod worker;
 pub mod checkpointer;
+pub mod harness;
