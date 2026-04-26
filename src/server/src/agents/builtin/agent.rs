@@ -193,33 +193,70 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+                let mut retry_count = 0;
+                let mut final_result = String::new();
+                let mut final_error = String::new();
+
+                loop {
+                    let result = self.execute_tool(&tc).await;
+                    match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            final_result = r;
+                            break;
+                        }
+                        Err(crate::tools::ToolError::Transient(msg)) => {
+                            if retry_count < 3 {
+                                retry_count += 1;
+                                tokio::time::sleep(std::time::Duration::from_secs(2_u64.pow(retry_count as u32))).await;
+                                continue;
+                            } else {
+                                final_error = format!("Transient error failed after 3 retries: {}", msg);
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: final_error.clone(),
+                                    iteration,
+                                });
+                                break;
+                            }
+                        }
+                        Err(crate::tools::ToolError::LlmRecoverable(msg)) => {
+                            // Provide to model so it can self-correct.
+                            // The Anthropic/OpenAI integrations format non-empty `error` field correctly.
+                            final_error = msg.clone();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", msg),
+                                iteration,
+                            });
+                            break;
+                        }
+                        Err(crate::tools::ToolError::UserFixable(msg)) => {
+                            // Interrupt execution (we'll just halt for now and return error, or we could ask user if we had a mechanism)
+                            let err_msg = format!("User intervention required: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                            return Err(err_msg.into());
+                        }
+                        Err(crate::tools::ToolError::Unexpected(msg)) => {
+                            let err_msg = format!("Unexpected tool error: {}", msg);
+                            on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                            return Err(err_msg.into());
+                        }
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
-                };
+                }
+
                 tool_results.push(ToolResult {
                     tool_call_id: tc.id.clone(),
-                    content,
-                    error,
+                    content: final_result,
+                    error: final_error,
                 });
             }
 
@@ -262,12 +299,12 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::tools::ToolError> {
         let tool = self
             .tools
             .iter()
             .find(|t| t.name == tc.name)
-            .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
+            .ok_or_else(|| crate::tools::ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
         tool.execute.execute(tc.arguments.clone()).await
     }
@@ -304,7 +341,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
-        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        async fn execute(&self, _args: Value) -> Result<String, crate::tools::ToolError> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
     }

@@ -9,7 +9,7 @@ impl ToolExecutor for FinanceReportExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, super::ToolError> {
         let report_type = args["report_type"]
             .as_str()
             .unwrap_or("weekly_summary");

@@ -12,10 +12,10 @@ impl ToolExecutor for AgentExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, super::ToolError> {
         let prompt = args["prompt"]
             .as_str()
-            .ok_or("agent: prompt is required")?;
+            .ok_or_else(|| super::ToolError::LlmRecoverable("agent: prompt is required".to_string()))?;
         let description = args["description"]
             .as_str()
             .unwrap_or(prompt);
@@ -39,10 +39,10 @@ impl ToolExecutor for TaskStopExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, super::ToolError> {
         let task_id = args["task_id"]
             .as_str()
-            .ok_or("taskstop: task_id is required")?;
+            .ok_or_else(|| super::ToolError::LlmRecoverable("taskstop: task_id is required".to_string()))?;
         Ok(format!("Stop requested for task {}.", task_id))
     }
 }
@@ -56,10 +56,10 @@ impl ToolExecutor for TaskStatusExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, super::ToolError> {
         let task_id = args["task_id"]
             .as_str()
-            .ok_or("taskstatus: task_id is required")?;
+            .ok_or_else(|| super::ToolError::LlmRecoverable("taskstatus: task_id is required".to_string()))?;
         Ok(json!({
             "task_id": task_id,
             "status": "running",

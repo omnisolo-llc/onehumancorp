@@ -44,12 +44,35 @@ impl Clone for Tool {
     }
 }
 
+
+#[derive(Debug)]
+pub enum ToolError {
+    Transient(String),
+    LlmRecoverable(String),
+    UserFixable(String),
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Transient(m) => write!(f, "Transient Error: {}", m),
+            Self::LlmRecoverable(m) => write!(f, "Error: {}", m), // Model can read this
+            Self::UserFixable(m) => write!(f, "User Intervention Required: {}", m),
+            Self::Unexpected(m) => write!(f, "Unexpected Error: {}", m),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}
+
+
 #[async_trait::async_trait]
 pub trait ToolExecutor: Send + Sync {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.

@@ -9,10 +9,10 @@ impl ToolExecutor for QrGenerateExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, super::ToolError> {
         let content = args["content"]
             .as_str()
-            .ok_or("qr_generate: content is required")?;
+            .ok_or_else(|| super::ToolError::LlmRecoverable("qr_generate: content is required".to_string()))?;
 
         let label = args["label"].as_str().unwrap_or("QR Code");
 
@@ -22,7 +22,7 @@ impl ToolExecutor for QrGenerateExecutor {
         use qrcode::QrCode;
 
         let code = QrCode::new(content.as_bytes())
-            .map_err(|e| format!("failed to generate QR code: {}", e))?;
+            .map_err(|e| super::ToolError::LlmRecoverable(format!("failed to generate QR code: {}", e)))?;
 
         // Render the bits into a string.
         let image_str = code.render::<char>()

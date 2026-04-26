@@ -12,10 +12,10 @@ impl ToolExecutor for SleepExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, super::ToolError> {
         let secs = args["seconds"]
             .as_f64()
-            .ok_or("sleep: seconds is required")?;
+            .ok_or_else(|| super::ToolError::LlmRecoverable("sleep: seconds is required".to_string()))?;
         let secs = secs.max(0.0).min(60.0); // cap at 60s
         tokio::time::sleep(std::time::Duration::from_secs_f64(secs)).await;
         Ok(format!("Slept for {}s.", secs))
