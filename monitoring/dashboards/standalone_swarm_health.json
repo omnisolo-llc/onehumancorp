@@ -1,0 +1,50 @@
+{
+  "title": "Standalone Swarm Health",
+  "panels": [
+    {
+      "title": "SQLite Lock Contention",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(ohc_sqlite_lock_contention_total[5m])"
+        }
+      ]
+    },
+    {
+      "title": "Task Queue Length",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "ohc_task_queue_length"
+        }
+      ]
+    },
+    {
+      "title": "Task Failure Rate",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(ohc_task_failed_total[5m])"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Retries Exhausted",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(sqliteRetryExhaustedCounter[5m])"
+        }
+      ]
+    },
+    {
+      "title": "SQLite Throttled Requests",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "rate(sqliteThrottledRequestCounter[5m])"
+        }
+      ]
+    }
+  ]
+}

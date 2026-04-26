@@ -337,7 +337,10 @@ func (tm *TaskManager) ClaimTask(ctx context.Context, taskID, agentID string) (*
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordSQLiteLockContention(ctx, "claim_task")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
@@ -742,7 +745,10 @@ func (tm *TaskManager) PollTasks(ctx context.Context, agentID string, limit int)
 	}
 
 	if tm.db.IsSQLite() {
-		tm.mu.Lock()
+		if !tm.mu.TryLock() {
+			telemetry.RecordSQLiteLockContention(ctx, "poll_tasks")
+			tm.mu.Lock()
+		}
 		defer tm.mu.Unlock()
 	}
 
