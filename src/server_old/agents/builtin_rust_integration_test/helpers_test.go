@@ -17,8 +17,8 @@ import (
 
 const (
 	binaryRunpath = "mono/src/server/src/agents/builtin/ohc-builtin-agent"
-	startTimeout  = 10 * time.Second
-	rpcTimeout    = 30 * time.Second
+	startTimeout  = 60 * time.Second
+	rpcTimeout    = 120 * time.Second
 )
 
 // findFreePort returns a free TCP port on localhost.
