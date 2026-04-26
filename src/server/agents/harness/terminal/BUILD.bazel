@@ -8,7 +8,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/agents/harness",
-        "//src/server/orchestration",
+        "//src/server_old/orchestration",
     ],
 )
 

@@ -22,8 +22,8 @@ go_library(
     importpath = "github.com/onehumancorp/mono/src/server/agents/builtin",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server/telemetry",
-        "//src/server/utils",
+        "//src/server_old/telemetry",
+        "//src/server_old/utils",
     ],
 )
 

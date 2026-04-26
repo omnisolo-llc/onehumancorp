@@ -1,0 +1,47 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Logs inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "Service Logs";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Service Logs"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Refresh"; }
+        }
+
+        Rectangle {
+            background: #0f172a;
+            border-radius: 8px;
+            
+            VerticalBox {
+                padding: 12px;
+                spacing: 4px;
+                alignment: start;
+                
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "1"; color: #64748b; font-family: "monospace"; }
+                    Text { text: "INFO: Starting service..."; color: #38bdf8; font-family: "monospace"; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "2"; color: #64748b; font-family: "monospace"; }
+                    Text { text: "WARN: Slow connection detected"; color: #fbbf24; font-family: "monospace"; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "3"; color: #64748b; font-family: "monospace"; }
+                    Text { text: "ERROR: Failed to connect to DB"; color: #f87171; font-family: "monospace"; }
+                }
+            }
+        }
+    }
+}

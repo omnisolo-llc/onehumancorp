@@ -1,0 +1,101 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component CostDashboard inherits Window {
+    width: 500px;
+    height: 600px;
+    title: "Cost & Token Usage";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Cost & Token Usage"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Refresh"; }
+        }
+
+        // Summary Cards
+        HorizontalBox {
+            spacing: 16px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Total Spend"; color: #64748b; }
+                    Text { text: "$124.50"; font-size: 24px; font-weight: 700; color: #a855f7; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Total Tokens"; color: #64748b; }
+                    Text { text: "1.2M"; font-size: 24px; font-weight: 700; color: #06b6d4; }
+                }
+            }
+        }
+
+        Text { text: "Usage per Agent"; font-size: 18px; font-weight: 700; color: #1e293b; }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                
+                VerticalBox {
+                    spacing: 4px;
+                    HorizontalBox {
+                        Text { text: "Alice (PM)"; color: #1e293b; }
+                        Rectangle {}
+                        Text { text: "$50.00"; color: #1e293b; }
+                    }
+                    Rectangle {
+                        height: 8px;
+                        background: #e2e8f0;
+                        border-radius: 4px;
+                        HorizontalBox {
+                            alignment: start;
+                            Rectangle { width: 100px; background: #a855f7; border-radius: 4px; }
+                        }
+                    }
+                }
+                VerticalBox {
+                    spacing: 4px;
+                    HorizontalBox {
+                        Text { text: "Bob (SWE)"; color: #1e293b; }
+                        Rectangle {}
+                        Text { text: "$74.50"; color: #1e293b; }
+                    }
+                    Rectangle {
+                        height: 8px;
+                        background: #e2e8f0;
+                        border-radius: 4px;
+                        HorizontalBox {
+                            alignment: start;
+                            Rectangle { width: 150px; background: #06b6d4; border-radius: 4px; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

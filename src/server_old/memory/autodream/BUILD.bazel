@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "autodream",
+    srcs = [
+        "pipeline.go",
+        "service.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/memory/autodream",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server_old/memory",
+        "//src/server_old/auth",
+    ],
+)
+
+go_test(
+    name = "autodream_test",
+    srcs = ["service_test.go"],
+    embed = [":autodream"],
+    deps = [
+        "//src/server_old/db",
+        "//src/server_old/memory",
+        "//src/server_old/auth",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)

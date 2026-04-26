@@ -1,0 +1,60 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component WelcomeChecklist inherits Window {
+    width: 600px;
+    height: 400px;
+    title: "Welcome Checklist";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        alignment: center;
+        spacing: 20px;
+        padding: 24px;
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 12px;
+
+            VerticalBox {
+                spacing: 16px;
+                padding: 24px;
+
+                Text {
+                    text: "You're set up! Here's what to do next:";
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #1e293b;
+                    wrap: word-wrap;
+                }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "✓"; color: #10b981; } 
+                    Text { text: "Business live"; color: #1e293b; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "•"; color: #64748b; }
+                    Text { text: "Add 3 more products"; color: #1e293b; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "•"; color: #64748b; }
+                    Text { text: "Connect Instagram"; color: #1e293b; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "•"; color: #64748b; }
+                    Text { text: "Share your link with a friend"; color: #1e293b; }
+                }
+
+                Button {
+                    text: "Go to Dashboard";
+                }
+            }
+        }
+    }
+}

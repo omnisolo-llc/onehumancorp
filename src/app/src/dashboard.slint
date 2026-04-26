@@ -1,0 +1,130 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Dashboard inherits Window {
+    width: 800px;
+    height: 800px;
+    title: "Dashboard";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Header
+        HorizontalBox {
+            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Billing & Credits"; }
+        }
+
+        // Stat Cards
+        HorizontalBox {
+            spacing: 16px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 180px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Active Agents"; color: #64748b; }
+                    Text { text: "5"; font-size: 32px; font-weight: 700; color: #a855f7; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 180px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Active Tasks"; color: #64748b; }
+                    Text { text: "12"; font-size: 32px; font-weight: 700; color: #06b6d4; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 180px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Scheduled Calls"; color: #64748b; }
+                    Text { text: "3"; font-size: 32px; font-weight: 700; color: #10b981; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 180px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Team Members"; color: #64748b; }
+                    Text { text: "8"; font-size: 32px; font-weight: 700; color: #f59e0b; }
+                }
+            }
+        }
+
+        // System Health Placeholder
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            height: 200px;
+            
+            VerticalBox {
+                padding: 16px;
+                Text { text: "System Health & Observability"; font-size: 20px; font-weight: 700; color: #1e293b; }
+                Rectangle {}
+                Text { text: "[ Charts and metrics will go here ]"; color: #64748b; horizontal-alignment: center; }
+                Rectangle {}
+            }
+        }
+
+        // Company Structure
+        Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        
+        VerticalBox {
+            spacing: 10px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "Product Manager"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                    Rectangle {}
+                    Button { text: "-"; }
+                    Text { text: "1"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                    Button { text: "+"; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "Software Engineer"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                    Rectangle {}
+                    Button { text: "-"; }
+                    Text { text: "3"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                    Button { text: "+"; }
+                }
+            }
+        }
+    }
+}

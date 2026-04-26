@@ -1,0 +1,78 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+
+export component Chat inherits Window {
+    width: 400px;
+    height: 600px;
+    title: "Chat - #general";
+
+    property <string> new_message: "";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 16px;
+        padding: 16px;
+
+        // Chat history area
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 12px;
+            
+            VerticalBox {
+                spacing: 12px;
+                padding: 16px;
+                alignment: start;
+                
+                // Message from other
+                HorizontalBox {
+                    alignment: start;
+                    Rectangle {
+                        background: #f1f5f9;
+                        border-radius: 12px;
+                        width: 260px;
+                        
+                        VerticalBox {
+                            padding: 10px;
+                            spacing: 4px;
+                            Text { text: "Agent Smith"; font-weight: 700; color: #a855f7; }
+                            Text { text: "Hello! How can I help you today?"; color: #1e293b; wrap: word-wrap; }
+                        }
+                    }
+                    Rectangle {} // Spacer
+                }
+                
+                // Message from me
+                HorizontalBox {
+                    alignment: end;
+                    Rectangle {} // Spacer
+                    Rectangle {
+                        background: #f3e8ff;
+                        border-radius: 12px;
+                        width: 260px;
+                        
+                        VerticalBox {
+                            padding: 10px;
+                            spacing: 4px;
+                            Text { text: "You"; font-weight: 700; color: #1e293b; horizontal-alignment: right; }
+                            Text { text: "I need to convert this codebase to Rust."; color: #1e293b; wrap: word-wrap; }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Input Bar
+        HorizontalBox {
+            spacing: 10px;
+            LineEdit {
+                placeholder-text: "Type a message...";
+                text: new_message;
+            }
+            Button {
+                text: "Send";
+            }
+        }
+    }
+}
