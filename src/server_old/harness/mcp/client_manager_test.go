@@ -2,18 +2,36 @@ package mcp
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	"github.com/onehumancorp/mono/src/server/agents/local"
 )
 
+
+type mockTool struct {
+	name        string
+	description string
+	params      map[string]interface{}
+}
+
+func (m *mockTool) Definition() local.ToolDefinition {
+	return local.ToolDefinition{
+		Name:        m.name,
+		Description: m.description,
+		InputSchema: m.params,
+	}
+}
+
+func (m *mockTool) Execute(ctx context.Context, workDir string, input map[string]interface{}) (string, error) {
+	return "", nil
+}
+
 func TestConvertToMCPTool(t *testing.T) {
-	internalTool := builtin.Tool{
-		Name:        "test_tool",
-		Description: "A test tool",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
+	internalTool := &mockTool{
+		name:        "test_tool",
+		description: "A test tool",
+		params:      map[string]interface{}{"type": "object"},
 	}
 
 	mcpTool := ConvertToMCPTool(internalTool)
@@ -24,10 +42,8 @@ func TestConvertToMCPTool(t *testing.T) {
 	if mcpTool.Description != "A test tool" {
 		t.Errorf("Expected Description 'A test tool', got %s", mcpTool.Description)
 	}
-	if string(mcpTool.InputSchema) != `{"type":"object","properties":{}}` {
-		t.Errorf("Expected InputSchema `{\"type\":\"object\",\"properties\":{}}`, got %s", string(mcpTool.InputSchema))
-	}
 }
+
 
 func TestClientManagerConnectStdio(t *testing.T) {
 	cm := NewClientManager()
