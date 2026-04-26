@@ -26,8 +26,11 @@ func TestConvertToMCPTool(t *testing.T) {
 	if mcpTool.Description != "A test tool" {
 		t.Errorf("Expected Description 'A test tool', got %s", mcpTool.Description)
 	}
-	if string(mcpTool.InputSchema) != `{"type":"object","properties":{}}` {
-		t.Errorf("Expected InputSchema `{\"type\":\"object\",\"properties\":{}}`, got %s", string(mcpTool.InputSchema))
+	expected1 := `{"properties":{},"type":"object"}`
+	expected2 := `{"type":"object","properties":{}}`
+	actual := string(mcpTool.InputSchema)
+	if actual != expected1 && actual != expected2 {
+		t.Errorf("Expected InputSchema to be a valid map serialization, got %s", actual)
 	}
 }
 
