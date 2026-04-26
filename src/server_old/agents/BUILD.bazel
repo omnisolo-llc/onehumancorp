@@ -3,8 +3,6 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "agents",
     srcs = [
-        "agent.go",
-        "agent_task_worker.go",
         "autodream.go",
         "inprocess_transport.go",
         "local_provider.go",
@@ -17,7 +15,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server_old/telemetry",
-        "//src/server/agents/grpc",
+        "//src/server_old/agents/grpc",
         "//src/proto/agentservice",
         "//src/server_old/db",
         "//src/server_old/integrations/plane",

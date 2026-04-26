@@ -102,8 +102,8 @@ rust_test(
 
 rust_test(
     name = "crypto_test",
-    srcs = ["src/crypto.rs"],
-    crate_root = "src/crypto.rs",
+    srcs = ["crypto.rs"],
+    crate_root = "crypto.rs",
     edition = "2021",
     deps = [
         "@crates//:aes-gcm",
