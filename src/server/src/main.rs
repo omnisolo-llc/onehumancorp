@@ -26,6 +26,9 @@ mod domain;
 pub mod pricing;
 pub mod services {
     pub mod wizard;
+    pub mod billing {
+        pub mod auditor;
+    }
 }
 
 use tokio::sync::mpsc;
