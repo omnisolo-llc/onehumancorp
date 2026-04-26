@@ -58,6 +58,7 @@ pub fn qr_generate_tool() -> Tool {
             "required": ["content"]
         }),
         execute: Arc::new(QrGenerateExecutor),
+        requires_permission: false,
     }
 }
 

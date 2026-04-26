@@ -180,6 +180,7 @@ pub fn task_create_tool(store: SharedTaskStore) -> Tool {
             "required": ["title"]
         }),
         execute: Arc::new(TaskCreateExecutor { store }),
+        requires_permission: false,
     }
 }
 
@@ -195,6 +196,7 @@ pub fn task_get_tool(store: SharedTaskStore) -> Tool {
             "required": ["id"]
         }),
         execute: Arc::new(TaskGetExecutor { store }),
+        requires_permission: false,
     }
 }
 
@@ -204,6 +206,7 @@ pub fn task_list_tool(store: SharedTaskStore) -> Tool {
         description: "List all tasks in the task tracker.".to_string(),
         parameters: json!({"type": "object", "properties": {}}),
         execute: Arc::new(TaskListExecutor { store }),
+        requires_permission: false,
     }
 }
 
@@ -224,5 +227,6 @@ pub fn task_update_tool(store: SharedTaskStore) -> Tool {
             "required": ["id"]
         }),
         execute: Arc::new(TaskUpdateExecutor { store }),
+        requires_permission: false,
     }
 }

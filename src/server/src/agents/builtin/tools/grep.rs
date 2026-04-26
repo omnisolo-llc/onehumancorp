@@ -129,5 +129,6 @@ pub fn grep_tool() -> Tool {
             "required": ["pattern"]
         }),
         execute: Arc::new(GrepExecutor),
+        requires_permission: false,
     }
 }

@@ -80,5 +80,6 @@ pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
             "required": ["message"]
         }),
         execute: Arc::new(SendMessageExecutor { mailbox }),
+        requires_permission: false,
     }
 }

@@ -1,3 +1,19 @@
+
+#[derive(Debug, Clone)]
+pub struct GuardrailConfig {
+    pub require_permission_for_tools: bool,
+    pub trusted_tools: Vec<String>,
+}
+
+impl Default for GuardrailConfig {
+    fn default() -> Self {
+        Self {
+            require_permission_for_tools: false,
+            trusted_tools: vec![],
+        }
+    }
+}
+
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
@@ -28,6 +44,7 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
+    pub guardrails: GuardrailConfig,
 }
 
 impl Default for AgentRunConfig {
@@ -41,6 +58,7 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
+            guardrails: GuardrailConfig::default(),
         }
     }
 }
@@ -193,7 +211,7 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
+                let result = self.execute_tool(&tc, cfg).await;
                 let (content, error) = match result {
                     Ok(r) => {
                         self.progress.record_tool_use();
@@ -262,12 +280,19 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
+        cfg: &AgentRunConfig,
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let tool = self
             .tools
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
+
+        if tool.requires_permission && cfg.guardrails.require_permission_for_tools {
+            if !cfg.guardrails.trusted_tools.contains(&tc.name) {
+                return Err(format!("tool '{}' requires user permission or must be added to trusted tools", tc.name).into());
+            }
+        }
 
         tool.execute.execute(tc.arguments.clone()).await
     }
@@ -309,6 +334,58 @@ mod tests {
         }
     }
 
+
+    #[tokio::test]
+    async fn test_tool_gating() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "high_risk_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let mut tool = Tool {
+            name: "high_risk_tool".to_string(),
+            description: "A dangerous tool".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(MockToolExecutor),
+            requires_permission: true,
+        };
+
+        let agent = Agent::new(client, vec![tool]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.guardrails.require_permission_for_tools = true;
+        cfg.guardrails.trusted_tools = vec![]; // Not trusted!
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        // The tool result should contain the error
+        let mut found_error = false;
+        for e in events {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                if result.contains("requires user permission") {
+                    found_error = true;
+                }
+            }
+        }
+        assert!(found_error, "Should have rejected the high risk tool");
+    }
+
+
     #[tokio::test]
     async fn test_observation_masking() {
         let client = Arc::new(MockLlmClient {
@@ -349,6 +426,7 @@ mod tests {
             description: "test".to_string(),
             parameters: Value::Null,
             execute: Arc::new(MockToolExecutor),
+            requires_permission: false,
         }];
 
         let agent = Agent::new(client, tools);
