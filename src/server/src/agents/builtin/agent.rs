@@ -213,7 +213,9 @@ impl Agent {
                             result: format!("Error: {}", err),
                             iteration,
                         });
-                        (String::new(), err)
+                        // LLM-Recoverable Error: Return the raw error as the tool's content directly to the model
+                        // so it can observe what went wrong and self-correct on the next iteration.
+                        (format!("Error executing tool: {}", err), String::new())
                     }
                 };
                 tool_results.push(ToolResult {
@@ -307,6 +309,61 @@ mod tests {
         async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
+    }
+
+
+    struct ErrorToolExecutor;
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for ErrorToolExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            Err("Simulated failure".into())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_recoverable_error_handling() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "error_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "error_tool".to_string(),
+            description: "fails always".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(ErrorToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+
+        let mut errors_seen = vec![];
+        let mut on_event = |e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                errors_seen.push(result);
+            }
+        };
+
+        let _ = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        // Assert that the error string was successfully intercepted and wrapped
+        assert_eq!(errors_seen.len(), 1);
+        assert_eq!(errors_seen[0], "Error: Simulated failure");
     }
 
     #[tokio::test]
