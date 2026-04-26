@@ -179,6 +179,7 @@ pub fn task_create_tool(store: SharedTaskStore) -> Tool {
             },
             "required": ["title"]
         }),
+        is_mutating: true,
         execute: Arc::new(TaskCreateExecutor { store }),
     }
 }
@@ -194,6 +195,7 @@ pub fn task_get_tool(store: SharedTaskStore) -> Tool {
             },
             "required": ["id"]
         }),
+        is_mutating: false,
         execute: Arc::new(TaskGetExecutor { store }),
     }
 }
@@ -203,6 +205,7 @@ pub fn task_list_tool(store: SharedTaskStore) -> Tool {
         name: "TaskList".to_string(),
         description: "List all tasks in the task tracker.".to_string(),
         parameters: json!({"type": "object", "properties": {}}),
+        is_mutating: false,
         execute: Arc::new(TaskListExecutor { store }),
     }
 }
@@ -223,6 +226,7 @@ pub fn task_update_tool(store: SharedTaskStore) -> Tool {
             },
             "required": ["id"]
         }),
+        is_mutating: true,
         execute: Arc::new(TaskUpdateExecutor { store }),
     }
 }

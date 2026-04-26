@@ -192,35 +192,116 @@ impl Agent {
 
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
+
+            // Partition tool calls into contiguous blocks of mutating/non-mutating
+            let mut blocks: Vec<Vec<&ToolCall>> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+                let tool = self.tools.iter().find(|t| t.name == tc.name);
+                let is_mutating = tool.map(|t| t.is_mutating).unwrap_or(true); // default true for safety
+
+                if blocks.is_empty() {
+                    blocks.push(vec![tc]);
+                } else {
+                    let last_block_is_mutating = {
+                        let last_tc = blocks.last().unwrap().first().unwrap();
+                        let last_tool = self.tools.iter().find(|t| t.name == last_tc.name);
+                        last_tool.map(|t| t.is_mutating).unwrap_or(true)
+                    };
+
+                    if is_mutating || last_block_is_mutating {
+                        // If current is mutating OR last block was mutating, start a new block
+                        // Actually, if we have contiguous non-mutating, we add to current block
+                        // So if both are non-mutating, add to current. Else push new.
+                        if !is_mutating && !last_block_is_mutating {
+                            blocks.last_mut().unwrap().push(tc);
+                        } else {
+                            blocks.push(vec![tc]);
+                        }
+                    } else {
+                        // both are non-mutating
+                        blocks.last_mut().unwrap().push(tc);
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
+                }
+            }
+
+            for block in blocks {
+                let is_mutating = {
+                    let tc = block.first().unwrap();
+                    let tool = self.tools.iter().find(|t| t.name == tc.name);
+                    tool.map(|t| t.is_mutating).unwrap_or(true)
                 };
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
-                });
+
+                if is_mutating || block.len() == 1 {
+                    // Execute serially
+                    for tc in block {
+                        let result = self.execute_tool(tc).await;
+                        let (content, error) = match result {
+                            Ok(r) => {
+                                self.progress.record_tool_use();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: r.clone(),
+                                    iteration,
+                                });
+                                (r, String::new())
+                            }
+                            Err(e) => {
+                                let err = e.to_string();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                (String::new(), err)
+                            }
+                        };
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error,
+                        });
+                    }
+                } else {
+                    // Execute concurrently
+                    let futures = block.into_iter().map(|tc| async move {
+                        let result = self.execute_tool(tc).await;
+                        (tc, result)
+                    });
+
+                    let results = futures::future::join_all(futures).await;
+
+                    for (tc, result) in results {
+                        let (content, error) = match result {
+                            Ok(r) => {
+                                self.progress.record_tool_use();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: r.clone(),
+                                    iteration,
+                                });
+                                (r, String::new())
+                            }
+                            Err(e) => {
+                                let err = e.to_string();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                (String::new(), err)
+                            }
+                        };
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error,
+                        });
+                    }
+                }
             }
 
             if cfg.enable_observation_masking {
@@ -348,6 +429,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "test".to_string(),
             parameters: Value::Null,
+            is_mutating: false,
             execute: Arc::new(MockToolExecutor),
         }];
 
