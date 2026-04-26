@@ -5,3 +5,4 @@ pub mod audit;
 pub mod wizard;
 pub mod dayone;
 pub mod cli;
+pub mod diagnostics;
