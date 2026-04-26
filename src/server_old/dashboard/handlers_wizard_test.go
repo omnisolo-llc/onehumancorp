@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/orchestration"
-	"github.com/onehumancorp/mono/src/server/settings"
+	"github.com/onehumancorp/mono/src/server_old/auth"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/settings"
 )
 
 type mockSettingsStore struct{}

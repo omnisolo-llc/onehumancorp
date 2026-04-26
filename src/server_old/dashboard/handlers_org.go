@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/onehumancorp/mono/src/server/settings"
+	"github.com/onehumancorp/mono/src/server_old/settings"
 )
 
 // Handles retrieving organization details.

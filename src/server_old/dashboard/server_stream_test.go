@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/auth"
+	"github.com/onehumancorp/mono/src/server_old/auth"
 )
 
 func TestHandleStream(t *testing.T) {

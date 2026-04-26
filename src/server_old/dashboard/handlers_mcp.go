@@ -11,16 +11,16 @@ import (
 
 	"context"
 
-	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/billing"
-	"github.com/onehumancorp/mono/src/server/integrations"
-	"github.com/onehumancorp/mono/src/server/interop"
-	"github.com/onehumancorp/mono/src/server/lib/integrations/hybridfsmcp"
-	"github.com/onehumancorp/mono/src/server/orchestration"
-	"github.com/onehumancorp/mono/src/server/telemetry"
-	"github.com/onehumancorp/mono/src/server/tools/blobinspector"
-	"github.com/onehumancorp/mono/src/server/tools/localstatefulproxy"
-	"github.com/onehumancorp/mono/src/server/tools/edgeoffloadmcp"
+	"github.com/onehumancorp/mono/src/server_old/auth"
+	"github.com/onehumancorp/mono/src/server_old/billing"
+	"github.com/onehumancorp/mono/src/server_old/integrations"
+	"github.com/onehumancorp/mono/src/server_old/interop"
+	"github.com/onehumancorp/mono/src/server_old/lib/integrations/hybridfsmcp"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/tools/blobinspector"
+	"github.com/onehumancorp/mono/src/server_old/tools/localstatefulproxy"
+	"github.com/onehumancorp/mono/src/server_old/tools/edgeoffloadmcp"
 	"go.opentelemetry.io/otel"
 )
 
@@ -531,7 +531,7 @@ func (s *Server) invokeMCPTool(ctx context.Context, req mcpInvokeRequest) (map[s
 
 // handleMissionsSync handles local-to-cloud mission synchronization via an UPSERT query
 func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server/dashboard").Start(r.Context(), "handleMissionsSync")
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server_old/dashboard").Start(r.Context(), "handleMissionsSync")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
@@ -590,7 +590,7 @@ func (s *Server) handleMissionsSync(w http.ResponseWriter, r *http.Request) {
 
 // handleContextSync handles local-to-cloud Hybrid MCP RAG state synchronization
 func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server/dashboard").Start(r.Context(), "handleContextSync")
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server_old/dashboard").Start(r.Context(), "handleContextSync")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
@@ -680,7 +680,7 @@ func (s *Server) handleContextSync(w http.ResponseWriter, r *http.Request) {
 
 // handleHybridSyncMissions handles receiving synced local missions from HybridMCPRAGDaemon.
 func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server/dashboard").Start(r.Context(), "handleHybridSyncMissions")
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server_old/dashboard").Start(r.Context(), "handleHybridSyncMissions")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
@@ -761,7 +761,7 @@ func (s *Server) handleHybridSyncMissions(w http.ResponseWriter, r *http.Request
 // handleSyncRAG handles receiving synced local MCP RAG contexts from the standalone sync daemon.
 // Resolves conflicts using the X-OHC-Conflict-Resolution header.
 func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server/dashboard").Start(r.Context(), "handleSyncRAG")
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server_old/dashboard").Start(r.Context(), "handleSyncRAG")
 	defer span.End()
 
 	if r.Method != http.MethodPost {
@@ -853,7 +853,7 @@ func (s *Server) handleSyncRAG(w http.ResponseWriter, r *http.Request) {
 
 // handleMcpRagSync handles receiving synced local MCP RAG contexts for the internal sync daemon.
 func (s *Server) handleMcpRagSync(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server/dashboard").Start(r.Context(), "handleMcpRagSync")
+	ctx, span := otel.Tracer("github.com/onehumancorp/mono/src/server_old/dashboard").Start(r.Context(), "handleMcpRagSync")
 	defer span.End()
 
 	if r.Method != http.MethodPost {

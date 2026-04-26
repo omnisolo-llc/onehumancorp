@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/domain"
-	"github.com/onehumancorp/mono/src/server/integrations"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/domain"
+	"github.com/onehumancorp/mono/src/server_old/integrations"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 func TestHybridMCPBridge_InvokeTool_EscalationFlag(t *testing.T) {

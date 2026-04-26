@@ -13,9 +13,9 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/onehumancorp/mono/src/server/billing"
-	"github.com/onehumancorp/mono/src/server/domain"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/billing"
+	"github.com/onehumancorp/mono/src/server_old/domain"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 func TestKairosMesh_E2E_PublishSubscribe(t *testing.T) {

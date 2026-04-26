@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/auth"
+	"github.com/onehumancorp/mono/src/server_old/auth"
 )
 
 // ChaosMiddleware simulates network latency and backend degradation.

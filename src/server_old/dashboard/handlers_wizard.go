@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/onehumancorp/mono/src/server/settings"
+	"github.com/onehumancorp/mono/src/server_old/settings"
 )
 
 // wizardStatusResponse describes the current setup state of the platform.

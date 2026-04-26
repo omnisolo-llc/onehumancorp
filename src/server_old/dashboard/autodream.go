@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/orchestration"
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/auth"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 )
 
 type AutoDreamSyncRequest struct {

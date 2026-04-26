@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/onehumancorp/mono/src/server/scheduler"
+	"github.com/onehumancorp/mono/src/server_old/scheduler"
 )
 
 type schedulerCreateRequest struct {

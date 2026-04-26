@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/agents"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/agents"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 // Handles hiring a new agent.

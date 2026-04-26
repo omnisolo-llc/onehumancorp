@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/domain"
-	"github.com/onehumancorp/mono/src/server/orchestration"
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/domain"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 )
 
 func TestHandleMissionsSync_PIIRedaction(t *testing.T) {

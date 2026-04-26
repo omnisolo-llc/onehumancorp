@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/integrations"
-	"github.com/onehumancorp/mono/src/server/orchestration"
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/integrations"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 )
 
 // Handles retrieving meetings.

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/auth"
+	"github.com/onehumancorp/mono/src/server_old/auth"
 )
 
 func TestHandleSyncRules(t *testing.T) {

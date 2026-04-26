@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/settings"
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/settings"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 )
 
 // Tests for missing coverage in handlers

@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/auth"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 func TestHandleAutoDreamSync(t *testing.T) {

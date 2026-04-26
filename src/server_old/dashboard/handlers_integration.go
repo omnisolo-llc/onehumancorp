@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/integrations"
+	"github.com/onehumancorp/mono/src/server_old/integrations"
 )
 
 // Handles retrieving integrations.

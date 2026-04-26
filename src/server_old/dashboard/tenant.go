@@ -16,10 +16,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/auth"
-	"github.com/onehumancorp/mono/src/server/billing"
-	"github.com/onehumancorp/mono/src/server/domain"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/auth"
+	"github.com/onehumancorp/mono/src/server_old/billing"
+	"github.com/onehumancorp/mono/src/server_old/domain"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 // TenantFactory is a function that creates a new Server (http.Handler) for
