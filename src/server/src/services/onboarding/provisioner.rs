@@ -40,9 +40,7 @@ pub fn check_environment(is_cloud: bool) -> Result<(), String> {
 pub fn cleanup_environment(is_cloud: bool) -> Result<(), String> {
     let base_dir = if is_cloud { ".ohc-cloud-data" } else { ".ohc-local-data" };
     
-    if Path::new(base_dir).exists() {
-        fs::remove_dir_all(base_dir).map_err(|e| e.to_string())?;
-    }
+    fs::remove_dir_all(base_dir).map_err(|e| e.to_string())?;
     
     // TODO: Increment metrics
     
