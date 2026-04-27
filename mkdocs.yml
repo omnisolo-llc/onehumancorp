@@ -64,6 +64,7 @@ nav:
       - Visual Dashboard Guide: walkthroughs/visual_dashboard_guide.md
       - Agent Harness Visual Walkthrough: walkthroughs/agent_harness_walkthrough.md
       - AutoDream Walkthrough: walkthroughs/kairos_autodream_walkthrough.md
+      - AutoDream Sync Daemon Walkthrough: walkthroughs/scribe_proactive_autodream_sync.md
       - Capability Plugin Mesh: walkthroughs/capability_plugin_mesh.md
       - Edge LLM Offloading Protocol: walkthroughs/edge_llm_offloading.md
       - Teammate Mesh Walkthrough: technical/walkthroughs/teammate_mesh.md
