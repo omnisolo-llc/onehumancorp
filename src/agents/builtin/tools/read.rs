@@ -11,11 +11,11 @@ impl ToolExecutor for ReadExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let path = args["path"].as_str().ok_or("read: path is required")?;
+    ) -> Result<String, crate::types::ToolError> {
+        let path = args["path"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("read: path is required".to_string()))?;
         let content = fs::read_to_string(path)
             .await
-            .map_err(|e| format!("read: {}: {}", path, e))?;
+            .map_err(|e| crate::types::ToolError::LlmRecoverable(format!("read: {}: {}", path, e)))?;
 
         // Optional line range
         if let (Some(start), Some(end)) = (

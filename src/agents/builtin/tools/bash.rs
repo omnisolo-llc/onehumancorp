@@ -12,10 +12,10 @@ impl ToolExecutor for BashExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let command = args["command"]
             .as_str()
-            .ok_or("bash: command is required")?
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable("bash: command is required".to_string()))?
             .to_string();
         let timeout_secs = args["timeout"].as_f64().unwrap_or(120.0);
         let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
@@ -28,8 +28,8 @@ impl ToolExecutor for BashExecutor {
                 .output(),
         )
         .await
-        .map_err(|_| format!("bash: command timed out after {}s", timeout_secs))?
-        .map_err(|e| format!("bash: failed to execute: {}", e))?;
+        .map_err(|_| crate::types::ToolError::LlmRecoverable(format!("bash: command timed out after {}s", timeout_secs)))?
+        .map_err(|e| crate::types::ToolError::LlmRecoverable(format!("bash: failed to execute: {}", e)))?;
 
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();

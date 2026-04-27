@@ -104,3 +104,67 @@ pub struct ToolDefinition {
     pub description: String,
     pub parameters: serde_json::Value,
 }
+
+
+/// Four types of Tool Execution Errors (LangGraph mechanic).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ToolError {
+    /// Retry with backoff
+    Transient(String),
+    /// Return raw error to LLM so it can self-correct
+    LlmRecoverable(String),
+    /// Interrupt execution and ask user for input
+    UserFixable(String),
+    /// Bubble up to debug
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolError::Transient(msg) => write!(f, "Transient error: {}", msg),
+            ToolError::LlmRecoverable(msg) => write!(f, "{}", msg),
+            ToolError::UserFixable(msg) => write!(f, "User fixable error: {}", msg),
+            ToolError::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}
+
+
+impl From<std::io::Error> for ToolError {
+    fn from(err: std::io::Error) -> Self {
+        ToolError::LlmRecoverable(format!("IO error: {}", err))
+    }
+}
+
+impl From<reqwest::Error> for ToolError {
+    fn from(err: reqwest::Error) -> Self {
+        ToolError::LlmRecoverable(format!("Network error: {}", err))
+    }
+}
+
+impl From<serde_json::Error> for ToolError {
+    fn from(err: serde_json::Error) -> Self {
+        ToolError::LlmRecoverable(format!("JSON error: {}", err))
+    }
+}
+
+impl From<Box<dyn std::error::Error + Send + Sync>> for ToolError {
+    fn from(err: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        ToolError::LlmRecoverable(err.to_string())
+    }
+}
+
+impl From<String> for ToolError {
+    fn from(err: String) -> Self {
+        ToolError::LlmRecoverable(err)
+    }
+}
+
+impl From<&str> for ToolError {
+    fn from(err: &str) -> Self {
+        ToolError::LlmRecoverable(err.to_string())
+    }
+}

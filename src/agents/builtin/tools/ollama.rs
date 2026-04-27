@@ -9,8 +9,8 @@ impl ToolExecutor for OllamaExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let action = args["action"].as_str().ok_or("ollama: action is required")?;
+    ) -> Result<String, crate::types::ToolError> {
+        let action = args["action"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("ollama: action is required".to_string()))?;
         let url = args["url"].as_str().unwrap_or("http://localhost:11434");
 
         let client = reqwest::Client::new();
@@ -26,7 +26,7 @@ impl ToolExecutor for OllamaExecutor {
                 Ok(result.to_string())
             }
             "pull_model" => {
-                let model_name = args["model_name"].as_str().ok_or("ollama: model_name is required for pull")?;
+                let model_name = args["model_name"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("ollama: model_name is required for pull".to_string()))?;
                 let endpoint = format!("{}/api/pull", url.trim_end_matches('/'));
                 let payload = json!({
                     "name": model_name,
@@ -39,7 +39,7 @@ impl ToolExecutor for OllamaExecutor {
                 Ok(json!({"status":"pulled"}).to_string())
             }
             "check_health" => {
-                let model_name = args["model_name"].as_str().ok_or("ollama: model_name is required for health check")?;
+                let model_name = args["model_name"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("ollama: model_name is required for health check".to_string()))?;
                 let endpoint = format!("{}/api/generate", url.trim_end_matches('/'));
                 let payload = json!({
                     "model": model_name,

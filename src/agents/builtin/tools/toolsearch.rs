@@ -10,10 +10,10 @@ impl ToolExecutor for ToolSearchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let query = args["query"]
             .as_str()
-            .ok_or("toolsearch: query is required")?
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable("toolsearch: query is required".to_string()))?
             .to_lowercase();
 
         let all_tools = &[

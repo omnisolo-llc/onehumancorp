@@ -72,10 +72,10 @@ impl ToolExecutor for TaskCreateExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let title = args["title"]
             .as_str()
-            .ok_or("task_create: title is required")?;
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable("task_create: title is required".to_string()))?;
         let description = args["description"].as_str().unwrap_or("").to_string();
         let assignee = args["assignee"].as_str().unwrap_or("").to_string();
 
@@ -108,8 +108,8 @@ impl ToolExecutor for TaskGetExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let id = args["id"].as_str().ok_or("task_get: id is required")?;
+    ) -> Result<String, crate::types::ToolError> {
+        let id = args["id"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("task_get: id is required".to_string()))?;
         let store = self.store.read().await;
         if let Some(task) = store.get(id) {
             Ok(serde_json::to_string_pretty(task).unwrap_or_default())
@@ -130,7 +130,7 @@ impl ToolExecutor for TaskListExecutor {
     async fn execute(
         &self,
         _args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let store = self.store.read().await;
         let tasks: Vec<&Task> = store.list();
         if tasks.is_empty() {
@@ -151,8 +151,8 @@ impl ToolExecutor for TaskUpdateExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let id = args["id"].as_str().ok_or("task_update: id is required")?;
+    ) -> Result<String, crate::types::ToolError> {
+        let id = args["id"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("task_update: id is required".to_string()))?;
         let status = args["status"].as_str().map(str::to_string);
         let result = args["result"].as_str().map(str::to_string);
 

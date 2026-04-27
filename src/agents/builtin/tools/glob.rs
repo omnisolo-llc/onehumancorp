@@ -10,10 +10,10 @@ impl ToolExecutor for GlobExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let pattern = args["pattern"]
             .as_str()
-            .ok_or("glob: pattern is required")?;
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable("glob: pattern is required".to_string()))?;
         let base_dir = args["path"].as_str().unwrap_or(".");
 
         let full_pattern = if base_dir == "." {
@@ -23,7 +23,7 @@ impl ToolExecutor for GlobExecutor {
         };
 
         let matches: Vec<String> = glob::glob(&full_pattern)
-            .map_err(|e| format!("glob: invalid pattern: {}", e))?
+            .map_err(|e| crate::types::ToolError::LlmRecoverable(format!("glob: invalid pattern: {}", e)))?
             .filter_map(|r| r.ok())
             .map(|p| p.display().to_string())
             .collect();

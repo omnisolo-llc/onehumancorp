@@ -11,18 +11,18 @@ impl ToolExecutor for EditExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let path = args["path"].as_str().ok_or("edit: path is required")?;
+    ) -> Result<String, crate::types::ToolError> {
+        let path = args["path"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("edit: path is required".to_string()))?;
         let old_str = args["old_str"]
             .as_str()
-            .ok_or("edit: old_str is required")?;
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable("edit: old_str is required".to_string()))?;
         let new_str = args["new_str"]
             .as_str()
-            .ok_or("edit: new_str is required")?;
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable("edit: new_str is required".to_string()))?;
 
         let content = fs::read_to_string(path)
             .await
-            .map_err(|e| format!("edit: read {}: {}", path, e))?;
+            .map_err(|e| crate::types::ToolError::LlmRecoverable(format!("edit: read {}: {}", path, e)))?;
 
         // Ensure exactly one occurrence.
         let count = content.matches(old_str).count();
@@ -44,7 +44,7 @@ impl ToolExecutor for EditExecutor {
         let new_content = content.replacen(old_str, new_str, 1);
         fs::write(path, &new_content)
             .await
-            .map_err(|e| format!("edit: write {}: {}", path, e))?;
+            .map_err(|e| crate::types::ToolError::LlmRecoverable(format!("edit: write {}: {}", path, e)))?;
 
         Ok(format!("File edited: {}", path))
     }

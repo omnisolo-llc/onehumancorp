@@ -205,15 +205,22 @@ impl Agent {
                         });
                         (r, String::new())
                     }
-                    Err(e) => {
-                        let err = e.to_string();
+                    Err(crate::types::ToolError::Transient(msg)) | Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
+                            result: format!("Error: {}", msg),
                             iteration,
                         });
-                        (String::new(), err)
+                        (String::new(), msg)
+                    }
+                    Err(crate::types::ToolError::UserFixable(msg)) => {
+                        on_event(AgentEvent::TaskError { error: format!("User fixable error: {}", msg) });
+                        return Err(crate::types::ToolError::UserFixable(msg).into());
+                    }
+                    Err(crate::types::ToolError::Unexpected(msg)) => {
+                        on_event(AgentEvent::TaskError { error: format!("Unexpected error: {}", msg) });
+                        return Err(crate::types::ToolError::Unexpected(msg).into());
                     }
                 };
                 tool_results.push(ToolResult {
@@ -262,12 +269,12 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let tool = self
             .tools
             .iter()
             .find(|t| t.name == tc.name)
-            .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
         tool.execute.execute(tc.arguments.clone()).await
     }

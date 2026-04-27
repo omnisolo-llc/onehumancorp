@@ -11,11 +11,11 @@ impl ToolExecutor for WriteExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let path = args["path"].as_str().ok_or("write: path is required")?;
+    ) -> Result<String, crate::types::ToolError> {
+        let path = args["path"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("write: path is required".to_string()))?;
         let content = args["content"]
             .as_str()
-            .ok_or("write: content is required")?;
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable("write: content is required".to_string()))?;
 
         // Create parent directories if needed.
         if let Some(parent) = std::path::Path::new(path).parent() {
@@ -26,7 +26,7 @@ impl ToolExecutor for WriteExecutor {
 
         fs::write(path, content)
             .await
-            .map_err(|e| format!("write: {}: {}", path, e))?;
+            .map_err(|e| crate::types::ToolError::LlmRecoverable(format!("write: {}: {}", path, e)))?;
 
         Ok(format!("File written: {}", path))
     }

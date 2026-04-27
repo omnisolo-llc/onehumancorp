@@ -11,9 +11,9 @@ impl ToolExecutor for LocalFSSyncExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let action = args["Action"].as_str().ok_or("local_fs_sync: Action is required")?;
-        let path = args["Path"].as_str().ok_or("local_fs_sync: Path is required")?;
+    ) -> Result<String, crate::types::ToolError> {
+        let action = args["Action"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("local_fs_sync: Action is required".to_string()))?;
+        let path = args["Path"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("local_fs_sync: Path is required".to_string()))?;
 
         let clean_path = Path::new(path);
         if !clean_path.starts_with(".agent-task/") || path.contains("..") {
@@ -26,7 +26,7 @@ impl ToolExecutor for LocalFSSyncExecutor {
                 Ok(content)
             }
             "write" => {
-                let content = args["Content"].as_str().ok_or("local_fs_sync: Content is required for write")?;
+                let content = args["Content"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("local_fs_sync: Content is required for write".to_string()))?;
                 fs::write(clean_path, content).await?;
                 Ok(json!({"status":"written"}).to_string())
             }

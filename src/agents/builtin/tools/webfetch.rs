@@ -13,8 +13,8 @@ impl ToolExecutor for WebFetchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let url = args["url"].as_str().ok_or("webfetch: url is required")?;
+    ) -> Result<String, crate::types::ToolError> {
+        let url = args["url"].as_str().ok_or_else(|| crate::types::ToolError::LlmRecoverable("webfetch: url is required".to_string()))?;
         let prompt = args["prompt"].as_str().unwrap_or("");
 
         let resp = self
@@ -23,7 +23,7 @@ impl ToolExecutor for WebFetchExecutor {
             .header("User-Agent", "OHC-Agent/1.0")
             .send()
             .await
-            .map_err(|e| format!("webfetch: GET {}: {}", url, e))?;
+            .map_err(|e| crate::types::ToolError::LlmRecoverable(format!("webfetch: GET {}: {}", url, e)))?;
 
         if !resp.status().is_success() {
             return Err(format!("webfetch: HTTP {}", resp.status()).into());
@@ -39,7 +39,7 @@ impl ToolExecutor for WebFetchExecutor {
         let body = resp
             .text()
             .await
-            .map_err(|e| format!("webfetch: read body: {}", e))?;
+            .map_err(|e| crate::types::ToolError::LlmRecoverable(format!("webfetch: read body: {}", e)))?;
 
         // Strip HTML tags for HTML content.
         let text = if content_type.contains("html") {
