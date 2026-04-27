@@ -7,6 +7,11 @@ export component Dashboard inherits Window {
 
     background: #f8fafc;
 
+    in property <string> active_agents: "0";
+    in property <string> active_tasks: "0";
+    in property <string> scheduled_calls: "0";
+    in property <string> team_members: "0";
+
     VerticalBox {
         spacing: 20px;
         padding: 24px;
@@ -31,7 +36,7 @@ export component Dashboard inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Active Agents"; color: #64748b; }
-                    Text { text: "5"; font-size: 32px; font-weight: 700; color: #a855f7; }
+                    Text { text: active_agents; font-size: 32px; font-weight: 700; color: #a855f7; }
                 }
             }
             Rectangle {
@@ -43,7 +48,7 @@ export component Dashboard inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Active Tasks"; color: #64748b; }
-                    Text { text: "12"; font-size: 32px; font-weight: 700; color: #06b6d4; }
+                    Text { text: active_tasks; font-size: 32px; font-weight: 700; color: #06b6d4; }
                 }
             }
             Rectangle {
@@ -55,7 +60,7 @@ export component Dashboard inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Scheduled Calls"; color: #64748b; }
-                    Text { text: "3"; font-size: 32px; font-weight: 700; color: #10b981; }
+                    Text { text: scheduled_calls; font-size: 32px; font-weight: 700; color: #10b981; }
                 }
             }
             Rectangle {
@@ -67,7 +72,7 @@ export component Dashboard inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Team Members"; color: #64748b; }
-                    Text { text: "8"; font-size: 32px; font-weight: 700; color: #f59e0b; }
+                    Text { text: team_members; font-size: 32px; font-weight: 700; color: #f59e0b; }
                 }
             }
         }
