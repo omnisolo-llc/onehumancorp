@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component GrowBusiness inherits Window {
     width: 500px;
@@ -10,14 +11,15 @@ export component GrowBusiness inherits Window {
     in-out property <bool> is_advanced: false;
     callback execute(string);
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+    GlassCard {
+        VerticalBox {
+            spacing: 20px;
+            padding: 24px;
 
         HorizontalBox {
-            Text { text: "Growth Strategies"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Text { text: "Growth Strategies"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
             Rectangle {}
             CheckBox {
                 text: "Expert Mode";
@@ -29,7 +31,7 @@ export component GrowBusiness inherits Window {
         // Step 0: Select Strategy
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Select a next step to grow your business"; color: #1e293b; }
+            Text { text: "Select a next step to grow your business"; color: white; font-family: "Outfit"; }
             
             Button { text: "Add 5 more products"; clicked => { selected_strategy = "Add 5 more products"; } }
             Button { text: "Connect Instagram"; clicked => { selected_strategy = "Connect Instagram"; } }
@@ -41,13 +43,13 @@ export component GrowBusiness inherits Window {
         // Step 1: Confirm
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "Confirm Action"; font-size: 20px; font-weight: 700; color: #1e293b; }
-            Text { text: "You are about to start: " + selected_strategy; color: #1e293b; }
-            Text { text: "Your AI agents will be instructed to begin this growth strategy immediately."; color: #64748b; wrap: word-wrap; }
+            Text { text: "Confirm Action"; font-size: 20px; font-weight: 700; color: white; font-family: "Outfit"; }
+            Text { text: "You are about to start: " + selected_strategy; color: white; font-family: "Outfit"; }
+            Text { text: "Your AI agents will be instructed to begin this growth strategy immediately."; color: #a8b2c1; font-family: "Inter"; wrap: word-wrap; }
             
             if (is_advanced) : VerticalBox {
                 spacing: 8px;
-                Text { text: "Advanced Target KPIs"; font-weight: 700; color: #1e293b; }
+                Text { text: "Advanced Target KPIs"; font-weight: 700; color: white; font-family: "Outfit"; }
                 LineEdit {
                     placeholder-text: "Conversion Target (%)";
                 }
@@ -73,6 +75,7 @@ export component GrowBusiness inherits Window {
                     }
                 }
             }
+        }
         }
     }
 }

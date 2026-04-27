@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component Wizard inherits Window {
     width: 600px;
@@ -7,13 +8,14 @@ export component Wizard inherits Window {
 
     property <int> step: 0;
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+    GlassCard {
+        VerticalBox {
+            spacing: 20px;
+            padding: 24px;
 
-        Text { text: "Setup Wizard"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Setup Wizard"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
 
         HorizontalBox {
             spacing: 10px;
@@ -26,10 +28,10 @@ export component Wizard inherits Window {
                 height: 24px; 
                 HorizontalBox {
                     padding: 2px;
-                    Text { text: "1"; color: white; horizontal-alignment: center; } 
+                    Text { text: "1"; color: white; font-family: "Outfit"; horizontal-alignment: center; }
                 }
             }
-            Text { text: "Server"; color: step == 0 ? #1e293b : #64748b; }
+            Text { text: "Server"; color: step == 0 ? white : #a8b2c1; font-family: "Inter"; }
             
             Rectangle { 
                 background: step >= 1 ? #a855f7 : #e2e8f0; 
@@ -38,10 +40,10 @@ export component Wizard inherits Window {
                 height: 24px; 
                 HorizontalBox {
                     padding: 2px;
-                    Text { text: "2"; color: white; horizontal-alignment: center; } 
+                    Text { text: "2"; color: white; font-family: "Outfit"; horizontal-alignment: center; }
                 }
             }
-            Text { text: "AI Provider"; color: step == 1 ? #1e293b : #64748b; }
+            Text { text: "AI Provider"; color: step == 1 ? white : #a8b2c1; font-family: "Inter"; }
             
             Rectangle { 
                 background: step >= 2 ? #a855f7 : #e2e8f0; 
@@ -50,29 +52,29 @@ export component Wizard inherits Window {
                 height: 24px; 
                 HorizontalBox {
                     padding: 2px;
-                    Text { text: "3"; color: white; horizontal-alignment: center; } 
+                    Text { text: "3"; color: white; font-family: "Outfit"; horizontal-alignment: center; }
                 }
             }
-            Text { text: "Real-time"; color: step == 2 ? #1e293b : #64748b; }
+            Text { text: "Real-time"; color: step == 2 ? white : #a8b2c1; font-family: "Inter"; }
         }
 
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Server Settings"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Text { text: "Server Settings"; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
             LineEdit { placeholder-text: "Listen Address"; text: "0.0.0.0:18789"; }
             LineEdit { placeholder-text: "Database Path"; text: "ohc.db"; }
         }
 
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "AI Provider — Minimax"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Text { text: "AI Provider — Minimax"; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
             LineEdit { placeholder-text: "Minimax API Key"; }
             LineEdit { placeholder-text: "Default Model"; text: "abab6.5s"; }
         }
 
         if (step == 2) : VerticalBox {
             spacing: 10px;
-            Text { text: "Real-time Messaging (Centrifuge)"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            Text { text: "Real-time Messaging (Centrifuge)"; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
             LineEdit { placeholder-text: "Centrifuge WebSocket URL"; text: "ws://localhost:8000/connection/websocket"; }
         }
 
@@ -94,6 +96,7 @@ export component Wizard inherits Window {
                     }
                 }
             }
+        }
         }
     }
 }

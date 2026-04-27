@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component BusinessSetup inherits Window {
     width: 600px;
@@ -18,18 +19,19 @@ export component BusinessSetup inherits Window {
 
     callback launch();
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+    GlassCard {
+        VerticalBox {
+            spacing: 20px;
+            padding: 24px;
 
-        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
 
         // Step 0: Welcome
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
+            Text { text: "Welcome! Your AI team, ready in minutes."; color: white; font-family: "Outfit"; }
         }
 
         // Step 1: Type & Name
@@ -52,7 +54,7 @@ export component BusinessSetup inherits Window {
                 placeholder-text: "What do you sell?";
                 text <=> products_services;
             }
-            Text { text: "Payment Preference: " + payment_pref; color: #1e293b; }
+            Text { text: "Payment Preference: " + payment_pref; color: white; font-family: "Outfit"; }
             HorizontalBox {
                 Button { text: "Stripe"; clicked => { payment_pref = "stripe"; } }
                 Button { text: "PayPal"; clicked => { payment_pref = "paypal"; } }
@@ -62,7 +64,7 @@ export component BusinessSetup inherits Window {
         // Step 3: Template
         if (step == 3) : VerticalBox {
             spacing: 10px;
-            Text { text: "Template Selection: " + template_id; color: #1e293b; }
+            Text { text: "Template Selection: " + template_id; color: white; font-family: "Outfit"; }
             HorizontalBox {
                 Button { text: "Modern"; clicked => { template_id = "modern"; } }
                 Button { text: "Classic"; clicked => { template_id = "classic"; } }
@@ -83,7 +85,7 @@ export component BusinessSetup inherits Window {
             spacing: 10px;
             HorizontalBox {
                 LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; }
-                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
+                Text { text: ".ohc.app"; color: white; font-family: "Outfit"; horizontal-alignment: center; }
             }
         }
 
@@ -106,6 +108,7 @@ export component BusinessSetup inherits Window {
                     }
                 }
             }
+        }
         }
     }
 }
