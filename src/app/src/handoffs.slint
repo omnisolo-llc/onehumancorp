@@ -1,9 +1,21 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
+export struct UiHandoff {
+    id: string,
+    intent: string,
+    agent_name: string,
+    description: string,
+    date: string,
+    status: string,
+}
+
 export component Handoffs inherits Window {
     width: 500px;
     height: 600px;
     title: "Handoffs & Escalations";
+
+    in property <[UiHandoff]> handoffs;
+    callback resolve_handoff(string, string);
 
     background: #f8fafc;
 
@@ -20,7 +32,7 @@ export component Handoffs inherits Window {
         VerticalBox {
             spacing: 16px;
             
-            Rectangle {
+            for h in handoffs : Rectangle {
                 background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
@@ -37,31 +49,20 @@ export component Handoffs inherits Window {
                             
                             HorizontalBox {
                                 padding: 4px;
-                                Text { text: "Intent: REFUND"; color: white; font-size: 10px; font-weight: 700; }
+                                Text { text: "Intent: " + h.intent; color: white; font-size: 10px; font-weight: 700; }
                             }
                         }
                         Rectangle {}
-                        Text { text: "Apr 25, 2026"; color: #64748b; font-size: 12px; horizontal-alignment: center; }
+                        Text { text: h.date; color: #64748b; font-size: 12px; horizontal-alignment: center; }
                     }
                     
-                    Text { text: "Escalated by Agent: support_agent"; color: #1e293b; font-weight: 700; }
-                    Text { text: "Customer is asking for a refund outside of policy."; color: #1e293b; wrap: word-wrap; }
-                    
-                    Rectangle {
-                        height: 100px;
-                        background: #f1f5f9;
-                        border-radius: 8px;
-                        
-                        HorizontalBox {
-                            padding: 16px;
-                            Text { text: "[ Image Placeholder ]"; color: #64748b; horizontal-alignment: center; }
-                        }
-                    }
+                    Text { text: "Escalated by Agent: " + h.agent_name; color: #1e293b; font-weight: 700; }
+                    Text { text: h.description; color: #1e293b; wrap: word-wrap; }
                     
                     HorizontalBox {
                         spacing: 10px;
-                        Button { text: "Reject"; }
-                        Button { text: "Approve"; }
+                        Button { text: "Reject"; clicked => { resolve_handoff(h.id, "reject"); } }
+                        Button { text: "Approve"; clicked => { resolve_handoff(h.id, "approve"); } }
                     }
                 }
             }

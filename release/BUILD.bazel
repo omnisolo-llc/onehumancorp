@@ -126,12 +126,14 @@ pkg_files(
     srcs = ["//src/server:ohc"],
     renames = {"//src/server:ohc": "ohc"},
     strip_prefix = strip_prefix.from_pkg(),
+    tags = ["manual"],
 )
 
 pkg_tar(
     name = "ohc-x86_64-unknown-linux-gnu",
     srcs = [":ohc_linux_amd64_files"],
     extension = "tar.gz",
+    tags = ["manual"],
     visibility = ["//visibility:public"],
 )
 

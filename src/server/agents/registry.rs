@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
-use crate::agents::provider::{Provider, ProviderType, Credentials, ClaudeProvider};
+use crate::agents::provider::{
+    Provider, ProviderType, Credentials, ClaudeProvider, GeminiProvider,
+    OpenCodeProvider, OpenClawProvider, IronClawProvider, MiniMaxiProvider,
+    BuiltinProvider, ScoutProvider
+};
 
 pub struct Registry {
     providers: RwLock<HashMap<ProviderType, Arc<dyn Provider>>>,
@@ -17,7 +21,13 @@ impl Registry {
     pub fn default_registry() -> Self {
         let r = Self::new();
         r.register(Arc::new(ClaudeProvider::new()));
-        // Add more providers here as they are implemented
+        r.register(Arc::new(GeminiProvider::new()));
+        r.register(Arc::new(OpenCodeProvider::new()));
+        r.register(Arc::new(OpenClawProvider::new()));
+        r.register(Arc::new(IronClawProvider::new()));
+        r.register(Arc::new(MiniMaxiProvider::new()));
+        r.register(Arc::new(BuiltinProvider::new()));
+        r.register(Arc::new(ScoutProvider::new()));
         r
     }
 
@@ -85,4 +95,62 @@ pub struct ProviderInfo {
     pub description: String,
     pub recommended_roles: Vec<String>,
     pub is_authenticated: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::agents::provider::Credentials;
+
+    #[test]
+    fn test_provider_get_credentials() {
+        let registry = Registry::default_registry();
+        let creds = Credentials {
+            api_key: "test-key".to_string(),
+            oauth_token: "".to_string(),
+            extra: std::collections::HashMap::new(),
+        };
+
+        let test_cases = vec![
+            ProviderType::Claude,
+            ProviderType::Gemini,
+            ProviderType::OpenCode,
+            ProviderType::OpenClaw,
+            ProviderType::IronClaw,
+            ProviderType::MiniMaxi,
+        ];
+
+        for t in test_cases {
+            let provider = registry.get(t.clone()).expect("provider should exist");
+            provider.authenticate(creds.clone()).expect("auth should succeed");
+            assert_eq!(provider.get_credentials().api_key, "test-key");
+            assert!(provider.is_authenticated());
+        }
+    }
+
+    #[test]
+    fn test_builtin_provider_always_authenticated() {
+        let registry = Registry::default_registry();
+        let provider = registry.get(ProviderType::Builtin).expect("provider should exist");
+        assert!(provider.is_authenticated());
+        
+        let creds = Credentials {
+            api_key: "some-key".to_string(),
+            oauth_token: "".to_string(),
+            extra: std::collections::HashMap::new(),
+        };
+        provider.authenticate(creds).expect("auth should succeed");
+        assert!(provider.is_authenticated());
+        assert!(provider.get_credentials().api_key.is_empty()); // Builtin doesn't store creds
+    }
+
+    #[test]
+    fn test_hello_world_agent_example() {
+        let registry = Registry::default_registry();
+        let provider = registry.get(ProviderType::Builtin).expect("Built-in provider not found");
+        println!("Successfully loaded provider: {}", provider.provider_type());
+        println!("Description: {}", provider.description());
+        println!("Is Authenticated: {}", provider.is_authenticated());
+        println!("Hello World! The agent provider is ready to use with zero configuration.");
+    }
 }

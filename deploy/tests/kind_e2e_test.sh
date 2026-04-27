@@ -51,16 +51,13 @@ log "Repo root: ${REPO_ROOT}"
 
 # ── Create Kind cluster ────────────────────────────────────────────────────────
 log "Creating Kind cluster '${CLUSTER_NAME}' ..."
+
+# Set KUBECONFIG to a temporary file BEFORE creating the cluster to avoid
+# trying to lock the user's read-only default kubeconfig in the sandbox.
+export KUBECONFIG="${TEST_TMPDIR:-/tmp}/kind-kubeconfig-$$"
+touch "${KUBECONFIG}"
+
 kind create cluster --name "${CLUSTER_NAME}" --wait 120s
-
-export KUBECONFIG
-KUBECONFIG="$(kind get kubeconfig --name "${CLUSTER_NAME}" 2>/dev/null | grep -E '^/' || true)"
-if [[ -z "${KUBECONFIG}" ]]; then
-  KUBECONFIG="${HOME}/.kube/config"
-fi
-
-kind get kubeconfig --name "${CLUSTER_NAME}" > /tmp/kind-kubeconfig-$$
-export KUBECONFIG="/tmp/kind-kubeconfig-$$"
 
 log "Waiting for cluster nodes ..."
 kubectl wait --for=condition=Ready node --all --timeout=120s
@@ -73,13 +70,31 @@ if [[ -n "${TEST_SRCDIR:-}" ]]; then
   # Locate the load script
   SERVER_LOADER="${REPO_ROOT}/deploy/server_load.sh"
   
-  if [[ ! -x "${SERVER_LOADER}" ]]; then
+  if [[ ! -f "${SERVER_LOADER}" || ! -x "${SERVER_LOADER}" ]]; then
     # In some sandboxes, we might need to find it in the runfiles tree
     SERVER_LOADER="$(find "${TEST_SRCDIR}" -name "server_load.sh" -type f -executable | head -1)"
   fi
   
   log "Executing server loader: ${SERVER_LOADER}"
-  "${SERVER_LOADER}"
+  log "Finding directory containing bazel-out ..."
+  BAZEL_ROOT="${REPO_ROOT}"
+  while [[ "${BAZEL_ROOT}" != "/" ]]; do
+    if [[ -d "${BAZEL_ROOT}/bazel-out" ]]; then
+      break
+    fi
+    BAZEL_ROOT="$(dirname "${BAZEL_ROOT}")"
+  done
+  
+  if [[ "${BAZEL_ROOT}" == "/" ]]; then
+    log "error: could not find directory containing bazel-out"
+    exit 1
+  fi
+  
+  log "Found bazel root at ${BAZEL_ROOT}"
+  
+  pushd "${BAZEL_ROOT}" >/dev/null
+  bazel run //deploy:server_load
+  popd >/dev/null
   
   # Standardize tags for the test
   docker tag onehumancorp/server:latest onehumancorp/server:e2e
@@ -124,6 +139,10 @@ helm upgrade --install "${RELEASE_NAME}" "${REPO_ROOT}/deploy/helm/ohc" \
   --set backend.image=onehumancorp/server:e2e \
   --set redis.enabled=false \
   --set cnpg.enabled=false \
+  --set backend.autoscaling.enabled=false \
+  --set ohcCore.autoscaling.enabled=false \
+  --set chatwoot.autoscaling.enabled=false \
+  --set powersync.autoscaling.enabled=false \
   --set "backend.env.REDIS_ADDR=redis-master:6379" \
   --wait --timeout 180s
 

@@ -1,11 +1,20 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
 
+export struct UiChatMessage {
+    id: string,
+    author_name: string,
+    body: string,
+    is_me: bool,
+}
+
 export component Chat inherits Window {
     width: 400px;
     height: 600px;
     title: "Chat - #general";
 
-    property <string> new_message: "";
+    in property <[UiChatMessage]> messages;
+    in-out property <string> new_message: "";
+    callback send_message(string);
 
     background: #f8fafc;
 
@@ -25,40 +34,27 @@ export component Chat inherits Window {
                 padding: 16px;
                 alignment: start;
                 
-                // Message from other
-                HorizontalBox {
-                    alignment: start;
+                for msg in messages : HorizontalBox {
+                    alignment: msg.is_me ? end : start;
+                    if (msg.is_me) : Rectangle {} // Spacer
                     Rectangle {
-                        background: #f1f5f9;
+                        background: msg.is_me ? #f3e8ff : #f1f5f9;
                         border-radius: 12px;
                         width: 260px;
                         
                         VerticalBox {
                             padding: 10px;
                             spacing: 4px;
-                            Text { text: "Agent Smith"; font-weight: 700; color: #a855f7; }
-                            Text { text: "Hello! How can I help you today?"; color: #1e293b; wrap: word-wrap; }
+                            Text { 
+                                text: msg.author_name; 
+                                font-weight: 700; 
+                                color: msg.is_me ? #1e293b : #a855f7; 
+                                horizontal-alignment: msg.is_me ? right : left; 
+                            }
+                            Text { text: msg.body; color: #1e293b; wrap: word-wrap; }
                         }
                     }
-                    Rectangle {} // Spacer
-                }
-                
-                // Message from me
-                HorizontalBox {
-                    alignment: end;
-                    Rectangle {} // Spacer
-                    Rectangle {
-                        background: #f3e8ff;
-                        border-radius: 12px;
-                        width: 260px;
-                        
-                        VerticalBox {
-                            padding: 10px;
-                            spacing: 4px;
-                            Text { text: "You"; font-weight: 700; color: #1e293b; horizontal-alignment: right; }
-                            Text { text: "I need to convert this codebase to Rust."; color: #1e293b; wrap: word-wrap; }
-                        }
-                    }
+                    if (!msg.is_me) : Rectangle {} // Spacer
                 }
             }
         }
@@ -68,10 +64,11 @@ export component Chat inherits Window {
             spacing: 10px;
             LineEdit {
                 placeholder-text: "Type a message...";
-                text: new_message;
+                text <=> new_message;
             }
             Button {
                 text: "Send";
+                clicked => { send_message(new_message); new_message = ""; }
             }
         }
     }

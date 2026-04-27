@@ -5,6 +5,13 @@ export component MyPlan inherits Window {
     height: 400px;
     title: "My Plan";
 
+    in-out property <string> tier: "Pro Tier";
+    in-out property <string> total_actions: "1200";
+    in-out property <string> action_limit: "Unlimited";
+    in-out property <string> used_storage: "150.5 MB";
+    in-out property <string> limit_storage: "10.0 GB";
+    in-out property <string> estimated_bill: "$124.50";
+
     background: #f8fafc;
 
     VerticalBox {
@@ -23,7 +30,7 @@ export component MyPlan inherits Window {
                 padding: 16px;
                 spacing: 8px;
                 Text { text: "Current Plan"; color: #64748b; }
-                Text { text: "Pro Tier"; font-size: 28px; font-weight: 700; color: #1e293b; }
+                Text { text: tier; font-size: 28px; font-weight: 700; color: #1e293b; }
                 Button { text: "Upgrade"; }
             }
         }
@@ -38,9 +45,9 @@ export component MyPlan inherits Window {
                 padding: 16px;
                 spacing: 8px;
                 Text { text: "Usage This Month"; font-size: 18px; font-weight: 700; color: #1e293b; }
-                Text { text: "AI Actions: 1200 / Unlimited"; color: #1e293b; }
-                Text { text: "Storage Used: 150.5 MB / 10.0 GB"; color: #1e293b; }
-                Text { text: "Estimated Next Bill: $124.50"; color: #1e293b; }
+                Text { text: "AI Actions: " + total_actions + " / " + action_limit; color: #1e293b; }
+                Text { text: "Storage Used: " + used_storage + " / " + limit_storage; color: #1e293b; }
+                Text { text: "Estimated Next Bill: " + estimated_bill; color: #1e293b; }
             }
         }
     }

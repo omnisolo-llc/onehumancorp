@@ -1,11 +1,20 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
+export struct UiLogLine {
+    index: int,
+    text: string,
+    color: color,
+}
+
 export component Logs inherits Window {
     width: 600px;
     height: 500px;
     title: "Service Logs";
 
     background: #f8fafc;
+
+    in property <[UiLogLine]> logs;
+    callback refresh();
 
     VerticalBox {
         spacing: 20px;
@@ -14,7 +23,10 @@ export component Logs inherits Window {
         HorizontalBox {
             Text { text: "Service Logs"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { text: "Refresh"; }
+            Button { 
+                text: "Refresh"; 
+                clicked => { refresh(); }
+            }
         }
 
         Rectangle {
@@ -26,20 +38,10 @@ export component Logs inherits Window {
                 spacing: 4px;
                 alignment: start;
                 
-                HorizontalBox {
+                for line in logs : HorizontalBox {
                     spacing: 10px;
-                    Text { text: "1"; color: #64748b; font-family: "monospace"; }
-                    Text { text: "INFO: Starting service..."; color: #38bdf8; font-family: "monospace"; }
-                }
-                HorizontalBox {
-                    spacing: 10px;
-                    Text { text: "2"; color: #64748b; font-family: "monospace"; }
-                    Text { text: "WARN: Slow connection detected"; color: #fbbf24; font-family: "monospace"; }
-                }
-                HorizontalBox {
-                    spacing: 10px;
-                    Text { text: "3"; color: #64748b; font-family: "monospace"; }
-                    Text { text: "ERROR: Failed to connect to DB"; color: #f87171; font-family: "monospace"; }
+                    Text { text: line.index; color: #64748b; font-family: "monospace"; }
+                    Text { text: line.text; color: line.color; font-family: "monospace"; }
                 }
             }
         }

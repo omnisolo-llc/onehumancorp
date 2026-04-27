@@ -1,11 +1,25 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
 
+export struct UiSkill {
+    name: string,
+    version: string,
+    description: string,
+    category: string,
+    installed: bool,
+    enabled: bool,
+}
+
 export component Skills inherits Window {
     width: 500px;
     height: 600px;
     title: "Skills & Plugins";
 
-    property <string> selected_category: "all";
+    in-out property <string> selected_category: "all";
+    in-out property <[UiSkill]> skills;
+    
+    callback install_skill(string);
+    callback uninstall_skill(string);
+    callback set_skill_enabled(string, bool);
 
     background: #f8fafc;
 
@@ -17,15 +31,15 @@ export component Skills inherits Window {
 
         HorizontalBox {
             spacing: 10px;
-            Button { text: "All"; }
-            Button { text: "Builtin"; }
-            Button { text: "Official"; }
+            Button { text: "All"; clicked => { selected_category = "all"; } }
+            Button { text: "Builtin"; clicked => { selected_category = "builtin"; } }
+            Button { text: "Official"; clicked => { selected_category = "official"; } }
         }
 
         VerticalBox {
             spacing: 12px;
             
-            Rectangle {
+            for s in skills : Rectangle {
                 background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
@@ -35,31 +49,23 @@ export component Skills inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     HorizontalBox {
-                        Text { text: "Web Search"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Text { text: "🛠️ " + s.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                         Rectangle {}
-                        Text { text: "v1.0.0"; color: #64748b; horizontal-alignment: center; }
-                        CheckBox { checked: true; }
-                        Button { text: "Remove"; }
+                        Text { text: "v" + s.version; color: #64748b; horizontal-alignment: center; }
+                        if (s.installed) : CheckBox { 
+                            checked: s.enabled; 
+                            toggled => { set_skill_enabled(s.name, !s.enabled); }
+                        }
+                        if (s.installed) : Button { 
+                            text: "Remove"; 
+                            clicked => { uninstall_skill(s.name); }
+                        }
+                        if (!s.installed) : Button { 
+                            text: "Install"; 
+                            clicked => { install_skill(s.name); }
+                        }
                     }
-                    Text { text: "Allows the agent to search the web for information."; color: #64748b; wrap: word-wrap; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    HorizontalBox {
-                        Text { text: "Python Executor"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                        Rectangle {}
-                        Text { text: "v0.5.0"; color: #64748b; horizontal-alignment: center; }
-                        Button { text: "Install"; }
-                    }
-                    Text { text: "Run Python scripts in a secure sandbox."; color: #64748b; wrap: word-wrap; }
+                    Text { text: s.description; color: #64748b; wrap: word-wrap; }
                 }
             }
         }

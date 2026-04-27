@@ -1,3 +1,4 @@
+pub mod store;
 use crate::db::DB;
 use std::sync::Arc;
 use sqlx::Row;
@@ -12,6 +13,7 @@ impl AutoDreamWorker {
     pub fn new(db: Arc<DB>) -> Self {
         AutoDreamWorker { db }
     }
+
 
     pub fn start(&self) {
         println!("Starting AutoDream worker");
@@ -87,10 +89,15 @@ impl AutoDreamWorker {
             
             let mem_id = uuid::Uuid::new_v4().to_string();
             
-            // Mock embedding
-            let embedding = "[0.1]"; 
+            let embedding = match client.generate_embedding(&summary).await {
+                Ok(emb) => serde_json::to_string(&emb).unwrap(),
+                Err(e) => {
+                    println!("AutoDream: failed to generate embedding: {}", e);
+                    "[0.0]".to_string()
+                }
+            };
             
-            db.insert_agent_memory(&mem_id, &org_id, &id, &summary, embedding).await?;
+            db.insert_agent_memory(&mem_id, &org_id, &id, &summary, &embedding).await?;
             db.mark_task_auto_dreamed(&id).await?;
             
             println!("AutoDream: ingested completed task {}", id);

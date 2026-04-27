@@ -1,14 +1,27 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
 
+export struct UiAgentProvider {
+    type_: string,
+    label: string,
+    description: string,
+}
+
 export component AgentHire inherits Window {
     width: 600px;
     height: 700px;
     title: "Hire New Agent";
 
-    property <int> step: 0;
-    property <string> selected_role: "";
-    property <string> selected_provider: "";
-    property <string> agent_name: "";
+    in-out property <int> step: 0;
+    in-out property <string> selected_role: "";
+    in-out property <string> selected_provider: "";
+    in-out property <string> agent_name: "";
+    
+    out property <bool> next_enabled: step != 0 || selected_role != "";
+    
+    in property <[string]> roles;
+    in property <[UiAgentProvider]> providers;
+    
+    callback deploy_agent(string, string, string);
     property <bool> cap_email: false;
     property <bool> cap_message: false;
 
@@ -27,8 +40,10 @@ export component AgentHire inherits Window {
             
             HorizontalBox {
                 spacing: 10px;
-                Button { text: "Product Manager"; clicked => { selected_role = "Product Manager"; agent_name = "Senior Product Manager"; } }
-                Button { text: "Software Engineer"; clicked => { selected_role = "Software Engineer"; agent_name = "Senior Software Engineer"; } }
+                for role in roles : Button {
+                    text: role;
+                    clicked => { selected_role = role; agent_name = "Senior " + role; }
+                }
             }
             Text { text: "Selected: " + selected_role; color: #a855f7; }
         }
@@ -38,8 +53,10 @@ export component AgentHire inherits Window {
             spacing: 10px;
             Text { text: "Step 2 — Choose AI Provider"; font-size: 18px; font-weight: 700; color: #1e293b; }
             
-            Button { text: "OpenAI"; clicked => { selected_provider = "OpenAI"; } }
-            Button { text: "Anthropic"; clicked => { selected_provider = "Anthropic"; } }
+            for p in providers : Button {
+                text: p.label;
+                clicked => { selected_provider = p.type_; }
+            }
             Text { text: "Selected: " + selected_provider; color: #a855f7; }
         }
 
@@ -49,7 +66,7 @@ export component AgentHire inherits Window {
             Text { text: "Step 3 — Agent Details"; font-size: 18px; font-weight: 700; color: #1e293b; }
             LineEdit {
                 placeholder-text: "Agent Name";
-                text: agent_name;
+                text <=> agent_name;
             }
         }
 
@@ -112,11 +129,12 @@ export component AgentHire inherits Window {
             Rectangle {} // Spacer
             Button {
                 text: step == 6 ? "Deploy Agent" : "Next";
+                enabled: next_enabled;
                 clicked => {
                     if (step < 6) {
                         step = step + 1;
                     } else {
-                        // Handle deployment
+                        deploy_agent(agent_name, selected_role, selected_provider);
                     }
                 }
             }

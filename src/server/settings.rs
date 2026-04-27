@@ -145,4 +145,34 @@ mod tests {
         // Clean up after test
         std::fs::remove_file(&file_path).unwrap();
     }
+
+    #[test]
+    fn test_store_from_file_errors() {
+        // Bad JSON
+        let mut file_path = std::env::temp_dir();
+        file_path.push("bad_settings.json");
+        std::fs::write(&file_path, "{bad json").unwrap();
+        
+        let result = Store::from_file(file_path.clone());
+        assert!(result.is_err());
+        
+        std::fs::remove_file(&file_path).unwrap();
+
+        // Unreadable file (directory)
+        let dir_path = std::env::temp_dir().join("some_dir");
+        std::fs::create_dir(&dir_path).unwrap();
+        let result = Store::from_file(dir_path.clone());
+        assert!(result.is_err());
+        std::fs::remove_dir(&dir_path).unwrap();
+    }
+
+    #[test]
+    fn test_store_save_errors() {
+        let store = Store {
+            data: RwLock::new(AppSettings::default()),
+            path: Some(PathBuf::from("/root/unauthorized/file.json")),
+        };
+        let result = store.save();
+        assert!(result.is_err());
+    }
 }

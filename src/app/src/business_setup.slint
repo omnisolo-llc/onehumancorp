@@ -5,9 +5,18 @@ export component BusinessSetup inherits Window {
     height: 500px;
     title: "Business Setup";
 
-    property <int> step: 0;
-    property <string> business_type: "";
-    property <string> company_name: "";
+    in-out property <int> step: 0;
+    in-out property <string> business_type: "";
+    in-out property <string> company_name: "";
+    in-out property <string> products_services: "";
+    in-out property <string> payment_pref: "stripe";
+    in-out property <string> template_id: "modern";
+    in-out property <string> first_product_name: "";
+    in-out property <string> first_product_desc: "";
+    in-out property <string> first_product_price: "";
+    in-out property <string> domain_name: "";
+
+    callback launch();
 
     background: #f8fafc;
 
@@ -28,11 +37,11 @@ export component BusinessSetup inherits Window {
             spacing: 10px;
             LineEdit {
                 placeholder-text: "Business Type (e.g. Baker, Handyman)";
-                text: business_type;
+                text <=> business_type;
             }
             LineEdit {
                 placeholder-text: "Company Name";
-                text: company_name;
+                text <=> company_name;
             }
         }
 
@@ -41,38 +50,39 @@ export component BusinessSetup inherits Window {
             spacing: 10px;
             LineEdit {
                 placeholder-text: "What do you sell?";
+                text <=> products_services;
             }
-            Text { text: "Payment Preference: Stripe"; color: #1e293b; }
+            Text { text: "Payment Preference: " + payment_pref; color: #1e293b; }
             HorizontalBox {
-                Button { text: "Stripe"; }
-                Button { text: "PayPal"; }
+                Button { text: "Stripe"; clicked => { payment_pref = "stripe"; } }
+                Button { text: "PayPal"; clicked => { payment_pref = "paypal"; } }
             }
         }
 
         // Step 3: Template
         if (step == 3) : VerticalBox {
             spacing: 10px;
-            Text { text: "Template Selection"; color: #1e293b; }
+            Text { text: "Template Selection: " + template_id; color: #1e293b; }
             HorizontalBox {
-                Button { text: "Modern"; }
-                Button { text: "Classic"; }
-                Button { text: "Bold"; }
+                Button { text: "Modern"; clicked => { template_id = "modern"; } }
+                Button { text: "Classic"; clicked => { template_id = "classic"; } }
+                Button { text: "Bold"; clicked => { template_id = "bold"; } }
             }
         }
 
         // Step 4: First Product
         if (step == 4) : VerticalBox {
             spacing: 10px;
-            LineEdit { placeholder-text: "First Product Name"; }
-            LineEdit { placeholder-text: "Product Description"; }
-            LineEdit { placeholder-text: "Price"; }
+            LineEdit { placeholder-text: "First Product Name"; text <=> first_product_name; }
+            LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; }
+            LineEdit { placeholder-text: "Price"; text <=> first_product_price; }
         }
 
         // Step 5: Domain
         if (step == 5) : VerticalBox {
             spacing: 10px;
             HorizontalBox {
-                LineEdit { placeholder-text: "Domain Name"; }
+                LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; }
                 Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
             }
         }
@@ -92,7 +102,7 @@ export component BusinessSetup inherits Window {
                     if (step < 5) {
                         step = step + 1;
                     } else {
-                        // Handle launch
+                        launch();
                     }
                 }
             }

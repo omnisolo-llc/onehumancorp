@@ -37,7 +37,17 @@ impl AutoDreamService for MyAutoDreamService {
 
         let limit = if req.limit <= 0 { 5 } else { req.limit };
 
-        match self.worker.search_memories("[0.0]", limit).await {
+        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        let client = crate::minimax::MinimaxClient::new(api_key);
+        let embedding = match client.generate_embedding(&req.query_text).await {
+            Ok(emb) => serde_json::to_string(&emb).unwrap_or_else(|_| "[0.0]".to_string()),
+            Err(e) => {
+                println!("AutoDream service: failed to generate embedding: {}", e);
+                "[0.0]".to_string()
+            }
+        };
+
+        match self.worker.search_memories(&embedding, limit).await {
             Ok(results) => Ok(Response::new(AutoDreamQueryResult { results })),
             Err(e) => Err(Status::internal(e.to_string())),
         }

@@ -1,6 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -19,15 +19,9 @@ filegroup(
 
 # gazelle:prefix github.com/onehumancorp/mono
 exports_files([
-    "go.mod",
-    "go.sum",
     "pubspec.yaml",
 ])
 
-# gazelle:exclude src/proto
-# gazelle:resolve go github.com/onehumancorp/mono/src/proto //src/proto:hub_go_proto
-# gazelle:resolve go github.com/onehumancorp/mono/src/proto/agentservice //src/proto/agentservice
-gazelle(name = "gazelle")
 
 config_setting(
     name = "linux",
@@ -47,15 +41,7 @@ config_setting(
     visibility = ["//visibility:public"],
 )
 
-gazelle(
-    name = "gazelle-update-repos",
-    args = [
-        "-from_file=go.mod",
-        "-to_macro=repositories.bzl%go_repositories",
-        "-prune",
-    ],
-    command = "update-repos",
-)
+
 
 sh_binary(
     name = "deploy_dev",
@@ -90,144 +76,19 @@ sh_binary(
     tags = ["manual"],
 )
 
-# Unified Development target (Backend + Flutter Web)
-# This is a pure-Bazel orchestrator that launches both components concurrently.
-genrule(
-    name = "gen_dev_sh",
-    outs = ["dev_generated.sh"],
-    cmd = """
-cat << 'EOF' > $@
-#!/usr/bin/env bash
-# Pure-Bazel development orchestrator
-set -e
-trap 'kill $$(jobs -p)' EXIT
-
-# Start backend (API Server)
-echo "--- Starting Go Backend (8080) ---"
-./src/server_old/ohc &
-
-# Give the backend a moment to bind its port
-sleep 1
-
-# Start Flutter Web Client
-echo "--- Starting Flutter Web Client (8081) ---"
-cd src/app_old
-# We use flutter run -d chrome for the best developer experience (hot restart).
-flutter run -d chrome --web-port 8081
-EOF
-""",
-)
-
 sh_binary(
-    name = "dev",
-    srcs = [":gen_dev_sh"],
+    name = "update-deps",
+    srcs = ["update_deps.sh"],
     data = [
-        "//src/app_old:srcs",
-        "//src/server_old:ohc",
+        "MODULE.bazel",
     ],
     tags = ["manual"],
 )
 
-# Unified Desktop target (Standalone Mode)
-# This launches the Flutter app in native mode, which then manages its own backend.
-genrule(
-    name = "gen_desktop_sh",
-    srcs = [
-        "@flutter_sdk//:flutter_binary_unix",
-        "@flutter_sdk//:flutter_binary_windows",
-    ],
-    outs = ["desktop_generated.sh"],
-    cmd = """
-FLUTTER_UNIX="$(rootpath @flutter_sdk//:flutter_binary_unix)"
-FLUTTER_WIN="$(rootpath @flutter_sdk//:flutter_binary_windows)"
-
-cat << 'EOF' > $@
-#!/usr/bin/env bash
-# Standalone Desktop App orchestrator
-set -e
-
-# Support for the app to manage its own backend lifecycle.
-# Expose the standalone wrapper as `ohc` so the app can start/stop/doctor the backend.
-OHC_BIN_DIR="$$(mktemp -d)"
-trap 'rm -rf "$$OHC_BIN_DIR"' EXIT
-ln -sf "$$PWD/src/server_old/standalone_ohc_exec" "$$OHC_BIN_DIR/ohc"
-export PATH="$$OHC_BIN_DIR:$$PATH"
-
-# Detect platform if not explicitly provided
-PLATFORM="auto"
-if [ "$$PLATFORM" = "auto" ]; then
-  case "$$(uname -s)" in
-    Linux*)     PLATFORM=linux;;
-    Darwin*)    PLATFORM=macos;;
-    MSYS*|MINGW*|CYGWIN*) PLATFORM=windows;;
-    *)          PLATFORM=linux;;
-  esac
-fi
-
-# Enable Standalone Mode via dart-define so the app knows to start its backend.
-echo "--- Starting OHC Desktop App (Standalone Mode, Platform: $$PLATFORM) ---"
-
-# Resolve the Flutter binary to use.
-# FLUTTER_BIN_OVERRIDE may be set by tests (or tooling) to point to a
-# custom/fake Flutter executable.  When not set, the hermetic SDK binary that
-# was baked into this launcher at build time is used.
-if [[ -n "$${FLUTTER_BIN_OVERRIDE:-}" ]]; then
-  FLUTTER_CMD="$${FLUTTER_BIN_OVERRIDE}"
-elif [[ "$$PLATFORM" == "windows" ]]; then
-  FLUTTER_CMD="../../REPLACE_ME_WIN"
-else
-  FLUTTER_CMD="../../REPLACE_ME_UNIX"
-fi
-
-cd src/app_old
-"$${FLUTTER_CMD}" run -d "$$PLATFORM" --dart-define=OHC_STANDALONE=true
-EOF
-sed -i "s|REPLACE_ME_UNIX|$$FLUTTER_UNIX|g" $@
-sed -i "s|REPLACE_ME_WIN|$$FLUTTER_WIN|g" $@
-""",
-)
-
-sh_binary(
-    name = "desktop",
-    srcs = [":gen_desktop_sh"],
-    data = [
-        "//:pubspec.yaml",
-        "//src/app_old:srcs",
-        "//src/server_old:ohc",
-        "//src/server_old:standalone_ohc_exec",
-        "@flutter_sdk",
-    ],
-    tags = ["manual"],
-)
-
-
-
-sh_test(
-    name = "app_deb_structure_test",
-    srcs = ["//src/app_old:test/linux_package_structure_test.sh"],
-    args = ["deb"],
-    data = ["//src/app_old:app_deb.deb"],
-)
-
-sh_test(
-    name = "app_rpm_structure_test",
-    srcs = ["//src/app_old:test/linux_package_structure_test.sh"],
-    args = ["rpm"],
-    data = [
-        "//src/app_old:app_rpm",
-        "//src/app_old:app_runtime_tar.tar",
-    ],
-)
-
-test_suite(
-    name = "desktop_packaging_tests",
-    tests = [
-        ":app_deb_structure_test",
-    ],
-)
 
 # Alias to run hello-world agent easily
 alias(
     name = "hello-world",
     actual = "//src/examples/hello-world-agent:hello-world",
+    tags = ["manual"],
 )

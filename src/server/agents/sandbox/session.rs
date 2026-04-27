@@ -2,11 +2,13 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::process::Command;
 use tokio::sync::RwLock;
+use regex::Regex;
 
 pub struct ShellSession {
     pub session_id: String,
     pub sandbox_dir: PathBuf,
     pub current_cwd: RwLock<PathBuf>,
+    blocked_patterns: Vec<Regex>,
 }
 
 impl ShellSession {
@@ -19,14 +21,37 @@ impl ShellSession {
             fs::write(&env_snapshot_path, b"").await.map_err(|e| e.to_string())?;
         }
 
+        let blocked_patterns = vec![
+            Regex::new(r"(?i)\bsudo\b").unwrap(),
+            Regex::new(r"(?i)\brm\s+-rf\s+/").unwrap(),
+            Regex::new(r"(?i)\bchown\b").unwrap(),
+            Regex::new(r"(?i)\bchmod\b").unwrap(),
+            Regex::new(r"<\(").unwrap(),
+            Regex::new(r">\(").unwrap(),
+            Regex::new(r"=\(").unwrap(),
+        ];
+
         Ok(ShellSession {
             session_id: session_id.to_string(),
             sandbox_dir: sandbox_path.to_path_buf(),
             current_cwd: RwLock::new(sandbox_path.to_path_buf()),
+            blocked_patterns,
         })
     }
 
+    pub fn validate(&self, command: &str) -> Result<(), String> {
+        for pattern in &self.blocked_patterns {
+            if pattern.is_match(command) {
+                return Err(format!("command violates security policy: matched {}", pattern));
+            }
+        }
+        // TODO: Implement AST validation similar to Go BashASTValidator
+        Ok(())
+    }
+
     pub async fn run_stateful_command(&self, command: &str) -> Result<String, String> {
+        self.validate(command)?;
+
         let env_snapshot_path = self.sandbox_dir.join("env_snapshot.sh");
         let cwd_snapshot_path = self.sandbox_dir.join("cwd_snapshot.txt");
 
@@ -43,6 +68,8 @@ impl ShellSession {
         
         cmd.env_clear();
         cmd.env("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+
+        // TODO: Support sandboxing with bwrap or sandbox-exec if available
 
         let output = cmd.output().await.map_err(|e| e.to_string())?;
 
@@ -80,6 +107,18 @@ mod tests {
         let out = session.run_stateful_command("export FOO=bar").await.unwrap();
         let out = session.run_stateful_command("echo $FOO").await.unwrap();
         assert!(out.contains("bar"));
+
+        let _ = tokio::fs::remove_dir_all(dir).await;
+    }
+
+    #[tokio::test]
+    async fn test_shell_session_validation() {
+        let dir = "/tmp/test_session_val";
+        let session = ShellSession::new("sess2", dir).await.unwrap();
+
+        let res = session.run_stateful_command("sudo apt-get update").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("violates security policy"));
 
         let _ = tokio::fs::remove_dir_all(dir).await;
     }

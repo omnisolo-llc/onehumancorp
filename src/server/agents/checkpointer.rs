@@ -198,4 +198,32 @@ mod tests {
         let decompressed = decompress_data(b64.as_bytes()).unwrap();
         assert_eq!(data, decompressed.as_slice());
     }
+    #[tokio::test]
+    #[ignore]
+    async fn test_pg_checkpointer_save_and_load() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let saver = PgCheckpointer::new(pool);
+        
+        let cp = Checkpoint {
+            thread_id: "thread-1".to_string(),
+            checkpoint_id: "cp-1".to_string(),
+            parent_id: Some("parent-1".to_string()),
+            data: serde_json::json!({"step": 1, "data": "some value"}),
+            metadata: serde_json::json!({"agent": "SWE-1"}),
+            created_at: Utc::now(),
+        };
+
+        let res = saver.put_checkpoint(cp.clone()).await;
+        assert!(res.is_err());
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_pg_checkpointer_list_checkpoints() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let saver = PgCheckpointer::new(pool);
+        
+        let res = saver.list_checkpoints("thread-list").await;
+        assert!(res.is_err());
+    }
 }

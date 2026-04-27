@@ -5,146 +5,96 @@ export component Landing inherits Window {
     height: 600px;
     title: "One Human Corp";
 
-    property <bool> is_variant_b: false;
+    in-out property <bool> is_variant_b: false;
+
+    callback start_business_setup();
+    callback continue_to_dashboard();
+    callback download(string);
 
     background: #f8fafc;
 
     VerticalBox {
-        alignment: center;
-        spacing: 30px;
+        spacing: 20px;
         padding: 32px;
+        alignment: center;
 
         // Header
-        VerticalBox {
-            alignment: center;
-            spacing: 10px;
-            
-            // Logo fallback
-            Text {
-                text: "🌀";
-                font-size: 60px;
-                horizontal-alignment: center;
-                color: #a855f7;
-            }
-            
-            Text {
-                text: "One Human Corp";
-                font-size: 32px;
-                font-weight: 700;
-                horizontal-alignment: center;
-                color: #1e293b;
-            }
-            
-            Text {
-                text: is_variant_b ? "The Cloud-Native Agentic OS" : "The Hybrid Agentic OS";
-                font-size: 24px;
-                horizontal-alignment: center;
-                color: #a855f7;
-            }
-            
-            Text {
-                text: is_variant_b ? 
-                    "Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform." :
-                    "Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.";
-                font-size: 16px;
-                horizontal-alignment: center;
-                color: #64748b;
-                wrap: word-wrap;
-            }
+        Text { text: "One Human Corp"; font-size: 32px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+        
+        Text { 
+            text: is_variant_b ? "The Cloud-Native Agentic OS" : "The Hybrid Agentic OS"; 
+            font-size: 24px; 
+            color: #a855f7; 
+            horizontal-alignment: center; 
+        }
+
+        Text {
+            text: is_variant_b ? 
+                "Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform." :
+                "Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.";
+            color: #64748b;
+            horizontal-alignment: center;
+            wrap: word-wrap;
         }
 
         // Value Props
         HorizontalBox {
             spacing: 20px;
             alignment: center;
-
-            // Card 1
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
+            
+            if (is_variant_b) : Rectangle {
+                background: white; border-radius: 8px; width: 220px; height: 150px;
                 VerticalBox {
-                    spacing: 8px;
                     padding: 16px;
-                    Text { text: "⚡"; font-size: 24px; }
-                    Text { text: is_variant_b ? "Global Performance" : "Zero Data Leakage"; font-weight: 700; color: #1e293b; }
-                    Text { text: is_variant_b ? "Deploy agents in a horizontally scalable multi-tenant environment." : "All intelligence operations run completely local via SQLite."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Global Performance"; font-weight: 700; }
+                    Text { text: "Deploy agents in a horizontally scalable multi-tenant environment."; color: #64748b; wrap: word-wrap; }
                 }
             }
-            // Card 2
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
+            if (is_variant_b) : Rectangle {
+                background: white; border-radius: 8px; width: 220px; height: 150px;
                 VerticalBox {
-                    spacing: 8px;
                     padding: 16px;
-                    Text { text: "👥"; font-size: 24px; }
-                    Text { text: is_variant_b ? "Instant Collaboration" : "Air-Gapped Autonomy"; font-weight: 700; color: #1e293b; }
-                    Text { text: is_variant_b ? "Invite team members instantly. Shared intelligence across your entire organization." : "Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Instant Collaboration"; font-weight: 700; }
+                    Text { text: "Invite team members instantly. Shared intelligence across your entire organization."; color: #64748b; wrap: word-wrap; }
                 }
             }
-            // Card 3
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 220px;
-                
+            
+            if (!is_variant_b) : Rectangle {
+                background: white; border-radius: 8px; width: 220px; height: 150px;
                 VerticalBox {
-                    spacing: 8px;
                     padding: 16px;
-                    Text { text: "🔄"; font-size: 24px; }
-                    Text { text: is_variant_b ? "Always Connected" : "Viral Referral Loop"; font-weight: 700; color: #1e293b; }
-                    Text { text: is_variant_b ? "Never worry about host machine resources. Our cloud manages everything seamlessly." : "Seamlessly bridge to the Cloud to collaborate with human team members when ready."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Zero Data Leakage"; font-weight: 700; }
+                    Text { text: "All intelligence operations run completely local via SQLite. Absolute sovereignty over your IP."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+            if (!is_variant_b) : Rectangle {
+                background: white; border-radius: 8px; width: 220px; height: 150px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Air-Gapped Autonomy"; font-weight: 700; }
+                    Text { text: "Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies."; color: #64748b; wrap: word-wrap; }
                 }
             }
         }
 
-        // Download Buttons
+        // Downloads
         HorizontalBox {
-            spacing: 16px;
+            spacing: 10px;
             alignment: center;
-            
-            Button { text: "Download for Mac"; }
-            Button { text: "Download for Windows"; }
-            Button { text: "Download for Linux"; }
+            Button { text: "Download for Mac"; clicked => { download("Mac"); } }
+            Button { text: "Download for Windows"; clicked => { download("Windows"); } }
+            Button { text: "Download for Linux"; clicked => { download("Linux"); } }
         }
 
-        // Actions
-        VerticalBox {
-            alignment: center;
-            spacing: 10px;
-            
-            Button {
-                text: "Start Business Setup";
-            }
-            
-            Text {
-                text: "Or continue to Cloud Dashboard";
-                color: #a855f7;
-                horizontal-alignment: center;
-            }
-        }
-        
-        // Debug Toggle
+        // Navigation
+        Button { text: "Start Business Setup"; clicked => { start_business_setup(); } }
+        Button { text: "Or continue to Cloud Dashboard"; clicked => { continue_to_dashboard(); } }
+
+        // Debug toggle
         HorizontalBox {
             alignment: center;
-            spacing: 10px;
-            Text { text: "A/B Test Variant:"; color: #1e293b; }
-            Button {
-                text: is_variant_b ? "Variant B" : "Variant A";
-                clicked => {
-                    is_variant_b = !is_variant_b;
-                }
-            }
+            Text { text: "Debug: Switch Variant"; }
+            Button { text: "Toggle"; clicked => { is_variant_b = !is_variant_b; } }
         }
     }
 }

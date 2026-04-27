@@ -8,8 +8,15 @@ export component Settings inherits Window {
     property <bool> standalone_mode: true;
     property <bool> expert_mode: false;
     property <string> backend_url: "http://localhost:8080";
-    property <string> user_name: "John Doe";
-    property <string> user_email: "john.doe@example.com";
+    in-out property <string> user_name: "John Doe";
+    in-out property <string> user_email: "john.doe@example.com";
+    in-out property <string> org_id: "org_1";
+    in-out property <string> user_role: "admin";
+    in-out property <bool> local_service_running: true;
+
+    callback start_stop_service();
+    callback run_doctor();
+    callback trigger_hybrid_sync();
 
     background: #f8fafc;
 
@@ -88,11 +95,17 @@ export component Settings inherits Window {
                 
                 HorizontalBox {
                     padding: 16px;
-                    Text { text: "Service Status: Running"; color: #1e293b; horizontal-alignment: center; }
-                    Button { text: "Stop"; }
+                    Text { text: "Service Status: " + (local_service_running ? "Running" : "Stopped"); color: #1e293b; horizontal-alignment: center; }
+                    Button { 
+                        text: local_service_running ? "Stop" : "Start";
+                        clicked => { start_stop_service(); }
+                    }
                 }
             }
-            Button { text: "Run Doctor Diagnostics"; }
+            Button { 
+                text: "Run Doctor Diagnostics";
+                clicked => { run_doctor(); }
+            }
         }
 
         // Other Settings
@@ -104,8 +117,30 @@ export component Settings inherits Window {
             }
         }
 
+        // Account Section
+        Text { text: "ACCOUNT"; color: #7c3aed; font-weight: 700; }
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            VerticalBox {
+                padding: 16px;
+                spacing: 8px;
+                HorizontalBox {
+                    Text { text: "Organization:"; color: #64748b; }
+                    Text { text: org_id; color: #1e293b; }
+                }
+                HorizontalBox {
+                    Text { text: "Role:"; color: #64748b; }
+                    Text { text: user_role; color: #1e293b; }
+                }
+            }
+        }
+
         Button {
             text: "Trigger Hybrid Sync";
+            clicked => { trigger_hybrid_sync(); }
         }
 
         Button {
