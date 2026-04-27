@@ -1,3 +1,7 @@
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Enhanced test suite stability by enabling strict BuildBuddy resource requests.
+- Privacy/Offline (Standalone): Ensured offline build infrastructure reliability during multi-tenant release cycles.
+
 # Release Notes
 
 
