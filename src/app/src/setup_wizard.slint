@@ -1,0 +1,148 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+
+export component SetupWizard inherits Window {
+    width: 600px;
+    height: 600px;
+    title: "Setup Wizard";
+
+    callback launch();
+
+    property <int> step: 0;
+
+    property <string> business_category: "";
+    property <string> company_name: "";
+    property <string> company_desc: "";
+    property <string> admin_name: "";
+    property <string> admin_email: "";
+    property <string> admin_password: "";
+
+    property <bool> sells_physical: false;
+    property <bool> sells_digital: false;
+    property <bool> sells_services: false;
+    property <bool> sells_food: false;
+    property <bool> sells_subscriptions: false;
+
+    property <string> payment_method: "";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        // Step 0: Welcome screen
+        if (step == 0) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Your business, live in minutes"; font-size: 20px; color: #a855f7; font-weight: 700; }
+            Text { text: "Welcome to OneHumanCorp! Let's get your platform configured."; color: #1e293b; wrap: word-wrap; }
+        }
+
+        // Step 1: Business type
+        if (step == 1) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Business Category"; font-size: 18px; color: #1e293b; font-weight: 700; }
+            HorizontalBox {
+                spacing: 10px;
+                Button { text: "Online Store"; clicked => { business_category = "Online Store"; } }
+                Button { text: "Service Business"; clicked => { business_category = "Service Business"; } }
+                Button { text: "Restaurant / Food"; clicked => { business_category = "Restaurant / Food"; } }
+            }
+            HorizontalBox {
+                spacing: 10px;
+                Button { text: "Creative / Portfolio"; clicked => { business_category = "Creative / Portfolio"; } }
+                Button { text: "Local Business"; clicked => { business_category = "Local Business"; } }
+                Button { text: "Other"; clicked => { business_category = "Other"; } }
+            }
+            Text { text: "Selected: " + business_category; color: #a855f7; }
+
+            Text { text: "Business Name & Description"; font-size: 18px; color: #1e293b; font-weight: 700; }
+            LineEdit { placeholder-text: "Business Name"; text <=> company_name; }
+            LineEdit { placeholder-text: "Short Description / Tagline"; text <=> company_desc; }
+        }
+
+        // Step 2: What do you sell?
+        if (step == 2) : VerticalBox {
+            spacing: 10px;
+            Text { text: "What do you sell?"; font-size: 18px; color: #1e293b; font-weight: 700; }
+            CheckBox { text: "Physical products"; checked: sells_physical; toggled => { sells_physical = !sells_physical; } }
+            CheckBox { text: "Digital downloads"; checked: sells_digital; toggled => { sells_digital = !sells_digital; } }
+            CheckBox { text: "Services / appointments"; checked: sells_services; toggled => { sells_services = !sells_services; } }
+            CheckBox { text: "Food & beverages"; checked: sells_food; toggled => { sells_food = !sells_food; } }
+            CheckBox { text: "Subscriptions"; checked: sells_subscriptions; toggled => { sells_subscriptions = !sells_subscriptions; } }
+        }
+
+        // Step 3: Payment preference
+        if (step == 3) : VerticalBox {
+            spacing: 10px;
+            Text { text: "How do you want to receive payments?"; font-size: 18px; color: #1e293b; font-weight: 700; }
+            HorizontalBox {
+                spacing: 10px;
+                Button { text: "Online only"; clicked => { payment_method = "Online only"; } }
+                Button { text: "In-person (POS)"; clicked => { payment_method = "In-person (POS)"; } }
+                Button { text: "Both"; clicked => { payment_method = "Both"; } }
+                Button { text: "Skip for now"; clicked => { payment_method = "Skip for now"; } }
+            }
+            Text { text: "Selected: " + payment_method; color: #a855f7; }
+        }
+
+        // Step 4: Administrator account
+        if (step == 4) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Administrator Account"; font-size: 18px; color: #1e293b; font-weight: 700; }
+            LineEdit { placeholder-text: "Full Name"; text <=> admin_name; }
+            LineEdit { placeholder-text: "Email Address"; text <=> admin_email; }
+            LineEdit { placeholder-text: "Password"; text <=> admin_password; input-type: password; }
+            Text { text: "Optional SSO"; color: #64748b; }
+            HorizontalBox {
+                spacing: 10px;
+                Button { text: "Google" ; }
+                Button { text: "Apple" ; }
+            }
+        }
+
+        // Step 5: Review & Launch
+        if (step == 5) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Review & Launch"; font-size: 18px; color: #1e293b; font-weight: 700; }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 4px;
+                    Text { text: "Name: " + company_name; color: #1e293b; }
+                    Text { text: "Category: " + business_category; color: #1e293b; }
+                    Text { text: "Payment: " + payment_method; color: #1e293b; }
+                    Text { text: "Admin: " + admin_name + " (" + admin_email + ")"; color: #1e293b; }
+                }
+            }
+            Text { text: "Ready? Clicking below provisions your tenant and pre-seeds AI agents."; color: #64748b; wrap: word-wrap; }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {} // Spacer
+            Button {
+                text: step == 5 ? "Launch My Business →" : "Next";
+                clicked => {
+                    if (step < 5) {
+                        step = step + 1;
+                    } else {
+                        launch();
+                    }
+                }
+            }
+        }
+    }
+}
