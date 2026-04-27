@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
 
 export component Wizard inherits Window {
     width: 600px;
@@ -6,7 +6,6 @@ export component Wizard inherits Window {
     title: "Setup Wizard";
 
     property <int> step: 0;
-    property <bool> is_advanced: false;
 
     background: #f8fafc;
 
@@ -60,39 +59,21 @@ export component Wizard inherits Window {
         if (step == 0) : VerticalBox {
             spacing: 10px;
             Text { text: "Server Settings"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            if (is_advanced) : VerticalBox {
-                spacing: 10px;
-                LineEdit { placeholder-text: "Listen Address"; text: "0.0.0.0:18789"; }
-                LineEdit { placeholder-text: "Database Path"; text: "ohc.db"; }
-            }
-            if (!is_advanced) : Text { text: "Using default server settings."; color: #64748b; }
+            LineEdit { placeholder-text: "Listen Address"; text: "0.0.0.0:18789"; }
+            LineEdit { placeholder-text: "Database Path"; text: "ohc.db"; }
         }
 
         if (step == 1) : VerticalBox {
             spacing: 10px;
             Text { text: "AI Provider — Minimax"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            if (is_advanced) : VerticalBox {
-                spacing: 10px;
-                LineEdit { placeholder-text: "Minimax API Key"; }
-                LineEdit { placeholder-text: "Default Model"; text: "abab6.5s"; }
-            }
-            if (!is_advanced) : Text { text: "Using default Minimax AI model."; color: #64748b; }
+            LineEdit { placeholder-text: "Minimax API Key"; }
+            LineEdit { placeholder-text: "Default Model"; text: "abab6.5s"; }
         }
 
         if (step == 2) : VerticalBox {
             spacing: 10px;
             Text { text: "Real-time Messaging (Centrifuge)"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            if (is_advanced) : LineEdit { placeholder-text: "Centrifuge WebSocket URL"; text: "ws://localhost:8000/connection/websocket"; }
-            if (!is_advanced) : Text { text: "Using default real-time settings."; color: #64748b; }
-        }
-
-        HorizontalBox {
-            alignment: start;
-            CheckBox {
-                text: "Advanced Settings";
-                checked: is_advanced;
-                toggled => { is_advanced = !is_advanced; }
-            }
+            LineEdit { placeholder-text: "Centrifuge WebSocket URL"; text: "ws://localhost:8000/connection/websocket"; }
         }
 
         Rectangle {} 

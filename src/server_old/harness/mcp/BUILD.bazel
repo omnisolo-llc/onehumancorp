@@ -3,12 +3,14 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "mcp",
     srcs = ["client_manager.go"],
-    importpath = "github.com/onehumancorp/mono/src/server_old/harness/mcp",
+    importpath = "github.com/onehumancorp/mono/src/server/harness/mcp",
     visibility = ["//visibility:public"],
+    deps = ["//src/server/agents/builtin"],
 )
 
 go_test(
     name = "mcp_test",
     srcs = ["client_manager_test.go"],
     embed = [":mcp"],
+    deps = ["//src/server/agents/builtin"],
 )

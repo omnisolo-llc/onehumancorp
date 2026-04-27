@@ -7,7 +7,6 @@ cargo_build_script(
     edition = "2021",
     data = [
         "src/ongoing_management.slint",
-        "src/wizard.slint",
         "//src/proto:hub.proto",
         "@protobuf//:protoc",
     ],
@@ -22,10 +21,7 @@ rust_binary(
     srcs = ["src/main.rs"],
     edition = "2021",
     visibility = ["//visibility:public"],
-    data = [
-        "src/ongoing_management.slint",
-        "src/wizard.slint",
-    ],
+    data = ["src/ongoing_management.slint"],
     deps = [
         ":build_script",
         "@crates//:slint",
