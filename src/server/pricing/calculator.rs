@@ -19,7 +19,7 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         // OpenAI — GPT-4 family
         "gpt-4" => ModelPricing { input_cost: 30.00, output_cost: 60.00, cached_cost: 0.0 },
         "gpt-4-turbo" => ModelPricing { input_cost: 10.00, output_cost: 30.00, cached_cost: 0.0 },
-        "gpt-4o" => ModelPricing { input_cost: 5.00, output_cost: 15.00, cached_cost: 2.50 },
+        "gpt-4o" => ModelPricing { input_cost: 2.50, output_cost: 10.00, cached_cost: 1.25 },
         "gpt-4o-mini" => ModelPricing { input_cost: 0.15, output_cost: 0.60, cached_cost: 0.075 },
         // OpenAI — GPT-4.1 family
         "gpt-4.1" => ModelPricing { input_cost: 2.00, output_cost: 8.00, cached_cost: 0.0 },
@@ -30,7 +30,7 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         "o1-mini" => ModelPricing { input_cost: 3.00, output_cost: 12.00, cached_cost: 0.0 },
         "o3-mini" => ModelPricing { input_cost: 1.10, output_cost: 4.40, cached_cost: 0.0 },
         // Google — Gemini 1.5 family
-        "gemini-1.5-pro" => ModelPricing { input_cost: 3.50, output_cost: 10.50, cached_cost: 0.0 },
+        "gemini-pro" | "gemini-1.5-pro" => ModelPricing { input_cost: 1.25, output_cost: 10.00, cached_cost: 0.125 },
         "gemini-1.5-flash" => ModelPricing { input_cost: 0.35, output_cost: 1.05, cached_cost: 0.0 },
         // Google — Gemini 2.0 family
         "gemini-2.0-flash" => ModelPricing { input_cost: 0.10, output_cost: 0.40, cached_cost: 0.0 },
@@ -115,5 +115,13 @@ mod tests {
         // Test with unknown model (fallback)
         let cost = calculate_cost("unknown-model", 1000000, 1000000, 1000000);
         assert_eq!(cost, 3.00 + 15.00 + 1.50);
+
+        // Test gpt-4o new pricing
+        let cost_gpt4o = calculate_cost("gpt-4o", 1000000, 1000000, 1000000);
+        assert_eq!(cost_gpt4o, 2.50 + 10.00 + 1.25);
+
+        // Test gemini-pro alias
+        let cost_gemini = calculate_cost("gemini-pro", 1000000, 1000000, 1000000);
+        assert_eq!(cost_gemini, 1.25 + 10.00 + 0.125);
     }
 }
