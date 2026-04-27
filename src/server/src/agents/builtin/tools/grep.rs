@@ -12,7 +12,7 @@ impl ToolExecutor for GrepExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::ToolError> {
         let pattern = args["pattern"]
             .as_str()
             .ok_or("grep: pattern is required")?;

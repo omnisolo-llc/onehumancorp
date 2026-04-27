@@ -11,7 +11,7 @@ impl ToolExecutor for EditExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::ToolError> {
         let path = args["path"].as_str().ok_or("edit: path is required")?;
         let old_str = args["old_str"]
             .as_str()

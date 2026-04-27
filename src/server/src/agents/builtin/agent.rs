@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use ohc_builtin_agent_llm::LlmClient;
-use ohc_builtin_agent_tools::Tool;
+use ohc_builtin_agent_tools::{Tool, ToolError};
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
 /// Events emitted by the agent run loop.
@@ -17,26 +17,6 @@ pub enum AgentEvent {
     IterationStarted { iteration: i32, message_count: usize },
 }
 
-
-#[derive(Debug)]
-pub enum ToolError {
-    Transient(String),
-    LlmRecoverable(String),
-    UserFixable(String),
-    Unexpected(String),
-}
-
-impl std::fmt::Display for ToolError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ToolError::Transient(msg) => write!(f, "Transient Error: {}", msg),
-            ToolError::LlmRecoverable(msg) => write!(f, "Error (LLM Recoverable): {}", msg),
-            ToolError::UserFixable(msg) => write!(f, "User Action Required: {}", msg),
-            ToolError::Unexpected(msg) => write!(f, "Unexpected Error: {}", msg),
-        }
-    }
-}
-impl std::error::Error for ToolError {}
 
 /// Configuration for a single agent run.
 #[derive(Debug, Clone)]
@@ -114,7 +94,7 @@ impl Agent {
         cfg: &AgentRunConfig,
         initial_message: &str,
         on_event: &mut F,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    ) -> Result<String, ToolError>
     where
         F: FnMut(AgentEvent) + Send,
     {
@@ -330,20 +310,7 @@ impl Agent {
             .find(|t| t.name == tc.name)
             .ok_or_else(|| ToolError::Unexpected(format!("unknown tool: {}", tc.name)))?;
 
-        tool.execute.execute(tc.arguments.clone()).await.map_err(|e| {
-            // Attempt to downcast or fallback to LlmRecoverable to allow self-correction
-            if let Some(err) = e.downcast_ref::<ToolError>() {
-                match err {
-                    ToolError::Transient(m) => ToolError::Transient(m.clone()),
-                    ToolError::LlmRecoverable(m) => ToolError::LlmRecoverable(m.clone()),
-                    ToolError::UserFixable(m) => ToolError::UserFixable(m.clone()),
-                    ToolError::Unexpected(m) => ToolError::Unexpected(m.clone()),
-                }
-            } else {
-                // By default, make tool errors LLM-recoverable so the agent can self-correct.
-                ToolError::LlmRecoverable(e.to_string())
-            }
-        })
+        tool.execute.execute(tc.arguments.clone()).await
     }
 }
 
@@ -378,7 +345,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
-        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        async fn execute(&self, _args: Value) -> Result<String, ToolError> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
     }

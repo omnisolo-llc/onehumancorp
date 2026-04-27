@@ -2,6 +2,70 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+
+#[derive(Debug)]
+pub enum ToolError {
+    Transient(String),
+    LlmRecoverable(String),
+    UserFixable(String),
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolError::Transient(msg) => write!(f, "Transient Error: {}", msg),
+            ToolError::LlmRecoverable(msg) => write!(f, "Error (LLM Recoverable): {}", msg),
+            ToolError::UserFixable(msg) => write!(f, "User Action Required: {}", msg),
+            ToolError::Unexpected(msg) => write!(f, "Unexpected Error: {}", msg),
+        }
+    }
+}
+impl std::error::Error for ToolError {}
+
+impl From<Box<dyn std::error::Error + Send + Sync>> for ToolError {
+    fn from(err: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        ToolError::LlmRecoverable(err.to_string())
+    }
+}
+
+impl From<std::io::Error> for ToolError {
+    fn from(err: std::io::Error) -> Self {
+        ToolError::LlmRecoverable(err.to_string())
+    }
+}
+
+impl From<serde_json::Error> for ToolError {
+    fn from(err: serde_json::Error) -> Self {
+        ToolError::LlmRecoverable(err.to_string())
+    }
+}
+
+impl From<std::string::FromUtf8Error> for ToolError {
+    fn from(err: std::string::FromUtf8Error) -> Self {
+        ToolError::LlmRecoverable(err.to_string())
+    }
+}
+
+impl From<reqwest::Error> for ToolError {
+    fn from(err: reqwest::Error) -> Self {
+        ToolError::Transient(err.to_string()) // Network errors are usually transient
+    }
+}
+
+impl From<String> for ToolError {
+    fn from(err: String) -> Self {
+        ToolError::LlmRecoverable(err)
+    }
+}
+
+impl From<&str> for ToolError {
+    fn from(err: &str) -> Self {
+        ToolError::LlmRecoverable(err.to_string())
+    }
+}
+
+
 pub mod bash;
 pub mod read;
 pub mod write;
@@ -49,7 +113,7 @@ pub trait ToolExecutor: Send + Sync {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.

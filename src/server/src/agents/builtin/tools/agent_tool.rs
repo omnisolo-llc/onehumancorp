@@ -12,7 +12,7 @@ impl ToolExecutor for AgentExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::ToolError> {
         let prompt = args["prompt"]
             .as_str()
             .ok_or("agent: prompt is required")?;
@@ -39,7 +39,7 @@ impl ToolExecutor for TaskStopExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::ToolError> {
         let task_id = args["task_id"]
             .as_str()
             .ok_or("taskstop: task_id is required")?;
@@ -56,7 +56,7 @@ impl ToolExecutor for TaskStatusExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::ToolError> {
         let task_id = args["task_id"]
             .as_str()
             .ok_or("taskstatus: task_id is required")?;

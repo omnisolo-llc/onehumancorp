@@ -12,7 +12,7 @@ impl ToolExecutor for BashExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::ToolError> {
         let command = args["command"]
             .as_str()
             .ok_or("bash: command is required")?
