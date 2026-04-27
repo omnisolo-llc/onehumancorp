@@ -100,6 +100,36 @@ impl DB {
             
         Ok(())
     }
+
+    pub async fn insert_consolidated_memory(&self, id: &str, org_id: &str, agent_id: Option<&str>, content: &str, embedding: Option<&str>, source_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let emb_str = embedding.unwrap_or_else(|| {
+            ""
+        });
+
+        if emb_str.is_empty() {
+            sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, NULL, $5) ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding")
+                .bind(id)
+                .bind(org_id)
+                .bind(agent_id)
+                .bind(content)
+                .bind(source_type)
+                .execute(&self.pool)
+                .await?;
+        } else {
+            sqlx::query("INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6) ON CONFLICT(id) DO UPDATE SET content=EXCLUDED.content, embedding=EXCLUDED.embedding")
+                .bind(id)
+                .bind(org_id)
+                .bind(agent_id)
+                .bind(content)
+                .bind(emb_str)
+                .bind(source_type)
+                .execute(&self.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
 }
 
 #[cfg(test)]

@@ -76,34 +76,8 @@ impl AutoDreamWorker {
     }
 
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
-        let tasks = db.get_completed_tasks().await?;
-        
-        for (id, org_id, payload) in tasks {
-            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-            let client = crate::minimax::MinimaxClient::new(api_key);
-            let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:\n{}", payload);
-            let summary = client.reason(&prompt).await.unwrap_or_else(|e| {
-                println!("AutoDream: failed to summarize logs: {}. Using raw payload.", e);
-                format!("Summary of task: {}", payload)
-            });
-            
-            let mem_id = uuid::Uuid::new_v4().to_string();
-            
-            let embedding = match client.generate_embedding(&summary).await {
-                Ok(emb) => serde_json::to_string(&emb).unwrap(),
-                Err(e) => {
-                    println!("AutoDream: failed to generate embedding: {}", e);
-                    "[0.0]".to_string()
-                }
-            };
-            
-            db.insert_agent_memory(&mem_id, &org_id, &id, &summary, &embedding).await?;
-            db.mark_task_auto_dreamed(&id).await?;
-            
-            println!("AutoDream: ingested completed task {}", id);
-        }
-        
-        Ok(())
+        let pipeline = AutoDreamPipeline::new(db.clone());
+        pipeline.run().await
     }
 
     pub async fn consolidate_epoch(&self) -> Result<(), Box<dyn std::error::Error>> {
@@ -194,5 +168,96 @@ impl AutoDreamWorker {
     async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         println!("AutoDreamWorker: stub for process_mesh_messages");
         Ok(())
+    }
+}
+
+
+pub struct AutoDreamPipeline {
+    db: Arc<DB>,
+}
+
+impl AutoDreamPipeline {
+    pub fn new(db: Arc<DB>) -> Self {
+        AutoDreamPipeline { db }
+    }
+
+    pub async fn run(&self) -> Result<(), Box<dyn std::error::Error>> {
+        println!("AutoDreamPipeline: running...");
+        let tasks = self.db.get_completed_tasks().await?;
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" || std::env::var("OHC_STANDALONE_MODE").unwrap_or_default() == "1";
+        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        let client = crate::minimax::MinimaxClient::new(api_key);
+
+        for (id, org_id, payload) in tasks {
+            let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:
+{}", payload);
+            let summary = if is_standalone {
+                println!("AutoDreamPipeline: standalone mode, skipping LLM summarization. Using raw payload.");
+                format!("Summary of task: {}", payload)
+            } else {
+                client.reason(&prompt).await.unwrap_or_else(|e| {
+                    println!("AutoDreamPipeline: failed to summarize logs: {}. Using raw payload.", e);
+                    format!("Summary of task: {}", payload)
+                })
+            };
+
+            let embedding = if is_standalone {
+                println!("AutoDreamPipeline: standalone mode, bypassing vector generation.");
+                None
+            } else {
+                match client.generate_embedding(&summary).await {
+                    Ok(emb) => Some(serde_json::to_string(&emb).unwrap()),
+                    Err(e) => {
+                        println!("AutoDreamPipeline: failed to generate embedding: {}", e);
+                        None
+                    }
+                }
+            };
+
+            let mem_id = uuid::Uuid::new_v4().to_string();
+
+            self.db.insert_consolidated_memory(
+                &mem_id,
+                &org_id,
+                None, // agent_id is optional/unknown here
+                &summary,
+                embedding.as_deref(),
+                "task"
+            ).await?;
+
+            self.db.mark_task_auto_dreamed(&id).await?;
+            println!("AutoDreamPipeline: ingested completed task {}", id);
+        }
+
+        Ok(())
+    }
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use std::env;
+
+    #[tokio::test]
+    async fn test_autodream_pipeline_standalone() {
+        // Set standalone mode
+        env::set_var("OHC_STANDALONE", "true");
+
+        // We will try to create a DB. If it fails (no postgres running), we skip the test.
+        // This is a common pattern in rust for DB tests without a dedicated setup.
+        if let Ok(db) = crate::db::DB::new().await {
+            let db = Arc::new(db);
+            let pipeline = AutoDreamPipeline::new(db);
+
+            // Run the pipeline. It should not error out in standalone mode even without Minimax API key.
+            let result = pipeline.run().await;
+            assert!(result.is_ok());
+        } else {
+            // Skip test if DB cannot connect
+            assert!(true);
+        }
     }
 }
