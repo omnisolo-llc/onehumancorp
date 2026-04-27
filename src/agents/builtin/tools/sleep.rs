@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{ToolError, Tool, ToolExecutor};
 
 // ── Sleep tool ────────────────────────────────────────────────────────────────
 
@@ -12,7 +12,7 @@ impl ToolExecutor for SleepExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let secs = args["seconds"]
             .as_f64()
             .ok_or("sleep: seconds is required")?;

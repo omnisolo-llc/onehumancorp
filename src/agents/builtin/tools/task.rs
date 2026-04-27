@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::{SharedTaskStore, Tool, ToolExecutor};
+use super::{ToolError, SharedTaskStore, Tool, ToolExecutor};
 
 /// A task in the task store.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -72,7 +72,7 @@ impl ToolExecutor for TaskCreateExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let title = args["title"]
             .as_str()
             .ok_or("task_create: title is required")?;
@@ -108,7 +108,7 @@ impl ToolExecutor for TaskGetExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let id = args["id"].as_str().ok_or("task_get: id is required")?;
         let store = self.store.read().await;
         if let Some(task) = store.get(id) {
@@ -130,7 +130,7 @@ impl ToolExecutor for TaskListExecutor {
     async fn execute(
         &self,
         _args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let store = self.store.read().await;
         let tasks: Vec<&Task> = store.list();
         if tasks.is_empty() {
@@ -151,7 +151,7 @@ impl ToolExecutor for TaskUpdateExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let id = args["id"].as_str().ok_or("task_update: id is required")?;
         let status = args["status"].as_str().map(str::to_string);
         let result = args["result"].as_str().map(str::to_string);

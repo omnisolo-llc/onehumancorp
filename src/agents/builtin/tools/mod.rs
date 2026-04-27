@@ -51,7 +51,7 @@ pub trait ToolExecutor: Send + Sync {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.
@@ -95,4 +95,61 @@ pub fn all_tools(
         local_fs_sync::local_fs_sync_tool(),
         ollama::ollama_tool(),
     ]
+}
+
+#[derive(Debug)]
+pub enum ToolError {
+    Transient(String),
+    LlmRecoverable(String),
+    UserFixable(String),
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Transient(msg) => write!(f, "{}", msg),
+            Self::LlmRecoverable(msg) => write!(f, "{}", msg),
+            Self::UserFixable(msg) => write!(f, "{}", msg),
+            Self::Unexpected(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}
+
+impl From<&str> for ToolError {
+    fn from(s: &str) -> Self {
+        ToolError::LlmRecoverable(s.to_string())
+    }
+}
+
+impl From<String> for ToolError {
+    fn from(s: String) -> Self {
+        ToolError::LlmRecoverable(s)
+    }
+}
+
+impl From<Box<dyn std::error::Error + Send + Sync>> for ToolError {
+    fn from(e: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        ToolError::LlmRecoverable(e.to_string())
+    }
+}
+
+impl From<std::io::Error> for ToolError {
+    fn from(e: std::io::Error) -> Self {
+        ToolError::LlmRecoverable(e.to_string())
+    }
+}
+
+impl From<serde_json::Error> for ToolError {
+    fn from(e: serde_json::Error) -> Self {
+        ToolError::LlmRecoverable(e.to_string())
+    }
+}
+
+impl From<reqwest::Error> for ToolError {
+    fn from(e: reqwest::Error) -> Self {
+        ToolError::LlmRecoverable(e.to_string())
+    }
 }

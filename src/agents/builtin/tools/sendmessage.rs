@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::{SharedMailbox, Tool, ToolExecutor};
+use super::{ToolError, SharedMailbox, Tool, ToolExecutor};
 
 /// A message in the mailbox.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,7 +40,7 @@ impl ToolExecutor for SendMessageExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let to = args["to"].as_str().unwrap_or("coordinator").to_string();
         let content = args["message"]
             .as_str()

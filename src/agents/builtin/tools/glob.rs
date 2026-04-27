@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{ToolError, Tool, ToolExecutor};
 
 struct GlobExecutor;
 
@@ -10,7 +10,7 @@ impl ToolExecutor for GlobExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let pattern = args["pattern"]
             .as_str()
             .ok_or("glob: pattern is required")?;

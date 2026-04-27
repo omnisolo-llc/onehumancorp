@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 use std::sync::Arc;
-use super::{Tool, ToolExecutor};
+use super::{ToolError, Tool, ToolExecutor};
 
 pub struct FinanceReportExecutor;
 
@@ -9,7 +9,7 @@ impl ToolExecutor for FinanceReportExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let report_type = args["report_type"]
             .as_str()
             .unwrap_or("weekly_summary");

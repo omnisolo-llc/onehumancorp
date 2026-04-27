@@ -2,7 +2,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor};
+use super::{ToolError, Tool, ToolExecutor};
 
 struct ReadExecutor;
 
@@ -11,7 +11,7 @@ impl ToolExecutor for ReadExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let path = args["path"].as_str().ok_or("read: path is required")?;
         let content = fs::read_to_string(path)
             .await

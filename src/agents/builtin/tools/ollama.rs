@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 use std::sync::Arc;
-use super::{Tool, ToolExecutor};
+use super::{ToolError, Tool, ToolExecutor};
 
 struct OllamaExecutor;
 
@@ -9,7 +9,7 @@ impl ToolExecutor for OllamaExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let action = args["action"].as_str().ok_or("ollama: action is required")?;
         let url = args["url"].as_str().unwrap_or("http://localhost:11434");
 

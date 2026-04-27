@@ -3,7 +3,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use super::{SharedTodos, Tool, ToolExecutor};
+use super::{ToolError, SharedTodos, Tool, ToolExecutor};
 
 /// A single todo item.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,7 +26,7 @@ impl ToolExecutor for TodoWriteExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let todos_arr = args["todos"]
             .as_array()
             .ok_or("todowrite: todos must be an array")?;
@@ -71,7 +71,7 @@ impl ToolExecutor for TodoReadExecutor {
     async fn execute(
         &self,
         _args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let todos = self.todos.read().await;
         if todos.is_empty() {
             return Ok("Todo list is empty.".to_string());

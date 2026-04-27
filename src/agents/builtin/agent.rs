@@ -193,33 +193,64 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+                let mut attempts = 0;
+                let max_attempts = 3;
+                let mut final_content = String::new();
+                let mut final_error = String::new();
+
+                loop {
+                    attempts += 1;
+                    let result = self.execute_tool(&tc).await;
+                    match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            final_content = r;
+                            break;
+                        }
+                        Err(ohc_builtin_agent_tools::ToolError::Transient(err)) => {
+                            if attempts >= max_attempts {
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: Transient failure after {} attempts: {}", attempts, err),
+                                    iteration,
+                                });
+                                final_error = format!("Transient failure after {} attempts: {}", attempts, err);
+                                break;
+                            }
+                            // Exponential backoff
+                            let backoff = std::time::Duration::from_millis(100 * (2u64.pow((attempts - 1) as u32)));
+                            tokio::time::sleep(backoff).await;
+                            continue;
+                        }
+                        Err(ohc_builtin_agent_tools::ToolError::LlmRecoverable(err)) => {
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: format!("Error: {}", err),
+                                iteration,
+                            });
+                            final_error = err;
+                            break;
+                        }
+                        Err(ohc_builtin_agent_tools::ToolError::UserFixable(err)) => {
+                            return Err(err.into());
+                        }
+                        Err(ohc_builtin_agent_tools::ToolError::Unexpected(err)) => {
+                            return Err(err.into());
+                        }
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
-                };
+                }
                 tool_results.push(ToolResult {
                     tool_call_id: tc.id.clone(),
-                    content,
-                    error,
+                    content: final_content,
+                    error: final_error,
                 });
             }
 
@@ -262,7 +293,7 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ohc_builtin_agent_tools::ToolError> {
         let tool = self
             .tools
             .iter()
@@ -304,7 +335,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
-        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        async fn execute(&self, _args: Value) -> Result<String, ohc_builtin_agent_tools::ToolError> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
     }
