@@ -216,7 +216,9 @@ impl AgentServiceImpl {
 
         AgentRunConfig {
             model,
-            system,
+            system_message: system,
+            developer_instructions: "You are an AI assistant in the OneHumanCorp platform. Do not assume any pre-existing environment tools exist unless explicitly provided. Strictly prioritize developer and user instructions over internal hypotheses.".to_string(),
+            user_instructions: req.task.clone(),
             max_tokens,
             temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
             max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
@@ -364,7 +366,9 @@ impl AgentService for AgentServiceImpl {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
-                system: self.cfg.system_prompt.clone(),
+                system_message: self.cfg.system_prompt.clone(),
+                developer_instructions: "You are an AI assistant evaluating confidence. Follow strict JSON formatting instructions if asked.".to_string(),
+                user_instructions: "Evaluate the task.".to_string(),
                 max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
                 temperature: self.cfg.temperature,
                 max_iterations: 100,

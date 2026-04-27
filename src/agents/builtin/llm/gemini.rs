@@ -105,12 +105,20 @@ impl LlmClient for GeminiClient {
             });
         }
 
-        let system_instruction = if !req.system.is_empty() {
+        let mut parts = vec![];
+        if !req.system_message.is_empty() {
+            parts.push(GeminiPart { text: Some(req.system_message.clone()) });
+        }
+        if !req.developer_instructions.is_empty() {
+            parts.push(GeminiPart { text: Some(req.developer_instructions.clone()) });
+        }
+        if !req.user_instructions.is_empty() {
+            parts.push(GeminiPart { text: Some(req.user_instructions.clone()) });
+        }
+        let system_instruction = if !parts.is_empty() {
             Some(GeminiContent {
                 role: "system".to_string(),
-                parts: vec![GeminiPart {
-                    text: Some(req.system.clone()),
-                }],
+                parts,
             })
         } else {
             None

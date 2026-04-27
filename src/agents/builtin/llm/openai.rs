@@ -130,15 +130,39 @@ impl LlmClient for OpenAIClient {
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
         let mut messages = Vec::new();
 
-        if !req.system.is_empty() {
+        // Strict Hierarchical Priority Stack
+
+        // 1. System Message (Highest Priority)
+        if !req.system_message.is_empty() {
             messages.push(OpenAIMessage {
                 role: "system".to_string(),
-                content: Some(req.system.clone()),
+                content: Some(req.system_message.clone()),
                 tool_calls: None,
                 tool_call_id: None,
             });
         }
 
+        // 2. Developer Instructions
+        if !req.developer_instructions.is_empty() {
+            messages.push(OpenAIMessage {
+                role: "system".to_string(), // Treated as system instructions
+                content: Some(req.developer_instructions.clone()),
+                tool_calls: None,
+                tool_call_id: None,
+            });
+        }
+
+        // 3. User Instructions
+        if !req.user_instructions.is_empty() {
+            messages.push(OpenAIMessage {
+                role: "system".to_string(), // Treated as system instructions to ensure compliance
+                content: Some(req.user_instructions.clone()),
+                tool_calls: None,
+                tool_call_id: None,
+            });
+        }
+
+        // 4. Conversation History (Already in messages)
         for m in &req.messages {
             if m.role == Role::System {
                 continue;

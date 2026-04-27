@@ -65,10 +65,22 @@ impl LlmClient for OllamaClient {
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
         let mut messages = Vec::new();
 
-        if !req.system.is_empty() {
+        if !req.system_message.is_empty() {
             messages.push(OllamaMessage {
                 role: "system".to_string(),
-                content: req.system.clone(),
+                content: req.system_message.clone(),
+            });
+        }
+        if !req.developer_instructions.is_empty() {
+            messages.push(OllamaMessage {
+                role: "system".to_string(),
+                content: req.developer_instructions.clone(),
+            });
+        }
+        if !req.user_instructions.is_empty() {
+            messages.push(OllamaMessage {
+                role: "system".to_string(),
+                content: req.user_instructions.clone(),
             });
         }
 

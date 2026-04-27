@@ -75,7 +75,9 @@ pub struct ToolResult {
 #[derive(Debug, Clone)]
 pub struct ChatRequest {
     pub model: String,
-    pub system: String,
+    pub system_message: String,
+    pub developer_instructions: String,
+    pub user_instructions: String,
     pub messages: Vec<Message>,
     pub tools: Vec<ToolDefinition>,
     pub max_tokens: i32,

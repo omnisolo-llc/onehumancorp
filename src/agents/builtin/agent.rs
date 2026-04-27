@@ -21,7 +21,9 @@ pub enum AgentEvent {
 #[derive(Debug, Clone)]
 pub struct AgentRunConfig {
     pub model: String,
-    pub system: String,
+    pub system_message: String,
+    pub developer_instructions: String,
+    pub user_instructions: String,
     pub max_tokens: i32,
     pub temperature: f32,
     pub max_iterations: i32,
@@ -34,7 +36,9 @@ impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
             model: String::new(),
-            system: String::new(),
+            system_message: String::new(),
+            developer_instructions: String::new(),
+            user_instructions: String::new(),
             max_tokens: 2048,
             temperature: 0.0,
             max_iterations: 100,
@@ -124,7 +128,9 @@ impl Agent {
 
             let req = ChatRequest {
                 model: cfg.model.clone(),
-                system: cfg.system.clone(),
+                system_message: cfg.system_message.clone(),
+                developer_instructions: cfg.developer_instructions.clone(),
+                user_instructions: cfg.user_instructions.clone(),
                 messages: messages.clone(),
                 tools: tool_defs.clone(),
                 max_tokens: cfg.max_tokens,
@@ -354,6 +360,9 @@ mod tests {
         let agent = Agent::new(client, tools);
 
         let mut cfg = AgentRunConfig::default();
+        cfg.system_message = "SysMsg".to_string();
+        cfg.developer_instructions = "DevInstr".to_string();
+        cfg.user_instructions = "UserInstr".to_string();
         cfg.enable_observation_masking = true;
 
         let mut events = vec![];

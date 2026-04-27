@@ -203,15 +203,28 @@ impl LlmClient for AnthropicClient {
             }
         }
 
-        let system = if req.system.is_empty() {
-            vec![]
-        } else {
-            vec![AnthropicSystem {
+        let mut system = vec![];
+        if !req.system_message.is_empty() {
+            system.push(AnthropicSystem {
                 r#type: "text",
-                text: req.system.clone(),
-                cache_control: Some(AnthropicCacheControl { r#type: "ephemeral" }),
-            }]
-        };
+                text: req.system_message.clone(),
+                cache_control: Some(AnthropicCacheControl { r#type: "ephemeral" }), // Claude supports caching on system messages
+            });
+        }
+        if !req.developer_instructions.is_empty() {
+            system.push(AnthropicSystem {
+                r#type: "text",
+                text: req.developer_instructions.clone(),
+                cache_control: None,
+            });
+        }
+        if !req.user_instructions.is_empty() {
+            system.push(AnthropicSystem {
+                r#type: "text",
+                text: req.user_instructions.clone(),
+                cache_control: None,
+            });
+        }
 
         let num_tools = req.tools.len();
         let tools: Vec<AnthropicToolDef> = req
