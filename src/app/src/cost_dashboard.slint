@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiAgentCost {
     name: string,
@@ -11,8 +12,8 @@ export component CostDashboard inherits Window {
     height: 600px;
     title: "Cost & Token Usage";
 
-    in-out property <string> total_spend: "$0.00";
-    in-out property <string> total_tokens: "0";
+    in-out property <string> total_spend: "";
+    in-out property <string> total_tokens: "";
     in-out property <[UiAgentCost]> agent_costs;
 
     background: #f8fafc;
@@ -22,51 +23,38 @@ export component CostDashboard inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Cost & Token Usage"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Cost & Token Usage"; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
             Rectangle {}
-            Button { text: "Refresh"; }
+            Button { text: "Refresh"; height: 44px; }
         }
 
         // Summary Cards
         HorizontalBox {
             spacing: 16px;
             
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total Spend"; color: #64748b; }
-                    Text { text: total_spend; font-size: 24px; font-weight: 700; color: #a855f7; }
+                    Text { text: "Total Spend"; color: #64748b; font-family: "Inter"; }
+                    Text { text: total_spend; font-size: 24px; font-weight: 700; color: #a855f7; font-family: "Inter"; }
                 }
             }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            GlassCard {
                 width: 220px;
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total Tokens"; color: #64748b; }
-                    Text { text: total_tokens; font-size: 24px; font-weight: 700; color: #06b6d4; }
+                    Text { text: "Total Tokens"; color: #64748b; font-family: "Inter"; }
+                    Text { text: total_tokens; font-size: 24px; font-weight: 700; color: #06b6d4; font-family: "Inter"; }
                 }
             }
         }
 
-        Text { text: "Usage per Agent"; font-size: 18px; font-weight: 700; color: #1e293b; }
+        Text { text: "Usage per Agent"; font-size: 18px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
 
-        Rectangle {
-            background: white;
-            border-color: #e2e8f0;
-            border-width: 1px;
-            border-radius: 8px;
-            
+        GlassCard {
             VerticalBox {
                 padding: 16px;
                 spacing: 12px;
@@ -74,9 +62,9 @@ export component CostDashboard inherits Window {
                 for ac in agent_costs : VerticalBox {
                     spacing: 4px;
                     HorizontalBox {
-                        Text { text: ac.name; color: #1e293b; }
+                        Text { text: ac.name; color: #1e293b; font-family: "Inter"; }
                         Rectangle {}
-                        Text { text: ac.cost; color: #1e293b; }
+                        Text { text: ac.cost; color: #1e293b; font-family: "Inter"; }
                     }
                     Rectangle {
                         height: 8px;

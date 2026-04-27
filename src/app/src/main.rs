@@ -283,4 +283,11 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
     }
+    #[test]
+    fn test_cost_dashboard_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::CostDashboard::new().unwrap();
+        assert_eq!(ui.get_total_spend(), "");
+        assert_eq!(ui.get_total_tokens(), "");
+    }
 }
