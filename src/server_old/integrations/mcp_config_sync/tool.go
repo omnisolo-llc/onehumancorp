@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/db"
 	"go.opentelemetry.io/otel"
@@ -116,8 +116,20 @@ func (t *ConfigTool) SyncConfigToCloud(ctx context.Context, payload ConfigSyncPa
 }
 
 // GetConfigTool returns the MCP tool definition for getting a config value.
-func (t *ConfigTool) GetConfigTool() builtin.Tool {
-	return builtin.Tool{
+
+
+
+type InternalTool struct {
+	Name        string
+	Description string
+	Parameters  json.RawMessage
+	Execute     func(ctx context.Context, args json.RawMessage) (string, error)
+}
+
+
+
+func (t *ConfigTool) GetConfigTool() InternalTool {
+	return InternalTool{
 		Name:        "get_config",
 		Description: "Reads a configuration value securely from either the local file system (Standalone mode) or the multi-tenant Enterprise Vault (Cloud mode).",
 		Parameters:  json.RawMessage(`{"type":"object","properties":{"key":{"type":"string","description":"The configuration key to read"}},"required":["key"]}`),
@@ -142,8 +154,8 @@ func (t *ConfigTool) GetConfigTool() builtin.Tool {
 }
 
 // SyncConfigToCloudTool returns the MCP tool definition for syncing a config value to the cloud.
-func (t *ConfigTool) SyncConfigToCloudTool() builtin.Tool {
-	return builtin.Tool{
+func (t *ConfigTool) SyncConfigToCloudTool() InternalTool {
+	return InternalTool{
 		Name:        "sync_config_to_cloud",
 		Description: "Syncs a local configuration value back to the multi-tenant Enterprise Vault in the Cloud via an MCP interface.",
 		Parameters:  json.RawMessage(`{"type":"object","properties":{"tenant_id":{"type":"string"},"agent_id":{"type":"string"},"key":{"type":"string"},"value":{"type":"string"},"metadata":{"type":"object","additionalProperties":{"type":"string"}}},"required":["tenant_id","agent_id","key","value"]}`),
