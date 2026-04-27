@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 // OrchestrationHubAdapter wraps orchestration.Hub to satisfy the local.Hub interface.

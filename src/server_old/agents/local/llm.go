@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/telemetry"
-	"github.com/onehumancorp/mono/src/server/utils"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/utils"
 )
 
 // LLMClient is the abstraction used by the agent loop to interact with a language model.

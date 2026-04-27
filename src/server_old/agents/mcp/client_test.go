@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 )
 
 func TestHybridContextTool(t *testing.T) {

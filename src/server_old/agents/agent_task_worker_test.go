@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/integrations"
-	"github.com/onehumancorp/mono/src/server/integrations/plane"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/integrations"
+	"github.com/onehumancorp/mono/src/server_old/integrations/plane"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 func TestTaskWorker_pollAndAssign(t *testing.T) {

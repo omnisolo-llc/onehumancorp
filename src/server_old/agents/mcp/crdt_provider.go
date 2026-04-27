@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 )
 
 // MCPTool defines a common interface for MCP tools.

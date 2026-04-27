@@ -4,8 +4,8 @@ package terminal
 import (
 	"context"
 
-	"github.com/onehumancorp/mono/src/server/agents/harness"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/agents/harness"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 type Executor struct {

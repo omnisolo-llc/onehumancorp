@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 )
 
 func TestHybridMCPBridge_ExecutionResult(t *testing.T) {

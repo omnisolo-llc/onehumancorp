@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/db"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 // AutoDreamEngine manages the background consolidation of memories.

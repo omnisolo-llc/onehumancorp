@@ -10,8 +10,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/db"
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/db"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 	"github.com/google/uuid"
 )
 

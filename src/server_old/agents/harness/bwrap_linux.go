@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/telemetry"
+	"github.com/onehumancorp/mono/src/server_old/telemetry"
 )
 
 type BwrapHarness struct{}

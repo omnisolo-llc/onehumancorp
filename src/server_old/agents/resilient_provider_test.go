@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server/db"
+	"github.com/onehumancorp/mono/src/server_old/db"
 )
 
 type mockPrimary struct {

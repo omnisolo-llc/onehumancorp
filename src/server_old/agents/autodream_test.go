@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/db"
+	"github.com/onehumancorp/mono/src/server_old/db"
 	_ "modernc.org/sqlite"
 )
 

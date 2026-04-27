@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/onehumancorp/mono/src/server/integrations/plane"
-	"github.com/onehumancorp/mono/src/server/orchestration"
+	"github.com/onehumancorp/mono/src/server_old/integrations/plane"
+	"github.com/onehumancorp/mono/src/server_old/orchestration"
 )
 
 func BenchmarkTaskWorker_pollAndDispatch(b *testing.B) {
