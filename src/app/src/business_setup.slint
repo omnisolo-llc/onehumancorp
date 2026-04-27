@@ -1,15 +1,32 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component BusinessSetup inherits Window {
-    width: 600px;
-    height: 500px;
+    width: 375px;
+    height: 812px;
     title: "Business Setup";
 
     in-out property <int> step: 0;
+
+    // Step 1: Business Type
     in-out property <string> business_type: "";
+
+    // Step 2: Name & Description
     in-out property <string> company_name: "";
+    in-out property <string> company_desc: "";
+
+    // Step 3: What do you sell
     in-out property <string> products_services: "";
-    in-out property <string> payment_pref: "stripe";
+
+    // Step 4: Payment Preference
+    in-out property <string> payment_pref: "";
+
+    // Step 5: Administrator Account
+    in-out property <string> admin_name: "";
+    in-out property <string> admin_email: "";
+    in-out property <string> admin_password: "";
+
+    // Additional data originally in business_setup
     in-out property <string> template_id: "modern";
     in-out property <string> first_product_name: "";
     in-out property <string> first_product_desc: "";
@@ -18,91 +35,126 @@ export component BusinessSetup inherits Window {
 
     callback launch();
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
-    VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+    ScrollView {
+        VerticalBox {
+            alignment: center;
+            spacing: 20px;
+            padding: 24px;
 
-        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            GlassCard {
+                VerticalBox {
+                    spacing: 20px;
+                    padding: 24px;
+                    alignment: start;
 
-        // Step 0: Welcome
-        if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
-        }
+                    // Header
+                    Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; horizontal-alignment: center; }
 
-        // Step 1: Type & Name
-        if (step == 1) : VerticalBox {
-            spacing: 10px;
-            LineEdit {
-                placeholder-text: "Business Type (e.g. Baker, Handyman)";
-                text <=> business_type;
-            }
-            LineEdit {
-                placeholder-text: "Company Name";
-                text <=> company_name;
-            }
-        }
+                    // Step 0: Welcome
+                    if (step == 0) : VerticalBox {
+                        spacing: 16px;
+                        Text { text: "Welcome! Your AI team, ready in minutes."; color: #a8b2c1; font-family: "Inter"; horizontal-alignment: center; wrap: word-wrap; }
+                        Text { text: "Your business, live in minutes."; font-size: 18px; color: white; font-family: "Outfit"; horizontal-alignment: center; wrap: word-wrap; }
+                    }
 
-        // Step 2: Products & Payment
-        if (step == 2) : VerticalBox {
-            spacing: 10px;
-            LineEdit {
-                placeholder-text: "What do you sell?";
-                text <=> products_services;
-            }
-            Text { text: "Payment Preference: " + payment_pref; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Stripe"; clicked => { payment_pref = "stripe"; } }
-                Button { text: "PayPal"; clicked => { payment_pref = "paypal"; } }
-            }
-        }
+                    // Step 1: Type
+                    if (step == 1) : VerticalBox {
+                        spacing: 16px;
+                        Text { text: "What kind of business are you building?"; color: white; font-size: 18px; font-family: "Outfit"; wrap: word-wrap; }
+                        VerticalBox {
+                            spacing: 10px;
+                            Button { height: 44px; text: "Online Store"; clicked => { business_type = "Online Store"; } }
+                            Button { height: 44px; text: "Service Business"; clicked => { business_type = "Service Business"; } }
+                            Button { height: 44px; text: "Restaurant / Food"; clicked => { business_type = "Restaurant / Food"; } }
+                            Button { height: 44px; text: "Creative / Portfolio"; clicked => { business_type = "Creative / Portfolio"; } }
+                            Button { height: 44px; text: "Local Business"; clicked => { business_type = "Local Business"; } }
+                            Button { height: 44px; text: "Other"; clicked => { business_type = "Other"; } }
+                        }
+                        Text { text: "Selected: " + business_type; color: #a8b2c1; font-family: "Inter"; }
+                    }
 
-        // Step 3: Template
-        if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Template Selection: " + template_id; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Modern"; clicked => { template_id = "modern"; } }
-                Button { text: "Classic"; clicked => { template_id = "classic"; } }
-                Button { text: "Bold"; clicked => { template_id = "bold"; } }
-            }
-        }
+                    // Step 2: Name & Description
+                    if (step == 2) : VerticalBox {
+                        spacing: 16px;
+                        Text { text: "What is your business called?"; color: white; font-size: 18px; font-family: "Outfit"; wrap: word-wrap; }
+                        LineEdit { placeholder-text: "Company Name"; text <=> company_name; }
+                        Text { text: "Describe your business"; color: white; font-size: 14px; font-family: "Outfit"; }
+                        LineEdit { placeholder-text: "Short description"; text <=> company_desc; }
+                    }
 
-        // Step 4: First Product
-        if (step == 4) : VerticalBox {
-            spacing: 10px;
-            LineEdit { placeholder-text: "First Product Name"; text <=> first_product_name; }
-            LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; }
-            LineEdit { placeholder-text: "Price"; text <=> first_product_price; }
-        }
+                    // Step 3: What do you sell
+                    if (step == 3) : VerticalBox {
+                        spacing: 16px;
+                        Text { text: "What do you sell?"; color: white; font-size: 18px; font-family: "Outfit"; wrap: word-wrap; }
+                        VerticalBox {
+                            spacing: 10px;
+                            Button { height: 44px; text: "Physical products"; clicked => { products_services = "Physical products"; } }
+                            Button { height: 44px; text: "Digital downloads"; clicked => { products_services = "Digital downloads"; } }
+                            Button { height: 44px; text: "Services / appointments"; clicked => { products_services = "Services / appointments"; } }
+                            Button { height: 44px; text: "Food & beverages"; clicked => { products_services = "Food & beverages"; } }
+                            Button { height: 44px; text: "Subscriptions"; clicked => { products_services = "Subscriptions"; } }
+                        }
+                        Text { text: "Selected: " + products_services; color: #a8b2c1; font-family: "Inter"; }
+                    }
 
-        // Step 5: Domain
-        if (step == 5) : VerticalBox {
-            spacing: 10px;
-            HorizontalBox {
-                LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; }
-                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
-            }
-        }
+                    // Step 4: Payment preference
+                    if (step == 4) : VerticalBox {
+                        spacing: 16px;
+                        Text { text: "How do you want to receive payments?"; color: white; font-size: 18px; font-family: "Outfit"; wrap: word-wrap; }
+                        VerticalBox {
+                            spacing: 10px;
+                            Button { height: 44px; text: "Online only (Fastest setup)"; clicked => { payment_pref = "Online only"; } }
+                            Button { height: 44px; text: "In-person (POS)"; clicked => { payment_pref = "In-person (POS)"; } }
+                            Button { height: 44px; text: "Both"; clicked => { payment_pref = "Both"; } }
+                            Button { height: 44px; text: "Skip for now"; clicked => { payment_pref = "Skip for now"; } }
+                        }
+                        Text { text: "Selected: " + payment_pref; color: #a8b2c1; font-family: "Inter"; }
+                    }
 
-        Rectangle {} // Spacer
+                    // Step 5: Administrator account
+                    if (step == 5) : VerticalBox {
+                        spacing: 16px;
+                        Text { text: "Create Administrator Account"; color: white; font-size: 18px; font-family: "Outfit"; wrap: word-wrap; }
+                        LineEdit { placeholder-text: "Name"; text <=> admin_name; }
+                        LineEdit { placeholder-text: "Email"; text <=> admin_email; }
+                        LineEdit { placeholder-text: "Password"; text <=> admin_password; input-type: InputType.password; }
+                        Button { height: 44px; text: "Continue with Google"; clicked => {} }
+                        Button { height: 44px; text: "Continue with Apple"; clicked => {} }
+                    }
 
-        // Navigation
-        HorizontalBox {
-            if (step > 0) : Button {
-                text: "Back";
-                clicked => { step = step - 1; }
-            }
-            Rectangle {} // Spacer
-            Button {
-                text: step == 5 ? "Launch My AI Team" : "Next";
-                clicked => {
-                    if (step < 5) {
-                        step = step + 1;
-                    } else {
-                        launch();
+                    // Step 6: Review & Launch
+                    if (step == 6) : VerticalBox {
+                        spacing: 16px;
+                        Text { text: "Ready to launch!"; color: white; font-size: 18px; font-family: "Outfit"; horizontal-alignment: center; }
+                        Text { text: "Business: " + company_name; color: #a8b2c1; font-family: "Inter"; }
+                        Text { text: "Type: " + business_type; color: #a8b2c1; font-family: "Inter"; }
+                        Text { text: "Selling: " + products_services; color: #a8b2c1; font-family: "Inter"; }
+                        Text { text: "Payments: " + payment_pref; color: #a8b2c1; font-family: "Inter"; }
+                    }
+
+                    Rectangle { height: 20px; } // Spacer
+
+                    // Navigation
+                    HorizontalBox {
+                        if (step > 0) : Button {
+                            height: 44px;
+                            text: "Back";
+                            clicked => { step = step - 1; }
+                        }
+                        Rectangle {} // Spacer
+                        Button {
+                            height: 44px;
+                            text: step == 6 ? "Launch My Business →" : (step == 0 ? "Get Started" : "Next");
+                            clicked => {
+                                if (step < 6) {
+                                    step = step + 1;
+                                } else {
+                                    launch();
+                                }
+                            }
+                        }
                     }
                 }
             }
