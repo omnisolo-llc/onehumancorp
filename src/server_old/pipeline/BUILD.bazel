@@ -6,9 +6,10 @@ go_library(
         "autodream_pipeline.go",
         "pipeline.go",
     ],
-    importpath = "github.com/onehumancorp/mono/src/server/pipeline",
+    importpath = "github.com/onehumancorp/mono/src/server_old/pipeline",
     visibility = ["//visibility:public"],
     deps = [
+        "//src/server_old/agents/local",
         "//src/server_old/agents",
         "//src/server_old/db",
         "//src/server_old/orchestration",
@@ -25,6 +26,7 @@ go_test(
     ],
     embed = [":pipeline"],
     deps = [
+        "//src/server_old/agents/local",
         "//src/server_old/agents",
         "//src/server_old/db",
         "//src/server_old/orchestration",
