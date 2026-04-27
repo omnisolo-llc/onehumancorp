@@ -1,0 +1,45 @@
+"""E2E tests for the OHC platform using Vitest and Playwright."""
+
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
+npm_link_all_packages(name = "node_modules")
+
+# Test source files
+_TEST_SRCS = glob([
+    "*.test.ts",
+    "test-utils.ts",
+])
+
+# All TypeScript test files
+filegroup(
+    name = "test_sources",
+    srcs = _TEST_SRCS + [
+        "vitest.config.ts",
+    ],
+)
+
+# Export node_modules for running tests locally
+exports_files(
+    [
+        "vitest.config.ts",
+        "package.json",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+# Test suite placeholder for e2e tests
+# These tests require a running server on localhost:18080
+# They are hermetically non-compliant by design (require external service)
+# Run locally with: npm run test -- deploy/tests --run
+test_suite(
+    name = "e2e_tests",
+    tests = [],
+    tags = [
+        "e2e",
+        "manual",
+        "requires-server",
+        "no-ci",
+    ],
+    visibility = ["//visibility:public"],
+)
+
