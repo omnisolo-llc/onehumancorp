@@ -24,15 +24,23 @@ class AuthUser {
 
   factory AuthUser.fromJson(Map<String, dynamic> json, String token) {
     final roles = json['roles'];
-    final role = (roles is List && roles.isNotEmpty)
-        ? roles.first as String
-        : json['role'] as String? ?? 'viewer';
+    final role =
+        (roles is List && roles.isNotEmpty)
+            ? roles.first as String
+            : json['role'] as String? ?? 'viewer';
     return AuthUser(
       id: json['id'] as String,
       email: json['email'] as String? ?? '',
-      name: json['username'] as String? ?? json['name'] as String? ?? json['email'] as String? ?? '',
+      name:
+          json['username'] as String? ??
+          json['name'] as String? ??
+          json['email'] as String? ??
+          '',
       role: role,
-      organizationId: json['organizationId'] as String? ?? json['organization_id'] as String? ?? '',
+      organizationId:
+          json['organizationId'] as String? ??
+          json['organization_id'] as String? ??
+          '',
       token: token,
     );
   }
@@ -45,6 +53,29 @@ class AuthService {
 
   AuthService({required this.baseUrl, http.Client? client})
     : _client = client ?? http.Client();
+
+  Future<AuthUser> register(
+    String username,
+    String email,
+    String password,
+  ) async {
+    final response = await _client.post(
+      Uri.parse('$baseUrl/api/auth/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'username': username,
+        'email': email,
+        'password': password,
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final token = data['token'] as String;
+      final user = data['user'] as Map<String, dynamic>;
+      return AuthUser.fromJson(user, token);
+    }
+    throw Exception('Registration failed: ${response.statusCode}');
+  }
 
   Future<AuthUser> login(String usernameOrEmail, String password) async {
     final response = await _client.post(

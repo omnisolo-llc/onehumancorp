@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server_old/agents/builtin"
+	"github.com/onehumancorp/mono/src/server/agents/builtin"
 	"github.com/onehumancorp/mono/src/server/db"
 )
 
