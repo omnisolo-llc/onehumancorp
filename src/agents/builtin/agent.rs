@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
+use ohc_builtin_agent_core::types::{ToolError, ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
@@ -193,33 +193,73 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
-                        });
-                        (r, String::new())
+                let mut retries = 0;
+                let mut tool_content = String::new();
+                let mut tool_error = String::new();
+
+                loop {
+                    let result = self.execute_tool(&tc).await;
+                    match result {
+                        Ok(r) => {
+                            self.progress.record_tool_use();
+                            on_event(AgentEvent::ToolCall {
+                                name: tc.name.clone(),
+                                args_json: tc.arguments.to_string(),
+                                result: r.clone(),
+                                iteration,
+                            });
+                            tool_content = r;
+                            break;
+                        }
+                        Err(e) => {
+                            if let Some(tool_err) = e.downcast_ref::<ToolError>() {
+                                match tool_err {
+                                    ToolError::Transient(msg) => {
+                                        retries += 1;
+                                        if retries <= 2 {
+                                            tokio::time::sleep(std::time::Duration::from_millis(500 * retries)).await;
+                                            continue;
+                                        } else {
+                                            tool_error = format!("Transient error after 3 tries: {}", msg);
+                                            break;
+                                        }
+                                    }
+                                    ToolError::LlmRecoverable(msg) => {
+                                        tool_error = msg.clone();
+                                        break;
+                                    }
+                                    ToolError::UserFixable(msg) => {
+                                        let err_msg = format!("UserFixable: {}", msg);
+                                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                                        return Err(err_msg.into());
+                                    }
+                                    ToolError::Unexpected(msg) => {
+                                        let err_msg = format!("Unexpected tool error: {}", msg);
+                                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                                        return Err(err_msg.into());
+                                    }
+                                }
+                            } else {
+                                tool_error = e.to_string();
+                                break;
+                            }
+                        }
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
-                        });
-                        (String::new(), err)
-                    }
-                };
+                }
+
+                if !tool_error.is_empty() {
+                    on_event(AgentEvent::ToolCall {
+                        name: tc.name.clone(),
+                        args_json: tc.arguments.to_string(),
+                        result: format!("Error: {}", tool_error),
+                        iteration,
+                    });
+                }
+
                 tool_results.push(ToolResult {
                     tool_call_id: tc.id.clone(),
-                    content,
-                    error,
+                    content: tool_content,
+                    error: tool_error,
                 });
             }
 
@@ -374,5 +414,202 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    #[tokio::test]
+    async fn test_tool_error_types() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        struct MockErrorToolExecutor {
+            pub error_to_return: std::sync::Arc<tokio::sync::Mutex<ToolError>>,
+            pub call_count: std::sync::Arc<AtomicUsize>,
+        }
+
+        #[async_trait::async_trait]
+        impl ToolExecutor for MockErrorToolExecutor {
+            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+                self.call_count.fetch_add(1, Ordering::Relaxed);
+                let err = self.error_to_return.lock().await.clone();
+                Err(Box::new(err))
+            }
+        }
+
+        // Test 1: Transient Error
+        {
+            let client = Arc::new(MockLlmClient {
+                responses: tokio::sync::Mutex::new(vec![
+                    ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_t".to_string(),
+                                name: "transient_tool".to_string(),
+                                arguments: Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    },
+                    ChatResponse {
+                        message: Message::assistant("Final answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    },
+                ]),
+            });
+
+            let call_count = Arc::new(AtomicUsize::new(0));
+            let tools = vec![Tool {
+                name: "transient_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor {
+                    error_to_return: Arc::new(tokio::sync::Mutex::new(ToolError::Transient("network blip".to_string()))),
+                    call_count: call_count.clone(),
+                }),
+            }];
+
+            let agent = Agent::new(client, tools);
+            let mut cfg = AgentRunConfig::default();
+            let mut events = vec![];
+            let result = agent.run(&cfg, "Hello", &mut |e| { events.push(e); }).await;
+
+            assert!(result.is_ok()); // The loop finishes and recovers
+            assert_eq!(call_count.load(Ordering::Relaxed), 3); // 1 initial + 2 retries
+        }
+
+        // Test 2: LLM Recoverable Error
+        {
+            let client = Arc::new(MockLlmClient {
+                responses: tokio::sync::Mutex::new(vec![
+                    ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_l".to_string(),
+                                name: "llm_tool".to_string(),
+                                arguments: Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    },
+                    ChatResponse {
+                        message: Message::assistant("Final answer"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                    },
+                ]),
+            });
+
+            let call_count = Arc::new(AtomicUsize::new(0));
+            let tools = vec![Tool {
+                name: "llm_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor {
+                    error_to_return: Arc::new(tokio::sync::Mutex::new(ToolError::LlmRecoverable("bad query".to_string()))),
+                    call_count: call_count.clone(),
+                }),
+            }];
+
+            let agent = Agent::new(client, tools);
+            let mut cfg = AgentRunConfig::default();
+            let mut events = vec![];
+            let result = agent.run(&cfg, "Hello", &mut |e| { events.push(e); }).await;
+
+            assert!(result.is_ok());
+            assert_eq!(call_count.load(Ordering::Relaxed), 1); // 1 call only
+        }
+
+        // Test 3: User Fixable Error
+        {
+            let client = Arc::new(MockLlmClient {
+                responses: tokio::sync::Mutex::new(vec![
+                    ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_u".to_string(),
+                                name: "user_tool".to_string(),
+                                arguments: Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    },
+                ]),
+            });
+
+            let call_count = Arc::new(AtomicUsize::new(0));
+            let tools = vec![Tool {
+                name: "user_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor {
+                    error_to_return: Arc::new(tokio::sync::Mutex::new(ToolError::UserFixable("missing token".to_string()))),
+                    call_count: call_count.clone(),
+                }),
+            }];
+
+            let agent = Agent::new(client, tools);
+            let mut cfg = AgentRunConfig::default();
+            let mut events = vec![];
+            let result = agent.run(&cfg, "Hello", &mut |e| { events.push(e); }).await;
+
+            assert!(result.is_err()); // Interrupted!
+            let err_msg = result.unwrap_err().to_string();
+            assert!(err_msg.contains("UserFixable: missing token"));
+            assert_eq!(call_count.load(Ordering::Relaxed), 1);
+        }
+
+        // Test 4: Unexpected Error
+        {
+            let client = Arc::new(MockLlmClient {
+                responses: tokio::sync::Mutex::new(vec![
+                    ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "".to_string(),
+                            tool_calls: vec![ToolCall {
+                                id: "call_x".to_string(),
+                                name: "unexpected_tool".to_string(),
+                                arguments: Value::Null,
+                            }],
+                            tool_results: vec![],
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "tool_calls".to_string(),
+                    },
+                ]),
+            });
+
+            let call_count = Arc::new(AtomicUsize::new(0));
+            let tools = vec![Tool {
+                name: "unexpected_tool".to_string(),
+                description: "test".to_string(),
+                parameters: Value::Null,
+                execute: Arc::new(MockErrorToolExecutor {
+                    error_to_return: Arc::new(tokio::sync::Mutex::new(ToolError::Unexpected("db crashed".to_string()))),
+                    call_count: call_count.clone(),
+                }),
+            }];
+
+            let agent = Agent::new(client, tools);
+            let mut cfg = AgentRunConfig::default();
+            let mut events = vec![];
+            let result = agent.run(&cfg, "Hello", &mut |e| { events.push(e); }).await;
+
+            assert!(result.is_err()); // Interrupted!
+            let err_msg = result.unwrap_err().to_string();
+            assert!(err_msg.contains("Unexpected tool error: db crashed"));
+            assert_eq!(call_count.load(Ordering::Relaxed), 1);
+        }
     }
 }
