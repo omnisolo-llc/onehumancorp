@@ -182,6 +182,7 @@ mod tests {
         let ui = app::BusinessSetup::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_company_name(), "");
+        assert_eq!(ui.get_business_type(), "");
     }
 
     #[test]

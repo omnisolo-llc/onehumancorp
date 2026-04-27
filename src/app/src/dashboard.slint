@@ -7,8 +7,8 @@ export struct UiRoleCount {
 }
 
 export component Dashboard inherits Window {
-    width: 800px;
-    height: 800px;
+    width: 375px;
+    height: 812px;
     title: "Dashboard";
 
     background: #f8fafc;
@@ -20,97 +20,94 @@ export component Dashboard inherits Window {
 
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
+    in property <string> company_name: "Maya's Bakery";
+
+    callback add_product();
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+        alignment: start;
 
         // Header
         HorizontalBox {
-            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            Text {
+                text: company_name;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+                font-family: "Outfit";
+            }
             Rectangle {}
-            Button { text: "Billing & Credits"; }
+            Rectangle {
+                width: 44px;
+                height: 44px;
+                border-radius: 22px;
+                background: #e2e8f0;
+                Text {
+                    text: "👤";
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    font-size: 20px;
+                }
+            }
         }
 
-        // Stat Cards
-        HorizontalBox {
-            spacing: 16px;
-            
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Agents"; color: #64748b; }
-                    Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
+        // Morning Briefing Card (Advisory Agent)
+        Rectangle {
+            background: #ffffff;
+            border-radius: 16px;
+            border-width: 1px;
+            border-color: #e2e8f0;
+            // Simulated Glassmorphism approach in Slint where no blur is available
+            drop-shadow-blur: 10px;
+            drop-shadow-color: #00000010;
+            drop-shadow-offset-y: 4px;
+
+            VerticalBox {
+                padding: 20px;
+                spacing: 12px;
+
+                Text {
+                    text: "🌅 Morning Briefing";
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #a855f7;
+                    font-family: "Outfit";
+                }
+
+                Text {
+                    text: "Good morning! The Promoter finished designing your storefront. You are ready to start selling. Let's add your first product to get started!";
+                    font-size: 16px;
+                    color: #475569;
+                    wrap: word-wrap;
+                    font-family: "Inter";
+                    line-height: 1.5;
                 }
             }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Tasks"; color: #64748b; }
-                    Text { text: active_tasks_count; font-size: 32px; font-weight: 700; color: #06b6d4; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Scheduled Calls"; color: #64748b; }
-                    Text { text: scheduled_calls_count; font-size: 32px; font-weight: 700; color: #10b981; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Team Members"; color: #64748b; }
-                    Text { text: team_members_count; font-size: 32px; font-weight: 700; color: #f59e0b; }
-                }
-            }
+        }
+
+        Rectangle { height: 10px; }
+
+        // Primary Action
+        Button {
+            text: "Add your first product";
+            height: 56px;
+            clicked => { add_product(); }
+        }
+
+        Rectangle { height: 20px; }
+
+        Text {
+            text: "Agent Activity";
+            font-size: 20px;
+            font-weight: 700;
+            color: #1e293b;
+            font-family: "Outfit";
         }
 
         SwarmObservability {
             messages: mesh_messages;
-        }
-
-        // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; }
-        
-        VerticalBox {
-            spacing: 10px;
-            
-            for role_count in role_counts : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                HorizontalBox {
-                    padding: 16px;
-                    Text { text: role_count.role; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Rectangle {}
-                    Button { text: "-"; }
-                    Text { text: role_count.count; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Button { text: "+"; }
-                }
-            }
         }
     }
 }

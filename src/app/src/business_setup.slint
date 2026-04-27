@@ -1,20 +1,13 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
 
 export component BusinessSetup inherits Window {
-    width: 600px;
-    height: 500px;
-    title: "Business Setup";
+    width: 375px;
+    height: 812px;
+    title: "Start Business";
 
     in-out property <int> step: 0;
     in-out property <string> business_type: "";
     in-out property <string> company_name: "";
-    in-out property <string> products_services: "";
-    in-out property <string> payment_pref: "stripe";
-    in-out property <string> template_id: "modern";
-    in-out property <string> first_product_name: "";
-    in-out property <string> first_product_desc: "";
-    in-out property <string> first_product_price: "";
-    in-out property <string> domain_name: "";
 
     callback launch();
 
@@ -23,88 +16,107 @@ export component BusinessSetup inherits Window {
     VerticalBox {
         spacing: 20px;
         padding: 24px;
+        alignment: center;
 
-        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
-
-        // Step 0: Welcome
+        // Step 0: Welcome / The Promise Landing
         if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
+            spacing: 24px;
+            alignment: center;
+
+            Text {
+                text: "Launch your business in 5 minutes";
+                font-size: 28px;
+                font-weight: 700;
+                color: #1e293b;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+                font-family: "Outfit";
+            }
+            Text {
+                text: "No code. No servers. No jargon.";
+                font-size: 16px;
+                color: #64748b;
+                horizontal-alignment: center;
+                font-family: "Inter";
+            }
+            Rectangle {
+                height: 40px;
+            }
+            Button {
+                text: "Start Business";
+                height: 44px;
+                clicked => { step = 1; }
+            }
         }
 
         // Step 1: Type & Name
         if (step == 1) : VerticalBox {
-            spacing: 10px;
+            spacing: 24px;
+            alignment: start;
+
+            Text { text: "What do you sell?"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+
             LineEdit {
-                placeholder-text: "Business Type (e.g. Baker, Handyman)";
+                placeholder-text: "Products / Services / Food";
                 text <=> business_type;
+                height: 44px;
+                font-family: "Inter";
+                font-size: 16px;
             }
+
+            Text { text: "What's your business name?"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+
             LineEdit {
                 placeholder-text: "Company Name";
                 text <=> company_name;
+                height: 44px;
+                font-family: "Inter";
+                font-size: 16px;
             }
-        }
 
-        // Step 2: Products & Payment
-        if (step == 2) : VerticalBox {
-            spacing: 10px;
-            LineEdit {
-                placeholder-text: "What do you sell?";
-                text <=> products_services;
-            }
-            Text { text: "Payment Preference: " + payment_pref; color: #1e293b; }
+            Rectangle { height: 20px; }
+
             HorizontalBox {
-                Button { text: "Stripe"; clicked => { payment_pref = "stripe"; } }
-                Button { text: "PayPal"; clicked => { payment_pref = "paypal"; } }
-            }
-        }
-
-        // Step 3: Template
-        if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Template Selection: " + template_id; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Modern"; clicked => { template_id = "modern"; } }
-                Button { text: "Classic"; clicked => { template_id = "classic"; } }
-                Button { text: "Bold"; clicked => { template_id = "bold"; } }
-            }
-        }
-
-        // Step 4: First Product
-        if (step == 4) : VerticalBox {
-            spacing: 10px;
-            LineEdit { placeholder-text: "First Product Name"; text <=> first_product_name; }
-            LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; }
-            LineEdit { placeholder-text: "Price"; text <=> first_product_price; }
-        }
-
-        // Step 5: Domain
-        if (step == 5) : VerticalBox {
-            spacing: 10px;
-            HorizontalBox {
-                LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; }
-                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
-            }
-        }
-
-        Rectangle {} // Spacer
-
-        // Navigation
-        HorizontalBox {
-            if (step > 0) : Button {
-                text: "Back";
-                clicked => { step = step - 1; }
-            }
-            Rectangle {} // Spacer
-            Button {
-                text: step == 5 ? "Launch My AI Team" : "Next";
-                clicked => {
-                    if (step < 5) {
-                        step = step + 1;
-                    } else {
-                        launch();
-                    }
+                Button {
+                    text: "Back";
+                    height: 44px;
+                    clicked => { step = 0; }
                 }
+                Rectangle {}
+                Button {
+                    text: "Next";
+                    height: 44px;
+                    clicked => { step = 2; }
+                }
+            }
+        }
+
+        // Step 2: AI Magic State
+        if (step == 2) : VerticalBox {
+            spacing: 24px;
+            alignment: center;
+
+            Text {
+                text: "✨";
+                font-size: 64px;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: "The Promoter is designing your storefront...";
+                font-size: 20px;
+                font-weight: 700;
+                color: #a855f7;
+                horizontal-alignment: center;
+                wrap: word-wrap;
+                font-family: "Outfit";
+            }
+
+            Rectangle { height: 40px; }
+
+            Button {
+                text: "Continue to Dashboard";
+                height: 44px;
+                clicked => { launch(); }
             }
         }
     }
