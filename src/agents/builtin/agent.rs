@@ -28,7 +28,6 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
-    pub guardrails: Option<crate::guardrails::GuardrailConfig>,
 }
 
 impl Default for AgentRunConfig {
@@ -42,7 +41,6 @@ impl Default for AgentRunConfig {
             max_task_tokens: 0,
             confidence_threshold: 0.0,
             enable_observation_masking: true,
-            guardrails: None,
         }
     }
 }
@@ -70,7 +68,6 @@ impl AgentProgress {
     pub fn token_count(&self) -> i64 {
         self.token_count.load(Ordering::Relaxed)
     }
-
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
@@ -101,14 +98,6 @@ impl Agent {
         F: FnMut(AgentEvent) + Send,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
-
-        if let Some(gr) = &cfg.guardrails {
-            if let Err(e) = crate::guardrails::check_input(initial_message, gr) {
-                let err_msg = format!("Input Guardrail Tripwire: {}", e);
-                on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                return Err(err_msg.into());
-            }
-        }
 
         let tool_defs: Vec<ToolDefinition> = self
             .tools
@@ -191,14 +180,6 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                if let Some(gr) = &cfg.guardrails {
-                    if let Err(e) = crate::guardrails::check_output(&last_assistant_content, gr) {
-                        let err_msg = format!("Output Guardrail Tripwire: {}", e);
-                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                        return Err(err_msg.into());
-                    }
-                }
-
                 // In a production-grade agent, we might use a separate LLM pass
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
@@ -212,13 +193,6 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                if let Some(gr) = &cfg.guardrails {
-                    if let Err(e) = crate::guardrails::check_tool_call(tc, gr) {
-                        let err_msg = format!("Tool Guardrail Tripwire: {}", e);
-                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                        return Err(err_msg.into());
-                    }
-                }
                 let result = self.execute_tool(&tc).await;
                 let (content, error) = match result {
                     Ok(r) => {
@@ -279,13 +253,6 @@ impl Agent {
         }
 
         // Hit max iterations.
-        if let Some(gr) = &cfg.guardrails {
-            if let Err(e) = crate::guardrails::check_output(&last_assistant_content, gr) {
-                let err_msg = format!("Output Guardrail Tripwire: {}", e);
-                on_event(AgentEvent::TaskError { error: err_msg.clone() });
-                return Err(err_msg.into());
-            }
-        }
         on_event(AgentEvent::TaskComplete {
             content: last_assistant_content.clone(),
         });
@@ -407,43 +374,5 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
-    }
-    #[tokio::test]
-    async fn test_guardrails() {
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "I am revealing the secret_key now".to_string(),
-                        tool_calls: vec![],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                },
-            ]),
-        });
-        let tools = vec![];
-        let agent = Agent::new(client, tools);
-
-        let mut cfg = AgentRunConfig::default();
-        cfg.guardrails = Some(crate::guardrails::GuardrailConfig {
-            blocked_keywords: vec!["secret_key".to_string()],
-        });
-
-        // Test Input Guardrail
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-        let res = agent.run(&cfg, "Can I see the secret_key?", &mut on_event).await;
-        assert!(res.is_err());
-        assert!(res.unwrap_err().to_string().contains("Input Guardrail Tripwire"));
-
-        // Test Output Guardrail
-        let mut events2 = vec![];
-        let mut on_event2 = |e| { events2.push(e); };
-        let res2 = agent.run(&cfg, "Hello", &mut on_event2).await;
-        assert!(res2.is_err());
-        assert!(res2.unwrap_err().to_string().contains("Output Guardrail Tripwire"));
     }
 }
