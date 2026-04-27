@@ -12,7 +12,7 @@ export struct UiHandoff {
 export component Handoffs inherits Window {
     width: 500px;
     height: 600px;
-    title: "Handoffs & Escalations";
+    title: "Customer Messages for You";
 
     in property <[UiHandoff]> handoffs;
     callback resolve_handoff(string, string);
@@ -24,7 +24,7 @@ export component Handoffs inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Handoffs & Escalations"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Customer Messages for You"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             Button { text: "Refresh"; }
         }
@@ -49,14 +49,14 @@ export component Handoffs inherits Window {
                             
                             HorizontalBox {
                                 padding: 4px;
-                                Text { text: "Intent: " + h.intent; color: white; font-size: 10px; font-weight: 700; }
+                                Text { text: "Topic: " + h.intent; color: white; font-size: 10px; font-weight: 700; }
                             }
                         }
                         Rectangle {}
                         Text { text: h.date; color: #64748b; font-size: 12px; horizontal-alignment: center; }
                     }
                     
-                    Text { text: "Escalated by Agent: " + h.agent_name; color: #1e293b; font-weight: 700; }
+                    Text { text: "Sent to you by AI Assistant: " + h.agent_name; color: #1e293b; font-weight: 700; }
                     Text { text: h.description; color: #1e293b; wrap: word-wrap; }
                     
                     HorizontalBox {

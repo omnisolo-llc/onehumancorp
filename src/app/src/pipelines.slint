@@ -13,7 +13,7 @@ export struct UiPipeline {
 export component Pipelines inherits Window {
     width: 500px;
     height: 600px;
-    title: "SDLC Pipelines";
+    title: "Website Updates";
 
     background: #f8fafc;
 
@@ -26,7 +26,7 @@ export component Pipelines inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "SDLC Pipelines"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Website Updates"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             Button { 
                 text: "Refresh"; 
@@ -50,7 +50,7 @@ export component Pipelines inherits Window {
                     HorizontalBox {
                         VerticalBox {
                             Text { text: p.name; font-weight: 700; color: #1e293b; }
-                            Text { text: "branch: " + p.branch; color: #64748b; }
+                            Text { text: "version: " + p.branch; color: #64748b; }
                         }
                         Rectangle {}
                         Text { text: p.status; color: #06b6d4; horizontal-alignment: center; }
@@ -69,9 +69,9 @@ export component Pipelines inherits Window {
                     }
                     
                     if (p.can_promote) : VerticalBox {
-                        Text { text: "Promote to Production"; color: #1e293b; font-weight: 700; }
+                        Text { text: "Publish to Live Website"; color: #1e293b; font-weight: 700; }
                         Button {
-                            text: "Promote";
+                            text: "Publish";
                             clicked => { promote_pipeline(p.id); }
                         }
                     }
