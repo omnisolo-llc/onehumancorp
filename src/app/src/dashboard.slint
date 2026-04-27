@@ -6,13 +6,38 @@ export struct UiRoleCount {
     count: int,
 }
 
-export component Dashboard inherits Window {
-    width: 800px;
-    height: 800px;
-    title: "Dashboard";
+component StatCard inherits Rectangle {
+    in property <string> label;
+    in property <int> value;
+    in property <color> color;
 
-    background: #f8fafc;
+    background: white.with-alpha(0.1);
+    border-color: white.with-alpha(0.2);
+    border-width: 1px;
+    border-radius: 12px;
+    width: 160px;
+    height: 100px;
 
+    VerticalBox {
+        padding: 12px;
+        alignment: space-between;
+        Text {
+            text: label;
+            color: #a8b2c1;
+            font-size: 14px;
+            font-family: "Inter";
+        }
+        Text {
+            text: value;
+            font-size: 28px;
+            font-weight: 700;
+            color: color;
+            font-family: "Outfit";
+        }
+    }
+}
+
+export component Dashboard inherits Rectangle {
     in property <int> active_agents_count: 0;
     in property <int> active_tasks_count: 0;
     in property <int> scheduled_calls_count: 0;
@@ -22,93 +47,104 @@ export component Dashboard inherits Window {
     in property <[UiMeshMessage]> mesh_messages;
 
     VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+        spacing: 24px;
+        padding: 20px;
 
         // Header
         HorizontalBox {
-            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            Text {
+                text: "Overview";
+                font-size: 24px;
+                font-weight: 700;
+                color: white;
+                font-family: "Outfit";
+            }
             Rectangle {}
-            Button { text: "Billing & Credits"; }
+            Button { text: "Settings"; }
         }
 
-        // Stat Cards
-        HorizontalBox {
-            spacing: 16px;
-            
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Agents"; color: #64748b; }
-                    Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
+        // Stat Grid (Mobile optimized)
+        VerticalBox {
+            spacing: 12px;
+            HorizontalBox {
+                spacing: 12px;
+                StatCard {
+                    label: "AI Helpers";
+                    value: active_agents_count;
+                    color: #a855f7;
+                }
+                StatCard {
+                    label: "To-Do List";
+                    value: active_tasks_count;
+                    color: #06b6d4;
                 }
             }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Tasks"; color: #64748b; }
-                    Text { text: active_tasks_count; font-size: 32px; font-weight: 700; color: #06b6d4; }
+            HorizontalBox {
+                spacing: 12px;
+                StatCard {
+                    label: "Bookings";
+                    value: scheduled_calls_count;
+                    color: #10b981;
                 }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Scheduled Calls"; color: #64748b; }
-                    Text { text: scheduled_calls_count; font-size: 32px; font-weight: 700; color: #10b981; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Team Members"; color: #64748b; }
-                    Text { text: team_members_count; font-size: 32px; font-weight: 700; color: #f59e0b; }
+                StatCard {
+                    label: "My Team";
+                    value: team_members_count;
+                    color: #f59e0b;
                 }
             }
         }
 
-        SwarmObservability {
-            messages: mesh_messages;
+        // Swarm Activity
+        VerticalBox {
+            spacing: 8px;
+            Text {
+                text: "Live Activity";
+                font-size: 18px;
+                font-weight: 700;
+                color: white;
+                font-family: "Outfit";
+            }
+            SwarmObservability {
+                messages: mesh_messages;
+                height: 200px;
+            }
         }
 
         // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; }
-        
         VerticalBox {
-            spacing: 10px;
+            spacing: 8px;
+            Text {
+                text: "My Swarm";
+                font-size: 18px;
+                font-weight: 700;
+                color: white;
+                font-family: "Outfit";
+            }
             
-            for role_count in role_counts : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                HorizontalBox {
-                    padding: 16px;
-                    Text { text: role_count.role; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Rectangle {}
-                    Button { text: "-"; }
-                    Text { text: role_count.count; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Button { text: "+"; }
+            VerticalBox {
+                spacing: 8px;
+                for role_count in role_counts : Rectangle {
+                    background: white.with-alpha(0.05);
+                    border-color: white.with-alpha(0.1);
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    HorizontalBox {
+                        padding: 12px;
+                        Text {
+                            text: role_count.role;
+                            font-weight: 700;
+                            color: white;
+                            font-family: "Inter";
+                        }
+                        Rectangle {}
+                        Text {
+                            text: role_count.count;
+                            font-weight: 700;
+                            color: #a855f7;
+                            font-family: "Outfit";
+                        }
+                    }
                 }
             }
         }

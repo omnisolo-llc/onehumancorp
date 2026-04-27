@@ -3,12 +3,12 @@ import { SwarmObservability, UiMeshMessage } from "./swarm_observability.slint";
 import { SwarmVelocity } from "./swarm_velocity.slint";
 import { AgentStatusIndicator } from "./agent_status_indicator.slint";
 export { FixAgent, Upgrade } from "./ongoing_management.slint";
-export { Settings } from "./settings.slint";
-export { Agents } from "./agents.slint";
-export { MyPlan } from "./my_plan.slint";
-export { Channels } from "./channels.slint";
-export { Chat } from "./chat.slint";
-export { Dashboard } from "./dashboard.slint";
+import { Settings } from "./settings.slint";
+import { Agents } from "./agents.slint";
+import { MyPlan } from "./my_plan.slint";
+import { Channels } from "./channels.slint";
+import { Chat } from "./chat.slint";
+import { Dashboard, UiRoleCount } from "./dashboard.slint";
 export { SwarmObservability, UiMeshMessage } from "./swarm_observability.slint";
 export { WelcomeChecklist } from "./welcome_checklist.slint";
 export { BusinessSetup } from "./business_setup.slint";
@@ -26,15 +26,15 @@ export { PromptTuning, UiPromptExample } from "./prompt_tuning.slint";
 export { Referrals, UiReferral } from "./referrals.slint";
 export { Scaling } from "./scaling.slint";
 export { SwarmMemory } from "./swarm_memory.slint";
-export { WebsiteBuilder } from "./website_builder.slint";
-export { SecureAgentConfig } from "./secure_agent_config.slint";
-export { AgentConfig } from "./agent_config.slint";
-export { AgentHire } from "./agent_hire.slint";
-export { LandingPageExperiments, UiExperiment } from "./landing_page_experiments.slint";
-export { Landing } from "./landing.slint";
-export { AutodreamWalkthrough } from "./autodream_walkthrough.slint";
-export { SetupWizard } from "./setup_wizard.slint";
-export { TaskList, UiTask } from "./task_list.slint";
+import { WebsiteBuilder } from "./website_builder.slint";
+import { SecureAgentConfig } from "./secure_agent_config.slint";
+import { AgentConfig } from "./agent_config.slint";
+import { AgentHire } from "./agent_hire.slint";
+import { LandingPageExperiments, UiExperiment } from "./landing_page_experiments.slint";
+import { Landing } from "./landing.slint";
+import { AutodreamWalkthrough } from "./autodream_walkthrough.slint";
+import { SetupWizard } from "./setup_wizard.slint";
+import { TaskList, UiTask } from "./task_list.slint";
 export { VectorMemoryVisualizer } from "./vector_memory_visualizer.slint";
 export { SwarmVelocity } from "./swarm_velocity.slint";
 export { AgentStatusIndicator } from "./agent_status_indicator.slint";
@@ -74,21 +74,121 @@ export { GrowBusiness } from "./grow_business.slint";
 export { Meetings, UiMeeting } from "./meetings.slint";
 export { Skills, UiSkill } from "./skills.slint";
 
-export component AppWindow inherits Window {
-    width: 400px;
-    height: 300px;
-    title: "New Rust + Slint App";
+component NavItem inherits Rectangle {
+    in property <string> icon;
+    in property <string> label;
+    in property <bool> active;
+    callback clicked;
 
     VerticalBox {
+        spacing: 4px;
         alignment: center;
-        spacing: 20px;
         Text {
-            text: "Hello from Slint!";
+            text: icon;
+            font-size: 24px;
             horizontal-alignment: center;
-            font-size: 20px;
+            color: active ? #a855f7 : #a8b2c1;
         }
-        Button {
-            text: "Click me";
+        Text {
+            text: label;
+            font-size: 12px;
+            font-family: "Inter";
+            horizontal-alignment: center;
+            color: active ? #a855f7 : #a8b2c1;
+        }
+    }
+
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component AppWindow inherits Window {
+    width: 375px;
+    height: 812px;
+    title: "OneHumanCorp";
+    background: #0D0D1A;
+
+    in-out property <int> active_tab: 0;
+
+    // Dashboard data forwarding
+    in property <int> active_agents_count: 0;
+    in property <int> active_tasks_count: 0;
+    in property <int> scheduled_calls_count: 0;
+    in property <int> team_members_count: 0;
+    in property <[UiRoleCount]> role_counts;
+    in property <[UiMeshMessage]> mesh_messages;
+
+    VerticalLayout {
+        padding: 0;
+        spacing: 0;
+
+        // Content Area
+        Rectangle {
+            background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+            if (active_tab == 0) : Dashboard {
+                active_agents_count: root.active_agents_count;
+                active_tasks_count: root.active_tasks_count;
+                scheduled_calls_count: root.scheduled_calls_count;
+                team_members_count: root.team_members_count;
+                role_counts: root.role_counts;
+                mesh_messages: root.mesh_messages;
+            }
+            if (active_tab == 1) : Agents {}
+            if (active_tab == 2) : WebsiteBuilder {}
+            if (active_tab == 3) : TaskList {}
+            if (active_tab == 4) : Settings {}
+        }
+
+        // Bottom Navigation Bar (Glassmorphism simulation)
+        Rectangle {
+            height: 90px;
+            background: white.with-alpha(0.05);
+
+            // Border Top
+            Rectangle {
+                height: 1px;
+                background: white.with-alpha(0.1);
+                y: 0;
+            }
+
+            HorizontalBox {
+                padding: 10px;
+                padding-bottom: 25px; // For safe area on mobile
+                alignment: space-around;
+
+                NavItem {
+                    icon: "🏠";
+                    label: "Home";
+                    active: active_tab == 0;
+                    clicked => { active_tab = 0; }
+                }
+                NavItem {
+                    icon: "🤖";
+                    label: "Helpers";
+                    active: active_tab == 1;
+                    clicked => { active_tab = 1; }
+                }
+                NavItem {
+                    icon: "🌐";
+                    label: "Store";
+                    active: active_tab == 2;
+                    clicked => { active_tab = 2; }
+                }
+                NavItem {
+                    icon: "✅";
+                    label: "Tasks";
+                    active: active_tab == 3;
+                    clicked => { active_tab = 3; }
+                }
+                NavItem {
+                    icon: "⚙️";
+                    label: "Settings";
+                    active: active_tab == 4;
+                    clicked => { active_tab = 4; }
+                }
+            }
         }
     }
 }

@@ -114,35 +114,13 @@ struct HybridHealth {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
-    tokio::spawn(async move {
-        match HubServiceClient::connect("http://127.0.0.1:18789").await {
-            Ok(mut client) => {
-                println!("Connected to server!");
-                let request = tonic::Request::new(RegisterAgentRequest {
-                    agent: Some(Agent {
-                        id: "agent_1".into(),
-                        name: "Rust Agent".into(),
-                        role: "Worker".into(),
-                        organization_id: "org_1".into(),
-                        status: "Running".into(),
-                        provider_type: "Mock".into(),
-                    }),
-                });
-                match client.register_agent(request).await {
-                    Ok(response) => println!("RESPONSE={:?}", response),
-                    Err(e) => println!("ERR={:?}", e),
-                }
-            }
-            Err(e) => {
-                println!("Could not connect to server: {:?}", e);
-            }
-        }
-    });
+    let ui = app::AppWindow::new()?;
 
-    let ui = app::AgentStatusIndicatorWindow::new()?;
-    let ui_handle = ui.as_weak();
-
-    ui.set_is_active(true);
+    // Provide mock data for Dashboard
+    ui.set_active_agents_count(12);
+    ui.set_active_tasks_count(42);
+    ui.set_scheduled_calls_count(5);
+    ui.set_team_members_count(3);
 
     ui.run()?;
     
@@ -282,5 +260,36 @@ mod tests {
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
+    }
+
+    #[test]
+    fn test_app_window_navigation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::AppWindow::new().unwrap();
+        assert_eq!(ui.get_active_tab(), 0);
+
+        ui.set_active_tab(1);
+        assert_eq!(ui.get_active_tab(), 1);
+
+        ui.set_active_tab(4);
+        assert_eq!(ui.get_active_tab(), 4);
+    }
+
+    #[test]
+    fn test_dashboard_mock_data() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::AppWindow::new().unwrap();
+
+        ui.set_active_agents_count(10);
+        assert_eq!(ui.get_active_agents_count(), 10);
+
+        ui.set_active_tasks_count(5);
+        assert_eq!(ui.get_active_tasks_count(), 5);
+
+        ui.set_scheduled_calls_count(2);
+        assert_eq!(ui.get_scheduled_calls_count(), 2);
+
+        ui.set_team_members_count(1);
+        assert_eq!(ui.get_team_members_count(), 1);
     }
 }
