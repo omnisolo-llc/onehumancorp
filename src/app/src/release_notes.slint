@@ -1,0 +1,57 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export struct UiReleaseNote {
+    version: string,
+    date: string,
+    title: string,
+    description: string,
+}
+
+export component ReleaseNotes inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "What's New in OHC";
+
+    background: #f8fafc;
+
+    in property <[UiReleaseNote]> notes: [
+        { version: "v1.2.0", date: "Oct 24, 2023", title: "New Video Tutorials!", description: "We added a new section in the Help Center with short videos showing you exactly how to set up your store." },
+        { version: "v1.1.5", date: "Oct 10, 2023", title: "Faster AI Agent Replies", description: "Your Customer Success Agent now replies to Instagram DMs twice as fast." }
+    ];
+
+    VerticalBox {
+        padding: 32px;
+        spacing: 24px;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text { text: "What's New"; font-size: 32px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: "✕"; height: 44px; width: 44px; }
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 20px;
+                for n in notes : VerticalBox {
+                    spacing: 8px;
+                    HorizontalBox {
+                        spacing: 12px;
+                        Rectangle {
+                            background: #e0f2fe;
+                            border-radius: 4px;
+                            padding: 4px;
+                            width: 80px;
+                            Text { text: n.version; color: #0284c7; font-size: 14px; font-weight: 700; font-family: "Inter"; horizontal-alignment: center; }
+                        }
+                        Text { text: n.date; color: #64748b; font-size: 14px; font-family: "Inter"; }
+                    }
+                    Text { text: n.title; font-size: 20px; font-weight: 600; color: #0f172a; font-family: "Outfit"; }
+                    Text { text: n.description; font-size: 16px; color: #475569; font-family: "Inter"; wrap: word-wrap; }
+                    Rectangle { height: 1px; background: #e2e8f0; } // Divider
+                }
+            }
+        }
+
+        Button { text: "View Full Changelog on Website"; height: 44px; }
+    }
+}

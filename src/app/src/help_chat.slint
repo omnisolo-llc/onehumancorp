@@ -1,0 +1,74 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+
+export struct UiChatMessage {
+    is_user: bool,
+    text: string,
+}
+
+export component HelpChat inherits Window {
+    width: 375px;
+    height: 600px;
+    title: "AI Help Chat";
+
+    background: #f8fafc;
+
+    in-out property <[UiChatMessage]> messages: [
+        { is_user: false, text: "Hi! I'm your AI Help Assistant. Ask me anything about setting up your business." }
+    ];
+
+    property <string> current_input: "";
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text { text: "Help Agent"; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: "✕"; height: 44px; width: 44px; }
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 12px;
+                for m in messages : HorizontalBox {
+                    alignment: m.is_user ? end : start;
+                    Rectangle {
+                        background: m.is_user ? #0ea5e9 : white;
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 12px;
+                        padding: 12px;
+
+                        Text {
+                            text: m.text;
+                            color: m.is_user ? white : #1e293b;
+                            font-size: 14px;
+                            font-family: "Inter";
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 8px;
+            LineEdit {
+                text <=> current_input;
+                placeholder-text: "Ask anything...";
+                height: 44px;
+            }
+            Button {
+                text: "Send";
+                height: 44px;
+                clicked => {
+                    if (current_input != "") {
+                        messages = [{ is_user: true, text: current_input }];
+                        current_input = "";
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,54 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component InteractiveWalkthrough inherits Window {
+    width: 375px;
+    height: 700px;
+    title: "Interactive Walkthrough";
+
+    background: rgba(0, 0, 0, 0.4);
+
+    property <int> current_step: 0;
+
+    VerticalBox {
+        alignment: center;
+        padding: 24px;
+
+        Rectangle {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+
+            VerticalBox {
+                spacing: 16px;
+
+                Text { text: "Guide"; font-size: 14px; font-weight: 600; color: #0284c7; font-family: "Inter"; }
+
+                Text {
+                    text: current_step == 0 ? "Welcome! Let's set up your store. First, add your business name." :
+                          current_step == 1 ? "Great. Now let's connect Stripe to accept your first payment." :
+                          "You're all set! Let's activate your AI Support Agent.";
+                    font-size: 18px; color: #1e293b; font-family: "Inter"; wrap: word-wrap;
+                }
+
+                HorizontalBox {
+                    alignment: space-between;
+
+                    Button {
+                        text: "Skip";
+                        height: 44px; width: 80px;
+                    }
+
+                    Button {
+                        text: current_step == 2 ? "Finish" : "Next";
+                        height: 44px; width: 80px;
+                        clicked => {
+                            if (current_step < 2) {
+                                current_step += 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,57 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+
+export struct UiHelpTopic {
+    title: string,
+    description: string,
+}
+
+export component HelpCenter inherits Window {
+    width: 375px;
+    height: 700px;
+    title: "Help Center";
+
+    background: #f8fafc;
+
+    in property <[UiHelpTopic]> topics: [
+        { title: "Getting Started", description: "Learn how to launch your business in 10 minutes." },
+        { title: "My Store", description: "Manage your storefront, catalog, and inventory." },
+        { title: "Payments", description: "Learn about taking payments and getting paid." },
+        { title: "AI Agents", description: "See what your AI agents are doing for you." },
+        { title: "Marketing", description: "Grow your business with marketing and SEO." },
+        { title: "Account & Billing", description: "Manage your account, plan, and billing." }
+    ];
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+        alignment: start;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text { text: "Help Center"; font-size: 28px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: "✕"; height: 44px; width: 44px; }
+        }
+
+        LineEdit {
+            placeholder-text: "Search for help...";
+            height: 44px;
+        }
+
+        Text { text: "Browse Topics"; font-size: 20px; font-weight: 600; color: #334155; font-family: "Outfit"; }
+
+        for t in topics : Rectangle {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 12px;
+            padding: 16px;
+
+            VerticalBox {
+                spacing: 8px;
+                Text { text: t.title; font-size: 18px; font-weight: 600; color: #0f172a; font-family: "Outfit"; }
+                Text { text: t.description; font-size: 14px; color: #475569; font-family: "Inter"; wrap: word-wrap; }
+                Button { text: "Read Articles →"; height: 44px; width: 140px; }
+            }
+        }
+    }
+}

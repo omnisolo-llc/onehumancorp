@@ -1,0 +1,61 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export struct UiVideoTutorial {
+    title: string,
+    duration: string,
+}
+
+export component VideoTutorials inherits Window {
+    width: 375px;
+    height: 700px;
+    title: "Video Tutorials";
+
+    background: #f8fafc;
+
+    in property <[UiVideoTutorial]> tutorials: [
+        { title: "Connect your bank account", duration: "1:15" },
+        { title: "Customize your storefront", duration: "1:25" },
+        { title: "Review AI drafted responses", duration: "0:50" }
+    ];
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 20px;
+
+        HorizontalBox {
+            alignment: space-between;
+            Text { text: "Video Tutorials"; font-size: 28px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+            Button { text: "✕"; height: 44px; width: 44px; }
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+
+                for t in tutorials : Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 12px;
+                    padding: 16px;
+
+                    VerticalBox {
+                        spacing: 12px;
+                        Rectangle {
+                            height: 160px;
+                            background: #cbd5e1;
+                            border-radius: 8px;
+
+                            Text { text: "▶ Play"; color: white; font-size: 24px; font-family: "Outfit"; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                        HorizontalBox {
+                            alignment: space-between;
+                            Text { text: t.title; font-size: 16px; font-weight: 600; color: #0f172a; font-family: "Inter"; }
+                            Text { text: t.duration; font-size: 14px; color: #64748b; font-family: "Inter"; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

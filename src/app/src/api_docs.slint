@@ -1,0 +1,66 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export struct UiApiEndpoint {
+    method: string,
+    path: string,
+    description: string,
+}
+
+export component ApiDocs inherits Window {
+    width: 800px;
+    height: 700px;
+    title: "Advanced: API Reference";
+
+    background: #f8fafc;
+
+    in property <[UiApiEndpoint]> endpoints: [
+        { method: "GET", path: "/v1/store/products", description: "List all active products in your catalog." },
+        { method: "POST", path: "/v1/store/orders", description: "Create a new custom order." },
+        { method: "GET", path: "/v1/agents/status", description: "Check what your AI agents are working on." }
+    ];
+
+    VerticalBox {
+        padding: 32px;
+        spacing: 24px;
+
+        HorizontalBox {
+            alignment: space-between;
+            VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced: API Reference"; font-size: 32px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+                Text { text: "Connect a custom checkout or integrate other tools directly."; font-size: 16px; color: #64748b; font-family: "Inter"; }
+            }
+            Button { text: "Generate API Key"; height: 44px; }
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+                for e in endpoints : Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    padding: 16px;
+
+                    VerticalBox {
+                        spacing: 12px;
+                        HorizontalBox {
+                            spacing: 12px;
+                            Rectangle {
+                                background: e.method == "GET" ? #3b82f6 : (e.method == "POST" ? #10b981 : #f59e0b);
+                                border-radius: 4px;
+                                padding: 4px;
+                                width: 60px;
+                                Text { text: e.method; color: white; font-size: 14px; font-weight: 700; font-family: "Inter"; horizontal-alignment: center; }
+                            }
+                            Text { text: e.path; font-size: 16px; font-weight: 600; color: #0f172a; font-family: "Inter"; }
+                        }
+                        Text { text: e.description; font-size: 14px; color: #475569; font-family: "Inter"; }
+                        Button { text: "Try it out"; height: 32px; width: 100px; }
+                    }
+                }
+            }
+        }
+    }
+}

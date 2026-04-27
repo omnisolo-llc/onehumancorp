@@ -1,0 +1,43 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export struct UiTooltip {
+    id: string,
+    text: string,
+}
+
+export component TooltipRegistry inherits Window {
+    width: 375px;
+    height: 400px;
+    title: "Tooltip Registry";
+
+    background: #f8fafc;
+
+    in property <[UiTooltip]> tooltips: [
+        { id: "dashboard_help", text: "Welcome to your dashboard! Here you can see your business health at a glance." },
+        { id: "billing_help", text: "Manage your payments and credits. Keep track of what you spend." }
+    ];
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+        alignment: start;
+
+        Text { text: "Tooltip Registry"; font-size: 24px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
+        Text { text: "Manage plain language tooltips."; font-size: 16px; color: #64748b; font-family: "Inter"; wrap: word-wrap; }
+
+        for t in tooltips : Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 12px;
+            padding: 16px;
+
+            VerticalBox {
+                spacing: 8px;
+                Text { text: t.id; font-size: 14px; font-weight: 600; color: #0284c7; font-family: "Inter"; }
+                Text { text: t.text; font-size: 16px; color: #1e293b; font-family: "Inter"; wrap: word-wrap; }
+                Button { text: "Edit Tooltip"; height: 44px; width: 120px; }
+            }
+        }
+    }
+}

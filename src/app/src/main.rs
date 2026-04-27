@@ -151,6 +151,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn test_help_center_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::HelpCenter::new().unwrap();
+    }
+    #[test]
+    fn test_tooltip_registry_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::TooltipRegistry::new().unwrap();
+    }
+    #[test]
+    fn test_interactive_walkthrough_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::InteractiveWalkthrough::new().unwrap();
+    }
+    #[test]
+    fn test_help_chat_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::HelpChat::new().unwrap();
+    }
+    #[test]
+    fn test_video_tutorials_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::VideoTutorials::new().unwrap();
+    }
+    #[test]
+    fn test_api_docs_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::ApiDocs::new().unwrap();
+    }
+    #[test]
+    fn test_release_notes_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::ReleaseNotes::new().unwrap();
+    }
+
     use super::*;
     
     #[test]
