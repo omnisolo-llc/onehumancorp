@@ -58,8 +58,8 @@ func TestConfigTool_GetConfig_Standalone_Success(t *testing.T) {
 	err := os.WriteFile(configPath, []byte(`my_key: local_value`), 0644)
 	require.NoError(t, err)
 
-	os.Setenv("OHC_CONFIG_PATH", configPath)
-	defer os.Unsetenv("OHC_CONFIG_PATH")
+	os.Setenv("OHC_STANDALONE_CONFIG_PATH", configPath)
+	defer os.Unsetenv("OHC_STANDALONE_CONFIG_PATH")
 
 	tool := NewConfigTool(nil)
 	val, err := tool.GetConfig(context.Background(), "my_key")
@@ -73,8 +73,8 @@ func TestConfigTool_GetConfig_Standalone_NotFound(t *testing.T) {
 
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "config.yaml")
-	os.Setenv("OHC_CONFIG_PATH", configPath)
-	defer os.Unsetenv("OHC_CONFIG_PATH")
+	os.Setenv("OHC_STANDALONE_CONFIG_PATH", configPath)
+	defer os.Unsetenv("OHC_STANDALONE_CONFIG_PATH")
 
 	tool := NewConfigTool(nil)
 	_, err := tool.GetConfig(context.Background(), "my_key")
@@ -146,8 +146,8 @@ func TestConfigTool_GetConfig_Standalone_InvalidYAML(t *testing.T) {
 	err := os.WriteFile(configPath, []byte(`invalid: [ yaml: content`), 0644)
 	require.NoError(t, err)
 
-	os.Setenv("OHC_CONFIG_PATH", configPath)
-	defer os.Unsetenv("OHC_CONFIG_PATH")
+	os.Setenv("OHC_STANDALONE_CONFIG_PATH", configPath)
+	defer os.Unsetenv("OHC_STANDALONE_CONFIG_PATH")
 
 	tool := NewConfigTool(nil)
 	_, err = tool.GetConfig(context.Background(), "my_key")
@@ -164,8 +164,8 @@ func TestConfigTool_GetConfig_Standalone_KeyNotFound(t *testing.T) {
 	err := os.WriteFile(configPath, []byte(`other_key: val`), 0644)
 	require.NoError(t, err)
 
-	os.Setenv("OHC_CONFIG_PATH", configPath)
-	defer os.Unsetenv("OHC_CONFIG_PATH")
+	os.Setenv("OHC_STANDALONE_CONFIG_PATH", configPath)
+	defer os.Unsetenv("OHC_STANDALONE_CONFIG_PATH")
 
 	tool := NewConfigTool(nil)
 	_, err = tool.GetConfig(context.Background(), "my_key")
@@ -210,8 +210,8 @@ func TestConfigTool_GetConfig_Standalone_ReadError(t *testing.T) {
 	err := os.Mkdir(configPath, 0755)
 	require.NoError(t, err)
 
-	os.Setenv("OHC_CONFIG_PATH", configPath)
-	defer os.Unsetenv("OHC_CONFIG_PATH")
+	os.Setenv("OHC_STANDALONE_CONFIG_PATH", configPath)
+	defer os.Unsetenv("OHC_STANDALONE_CONFIG_PATH")
 
 	tool := NewConfigTool(nil)
 	_, err = tool.GetConfig(context.Background(), "my_key")
@@ -229,8 +229,8 @@ func TestConfigTool_GetConfigTool(t *testing.T) {
 	err := os.WriteFile(configPath, []byte(`my_key: local_value`), 0644)
 	require.NoError(t, err)
 
-	os.Setenv("OHC_CONFIG_PATH", configPath)
-	defer os.Unsetenv("OHC_CONFIG_PATH")
+	os.Setenv("OHC_STANDALONE_CONFIG_PATH", configPath)
+	defer os.Unsetenv("OHC_STANDALONE_CONFIG_PATH")
 
 	tool := NewConfigTool(nil)
 	mcpTool := tool.GetConfigTool()

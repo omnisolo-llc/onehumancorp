@@ -15,8 +15,6 @@ import 'package:ohc_app/screens/security_screen.dart';
 import 'package:ohc_app/screens/settings_screen.dart';
 import 'package:ohc_app/screens/service_screen.dart';
 import 'package:ohc_app/screens/wizard_screen.dart';
-import 'package:ohc_app/screens/pricing_screen.dart';
-import 'package:ohc_app/screens/my_plan_screen.dart';
 import 'package:ohc_app/screens/diagnostics_screen.dart';
 import 'package:ohc_app/screens/business_setup_wizard_screen.dart';
 import 'package:ohc_app/screens/welcome_checklist_screen.dart';
@@ -191,14 +189,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/wizards/billing',
             builder: (context, state) => const BillingWizardScreen(),
           ),
-          GoRoute(
-            path: '/pricing',
-            builder: (context, state) => const PricingScreen(),
-          ),
-          GoRoute(
-            path: '/my-plan',
-            builder: (context, state) => const MyPlanScreen(),
-          ),
+
 
           GoRoute(
             path: '/agents/:id/tune',
@@ -318,7 +309,6 @@ class _Sidebar extends StatelessWidget {
           path: '/handoffs',
         ),
         _NavItem(icon: Icons.bar_chart, label: 'Cost & Usage', path: '/cost'),
-        _NavItem(icon: Icons.account_balance_wallet, label: 'My Plan', path: '/my-plan'),
         _NavItem(
           icon: Icons.rocket_launch,
           label: 'Dynamic Scaling',
