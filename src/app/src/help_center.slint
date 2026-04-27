@@ -1,0 +1,161 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, Text, LineEdit } from "std-widgets.slint";
+
+export struct HelpArticle {
+    title: string,
+    content: string,
+}
+
+export struct HelpTopic {
+    title: string,
+    articles: [HelpArticle],
+}
+
+export component HelpCenter inherits Window {
+    width: 375px;
+    height: 667px;
+    title: "Help Center";
+
+    background: #f8fafc;
+
+    in property <[HelpTopic]> topics: [
+        {
+            title: "Getting Started",
+            articles: [
+                { title: "How to set up your store", content: "Learn how to add your business details, logo, and store name to get started quickly." },
+                { title: "Accepting your first payment", content: "Connect your bank account securely to start receiving payments from your customers." }
+            ]
+        },
+        {
+            title: "My Store",
+            articles: [
+                { title: "Adding products", content: "Add photos, prices, and descriptions for your items so customers can buy them." },
+                { title: "Managing inventory", content: "Keep track of what's in stock and get notified when you are running low." }
+            ]
+        },
+        {
+            title: "Payments",
+            articles: [
+                { title: "Connecting Stripe", content: "Link your Stripe account to process credit cards, Apple Pay, and Google Pay." },
+                { title: "Refunds", content: "How to issue full or partial refunds directly from your dashboard." }
+            ]
+        },
+        {
+            title: "AI Agents",
+            articles: [
+                { title: "What do the agents do?", content: "AI agents work like your employees. They can design your site, reply to customers, and track sales." },
+                { title: "Configuring the Support Agent", content: "Teach your support agent how to answer common questions and when to hand off to you." }
+            ]
+        },
+        {
+            title: "Marketing",
+            articles: [
+                { title: "Running campaigns", content: "Send promotional emails or SMS to your customers about sales or new products." },
+                { title: "Getting found on Google", content: "We automatically optimize your store so local customers can find you on Google Search." }
+            ]
+        },
+        {
+            title: "Account & Billing",
+            articles: [
+                { title: "Upgrading your plan", content: "Learn about the benefits of our paid plans and how to upgrade." },
+                { title: "Canceling subscription", content: "How to pause or cancel your monthly subscription." }
+            ]
+        }
+    ];
+
+    property <string> search_query: "";
+    property <string> selected_article_title: "";
+    property <string> selected_article_content: "";
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        if selected_article_title == "" : VerticalBox {
+            spacing: 16px;
+            Text {
+                text: "Help Center";
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+
+            LineEdit {
+                placeholder-text: "Search for help...";
+                text <=> search_query;
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 24px;
+
+                    for topic in topics : VerticalBox {
+                        spacing: 8px;
+                        Text {
+                            text: topic.title;
+                            font-size: 18px;
+                            font-weight: 700;
+                            color: #334155;
+                        }
+
+                        for article in topic.articles : Rectangle {
+                            background: white;
+                            border-radius: 8px;
+                            border-color: #e2e8f0;
+                            border-width: 1px;
+
+                            HorizontalBox {
+                                padding: 12px;
+                                Text {
+                                    text: article.title;
+                                    color: #0f172a;
+                                    font-size: 16px;
+                                }
+                                Rectangle { horizontal-stretch: 1; }
+                                Text {
+                                    text: "→";
+                                    color: #94a3b8;
+                                    font-size: 16px;
+                                }
+                            }
+
+                            TouchArea {
+                                clicked => {
+                                    selected_article_title = article.title;
+                                    selected_article_content = article.content;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if selected_article_title != "" : VerticalBox {
+            spacing: 16px;
+
+            Button {
+                text: "← Back to Help Center";
+                clicked => {
+                    selected_article_title = "";
+                    selected_article_content = "";
+                }
+            }
+
+            Text {
+                text: selected_article_title;
+                font-size: 24px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+
+            ScrollView {
+                Text {
+                    text: selected_article_content;
+                    font-size: 16px;
+                    color: #334155;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+}

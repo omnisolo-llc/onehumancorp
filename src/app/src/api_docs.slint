@@ -1,0 +1,86 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, Text } from "std-widgets.slint";
+
+export struct ApiEndpoint {
+    method: string,
+    path: string,
+    description: string,
+}
+
+export component ApiDocs inherits Window {
+    width: 800px;
+    height: 600px;
+    title: "API Documentation (Advanced)";
+
+    background: #f8fafc;
+
+    in property <[ApiEndpoint]> endpoints: [
+        { method: "GET", path: "/api/v1/store/products", description: "List all active products in the store inventory." },
+        { method: "POST", path: "/api/v1/store/checkout", description: "Create a new secure checkout session." },
+        { method: "GET", path: "/api/v1/agents/status", description: "Get the current operating status of all active AI agents." }
+    ];
+
+    VerticalBox {
+        padding: 32px;
+        spacing: 24px;
+
+        VerticalBox {
+            spacing: 8px;
+            Text {
+                text: "API Reference";
+                font-size: 32px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+            Text {
+                text: "Advanced tools for developers to integrate OHC with external systems.";
+                font-size: 16px;
+                color: #64748b;
+            }
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+
+                for endpoint in endpoints : Rectangle {
+                    background: white;
+                    border-radius: 8px;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    padding: 16px;
+
+                    VerticalBox {
+                        spacing: 8px;
+                        HorizontalBox {
+                            spacing: 12px;
+                            Rectangle {
+                                background: endpoint.method == "GET" ? #eff6ff : #f0fdf4;
+                                border-radius: 4px;
+                                padding: 4px;
+                                Text {
+                                    text: endpoint.method;
+                                    font-size: 14px;
+                                    font-weight: 700;
+                                    color: endpoint.method == "GET" ? #2563eb : #16a34a;
+                                }
+                            }
+                            Text {
+                                text: endpoint.path;
+                                font-size: 16px;
+                                font-weight: 700;
+                                color: #1e293b;
+                                vertical-alignment: center;
+                            }
+                        }
+                        Text {
+                            text: endpoint.description;
+                            font-size: 14px;
+                            color: #475569;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

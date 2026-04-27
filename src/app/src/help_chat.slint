@@ -1,0 +1,81 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, Text, LineEdit } from "std-widgets.slint";
+
+export struct ChatMessage {
+    sender: string,
+    content: string,
+    is_agent: bool,
+}
+
+export component HelpChat inherits Window {
+    width: 375px;
+    height: 667px;
+    title: "Ask Anything";
+
+    background: #f8fafc;
+
+    property <string> current_input: "";
+    property <[ChatMessage]> messages: [
+        { sender: "Help Agent", content: "Hi! I'm your AI Help Assistant. What can I help you with today?", is_agent: true }
+    ];
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: "Ask Anything";
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-color: #e2e8f0;
+            border-width: 1px;
+
+            ScrollView {
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+
+                    for msg in messages : HorizontalBox {
+                        alignment: msg.is_agent ? start : end;
+
+                        Rectangle {
+                            background: msg.is_agent ? #f1f5f9 : #0284c7;
+                            border-radius: 12px;
+
+                            Text {
+                                padding: 12px;
+                                text: msg.content;
+                                color: msg.is_agent ? #1e293b : white;
+                                wrap: word-wrap;
+                                font-size: 14px;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalBox {
+            spacing: 8px;
+
+            LineEdit {
+                placeholder-text: "Type your question...";
+                text <=> current_input;
+                horizontal-stretch: 1;
+            }
+
+            Button {
+                text: "Send";
+                clicked => {
+                    // Logic to send message would be handled by Rust backend
+                    current_input = "";
+                }
+            }
+        }
+    }
+}

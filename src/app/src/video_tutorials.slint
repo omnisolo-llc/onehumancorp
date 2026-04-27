@@ -1,0 +1,85 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, Text, Rectangle } from "std-widgets.slint";
+
+export struct VideoTutorial {
+    title: string,
+    duration: string,
+    thumbnail_url: string,
+    video_id: string,
+}
+
+export component VideoTutorials inherits Window {
+    width: 375px;
+    height: 667px;
+    title: "Video Tutorials";
+
+    background: #f8fafc;
+
+    in property <[VideoTutorial]> videos: [
+        { title: "Setting up your first product", duration: "1:24", thumbnail_url: "thumbnail_1.jpg", video_id: "v1" },
+        { title: "How to read your weekly report", duration: "0:58", thumbnail_url: "thumbnail_2.jpg", video_id: "v2" },
+        { title: "Activating tap-to-pay", duration: "1:10", thumbnail_url: "thumbnail_3.jpg", video_id: "v3" }
+    ];
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: "Video Tutorials";
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+
+                for video in videos : Rectangle {
+                    background: white;
+                    border-radius: 12px;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+
+                    VerticalBox {
+                        // Placeholder for the actual video player or thumbnail image
+                        Rectangle {
+                            height: 160px;
+                            background: #cbd5e1;
+                            border-top-left-radius: 12px;
+                            border-top-right-radius: 12px;
+
+                            Text {
+                                text: "▶";
+                                font-size: 48px;
+                                color: white;
+                                horizontal-alignment: center;
+                                vertical-alignment: center;
+                            }
+                        }
+
+                        HorizontalBox {
+                            padding: 12px;
+                            spacing: 8px;
+
+                            VerticalBox {
+                                Text {
+                                    text: video.title;
+                                    font-size: 16px;
+                                    font-weight: 700;
+                                    color: #1e293b;
+                                    wrap: word-wrap;
+                                }
+                                Text {
+                                    text: video.duration;
+                                    font-size: 14px;
+                                    color: #64748b;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

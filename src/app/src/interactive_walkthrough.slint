@@ -1,0 +1,69 @@
+import { Button, VerticalBox, HorizontalBox, Text, Rectangle } from "std-widgets.slint";
+
+export struct WalkthroughStep {
+    target_id: string,
+    message: string,
+    position: string, // "top", "bottom", "left", "right"
+}
+
+export component InteractiveWalkthrough inherits Window {
+    // This overlay acts as the presentation layer for the walkthrough
+    width: 375px;
+    height: 667px;
+    background: transparent;
+
+    in property <bool> is_active: false;
+    in property <int> current_step_index: 0;
+    in property <[WalkthroughStep]> steps: [
+        { target_id: "store_name_input", message: "Start by entering the name of your business here.", position: "bottom" },
+        { target_id: "payment_button", message: "Click here to connect your bank account securely.", position: "top" }
+    ];
+
+    callback next_step();
+    callback skip_walkthrough();
+
+    if is_active : Rectangle {
+        // Semi-transparent overlay to dim the background
+        background: rgba(15, 23, 42, 0.5);
+
+        // This is a simplified representation. In a full Slint application,
+        // you would use absolute positioning or a specific layout trick to
+        // place the highlight cutout and the tooltip relative to the target element.
+
+        VerticalBox {
+            alignment: center;
+            padding: 24px;
+
+            Rectangle {
+                background: white;
+                border-radius: 12px;
+
+                VerticalBox {
+                    padding: 20px;
+                    spacing: 16px;
+
+                    Text {
+                        text: steps[current_step_index].message;
+                        font-size: 16px;
+                        color: #1e293b;
+                        wrap: word-wrap;
+                    }
+
+                    HorizontalBox {
+                        alignment: space-between;
+
+                        Button {
+                            text: "Skip";
+                            clicked => { skip_walkthrough(); }
+                        }
+
+                        Button {
+                            text: current_step_index < steps.length - 1 ? "Next" : "Finish";
+                            clicked => { next_step(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

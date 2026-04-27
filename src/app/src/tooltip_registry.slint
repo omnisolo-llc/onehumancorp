@@ -1,0 +1,21 @@
+export struct TooltipData {
+    id: string,
+    text: string,
+}
+
+export global TooltipRegistry {
+    in property <[TooltipData]> tooltips: [
+        { id: "store_status", text: "Turn your online store on or off instantly." },
+        { id: "agent_toggle", text: "Activate your AI support agent to answer customer messages automatically." },
+        { id: "payment_setup", text: "Connect your bank to receive money from online sales." }
+    ];
+
+    pure public function get_tooltip_text(id: string) -> string {
+        for tooltip in tooltips: {
+            if (tooltip.id == id) {
+                return tooltip.text;
+            }
+        }
+        return "";
+    }
+}

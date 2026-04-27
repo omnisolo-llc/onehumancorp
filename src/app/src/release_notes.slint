@@ -1,0 +1,93 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, Text } from "std-widgets.slint";
+
+export struct ReleaseNote {
+    version: string,
+    date: string,
+    title: string,
+    description: string,
+}
+
+export component ReleaseNotes inherits Window {
+    width: 375px;
+    height: 667px;
+    title: "What's New";
+
+    background: #f8fafc;
+
+    in property <[ReleaseNote]> notes: [
+        {
+            version: "1.2.0",
+            date: "October 10, 2023",
+            title: "New AI Salesperson",
+            description: "Your AI Salesperson can now automatically follow up with customers who left items in their cart. No setup required!"
+        },
+        {
+            version: "1.1.5",
+            date: "September 28, 2023",
+            title: "Mobile POS Updates",
+            description: "You can now use Tap-to-Pay directly on your iPhone to accept in-person payments. Perfect for markets and events."
+        },
+        {
+            version: "1.1.0",
+            date: "September 15, 2023",
+            title: "Better Calendar Sync",
+            description: "If you offer services, your bookings now sync seamlessly with your Google Calendar to prevent double booking."
+        }
+    ];
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: "What's New";
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 24px;
+
+                for note in notes : VerticalBox {
+                    spacing: 8px;
+
+                    HorizontalBox {
+                        spacing: 8px;
+                        Text {
+                            text: "Version " + note.version;
+                            font-size: 14px;
+                            font-weight: 700;
+                            color: #0284c7;
+                        }
+                        Text {
+                            text: "• " + note.date;
+                            font-size: 14px;
+                            color: #64748b;
+                        }
+                    }
+
+                    Text {
+                        text: note.title;
+                        font-size: 18px;
+                        font-weight: 700;
+                        color: #1e293b;
+                    }
+
+                    Text {
+                        text: note.description;
+                        font-size: 16px;
+                        color: #334155;
+                        wrap: word-wrap;
+                    }
+
+                    Rectangle {
+                        height: 1px;
+                        background: #e2e8f0;
+                    }
+                }
+            }
+        }
+    }
+}

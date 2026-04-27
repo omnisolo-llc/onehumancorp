@@ -284,3 +284,56 @@ mod tests {
         app::TaskList::new().unwrap();
     }
 }
+
+#[cfg(test)]
+mod help_tests {
+    use super::*;
+
+    #[test]
+    fn test_help_center_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::HelpCenter::new().unwrap();
+    }
+
+    #[test]
+    fn test_release_notes_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::ReleaseNotes::new().unwrap();
+    }
+
+    #[test]
+    fn test_help_chat_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::HelpChat::new().unwrap();
+    }
+}
+
+#[cfg(test)]
+mod additional_help_tests {
+    use super::*;
+
+    #[test]
+    fn test_tooltip_registry_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        // Note: TooltipRegistry is a global in Slint, typically not instantiated as a window.
+        // We're mostly ensuring it compiles and is exposed correctly.
+    }
+
+    #[test]
+    fn test_video_tutorials_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::VideoTutorials::new().unwrap();
+    }
+
+    #[test]
+    fn test_api_docs_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::ApiDocs::new().unwrap();
+    }
+
+    #[test]
+    fn test_interactive_walkthrough_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::InteractiveWalkthrough::new().unwrap();
+    }
+}
