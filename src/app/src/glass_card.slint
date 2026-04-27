@@ -1,0 +1,12 @@
+import { Rectangle } from "std-widgets.slint";
+
+export component GlassCard inherits Rectangle {
+    background: @linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.2);
+    // drop-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); // if slint supports it
+    // backdrop-filter: blur(20px); // if slint supports it
+
+    @children
+}
