@@ -1,0 +1,8 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "grpc",
+    srcs = ["placeholder.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/agents/grpc",
+    visibility = ["//visibility:public"],
+)
