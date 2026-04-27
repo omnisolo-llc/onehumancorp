@@ -125,7 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         role: "Worker".into(),
                         organization_id: "org_1".into(),
                         status: "Running".into(),
-                        provider_type: "Mock".into(),
+                        provider_type: "Rust".into(),
                     }),
                 });
                 match client.register_agent(request).await {
