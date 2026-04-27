@@ -1,2 +1,2 @@
 package harness
-type Terminal interface {}
+type Provider struct {}

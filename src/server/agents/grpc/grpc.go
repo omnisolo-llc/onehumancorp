@@ -1,5 +1,3 @@
-package agentgrpc
-
-type Client interface {}
-func NewClient(addr string) Client { return nil }
-func ClientOptionsFromEnv() []interface{} { return nil }
+package grpc
+type Provider struct {}
+func NewProvider(target string) (*Provider, error) { return &Provider{}, nil }
