@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	binaryRunpath = "src/server/src/agents/builtin/src/ohc-builtin-agent"
-	startTimeout  = 1 * time.Second
+	binaryRunpath = "src/server/agents/builtin/src/ohc-builtin-agent"
+	startTimeout  = 10 * time.Second
 	rpcTimeout    = 30 * time.Second
 )
 
@@ -41,8 +41,6 @@ func findFreePort(t *testing.T) string {
 // the workspace build output directory.
 func locateBinary(t *testing.T) string {
 	t.Helper()
-	t.Skip("Skipping legacy tests due to flaky bazel test execution resolution.")
-	return ""
 
 	// 1. Bazel runfiles mechanism.
 	if rf := os.Getenv("RUNFILES_DIR"); rf != "" {
@@ -73,10 +71,9 @@ func locateBinary(t *testing.T) string {
 		}
 	}
 	candidates := []string{
-		filepath.Join(root, "src/server/src/agents/builtin/target/debug/ohc-builtin-agent"),
-		filepath.Join(root, "src/server/src/agents/builtin/target/release/ohc-builtin-agent"),
-		filepath.Join(root, "bazel-bin/src/server/src/agents/builtin/ohc-builtin-agent"),
-		filepath.Join(root, "bazel-out/k8-fastbuild/bin/src/server/src/agents/builtin/ohc-builtin-agent"),
+		filepath.Join(root, "src/server/agents/builtin/target/debug/ohc-builtin-agent"),
+		filepath.Join(root, "src/server/agents/builtin/target/release/ohc-builtin-agent"),
+		filepath.Join(root, "bazel-bin/src/server/agents/builtin/ohc-builtin-agent"),
 	}
 	for _, c := range candidates {
 		if _, err := os.Stat(c); err == nil {

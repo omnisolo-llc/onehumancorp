@@ -243,6 +243,8 @@ impl Agent {
                 let mut futures = Vec::new();
                 for tc in &tool_calls {
 
+                    // We need to move tc_clone into the future, and also `self`? `self` is a reference.
+                    // Actually, the issue is capturing `self` and `tc_clone` in the `async move` block.
                     futures.push(async move {
                         let result = self.execute_tool(&tc).await;
                         (tc.clone(), result)
