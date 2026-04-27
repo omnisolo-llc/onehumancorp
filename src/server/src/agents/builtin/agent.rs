@@ -236,21 +236,21 @@ impl Agent {
                             attempts += 1;
                             tokio::time::sleep(tokio::time::Duration::from_millis(500 * attempts)).await;
                             if attempts >= max_retries {
-                                final_result = Some(Err(format!("Transient error failed after {} retries: {}", max_retries, msg)));
+                                final_result = Some(Err(ToolError::Transient(format!("Transient error failed after {} retries: {}", max_retries, msg))));
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
                             // Feed back to LLM to self-correct
-                            final_result = Some(Err(format!("LLM-Recoverable Error: {}", msg)));
+                            final_result = Some(Err(ToolError::LlmRecoverable(format!("LLM-Recoverable Error: {}", msg))));
                             break;
                         }
                         Err(ToolError::UserFixable(msg)) => {
                             // Pause execution and notify user (or log)
-                            final_result = Some(Err(format!("User Fixable Error: {}", msg)));
+                            final_result = Some(Err(ToolError::UserFixable(format!("User Fixable Error: {}", msg))));
                             break;
                         }
                         Err(ToolError::Unexpected(msg)) => {
-                            final_result = Some(Err(format!("Unexpected Error: {}", msg)));
+                            final_result = Some(Err(ToolError::Unexpected(format!("Unexpected Error: {}", msg))));
                             break;
                         }
                     }
@@ -258,7 +258,7 @@ impl Agent {
 
                 let (content, error) = match final_result.unwrap() {
                     Ok(r) => (r, String::new()),
-                    Err(err) => {
+                    Err(ToolError::Transient(err)) | Err(ToolError::LlmRecoverable(err)) => {
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -266,6 +266,14 @@ impl Agent {
                             iteration,
                         });
                         (String::new(), err)
+                    },
+                    Err(ToolError::UserFixable(err)) => {
+                        on_event(AgentEvent::TaskError { error: format!("Execution interrupted: {}", err) });
+                        return Err(err.into());
+                    },
+                    Err(ToolError::Unexpected(err)) => {
+                        on_event(AgentEvent::TaskError { error: format!("Fatal unexpected error: {}", err) });
+                        return Err(err.into());
                     }
                 };
 
