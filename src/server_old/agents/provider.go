@@ -6,6 +6,7 @@
 // platform forwards the auth to every agent of that type.
 package agents
 
+
 import (
 	"context"
 	"encoding/json"
@@ -16,6 +17,18 @@ import (
 
 	"errors"
 )
+
+// Transport is an interface
+type Transport interface {
+	RequestReply(ctx context.Context, payload []byte) ([]byte, error)
+}
+
+
+type Transport any
+
+
+type Transport any
+
 
 // ProviderType is the unique identifier for an external agent implementation.
 // Accepts no parameters.
@@ -103,7 +116,7 @@ func (c Credentials) IsEmpty() bool {
 
 // IsolationStrategy defines how an agent harness handles worktree isolation.
 type IsolationStrategy interface {
-	RunInIsolation(ctx context.Context, worktree string, transport Transport) error
+	RunInIsolation(ctx context.Context, worktree string, ) error
 }
 
 type Provider interface {
@@ -157,7 +170,7 @@ func (b *baseProvider) load() Credentials {
 
 // executeInIsolation handles the shared process sandboxing and telemetry tracking per subagent invocation.
 // It syncs subagent statuses and errors dynamically via the Teammate Mesh API (Redis Pub/Sub).
-func executeInIsolation(ctx context.Context, agentType string, worktree string, transport Transport) error {
+func executeInIsolation(ctx context.Context, agentType string, worktree string, ) error {
 	// 1. Process Sandboxing & Temporary Worktrees
 	isolationSandboxID := fmt.Sprintf("sandbox-%s-%d", agentType, time.Now().UnixNano())
 
@@ -261,8 +274,8 @@ func (p *ClaudeProvider) GetCredentials() Credentials { return p.load() }
 func (p *ClaudeProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *ClaudeProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *ClaudeProvider) RunInIsolation(ctx context.Context, worktree string, ) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree)
 }
 
 // ── Gemini (Google) ───────────────────────────────────────────────────────────
@@ -327,8 +340,8 @@ func (p *GeminiProvider) GetCredentials() Credentials { return p.load() }
 func (p *GeminiProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *GeminiProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *GeminiProvider) RunInIsolation(ctx context.Context, worktree string, ) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree)
 }
 
 // ── OpenCode ──────────────────────────────────────────────────────────────────
@@ -393,8 +406,8 @@ func (p *OpenCodeProvider) GetCredentials() Credentials { return p.load() }
 func (p *OpenCodeProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *OpenCodeProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *OpenCodeProvider) RunInIsolation(ctx context.Context, worktree string, ) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree)
 }
 
 // ── OpenClaw ──────────────────────────────────────────────────────────────────
@@ -459,8 +472,8 @@ func (p *OpenClawProvider) GetCredentials() Credentials { return p.load() }
 func (p *OpenClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *OpenClawProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *OpenClawProvider) RunInIsolation(ctx context.Context, worktree string, ) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree)
 }
 
 // ── IronClaw ──────────────────────────────────────────────────────────────────
@@ -525,8 +538,8 @@ func (p *IronClawProvider) GetCredentials() Credentials { return p.load() }
 func (p *IronClawProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *IronClawProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *IronClawProvider) RunInIsolation(ctx context.Context, worktree string, ) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree)
 }
 
 // ── MiniMaxi ──────────────────────────────────────────────────────────────────
@@ -577,8 +590,8 @@ func (p *MiniMaxiProvider) GetCredentials() Credentials { return p.load() }
 func (p *MiniMaxiProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *MiniMaxiProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *MiniMaxiProvider) RunInIsolation(ctx context.Context, worktree string, ) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree)
 }
 
 // ── Builtin ───────────────────────────────────────────────────────────────────
@@ -649,7 +662,7 @@ func (p *BuiltinProvider) GetCredentials() Credentials { return Credentials{} }
 func (p *BuiltinProvider) IsAuthenticated() bool { return true }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
+func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, ) error {
 	// Builtin agent in standalone microservice mode handles its own isolation.
 	// We dispatch via gRPC if OHC_AGENT_ADDRESS is set.
 	if os.Getenv("OHC_AGENT_ADDRESS") != "" {
@@ -659,7 +672,7 @@ func (p *BuiltinProvider) RunInIsolation(ctx context.Context, worktree string, t
 		}
 		return nil
 	}
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+	return executeInIsolation(ctx, string(p.Type()), worktree)
 }
 
 // ── Scout ─────────────────────────────────────────────────────────────────────
@@ -721,6 +734,6 @@ func (p *ScoutProvider) GetCredentials() Credentials { return p.load() }
 func (p *ScoutProvider) IsAuthenticated() bool { return !p.load().IsEmpty() }
 
 // RunInIsolation implements IsolationStrategy.
-func (p *ScoutProvider) RunInIsolation(ctx context.Context, worktree string, transport Transport) error {
-	return executeInIsolation(ctx, string(p.Type()), worktree, transport)
+func (p *ScoutProvider) RunInIsolation(ctx context.Context, worktree string, ) error {
+	return executeInIsolation(ctx, string(p.Type()), worktree)
 }
