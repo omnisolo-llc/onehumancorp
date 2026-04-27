@@ -1,5 +1,3 @@
-startup --output_base=/usr/local/google/home/kxw/.cache/bazel-output-mono
-
 # Bazel configuration for MCP Any
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
