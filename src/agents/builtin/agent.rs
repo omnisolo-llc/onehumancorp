@@ -206,6 +206,18 @@ impl Agent {
                         (r, String::new())
                     }
                     Err(e) => {
+                        if let Some(tool_err) = e.downcast_ref::<crate::types::ToolError>() {
+                            match tool_err {
+                                crate::types::ToolError::UserFixable(_msg) |
+                                crate::types::ToolError::Unexpected(_msg) => {
+                                    let err_str = e.to_string();
+                                    on_event(AgentEvent::TaskError { error: err_str.clone() });
+                                    return Err(e);
+                                }
+                                _ => {}
+                            }
+                        }
+
                         let err = e.to_string();
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
@@ -269,7 +281,26 @@ impl Agent {
             .find(|t| t.name == tc.name)
             .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
 
-        tool.execute.execute(tc.arguments.clone()).await
+        let mut retries = 0;
+        let max_retries = 3;
+        loop {
+            match tool.execute.execute(tc.arguments.clone()).await {
+                Ok(result) => return Ok(result),
+                Err(e) => {
+                    if let Some(tool_err) = e.downcast_ref::<crate::types::ToolError>() {
+                        if let crate::types::ToolError::Transient(_) = tool_err {
+                            if retries < max_retries {
+                                retries += 1;
+                                let delay = std::time::Duration::from_millis(500 * (1 << (retries - 1)));
+                                tokio::time::sleep(delay).await;
+                                continue;
+                            }
+                        }
+                    }
+                    return Err(e);
+                }
+            }
+        }
     }
 }
 
@@ -374,5 +405,138 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    struct MockErrorToolExecutor {
+        error_type: std::sync::Mutex<String>,
+        calls: std::sync::Mutex<i32>,
+    }
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for MockErrorToolExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            let mut calls = self.calls.lock().unwrap();
+            *calls += 1;
+
+            let err_type = self.error_type.lock().unwrap().clone();
+            if err_type == "Transient" {
+                if *calls < 3 {
+                    return Err(Box::new(crate::types::ToolError::Transient("transient error".to_string())));
+                }
+                return Ok("success after retry".to_string());
+            } else if err_type == "UserFixable" {
+                return Err(Box::new(crate::types::ToolError::UserFixable("need input".to_string())));
+            } else if err_type == "Unexpected" {
+                return Err(Box::new(crate::types::ToolError::Unexpected("boom".to_string())));
+            } else if err_type == "LlmRecoverable" {
+                return Err(Box::new(crate::types::ToolError::LlmRecoverable("bad args".to_string())));
+            }
+            Ok("success".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tool_error_handling() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "error_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+                ChatResponse {
+                    message: Message::assistant("Final answer"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                },
+            ]),
+        });
+
+        // Test UserFixable (interrupts)
+        let tool_exec = Arc::new(MockErrorToolExecutor {
+            error_type: std::sync::Mutex::new("UserFixable".to_string()),
+            calls: std::sync::Mutex::new(0),
+        });
+        let tools = vec![Tool {
+            name: "error_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: tool_exec.clone(),
+        }];
+        let agent = Agent::new(client.clone(), tools);
+        let mut cfg = AgentRunConfig::default();
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_err());
+
+        // Reset client for Transient
+        client.responses.lock().await.push(ChatResponse {
+            message: Message {
+                role: Role::Assistant,
+                content: "".to_string(),
+                tool_calls: vec![ToolCall {
+                    id: "call_1".to_string(),
+                    name: "error_tool".to_string(),
+                    arguments: Value::Null,
+                }],
+                tool_results: vec![],
+            },
+            usage: Usage::default(),
+            stop_reason: "tool_calls".to_string(),
+        });
+        client.responses.lock().await.push(ChatResponse {
+            message: Message::assistant("Final answer"),
+            usage: Usage::default(),
+            stop_reason: "stop".to_string(),
+        });
+
+        // Test Transient (retries and succeeds)
+        *tool_exec.error_type.lock().unwrap() = "Transient".to_string();
+        *tool_exec.calls.lock().unwrap() = 0;
+        let mut events2 = vec![];
+        let mut on_event2 = |e| { events2.push(e); };
+        let result = agent.run(&cfg, "Hello", &mut on_event2).await;
+        assert!(result.is_ok());
+        assert_eq!(*tool_exec.calls.lock().unwrap(), 3);
+
+        // Reset client for LlmRecoverable
+        client.responses.lock().await.push(ChatResponse {
+            message: Message {
+                role: Role::Assistant,
+                content: "".to_string(),
+                tool_calls: vec![ToolCall {
+                    id: "call_1".to_string(),
+                    name: "error_tool".to_string(),
+                    arguments: Value::Null,
+                }],
+                tool_results: vec![],
+            },
+            usage: Usage::default(),
+            stop_reason: "tool_calls".to_string(),
+        });
+        client.responses.lock().await.push(ChatResponse {
+            message: Message::assistant("Final answer"),
+            usage: Usage::default(),
+            stop_reason: "stop".to_string(),
+        });
+
+        // Test LlmRecoverable (continues)
+        *tool_exec.error_type.lock().unwrap() = "LlmRecoverable".to_string();
+        *tool_exec.calls.lock().unwrap() = 0;
+        let mut events3 = vec![];
+        let mut on_event3 = |e| { events3.push(e); };
+        let result = agent.run(&cfg, "Hello", &mut on_event3).await;
+        assert!(result.is_ok()); // The agent completes because the error is fed back
     }
 }

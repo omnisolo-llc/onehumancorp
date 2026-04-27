@@ -1,5 +1,27 @@
 use serde::{Deserialize, Serialize};
 
+/// Error types for tool execution.
+#[derive(Debug, Clone)]
+pub enum ToolError {
+    Transient(String),
+    LlmRecoverable(String),
+    UserFixable(String),
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolError::Transient(msg) => write!(f, "{}", msg),
+            ToolError::LlmRecoverable(msg) => write!(f, "{}", msg),
+            ToolError::UserFixable(msg) => write!(f, "{}", msg),
+            ToolError::Unexpected(msg) => write!(f, "{}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}
+
 /// Role in the conversation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
