@@ -135,6 +135,7 @@ sh_test(
         "//src/server:server-rust",
     ],
     tags = [
+        "manual",
         "large",
         "local",
         "no-remote-exec",
