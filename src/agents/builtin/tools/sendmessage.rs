@@ -65,6 +65,7 @@ pub fn sendmessage_tool(mailbox: SharedMailbox) -> Tool {
         description: "Send a message to the parent agent or coordinator. \
             Used for reporting sub-task results or requesting assistance."
             .to_string(),
+        is_mutating: true,
         parameters: json!({
             "type": "object",
             "properties": {

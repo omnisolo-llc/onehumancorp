@@ -46,6 +46,7 @@ pub fn local_fs_sync_tool() -> Tool {
     Tool {
         name: "local_fs_sync".to_string(),
         description: "Performs local file system operations restricted to .agent-task/ directory.".to_string(),
+        is_mutating: true,
         parameters: json!({
             "type": "object",
             "properties": {

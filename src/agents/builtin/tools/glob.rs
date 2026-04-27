@@ -40,6 +40,7 @@ pub fn glob_tool() -> Tool {
     Tool {
         name: "Glob".to_string(),
         description: "Find files matching a glob pattern. Returns newline-separated paths.".to_string(),
+        is_mutating: false,
         parameters: json!({
             "type": "object",
             "properties": {

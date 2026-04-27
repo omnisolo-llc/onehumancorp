@@ -192,35 +192,105 @@ impl Agent {
 
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
+
+            // Batch contiguous non-mutating calls
+            let mut batches: Vec<Vec<&ToolCall>> = Vec::new();
+            let mut current_batch: Vec<&ToolCall> = Vec::new();
+            let mut current_batch_is_mutating = false;
+
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
-                    Ok(r) => {
-                        self.progress.record_tool_use();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: r.clone(),
-                            iteration,
+                let is_mutating = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(false);
+                if current_batch.is_empty() {
+                    current_batch.push(tc);
+                    current_batch_is_mutating = is_mutating;
+                } else if is_mutating == current_batch_is_mutating && !is_mutating {
+                    // Group non-mutating tools together
+                    current_batch.push(tc);
+                } else {
+                    // New batch
+                    batches.push(current_batch);
+                    current_batch = vec![tc];
+                    current_batch_is_mutating = is_mutating;
+                }
+            }
+            if !current_batch.is_empty() {
+                batches.push(current_batch);
+            }
+
+            for batch in batches {
+                let is_mutating = self.tools.iter().find(|t| t.name == batch[0].name).map(|t| t.is_mutating).unwrap_or(false);
+
+                if is_mutating || batch.len() == 1 {
+                    // Execute serially
+                    for tc in batch {
+                        let result = self.execute_tool(tc).await;
+                        let (content, error) = match result {
+                            Ok(r) => {
+                                self.progress.record_tool_use();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: r.clone(),
+                                    iteration,
+                                });
+                                (r, String::new())
+                            }
+                            Err(e) => {
+                                let err = e.to_string();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                (String::new(), err)
+                            }
+                        };
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error,
                         });
-                        (r, String::new())
                     }
-                    Err(e) => {
-                        let err = e.to_string();
-                        on_event(AgentEvent::ToolCall {
-                            name: tc.name.clone(),
-                            args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err),
-                            iteration,
+                } else {
+                    // Execute concurrently
+                    let futures = batch.iter().map(|tc| async move {
+                        let result = self.execute_tool(tc).await;
+                        (tc, result)
+                    });
+
+                    let batch_results = futures::future::join_all(futures).await;
+
+                    for (tc, result) in batch_results {
+                        let (content, error) = match result {
+                            Ok(r) => {
+                                self.progress.record_tool_use();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: r.clone(),
+                                    iteration,
+                                });
+                                (r, String::new())
+                            }
+                            Err(e) => {
+                                let err = e.to_string();
+                                on_event(AgentEvent::ToolCall {
+                                    name: tc.name.clone(),
+                                    args_json: tc.arguments.to_string(),
+                                    result: format!("Error: {}", err),
+                                    iteration,
+                                });
+                                (String::new(), err)
+                            }
+                        };
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error,
                         });
-                        (String::new(), err)
                     }
-                };
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
-                });
+                }
             }
 
             if cfg.enable_observation_masking {
@@ -348,6 +418,7 @@ mod tests {
             name: "test_tool".to_string(),
             description: "test".to_string(),
             parameters: Value::Null,
+            is_mutating: false,
             execute: Arc::new(MockToolExecutor),
         }];
 
