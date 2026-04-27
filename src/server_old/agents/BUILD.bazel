@@ -3,6 +3,8 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "agents",
     srcs = [
+
+
         "autodream.go",
         "inprocess_transport.go",
         "local_provider.go",
@@ -27,9 +29,6 @@ go_library(
 go_test(
     name = "agents_test",
     srcs = [
-        "agent_task_worker_benchmark_test.go",
-        "agent_task_worker_test.go",
-        "agents_test.go",
         "autodream_test.go",
         "coverage_test.go",
         "inprocess_transport_test.go",

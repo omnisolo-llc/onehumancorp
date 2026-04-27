@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/onehumancorp/mono/src/server/agents"
+	"github.com/onehumancorp/mono/src/server_old/agents"
 )
 
 // Version is injected at link time via -ldflags "-X main.Version=x.y.z".
