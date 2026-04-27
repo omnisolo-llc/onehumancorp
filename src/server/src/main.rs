@@ -24,6 +24,7 @@ mod queue;
 mod agents;
 mod domain;
 pub mod pricing;
+pub mod analytics;
 pub mod services {
     pub mod wizard;
     pub mod billing {
@@ -31,6 +32,7 @@ pub mod services {
     }
     pub mod growth;
     pub mod onboarding;
+    pub mod sync;
 }
 
 use tokio::sync::mpsc;
