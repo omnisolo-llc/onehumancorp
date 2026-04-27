@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server_old/agents"
+	"github.com/onehumancorp/mono/src/server/agents"
 	"github.com/onehumancorp/mono/src/server/api"
 	"github.com/onehumancorp/mono/src/server/api/mesh"
 	meshapi "github.com/onehumancorp/mono/src/server/api/mesh_legacy"
