@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "orchestration",
+    srcs = ["autodream_worker.go"],
+    importpath = "ohc/server/orchestration",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "orchestration_test",
+    srcs = ["autodream_worker_test.go"],
+    embed = [":orchestration"],
+    deps = [
+        "@com_github_lib_pq//:pq",
+        "@com_github_stretchr_testify//assert",
+    ],
+)
