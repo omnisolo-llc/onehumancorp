@@ -1,4 +1,3 @@
-use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::env;
 use sqlx::Row;
@@ -14,10 +13,7 @@ impl DB {
         let database_url = env::var("DATABASE_URL")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
 
-        let pool = PgPoolOptions::new()
-            .max_connections(5)
-            .connect(&database_url)
-            .await?;
+        let pool = PgPool::connect(&database_url).await?;
 
         Ok(DB { pool })
     }

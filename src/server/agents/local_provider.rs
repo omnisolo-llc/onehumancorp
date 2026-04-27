@@ -24,6 +24,7 @@ impl LocalLLMProvider {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        let start = std::time::Instant::now();
         let client = reqwest::Client::new();
         
         let request_body = serde_json::json!({
@@ -38,6 +39,9 @@ impl LocalLLMProvider {
             .await
             .map_err(|e| e.to_string())?;
 
+        let duration = start.elapsed().as_secs_f64();
+        tracing::info!(model = %self.model, latency = duration, "Recorded LLM Network Latency");
+
         if !resp.status().is_success() {
             let status = resp.status();
             let err_body = resp.text().await.unwrap_or_default();
@@ -51,6 +55,7 @@ impl LocalLLMProvider {
     }
 
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
+        let start = std::time::Instant::now();
         let client = reqwest::Client::new();
         
         let request_body = serde_json::json!({
@@ -63,6 +68,9 @@ impl LocalLLMProvider {
             .send()
             .await
             .map_err(|e| e.to_string())?;
+
+        let duration = start.elapsed().as_secs_f64();
+        tracing::info!(model = %self.model, latency = duration, "Recorded LLM Network Latency");
 
         if !resp.status().is_success() {
             let status = resp.status();

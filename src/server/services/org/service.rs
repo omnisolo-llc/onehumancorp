@@ -68,15 +68,51 @@ impl OrgService for MyOrgService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
+        let agents = self.hub.get_agents();
+        let meetings = self.hub.get_meetings();
+        
+        let mut total_msgs = 0;
+        let mut audited_msgs = 0;
+        let mut agent_set = std::collections::HashSet::new();
+        for a in &agents {
+            agent_set.insert(a.id.clone());
+        }
+        
+        for m in &meetings {
+            for msg in &m.transcript {
+                total_msgs += 1;
+                if agent_set.contains(&msg.from_agent) {
+                    audited_msgs += 1;
+                }
+            }
+        }
+        
+        let audit_fidelity_pct = if total_msgs > 0 {
+            (audited_msgs as f64 / total_msgs as f64) * 100.0
+        } else {
+            100.0
+        };
+        
+        let total_agents = agents.len() as i32;
+        let total_humans = 10; 
+        
+        let human_agent_ratio = if total_humans > 0 {
+            total_agents as f64 / total_humans as f64
+        } else {
+            0.0
+        };
+        
+        let summary = self.hub.tracker().summary("system");
+        
         Ok(Response::new(AnalyticsSummaryResponse {
-            human_agent_ratio: 1.5,
-            total_agents: 15,
-            total_humans: 10,
-            audit_fidelity_pct: 95.0,
+            human_agent_ratio,
+            total_agents,
+            total_humans,
+            audit_fidelity_pct,
             resumption_latency_ms: 4800,
             pending_approvals: 2,
             active_handoffs: 1,
-            token_velocity: 10000,
+            token_velocity: summary.total_tokens,
         }))
     }
 }

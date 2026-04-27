@@ -5,6 +5,8 @@ export component SwarmMemory inherits Window {
     height: 600px;
     title: "Swarm Memory Mesh";
 
+    callback view_walkthrough();
+
     background: #f8fafc;
 
     HorizontalBox {
@@ -96,7 +98,7 @@ export component SwarmMemory inherits Window {
                     spacing: 10px;
                     Text { text: "[ Swarm Velocity Chart ]"; color: #64748b; horizontal-alignment: center; }
                     Text { text: "[ Vector Memory Visualizer ]"; color: #64748b; horizontal-alignment: center; }
-                    Button { text: "View Walkthrough"; }
+                    Button { text: "View Walkthrough"; clicked => { view_walkthrough(); } }
                 }
             }
         }

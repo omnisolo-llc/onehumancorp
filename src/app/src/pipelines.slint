@@ -1,11 +1,25 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
+export struct UiPipeline {
+    id: string,
+    name: string,
+    branch: string,
+    status: string,
+    initiated_by: string,
+    staging_url: string,
+    can_promote: bool,
+}
+
 export component Pipelines inherits Window {
     width: 500px;
     height: 600px;
     title: "SDLC Pipelines";
 
     background: #f8fafc;
+
+    in property <[UiPipeline]> pipelines;
+    callback promote_pipeline(string);
+    callback refresh();
 
     VerticalBox {
         spacing: 20px;
@@ -14,13 +28,16 @@ export component Pipelines inherits Window {
         HorizontalBox {
             Text { text: "SDLC Pipelines"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { text: "Refresh"; }
+            Button { 
+                text: "Refresh"; 
+                clicked => { refresh(); }
+            }
         }
 
         VerticalBox {
             spacing: 16px;
             
-            Rectangle {
+            for p in pipelines : Rectangle {
                 background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
@@ -32,29 +49,31 @@ export component Pipelines inherits Window {
                     
                     HorizontalBox {
                         VerticalBox {
-                            Text { text: "Main Pipeline"; font-weight: 700; color: #1e293b; }
-                            Text { text: "branch: main"; color: #64748b; }
+                            Text { text: p.name; font-weight: 700; color: #1e293b; }
+                            Text { text: "branch: " + p.branch; color: #64748b; }
                         }
                         Rectangle {}
-                        Text { text: "STAGING"; color: #06b6d4; horizontal-alignment: center; }
+                        Text { text: p.status; color: #06b6d4; horizontal-alignment: center; }
                     }
                     
-                    Text { text: "Initiated by: System"; color: #64748b; }
+                    Text { text: "Initiated by: " + p.initiated_by; color: #64748b; }
                     
-                    Rectangle {
+                    if (p.staging_url != "") : Rectangle {
                         background: #e2e8f0;
                         border-radius: 4px;
                         
                         HorizontalBox {
                             padding: 8px;
-                            Text { text: "http://staging.example.com"; color: #0369a1; } 
+                            Text { text: p.staging_url; color: #0369a1; } 
                         }
                     }
                     
-                    Text { text: "Promote to Production"; color: #1e293b; font-weight: 700; }
-                    
-                    Button {
-                        text: "Slide to Approve (Tap)";
+                    if (p.can_promote) : VerticalBox {
+                        Text { text: "Promote to Production"; color: #1e293b; font-weight: 700; }
+                        Button {
+                            text: "Promote";
+                            clicked => { promote_pipeline(p.id); }
+                        }
                     }
                 }
             }

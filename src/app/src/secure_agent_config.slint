@@ -5,6 +5,8 @@ export component SecureAgentConfig inherits Window {
     height: 400px;
     title: "Secure Agent Config";
 
+    callback save_config(string);
+
     property <string> token: "";
     property <string> error_text: "";
 
@@ -33,6 +35,7 @@ export component SecureAgentConfig inherits Window {
         Button {
             text: "Save Configuration";
             enabled: token != "" && error_text == "";
+            clicked => { save_config(token); }
         }
     }
 }

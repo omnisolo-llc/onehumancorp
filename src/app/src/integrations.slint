@@ -1,11 +1,21 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
+export struct UiMcpTool {
+    id: string,
+    name: string,
+    description: string,
+}
+
 export component Integrations inherits Window {
     width: 500px;
     height: 600px;
     title: "Integrations & Tools";
 
     background: #f8fafc;
+
+    in property <[UiMcpTool]> tools;
+    callback configure_integration(string);
+    callback invoke_tool(string);
 
     VerticalBox {
         spacing: 20px;
@@ -28,7 +38,10 @@ export component Integrations inherits Window {
                     spacing: 8px;
                     Text { text: "✈️ Telegram"; font-weight: 700; color: #1e293b; }
                     Text { text: "Connect your bot for mobile alerts"; color: #64748b; wrap: word-wrap; }
-                    Button { text: "Configure"; }
+                    Button { 
+                        text: "Configure"; 
+                        clicked => { configure_integration("Telegram"); }
+                    }
                 }
             }
             
@@ -44,7 +57,10 @@ export component Integrations inherits Window {
                     spacing: 8px;
                     Text { text: "👾 Discord"; font-weight: 700; color: #1e293b; }
                     Text { text: "Stream agent logs to a channel"; color: #64748b; wrap: word-wrap; }
-                    Button { text: "Configure"; }
+                    Button { 
+                        text: "Configure"; 
+                        clicked => { configure_integration("Discord"); }
+                    }
                 }
             }
         }
@@ -62,15 +78,13 @@ export component Integrations inherits Window {
                 padding: 16px;
                 spacing: 10px;
                 
-                HorizontalBox {
-                    Text { text: "🛠️ Tool: Web Search"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                for tool in tools : HorizontalBox {
+                    Text { text: "🛠️ " + tool.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                     Rectangle {} 
-                    Button { text: "Invoke"; }
-                }
-                HorizontalBox {
-                    Text { text: "🛠️ Tool: File Reader"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Rectangle {} 
-                    Button { text: "Invoke"; }
+                    Button { 
+                        text: "Invoke"; 
+                        clicked => { invoke_tool(tool.id); }
+                    }
                 }
             }
         }

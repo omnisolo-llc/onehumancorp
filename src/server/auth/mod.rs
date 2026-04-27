@@ -12,7 +12,7 @@ pub mod postgres_store;
 pub mod grpc;
 pub mod orchestration;
 use crate::ohc::orchestration::auth_service_server::AuthService;
-use crate::ohc::orchestration::{LoginRequest, LoginResponse};
+use crate::ohc::orchestration::*;
 
 pub const ROLE_ADMIN: &str = "admin";
 pub const ROLE_OPERATOR: &str = "operator";
@@ -439,6 +439,66 @@ impl Store {
             }
         }
     }
+    pub fn get_or_create_oidc_user(&self, sub: &str, email: &str, preferred_username: &str, org_id: &str) -> User {
+        let mut users = self.users.write().unwrap();
+        let mut by_oidc = self.by_oidc.write().unwrap();
+        let mut by_email = self.by_email.write().unwrap();
+        let mut by_name = self.by_name.write().unwrap();
+
+        let oidc_key = TenantKey { org_id: org_id.to_string(), key: sub.to_string() };
+        if let Some(user_id) = by_oidc.get(&oidc_key) {
+            if let Some(user) = users.get(user_id) {
+                return user.clone();
+            }
+        }
+
+        if !email.is_empty() {
+            let email_key = TenantKey { org_id: org_id.to_string(), key: email.to_string() };
+            if let Some(user_id) = by_email.get(&email_key) {
+                if let Some(user) = users.get_mut(user_id) {
+                    user.oidc_subject = Some(sub.to_string());
+                    by_oidc.insert(oidc_key, user_id.clone());
+                    return user.clone();
+                }
+            }
+        }
+
+        let mut uname = preferred_username.to_string();
+        if uname.is_empty() {
+            uname = email.to_string();
+        }
+        // de-duplicate username
+        let name_key = TenantKey { org_id: org_id.to_string(), key: uname.clone() };
+        if by_name.contains_key(&name_key) {
+             uname = format!("{}_{}", uname, hex::encode(random_bytes(3)));
+        }
+
+        let now = Utc::now();
+        let id = hex::encode(random_bytes(8));
+        let user = User {
+            id: id.clone(),
+            username: uname.clone(),
+            email: email.to_string(),
+            password_hash: String::new(), // No password for OIDC users
+            roles: vec![ROLE_VIEWER.to_string()],
+            active: true,
+            organization_id: Some(org_id.to_string()),
+            oidc_subject: Some(sub.to_string()),
+            created_at: now,
+            updated_at: now,
+        };
+
+        users.insert(id.clone(), user.clone());
+        if !uname.is_empty() {
+            by_name.insert(TenantKey { org_id: org_id.to_string(), key: uname }, id.clone());
+        }
+        if !email.is_empty() {
+            by_email.insert(TenantKey { org_id: org_id.to_string(), key: email.to_string() }, id.clone());
+        }
+        by_oidc.insert(oidc_key, id);
+
+        user
+    }
 }
 
 fn random_bytes(n: usize) -> Vec<u8> {
@@ -454,9 +514,9 @@ impl AuthService for Arc<Store> {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
         
-        match self.authenticate(&req.username, &req.password, &req.organization_id) {
+        match self.as_ref().authenticate(&req.username, &req.password, &req.organization_id) {
             Ok(user) => {
-                match self.issue_token(&user) {
+                match self.as_ref().issue_token(&user) {
                     Ok(token) => {
                          let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
                          Ok(Response::new(LoginResponse {
@@ -469,6 +529,161 @@ impl AuthService for Arc<Store> {
             }
             Err(e) => Err(Status::unauthenticated(e)),
         }
+    }
+
+    async fn register(&self, request: Request<CreateUserRequest>) -> Result<Response<LoginResponse>, Status> {
+        let req = request.into_inner();
+        let roles = if req.roles.is_empty() {
+            vec![ROLE_ADMIN.to_string()]
+        } else {
+            req.roles
+        };
+        
+        match self.as_ref().create_user(req.username, req.email, req.password, roles, req.organization_id) {
+            Ok(user) => {
+                match self.as_ref().issue_token(&user) {
+                    Ok(token) => {
+                         let expires_at = (Utc::now() + chrono::Duration::hours(24)).timestamp();
+                         Ok(Response::new(LoginResponse {
+                             token,
+                             expires_at,
+                         }))
+                    }
+                    Err(e) => Err(Status::internal(e)),
+                }
+            }
+            Err(e) => Err(Status::already_exists(e)),
+        }
+    }
+
+    async fn logout(&self, _request: Request<EmptyRequest>) -> Result<Response<EmptyResponse>, Status> {
+        // TODO: Implement token revocation in gRPC
+        Ok(Response::new(EmptyResponse {}))
+    }
+
+    async fn get_me(&self, _request: Request<EmptyRequest>) -> Result<Response<UserProto>, Status> {
+        // TODO: Implement after adding JWT interceptor to extract user claims
+        Err(Status::unimplemented("get_me requires JWT authentication interceptor"))
+    }
+
+    async fn list_users(&self, request: Request<ListUsersRequest>) -> Result<Response<ListUsersResponse>, Status> {
+        let req = request.into_inner();
+        let users = self.as_ref().list_users(&req.organization_id);
+        let proto_users = users.into_iter().map(|u| UserProto {
+            id: u.id,
+            username: u.username,
+            email: u.email,
+            roles: u.roles,
+            active: u.active,
+            organization_id: u.organization_id.unwrap_or_default(),
+            created_at_unix: u.created_at.timestamp(),
+            updated_at_unix: u.updated_at.timestamp(),
+            oidc_subject: u.oidc_subject.unwrap_or_default(),
+        }).collect();
+        
+        Ok(Response::new(ListUsersResponse { users: proto_users }))
+    }
+
+    async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
+        let req = request.into_inner();
+        match self.as_ref().create_user(req.username, req.email, req.password, req.roles, req.organization_id) {
+            Ok(u) => Ok(Response::new(UserProto {
+                id: u.id,
+                username: u.username,
+                email: u.email,
+                roles: u.roles,
+                active: u.active,
+                organization_id: u.organization_id.unwrap_or_default(),
+                created_at_unix: u.created_at.timestamp(),
+                updated_at_unix: u.updated_at.timestamp(),
+                oidc_subject: u.oidc_subject.unwrap_or_default(),
+            })),
+            Err(e) => Err(Status::already_exists(e)),
+        }
+    }
+
+    async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserProto>, Status> {
+        let req = request.into_inner();
+        match self.as_ref().get_user(&req.id, &req.organization_id) {
+            Some(u) => Ok(Response::new(UserProto {
+                id: u.id,
+                username: u.username,
+                email: u.email,
+                roles: u.roles,
+                active: u.active,
+                organization_id: u.organization_id.unwrap_or_default(),
+                created_at_unix: u.created_at.timestamp(),
+                updated_at_unix: u.updated_at.timestamp(),
+                oidc_subject: u.oidc_subject.unwrap_or_default(),
+            })),
+            None => Err(Status::not_found("user not found")),
+        }
+    }
+
+    async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserProto>, Status> {
+        let req = request.into_inner();
+        match self.as_ref().update_user(&req.id, req.email, Some(req.roles), req.active, &req.organization_id) {
+            Ok(u) => Ok(Response::new(UserProto {
+                id: u.id,
+                username: u.username,
+                email: u.email,
+                roles: u.roles,
+                active: u.active,
+                organization_id: u.organization_id.unwrap_or_default(),
+                created_at_unix: u.created_at.timestamp(),
+                updated_at_unix: u.updated_at.timestamp(),
+                oidc_subject: u.oidc_subject.unwrap_or_default(),
+            })),
+            Err(e) => Err(Status::internal(e)),
+        }
+    }
+
+    async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<EmptyResponse>, Status> {
+        let req = request.into_inner();
+        match self.as_ref().delete_user(&req.id, &req.organization_id) {
+            Ok(_) => Ok(Response::new(EmptyResponse {})),
+            Err(e) => Err(Status::not_found(e)),
+        }
+    }
+
+    async fn list_roles(&self, _request: Request<EmptyRequest>) -> Result<Response<ListRolesResponse>, Status> {
+        let roles = self.roles.read().unwrap();
+        let proto_roles = roles.values().map(|r| RoleProto {
+            id: r.id.clone(),
+            name: r.name.clone(),
+            permissions: r.permissions.clone(),
+            created_at_unix: r.created_at.timestamp(),
+        }).collect();
+        
+        Ok(Response::new(ListRolesResponse { roles: proto_roles }))
+    }
+
+    async fn create_role(&self, request: Request<CreateRoleRequest>) -> Result<Response<RoleProto>, Status> {
+        let req = request.into_inner();
+        if req.name.is_empty() {
+            return Err(Status::invalid_argument("role name is required"));
+        }
+        
+        let mut roles = self.roles.write().unwrap();
+        if roles.contains_key(&req.name) {
+            return Err(Status::already_exists(format!("role {} already exists", req.name)));
+        }
+        
+        let r = Role {
+            id: req.name.clone(),
+            name: req.name.clone(),
+            permissions: req.permissions.clone(),
+            created_at: Utc::now(),
+        };
+        
+        roles.insert(req.name.clone(), r.clone());
+        
+        Ok(Response::new(RoleProto {
+            id: r.id,
+            name: r.name,
+            permissions: r.permissions,
+            created_at_unix: r.created_at.timestamp(),
+        }))
     }
 }
 
@@ -574,6 +789,62 @@ mod tests {
 
         assert!(parse_spiffe_id("invalid").is_err());
         assert!(parse_spiffe_id("spiffe://invalid.com/x").is_err());
+    }
+    #[tokio::test]
+    async fn test_auth_service_login_valid() {
+        let s = Arc::new(Store::new());
+        let req = Request::new(LoginRequest {
+            username: "admin".to_string(),
+            password: "admin".to_string(),
+            organization_id: "".to_string(),
+        });
+        
+        let resp = s.login(req).await.unwrap();
+        let resp = resp.into_inner();
+        assert!(!resp.token.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_auth_service_register_valid() {
+        let s = Arc::new(Store::new());
+        let req = Request::new(CreateUserRequest {
+            username: "newuser".to_string(),
+            email: "new@test.com".to_string(),
+            password: "password123".to_string(),
+            roles: vec![],
+            organization_id: "".to_string(),
+        });
+        
+        let resp = s.register(req).await.unwrap();
+        let resp = resp.into_inner();
+        assert!(!resp.token.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_auth_service_list_users() {
+        let s = Arc::new(Store::new());
+        let req = Request::new(ListUsersRequest {
+            organization_id: "".to_string(),
+        });
+        
+        let resp = s.list_users(req).await.unwrap();
+        let resp = resp.into_inner();
+        assert_eq!(resp.users.len(), 1);
+        assert_eq!(resp.users[0].username, "admin");
+    }
+
+    #[tokio::test]
+    async fn test_auth_service_create_role() {
+        let s = Arc::new(Store::new());
+        let req = Request::new(CreateRoleRequest {
+            name: "new_role".to_string(),
+            permissions: vec!["read".to_string()],
+        });
+        
+        let resp = s.create_role(req).await.unwrap();
+        let resp = resp.into_inner();
+        assert_eq!(resp.name, "new_role");
+        assert_eq!(resp.permissions, vec!["read".to_string()]);
     }
 }
 

@@ -1,12 +1,14 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
 
 export component GrowBusiness inherits Window {
     width: 500px;
     height: 500px;
     title: "Grow My Business";
 
-    property <int> step: 0;
-    property <string> selected_strategy: "";
+    in-out property <int> step: 0;
+    in-out property <string> selected_strategy: "";
+    in-out property <bool> is_advanced: false;
+    callback execute(string);
 
     background: #f8fafc;
 
@@ -14,7 +16,15 @@ export component GrowBusiness inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Growth Strategies"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        HorizontalBox {
+            Text { text: "Growth Strategies"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            CheckBox {
+                text: "Expert Mode";
+                checked: is_advanced;
+                toggled => { is_advanced = !is_advanced; }
+            }
+        }
 
         // Step 0: Select Strategy
         if (step == 0) : VerticalBox {
@@ -34,6 +44,14 @@ export component GrowBusiness inherits Window {
             Text { text: "Confirm Action"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Text { text: "You are about to start: " + selected_strategy; color: #1e293b; }
             Text { text: "Your AI agents will be instructed to begin this growth strategy immediately."; color: #64748b; wrap: word-wrap; }
+            
+            if (is_advanced) : VerticalBox {
+                spacing: 8px;
+                Text { text: "Advanced Target KPIs"; font-weight: 700; color: #1e293b; }
+                LineEdit {
+                    placeholder-text: "Conversion Target (%)";
+                }
+            }
         }
 
         Rectangle {} // Spacer
@@ -51,7 +69,7 @@ export component GrowBusiness inherits Window {
                     if (step < 1) {
                         step = step + 1;
                     } else {
-                        // Handle execution
+                        execute(selected_strategy);
                     }
                 }
             }

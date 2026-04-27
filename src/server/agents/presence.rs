@@ -11,7 +11,7 @@ impl PresenceManager {
     }
 
     pub async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
+        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let key = format!("presence:{}", agent_id);
         
         redis::cmd("SET")
@@ -19,7 +19,7 @@ impl PresenceManager {
             .arg(status)
             .arg("EX")
             .arg(ttl_seconds)
-            .query_async::<_, ()>(&mut con)
+            .query_async::<()>(&mut con)
             .await
             .map_err(|e| e.to_string())?;
             
@@ -27,7 +27,7 @@ impl PresenceManager {
     }
 
     pub async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
-        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
+        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         
         let keys: Vec<String> = con.keys("presence:*").await.map_err(|e| e.to_string())?;
         

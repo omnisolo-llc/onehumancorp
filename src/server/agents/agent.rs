@@ -1,3 +1,4 @@
+// Trivial change to force rebuild
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio_stream::StreamExt;
@@ -99,8 +100,7 @@ pub struct RedisPubSubTransport {
 
 impl RedisPubSubTransport {
     pub async fn new(client: redis::Client, publish_chan: &str, subscribe_chan: &str) -> Result<Self, String> {
-        let mut con = client.get_async_connection().await.map_err(|e| e.to_string())?;
-        let mut pubsub = con.into_pubsub();
+        let mut pubsub = client.get_async_pubsub().await.map_err(|e| e.to_string())?;
         pubsub.subscribe(subscribe_chan).await.map_err(|e| e.to_string())?;
         
         Ok(RedisPubSubTransport {
@@ -114,7 +114,7 @@ impl RedisPubSubTransport {
 #[async_trait]
 impl Transport for RedisPubSubTransport {
     async fn send(&self, message: &[u8]) -> Result<(), String> {
-        let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
+        let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         con.publish::<_, _, ()>(&self.publish_chan, message).await.map_err(|e| e.to_string())?;
         Ok(())
     }

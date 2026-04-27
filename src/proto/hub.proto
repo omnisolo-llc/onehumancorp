@@ -252,8 +252,80 @@ message LoginResponse {
   int64 expires_at = 2;
 }
 
+message UserProto {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  repeated string roles = 4;
+  bool active = 5;
+  string organization_id = 6;
+  int64 created_at_unix = 7;
+  int64 updated_at_unix = 8;
+  string oidc_subject = 9;
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  repeated string roles = 4;
+  string organization_id = 5;
+}
+
+message UpdateUserRequest {
+  string id = 1;
+  optional string email = 2;
+  repeated string roles = 3;
+  optional bool active = 4;
+  string organization_id = 5;
+}
+
+message GetUserRequest {
+  string id = 1;
+  string organization_id = 2;
+}
+
+message DeleteUserRequest {
+  string id = 1;
+  string organization_id = 2;
+}
+
+message ListUsersRequest {
+  string organization_id = 1;
+}
+
+message ListUsersResponse {
+  repeated UserProto users = 1;
+}
+
+message RoleProto {
+  string id = 1;
+  string name = 2;
+  repeated string permissions = 3;
+  int64 created_at_unix = 4;
+}
+
+message CreateRoleRequest {
+  string name = 1;
+  repeated string permissions = 2;
+}
+
+message ListRolesResponse {
+  repeated RoleProto roles = 1;
+}
+
 service AuthService {
   rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Register(CreateUserRequest) returns (LoginResponse);
+  rpc Logout(EmptyRequest) returns (EmptyResponse);
+  rpc GetMe(EmptyRequest) returns (UserProto);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  rpc CreateUser(CreateUserRequest) returns (UserProto);
+  rpc GetUser(GetUserRequest) returns (UserProto);
+  rpc UpdateUser(UpdateUserRequest) returns (UserProto);
+  rpc DeleteUser(DeleteUserRequest) returns (EmptyResponse);
+  rpc ListRoles(EmptyRequest) returns (ListRolesResponse);
+  rpc CreateRole(CreateRoleRequest) returns (RoleProto);
 }
 
 message WizardField {
@@ -1402,8 +1474,29 @@ message McpInvokeResponse {
   string payload = 1;
 }
 
+message SyncMissionRequest {
+  string id = 1;
+  string status = 2;
+  string payload = 3;
+  bool force_local = 4;
+}
+
+message SyncMissionsRequest {
+  repeated SyncMissionRequest missions = 1;
+  bool force_local = 2;
+}
+
+message SyncContextRequest {
+  string memory_id = 1;
+  string context = 2;
+  string source_plugin = 3;
+  string vector_embedding = 4;
+}
+
 service McpService {
   rpc RegisterTool(McpRegisterRequest) returns (McpRegisterResponse);
   rpc GetTools(EmptyRequest) returns (McpToolsResponse);
   rpc InvokeTool(McpInvokeRequest) returns (McpInvokeResponse);
+  rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
+  rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
 }

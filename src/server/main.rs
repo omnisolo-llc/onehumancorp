@@ -18,6 +18,7 @@ mod msgbus;
 mod pipeline;
 mod oidc;
 mod sip;
+mod seeder;
 mod orchestrator;
 mod spawner;
 mod queue;
@@ -25,10 +26,13 @@ mod agents;
 mod domain;
 pub mod pricing;
 pub mod analytics;
+pub mod telemetry;
+pub mod chaos;
 pub mod integrations;
 pub mod utils;
 pub mod storage;
 pub mod config;
+pub mod http;
 pub mod services {
     pub mod wizard;
     pub mod billing {
@@ -822,6 +826,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
+    // let http_addr = "[::1]:8080".parse()?;
+    // let hub_for_http = hub.clone();
+    // tokio::spawn(async move {
+    //     if let Err(e) = http::run(http_addr, hub_for_http).await {
+    //         eprintln!("HTTP server error: {}", e);
+    //     }
+    // });
     
     // Start event log worker
     let hub_clone = hub.clone();
@@ -888,4 +899,97 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ohc::orchestration::*;
+    use crate::ohc::agent::service::*;
+    use tonic::Request;
+
+    // Helper to create a dummy hub and service for testing
+    // Note: These tests are ignored by default because they require a running Postgres database.
+    async fn setup_test_service() -> Option<MyHubService> {
+        let db_url = std::env::var("DATABASE_URL").ok()?;
+        let pool = sqlx::PgPool::connect(&db_url).await.ok()?;
+        
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(Hub::new(event_tx, pool.clone()));
+        Some(MyHubService::new(hub, pool))
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_invite_valid() {
+        let service = match setup_test_service().await {
+            Some(s) => s,
+            None => return, // Skip if DB not available
+        };
+
+        let req = Request::new(InviteRequest {
+            team_id: "team1".to_string(),
+            inviter_id: "user1".to_string(),
+            invitee_id: "user2".to_string(),
+        });
+
+        let resp = service.invite(req).await;
+        assert!(resp.is_ok());
+        assert!(resp.unwrap().into_inner().success);
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_accept_invite_valid() {
+        let service = match setup_test_service().await {
+            Some(s) => s,
+            None => return, // Skip if DB not available
+        };
+
+        let req = Request::new(AcceptInviteRequest {
+            invitee_id: "user2".to_string(),
+        });
+
+        let resp = service.accept_invite(req).await;
+        assert!(resp.is_ok());
+        assert!(resp.unwrap().into_inner().success);
+    }
+    #[tokio::test]
+    #[ignore]
+    async fn test_publish_teammate_mesh_event_valid() {
+        let service = match setup_test_service().await {
+            Some(s) => s,
+            None => return,
+        };
+
+        let req = Request::new(PublishTeammateMeshEventRequest {
+            channel: "test".to_string(),
+            event: Some(TeammateMeshEvent {
+                agent_id: "agent1".to_string(),
+                action: "test_action".to_string(),
+                status: "test_status".to_string(),
+                payload: "hello".to_string().into(),
+            }),
+        });
+
+        let resp = service.publish_teammate_mesh_event(req).await;
+        assert!(resp.is_ok());
+        assert!(resp.unwrap().into_inner().success);
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn test_stream_mesh_events_valid() {
+        let service = match setup_test_service().await {
+            Some(s) => s,
+            None => return,
+        };
+
+        let req = Request::new(EventStreamRequest {
+            topic: "test".to_string(),
+        });
+
+        let resp = service.stream_mesh_events(req).await;
+        assert!(resp.is_ok());
+    }
 }
