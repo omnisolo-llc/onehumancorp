@@ -118,6 +118,35 @@ export component Dashboard inherits Window {
             }
         }
 
+
+        // Share Widget
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+
+                Text { text: "Share my business"; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    Rectangle {
+                        background: #f1f5f9;
+                        border-radius: 4px;
+                        padding: 8px;
+                        Text { text: "https://mybusiness.ohc.app"; color: #475569; }
+                    }
+                    Button { text: "Copy Link"; }
+                }
+
+                Text { text: "powered by built with OHC"; color: #94a3b8; font-size: 12px; horizontal-alignment: center; }
+            }
+        }
+
         // Company Structure
         Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; }
         
