@@ -1,0 +1,12 @@
+{
+  "tooltips": [
+    {
+      "id": "agent_activate_btn",
+      "text": "Turn on your AI helper to reply to customers for you."
+    },
+    {
+      "id": "publish_site_btn",
+      "text": "Make your website live so customers can see it."
+    }
+  ]
+}

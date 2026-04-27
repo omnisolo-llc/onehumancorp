@@ -27,6 +27,7 @@ validation:
         omitted_files: ignore
 nav:
   - Home: index.md
+  - Help Center: help/index.md
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
       - Universal Transport Bridge: architecture/universal_transport_bridge.md
