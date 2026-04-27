@@ -40,7 +40,7 @@ impl ToolExecutor for SendMessageExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let to = args["to"].as_str().unwrap_or("coordinator").to_string();
         let content = args["message"]
             .as_str()

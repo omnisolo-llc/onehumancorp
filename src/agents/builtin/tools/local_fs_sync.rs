@@ -11,7 +11,7 @@ impl ToolExecutor for LocalFSSyncExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let action = args["Action"].as_str().ok_or("local_fs_sync: Action is required")?;
         let path = args["Path"].as_str().ok_or("local_fs_sync: Path is required")?;
 

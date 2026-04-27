@@ -9,7 +9,7 @@ impl ToolExecutor for OllamaExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let action = args["action"].as_str().ok_or("ollama: action is required")?;
         let url = args["url"].as_str().unwrap_or("http://localhost:11434");
 

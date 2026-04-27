@@ -12,7 +12,7 @@ impl ToolExecutor for SleepExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let secs = args["seconds"]
             .as_f64()
             .ok_or("sleep: seconds is required")?;

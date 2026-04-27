@@ -10,7 +10,7 @@ impl ToolExecutor for GlobExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let pattern = args["pattern"]
             .as_str()
             .ok_or("glob: pattern is required")?;

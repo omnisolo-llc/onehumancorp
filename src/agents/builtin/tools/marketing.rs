@@ -9,7 +9,7 @@ impl ToolExecutor for QrGenerateExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let content = args["content"]
             .as_str()
             .ok_or("qr_generate: content is required")?;

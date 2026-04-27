@@ -93,7 +93,7 @@ impl Agent {
         cfg: &AgentRunConfig,
         initial_message: &str,
         on_event: &mut F,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    ) -> Result<String, crate::types::ToolError>
     where
         F: FnMut(AgentEvent) + Send,
     {
@@ -205,8 +205,9 @@ impl Agent {
                         });
                         (r, String::new())
                     }
-                    Err(e) => {
-                        let err = e.to_string();
+                    Err(crate::types::ToolError::Transient(msg)) => {
+                        // Could implement retry here, for now just pass to LLM
+                        let err = format!("Transient error: {}", msg);
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -214,6 +215,28 @@ impl Agent {
                             iteration,
                         });
                         (String::new(), err)
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        let err = format!("Recoverable error: {}", msg);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", err),
+                            iteration,
+                        });
+                        (String::new(), err)
+                    }
+                    Err(crate::types::ToolError::UserFixable(msg)) => {
+                        on_event(AgentEvent::TaskError {
+                            error: format!("User fixable error: {}", msg),
+                        });
+                        return Err(crate::types::ToolError::UserFixable(msg).into());
+                    }
+                    Err(crate::types::ToolError::Unexpected(msg)) => {
+                        on_event(AgentEvent::TaskError {
+                            error: format!("Unexpected error: {}", msg),
+                        });
+                        return Err(crate::types::ToolError::Unexpected(msg).into());
                     }
                 };
                 tool_results.push(ToolResult {
@@ -262,12 +285,12 @@ impl Agent {
     async fn execute_tool(
         &self,
         tc: &ToolCall,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let tool = self
             .tools
             .iter()
             .find(|t| t.name == tc.name)
-            .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
+            .ok_or_else(|| crate::types::ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
         tool.execute.execute(tc.arguments.clone()).await
     }
@@ -304,7 +327,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
-        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        async fn execute(&self, _args: Value) -> Result<String, crate::types::ToolError> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
     }

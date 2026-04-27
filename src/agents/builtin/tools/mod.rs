@@ -51,7 +51,7 @@ pub trait ToolExecutor: Send + Sync {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<String, crate::types::ToolError>;
 }
 
 /// Shared todo list state.

@@ -13,7 +13,7 @@ impl ToolExecutor for WebFetchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, crate::types::ToolError> {
         let url = args["url"].as_str().ok_or("webfetch: url is required")?;
         let prompt = args["prompt"].as_str().unwrap_or("");
 

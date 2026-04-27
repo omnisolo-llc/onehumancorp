@@ -104,3 +104,46 @@ pub struct ToolDefinition {
     pub description: String,
     pub parameters: serde_json::Value,
 }
+
+#[derive(Debug, Clone)]
+pub enum ToolError {
+    Transient(String),
+    LlmRecoverable(String),
+    UserFixable(String),
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolError::Transient(msg) => write!(f, "Transient error: {}", msg),
+            ToolError::LlmRecoverable(msg) => write!(f, "Recoverable error: {}", msg),
+            ToolError::UserFixable(msg) => write!(f, "User fixable error: {}", msg),
+            ToolError::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}
+
+impl From<String> for ToolError {
+    fn from(s: String) -> Self {
+        ToolError::LlmRecoverable(s)
+    }
+}
+
+impl From<&str> for ToolError {
+    fn from(s: &str) -> Self {
+        ToolError::LlmRecoverable(s.to_string())
+    }
+}
+
+impl From<Box<dyn std::error::Error + Send + Sync>> for ToolError {
+    fn from(err: Box<dyn std::error::Error + Send + Sync>) -> Self {
+        if let Some(tool_err) = err.downcast_ref::<ToolError>() {
+            tool_err.clone()
+        } else {
+            ToolError::Unexpected(err.to_string())
+        }
+    }
+}
