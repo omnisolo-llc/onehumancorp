@@ -240,7 +240,7 @@ impl Hub {
         check_documentation_gate(instruction)?;
 
         let mut agents = self.agents.write().unwrap();
-        
+
         if agents.len() >= 10 {
             return Err("VRAM quota limit exceeded".to_string());
         }
@@ -515,7 +515,7 @@ impl Hub {
             "mode": mode,
             "status": status,
             "db_ping_ms": db_ping,
-            "mesh_active": true, 
+            "mesh_active": true,
             "cloud_connected": true,
         }))
     }

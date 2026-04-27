@@ -111,25 +111,25 @@ pub fn start_token_burn_forecaster(
             println!("TokenBurnForecaster: tick");
 
             let orgs = vec!["org1".to_string(), "org2".to_string()];
-            
+
             for org_id in orgs {
-                let total_tokens = 1000; 
-                
+                let total_tokens = 1000;
+
                 if total_tokens > 0 {
                     let h = history.entry(org_id.clone()).or_insert_with(Vec::new);
                     h.push(total_tokens);
-                    
+
                     if h.len() > 5 {
                         h.remove(0);
                     }
-                    
+
                     if h.len() > 1 {
                         let rate = (h.last().unwrap() - h.first().unwrap()) as f64 / (h.len() - 1) as f64;
                         println!("TokenBurnForecaster: Org {} rate: {}", org_id, rate);
-                        
+
                         let prediction_24h = rate * 60.0 * 24.0;
                         println!("TokenBurnForecaster: Org {} predicted 24h: {}", org_id, prediction_24h);
-                        
+
                         if prediction_24h > 0.0 {
                             println!("TokenBurnForecaster: Predictive cost alert for {}", org_id);
                         }

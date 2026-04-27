@@ -31,17 +31,17 @@ impl WizardService for MyWizardService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<WizardStatusProtoResponse>, Status> {
         let cfg = self.settings.read().unwrap();
-        
+
         let has_enabled_provider = cfg.ai_providers.iter().any(|p| p.enabled);
-        
+
         let steps = WizardStepsProto {
             server: !cfg.listen_addr.is_empty() && !cfg.db_path.is_empty(),
             ai_provider: has_enabled_provider,
             centrifuge: !cfg.centrifuge_url.is_empty(),
         };
-        
+
         let configured = steps.server && steps.ai_provider && steps.centrifuge;
-        
+
         Ok(Response::new(WizardStatusProtoResponse {
             configured,
             steps: Some(steps),
@@ -54,7 +54,7 @@ impl WizardService for MyWizardService {
     ) -> Result<Response<WizardStatusProtoResponse>, Status> {
         let req = request.into_inner();
         let mut cfg = self.settings.write().unwrap();
-        
+
         if !req.listen_addr.is_empty() {
             cfg.listen_addr = req.listen_addr;
         }
@@ -73,25 +73,25 @@ impl WizardService for MyWizardService {
         if !req.minimax_api_key.is_empty() {
             cfg.minimax_api_key = req.minimax_api_key;
         }
-        
+
         for (k, v) in req.extras {
             cfg.extras.insert(k, v);
         }
-        
+
         if !req.ai_providers.is_empty() {
             cfg.ai_providers = req.ai_providers;
         }
 
         let has_enabled_provider = cfg.ai_providers.iter().any(|p| p.enabled);
-        
+
         let steps = WizardStepsProto {
             server: !cfg.listen_addr.is_empty() && !cfg.db_path.is_empty(),
             ai_provider: has_enabled_provider,
             centrifuge: !cfg.centrifuge_url.is_empty(),
         };
-        
+
         let configured = steps.server && steps.ai_provider && steps.centrifuge;
-        
+
         Ok(Response::new(WizardStatusProtoResponse {
             configured,
             steps: Some(steps),
@@ -104,7 +104,7 @@ impl WizardService for MyWizardService {
     ) -> Result<Response<OnboardingVerifyResponse>, Status> {
         let run_mode = std::env::var("OHC_STANDALONE").unwrap_or_default();
         let is_standalone = run_mode == "true";
-        
+
         let mut health_checks = Vec::new();
         let mut is_all_healthy = true;
 

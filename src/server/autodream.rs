@@ -15,7 +15,7 @@ impl AutoDreamWorker {
 
     pub fn start(&self) {
         println!("Starting AutoDream worker");
-        
+
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
@@ -26,7 +26,7 @@ impl AutoDreamWorker {
                 sleep(Duration::from_secs(60)).await;
             }
         });
-        
+
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
@@ -46,7 +46,7 @@ impl AutoDreamWorker {
                 sleep(Duration::from_secs(120)).await;
             }
         });
-        
+
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
@@ -59,23 +59,23 @@ impl AutoDreamWorker {
 
     async fn prune_stale_sessions(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::hours(24);
-        
+
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
-        
+
         for (id, data) in stale_sessions {
              println!("AutoDream: pruned session {}: {}", id, data);
-             
+
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
              db.inject_truth(&format!("session-summary-{}", id), &summary, "[0.0]").await?;
         }
-        
+
         Ok(())
     }
 
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
-        
+
         for (id, org_id, payload) in tasks {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             let client = crate::minimax::MinimaxClient::new(api_key);
@@ -84,18 +84,18 @@ impl AutoDreamWorker {
                 println!("AutoDream: failed to summarize logs: {}. Using raw payload.", e);
                 format!("Summary of task: {}", payload)
             });
-            
+
             let mem_id = uuid::Uuid::new_v4().to_string();
-            
+
             // Mock embedding
-            let embedding = "[0.1]"; 
-            
+            let embedding = "[0.1]";
+
             db.insert_agent_memory(&mem_id, &org_id, &id, &summary, embedding).await?;
             db.mark_task_auto_dreamed(&id).await?;
-            
+
             println!("AutoDream: ingested completed task {}", id);
         }
-        
+
         Ok(())
     }
 
@@ -132,9 +132,9 @@ impl AutoDreamWorker {
                 Ok(embedding) => {
                     let emb_str = serde_json::to_string(&embedding).unwrap();
                     let mem_id = uuid::Uuid::new_v4().to_string();
-                    
+
                     db.insert_agent_memory(&mem_id, "system", &format!("session-{}", session_id), &context_data, &emb_str).await?;
-                    
+
                     sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
                         .bind(&session_id)
                         .execute(&db.pool)
@@ -151,7 +151,7 @@ impl AutoDreamWorker {
     async fn process_fs_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
-        
+
         if !path.exists() {
             return Ok(());
         }
@@ -165,14 +165,14 @@ impl AutoDreamWorker {
             let path = entry.path();
             if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&path).await?;
-                
+
                 match client.generate_embedding(&content).await {
                     Ok(embedding) => {
                         let emb_str = serde_json::to_string(&embedding).unwrap();
                         let mem_id = uuid::Uuid::new_v4().to_string();
-                        
+
                         db.insert_agent_memory(&mem_id, "system", "fs-agent", &content, &emb_str).await?;
-                        
+
                         tokio::fs::remove_file(path).await?;
                     }
                     Err(e) => {

@@ -26,13 +26,13 @@ impl McpService for MyMcpService {
     ) -> Result<Response<McpRegisterResponse>, Status> {
         let req = request.into_inner();
         let tool = req.tool.ok_or_else(|| Status::invalid_argument("tool is required"))?;
-        
+
         if tool.id.is_empty() || tool.name.is_empty() {
             return Err(Status::invalid_argument("tool ID and name are required"));
         }
 
         let mut tools = self.dynamic_tools.write().unwrap();
-        
+
         for t in tools.iter_mut() {
             if t.id == tool.id {
                 *t = tool.clone();
@@ -65,7 +65,7 @@ impl McpService for MyMcpService {
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
         let req = request.into_inner();
-        
+
         if req.tool_id.is_empty() {
             return Err(Status::invalid_argument("toolId is required"));
         }
@@ -74,7 +74,7 @@ impl McpService for MyMcpService {
             "telegram-mcp" | "slack-mcp" | "teams-mcp" => {
                 let params: serde_json::Value = serde_json::from_str(&req.params)
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
-                
+
                 let channel = params["channel"].as_str().unwrap_or_default();
                 let from_agent = params["from_agent"].as_str().unwrap_or("system");
                 let content = params["content"].as_str().ok_or_else(|| Status::invalid_argument("content is required"))?;
@@ -89,7 +89,7 @@ impl McpService for MyMcpService {
             "git-mcp" => {
                 let params: serde_json::Value = serde_json::from_str(&req.params)
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
-                
+
                 let repo = params["repository"].as_str().unwrap_or_default();
                 let title = params["title"].as_str().unwrap_or_default();
                 let body = params["body"].as_str().unwrap_or_default();
@@ -106,13 +106,13 @@ impl McpService for MyMcpService {
             "jira-mcp" => {
                 let params: serde_json::Value = serde_json::from_str(&req.params)
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
-                
+
                 let project = params["project"].as_str().unwrap_or_default();
                 let title = params["title"].as_str().unwrap_or_default();
                 let description = params["description"].as_str().unwrap_or_default();
                 let created_by = params["created_by"].as_str().unwrap_or_default();
                 let priority = params["priority"].as_str().unwrap_or("medium");
-                
+
                 let mut labels = Vec::new();
                 if let Some(arr) = params["labels"].as_array() {
                     for l in arr {
@@ -139,9 +139,9 @@ impl McpService for MyMcpService {
             "hybrid_sync" => {
                 let params: serde_json::Value = serde_json::from_str(&req.params)
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
-                
+
                 let action = params["action"].as_str().unwrap_or_default();
-                
+
                 match action {
                     "sync_state" => {
                         let resp_payload = serde_json::to_string(&serde_json::json!({"status": "synced"})).unwrap();
@@ -150,7 +150,7 @@ impl McpService for MyMcpService {
                     "resolve_conflicts" => {
                         let local_hlc = params["local_hlc"].as_f64().unwrap_or(0.0);
                         let remote_hlc = params["remote_hlc"].as_f64().unwrap_or(0.0);
-                        
+
                         let winner = if local_hlc > remote_hlc {
                             "local"
                         } else if remote_hlc > local_hlc {
@@ -158,7 +158,7 @@ impl McpService for MyMcpService {
                         } else {
                             "tie_broken_by_remote"
                         };
-                        
+
                         let resp_payload = serde_json::to_string(&serde_json::json!({"status": "resolved", "winner": winner})).unwrap();
                         Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
                     }

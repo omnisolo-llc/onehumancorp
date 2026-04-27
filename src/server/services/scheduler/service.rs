@@ -33,7 +33,7 @@ impl SchedulerService for MySchedulerService {
     ) -> Result<Response<ProtoTask>, Status> {
         let req = request.into_inner();
         let schedule = req.schedule.ok_or_else(|| Status::invalid_argument("schedule is required"))?;
-        
+
         let task = Task {
             id: format!("task-{}", Utc::now().timestamp()),
             organization_id: "system".to_string(),
@@ -60,7 +60,7 @@ impl SchedulerService for MySchedulerService {
         let req = request.into_inner();
         self.hub.scheduler().cancel("system", &req.id)
             .map_err(|e| Status::not_found(e))?;
-            
+
         Ok(Response::new(EmptyResponse {}))
     }
 }
@@ -92,7 +92,7 @@ fn convert_from_proto_schedule(s: ProtoSchedule) -> Schedule {
         "Cron" => ScheduleType::Cron,
         _ => ScheduleType::Once,
     };
-    
+
     Schedule {
         r#type,
         at: if s.at_unix > 0 { Some(Utc.timestamp_opt(s.at_unix, 0).unwrap()) } else { None },

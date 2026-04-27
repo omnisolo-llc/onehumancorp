@@ -102,7 +102,7 @@ impl RedisPubSubTransport {
         let mut con = client.get_async_connection().await.map_err(|e| e.to_string())?;
         let mut pubsub = con.into_pubsub();
         pubsub.subscribe(subscribe_chan).await.map_err(|e| e.to_string())?;
-        
+
         Ok(RedisPubSubTransport {
             client,
             publish_chan: publish_chan.to_string(),

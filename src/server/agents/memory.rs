@@ -146,10 +146,10 @@ impl OHCMemory for FileBasedMemory {
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String> {
         let dir = self.secure_join(&[namespace])?;
         tokio::fs::create_dir_all(&dir).await.map_err(|e| e.to_string())?;
-        
+
         let path = self.secure_join(&[namespace, key])?;
         tokio::fs::write(path, data).await.map_err(|e| e.to_string())?;
-        
+
         Ok(())
     }
 

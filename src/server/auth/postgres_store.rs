@@ -18,7 +18,7 @@ impl PgUserRepository {
 impl UserRepository for PgUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        
+
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
@@ -202,7 +202,7 @@ impl UserRepository for PgUserRepository {
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
-        
+
         let query = if org_id.is_empty() || org_id == "sys" {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,

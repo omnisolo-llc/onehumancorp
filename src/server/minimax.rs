@@ -235,7 +235,7 @@ impl LocalLLMClient {
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/embeddings".to_string());
         let model = std::env::var("OHC_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
-            
+
         LocalLLMClient { endpoint, embed_endpoint, model }
     }
 
@@ -337,7 +337,7 @@ impl CachedMinimaxClient {
         use sqlx::Row;
 
         let hash = format!("{:x}", Sha256::digest(prompt.as_bytes()));
-        
+
         if let Some(ref redis_client) = self.redis {
             if let Ok(mut con) = redis_client.get_async_connection().await {
                 let redis_key = format!("llm_reason:{}", hash);
@@ -355,14 +355,14 @@ impl CachedMinimaxClient {
 
         if let Some(row) = row {
             let response: String = row.get("response");
-            
+
             if let Some(ref redis_client) = self.redis {
                 if let Ok(mut con) = redis_client.get_async_connection().await {
                     let redis_key = format!("llm_reason:{}", hash);
                     let _: Result<(), _> = con.set_ex(&redis_key, &response, 24 * 3600).await;
                 }
             }
-            
+
             return Ok(response);
         }
 

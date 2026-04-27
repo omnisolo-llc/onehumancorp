@@ -21,7 +21,7 @@ impl DistributedLock {
     pub async fn acquire(&self, timeout: Duration, expiration: Duration) -> Result<(), String> {
         let mut con = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
         let start = std::time::Instant::now();
-        
+
         loop {
             if start.elapsed() > timeout {
                 return Err("timeout acquiring lock".to_string());
@@ -56,7 +56,7 @@ impl DistributedLock {
         "#);
 
         let res: i32 = script.key(&self.key).arg(&self.value).invoke_async(&mut con).await.map_err(|e| e.to_string())?;
-        
+
         if res == 1 {
             Ok(())
         } else {

@@ -23,7 +23,7 @@ impl MyAgentManagerService {
     fn get_snapshot(&self) -> DashboardSnapshot {
         let agents = self.hub.get_agents();
         let meetings = self.hub.get_meetings();
-        
+
         let costs = Summary {
             total_cost_usd: 100.0,
             total_tokens: 50000,
@@ -93,7 +93,7 @@ impl AgentManagerService for MyAgentManagerService {
     ) -> Result<Response<DashboardSnapshot>, Status> {
         let req = request.into_inner();
         let task = req.task.ok_or_else(|| Status::invalid_argument("task is required"))?;
-        
+
         if req.from_agent_id.is_empty() || req.to_agent_id.is_empty() {
             return Err(Status::invalid_argument("from_agent_id and to_agent_id are required"));
         }

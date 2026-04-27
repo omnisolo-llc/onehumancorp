@@ -48,7 +48,7 @@ impl OpsService for MyOpsService {
         if req.severity.is_empty() || req.summary.is_empty() {
             return Err(Status::invalid_argument("severity and summary are required"));
         }
-        
+
         let now = Utc::now();
         let incident = Incident {
             id: format!("inc-{}", now.timestamp()),
@@ -60,10 +60,10 @@ impl OpsService for MyOpsService {
             updated_at_unix: now.timestamp(),
             resolution_plan_id: String::new(),
         };
-        
+
         let mut incidents = self.incidents.write().unwrap();
         incidents.push(incident.clone());
-        
+
         Ok(Response::new(incident))
     }
 
@@ -75,11 +75,11 @@ impl OpsService for MyOpsService {
         if req.incident_id.is_empty() || req.status.is_empty() {
             return Err(Status::invalid_argument("incidentId and status are required"));
         }
-        
+
         let mut incidents = self.incidents.write().unwrap();
         let mut found = false;
         let mut updated = None;
-        
+
         for inc in incidents.iter_mut() {
             if inc.id == req.incident_id {
                 inc.status = req.status.clone();
@@ -95,11 +95,11 @@ impl OpsService for MyOpsService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("incident not found"));
         }
-        
+
         Ok(Response::new(updated.unwrap()))
     }
 
@@ -121,7 +121,7 @@ impl OpsService for MyOpsService {
         if req.role_id.is_empty() {
             return Err(Status::invalid_argument("roleId is required"));
         }
-        
+
         let profile = ComputeProfile {
             role_id: req.role_id,
             min_vram_gb: req.min_vram_gb,
@@ -129,10 +129,10 @@ impl OpsService for MyOpsService {
             scheduling_priority: req.scheduling_priority,
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut profiles = self.compute_profiles.write().unwrap();
         profiles.push(profile.clone());
-        
+
         Ok(Response::new(profile))
     }
 
@@ -144,7 +144,7 @@ impl OpsService for MyOpsService {
         if req.region.is_empty() {
             return Err(Status::invalid_argument("region is required"));
         }
-        
+
         Ok(Response::new(ClusterStatus {
             region: req.region,
             status: "healthy".to_string(),
@@ -172,7 +172,7 @@ impl OpsService for MyOpsService {
         if req.threshold_usd <= 0.0 {
             return Err(Status::invalid_argument("thresholdUsd must be greater than zero"));
         }
-        
+
         let alert = BudgetAlert {
             id: format!("alert-{}", Utc::now().timestamp()),
             organization_id: req.organization_id,
@@ -183,10 +183,10 @@ impl OpsService for MyOpsService {
             triggered: false,
             created_at_unix: Utc::now().timestamp(),
         };
-        
+
         let mut alerts = self.budget_alerts.write().unwrap();
         alerts.push(alert.clone());
-        
+
         Ok(Response::new(alert))
     }
 
@@ -208,7 +208,7 @@ impl OpsService for MyOpsService {
         if req.name.is_empty() {
             return Err(Status::invalid_argument("name is required"));
         }
-        
+
         let now = Utc::now();
         let pipeline = Pipeline {
             id: format!("pipeline-{}", now.timestamp()),
@@ -220,10 +220,10 @@ impl OpsService for MyOpsService {
             created_at_unix: now.timestamp(),
             updated_at_unix: now.timestamp(),
         };
-        
+
         let mut pipelines = self.pipelines.write().unwrap();
         pipelines.push(pipeline.clone());
-        
+
         Ok(Response::new(pipeline))
     }
 
@@ -235,7 +235,7 @@ impl OpsService for MyOpsService {
         let mut pipelines = self.pipelines.write().unwrap();
         let mut found = false;
         let mut updated = None;
-        
+
         for p in pipelines.iter_mut() {
             if p.id == req.pipeline_id {
                 if p.status != "STAGING" {
@@ -248,11 +248,11 @@ impl OpsService for MyOpsService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("pipeline not found"));
         }
-        
+
         Ok(Response::new(updated.unwrap()))
     }
 
@@ -264,7 +264,7 @@ impl OpsService for MyOpsService {
         let mut pipelines = self.pipelines.write().unwrap();
         let mut found = false;
         let mut updated = None;
-        
+
         for p in pipelines.iter_mut() {
             if p.id == req.pipeline_id {
                 p.status = req.status.clone();
@@ -277,11 +277,11 @@ impl OpsService for MyOpsService {
                 break;
             }
         }
-        
+
         if !found {
             return Err(Status::not_found("pipeline not found"));
         }
-        
+
         Ok(Response::new(updated.unwrap()))
     }
 
