@@ -2,20 +2,41 @@ use std::sync::RwLock;
 use crate::ohc::orchestration::*;
 use chrono::Utc;
 
+pub struct IntegrationCredentials {
+    pub bot_token: String,
+    pub chat_id: String,
+    pub webhook_url: String,
+    pub api_token: String,
+}
+
 pub struct IntegrationsRegistry {
     messages: RwLock<std::collections::HashMap<String, Vec<ChatMessage>>>,
     instances: RwLock<std::collections::HashMap<String, IntegrationInstance>>,
     pull_requests: RwLock<std::collections::HashMap<String, Vec<PullRequest>>>,
     issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
+    credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
 }
 
 impl IntegrationsRegistry {
     pub fn new() -> Self {
+        let mut instances = std::collections::HashMap::new();
+        for provider in crate::integrations::catalog::get_catalog() {
+            let id = provider.metadata.id.clone();
+            instances.insert(id.clone(), IntegrationInstance {
+                id: id.clone(),
+                name: provider.metadata.name.clone(),
+                category: provider.metadata.category.clone(),
+                status: "disconnected".to_string(),
+                base_url: provider.metadata.base_url.clone(),
+            });
+        }
+
         IntegrationsRegistry {
             messages: RwLock::new(std::collections::HashMap::new()),
-            instances: RwLock::new(std::collections::HashMap::new()),
+            instances: RwLock::new(instances),
             pull_requests: RwLock::new(std::collections::HashMap::new()),
             issues: RwLock::new(std::collections::HashMap::new()),
+            credentials: RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -45,6 +66,26 @@ impl IntegrationsRegistry {
         let mut msgs = self.messages.write().unwrap();
         msgs.entry(integration_id.to_string()).or_insert_with(Vec::new).push(msg.clone());
 
+        // Attempt real delivery
+        let creds_map = self.credentials.read().unwrap();
+        if let Some(creds) = creds_map.get(integration_id) {
+             let text = format!("[{}] {}", from_agent, content);
+             match integration_id {
+                 "telegram" => {
+                     if !creds.bot_token.is_empty() {
+                         let chat_id = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         tokio::spawn(send_telegram_message(creds.bot_token.clone(), chat_id, text));
+                     }
+                 }
+                 "discord" => {
+                     if !creds.webhook_url.is_empty() {
+                          tokio::spawn(send_discord_webhook(creds.webhook_url.clone(), from_agent.to_string(), content.to_string()));
+                     }
+                 }
+                 _ => {}
+             }
+        }
+
         Ok(msg)
     }
 
@@ -59,7 +100,7 @@ impl IntegrationsRegistry {
         insts.values().filter(|i| i.category == category).cloned().collect()
     }
 
-    pub fn connect(&self, integration_id: &str, base_url: &str, _creds: ConnectIntegrationRequest) -> Result<IntegrationInstance, String> {
+    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest) -> Result<IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
         let inst = IntegrationInstance {
             id: integration_id.to_string(),
@@ -69,6 +110,15 @@ impl IntegrationsRegistry {
             base_url: base_url.to_string(),
         };
         insts.insert(integration_id.to_string(), inst.clone());
+
+        let mut credentials = self.credentials.write().unwrap();
+        credentials.insert(integration_id.to_string(), IntegrationCredentials {
+            bot_token: creds.bot_token,
+            chat_id: creds.chat_id,
+            webhook_url: creds.webhook_url,
+            api_token: creds.api_token,
+        });
+
         Ok(inst)
     }
 
@@ -170,5 +220,36 @@ impl IntegrationsRegistry {
             }
         }
         Err("issue not found".to_string())
+    }
+}
+
+async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {
+    let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
+    let client = reqwest::Client::new();
+    let res = client.post(&url)
+        .json(&serde_json::json!({
+            "chat_id": chat_id,
+            "text": text,
+        }))
+        .send()
+        .await;
+    
+    if let Err(e) = res {
+        println!("Failed to send Telegram message: {}", e);
+    }
+}
+
+async fn send_discord_webhook(webhook_url: String, username: String, content: String) {
+    let client = reqwest::Client::new();
+    let res = client.post(&webhook_url)
+        .json(&serde_json::json!({
+            "username": username,
+            "content": content,
+        }))
+        .send()
+        .await;
+
+    if let Err(e) = res {
+        println!("Failed to send Discord webhook: {}", e);
     }
 }

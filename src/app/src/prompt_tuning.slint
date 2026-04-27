@@ -1,13 +1,27 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
 
+export struct UiPromptExample {
+    q: string,
+    a: string,
+}
+
 export component PromptTuning inherits Window {
     width: 700px;
     height: 500px;
     title: "Tune Agent";
 
-    property <int> step: 0;
-    property <string> tone: "Friendly";
-    property <bool> show_raw: false;
+    in-out property <int> step: 0;
+    in-out property <string> tone: "Friendly";
+    in-out property <bool> show_raw: false;
+    
+    in-out property <bool> focus_only_business: false;
+    in-out property <bool> focus_avoid_competitors: false;
+    in-out property <bool> focus_reply_spanish: false;
+    
+    in-out property <[UiPromptExample]> examples;
+    
+    callback add_example();
+    callback save_prompt();
 
     background: #f8fafc;
 
@@ -36,16 +50,20 @@ export component PromptTuning inherits Window {
             if (step == 1) : VerticalBox {
                 spacing: 10px;
                 Text { text: "Domain focus"; color: #1e293b; }
-                CheckBox { text: "Only discuss business"; }
-                CheckBox { text: "Avoid competitors"; }
+                CheckBox { text: "Only discuss business"; checked: focus_only_business; toggled => { focus_only_business = !focus_only_business; } }
+                CheckBox { text: "Avoid competitors"; checked: focus_avoid_competitors; toggled => { focus_avoid_competitors = !focus_avoid_competitors; } }
+                CheckBox { text: "Always reply in Spanish"; checked: focus_reply_spanish; toggled => { focus_reply_spanish = !focus_reply_spanish; } }
             }
 
             // Step 2: Examples
             if (step == 2) : VerticalBox {
                 spacing: 10px;
                 Text { text: "Example interactions"; color: #1e293b; }
-                Button { text: "Add Example"; }
-                Text { text: "Q: Sample Q\nA: Sample A"; color: #64748b; }
+                Button { 
+                    text: "Add Example"; 
+                    clicked => { add_example(); }
+                }
+                for ex in examples : Text { text: "Q: " + ex.q + "\nA: " + ex.a; color: #64748b; }
             }
 
             // Step 3: Review
@@ -70,7 +88,7 @@ export component PromptTuning inherits Window {
                         if (step < 3) {
                             step = step + 1;
                         } else {
-                            // Handle save
+                            save_prompt();
                         }
                     }
                 }
@@ -97,7 +115,10 @@ export component PromptTuning inherits Window {
                 VerticalBox {
                     padding: 16px;
                     if (show_raw) : Text {
-                        text: "You are an AI agent with a " + tone + " personality.";
+                        text: "You are an AI agent with a " + tone + " personality.\n"
+                            + (focus_only_business ? "Domain Focus: Only discuss business.\n" : "")
+                            + (focus_avoid_competitors ? "Domain Focus: Avoid competitors.\n" : "")
+                            + (focus_reply_spanish ? "Domain Focus: Always reply in Spanish.\n" : "");
                         color: #1e293b;
                         wrap: word-wrap;
                     }

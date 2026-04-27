@@ -9,7 +9,7 @@ use ohc_builtin_agent_llm::{
     anthropic::AnthropicClient, ollama::OllamaClient, openai::OpenAIClient, LlmClient,
 };
 use crate::memory::{inject_memories_into_prompt, PgVectorMemoryStore};
-use crate::proto::{
+use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SubAgentRequest, SubAgentResponse,
 };
@@ -392,7 +392,7 @@ impl AgentService for AgentServiceImpl {
         }
 
         // Remote dispatch: forward to sub-agent gRPC server.
-        use crate::proto::{
+        use crate::proto::agent_service::{
             agent_service_client::AgentServiceClient, RunTaskRequest,
         };
 

@@ -1,11 +1,23 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
+export struct UiAiConfigProvider {
+    id: string,
+    name: string,
+    base_url: string,
+    is_official: bool,
+    models: [string],
+}
+
 export component AiConfig inherits Window {
     width: 500px;
     height: 600px;
     title: "AI Providers";
 
     background: #f8fafc;
+
+    in property <[UiAiConfigProvider]> providers;
+    callback add_provider();
+    callback edit_provider(string);
 
     VerticalBox {
         spacing: 20px;
@@ -14,13 +26,16 @@ export component AiConfig inherits Window {
         HorizontalBox {
             Text { text: "AI Providers"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { text: "Add Provider"; }
+            Button { 
+                text: "Add Provider"; 
+                clicked => { add_provider(); }
+            }
         }
 
         VerticalBox {
             spacing: 10px;
             
-            Rectangle {
+            for p in providers : Rectangle {
                 background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
@@ -30,37 +45,22 @@ export component AiConfig inherits Window {
                     padding: 16px;
                     spacing: 8px;
                     HorizontalBox {
-                        Text { text: "🧠 OpenAI"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Text { text: "🧠 " + p.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                         Rectangle {}
-                        Text { text: "Official"; color: #a855f7; horizontal-alignment: center; }
-                        Button { text: "Edit"; }
+                        if (p.is_official) : Text { text: "Official"; color: #a855f7; horizontal-alignment: center; }
+                        Button { 
+                            text: "Edit"; 
+                            clicked => { edit_provider(p.id); }
+                        }
                     }
-                    Text { text: "https://api.openai.com/v1"; color: #64748b; }
+                    Text { text: p.base_url; color: #64748b; }
                     HorizontalBox {
                         spacing: 5px;
-                        Rectangle { background: #e2e8f0; border-radius: 4px; HorizontalBox { padding: 4px; Text { text: "gpt-4o-mini"; color: #1e293b; } } }
-                        Rectangle { background: #e2e8f0; border-radius: 4px; HorizontalBox { padding: 4px; Text { text: "gpt-4o"; color: #1e293b; } } }
-                    }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                VerticalBox {
-                    padding: 16px;
-                    spacing: 8px;
-                    HorizontalBox {
-                        Text { text: "🧠 Ollama (local)"; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                        Rectangle {}
-                        Button { text: "Edit"; }
-                    }
-                    Text { text: "http://localhost:11434/v1"; color: #64748b; }
-                    HorizontalBox {
-                        spacing: 5px;
-                        Rectangle { background: #e2e8f0; border-radius: 4px; HorizontalBox { padding: 4px; Text { text: "llama3"; color: #1e293b; } } }
+                        for model in p.models : Rectangle { 
+                            background: #e2e8f0; 
+                            border-radius: 4px; 
+                            HorizontalBox { padding: 4px; Text { text: model; color: #1e293b; } } 
+                        }
                     }
                 }
             }

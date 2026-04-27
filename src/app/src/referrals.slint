@@ -1,11 +1,22 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
+export struct UiReferral {
+    referral_code: string,
+    user_id: string,
+    clicks: int,
+    conversions: int,
+    created_at: string,
+}
+
 export component Referrals inherits Window {
     width: 500px;
     height: 600px;
     title: "Viral Loop Dashboard";
 
     background: #f8fafc;
+
+    in property <[UiReferral]> referrals;
+    callback refresh();
 
     VerticalBox {
         spacing: 20px;
@@ -14,13 +25,15 @@ export component Referrals inherits Window {
         HorizontalBox {
             Text { text: "Viral Loop Dashboard"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { text: "Refresh"; }
+            Button { 
+                text: "Refresh"; 
+                clicked => { refresh(); }
+            }
         }
 
         VerticalBox {
             spacing: 16px;
-            
-            Rectangle {
+            for r in referrals : Rectangle {
                 background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
@@ -28,30 +41,31 @@ export component Referrals inherits Window {
                 
                 VerticalBox {
                     padding: 16px;
-                    spacing: 12px;
+                    spacing: 8px;
                     
                     HorizontalBox {
-                        Text { text: "Ref: ABC123"; font-weight: 700; color: #1e293b; font-size: 18px; }
+                        Text { text: "Ref: " + r.referral_code; font-weight: 700; color: #1e293b; }
                         Rectangle {}
-                        Text { text: "👥"; font-size: 24px; horizontal-alignment: center; }
+                        Text { text: "👥"; font-size: 20px; }
                     }
                     
-                    Text { text: "User: user_1"; color: #64748b; }
+                    Text { text: "User: " + r.user_id; color: #64748b; }
                     
                     HorizontalBox {
-                        spacing: 20px;
-                        alignment: center;
+                        alignment: space-around;
                         VerticalBox {
-                            Text { text: "10"; font-size: 24px; font-weight: 700; color: #a855f7; horizontal-alignment: center; }
-                            Text { text: "Clicks"; color: #64748b; font-size: 12px; horizontal-alignment: center; }
+                            alignment: center;
+                            Text { text: r.clicks; font-size: 24px; font-weight: 700; color: #a855f7; }
+                            Text { text: "Clicks"; color: #64748b; font-size: 12px; }
                         }
                         VerticalBox {
-                            Text { text: "2"; font-size: 24px; font-weight: 700; color: #a855f7; horizontal-alignment: center; }
-                            Text { text: "Conversions"; color: #64748b; font-size: 12px; horizontal-alignment: center; }
+                            alignment: center;
+                            Text { text: r.conversions; font-size: 24px; font-weight: 700; color: #a855f7; }
+                            Text { text: "Conversions"; color: #64748b; font-size: 12px; }
                         }
                     }
                     
-                    Text { text: "Created: Apr 25, 2026"; color: #9ca3af; font-size: 12px; }
+                    Text { text: "Created: " + r.created_at; color: #64748b; font-size: 12px; }
                 }
             }
         }

@@ -232,4 +232,48 @@ mod tests {
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);
     }
+
+    #[tokio::test]
+    async fn test_power_sync_push() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let service = MySyncService::new(pool);
+        let req = Request::new(PowerSyncPushRequest { payload: "test payload".to_string() });
+        let resp = service.power_sync_push(req).await.unwrap();
+        assert_eq!(resp.get_ref().status, "ok");
+    }
+
+    #[tokio::test]
+    async fn test_power_sync_pull() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let service = MySyncService::new(pool);
+        let req = Request::new(PowerSyncPullRequest {});
+        let resp = service.power_sync_pull(req).await.unwrap();
+        assert_eq!(resp.get_ref().payload, "[]");
+    }
+    #[tokio::test]
+    async fn test_sync_mcp_deltas_empty() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let service = MySyncService::new(pool);
+        let req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
+        let resp = service.sync_mcp_deltas(req).await.unwrap();
+        assert_eq!(resp.get_ref().status, "success");
+        assert_eq!(resp.get_ref().synced_count, 0);
+    }
+    #[tokio::test]
+    async fn test_sync_escalation_empty() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let service = MySyncService::new(pool);
+        let req = Request::new(SyncEscalationRequest { payloads: vec![] });
+        let resp = service.sync_escalation(req).await.unwrap();
+        assert_eq!(resp.get_ref().status, "success");
+        assert_eq!(resp.get_ref().synced_count, 0);
+    }
+    #[tokio::test]
+    async fn test_vector_sync() {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let service = MySyncService::new(pool);
+        let req = Request::new(VectorSyncRequest {});
+        let resp = service.vector_sync(req).await.unwrap();
+        assert_eq!(resp.get_ref().status, "success");
+    }
 }

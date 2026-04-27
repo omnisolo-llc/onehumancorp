@@ -5,6 +5,8 @@ export component Diagnostics inherits Window {
     height: 600px;
     title: "Diagnostics Dashboard";
 
+    callback run_diagnostics();
+
     background: #f8fafc;
 
     VerticalBox {
@@ -86,6 +88,7 @@ export component Diagnostics inherits Window {
 
         Button {
             text: "Run Diagnostics";
+            clicked => { run_diagnostics(); }
         }
     }
 }

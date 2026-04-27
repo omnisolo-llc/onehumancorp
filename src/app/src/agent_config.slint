@@ -5,6 +5,8 @@ export component AgentConfig inherits Window {
     height: 500px;
     title: "Configure AI Agent";
 
+    callback activate_agent(string, bool, bool, string);
+
     property <int> step: 0;
     property <string> selected_agent: "";
     property <bool> can_reply: false;
@@ -97,6 +99,7 @@ export component AgentConfig inherits Window {
                         step = step + 1;
                     } else {
                         // Handle activation
+                        activate_agent(selected_agent, can_reply, can_social, frequency);
                     }
                 }
             }

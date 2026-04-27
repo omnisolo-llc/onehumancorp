@@ -1,9 +1,20 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 
+export struct UiMeeting {
+    name: string,
+    status: string,
+    participants: int,
+    is_active: bool,
+}
+
 export component Meetings inherits Window {
     width: 500px;
     height: 600px;
     title: "Meeting Rooms";
+
+    in-out property <[UiMeeting]> meetings;
+    callback new_room();
+    callback join_room(string);
 
     background: #f8fafc;
 
@@ -14,13 +25,13 @@ export component Meetings inherits Window {
         HorizontalBox {
             Text { text: "Meeting Rooms"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
-            Button { text: "New Room"; }
+            Button { text: "New Room"; clicked => { new_room(); } }
         }
 
         VerticalBox {
             spacing: 12px;
             
-            Rectangle {
+            for m in meetings : Rectangle {
                 background: white;
                 border-color: #e2e8f0;
                 border-width: 1px;
@@ -30,37 +41,16 @@ export component Meetings inherits Window {
                     padding: 16px;
                     Text { text: "📹"; font-size: 32px; horizontal-alignment: center; } 
                     VerticalBox {
-                        Text { text: "Stand-up"; font-weight: 700; color: #1e293b; }
+                        Text { text: m.name; font-weight: 700; color: #1e293b; }
                         HorizontalBox {
                             spacing: 5px;
-                            Rectangle { background: #10b981; border-radius: 4px; width: 8px; height: 8px; } 
-                            Text { text: "active"; color: #10b981; font-size: 12px; }
-                            Text { text: "👥 3"; color: #64748b; font-size: 12px; }
+                            Rectangle { background: m.is_active ? #10b981 : #a855f7; border-radius: 4px; width: 8px; height: 8px; } 
+                            Text { text: m.status; color: m.is_active ? #10b981 : #a855f7; font-size: 12px; }
+                            Text { text: "👥 " + m.participants; color: #64748b; font-size: 12px; }
                         }
                     }
                     Rectangle {} 
-                    Button { text: "Join"; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                
-                HorizontalBox {
-                    padding: 16px;
-                    Text { text: "📹"; font-size: 32px; horizontal-alignment: center; } 
-                    VerticalBox {
-                        Text { text: "Sprint Review"; font-weight: 700; color: #1e293b; }
-                        HorizontalBox {
-                            spacing: 5px;
-                            Rectangle { background: #a855f7; border-radius: 4px; width: 8px; height: 8px; } 
-                            Text { text: "scheduled"; color: #a855f7; font-size: 12px; }
-                        }
-                    }
-                    Rectangle {} 
-                    Button { text: "Join"; }
+                    Button { text: "Join"; clicked => { join_room(m.name); } }
                 }
             }
         }

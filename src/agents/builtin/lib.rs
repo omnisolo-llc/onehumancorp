@@ -22,4 +22,4 @@ pub mod guardrails;
 
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;
-pub use proto;
+pub mod proto;

@@ -8,6 +8,8 @@ export component Scaling inherits Window {
     property <string> selected_role: "SOFTWARE_ENGINEER";
     property <int> target_count: 1;
 
+    callback scale_agents(string, int);
+
     background: #f8fafc;
 
     HorizontalBox {
@@ -54,6 +56,7 @@ export component Scaling inherits Window {
 
             Button {
                 text: "Initiate Scaling";
+                clicked => { scale_agents(selected_role, target_count); }
             }
         }
 

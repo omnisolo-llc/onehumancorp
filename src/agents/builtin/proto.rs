@@ -3,5 +3,6 @@
 // The generator is src/build.rs (runs tonic-build when protoc is available).
 pub mod agent_service {
     #![allow(clippy::all)]
-    include!("gen/ohc.agent.service.rs");
+    tonic::include_proto!("ohc.agent.service");
 }
+pub use agent_service::*;

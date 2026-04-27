@@ -1,4 +1,78 @@
 import { Button, VerticalBox } from "std-widgets.slint";
+import { SwarmObservability, UiMeshMessage } from "./swarm_observability.slint";
+import { SwarmVelocity } from "./swarm_velocity.slint";
+import { AgentStatusIndicator } from "./agent_status_indicator.slint";
+export { FixAgent, Upgrade } from "./ongoing_management.slint";
+export { Settings } from "./settings.slint";
+export { Agents } from "./agents.slint";
+export { MyPlan } from "./my_plan.slint";
+export { Channels } from "./channels.slint";
+export { Chat } from "./chat.slint";
+export { Dashboard } from "./dashboard.slint";
+export { SwarmObservability, UiMeshMessage } from "./swarm_observability.slint";
+export { WelcomeChecklist } from "./welcome_checklist.slint";
+export { BusinessSetup } from "./business_setup.slint";
+export { Login } from "./login.slint";
+export { CostDashboard, UiAgentCost } from "./cost_dashboard.slint";
+export { Security, UiSecurityIssue } from "./security.slint";
+export { Integrations, UiMcpTool } from "./integrations.slint";
+export { Logs, UiLogLine } from "./logs.slint";
+export { Pipelines, UiPipeline } from "./pipelines.slint";
+export { Pricing, UiPricingTier } from "./pricing.slint";
+export { Diagnostics } from "./diagnostics.slint";
+export { Handoffs, UiHandoff } from "./handoffs.slint";
+export { UserManagement, UiUser } from "./user_management.slint";
+export { PromptTuning, UiPromptExample } from "./prompt_tuning.slint";
+export { Referrals, UiReferral } from "./referrals.slint";
+export { Scaling } from "./scaling.slint";
+export { SwarmMemory } from "./swarm_memory.slint";
+export { WebsiteBuilder } from "./website_builder.slint";
+export { SecureAgentConfig } from "./secure_agent_config.slint";
+export { AgentConfig } from "./agent_config.slint";
+export { AgentHire } from "./agent_hire.slint";
+export { LandingPageExperiments, UiExperiment } from "./landing_page_experiments.slint";
+export { Landing } from "./landing.slint";
+export { AutodreamWalkthrough } from "./autodream_walkthrough.slint";
+export { SetupWizard } from "./setup_wizard.slint";
+export { TaskList, UiTask } from "./task_list.slint";
+export { VectorMemoryVisualizer } from "./vector_memory_visualizer.slint";
+export { SwarmVelocity } from "./swarm_velocity.slint";
+export { AgentStatusIndicator } from "./agent_status_indicator.slint";
+
+export component SwarmVelocityWindow inherits Window {
+    width: 500px;
+    height: 200px;
+    title: "Swarm Velocity Test";
+    
+    in-out property <string> completion_rate <=> sv.completion_rate;
+    in-out property <string> avg_latency <=> sv.avg_latency;
+    in-out property <int> active_threads <=> sv.active_threads;
+
+    sv := SwarmVelocity {}
+}
+
+export component SwarmObservabilityWindow inherits Window {
+    width: 500px;
+    height: 350px;
+    title: "Swarm Observability Test";
+    
+    in-out property <[UiMeshMessage]> messages <=> so.messages;
+
+    so := SwarmObservability {}
+}
+
+export component AgentStatusIndicatorWindow inherits Window {
+    width: 100px;
+    height: 100px;
+    title: "Agent Status Indicator Test";
+    
+    in-out property <bool> is_active <=> asi.is_active;
+
+    asi := AgentStatusIndicator {}
+}
+export { GrowBusiness } from "./grow_business.slint";
+export { Meetings, UiMeeting } from "./meetings.slint";
+export { Skills, UiSkill } from "./skills.slint";
 
 export component AppWindow inherits Window {
     width: 400px;

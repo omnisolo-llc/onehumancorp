@@ -8,7 +8,14 @@ pub mod ohc {
     }
 }
 
-slint::include_modules!();
+pub mod agent;
+pub mod local_manager;
+pub mod api_service;
+use slint::ComponentHandle;
+
+pub mod app {
+    include!(concat!(env!("OUT_DIR"), "/app.rs"));
+}
 
 use serde::{Deserialize, Serialize};
 
@@ -132,38 +139,148 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = Dashboard::new()?;
+    let ui = app::AgentStatusIndicatorWindow::new()?;
     let ui_handle = ui.as_weak();
 
-    tokio::spawn(async move {
-        let client = reqwest::Client::new();
-        loop {
-            match client.get("http://127.0.0.1:18080/api/dashboard").send().await {
-                Ok(res) => {
-                    if res.status().is_success() {
-                        match res.json::<DashboardSnapshot>().await {
-                            Ok(data) => {
-                                println!("Fetched dashboard data");
-                                if let Some(ui) = ui_handle.upgrade() {
-                                    ui.set_active_agents(data.agents.len().to_string().into());
-                                    ui.set_active_tasks(data.statuses.iter().map(|s| s.count).sum::<i32>().to_string().into());
-                                    ui.set_scheduled_calls(data.meetings.len().to_string().into());
-                                    ui.set_team_members(data.organization.members.len().to_string().into());
-                                }
-                            }
-                            Err(e) => println!("Failed to deserialize dashboard data: {:?}", e),
-                        }
-                    } else {
-                        println!("API error: {:?}", res.status());
-                    }
-                }
-                Err(e) => println!("Failed to fetch dashboard data: {:?}", e),
-            }
-            tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-        }
-    });
+    ui.set_is_active(true);
 
     ui.run()?;
     
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_welcome_checklist_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_welcome_checklist_creation because no display server is available.");
+            return;
+        }
+        app::WelcomeChecklist::new().unwrap();
+    }
+
+    #[test]
+    fn test_login_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_login_creation because no display server is available.");
+            return;
+        }
+        let ui = app::Login::new().unwrap();
+        assert_eq!(ui.get_username(), "");
+        assert_eq!(ui.get_password(), "");
+    }
+
+    #[test]
+    fn test_business_setup_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_business_setup_creation because no display server is available.");
+            return;
+        }
+        let ui = app::BusinessSetup::new().unwrap();
+        assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_company_name(), "");
+    }
+
+    #[test]
+    fn test_agent_hire_next_button_disabled_by_default() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_agent_hire_next_button_disabled_by_default because no display server is available.");
+            return;
+        }
+        let ui = app::AgentHire::new().unwrap();
+        assert_eq!(ui.get_step(), 0);
+        assert_eq!(ui.get_selected_role(), "");
+        assert_eq!(ui.get_next_enabled(), false);
+    }
+
+    #[test]
+    fn test_agent_hire_next_button_enabled_after_role_selection() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_agent_hire_next_button_enabled_after_role_selection because no display server is available.");
+            return;
+        }
+        let ui = app::AgentHire::new().unwrap();
+        assert_eq!(ui.get_step(), 0);
+        ui.set_selected_role("SOFTWARE_ENGINEER".into());
+        assert_eq!(ui.get_next_enabled(), true);
+    }
+
+    #[test]
+    fn test_landing_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_landing_creation because no display server is available.");
+            return;
+        }
+        let ui = app::Landing::new().unwrap();
+        assert_eq!(ui.get_is_variant_b(), false);
+    }
+
+    #[test]
+    fn test_agents_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Agents::new().unwrap();
+    }
+    #[test]
+    fn test_chat_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Chat::new().unwrap();
+    }
+    #[test]
+    fn test_channels_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Channels::new().unwrap();
+    }
+    #[test]
+    fn test_integrations_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Integrations::new().unwrap();
+    }
+    #[test]
+    fn test_security_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Security::new().unwrap();
+    }
+    #[test]
+    fn test_meetings_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Meetings::new().unwrap();
+    }
+    #[test]
+    fn test_logs_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Logs::new().unwrap();
+    }
+    #[test]
+    fn test_pricing_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Pricing::new().unwrap();
+    }
+    #[test]
+    fn test_scaling_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Scaling::new().unwrap();
+    }
+    #[test]
+    fn test_swarm_memory_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::SwarmMemory::new().unwrap();
+    }
+    #[test]
+    fn test_website_builder_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::WebsiteBuilder::new().unwrap();
+    }
+    #[test]
+    fn test_setup_wizard_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::SetupWizard::new().unwrap();
+    }
+    #[test]
+    fn test_task_list_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::TaskList::new().unwrap();
+    }
 }

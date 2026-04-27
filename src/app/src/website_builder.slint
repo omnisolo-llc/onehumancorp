@@ -5,6 +5,8 @@ export component WebsiteBuilder inherits Window {
     height: 600px;
     title: "Build My Website";
 
+    callback publish_site(string, string, string, string);
+
     property <int> step: 0;
     property <string> selected_template: "";
     property <string> primary_color: "#FF3B30";
@@ -106,6 +108,7 @@ export component WebsiteBuilder inherits Window {
                         step = step + 1;
                     } else {
                         // Handle publish
+                        publish_site(selected_template, primary_color, product_name, domain_choice);
                     }
                 }
             }
