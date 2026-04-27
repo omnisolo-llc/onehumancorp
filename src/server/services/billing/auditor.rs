@@ -83,6 +83,11 @@ impl CostAuditor {
         saved_cost
     }
 
+    pub fn get_total_cost(&self) -> f64 {
+        let total_cost = self.total_cost.lock().unwrap();
+        *total_cost
+    }
+
     pub fn get_agent_cost(&self, agent_id: &str) -> f64 {
         let agent_costs = self.agent_costs.lock().unwrap();
         *agent_costs.get(agent_id).unwrap_or(&0.0)
@@ -182,6 +187,37 @@ impl CostAuditor {
 mod tests {
     use super::*;
     use crate::pricing::calculator::CostConfig;
+
+    #[test]
+    fn test_get_total_cost() {
+        let config = CostConfig {
+            cost_per_input_token: 0.001,
+            cost_per_output_token: 0.002,
+            ..Default::default()
+        };
+        let auditor = CostAuditor::new(config);
+
+        let event1 = AuditEvent {
+            agent_id: "agent1".to_string(),
+            input_tokens: 1000,
+            output_tokens: 500,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+
+        let event2 = AuditEvent {
+            agent_id: "agent2".to_string(),
+            input_tokens: 2000,
+            output_tokens: 1000,
+            cached_input_tokens: 0,
+            local_embedding_tokens: 0,
+        };
+
+        auditor.record_event(event1);
+        auditor.record_event(event2);
+
+        assert_eq!(auditor.get_total_cost(), 6.0);
+    }
 
     #[test]
     fn test_cost_auditor() {
