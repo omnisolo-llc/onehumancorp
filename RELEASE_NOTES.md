@@ -1,6 +1,10 @@
 # Release Notes
 
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Enable resource requests for bazel test action in buildbuddy.yaml (#e384844)
+- Privacy/Offline (Standalone): Update resource requirements to ensure stable standalone testing environments.
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 - Scaling (Cloud): Implement Business Setup and Website Builder wizard UI scaffolding, onboarding cross-device state, and Business Share & Embed widget.
 - Privacy/Offline (Standalone): Conduct Hybrid Privacy Audit with PII guardrails, implement in-app mobile-first Help Center with tooltips, and add Dashboard Welcome Checklist.
