@@ -71,11 +71,11 @@ kubectl wait --for=condition=Ready node --all --timeout=120s
 if [[ -n "${TEST_SRCDIR:-}" ]]; then
   log "Bazel environment detected. Loading images from bazel-bin..."
   # Locate the load script
-  SERVER_LOADER="${REPO_ROOT}/deploy/server_load"
+  SERVER_LOADER="${REPO_ROOT}/deploy/server_load.sh"
   
   if [[ ! -x "${SERVER_LOADER}" ]]; then
     # In some sandboxes, we might need to find it in the runfiles tree
-    SERVER_LOADER="$(find "${TEST_SRCDIR}" -name "server_load" -type f -executable | head -1)"
+    SERVER_LOADER="$(find "${TEST_SRCDIR}" -name "server_load.sh" -type f -executable | head -1)"
   fi
   
   log "Executing server loader: ${SERVER_LOADER}"
@@ -90,6 +90,14 @@ else
   docker tag onehumancorp/server:latest onehumancorp/server:e2e
 fi
 
+# ── Add Helm repos ─────────────────────────────────────────────────────────────
+log "Adding Bitnami Helm repo ..."
+helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
+helm repo update bitnami 2>/dev/null || true
+
+log "Building chart dependencies ..."
+helm dependency build "${REPO_ROOT}/deploy/helm/ohc"
+
 # ── Helm Verification ──────────────────────────────────────────────────────────
 log "Verifying Helm chart ..."
 helm lint "${REPO_ROOT}/deploy/helm/ohc"
@@ -100,11 +108,6 @@ kind load docker-image onehumancorp/server:e2e --name "${CLUSTER_NAME}"
 
 # ── Create namespace ───────────────────────────────────────────────────────────
 kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
-
-# ── Add Helm repos ─────────────────────────────────────────────────────────────
-log "Adding Bitnami Helm repo ..."
-helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
-helm repo update bitnami 2>/dev/null || true
 
 # ── Install Redis ──────────────────────────────────────────────────────────────
 log "Installing Redis ..."
