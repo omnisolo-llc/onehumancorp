@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = FixAgent::new()?;
+    let ui = AppWindow::new()?;
     ui.run()?;
     
     Ok(())

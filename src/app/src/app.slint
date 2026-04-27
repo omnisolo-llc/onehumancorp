@@ -1,20 +1,25 @@
-import { Button, VerticalBox } from "std-widgets.slint";
+import { Login } from "login.slint";
+import { BusinessSetup } from "business_setup.slint";
+import { WelcomeChecklist } from "welcome_checklist.slint";
 
 export component AppWindow inherits Window {
-    width: 400px;
-    height: 300px;
-    title: "New Rust + Slint App";
+    width: 375px;
+    height: 700px;
+    title: "One Human Corp";
 
-    VerticalBox {
-        alignment: center;
-        spacing: 20px;
-        Text {
-            text: "Hello from Slint!";
-            horizontal-alignment: center;
-            font-size: 20px;
-        }
-        Button {
-            text: "Click me";
+    property <int> current_view: 0; // 0: Login, 1: BusinessSetup, 2: WelcomeChecklist
+
+    if (current_view == 0) : Login {
+        go_to_setup => { current_view = 1; }
+    }
+
+    if (current_view == 1) : BusinessSetup {
+        setup_complete => { current_view = 2; }
+    }
+
+    if (current_view == 2) : WelcomeChecklist {
+        go_to_dashboard => {
+            // Dashboard transition not handled here in this mission
         }
     }
 }

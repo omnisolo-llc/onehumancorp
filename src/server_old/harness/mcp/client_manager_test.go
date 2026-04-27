@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onehumancorp/mono/src/server_old/agents/local"
+	"github.com/onehumancorp/mono/src/server/agents/builtin"
 )
 
 func TestConvertToMCPTool(t *testing.T) {
-	internalTool := local.ToolDefinition{
+	internalTool := builtin.Tool{
 		Name:        "test_tool",
 		Description: "A test tool",
 		Parameters:  json.RawMessage(`{"type":"object","properties":{}}`),
