@@ -193,8 +193,36 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
+                let mut attempts = 0;
+                let final_result: Result<String, Box<dyn std::error::Error + Send + Sync>>;
+
+                loop {
+                    attempts += 1;
+                    let iter_result = self.execute_tool(&tc).await;
+
+                    if let Err(ref e) = iter_result {
+                        if let Some(tool_err) = e.downcast_ref::<ohc_builtin_agent_core::types::ToolError>() {
+                            match tool_err {
+                                ohc_builtin_agent_core::types::ToolError::Transient(_) => {
+                                    if attempts < 3 {
+                                        tokio::time::sleep(tokio::time::Duration::from_millis(500 * attempts as u64)).await;
+                                        continue;
+                                    }
+                                }
+                                ohc_builtin_agent_core::types::ToolError::UserFixable(_) | ohc_builtin_agent_core::types::ToolError::Unexpected(_) => {
+                                    let err_msg = format!("Tool execution interrupted: {}", e);
+                                    on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                                    return Err(err_msg.into());
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    final_result = iter_result;
+                    break;
+                }
+
+                let (content, error) = match final_result {
                     Ok(r) => {
                         self.progress.record_tool_use();
                         on_event(AgentEvent::ToolCall {
@@ -307,6 +335,53 @@ mod tests {
         async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
             Ok("A very long tool output that should be masked because it is long enough".to_string())
         }
+    }
+
+    #[tokio::test]
+    async fn test_tool_error_interruption() {
+        use ohc_builtin_agent_core::types::ToolError;
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_fail".to_string(),
+                            name: "fail_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        struct FailToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for FailToolExecutor {
+            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+                Err(Box::new(ToolError::Unexpected("Critical failure".to_string())))
+            }
+        }
+
+        let tools = vec![Tool {
+            name: "fail_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(FailToolExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let cfg = AgentRunConfig::default();
+        let mut events = vec![];
+
+        let result = agent.run(&cfg, "Do it", &mut |e| { events.push(e); }).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Critical failure"));
     }
 
     #[tokio::test]

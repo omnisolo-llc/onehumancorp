@@ -104,3 +104,29 @@ pub struct ToolDefinition {
     pub description: String,
     pub parameters: serde_json::Value,
 }
+
+/// Errors returned by tool executions, representing different recovery strategies.
+#[derive(Debug, Clone)]
+pub enum ToolError {
+    /// A temporary error (e.g. network failure) that should be retried with backoff.
+    Transient(String),
+    /// An error that the LLM can fix if we feed it back to it.
+    LlmRecoverable(String),
+    /// An error requiring the user to intervene (e.g. missing credentials).
+    UserFixable(String),
+    /// An unexpected error that should abort the execution loop.
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolError::Transient(msg) => write!(f, "Transient tool error: {}", msg),
+            ToolError::LlmRecoverable(msg) => write!(f, "Tool execution failed: {}", msg),
+            ToolError::UserFixable(msg) => write!(f, "User action required: {}", msg),
+            ToolError::Unexpected(msg) => write!(f, "Unexpected tool error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}
