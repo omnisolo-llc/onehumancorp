@@ -1,3 +1,4 @@
+startup --output_base=/usr/local/google/home/kxw/.cache/bazel-output-mono
 
 # Bazel configuration for MCP Any
 
