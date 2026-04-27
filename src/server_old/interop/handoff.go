@@ -2,7 +2,8 @@ package interop
 
 import (
 	"context"
-	"encoding/json"
+	"google.golang.org/protobuf/proto"
+	ipporto "github.com/onehumancorp/mono/src/server/interop/proto"
 	"fmt"
 	"sync"
 	"time"
@@ -27,6 +28,11 @@ func NewHandoffManager(mesh TeammateMesh, lock DistributedLock) *HandoffManager 
 
 // ExportState securely publishes the agent's current State into the mesh for cross-mode consumption.
 func (h *HandoffManager) ExportState(ctx context.Context, tenantID string, state *State) error {
+	pbState := &ipporto.MissionState{
+		TenantId:  tenantID,
+		MissionId: state.ID,
+		Owner:     state.Owner,
+	}
 	lockKey := fmt.Sprintf("ohc:lock:handoff:%s", tenantID)
 
 	acquired, err := h.lock.Lock(ctx, lockKey, 10*time.Second)
@@ -38,7 +44,8 @@ func (h *HandoffManager) ExportState(ctx context.Context, tenantID string, state
 	}
 	defer h.lock.Unlock(ctx, lockKey)
 
-	payload, err := json.Marshal(state)
+
+	payload, err := proto.Marshal(pbState)
 	if err != nil {
 		return fmt.Errorf("failed to serialize state: %w", err)
 	}
@@ -64,10 +71,13 @@ func (h *HandoffManager) ImportState(ctx context.Context, tenantID string, handl
 				if !ok {
 					return
 				}
-
-				var state State
-				if err := json.Unmarshal(payload, &state); err != nil {
-					continue // Drop malformed state
+				var pbState ipporto.MissionState
+				if err := proto.Unmarshal(payload, &pbState); err != nil {
+					continue
+				}
+				state := State{
+					ID: pbState.MissionId,
+					Owner: pbState.Owner,
 				}
 
 				h.mu.Lock()

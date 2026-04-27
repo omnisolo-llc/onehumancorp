@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/onehumancorp/mono/src/server/agents/builtin"
+	local "github.com/onehumancorp/mono/src/server/agents/local"
 	"github.com/onehumancorp/mono/src/server/auth"
 	"github.com/onehumancorp/mono/src/server/db"
 	"go.opentelemetry.io/otel"
@@ -25,9 +25,38 @@ type ConfigSyncPayload struct {
 	Metadata map[string]string `json:"metadata"`
 }
 
+
+
+
 type ConfigTool struct {
 	dbProvider db.Provider
 }
+
+type mcpConfigTool struct {
+    def local.ToolDefinition
+    execute func(ctx context.Context, workDir string, input map[string]interface{}) (string, error)
+}
+
+func (t *mcpConfigTool) Definition() local.ToolDefinition {
+    return t.def
+}
+
+func (t *mcpConfigTool) Execute(ctx context.Context, workDir string, input map[string]interface{}) (string, error) {
+    return t.execute(ctx, workDir, input)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 func NewConfigTool(provider db.Provider) *ConfigTool {
 	return &ConfigTool{
@@ -116,23 +145,23 @@ func (t *ConfigTool) SyncConfigToCloud(ctx context.Context, payload ConfigSyncPa
 }
 
 // GetConfigTool returns the MCP tool definition for getting a config value.
-func (t *ConfigTool) GetConfigTool() builtin.Tool {
-	return builtin.Tool{
-		Name:        "get_config",
-		Description: "Reads a configuration value securely from either the local file system (Standalone mode) or the multi-tenant Enterprise Vault (Cloud mode).",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{"key":{"type":"string","description":"The configuration key to read"}},"required":["key"]}`),
-		Execute: func(ctx context.Context, args json.RawMessage) (string, error) {
-			var input struct {
-				Key string `json:"key"`
+func (t *ConfigTool) GetConfigTool() local.Tool {
+	return &mcpConfigTool{
+		def: local.ToolDefinition{
+			Name:        "get_config",
+			Description: "Reads a configuration value securely from either the local file system (Standalone mode) or the multi-tenant Enterprise Vault (Cloud mode).",
+			InputSchema: map[string]interface{}{"type": "object", "properties": map[string]interface{}{"key": map[string]interface{}{"type": "string", "description": "The configuration key to retrieve"}}, "required": []interface{}{"key"}},
+		},
+		execute: func(ctx context.Context, workDir string, input map[string]interface{}) (string, error) {
+			keyVal, ok := input["key"].(string)
+			if !ok {
+				return "", fmt.Errorf("invalid arguments: missing key")
 			}
-			if err := json.Unmarshal(args, &input); err != nil {
-				return "", fmt.Errorf("invalid arguments: %w", err)
-			}
-			if input.Key == "" {
+			if keyVal == "" {
 				return "", errors.New("key is required")
 			}
 
-			val, err := t.GetConfig(ctx, input.Key)
+			val, err := t.GetConfig(ctx, keyVal)
 			if err != nil {
 				return "", err
 			}
@@ -141,22 +170,36 @@ func (t *ConfigTool) GetConfigTool() builtin.Tool {
 	}
 }
 
-// SyncConfigToCloudTool returns the MCP tool definition for syncing a config value to the cloud.
-func (t *ConfigTool) SyncConfigToCloudTool() builtin.Tool {
-	return builtin.Tool{
-		Name:        "sync_config_to_cloud",
-		Description: "Syncs a local configuration value back to the multi-tenant Enterprise Vault in the Cloud via an MCP interface.",
-		Parameters:  json.RawMessage(`{"type":"object","properties":{"tenant_id":{"type":"string"},"agent_id":{"type":"string"},"key":{"type":"string"},"value":{"type":"string"},"metadata":{"type":"object","additionalProperties":{"type":"string"}}},"required":["tenant_id","agent_id","key","value"]}`),
-		Execute: func(ctx context.Context, args json.RawMessage) (string, error) {
-			var input ConfigSyncPayload
-			if err := json.Unmarshal(args, &input); err != nil {
-				return "", fmt.Errorf("invalid arguments: %w", err)
-			}
-			if input.TenantID == "" || input.AgentID == "" || input.Key == "" || input.Value == "" {
-				return "", errors.New("tenant_id, agent_id, key, and value are required")
-			}
+func (t *ConfigTool) SyncConfigToCloudTool() local.Tool {
+	return &mcpConfigTool{
+		def: local.ToolDefinition{
+			Name:        "sync_config_to_cloud",
+			Description: "Syncs a local configuration value back to the multi-tenant Enterprise Vault in the Cloud via an MCP interface.",
+			InputSchema: map[string]interface{}{"type": "object", "properties": map[string]interface{}{"tenant_id": map[string]interface{}{"type": "string"},"agent_id": map[string]interface{}{"type": "string"},"key": map[string]interface{}{"type": "string"},"value": map[string]interface{}{"type": "string"},"metadata": map[string]interface{}{"type": "object"}}, "required": []interface{}{"tenant_id","agent_id","key","value"}},
+		},
+		execute: func(ctx context.Context, workDir string, input map[string]interface{}) (string, error) {
+			tenantID, _ := input["tenant_id"].(string)
+			agentID, _ := input["agent_id"].(string)
+			keyVal, _ := input["key"].(string)
+			val, _ := input["value"].(string)
+            metaMap := make(map[string]string)
+            if m, ok := input["metadata"].(map[string]interface{}); ok {
+                for k, v := range m {
+                    if vs, ok := v.(string); ok {
+                        metaMap[k] = vs
+                    }
+                }
+            }
 
-			if err := t.SyncConfigToCloud(ctx, input); err != nil {
+            payload := ConfigSyncPayload{
+                TenantID: tenantID,
+                AgentID:  agentID,
+                Key:      keyVal,
+                Value:    val,
+                Metadata: metaMap,
+            }
+
+			if err := t.SyncConfigToCloud(ctx, payload); err != nil {
 				return "", err
 			}
 			return "Successfully synced config to cloud", nil

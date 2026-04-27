@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package interop.proto;
+
+option go_package = "github.com/onehumancorp/mono/src/server/interop/proto";
+
+message MissionState {
+    string tenant_id = 1;
+    string mission_id = 2;
+    string owner = 3;
+    map<string, string> context = 4;
+}
