@@ -1,6 +1,9 @@
 package builtin
 
-import "context"
+import (
+    "context"
+    "encoding/json"
+)
 
 type Role string
 const (
@@ -37,3 +40,10 @@ func (c *OpenAIClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse,
 type OllamaClient struct{}
 func NewOllamaClient(key string) *OllamaClient { return &OllamaClient{} }
 func (c *OllamaClient) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) { return ChatResponse{}, nil }
+
+type Tool struct {
+    Name string
+    Description string
+    Parameters interface{}
+    Execute func(ctx context.Context, args json.RawMessage) (string, error)
+}
