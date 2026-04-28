@@ -126,7 +126,7 @@ impl Store {
         let secret = std::env::var("JWT_SECRET")
             .map(|s| s.into_bytes())
             .unwrap_or_else(|_| {
-                println!("warning: falling back to random JWT secret; this is only suitable for single-node or standalone deployments");
+
                 random_bytes(32)
             });
 

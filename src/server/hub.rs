@@ -396,7 +396,7 @@ impl Hub {
                     
                     if hist.len() > 1 {
                         let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
-                        println!("Telemetry: Token burn rate for {}: {}", org_id, rate);
+
                     }
                 } else {
                     history.remove(&org_id);

@@ -27,6 +27,7 @@ mod domain;
 pub mod pricing;
 pub mod analytics;
 pub mod telemetry;
+pub mod telemetry_test;
 pub mod chaos;
 pub mod integrations;
 pub mod utils;
@@ -91,12 +92,14 @@ where
     let _ = tx.try_send(Box::new(f));
 }
 
-fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+fn spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
     if let Some(spiffe_id) = req.metadata().get("x-spiffe-id") {
         if let Ok(spiffe_id_str) = spiffe_id.to_str() {
              match crate::auth::parse_spiffe_id(spiffe_id_str) {
                  Ok((org_id, agent_id)) => {
-                     println!("Authenticated SPIFFE ID: org={}, agent={}", org_id, agent_id);
+                     // PII leakage prevention: do not log full org_id in production-like environments
+                     let org_header = if org_id.is_empty() { "system" } else { &org_id };
+                     req.metadata_mut().insert("x-org-id", org_header.parse().map_err(|_| tonic::Status::internal("failed to parse org id"))?);
                  }
                  Err(e) => return Err(tonic::Status::permission_denied(e)),
              }
@@ -151,8 +154,15 @@ impl HubService for MyHubService {
         &self,
         request: Request<RegisterAgentRequest>,
     ) -> Result<Response<RegisterAgentResponse>, Status> {
+        let org_id = request.metadata().get("x-org-id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("system");
+
         let req = request.into_inner();
-        if let Some(agent) = req.agent {
+        if let Some(mut agent) = req.agent {
+            if agent.organization_id.is_empty() {
+                agent.organization_id = org_id.to_string();
+            }
             self.hub.register_agent(agent);
             Ok(Response::new(RegisterAgentResponse { success: true }))
         } else {

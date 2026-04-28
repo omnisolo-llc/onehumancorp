@@ -57,7 +57,7 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
         let hub = self.hub.clone();
         
         tokio::spawn(async move {
-            println!("AutoDream: Triggering embedding for completed task: {}", task_id);
+
             
             let context_str = format!("Task ID: {}, Result: {}", task_id, result);
             
@@ -70,12 +70,12 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
             
             match client.generate_embedding(&context_str).await {
                 Ok(embedding) => {
-                    println!("AutoDream: Generated embedding for task: {}", task_id);
+
                     
                     let org_id = match hub.task_manager().get_task(&task_id) {
                         Ok(task) => task.organization_id.clone(),
                         Err(_) => {
-                            println!("AutoDream: Failed to get task {} to find org_id", task_id);
+
                             "system".to_string() // Fallback
                         }
                     };
@@ -108,7 +108,7 @@ pub fn start_token_burn_forecaster(
 
         loop {
             interval.tick().await;
-            println!("TokenBurnForecaster: tick");
+            println!("BurnForecaster: tick");
 
             let orgs = vec!["org1".to_string(), "org2".to_string()];
             
@@ -125,13 +125,13 @@ pub fn start_token_burn_forecaster(
                     
                     if h.len() > 1 {
                         let rate = (h.last().unwrap() - h.first().unwrap()) as f64 / (h.len() - 1) as f64;
-                        println!("TokenBurnForecaster: Org {} rate: {}", org_id, rate);
+
                         
                         let prediction_24h = rate * 60.0 * 24.0;
-                        println!("TokenBurnForecaster: Org {} predicted 24h: {}", org_id, prediction_24h);
+
                         
                         if prediction_24h > 0.0 {
-                            println!("TokenBurnForecaster: Predictive cost alert for {}", org_id);
+
                         }
                     }
                 }
