@@ -10,7 +10,6 @@ pub enum ProviderType {
     Gemini,
     OpenCode,
     OpenClaw,
-    IronClaw,
     Builtin,
     Scout,
     MiniMaxi,
@@ -23,7 +22,6 @@ impl std::fmt::Display for ProviderType {
             ProviderType::Gemini => "gemini",
             ProviderType::OpenCode => "opencode",
             ProviderType::OpenClaw => "openclaw",
-            ProviderType::IronClaw => "ironclaw",
             ProviderType::Builtin => "builtin",
             ProviderType::Scout => "scout",
             ProviderType::MiniMaxi => "minimaxi",
@@ -248,41 +246,6 @@ impl Provider for OpenClawProvider {
     fn authenticate(&self, creds: Credentials) -> Result<(), String> {
         if creds.api_key.is_empty() {
             return Err("openclaw provider requires an API key".to_string());
-        }
-        self.base.store(creds);
-        Ok(())
-    }
-    fn get_credentials(&self) -> Credentials { self.base.load() }
-    fn is_authenticated(&self) -> bool { !self.base.load().is_empty() }
-    async fn run_in_isolation(&self, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
-        execute_in_isolation(&self.provider_type().to_string(), worktree, transport).await
-    }
-}
-
-pub struct IronClawProvider {
-    base: BaseProvider,
-}
-
-impl IronClawProvider {
-    pub fn new() -> Self {
-        IronClawProvider { base: BaseProvider::new() }
-    }
-}
-
-#[async_trait]
-impl Provider for IronClawProvider {
-    fn provider_type(&self) -> ProviderType { ProviderType::IronClaw }
-    fn description(&self) -> String { "IronClaw — security and audit-focused agent with deep static-analysis capabilities".to_string() }
-    fn supported_roles(&self) -> Vec<String> {
-        vec![
-            "SECURITY_ENGINEER".to_string(),
-            "AUDIT_MANAGER".to_string(),
-            "QA_TESTER".to_string(),
-        ]
-    }
-    fn authenticate(&self, creds: Credentials) -> Result<(), String> {
-        if creds.api_key.is_empty() {
-            return Err("ironclaw provider requires an API key".to_string());
         }
         self.base.store(creds);
         Ok(())
