@@ -22,7 +22,7 @@ export component Landing inherits Window {
         Text { text: "One Human Corp"; font-size: 32px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
         
         Text { 
-            text: is_variant_b ? "The Cloud-Native Agentic OS" : "The Hybrid Agentic OS"; 
+            text: is_variant_b ? "Your Online Business Helper" : "Your Complete Business Helper";
             font-size: 24px; 
             color: #a855f7; 
             horizontal-alignment: center; 
@@ -30,8 +30,8 @@ export component Landing inherits Window {
 
         Text {
             text: is_variant_b ? 
-                "Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform." :
-                "Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.";
+                "Grow easily online. Work together with your team from anywhere." :
+                "Grow your business while keeping your data totally private. Work offline whenever you need.";
             color: #64748b;
             horizontal-alignment: center;
             wrap: word-wrap;
@@ -47,7 +47,7 @@ export component Landing inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Global Performance"; font-weight: 700; }
-                    Text { text: "Deploy agents in a horizontally scalable multi-tenant environment."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Easily add more helpers as your business grows."; color: #64748b; wrap: word-wrap; }
                 }
             }
             if (is_variant_b) : Rectangle {
@@ -64,7 +64,7 @@ export component Landing inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Zero Data Leakage"; font-weight: 700; }
-                    Text { text: "All intelligence operations run completely local via SQLite. Absolute sovereignty over your IP."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Everything runs safely on your own device. You have total control over your business data."; color: #64748b; wrap: word-wrap; }
                 }
             }
             if (!is_variant_b) : Rectangle {
@@ -72,7 +72,7 @@ export component Landing inherits Window {
                 VerticalBox {
                     padding: 16px;
                     Text { text: "Air-Gapped Autonomy"; font-weight: 700; }
-                    Text { text: "Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies."; color: #64748b; wrap: word-wrap; }
+                    Text { text: "Keep working even without internet. Your business doesn't stop when your connection does."; color: #64748b; wrap: word-wrap; }
                 }
             }
         }

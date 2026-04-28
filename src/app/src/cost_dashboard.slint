@@ -9,7 +9,7 @@ export struct UiAgentCost {
 export component CostDashboard inherits Window {
     width: 500px;
     height: 600px;
-    title: "Cost & Token Usage";
+    title: "Cost & Usage summary";
 
     in-out property <string> total_spend: "$0.00";
     in-out property <string> total_tokens: "0";
@@ -22,7 +22,7 @@ export component CostDashboard inherits Window {
         padding: 24px;
 
         HorizontalBox {
-            Text { text: "Cost & Token Usage"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "Cost & Usage summary"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Rectangle {}
             Button { text: "Refresh"; }
         }
@@ -53,7 +53,7 @@ export component CostDashboard inherits Window {
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Total Tokens"; color: #64748b; }
+                    Text { text: "Total Tasks Completed"; color: #64748b; }
                     Text { text: total_tokens; font-size: 24px; font-weight: 700; color: #06b6d4; }
                 }
             }
