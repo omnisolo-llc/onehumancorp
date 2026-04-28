@@ -1,3 +1,4 @@
+use crate::agents::memory::VectorRepository;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use crate::agents::plane::Client as PlaneClient;
@@ -9,6 +10,7 @@ pub struct TaskWorker {
     hub: Arc<Hub>,
     poll_interval: std::time::Duration,
     num_workers: usize,
+    memory_repo: Option<Arc<VectorRepository>>,
 }
 
 impl TaskWorker {
@@ -18,7 +20,13 @@ impl TaskWorker {
             hub,
             poll_interval: std::time::Duration::from_secs(30),
             num_workers: 3,
+            memory_repo: None,
         }
+    }
+
+    pub fn with_memory(mut self, repo: Arc<VectorRepository>) -> Self {
+        self.memory_repo = Some(repo);
+        self
     }
 
     pub async fn start(&self, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>) {
@@ -58,11 +66,26 @@ impl TaskWorker {
         let plane_client = self.plane_client.clone();
         let task_tx = task_tx.clone();
         
+        let memory_repo = self.memory_repo.clone();
+
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(poll_interval);
+            let mut prune_counter = 0;
             loop {
                 tokio::select! {
                     _ = interval.tick() => {
+                        prune_counter += 1;
+                        // Run pruning every ~60 ticks (e.g. 30 minutes)
+                        if prune_counter >= 60 {
+                            if let Some(repo) = &memory_repo {
+                                let thirty_days_ago = chrono::Utc::now() - chrono::Duration::days(30);
+                                if let Err(e) = repo.prune_stale(thirty_days_ago).await {
+                                    println!("failed to prune stale memory: {}", e);
+                                }
+                            }
+                            prune_counter = 0;
+                        }
+
                         if let Ok(issues) = plane_client.list_open_issues().await {
                             if !issues.is_empty() {
                                 let dispatch_count = workers.min(issues.len());
