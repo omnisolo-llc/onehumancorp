@@ -119,9 +119,9 @@ impl SipDB {
 
     pub async fn get_pending_missions(&self, role: &str) -> Result<Vec<crate::ohc::orchestration::Message>, sqlx::Error> {
         let query = if role == "ANY" {
-            "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500"
+            "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at ASC LIMIT 500"
         } else {
-            "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
+            "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at ASC LIMIT 500"
         };
         
         let rows = if role == "ANY" {
