@@ -155,26 +155,26 @@ mod tests {
     
     #[test]
     fn test_welcome_checklist_creation() {
-                app::WelcomeChecklist::new().unwrap();
+        app::WelcomeChecklist::new().unwrap();
     }
 
     #[test]
     fn test_login_creation() {
-                let ui = app::Login::new().unwrap();
+        let ui = app::Login::new().unwrap();
         assert_eq!(ui.get_username(), "");
         assert_eq!(ui.get_password(), "");
     }
 
     #[test]
     fn test_business_setup_creation() {
-                let ui = app::BusinessSetup::new().unwrap();
+        let ui = app::BusinessSetup::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_company_name(), "");
     }
 
     #[test]
     fn test_agent_hire_next_button_disabled_by_default() {
-                let ui = app::AgentHire::new().unwrap();
+        let ui = app::AgentHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_selected_role(), "");
         assert_eq!(ui.get_next_enabled(), false);
@@ -182,7 +182,7 @@ mod tests {
 
     #[test]
     fn test_agent_hire_next_button_enabled_after_role_selection() {
-                let ui = app::AgentHire::new().unwrap();
+        let ui = app::AgentHire::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_role("SOFTWARE_ENGINEER".into());
         assert_eq!(ui.get_next_enabled(), true);
@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_landing_creation() {
-                let ui = app::Landing::new().unwrap();
+        let ui = app::Landing::new().unwrap();
         assert_eq!(ui.get_is_variant_b(), false);
     }
 
