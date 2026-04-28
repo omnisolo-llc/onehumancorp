@@ -1,7 +1,7 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
 
 export component BusinessSetup inherits Window {
-    width: 600px;
+    width: 375px;
     height: 500px;
     title: "Business Setup";
 
@@ -14,6 +14,7 @@ export component BusinessSetup inherits Window {
     in-out property <string> first_product_name: "";
     in-out property <string> first_product_desc: "";
     in-out property <string> first_product_price: "";
+    in-out property <string> first_booking_service: "";
     in-out property <string> domain_name: "";
 
     callback launch();
@@ -76,6 +77,7 @@ export component BusinessSetup inherits Window {
             LineEdit { placeholder-text: "First Product Name"; text <=> first_product_name; }
             LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; }
             LineEdit { placeholder-text: "Price"; text <=> first_product_price; }
+            LineEdit { placeholder-text: "Booking/Service Name (optional)"; text <=> first_booking_service; }
         }
 
         // Step 5: Domain
