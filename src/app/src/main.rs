@@ -274,9 +274,9 @@ mod tests {
         app::WebsiteBuilder::new().unwrap();
     }
     #[test]
-    fn test_wizard_creation() {
+    fn test_setup_wizard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::Wizard::new().unwrap();
+        app::SetupWizard::new().unwrap();
     }
     #[test]
     fn test_task_list_creation() {
