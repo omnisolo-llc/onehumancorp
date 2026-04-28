@@ -385,6 +385,10 @@ impl SipDB {
         
         let payload_str = serde_json::to_string(&records).map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
         
+        let payload_len = payload_str.len();
+        crate::telemetry::record_sync_payload_size("buffered_metrics", payload_len);
+
+        let start_time = std::time::Instant::now();
         let client = reqwest::Client::new();
         let response = client.post(remote_endpoint)
             .header("Content-Type", "application/json")
@@ -398,6 +402,8 @@ impl SipDB {
             return Err(sqlx::Error::Protocol(format!("remote endpoint returned status: {}", response.status())));
         }
         
+        crate::telemetry::record_sync_latency("buffered_metrics", start_time.elapsed());
+
         sqlx::query("DELETE FROM telemetry_buffer WHERE id = ANY($1)")
             .bind(&ids_to_delete)
             .execute(&self.pool)
@@ -432,6 +438,10 @@ impl SipDB {
         
         let payload_str = serde_json::to_string(&records).map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
         
+        let payload_len = payload_str.len();
+        crate::telemetry::record_sync_payload_size("context_sync", payload_len);
+
+        let start_time = std::time::Instant::now();
         let client = reqwest::Client::new();
         let response = client.post(remote_endpoint)
             .header("Content-Type", "application/json")
@@ -444,6 +454,8 @@ impl SipDB {
             return Err(sqlx::Error::Protocol(format!("remote endpoint returned status: {}", response.status())));
         }
         
+        crate::telemetry::record_sync_latency("context_sync", start_time.elapsed());
+
         sqlx::query("DELETE FROM swarm_memory_embeddings WHERE memory_id = ANY($1)")
             .bind(&ids_to_delete)
             .execute(&self.pool)
@@ -481,6 +493,10 @@ impl SipDB {
         
         let payload_str = serde_json::to_string(&records).map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
         
+        let payload_len = payload_str.len();
+        crate::telemetry::record_sync_payload_size("missions", payload_len);
+
+        let start_time = std::time::Instant::now();
         let client = reqwest::Client::new();
         let response = client.post(remote_endpoint)
             .header("Content-Type", "application/json")
@@ -494,6 +510,8 @@ impl SipDB {
             return Err(sqlx::Error::Protocol(format!("remote endpoint returned status: {}", response.status())));
         }
         
+        crate::telemetry::record_sync_latency("missions", start_time.elapsed());
+
         sqlx::query("UPDATE agent_missions SET status = 'SYNCED' WHERE id = ANY($1)")
             .bind(&ids_to_update)
             .execute(&self.pool)
