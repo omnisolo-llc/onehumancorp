@@ -200,7 +200,11 @@ mod tests {
     }
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let db_url = match std::env::var("DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => panic!("DB not available"),
+        };
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy(&db_url).unwrap();
         let saver = PgCheckpointer::new(pool);
         
         let cp = Checkpoint {
@@ -218,7 +222,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_pg_checkpointer_list_checkpoints() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let db_url = match std::env::var("DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => panic!("DB not available"),
+        };
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy(&db_url).unwrap();
         let saver = PgCheckpointer::new(pool);
         
         let res = saver.list_checkpoints("thread-list").await;
