@@ -124,10 +124,8 @@ mod tests {
     fn test_load_defaults() {
         let _lock = ENV_MUTEX.lock().unwrap();
         // Ensure environment doesn't interfere
-        unsafe {
-            env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("DATABASE_URL");
-        }
+        env::remove_var("OHC_LISTEN_ADDR");
+        env::remove_var("DATABASE_URL");
 
         let cfg = load().unwrap();
         assert_eq!(cfg.listen_addr, ":8080");
@@ -138,18 +136,14 @@ mod tests {
     #[test]
     fn test_load_env_vars() {
         let _lock = ENV_MUTEX.lock().unwrap();
-        unsafe {
-            env::set_var("OHC_LISTEN_ADDR", ":9999");
-            env::set_var("DATABASE_URL", "postgres://localhost/testdb");
-        }
+        env::set_var("OHC_LISTEN_ADDR", ":9999");
+        env::set_var("DATABASE_URL", "postgres://localhost/testdb");
 
         let cfg = load().unwrap();
         assert_eq!(cfg.listen_addr, ":9999");
         assert_eq!(cfg.database_url.unwrap(), "postgres://localhost/testdb");
 
-        unsafe {
-            env::remove_var("OHC_LISTEN_ADDR");
-            env::remove_var("DATABASE_URL");
-        }
+        env::remove_var("OHC_LISTEN_ADDR");
+        env::remove_var("DATABASE_URL");
     }
 }
