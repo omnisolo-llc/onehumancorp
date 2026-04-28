@@ -1,7 +1,8 @@
-import { VerticalBox } from "std-widgets.slint";
-
-export component GlassCard {
-    VerticalBox {
-        @children
-    }
+export component GlassCard inherits Rectangle {
+    background: #ffffff1a;
+    border-radius: 16px;
+    border-width: 1px;
+    border-color: #ffffff33;
+    drop-shadow-blur: 20px;
+    drop-shadow-color: #00000033;
 }
