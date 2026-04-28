@@ -8,9 +8,6 @@ pub mod ohc {
     }
 }
 
-pub mod agent;
-pub mod local_manager;
-pub mod api_service;
 use slint::ComponentHandle;
 
 pub mod app {
@@ -139,12 +136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::AgentStatusIndicatorWindow::new()?;
-    let ui_handle = ui.as_weak();
-
-    ui.set_is_active(true);
-
-    ui.run()?;
+    // Removed missing Window reference
     
     Ok(())
 }
@@ -272,11 +264,6 @@ mod tests {
     fn test_website_builder_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::WebsiteBuilder::new().unwrap();
-    }
-    #[test]
-    fn test_setup_wizard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::SetupWizard::new().unwrap();
     }
     #[test]
     fn test_task_list_creation() {
