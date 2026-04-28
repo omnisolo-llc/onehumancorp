@@ -20,18 +20,18 @@ pub trait CheckpointSaver: Send + Sync {
     async fn list_checkpoints(&self, thread_id: &str) -> Result<Vec<Checkpoint>, String>;
 }
 
-pub struct PgCheckpointer {
-    pool: sqlx::PgPool,
+pub struct DbCheckpointer {
+    pool: sqlx::AnyPool,
 }
 
-impl PgCheckpointer {
-    pub fn new(pool: sqlx::PgPool) -> Self {
-        PgCheckpointer { pool }
+impl DbCheckpointer {
+    pub fn new(pool: sqlx::AnyPool) -> Self {
+        DbCheckpointer { pool }
     }
 }
 
 #[async_trait]
-impl CheckpointSaver for PgCheckpointer {
+impl CheckpointSaver for DbCheckpointer {
     async fn get_checkpoint(&self, thread_id: &str, checkpoint_id: &str) -> Result<Option<Checkpoint>, String> {
         let row = sqlx::query(
             "SELECT thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at FROM swarm_checkpoints WHERE thread_id = $1 AND checkpoint_id = $2"
@@ -199,10 +199,21 @@ mod tests {
         assert_eq!(data, decompressed.as_slice());
     }
     #[tokio::test]
-    #[ignore]
     async fn test_pg_checkpointer_save_and_load() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
-        let saver = PgCheckpointer::new(pool);
+        sqlx::any::install_default_drivers();
+        let pool = sqlx::any::AnyPoolOptions::new().connect_lazy("sqlite::memory:").unwrap();
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS swarm_checkpoints (
+                thread_id TEXT NOT NULL,
+                checkpoint_id TEXT NOT NULL,
+                parent_id TEXT,
+                checkpoint JSONB NOT NULL,
+                metadata JSONB NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL,
+                PRIMARY KEY (thread_id, checkpoint_id)
+            )"
+        ).execute(&pool).await.unwrap();
+        let saver = DbCheckpointer::new(pool);
         
         let cp = Checkpoint {
             thread_id: "thread-1".to_string(),
@@ -218,10 +229,21 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
     async fn test_pg_checkpointer_list_checkpoints() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
-        let saver = PgCheckpointer::new(pool);
+        sqlx::any::install_default_drivers();
+        let pool = sqlx::any::AnyPoolOptions::new().connect_lazy("sqlite::memory:").unwrap();
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS swarm_checkpoints (
+                thread_id TEXT NOT NULL,
+                checkpoint_id TEXT NOT NULL,
+                parent_id TEXT,
+                checkpoint JSONB NOT NULL,
+                metadata JSONB NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL,
+                PRIMARY KEY (thread_id, checkpoint_id)
+            )"
+        ).execute(&pool).await.unwrap();
+        let saver = DbCheckpointer::new(pool);
         
         let res = saver.list_checkpoints("thread-list").await;
         assert!(res.is_err());

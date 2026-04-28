@@ -45,7 +45,7 @@ futures = { workspace = true }
 urlencoding = "2"
 qrcode = { version = "0.14", default-features = false }
 async-recursion = "1"
-sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "any", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 opentelemetry = { version = "0.27", features = ["metrics", "trace"] }
 opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
