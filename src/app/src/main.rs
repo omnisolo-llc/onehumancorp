@@ -284,3 +284,30 @@ mod tests {
         app::TaskList::new().unwrap();
     }
 }
+
+#[cfg(test)]
+mod help_center_tests {
+    use super::*;
+
+    #[test]
+    fn test_help_center_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::HelpCenter::new().unwrap();
+    }
+
+    #[test]
+    fn test_help_center_search() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::HelpCenter::new().unwrap();
+        assert_eq!(ui.get_search_query(), "");
+        ui.set_search_query("test".into());
+        assert_eq!(ui.get_search_query(), "test");
+    }
+
+    #[test]
+    fn test_help_center_read_article() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::HelpCenter::new().unwrap();
+        assert_eq!(ui.get_showing_article(), false);
+    }
+}

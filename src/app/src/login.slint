@@ -6,6 +6,8 @@ export component Login inherits Window {
     height: 600px;
     title: "One Human Corp - Login";
 
+    callback open_help();
+
     property <bool> loading: false;
     property <bool> is_sign_up: false;
     property <string> error_message: "";
@@ -96,6 +98,10 @@ export component Login inherits Window {
                 Button {
                     text: "⚙ Connection Settings";
                     clicked => { open_settings(); }
+                }
+                Button {
+                    text: "? Help";
+                    clicked => { open_help(); }
                 }
             }
         }

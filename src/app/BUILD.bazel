@@ -50,6 +50,7 @@ cargo_build_script(
         "src/swarm_observability.slint",
         "src/swarm_velocity.slint",
         "src/welcome_checklist.slint",
+        "src/help_center.slint",
         "//src/proto:hub.proto",
         "@protobuf//:protoc",
     ],
@@ -114,6 +115,7 @@ rust_binary(
         "src/swarm_observability.slint",
         "src/swarm_velocity.slint",
         "src/welcome_checklist.slint",
+        "src/help_center.slint",
     ],
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -190,6 +192,7 @@ rust_test(
         "src/swarm_observability.slint",
         "src/swarm_velocity.slint",
         "src/welcome_checklist.slint",
+        "src/help_center.slint",
     ],
     edition = "2024",
     deps = [

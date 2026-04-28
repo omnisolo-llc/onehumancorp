@@ -24,7 +24,11 @@ export component BusinessSetup inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        HorizontalBox {
+            Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "?"; }
+        }
 
         // Step 0: Welcome
         if (step == 0) : VerticalBox {
