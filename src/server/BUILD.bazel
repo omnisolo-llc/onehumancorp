@@ -11,7 +11,7 @@ cargo_build_script(
         "//src/proto:organization.proto",
         "@protobuf//:protoc",
     ],
-    edition = "2024",
+    edition = "2021",
     deps = [
         "@crates//:tonic-build",
     ],
@@ -21,7 +21,7 @@ rust_binary(
     name = "server-rust",
     srcs = glob(["**/*.rs"]),
     data = glob(["migrations/*.sql"]),
-    edition = "2024",
+    edition = "2021",
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -65,7 +65,8 @@ rust_test(
     srcs = glob(["**/*.rs"]),
     crate_root = "main.rs",
     data = glob(["migrations/*.sql"]),
-    edition = "2024",
+    edition = "2021",
+    size = "large",
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -111,7 +112,7 @@ rust_test(
     name = "crypto_test",
     srcs = ["crypto.rs"],
     crate_root = "crypto.rs",
-    edition = "2024",
+    edition = "2021",
     deps = [
         "@crates//:aes-gcm",
         "@crates//:base64",
