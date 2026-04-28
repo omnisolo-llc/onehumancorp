@@ -1,0 +1,71 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, CheckBox } from "std-widgets.slint";
+
+export component BillingWizard inherits Window {
+    width: 375px;
+    height: 667px;
+    title: "Billing & Credits";
+
+    in-out property <int> step: 0;
+    in-out property <bool> is_advanced: false;
+    in-out property <string> api_key: "";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "What does this cost?"; font-size: 24px; font-weight: 700; color: #1e293b; wrap: word-wrap; }
+            Rectangle {}
+            CheckBox {
+                text: "Expert Mode";
+                checked: is_advanced;
+                toggled => { is_advanced = !is_advanced; }
+            }
+        }
+
+        if (step == 0) : VerticalBox {
+            spacing: 15px;
+            Text { text: "Current Usage"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Text { text: "You have used 80% of your current credits."; color: #64748b; wrap: word-wrap; }
+            Text { text: "Projected Cost: $12.50"; color: #1e293b; }
+            if (is_advanced) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Advanced Settings"; font-weight: 700; color: #1e293b; }
+                LineEdit { placeholder-text: "Billing API Key"; text <=> api_key; }
+            }
+        }
+
+        if (step == 1) : VerticalBox {
+            spacing: 15px;
+            Text { text: "Add Credits or Upgrade"; font-size: 20px; font-weight: 700; color: #1e293b; wrap: word-wrap; }
+            VerticalBox {
+                spacing: 10px;
+                Button { text: "Add $10 Credits"; }
+                Button { text: "Upgrade to Pro ($29/mo)"; }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {} // Spacer
+            Button {
+                text: step == 1 ? "Finish" : "Next";
+                clicked => {
+                    if (step < 1) {
+                        step = step + 1;
+                    } else {
+                        // Handle save
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,8 +1,8 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox, LineEdit } from "std-widgets.slint";
 
 export component GrowBusiness inherits Window {
-    width: 500px;
-    height: 500px;
+    width: 375px;
+    height: 667px;
     title: "Grow My Business";
 
     in-out property <int> step: 0;
@@ -28,19 +28,22 @@ export component GrowBusiness inherits Window {
 
         // Step 0: Select Strategy
         if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Select a next step to grow your business"; color: #1e293b; }
+            spacing: 15px;
+            Text { text: "Select a next step to grow your business"; font-size: 20px; font-weight: 700; color: #1e293b; wrap: word-wrap; }
             
-            Button { text: "Add 5 more products"; clicked => { selected_strategy = "Add 5 more products"; } }
-            Button { text: "Connect Instagram"; clicked => { selected_strategy = "Connect Instagram"; } }
-            Button { text: "Run your first email campaign"; clicked => { selected_strategy = "Run your first email campaign"; } }
+            VerticalBox {
+                spacing: 10px;
+                Button { text: "Add 5 more products"; clicked => { selected_strategy = "Add 5 more products"; } }
+                Button { text: "Connect Instagram"; clicked => { selected_strategy = "Connect Instagram"; } }
+                Button { text: "Run your first email campaign"; clicked => { selected_strategy = "Run your first email campaign"; } }
+            }
             
             Text { text: "Selected: " + selected_strategy; color: #a855f7; }
         }
 
         // Step 1: Confirm
         if (step == 1) : VerticalBox {
-            spacing: 10px;
+            spacing: 15px;
             Text { text: "Confirm Action"; font-size: 20px; font-weight: 700; color: #1e293b; }
             Text { text: "You are about to start: " + selected_strategy; color: #1e293b; }
             Text { text: "Your AI agents will be instructed to begin this growth strategy immediately."; color: #64748b; wrap: word-wrap; }

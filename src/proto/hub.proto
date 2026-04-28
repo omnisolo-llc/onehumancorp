@@ -1270,6 +1270,13 @@ message OnboardingVerifyResponse {
 }
 
 service WizardService {
+  rpc SetupBusiness(BusinessSetupRequest) returns (BusinessSetupResponse);
+  rpc BuildWebsite(WebsiteBuilderRequest) returns (WebsiteBuilderResponse);
+  rpc ConfigureAgent(AgentConfigRequest) returns (AgentConfigResponse);
+  rpc TunePrompt(PromptTuningRequest) returns (PromptTuningResponse);
+  rpc GrowBusiness(GrowBusinessRequest) returns (GrowBusinessResponse);
+  rpc ConfigureBilling(BillingWizardRequest) returns (BillingWizardResponse);
+  rpc FixIssue(FixWizardRequest) returns (FixWizardResponse);
   rpc GetWizardStatus(EmptyRequest) returns (WizardStatusProtoResponse);
   rpc ConfigureWizard(WizardConfigureRequest) returns (WizardStatusProtoResponse);
   rpc VerifyOnboarding(EmptyRequest) returns (OnboardingVerifyResponse);
@@ -1499,4 +1506,88 @@ service McpService {
   rpc InvokeTool(McpInvokeRequest) returns (McpInvokeResponse);
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
+}
+
+message BusinessSetupRequest {
+  string business_type = 1;
+  string company_name = 2;
+  string company_desc = 3;
+  string products_services = 4;
+  string payment_pref = 5;
+  string admin_name = 6;
+  string admin_email = 7;
+  string admin_password = 8;
+  string custom_domain = 9;
+  string api_key = 10;
+}
+
+message BusinessSetupResponse {
+  bool success = 1;
+}
+
+message WebsiteBuilderRequest {
+  string selected_template = 1;
+  string primary_color = 2;
+  string product_name = 3;
+  string product_price = 4;
+  string product_desc = 5;
+  string domain_choice = 6;
+  string custom_css = 7;
+}
+
+message WebsiteBuilderResponse {
+  bool success = 1;
+}
+
+message AgentConfigRequest {
+  string agent_role = 1;
+  bool perm_reply = 2;
+  bool perm_post = 3;
+  bool perm_write = 4;
+  bool perm_send = 5;
+  string frequency = 6;
+  string custom_prompt = 7;
+  string llm_model = 8;
+}
+
+message AgentConfigResponse {
+  bool success = 1;
+}
+
+message PromptTuningRequest {
+  string tone = 1;
+  bool focus_products = 2;
+  bool avoid_competitors = 3;
+  bool specific_language = 4;
+  string language_name = 5;
+  string raw_json_config = 6;
+}
+
+message PromptTuningResponse {
+  bool success = 1;
+}
+
+message GrowBusinessRequest {
+  string selected_strategy = 1;
+  string conversion_target = 2;
+}
+
+message GrowBusinessResponse {
+  bool success = 1;
+}
+
+message BillingWizardRequest {
+  string api_key = 1;
+}
+
+message BillingWizardResponse {
+  bool success = 1;
+}
+
+message FixWizardRequest {
+  string resolved = 1;
+}
+
+message FixWizardResponse {
+  bool success = 1;
 }

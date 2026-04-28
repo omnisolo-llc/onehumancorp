@@ -157,4 +157,73 @@ impl WizardService for MyWizardService {
             diagnostics: health_checks,
         }))
     }
+
+    async fn setup_business(
+        &self,
+        request: Request<BusinessSetupRequest>,
+    ) -> Result<Response<BusinessSetupResponse>, Status> {
+        let req = request.into_inner();
+        let mut cfg = self.settings.write().unwrap();
+        cfg.extras.insert("business_type".to_string(), req.business_type);
+        cfg.extras.insert("company_name".to_string(), req.company_name);
+        Ok(Response::new(BusinessSetupResponse { success: true }))
+    }
+
+    async fn build_website(
+        &self,
+        request: Request<WebsiteBuilderRequest>,
+    ) -> Result<Response<WebsiteBuilderResponse>, Status> {
+        let req = request.into_inner();
+        let mut cfg = self.settings.write().unwrap();
+        cfg.extras.insert("website_template".to_string(), req.selected_template);
+        Ok(Response::new(WebsiteBuilderResponse { success: true }))
+    }
+
+    async fn configure_agent(
+        &self,
+        request: Request<AgentConfigRequest>,
+    ) -> Result<Response<AgentConfigResponse>, Status> {
+        let req = request.into_inner();
+        let mut cfg = self.settings.write().unwrap();
+        cfg.extras.insert("agent_role".to_string(), req.agent_role);
+        Ok(Response::new(AgentConfigResponse { success: true }))
+    }
+
+    async fn tune_prompt(
+        &self,
+        request: Request<PromptTuningRequest>,
+    ) -> Result<Response<PromptTuningResponse>, Status> {
+        let req = request.into_inner();
+        let mut cfg = self.settings.write().unwrap();
+        cfg.extras.insert("prompt_tone".to_string(), req.tone);
+        Ok(Response::new(PromptTuningResponse { success: true }))
+    }
+
+    async fn grow_business(
+        &self,
+        request: Request<GrowBusinessRequest>,
+    ) -> Result<Response<GrowBusinessResponse>, Status> {
+        let req = request.into_inner();
+        let mut cfg = self.settings.write().unwrap();
+        cfg.extras.insert("growth_strategy".to_string(), req.selected_strategy);
+        Ok(Response::new(GrowBusinessResponse { success: true }))
+    }
+
+    async fn configure_billing(
+        &self,
+        request: Request<BillingWizardRequest>,
+    ) -> Result<Response<BillingWizardResponse>, Status> {
+        let req = request.into_inner();
+        let mut cfg = self.settings.write().unwrap();
+        cfg.extras.insert("billing_api_key".to_string(), req.api_key);
+        Ok(Response::new(BillingWizardResponse { success: true }))
+    }
+
+    async fn fix_issue(
+        &self,
+        request: Request<FixWizardRequest>,
+    ) -> Result<Response<FixWizardResponse>, Status> {
+        let _req = request.into_inner();
+        Ok(Response::new(FixWizardResponse { success: true }))
+    }
 }
