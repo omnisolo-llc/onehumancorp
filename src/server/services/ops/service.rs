@@ -30,6 +30,7 @@ impl MyOpsService {
 
 #[tonic::async_trait]
 impl OpsService for MyOpsService {
+    type StreamScaleEventsStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<ScaleEvent, tonic::Status>> + Send + 'static>>;
     async fn get_incidents(
         &self,
         _request: Request<EmptyRequest>,

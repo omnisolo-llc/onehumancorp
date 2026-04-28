@@ -15,6 +15,7 @@ mod tasks;
 mod settings;
 mod scheduler;
 mod msgbus;
+pub mod orchestration;
 mod pipeline;
 mod oidc;
 mod sip;
@@ -147,6 +148,11 @@ impl MyHubService {
 
 #[tonic::async_trait]
 impl HubService for MyHubService {
+    type PollTasksStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<SharedTask, tonic::Status>> + Send + 'static>>;
+    type StreamMessagesStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<Message, tonic::Status>> + Send + 'static>>;
+    type DiscoverAgentsStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<AgentCapabilities, tonic::Status>> + Send + 'static>>;
+    type StreamMeshEventsStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<MeshEvent, tonic::Status>> + Send + 'static>>;
+    type StreamTeammateMeshStream = std::pin::Pin<Box<dyn tokio_stream::Stream<Item = Result<TeammateMeshEvent, tonic::Status>> + Send + 'static>>;
     async fn register_agent(
         &self,
         request: Request<RegisterAgentRequest>,
