@@ -1,5 +1,4 @@
 use sqlx::{SqlitePool, Row};
-use std::sync::Arc;
 use tokio::time::Duration;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
