@@ -15,14 +15,13 @@ build --remote_download_toplevel
 build --action_env=CGO_ENABLED=1
 
 # ── Sandboxing ────────────────────────────────────────────────────────────────
-build --spawn_strategy=remote,sandboxed,local
+common --spawn_strategy=sandboxed,local
 build --incompatible_strict_action_env
 build --announce_rc
 build --linkopt=-fuse-ld=bfd
 build --host_linkopt=-fuse-ld=bfd
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
-build --@rules_rust//rust/toolchain/channel=stable
 
 # ── Remote execution resilience ───────────────────────────────────────────────
 # Automatically rewind and retry actions when their remote inputs are lost
