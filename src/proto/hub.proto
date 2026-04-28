@@ -626,6 +626,17 @@ message TeamInvitesResponse {
   repeated TeamInviteProto invites = 1;
 }
 
+message ProcessStandaloneReferralRequest {
+  string referral_code = 1;
+  string invitee_email = 2;
+}
+
+message ProcessStandaloneReferralResponse {
+  string status = 1;
+  string temporary_tenant_id = 2;
+  string cloud_url = 3;
+}
+
 message ViralCoefficientResponse {
   int32 total_referrals = 1;
   int32 total_conversions = 2;
