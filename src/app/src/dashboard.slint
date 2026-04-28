@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
 import { SwarmObservability, UiMeshMessage } from "swarm_observability.slint";
 
 export struct UiRoleCount {
@@ -7,10 +7,11 @@ export struct UiRoleCount {
 }
 
 export component Dashboard inherits Window {
-    width: 800px;
+    width: 375px; // Mobile-first baseline
     height: 800px;
     title: "Dashboard";
 
+    // Premium Design Tokens
     background: #f8fafc;
 
     in property <int> active_agents_count: 0;
@@ -21,94 +22,101 @@ export component Dashboard inherits Window {
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
 
-    VerticalBox {
-        spacing: 20px;
-        padding: 24px;
-
-        // Header
-        HorizontalBox {
-            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
-            Rectangle {}
-            Button { text: "Billing & Credits"; }
-        }
-
-        // Stat Cards
-        HorizontalBox {
-            spacing: 16px;
-            
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Agents"; color: #64748b; }
-                    Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Tasks"; color: #64748b; }
-                    Text { text: active_tasks_count; font-size: 32px; font-weight: 700; color: #06b6d4; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Scheduled Calls"; color: #64748b; }
-                    Text { text: scheduled_calls_count; font-size: 32px; font-weight: 700; color: #10b981; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Team Members"; color: #64748b; }
-                    Text { text: team_members_count; font-size: 32px; font-weight: 700; color: #f59e0b; }
-                }
-            }
-        }
-
-        SwarmObservability {
-            messages: mesh_messages;
-        }
-
-        // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; }
-        
+    ScrollView {
         VerticalBox {
-            spacing: 10px;
+            spacing: 20px;
+            padding: 16px; // Tighter padding for mobile
+
+            // Header
+            HorizontalBox {
+                Text { text: "Dashboard"; font-size: 24px; font-weight: 700; color: #1e293b; vertical-alignment: center; }
+                Rectangle {}
+                Button { text: "Billing"; height: 44px; }
+            }
+
+            // Stat Cards - Stacked vertically for mobile viewports
+            VerticalBox {
+                spacing: 12px;
+
+                Rectangle {
+                    // Glassmorphism effect via semi-transparent hex #ffffffaa
+                    background: #ffffffaa;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 12px;
+
+                    HorizontalBox {
+                        padding: 16px;
+                        Text { text: "Active Agents"; color: #64748b; vertical-alignment: center; }
+                        Rectangle {}
+                        Text { text: active_agents_count; font-size: 24px; font-weight: 700; color: #a855f7; vertical-alignment: center; }
+                    }
+                }
+                Rectangle {
+                    background: #ffffffaa;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 12px;
+
+                    HorizontalBox {
+                        padding: 16px;
+                        Text { text: "Active Tasks"; color: #64748b; vertical-alignment: center; }
+                        Rectangle {}
+                        Text { text: active_tasks_count; font-size: 24px; font-weight: 700; color: #06b6d4; vertical-alignment: center; }
+                    }
+                }
+                Rectangle {
+                    background: #ffffffaa;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 12px;
+
+                    HorizontalBox {
+                        padding: 16px;
+                        Text { text: "Scheduled Calls"; color: #64748b; vertical-alignment: center; }
+                        Rectangle {}
+                        Text { text: scheduled_calls_count; font-size: 24px; font-weight: 700; color: #10b981; vertical-alignment: center; }
+                    }
+                }
+                Rectangle {
+                    background: #ffffffaa;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 12px;
+
+                    HorizontalBox {
+                        padding: 16px;
+                        Text { text: "Team Members"; color: #64748b; vertical-alignment: center; }
+                        Rectangle {}
+                        Text { text: team_members_count; font-size: 24px; font-weight: 700; color: #f59e0b; vertical-alignment: center; }
+                    }
+                }
+            }
+
+            SwarmObservability {
+                messages: mesh_messages;
+            }
+
+            // Company Structure
+            Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; }
             
-            for role_count in role_counts : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
+            VerticalBox {
+                spacing: 10px;
                 
-                HorizontalBox {
-                    padding: 16px;
-                    Text { text: role_count.role; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Rectangle {}
-                    Button { text: "-"; }
-                    Text { text: role_count.count; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Button { text: "+"; }
+                for role_count in role_counts : Rectangle {
+                    background: #ffffffaa;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 12px;
+
+                    HorizontalBox {
+                        padding: 16px;
+                        Text { text: role_count.role; font-weight: 700; color: #1e293b; vertical-alignment: center; }
+                        Rectangle {}
+                        Button { text: "-"; width: 44px; height: 44px; } // 44x44 constraint
+                        Text { text: role_count.count; font-weight: 700; color: #1e293b; vertical-alignment: center; horizontal-alignment: center; width: 30px; }
+                        Button { text: "+"; width: 44px; height: 44px; } // 44x44 constraint
+                    }
                 }
             }
         }

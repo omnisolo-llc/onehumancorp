@@ -1,8 +1,8 @@
-import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
 
 export component BusinessSetup inherits Window {
-    width: 600px;
-    height: 500px;
+    width: 375px; // Mobile-first baseline
+    height: 800px;
     title: "Business Setup";
 
     in-out property <int> step: 0;
@@ -20,89 +20,104 @@ export component BusinessSetup inherits Window {
 
     background: #f8fafc;
 
-    VerticalBox {
-        spacing: 20px;
-        padding: 24px;
+    ScrollView {
+        VerticalBox {
+            spacing: 20px;
+            padding: 24px;
 
-        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
 
-        // Step 0: Welcome
-        if (step == 0) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
-        }
-
-        // Step 1: Type & Name
-        if (step == 1) : VerticalBox {
-            spacing: 10px;
-            LineEdit {
-                placeholder-text: "Business Type (e.g. Baker, Handyman)";
-                text <=> business_type;
+            // Step 0: Welcome
+            if (step == 0) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; wrap: word-wrap; }
             }
-            LineEdit {
-                placeholder-text: "Company Name";
-                text <=> company_name;
-            }
-        }
 
-        // Step 2: Products & Payment
-        if (step == 2) : VerticalBox {
-            spacing: 10px;
-            LineEdit {
-                placeholder-text: "What do you sell?";
-                text <=> products_services;
+            // Step 1: Type & Name
+            if (step == 1) : VerticalBox {
+                spacing: 10px;
+                LineEdit {
+                    placeholder-text: "Business Type (e.g. Baker, Handyman)";
+                    text <=> business_type;
+                    height: 44px; // Touch target constraint
+                }
+                LineEdit {
+                    placeholder-text: "Company Name";
+                    text <=> company_name;
+                    height: 44px;
+                }
             }
-            Text { text: "Payment Preference: " + payment_pref; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Stripe"; clicked => { payment_pref = "stripe"; } }
-                Button { text: "PayPal"; clicked => { payment_pref = "paypal"; } }
+
+            // Step 2: Products & Payment
+            if (step == 2) : VerticalBox {
+                spacing: 10px;
+                LineEdit {
+                    placeholder-text: "What do you sell?";
+                    text <=> products_services;
+                    height: 44px;
+                }
+                Text { text: "Payment Preference: " + payment_pref; color: #1e293b; }
+                VerticalBox { // Stacked for mobile
+                    spacing: 10px;
+                    Button { text: "Stripe"; clicked => { payment_pref = "stripe"; } height: 44px; }
+                    Button { text: "PayPal"; clicked => { payment_pref = "paypal"; } height: 44px; }
+                }
             }
-        }
 
-        // Step 3: Template
-        if (step == 3) : VerticalBox {
-            spacing: 10px;
-            Text { text: "Template Selection: " + template_id; color: #1e293b; }
-            HorizontalBox {
-                Button { text: "Modern"; clicked => { template_id = "modern"; } }
-                Button { text: "Classic"; clicked => { template_id = "classic"; } }
-                Button { text: "Bold"; clicked => { template_id = "bold"; } }
+            // Step 3: Template
+            if (step == 3) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Template Selection: " + template_id; color: #1e293b; }
+                VerticalBox { // Stacked for mobile
+                    spacing: 10px;
+                    Button { text: "Modern"; clicked => { template_id = "modern"; } height: 44px; }
+                    Button { text: "Classic"; clicked => { template_id = "classic"; } height: 44px; }
+                    Button { text: "Bold"; clicked => { template_id = "bold"; } height: 44px; }
+                }
             }
-        }
 
-        // Step 4: First Product
-        if (step == 4) : VerticalBox {
-            spacing: 10px;
-            LineEdit { placeholder-text: "First Product Name"; text <=> first_product_name; }
-            LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; }
-            LineEdit { placeholder-text: "Price"; text <=> first_product_price; }
-        }
-
-        // Step 5: Domain
-        if (step == 5) : VerticalBox {
-            spacing: 10px;
-            HorizontalBox {
-                LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; }
-                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
+            // Step 4: First Product
+            if (step == 4) : VerticalBox {
+                spacing: 10px;
+                LineEdit { placeholder-text: "First Product Name"; text <=> first_product_name; height: 44px; }
+                LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; height: 44px; }
+                LineEdit {
+                    placeholder-text: "Price";
+                    text <=> first_product_price;
+                    height: 44px;
+                    input-type: number; // native numeric keyboard constraint
+                }
             }
-        }
 
-        Rectangle {} // Spacer
-
-        // Navigation
-        HorizontalBox {
-            if (step > 0) : Button {
-                text: "Back";
-                clicked => { step = step - 1; }
+            // Step 5: Domain
+            if (step == 5) : VerticalBox {
+                spacing: 10px;
+                HorizontalBox {
+                    spacing: 10px;
+                    LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; height: 44px; }
+                    Text { text: ".ohc.app"; color: #1e293b; vertical-alignment: center; }
+                }
             }
+
             Rectangle {} // Spacer
-            Button {
-                text: step == 5 ? "Launch My AI Team" : "Next";
-                clicked => {
-                    if (step < 5) {
-                        step = step + 1;
-                    } else {
-                        launch();
+
+            // Navigation
+            HorizontalBox {
+                if (step > 0) : Button {
+                    text: "Back";
+                    height: 44px;
+                    clicked => { step = step - 1; }
+                }
+                Rectangle {} // Spacer
+                Button {
+                    text: step == 5 ? "Launch My AI Team" : "Next";
+                    height: 44px;
+                    clicked => {
+                        if (step < 5) {
+                            step = step + 1;
+                        } else {
+                            launch();
+                        }
                     }
                 }
             }
