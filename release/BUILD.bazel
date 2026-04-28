@@ -23,6 +23,100 @@ load("@rules_pkg//pkg:mappings.bzl", "pkg_files", "strip_prefix")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
+# ── Linux x86_64 ──────────────────────────────────────────────────────────────
+
+pkg_files(
+    name = "ironclaw_linux_amd64_files",
+    srcs = ["//src/server/ironclaw:ironclaw_linux_amd64"],
+    renames = {"//src/server/ironclaw:ironclaw_linux_amd64": "ironclaw"},
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_tar(
+    name = "ironclaw-x86_64-unknown-linux-gnu",
+    srcs = [":ironclaw_linux_amd64_files"],
+    extension = "tar.gz",
+    visibility = ["//visibility:public"],
+)
+
+# ── Linux aarch64 ─────────────────────────────────────────────────────────────
+
+pkg_files(
+    name = "ironclaw_linux_arm64_files",
+    srcs = ["//src/server/ironclaw:ironclaw_linux_arm64"],
+    renames = {"//src/server/ironclaw:ironclaw_linux_arm64": "ironclaw"},
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_tar(
+    name = "ironclaw-aarch64-unknown-linux-gnu",
+    srcs = [":ironclaw_linux_arm64_files"],
+    extension = "tar.gz",
+    visibility = ["//visibility:public"],
+)
+
+# ── macOS x86_64 (Intel) ──────────────────────────────────────────────────────
+
+pkg_files(
+    name = "ironclaw_darwin_amd64_files",
+    srcs = ["//src/server/ironclaw:ironclaw_darwin_amd64"],
+    renames = {"//src/server/ironclaw:ironclaw_darwin_amd64": "ironclaw"},
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_tar(
+    name = "ironclaw-x86_64-apple-darwin",
+    srcs = [":ironclaw_darwin_amd64_files"],
+    extension = "tar.gz",
+    visibility = ["//visibility:public"],
+)
+
+# ── macOS aarch64 (Apple Silicon) ─────────────────────────────────────────────
+
+pkg_files(
+    name = "ironclaw_darwin_arm64_files",
+    srcs = ["//src/server/ironclaw:ironclaw_darwin_arm64"],
+    renames = {"//src/server/ironclaw:ironclaw_darwin_arm64": "ironclaw"},
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_tar(
+    name = "ironclaw-aarch64-apple-darwin",
+    srcs = [":ironclaw_darwin_arm64_files"],
+    extension = "tar.gz",
+    visibility = ["//visibility:public"],
+)
+
+# ── Windows x86_64 ────────────────────────────────────────────────────────────
+
+pkg_files(
+    name = "ironclaw_windows_amd64_files",
+    srcs = ["//src/server/ironclaw:ironclaw_windows_amd64"],
+    renames = {"//src/server/ironclaw:ironclaw_windows_amd64": "ironclaw.exe"},
+    strip_prefix = strip_prefix.from_pkg(),
+)
+
+pkg_tar(
+    name = "ironclaw-x86_64-pc-windows-msvc",
+    srcs = [":ironclaw_windows_amd64_files"],
+    extension = "tar.gz",
+    visibility = ["//visibility:public"],
+)
+
+# ── Convenience alias ─────────────────────────────────────────────────────────
+# Build all platform archives in one shot.
+
+filegroup(
+    name = "all_ironclaw_archives",
+    srcs = [
+        ":ironclaw-aarch64-apple-darwin",
+        ":ironclaw-aarch64-unknown-linux-gnu",
+        ":ironclaw-x86_64-apple-darwin",
+        ":ironclaw-x86_64-pc-windows-msvc",
+        ":ironclaw-x86_64-unknown-linux-gnu",
+    ],
+    visibility = ["//visibility:public"],
+)
 
 # ── Server (ohc) cross-platform packaging ─────────────────────────────────────
 # Mirrors the ironclaw layout for the backend server binary.
