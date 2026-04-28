@@ -139,10 +139,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::AgentStatusIndicatorWindow::new()?;
+    let ui = app::BusinessSetup::new()?;
     let ui_handle = ui.as_weak();
 
-    ui.set_is_active(true);
+    ui.on_launch({
+        let ui_handle = ui_handle.clone();
+        move || {
+            if let Some(ui) = ui_handle.upgrade() {
+                let mut state = std::collections::HashMap::new();
+                state.insert("business_type".to_string(), ui.get_business_type().to_string());
+                state.insert("company_name".to_string(), ui.get_company_name().to_string());
+                state.insert("company_desc".to_string(), ui.get_company_desc().to_string());
+                state.insert("products_services".to_string(), ui.get_products_services().to_string());
+                state.insert("payment_pref".to_string(), ui.get_payment_pref().to_string());
+                state.insert("admin_name".to_string(), ui.get_admin_name().to_string());
+                state.insert("admin_email".to_string(), ui.get_admin_email().to_string());
+
+                let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+
+                tokio::spawn(async move {
+                    if let Ok(mut client) = HubServiceClient::connect("http://127.0.0.1:18789").await {
+                        let _ = client.save_wizard_state(request).await;
+                    }
+                });
+            }
+        }
+    });
 
     ui.run()?;
     
@@ -182,6 +204,7 @@ mod tests {
         let ui = app::BusinessSetup::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_company_name(), "");
+        assert_eq!(ui.get_business_type(), "");
     }
 
     #[test]
