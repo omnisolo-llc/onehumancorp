@@ -82,7 +82,7 @@ mod tests {
 
     #[test]
     fn test_deterministic_encryption() {
-        unsafe { std::env::set_var("OHC_SQLITE_KEY", "test_key") };
+        std::env::set_var("OHC_SQLITE_KEY", "test_key");
         let plaintext = "hello world";
         let ciphertext1 = encrypt_deterministic(plaintext);
         let ciphertext2 = encrypt_deterministic(plaintext);
