@@ -1,0 +1,103 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+
+export struct UiHelpArticle {
+    title: string,
+    topic: string,
+    content: string,
+}
+
+export component HelpCenter inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "Help Center";
+    background: #f8fafc;
+
+    in property <[UiHelpArticle]> articles;
+    property <string> search_query: "";
+    property <string> selected_topic: "All";
+    property <string> selected_article_title: "";
+    property <string> selected_article_content: "";
+    property <bool> showing_article: false;
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 20px;
+
+        if (!showing_article) : VerticalBox {
+            spacing: 20px;
+
+            HorizontalBox {
+                Text { text: "Help Center"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            }
+
+            LineEdit {
+                placeholder-text: "Search for help...";
+                text <=> search_query;
+                height: 40px;
+            }
+
+            HorizontalBox {
+                spacing: 10px;
+                Button { text: "All"; clicked => { selected_topic = "All"; } }
+                Button { text: "Getting Started"; clicked => { selected_topic = "Getting Started"; } }
+                Button { text: "My Store"; clicked => { selected_topic = "My Store"; } }
+                Button { text: "Payments"; clicked => { selected_topic = "Payments"; } }
+                Button { text: "AI Agents"; clicked => { selected_topic = "AI Agents"; } }
+                Button { text: "Marketing"; clicked => { selected_topic = "Marketing"; } }
+                Button { text: "Account & Billing"; clicked => { selected_topic = "Account & Billing"; } }
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 10px;
+                    for article in articles : Rectangle {
+                        visible: (search_query == "" || article.title.contains(search_query) || article.content.contains(search_query)) && (selected_topic == "All" || article.topic == selected_topic);
+                        background: white;
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
+
+                        VerticalBox {
+                            padding: 16px;
+                            Text { text: article.title; font-weight: 700; font-size: 18px; color: #1e293b; }
+                            Text { text: article.topic; font-size: 14px; color: #64748b; }
+                            Button {
+                                text: "Read Article";
+                                clicked => {
+                                    selected_article_title = article.title;
+                                    selected_article_content = article.content;
+                                    showing_article = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (showing_article) : VerticalBox {
+            spacing: 20px;
+
+            Button {
+                text: "← Back to Help Center";
+                clicked => { showing_article = false; }
+            }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+
+                ScrollView {
+                    VerticalBox {
+                        padding: 24px;
+                        spacing: 16px;
+                        Text { text: selected_article_title; font-size: 24px; font-weight: 700; color: #1e293b; wrap: word-wrap; }
+                        Text { text: selected_article_content; font-size: 16px; color: #334155; wrap: word-wrap; }
+                    }
+                }
+            }
+        }
+    }
+}
