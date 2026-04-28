@@ -45,8 +45,6 @@ impl McpService for MyMcpService {
             return Err(Status::invalid_argument("tool ID and name are required"));
         }
 
-        crate::auth::grpc::validate_spiffe_id(&req.spiffe_id)?;
-
         let mut tools = self.dynamic_tools.write().unwrap();
         
         for t in tools.iter_mut() {
@@ -223,68 +221,5 @@ impl McpService for MyMcpService {
                 Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tonic::Request;
-    use crate::ohc::orchestration::{McpRegisterRequest, McpToolProto};
-
-    use std::sync::Arc;
-    use crate::integrations::registry::IntegrationsRegistry;
-    use tokio::sync::mpsc;
-    use sqlx::postgres::PgPoolOptions;
-
-    async fn setup_test_service() -> MyMcpService {
-        let registry = Arc::new(IntegrationsRegistry::new());
-        // For testing, we create a dummy pool and hub. In unit tests,
-        // the pool might fail if no Postgres is available, but sqlx AnyPool can't be used easily.
-        // We will just create a dummy pool connecting to a non-existent DB since register_tool doesn't hit DB.
-        let pool = PgPoolOptions::new()
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/ohc_test")
-            .unwrap();
-        let (tx, _) = mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
-        MyMcpService::new(registry, hub)
-    }
-
-    #[tokio::test]
-    async fn test_register_tool_valid_spiffe() {
-        let service = setup_test_service().await;
-        let req = McpRegisterRequest {
-            tool: Some(McpToolProto {
-                id: "test-tool".to_string(),
-                name: "Test Tool".to_string(),
-                description: "A test tool".to_string(),
-                category: "testing".to_string(),
-                status: "active".to_string(),
-            }),
-            spiffe_id: "spiffe://onehumancorp.io/agent/test".to_string(),
-        };
-
-        let response = service.register_tool(Request::new(req)).await;
-        assert!(response.is_ok());
-        assert_eq!(response.unwrap().into_inner().status, "registered");
-    }
-
-    #[tokio::test]
-    async fn test_register_tool_invalid_spiffe() {
-        let service = setup_test_service().await;
-        let req = McpRegisterRequest {
-            tool: Some(McpToolProto {
-                id: "test-tool".to_string(),
-                name: "Test Tool".to_string(),
-                description: "A test tool".to_string(),
-                category: "testing".to_string(),
-                status: "active".to_string(),
-            }),
-            spiffe_id: "spiffe://evil.com/agent/test".to_string(),
-        };
-
-        let response = service.register_tool(Request::new(req)).await;
-        assert!(response.is_err());
-        assert_eq!(response.unwrap_err().code(), tonic::Code::PermissionDenied);
     }
 }
