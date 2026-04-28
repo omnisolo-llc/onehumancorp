@@ -3,6 +3,9 @@ use std::sync::RwLock;
 use std::sync::OnceLock;
 use regex::Regex;
 use crate::ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
+use prost::Message as ProstMessage;
+use crate::mesh::MeshTransport;
+use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use crate::billing::Tracker;
@@ -26,6 +29,7 @@ pub struct Hub {
     minimax_api_key: String,
     caps_tx: broadcast::Sender<AgentCapabilities>,
     mesh_events: RwLock<HashMap<String, broadcast::Sender<MeshEvent>>>,
+    mesh_transport: Arc<dyn MeshTransport>,
     teammate_events: RwLock<HashMap<String, broadcast::Sender<TeammateMeshEvent>>>,
     tracker: Tracker,
     task_manager: TaskManager,
@@ -41,6 +45,14 @@ pub struct Hub {
 
 impl Hub {
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let mesh_transport: Arc<dyn MeshTransport> = if is_standalone {
+            Arc::new(crate::mesh::memory::MemoryMeshTransport::new())
+        } else {
+            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+            let client = redis::Client::open(redis_url).expect("Failed to connect to redis for MeshTransport");
+            Arc::new(crate::mesh::redis::RedisMeshTransport::new(client))
+        };
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
         Hub {
@@ -52,6 +64,7 @@ impl Hub {
             caps_tx,
             pool,
             mesh_events: RwLock::new(HashMap::new()),
+            mesh_transport,
             teammate_events: RwLock::new(HashMap::new()),
             tracker: Tracker::new(),
             task_manager: TaskManager::new(event_log_tx.clone()),
@@ -306,22 +319,43 @@ impl Hub {
     }
 
     pub fn publish_teammate_event(&self, channel: String, event: TeammateMeshEvent) -> Result<(), String> {
-        let mut teammate_events = self.teammate_events.write().unwrap();
-        let tx = teammate_events.entry(channel).or_insert_with(|| {
-            let (tx, _) = broadcast::channel(100);
-            tx
+        let mut buf = Vec::new();
+        event.encode(&mut buf).map_err(|e| e.to_string())?;
+        let mesh_transport = self.mesh_transport.clone();
+        let channel_clone = channel.clone();
+        tokio::spawn(async move {
+            let _ = mesh_transport.publish(channel_clone, buf).await;
         });
-        let _ = tx.send(event);
+        // Local loopback is handled by the subscriber loop if the implementation demands it, or removed entirely here. Removing direct local send to prevent echo.
         Ok(())
     }
 
     pub fn subscribe_teammate_mesh(&self, channel: String) -> broadcast::Receiver<TeammateMeshEvent> {
         let mut teammate_events = self.teammate_events.write().unwrap();
-        let tx = teammate_events.entry(channel).or_insert_with(|| {
+        if !teammate_events.contains_key(&channel) {
             let (tx, _) = broadcast::channel(100);
-            tx
-        });
-        tx.subscribe()
+            teammate_events.insert(channel.clone(), tx.clone());
+
+            let mesh_transport = self.mesh_transport.clone();
+            let channel_clone = channel.clone();
+            let tx_clone = tx.clone();
+            let tx_clone2 = tx.clone();
+
+            tokio::spawn(async move {
+                let handler = Box::new(move |payload: Vec<u8>| {
+                    if let Ok(event) = TeammateMeshEvent::decode(payload.as_slice()) {
+                        let _ = tx_clone.send(event);
+                    }
+                });
+                if let Ok(cancel) = mesh_transport.subscribe(channel_clone, handler).await {
+                    let mut rx = tx_clone2.subscribe();
+                    while let Ok(_) = rx.recv().await {}
+                    cancel();
+                }
+            });
+            return tx.subscribe();
+        }
+        teammate_events.get(&channel).unwrap().subscribe()
     }
 
     pub fn tracker(&self) -> &Tracker {

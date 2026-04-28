@@ -5,6 +5,7 @@ use chrono::Utc;
 use std::pin::Pin;
 
 mod db;
+pub mod mesh;
 mod auth;
 mod hub;
 mod minimax;
