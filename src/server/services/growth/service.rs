@@ -361,3 +361,30 @@ impl GrowthService for MyGrowthService {
         Ok(Response::new(entry))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tonic::Request;
+
+    #[tokio::test]
+    async fn test_e2e_referral_flow() {
+        let service = MyGrowthService::new();
+
+        let req = Request::new(CreateReferralRequest {
+            user_id: "test_user".to_string(),
+            referral_code: "test_code".to_string(),
+        });
+
+        let res = service.create_referral(req).await.unwrap().into_inner();
+        assert_eq!(res.user_id, "test_user");
+        assert_eq!(res.referral_code, "test_code");
+
+        let id_req = Request::new(GrowthIdRequest {
+            id: res.id.clone(),
+        });
+
+        let click_res = service.click_referral(id_req).await.unwrap().into_inner();
+        assert_eq!(click_res.clicks, 1);
+    }
+}
