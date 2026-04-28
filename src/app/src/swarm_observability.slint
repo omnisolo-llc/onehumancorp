@@ -1,0 +1,4 @@
+export struct UiMeshMessage { source: string, payload: string }
+export component SwarmObservability inherits Rectangle {
+    in-out property <[UiMeshMessage]> messages;
+}

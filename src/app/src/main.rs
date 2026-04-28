@@ -182,6 +182,10 @@ mod tests {
         let ui = app::BusinessSetup::new().unwrap();
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_company_name(), "");
+        assert_eq!(ui.get_show_confetti(), false);
+
+        ui.set_show_confetti(true);
+        assert_eq!(ui.get_show_confetti(), true);
     }
 
     #[test]

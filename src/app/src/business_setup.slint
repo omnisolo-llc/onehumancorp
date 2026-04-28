@@ -15,8 +15,12 @@ export component BusinessSetup inherits Window {
     in-out property <string> first_product_desc: "";
     in-out property <string> first_product_price: "";
     in-out property <string> domain_name: "";
+    in-out property <bool> show_confetti: false;
 
     callback launch();
+    callback copy_link_to_clipboard(string);
+    callback generate_description(string);
+    callback save_state(int);
 
     background: #f8fafc;
 
@@ -74,7 +78,15 @@ export component BusinessSetup inherits Window {
         if (step == 4) : VerticalBox {
             spacing: 10px;
             LineEdit { placeholder-text: "First Product Name"; text <=> first_product_name; }
-            LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; }
+            HorizontalBox {
+                LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; }
+                Button {
+                    text: "✨ Auto-generate";
+                    clicked => {
+                        generate_description(first_product_name);
+                    }
+                }
+            }
             LineEdit { placeholder-text: "Price"; text <=> first_product_price; }
         }
 
@@ -85,6 +97,12 @@ export component BusinessSetup inherits Window {
                 LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; }
                 Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
             }
+            if (show_confetti) : Text {
+                text: "🎉 Confetti! Your business is going live! 🎉";
+                font-size: 16px;
+                color: #a855f7;
+                horizontal-alignment: center;
+            }
         }
 
         Rectangle {} // Spacer
@@ -93,7 +111,10 @@ export component BusinessSetup inherits Window {
         HorizontalBox {
             if (step > 0) : Button {
                 text: "Back";
-                clicked => { step = step - 1; }
+                clicked => {
+                    step = step - 1;
+                    save_state(step);
+                }
             }
             Rectangle {} // Spacer
             Button {
@@ -101,7 +122,10 @@ export component BusinessSetup inherits Window {
                 clicked => {
                     if (step < 5) {
                         step = step + 1;
+                        save_state(step);
                     } else {
+                        show_confetti = true;
+                        copy_link_to_clipboard(domain_name + ".ohc.app");
                         launch();
                     }
                 }
