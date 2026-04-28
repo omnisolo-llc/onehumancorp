@@ -1,3 +1,5 @@
+pub mod mesh;
+pub mod api;
 use tonic::{transport::Server, Request, Response, Status};
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
@@ -834,6 +836,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     }
     // });
     
+    // Start Mesh API server
+    let mesh_transport = mesh::transport::create_transport(
+        std::env::var("REDIS_URL").ok().as_deref(),
+        std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true"
+    ).await;
+
+    let app = axum::Router::new()
+        .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
+        .with_state(mesh_transport);
+
+    let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
+    let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
+    tokio::spawn(async move {
+        println!("Mesh WebSocket server listening on {}", mesh_addr);
+        if let Err(e) = axum::serve(listener, app.into_make_service()).await {
+            eprintln!("Mesh server error: {}", e);
+        }
+    });
+
     // Start event log worker
     let hub_clone = hub.clone();
     tokio::spawn(async move {
