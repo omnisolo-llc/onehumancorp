@@ -108,7 +108,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_db_new_fails_without_server() {
-        std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent");
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://localhost:54321/nonexistent") };
         let db = DB::new().await;
         assert!(db.is_err());
     }
