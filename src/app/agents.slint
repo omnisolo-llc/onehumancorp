@@ -1,0 +1,60 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiAgent {
+    id: string,
+    name: string,
+    role: string,
+    status: string,
+    is_running: bool,
+    svid_verified: bool,
+}
+
+export component Agents inherits BaseWindow {
+    width: 500px;
+    height: 600px;
+    title: "Agents";
+
+    background: #f8fafc;
+
+    in property <[UiAgent]> agents;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Agents"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Hire Agent"; }
+        }
+
+        VerticalBox {
+            spacing: 10px;
+            
+            for agent in agents : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: "🤖"; font-size: 32px; horizontal-alignment: center; }
+                    VerticalBox {
+                        Text { text: agent.name; font-weight: 700; color: #1e293b; }
+                        Text { text: agent.role; color: #64748b; }
+                    }
+                    Rectangle {} 
+                    VerticalBox {
+                        Text { 
+                            text: agent.status; 
+                            color: agent.is_running ? #10b981 : #ef4444; 
+                            horizontal-alignment: center; 
+                        }
+                        if (!agent.is_running) : Button { text: "Help me fix this"; }
+                    }
+                }
+            }
+        }
+    }
+}

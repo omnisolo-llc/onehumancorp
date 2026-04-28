@@ -1,0 +1,41 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox, LineEdit } from "shim.slint";
+
+export component SecureAgentConfig inherits BaseWindow {
+    width: 400px;
+    height: 400px;
+    title: "Secure Agent Config";
+
+    callback save_config(string);
+
+    property <string> token: "";
+    property <string> error_text: "";
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 32px;
+        alignment: center;
+
+        Text { text: "Agent Configuration"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        
+        Text {
+            text: "Enter your secure SPIFFE Enrollment Token to authenticate the agent.";
+            color: #64748b;
+            wrap: word-wrap;
+        }
+
+        LineEdit {
+            placeholder-text: "spiffe://ohc.os/agent/1234";
+            text: token;
+        }
+        
+        if (error_text != "") : Text { text: error_text; color: #ef4444; }
+
+        Button {
+            text: "Save Configuration";
+            enabled: token != "" && error_text == "";
+            clicked => { save_config(token); }
+        }
+    }
+}

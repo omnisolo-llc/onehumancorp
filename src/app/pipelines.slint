@@ -1,0 +1,82 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiPipeline {
+    id: string,
+    name: string,
+    branch: string,
+    status: string,
+    initiated_by: string,
+    staging_url: string,
+    can_promote: bool,
+}
+
+export component Pipelines inherits BaseWindow {
+    width: 500px;
+    height: 600px;
+    title: "SDLC Pipelines";
+
+    background: #f8fafc;
+
+    in property <[UiPipeline]> pipelines;
+    callback promote_pipeline(string);
+    callback refresh();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "SDLC Pipelines"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { 
+                text: "Refresh"; 
+                clicked => { refresh(); }
+            }
+        }
+
+        VerticalBox {
+            spacing: 16px;
+            
+            for p in pipelines : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 12px;
+                    
+                    HorizontalBox {
+                        VerticalBox {
+                            Text { text: p.name; font-weight: 700; color: #1e293b; }
+                            Text { text: "branch: " + p.branch; color: #64748b; }
+                        }
+                        Rectangle {}
+                        Text { text: p.status; color: #06b6d4; horizontal-alignment: center; }
+                    }
+                    
+                    Text { text: "Initiated by: " + p.initiated_by; color: #64748b; }
+                    
+                    if (p.staging_url != "") : Rectangle {
+                        background: #e2e8f0;
+                        border-radius: 4px;
+                        
+                        HorizontalBox {
+                            padding: 8px;
+                            Text { text: p.staging_url; color: #0369a1; } 
+                        }
+                    }
+                    
+                    if (p.can_promote) : VerticalBox {
+                        Text { text: "Promote to Production"; color: #1e293b; font-weight: 700; }
+                        Button {
+                            text: "Promote";
+                            clicked => { promote_pipeline(p.id); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

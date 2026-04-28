@@ -1,0 +1,49 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiLogLine {
+    index: int,
+    text: string,
+    color: color,
+}
+
+export component Logs inherits BaseWindow {
+    width: 600px;
+    height: 500px;
+    title: "Service Logs";
+
+    background: #f8fafc;
+
+    in property <[UiLogLine]> logs;
+    callback refresh();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Service Logs"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { 
+                text: "Refresh"; 
+                clicked => { refresh(); }
+            }
+        }
+
+        Rectangle {
+            background: #0f172a;
+            border-radius: 8px;
+            
+            VerticalBox {
+                padding: 12px;
+                spacing: 4px;
+                alignment: start;
+                
+                for line in logs : HorizontalBox {
+                    spacing: 10px;
+                    Text { text: line.index; color: #64748b; font-family: "monospace"; }
+                    Text { text: line.text; color: line.color; font-family: "monospace"; }
+                }
+            }
+        }
+    }
+}

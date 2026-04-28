@@ -1,0 +1,104 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox, LineEdit } from "shim.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component Login inherits BaseWindow {
+    width: 400px;
+    height: 600px;
+    title: "One Human Corp - Login";
+
+    property <bool> loading: false;
+    property <bool> is_sign_up: false;
+    property <string> error_message: "";
+
+    in-out property <string> username: "";
+    in-out property <string> password: "";
+
+    callback login(string, string);
+    callback oauth_login(string);
+    callback open_settings();
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    VerticalBox {
+        alignment: center;
+        spacing: 20px;
+        padding: 32px;
+
+        GlassCard {
+            VerticalBox {
+                spacing: 16px;
+                padding: 24px;
+
+                Text {
+                    text: "✨";
+                    font-size: 64px;
+                    horizontal-alignment: center;
+                    color: #a855f7;
+                }
+
+                Text {
+                    text: "One Human Corp";
+                    font-size: 28px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    color: white;
+                    font-family: "Outfit";
+                }
+
+                Text {
+                    text: "Sign in to orchestrate your swarm";
+                    font-size: 14px;
+                    horizontal-alignment: center;
+                    color: #a8b2c1;
+                    font-family: "Inter";
+                }
+
+                LineEdit {
+                    placeholder-text: "Email or Username";
+                    text <=> username;
+                }
+
+                LineEdit {
+                    placeholder-text: "Password";
+                    input-type: InputType.password;
+                    text <=> password;
+                }
+
+                if (error_message != "") : Text {
+                    text: error_message;
+                    color: #ef4444;
+                    horizontal-alignment: center;
+                    font-family: "Inter";
+                }
+
+                Button {
+                    text: is_sign_up ? "Sign Up" : "Sign In";
+                    clicked => { login(username, password); }
+                }
+
+                Button {
+                    text: is_sign_up ? "Already have an account? Sign In" : "Don't have an account? Sign Up";
+                    clicked => {
+                        is_sign_up = !is_sign_up;
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    Text { text: "OR"; color: #9ca3af; font-weight: 700; }
+                }
+
+                Button {
+                    text: "Continue with SSO";
+                    clicked => { oauth_login("SSO"); }
+                }
+                
+                Button {
+                    text: "⚙ Connection Settings";
+                    clicked => { open_settings(); }
+                }
+            }
+        }
+    }
+}
+

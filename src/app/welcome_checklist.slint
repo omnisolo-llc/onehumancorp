@@ -1,0 +1,63 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+import { GlassCard } from "glass_card.slint";
+
+export component WelcomeChecklist inherits BaseWindow {
+    width: 600px;
+    height: 400px;
+    title: "Welcome Checklist";
+
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+
+    callback go_to_dashboard();
+
+    VerticalBox {
+        alignment: center;
+        spacing: 20px;
+        padding: 24px;
+
+        GlassCard {
+            VerticalBox {
+                spacing: 16px;
+                padding: 24px;
+
+                Text {
+                    text: "You're set up! Here's what to do next:";
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: white;
+                    wrap: word-wrap;
+                    font-family: "Outfit";
+                }
+
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "✓"; color: #10b981; } 
+                    Text { text: "Business live"; color: white; font-family: "Inter"; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "○"; color: white; }
+                    Text { text: "Add 3 more products"; color: white; font-family: "Inter"; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "○"; color: white; }
+                    Text { text: "Connect Instagram"; color: white; font-family: "Inter"; }
+                }
+                HorizontalBox {
+                    spacing: 10px;
+                    Text { text: "○"; color: white; }
+                    Text { text: "Share your link with a friend"; color: white; font-family: "Inter"; }
+                }
+
+                Button {
+                    text: "Go to Dashboard";
+                    clicked => {
+                        root.go_to_dashboard();
+                    }
+                }
+            }
+        }
+    }
+}
+

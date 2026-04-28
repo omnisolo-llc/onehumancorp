@@ -1,0 +1,75 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiSecurityIssue {
+    id: string,
+    title: string,
+    description: string,
+    severity: string,
+    fixable: bool,
+    fixed: bool,
+}
+
+export component Security inherits BaseWindow {
+    width: 500px;
+    height: 600px;
+    title: "Security";
+
+    in property <[UiSecurityIssue]> issues;
+    callback fix_issue(string);
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Security"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Re-scan"; }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+            
+            for issue in issues : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { 
+                            text: (issue.fixed ? "✓ " : "⚠️ ") + issue.title; 
+                            font-weight: 700; 
+                            color: issue.fixed ? #10b981 : (issue.severity == "high" ? #ef4444 : #f59e0b); 
+                            horizontal-alignment: center; 
+                        } 
+                        Rectangle {}
+                        Rectangle { 
+                            background: issue.fixed ? rgba(16, 185, 129, 0.2) : (issue.severity == "high" ? rgba(239, 68, 68, 0.2) : rgba(245, 158, 11, 0.2)); 
+                            border-radius: 4px; 
+                            HorizontalBox {
+                                padding: 4px;
+                                Text { 
+                                    text: issue.severity; 
+                                    color: issue.fixed ? #10b981 : (issue.severity == "high" ? #ef4444 : #f59e0b); 
+                                    font-size: 10px; 
+                                    font-weight: 700; 
+                                } 
+                            }
+                        }
+                    }
+                    Text { text: issue.description; color: issue.fixed ? #64748b : #1e293b; wrap: word-wrap; }
+                    if (issue.fixable && !issue.fixed) : Button { 
+                        text: "Auto-fix"; 
+                        clicked => { fix_issue(issue.id); }
+                    }
+                }
+            }
+        }
+    }
+}

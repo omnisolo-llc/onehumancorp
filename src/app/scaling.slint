@@ -1,0 +1,84 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export component Scaling inherits BaseWindow {
+    width: 700px;
+    height: 600px;
+    title: "Dynamic Scaling";
+
+    property <string> selected_role: "SOFTWARE_ENGINEER";
+    property <int> target_count: 1;
+
+    callback scale_agents(string, int);
+
+    background: #f8fafc;
+
+    HorizontalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Left Column: Controls
+        VerticalBox {
+            width: 350px;
+            spacing: 20px;
+            
+            Text { text: "Agent Workforce Scaling"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Text { text: "Provision additional specialized agents."; color: #64748b; wrap: word-wrap; }
+
+            Text { text: "1. Select Specialization"; font-size: 16px; font-weight: 700; color: #1e293b; }
+            HorizontalBox {
+                spacing: 10px;
+                Button { text: "Software Engineer"; clicked => { selected_role = "SOFTWARE_ENGINEER"; } }
+                Button { text: "QA Tester"; clicked => { selected_role = "QA_TESTER"; } }
+            }
+            Text { text: "Selected: " + selected_role; color: #a855f7; }
+
+            Text { text: "2. Define Target Capacity"; font-size: 16px; font-weight: 700; color: #1e293b; }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 10px;
+                    HorizontalBox {
+                        Text { text: "Target Count"; color: #1e293b; }
+                        Rectangle {}
+                        Text { text: "" + target_count; font-size: 24px; font-weight: 700; color: #a855f7; horizontal-alignment: center; }
+                    }
+                    HorizontalBox {
+                        Button { text: "-"; clicked => { if (target_count > 1) { target_count = target_count - 1; } } }
+                        Button { text: "+"; clicked => { if (target_count < 10) { target_count = target_count + 1; } } }
+                    }
+                }
+            }
+
+            Button {
+                text: "Initiate Scaling";
+                clicked => { scale_agents(selected_role, target_count); }
+            }
+        }
+
+        // Right Column: Logs
+        VerticalBox {
+            width: 250px;
+            spacing: 10px;
+            
+            Text { text: "Provisioning Logs"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            
+            Rectangle {
+                background: #0f172a;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 12px;
+                    spacing: 4px;
+                    alignment: start;
+                    Text { text: "Starting provisioning..."; color: #94a3b8; font-family: "monospace"; font-size: 12px; }
+                    Text { text: "SUCCESS: Scaled to " + target_count; color: #4ade80; font-family: "monospace"; font-size: 12px; }
+                }
+            }
+        }
+    }
+}

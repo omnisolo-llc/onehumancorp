@@ -1,0 +1,75 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox, LineEdit } from "shim.slint";
+
+export struct UiChatMessage {
+    id: string,
+    author_name: string,
+    body: string,
+    is_me: bool,
+}
+
+export component Chat inherits BaseWindow {
+    width: 400px;
+    height: 600px;
+    title: "Chat - #general";
+
+    in property <[UiChatMessage]> messages;
+    in-out property <string> new_message: "";
+    callback send_message(string);
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 16px;
+        padding: 16px;
+
+        // Chat history area
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 12px;
+            
+            VerticalBox {
+                spacing: 12px;
+                padding: 16px;
+                alignment: start;
+                
+                for msg in messages : HorizontalBox {
+                    alignment: msg.is_me ? end : start;
+                    if (msg.is_me) : Rectangle {} // Spacer
+                    Rectangle {
+                        background: msg.is_me ? #f3e8ff : #f1f5f9;
+                        border-radius: 12px;
+                        width: 260px;
+                        
+                        VerticalBox {
+                            padding: 10px;
+                            spacing: 4px;
+                            Text { 
+                                text: msg.author_name; 
+                                font-weight: 700; 
+                                color: msg.is_me ? #1e293b : #a855f7; 
+                                horizontal-alignment: msg.is_me ? right : left; 
+                            }
+                            Text { text: msg.body; color: #1e293b; wrap: word-wrap; }
+                        }
+                    }
+                    if (!msg.is_me) : Rectangle {} // Spacer
+                }
+            }
+        }
+
+        // Input Bar
+        HorizontalBox {
+            spacing: 10px;
+            LineEdit {
+                placeholder-text: "Type a message...";
+                text <=> new_message;
+            }
+            Button {
+                text: "Send";
+                clicked => { send_message(new_message); new_message = ""; }
+            }
+        }
+    }
+}

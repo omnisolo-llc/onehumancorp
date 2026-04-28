@@ -1,0 +1,69 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiAiConfigProvider {
+    id: string,
+    name: string,
+    base_url: string,
+    is_official: bool,
+    models: [string],
+}
+
+export component AiConfig inherits BaseWindow {
+    width: 500px;
+    height: 600px;
+    title: "AI Providers";
+
+    background: #f8fafc;
+
+    in property <[UiAiConfigProvider]> providers;
+    callback add_provider();
+    callback edit_provider(string);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "AI Providers"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { 
+                text: "Add Provider"; 
+                clicked => { add_provider(); }
+            }
+        }
+
+        VerticalBox {
+            spacing: 10px;
+            
+            for p in providers : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: "🧠 " + p.name; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                        Rectangle {}
+                        if (p.is_official) : Text { text: "Official"; color: #a855f7; horizontal-alignment: center; }
+                        Button { 
+                            text: "Edit"; 
+                            clicked => { edit_provider(p.id); }
+                        }
+                    }
+                    Text { text: p.base_url; color: #64748b; }
+                    HorizontalBox {
+                        spacing: 5px;
+                        for model in p.models : Rectangle { 
+                            background: #e2e8f0; 
+                            border-radius: 4px; 
+                            HorizontalBox { padding: 4px; Text { text: model; color: #1e293b; } } 
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,82 @@
+export enum LayoutAlignment { stretch, center, start, end }
+
+export component BaseWindow inherits Rectangle {
+    in-out property <string> title;
+    in-out property <image> icon;
+}
+
+export component Button inherits Rectangle {
+    in-out property <string> text;
+    callback clicked;
+}
+export component VerticalBox inherits Rectangle {
+    in-out property <LayoutAlignment> alignment: LayoutAlignment.center;
+    in-out property <length> spacing;
+    in-out property <length> padding;
+}
+export component HorizontalBox inherits Rectangle {
+    in-out property <LayoutAlignment> alignment: LayoutAlignment.center;
+    in-out property <length> spacing;
+    in-out property <length> padding;
+}
+export component GridBox inherits Rectangle {
+    in-out property <length> spacing;
+    in-out property <length> padding;
+}
+export component LineEdit inherits Rectangle {
+    in-out property <string> text;
+    in-out property <string> placeholder-text;
+    in-out property <bool> enabled: true;
+    in-out property <bool> has-focus: false;
+}
+export component CheckBox inherits Rectangle {
+    in-out property <bool> checked;
+    in-out property <string> text;
+}
+export component TextEdit inherits Rectangle {
+    in-out property <string> text;
+}
+export component ListView inherits Rectangle { }
+export component StandardListView inherits Rectangle {
+    in-out property <[string]> model;
+}
+export component ScrollView inherits Rectangle { }
+export component GroupBox inherits Rectangle {
+    in-out property <string> title;
+}
+export component Slider inherits Rectangle {
+    in-out property <float> value;
+}
+export component ComboBox inherits Rectangle {
+    in-out property <[string]> model;
+}
+export component SpinBox inherits Rectangle {
+    in-out property <int> value;
+}
+export component StandardTableView inherits Rectangle { }
+export component ProgressIndicator inherits Rectangle {
+    in-out property <float> progress;
+}
+export component Switch inherits Rectangle {
+    in-out property <bool> checked;
+}
+export component Spinner inherits Rectangle {
+    in-out property <bool> indeterminate;
+}
+export component TimePickerPopup inherits Rectangle { }
+export component DatePickerPopup inherits Rectangle { }
+export component MenuBarImpl inherits Rectangle { }
+export component PopupMenuImpl inherits Rectangle { }
+export component AboutSlint inherits Rectangle { }
+export component StandardButton inherits Button {
+    in-out property <string> kind;
+}
+export struct Palette {
+    background: color,
+    foreground: color,
+    control-background: color,
+}
+export struct StyleMetrics {
+    layout-spacing: length,
+    layout-padding: length,
+}

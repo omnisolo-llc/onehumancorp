@@ -1,0 +1,53 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiPricingTier {
+    name: string,
+    price: string,
+    description: string,
+}
+
+export component Pricing inherits BaseWindow {
+    width: 400px;
+    height: 600px;
+    title: "Pricing & Billing";
+
+    background: #f8fafc;
+
+    in property <[UiPricingTier]> tiers: [
+        { name: "Free", price: "$0/mo", description: "Up to 100 AI Actions, 500MB storage." },
+        { name: "Starter", price: "$29/mo", description: "Up to 1000 AI Actions, 5GB storage." },
+        { name: "Pro", price: "$99/mo", description: "Unlimited AI Actions, 50GB storage." },
+        { name: "Business", price: "Custom", description: "Enterprise features and support." },
+    ];
+
+    callback select_plan(string);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Pricing & Billing"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        VerticalBox {
+            spacing: 16px;
+            for tier in tiers : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text { text: tier.name; font-size: 20px; font-weight: 700; color: #1e293b; }
+                    Text { text: tier.price; font-size: 16px; color: #a855f7; }
+                    Text { text: tier.description; color: #64748b; wrap: word-wrap; }
+                    Button {
+                        text: "Select Plan";
+                        clicked => { select_plan(tier.name); }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,61 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiTask {
+    title: string,
+    status: string,
+    agent_id: string,
+    dependencies: string,
+    parent_task_id: string,
+    workflow_state: string,
+}
+
+export component TaskList inherits BaseWindow {
+    width: 500px;
+    height: 600px;
+    title: "Shared Task List";
+
+    in property <[UiTask]> tasks;
+    callback refresh();
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Shared Task List"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { 
+                text: "Refresh"; 
+                clicked => { refresh(); }
+            }
+        }
+
+        VerticalBox {
+            spacing: 16px;
+            for t in tasks : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    
+                    HorizontalBox {
+                        Text { text: t.title; font-weight: 700; color: #1e293b; }
+                        Rectangle {}
+                        Text { text: t.status; color: #a855f7; }
+                    }
+                    
+                    if (t.agent_id != "") : Text { text: "Agent: " + t.agent_id; color: #64748b; }
+                    if (t.dependencies != "") : Text { text: "Dependencies: " + t.dependencies; color: #64748b; font-size: 12px; }
+                    if (t.parent_task_id != "") : Text { text: "Parent Task: " + t.parent_task_id; color: #64748b; font-size: 12px; }
+                    if (t.workflow_state != "") : Text { text: "Workflow State: " + t.workflow_state; color: #64748b; font-size: 12px; }
+                }
+            }
+        }
+    }
+}

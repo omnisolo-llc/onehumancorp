@@ -1,0 +1,98 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiAgentCost {
+    name: string,
+    cost: string,
+    pct: float,
+}
+
+export component CostDashboard inherits BaseWindow {
+    width: 500px;
+    height: 600px;
+    title: "Cost & Token Usage";
+
+    in-out property <string> total_spend: "$0.00";
+    in-out property <string> total_tokens: "0";
+    in-out property <[UiAgentCost]> agent_costs;
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "Cost & Token Usage"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Refresh"; }
+        }
+
+        // Summary Cards
+        HorizontalBox {
+            spacing: 16px;
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Total Spend"; color: #64748b; }
+                    Text { text: total_spend; font-size: 24px; font-weight: 700; color: #a855f7; }
+                }
+            }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                width: 220px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Total Tokens"; color: #64748b; }
+                    Text { text: total_tokens; font-size: 24px; font-weight: 700; color: #06b6d4; }
+                }
+            }
+        }
+
+        Text { text: "Usage per Agent"; font-size: 18px; font-weight: 700; color: #1e293b; }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                
+                for ac in agent_costs : VerticalBox {
+                    spacing: 4px;
+                    HorizontalBox {
+                        Text { text: ac.name; color: #1e293b; }
+                        Rectangle {}
+                        Text { text: ac.cost; color: #1e293b; }
+                    }
+                    Rectangle {
+                        height: 8px;
+                        background: #e2e8f0;
+                        border-radius: 4px;
+                        HorizontalBox {
+                            alignment: start;
+                            Rectangle { 
+                                width: ac.pct * 200px; // Fixed max width for simplicity
+                                background: #a855f7; 
+                                border-radius: 4px; 
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,111 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox, LineEdit } from "shim.slint";
+
+export component BusinessSetup inherits BaseWindow {
+    width: 600px;
+    height: 500px;
+    title: "Business Setup";
+
+    in-out property <int> step: 0;
+    in-out property <string> business_type: "";
+    in-out property <string> company_name: "";
+    in-out property <string> products_services: "";
+    in-out property <string> payment_pref: "stripe";
+    in-out property <string> template_id: "modern";
+    in-out property <string> first_product_name: "";
+    in-out property <string> first_product_desc: "";
+    in-out property <string> first_product_price: "";
+    in-out property <string> domain_name: "";
+
+    callback launch();
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        // Step 0: Welcome
+        if (step == 0) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
+        }
+
+        // Step 1: Type & Name
+        if (step == 1) : VerticalBox {
+            spacing: 10px;
+            LineEdit {
+                placeholder-text: "Business Type (e.g. Baker, Handyman)";
+                text <=> business_type;
+            }
+            LineEdit {
+                placeholder-text: "Company Name";
+                text <=> company_name;
+            }
+        }
+
+        // Step 2: Products & Payment
+        if (step == 2) : VerticalBox {
+            spacing: 10px;
+            LineEdit {
+                placeholder-text: "What do you sell?";
+                text <=> products_services;
+            }
+            Text { text: "Payment Preference: " + payment_pref; color: #1e293b; }
+            HorizontalBox {
+                Button { text: "Stripe"; clicked => { payment_pref = "stripe"; } }
+                Button { text: "PayPal"; clicked => { payment_pref = "paypal"; } }
+            }
+        }
+
+        // Step 3: Template
+        if (step == 3) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Template Selection: " + template_id; color: #1e293b; }
+            HorizontalBox {
+                Button { text: "Modern"; clicked => { template_id = "modern"; } }
+                Button { text: "Classic"; clicked => { template_id = "classic"; } }
+                Button { text: "Bold"; clicked => { template_id = "bold"; } }
+            }
+        }
+
+        // Step 4: First Product
+        if (step == 4) : VerticalBox {
+            spacing: 10px;
+            LineEdit { placeholder-text: "First Product Name"; text <=> first_product_name; }
+            LineEdit { placeholder-text: "Product Description"; text <=> first_product_desc; }
+            LineEdit { placeholder-text: "Price"; text <=> first_product_price; }
+        }
+
+        // Step 5: Domain
+        if (step == 5) : VerticalBox {
+            spacing: 10px;
+            HorizontalBox {
+                LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; }
+                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Navigation
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {} // Spacer
+            Button {
+                text: step == 5 ? "Launch My AI Team" : "Next";
+                clicked => {
+                    if (step < 5) {
+                        step = step + 1;
+                    } else {
+                        launch();
+                    }
+                }
+            }
+        }
+    }
+}

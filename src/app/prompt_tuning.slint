@@ -1,0 +1,134 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox, CheckBox } from "shim.slint";
+
+export struct UiPromptExample {
+    q: string,
+    a: string,
+}
+
+export component PromptTuning inherits BaseWindow {
+    width: 700px;
+    height: 500px;
+    title: "Tune Agent";
+
+    in-out property <int> step: 0;
+    in-out property <string> tone: "Friendly";
+    in-out property <bool> show_raw: false;
+    
+    in-out property <bool> focus_only_business: false;
+    in-out property <bool> focus_avoid_competitors: false;
+    in-out property <bool> focus_reply_spanish: false;
+    
+    in-out property <[UiPromptExample]> examples;
+    
+    callback add_example();
+    callback save_prompt();
+
+    background: #f8fafc;
+
+    HorizontalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        // Left Column: Wizard Steps
+        VerticalBox {
+            width: 320px;
+            spacing: 20px;
+            
+            Text { text: "Prompt Tuning"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+            // Step 0: Tone
+            if (step == 0) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Personality & tone"; color: #1e293b; }
+                Button { text: "Formal"; clicked => { tone = "Formal"; } }
+                Button { text: "Friendly"; clicked => { tone = "Friendly"; } }
+                Button { text: "Concise"; clicked => { tone = "Concise"; } }
+                Text { text: "Selected: " + tone; color: #a855f7; }
+            }
+
+            // Step 1: Focus
+            if (step == 1) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Domain focus"; color: #1e293b; }
+                CheckBox { text: "Only discuss business"; checked: focus_only_business; toggled => { focus_only_business = !focus_only_business; } }
+                CheckBox { text: "Avoid competitors"; checked: focus_avoid_competitors; toggled => { focus_avoid_competitors = !focus_avoid_competitors; } }
+                CheckBox { text: "Always reply in Spanish"; checked: focus_reply_spanish; toggled => { focus_reply_spanish = !focus_reply_spanish; } }
+            }
+
+            // Step 2: Examples
+            if (step == 2) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Example interactions"; color: #1e293b; }
+                Button { 
+                    text: "Add Example"; 
+                    clicked => { add_example(); }
+                }
+                for ex in examples : Text { text: "Q: " + ex.q + "\nA: " + ex.a; color: #64748b; }
+            }
+
+            // Step 3: Review
+            if (step == 3) : VerticalBox {
+                spacing: 10px;
+                Text { text: "Review & Save"; color: #1e293b; }
+                Text { text: "Ready to update the agent?"; color: #64748b; }
+            }
+
+            Rectangle {} // Spacer
+
+            // Navigation
+            HorizontalBox {
+                if (step > 0) : Button {
+                    text: "Back";
+                    clicked => { step = step - 1; }
+                }
+                Rectangle {} // Spacer
+                Button {
+                    text: step == 3 ? "Save" : "Next";
+                    clicked => {
+                        if (step < 3) {
+                            step = step + 1;
+                        } else {
+                            save_prompt();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Right Column: Preview
+        VerticalBox {
+            width: 320px;
+            spacing: 10px;
+            
+            HorizontalBox {
+                Text { text: "Live Preview"; font-size: 18px; font-weight: 700; color: #1e293b; }
+                Rectangle {}
+                Button { text: show_raw ? "Hide raw" : "Show raw"; clicked => { show_raw = !show_raw; } }
+            }
+            
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                VerticalBox {
+                    padding: 16px;
+                    if (show_raw) : Text {
+                        text: "You are an AI agent with a " + tone + " personality.\n"
+                            + (focus_only_business ? "Domain Focus: Only discuss business.\n" : "")
+                            + (focus_avoid_competitors ? "Domain Focus: Avoid competitors.\n" : "")
+                            + (focus_reply_spanish ? "Domain Focus: Always reply in Spanish.\n" : "");
+                        color: #1e293b;
+                        wrap: word-wrap;
+                    }
+                    if (!show_raw) : Text {
+                        text: "Chat sandbox placeholder";
+                        color: #64748b;
+                        horizontal-alignment: center;
+                    }
+                }
+            }
+        }
+    }
+}

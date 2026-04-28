@@ -1,0 +1,100 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export component Landing inherits BaseWindow {
+    width: 800px;
+    height: 600px;
+    title: "One Human Corp";
+
+    in-out property <bool> is_variant_b: false;
+
+    callback start_business_setup();
+    callback continue_to_dashboard();
+    callback download(string);
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 32px;
+        alignment: center;
+
+        // Header
+        Text { text: "One Human Corp"; font-size: 32px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+        
+        Text { 
+            text: is_variant_b ? "The Cloud-Native Agentic OS" : "The Hybrid Agentic OS"; 
+            font-size: 24px; 
+            color: #a855f7; 
+            horizontal-alignment: center; 
+        }
+
+        Text {
+            text: is_variant_b ? 
+                "Scale your intelligence with seamless Cloud Convenience. Collaborate instantly with your team on our globally available multi-tenant platform." :
+                "Scale your intelligence. Retain your sovereignty. Experience the gold standard for private LLM usage with our Local-First Standalone Mode.";
+            color: #64748b;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+
+        // Value Props
+        HorizontalBox {
+            spacing: 20px;
+            alignment: center;
+            
+            if (is_variant_b) : Rectangle {
+                background: white; border-radius: 8px; width: 220px; height: 150px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Global Performance"; font-weight: 700; }
+                    Text { text: "Deploy agents in a horizontally scalable multi-tenant environment."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+            if (is_variant_b) : Rectangle {
+                background: white; border-radius: 8px; width: 220px; height: 150px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Instant Collaboration"; font-weight: 700; }
+                    Text { text: "Invite team members instantly. Shared intelligence across your entire organization."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+            
+            if (!is_variant_b) : Rectangle {
+                background: white; border-radius: 8px; width: 220px; height: 150px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Zero Data Leakage"; font-weight: 700; }
+                    Text { text: "All intelligence operations run completely local via SQLite. Absolute sovereignty over your IP."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+            if (!is_variant_b) : Rectangle {
+                background: white; border-radius: 8px; width: 220px; height: 150px;
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Air-Gapped Autonomy"; font-weight: 700; }
+                    Text { text: "Operate entirely offline. OHC degrades gracefully without heavy cloud dependencies."; color: #64748b; wrap: word-wrap; }
+                }
+            }
+        }
+
+        // Downloads
+        HorizontalBox {
+            spacing: 10px;
+            alignment: center;
+            Button { text: "Download for Mac"; clicked => { download("Mac"); } }
+            Button { text: "Download for Windows"; clicked => { download("Windows"); } }
+            Button { text: "Download for Linux"; clicked => { download("Linux"); } }
+        }
+
+        // Navigation
+        Button { text: "Start Business Setup"; clicked => { start_business_setup(); } }
+        Button { text: "Or continue to Cloud Dashboard"; clicked => { continue_to_dashboard(); } }
+
+        // Debug toggle
+        HorizontalBox {
+            alignment: center;
+            Text { text: "Debug: Switch Variant"; }
+            Button { text: "Toggle"; clicked => { is_variant_b = !is_variant_b; } }
+        }
+    }
+}

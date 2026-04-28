@@ -1,0 +1,83 @@
+import { BaseWindow, Button, VerticalBox, HorizontalBox } from "shim.slint";
+
+export struct UiUser {
+    id: string,
+    username: string,
+    email: string,
+    role: string,
+    joined_at: string,
+    avatar_letter: string,
+}
+
+export component UserManagement inherits BaseWindow {
+    width: 500px;
+    height: 600px;
+    title: "User Management";
+
+    in property <[UiUser]> users;
+    callback delete_user(string);
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        HorizontalBox {
+            Text { text: "User Management"; font-size: 20px; font-weight: 700; color: #1e293b; }
+            Rectangle {}
+            Button { text: "Invite User"; }
+        }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+            
+            HorizontalBox {
+                padding: 16px;
+                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
+            }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+            
+            for u in users : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                
+                HorizontalBox {
+                    padding: 16px;
+                    Rectangle {
+                        background: #a855f7;
+                        border-radius: 16px;
+                        width: 32px;
+                        height: 32px;
+                        HorizontalBox { padding: 2px; Text { text: u.avatar_letter; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
+                    }
+                    VerticalBox {
+                        HorizontalBox {
+                            Text { text: u.username; font-weight: 700; color: #1e293b; }
+                            Rectangle { 
+                                background: rgba(168, 85, 247, 0.2); 
+                                border-radius: 4px; 
+                                HorizontalBox {
+                                    padding: 2px;
+                                    Text { text: u.role; color: #a855f7; font-size: 10px; } 
+                                }
+                            }
+                        }
+                        Text { text: u.email; color: #64748b; }
+                        Text { text: "Joined: " + u.joined_at; color: #9ca3af; font-size: 12px; }
+                    }
+                    Rectangle {} 
+                    Button { text: "Delete"; clicked => { delete_user(u.id); } }
+                }
+            }
+        }
+    }
+}
