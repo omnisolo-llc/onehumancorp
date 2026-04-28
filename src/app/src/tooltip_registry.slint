@@ -1,0 +1,44 @@
+export global TooltipRegistry {
+    public pure function get_tooltip_text(key: string) -> string {
+        if (key == "storefront_status") {
+            return "This shows if your store is currently visible to customers.";
+        } else if (key == "ai_agent_status") {
+            return "Indicates if your AI helpers are currently awake and working.";
+        } else if (key == "revenue_chart") {
+            return "A quick look at how much money you made this week.";
+        } else if (key == "inventory_alert") {
+            return "We will let you know here if you are running out of anything.";
+        }
+        return "Help text not found.";
+    }
+}
+
+export component Tooltip inherits Rectangle {
+    in property <string> text_key;
+
+    background: #1e293b;
+    border-radius: 6px;
+    padding: 8px;
+    opacity: 0;
+
+    Text {
+        text: TooltipRegistry.get_tooltip_text(root.text_key);
+        color: white;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+
+    ta := TouchArea { }
+
+    states [
+        visible when ta.has-hover : {
+            opacity: 1;
+            in {
+                animate opacity { duration: 200ms; }
+            }
+            out {
+                animate opacity { duration: 200ms; }
+            }
+        }
+    ]
+}

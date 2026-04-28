@@ -1,0 +1,73 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export struct UiReleaseNote {
+    version: string,
+    date: string,
+    highlights: [string],
+}
+
+export component ReleaseNotes inherits Window {
+    width: 500px;
+    height: 700px;
+    title: "What's New";
+
+    background: #f8fafc;
+
+    in property <[UiReleaseNote]> updates: [
+        {
+            version: "v1.2.0",
+            date: "October 12, 2023",
+            highlights: ["Added Tap to Pay for iPhones", "AI Agents now reply 2x faster", "New autumn website templates"]
+        },
+        {
+            version: "v1.1.5",
+            date: "September 28, 2023",
+            highlights: ["Bug fix: Calendar syncing issues resolved", "Added Arabic language support"]
+        }
+    ];
+
+    callback view_full_changelog();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 32px;
+
+        Text { text: "What's New in OHC"; font-size: 28px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 24px;
+
+                for note in updates : VerticalBox {
+                    spacing: 8px;
+                    HorizontalBox {
+                        Text { text: note.version; font-size: 20px; font-weight: 700; color: #7c3aed; }
+                        Rectangle { horizontal-stretch: 1; }
+                        Text { text: note.date; font-size: 14px; color: #64748b; }
+                    }
+                    Rectangle {
+                        background: white;
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 8px;
+                        padding: 16px;
+
+                        VerticalBox {
+                            spacing: 8px;
+                            for highlight in note.highlights : HorizontalBox {
+                                spacing: 8px;
+                                Text { text: "•"; color: #1e293b; font-weight: 700; }
+                                Text { text: highlight; color: #1e293b; font-size: 15px; wrap: word-wrap; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Button {
+            text: "View Full History on Website";
+            clicked => { view_full_changelog(); }
+        }
+    }
+}

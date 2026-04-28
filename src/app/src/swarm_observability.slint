@@ -1,0 +1,10 @@
+export struct UiMeshMessage {
+    id: string,
+    topic: string,
+    payload: string,
+    timestamp: string,
+}
+
+export component SwarmObservability {
+    in-out property <[UiMeshMessage]> messages;
+}

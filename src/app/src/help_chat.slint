@@ -1,0 +1,89 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
+
+export struct UiHelpChatMessage {
+    sender: string,
+    message: string,
+    article_link: string,
+}
+
+export component HelpChat inherits Window {
+    width: 375px;
+    height: 600px;
+    title: "Ask for Help";
+
+    background: #f8fafc;
+
+    in property <[UiHelpChatMessage]> chat_history: [
+        { sender: "AI Guide", message: "Hi there! I'm your OHC support guide. How can I help you run your business today?", article_link: "" },
+        { sender: "User", message: "How do I take payments on my phone?", article_link: "" },
+        { sender: "AI Guide", message: "You can use Tap to Pay right on your phone! It lets customers tap their credit cards directly against your screen. Want to learn how to turn it on?", article_link: "Setting up Tap to Pay" }
+    ];
+
+    in-out property <string> draft_message: "";
+
+    callback send_message(string);
+    callback open_article(string);
+
+    VerticalBox {
+        spacing: 0px;
+
+        Rectangle {
+            background: white;
+            height: 60px;
+            HorizontalBox {
+                padding: 16px;
+                Text { text: "💬 Help Guide"; font-size: 20px; font-weight: 700; color: #1e293b; vertical-alignment: center; }
+            }
+        }
+
+        ScrollView {
+            VerticalBox {
+                padding: 16px;
+                spacing: 12px;
+                for msg in chat_history : HorizontalBox {
+                    alignment: msg.sender == "User" ? end : start;
+                    Rectangle {
+                        background: msg.sender == "User" ? #a855f7 : white;
+                        border-color: #e2e8f0;
+                        border-width: msg.sender == "User" ? 0px : 1px;
+                        border-radius: 12px;
+                        VerticalBox {
+                            padding: 12px;
+                            spacing: 8px;
+                            Text {
+                                text: msg.message;
+                                color: msg.sender == "User" ? white : #1e293b;
+                                wrap: word-wrap;
+                                font-size: 15px;
+                            }
+                            if (msg.article_link != "") : Button {
+                                text: "Read: " + msg.article_link + " →";
+                                clicked => { open_article(msg.article_link); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            padding: 12px;
+            HorizontalBox {
+                spacing: 12px;
+                LineEdit {
+                    text: draft_message;
+                    placeholder-text: "Ask me anything...";
+                    edited(text) => { root.draft_message = text; }
+                    accepted => { send_message(root.draft_message); root.draft_message = ""; }
+                }
+                Button {
+                    text: "Send";
+                    clicked => { send_message(root.draft_message); root.draft_message = ""; }
+                }
+            }
+        }
+    }
+}

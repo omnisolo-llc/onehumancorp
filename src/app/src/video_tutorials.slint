@@ -1,0 +1,65 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export struct UiVideoTutorial {
+    title: string,
+    duration: string,
+    thumbnail_color: color,
+}
+
+export component VideoTutorials inherits Window {
+    width: 400px;
+    height: 700px;
+    title: "Video Tutorials";
+
+    background: #f8fafc;
+
+    in property <[UiVideoTutorial]> videos: [
+        { title: "Connect your Instagram", duration: "1:15", thumbnail_color: #fca5a5 },
+        { title: "Accept a custom cake order", duration: "0:45", thumbnail_color: #93c5fd },
+        { title: "Set up a tutoring calendar", duration: "1:30", thumbnail_color: #86efac },
+        { title: "Understanding your weekly report", duration: "2:00", thumbnail_color: #d8b4fe }
+    ];
+
+    callback play_video(string);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Quick Video Guides"; font-size: 24px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+        Text { text: "Watch these short videos to master OHC."; font-size: 16px; color: #64748b; horizontal-alignment: center; }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+
+                for video in videos : Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 12px;
+                    clip: true;
+
+                    VerticalBox {
+                        Rectangle {
+                            height: 180px;
+                            background: video.thumbnail_color;
+                            Text { text: "▶️"; font-size: 48px; horizontal-alignment: center; vertical-alignment: center; }
+                        }
+                        HorizontalBox {
+                            padding: 16px;
+                            VerticalBox {
+                                Text { text: video.title; font-size: 18px; font-weight: 700; color: #1e293b; wrap: word-wrap; }
+                                Text { text: video.duration; font-size: 14px; color: #64748b; }
+                            }
+                            Button {
+                                text: "Play";
+                                clicked => { play_video(video.title); }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

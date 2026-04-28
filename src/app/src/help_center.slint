@@ -1,0 +1,62 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView, LineEdit } from "std-widgets.slint";
+
+export struct UiHelpArticle {
+    title: string,
+    excerpt: string,
+    category: string,
+}
+
+export component HelpCenter inherits Window {
+    width: 400px;
+    height: 700px;
+    title: "Help Center";
+
+    background: #f8fafc;
+
+    in property <[UiHelpArticle]> articles: [
+        { title: "How to add a new product", excerpt: "Learn how to list a new item in your store in just 3 steps.", category: "Getting Started" },
+        { title: "Setting up your bank account", excerpt: "Connect your bank to start receiving money from your sales.", category: "Payments" },
+        { title: "What is an AI Agent?", excerpt: "Understand how your invisible helpers do the heavy lifting for you.", category: "AI Agents" },
+        { title: "How to see your daily sales", excerpt: "A quick guide to finding out how much you made today.", category: "Account & Billing" }
+    ];
+
+    callback search_articles(string);
+    callback open_article(string);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "How can we help?"; font-size: 28px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+
+        LineEdit {
+            placeholder-text: "Search for help...";
+            edited(text) => { search_articles(text); }
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+
+                for article in articles : Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 16px;
+                        spacing: 8px;
+                        Text { text: article.title; font-size: 18px; font-weight: 700; color: #1e293b; }
+                        Text { text: article.category; font-size: 12px; color: #a855f7; }
+                        Text { text: article.excerpt; font-size: 14px; color: #64748b; wrap: word-wrap; }
+                        Button {
+                            text: "Read Article →";
+                            clicked => { open_article(article.title); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

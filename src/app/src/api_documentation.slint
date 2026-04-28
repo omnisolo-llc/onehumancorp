@@ -1,0 +1,62 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export struct UiApiEndpoint {
+    method: string,
+    path: string,
+    description: string,
+}
+
+export component ApiDocumentation inherits Window {
+    width: 600px;
+    height: 700px;
+    title: "API Reference (Advanced)";
+
+    background: #0f172a;
+
+    in property <[UiApiEndpoint]> endpoints: [
+        { method: "GET", path: "/v1/store/products", description: "List all active products." },
+        { method: "POST", path: "/v1/orders", description: "Create a new order from a custom checkout." },
+        { method: "GET", path: "/v1/analytics/daily", description: "Fetch daily sales and visitor metrics." },
+        { method: "POST", path: "/v1/agents/chat", description: "Send a message to your AI Customer Success agent." }
+    ];
+
+    callback copy_curl(string);
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 32px;
+
+        Text { text: "API Reference"; font-size: 32px; font-weight: 700; color: white; }
+        Text { text: "For advanced users: Connect your own apps directly to OHC."; font-size: 16px; color: #94a3b8; }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 24px;
+
+                for ep in endpoints : Rectangle {
+                    background: #1e293b;
+                    border-radius: 8px;
+
+                    VerticalBox {
+                        padding: 20px;
+                        spacing: 12px;
+                        HorizontalBox {
+                            Rectangle {
+                                background: ep.method == "GET" ? #3b82f6 : #10b981;
+                                border-radius: 4px;
+                                padding: 4px;
+                                Text { text: ep.method; color: white; font-weight: 700; font-size: 14px; }
+                            }
+                            Text { text: ep.path; color: #e2e8f0; font-size: 18px; font-family: "monospace"; }
+                        }
+                        Text { text: ep.description; color: #cbd5e1; font-size: 14px; }
+                        Button {
+                            text: "Copy cURL Example";
+                            clicked => { copy_curl(ep.path); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

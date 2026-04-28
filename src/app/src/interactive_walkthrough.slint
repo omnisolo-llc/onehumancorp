@@ -1,0 +1,44 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component InteractiveWalkthrough inherits Window {
+    width: 375px;
+    height: 300px;
+    title: "App Walkthrough";
+
+    background: transparent;
+
+    in property <int> current_step: 1;
+    in property <int> total_steps: 3;
+    in property <string> step_title: "Set up your store";
+    in property <string> step_description: "Let's start by giving your new business a name and adding your first product. It only takes a minute!";
+
+    callback next_step();
+    callback skip_walkthrough();
+
+    Rectangle {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 16px;
+        border-color: #a855f7;
+        border-width: 2px;
+
+        VerticalBox {
+            padding: 24px;
+            spacing: 16px;
+
+            HorizontalBox {
+                Text { text: "Step " + current_step + " of " + total_steps; font-size: 14px; color: #a855f7; font-weight: 700; }
+                Rectangle { horizontal-stretch: 1; }
+                Button { text: "✕"; clicked => { skip_walkthrough(); } }
+            }
+
+            Text { text: step_title; font-size: 22px; font-weight: 700; color: #1e293b; }
+            Text { text: step_description; font-size: 16px; color: #64748b; wrap: word-wrap; }
+
+            HorizontalBox {
+                Button { text: "Skip Tour"; clicked => { skip_walkthrough(); } }
+                Rectangle { horizontal-stretch: 1; }
+                Button { text: "Next →"; clicked => { next_step(); } }
+            }
+        }
+    }
+}
