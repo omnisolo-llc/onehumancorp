@@ -911,8 +911,8 @@ mod tests {
     // Helper to create a dummy hub and service for testing
     // Note: These tests are ignored by default because they require a running Postgres database.
     async fn setup_test_service() -> Option<MyHubService> {
-        let db_url = std::env::var("DATABASE_URL").ok()?;
-        let pool = sqlx::PgPool::connect(&db_url).await.ok()?;
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost:5432/dummy".to_string());
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy(&db_url).unwrap();
         
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(event_tx, pool.clone()));
@@ -920,11 +920,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_invite_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
-            None => return, // Skip if DB not available
+            None => panic!("Failed to setup test service"), // Skip if DB not available
         };
 
         let req = Request::new(InviteRequest {
@@ -939,11 +939,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_accept_invite_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
-            None => return, // Skip if DB not available
+            None => panic!("Failed to setup test service"), // Skip if DB not available
         };
 
         let req = Request::new(AcceptInviteRequest {
@@ -955,11 +955,11 @@ mod tests {
         assert!(resp.unwrap().into_inner().success);
     }
     #[tokio::test]
-    #[ignore]
+
     async fn test_publish_teammate_mesh_event_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
-            None => return,
+            None => panic!("Failed to setup test service"),
         };
 
         let req = Request::new(PublishTeammateMeshEventRequest {
@@ -978,11 +978,11 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_stream_mesh_events_valid() {
         let service = match setup_test_service().await {
             Some(s) => s,
-            None => return,
+            None => panic!("Failed to setup test service"),
         };
 
         let req = Request::new(EventStreamRequest {

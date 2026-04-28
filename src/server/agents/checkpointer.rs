@@ -199,9 +199,9 @@ mod tests {
         assert_eq!(data, decompressed.as_slice());
     }
     #[tokio::test]
-    #[ignore]
+
     async fn test_pg_checkpointer_save_and_load() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost:5432/dummy").unwrap();
         let saver = PgCheckpointer::new(pool);
         
         let cp = Checkpoint {
@@ -218,9 +218,9 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
+
     async fn test_pg_checkpointer_list_checkpoints() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost:5432/dummy").unwrap();
         let saver = PgCheckpointer::new(pool);
         
         let res = saver.list_checkpoints("thread-list").await;
