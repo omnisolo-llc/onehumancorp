@@ -1,0 +1,102 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Walkthrough inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "How We Save Your Data";
+
+    property <int> current_step: 0;
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+        alignment: center;
+
+        Text { text: "Interactive Guide: How We Save Your Data"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 16px;
+            width: 500px;
+
+            VerticalBox {
+                padding: 32px;
+                spacing: 16px;
+
+                Text {
+                    text: current_step == 0 ? "1. Save changes locally" :
+                          current_step == 1 ? "2. Check for offline updates" :
+                          current_step == 2 ? "3. Gather offline updates" :
+                          current_step == 3 ? "4. Securely upload to the cloud" :
+                          current_step == 4 ? "5. Update your main business record" :
+                          current_step == 5 ? "6. Confirm safe storage" :
+                          "7. Mark as saved everywhere";
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #0284c7;
+                }
+
+                Text {
+                    text: current_step == 0 ? "Your AI assistant saves new information directly on your device." :
+                          current_step == 1 ? "The app checks if there are any new updates waiting to be backed up." :
+                          current_step == 2 ? "The app gathers all your recent offline changes together." :
+                          current_step == 3 ? "The app securely sends your updates to your private cloud storage." :
+                          current_step == 4 ? "Your main business profile in the cloud is updated with the new information." :
+                          current_step == 5 ? "The cloud confirms that your data has been safely stored." :
+                          "The app updates your phone to show that everything is backed up.";
+                    color: #1e293b;
+                    wrap: word-wrap;
+                }
+
+                Rectangle {
+                    background: #f1f5f9;
+                    border-radius: 8px;
+
+                    HorizontalBox {
+                        padding: 12px;
+                        spacing: 12px;
+                        Text { text: "🔄"; color: #0284c7; }
+                        Text {
+                            text: current_step == 0 ? "AI Assistant -> Your Phone" :
+                                  current_step == 1 ? "App -> Your Phone" :
+                                  current_step == 2 ? "Your Phone -> App" :
+                                  current_step == 3 ? "App -> Private Cloud" :
+                                  current_step == 4 ? "Private Cloud -> Main Record" :
+                                  current_step == 5 ? "Private Cloud -> App" :
+                                  "App -> Your Phone";
+                            color: #0284c7;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 20px;
+
+                    Button {
+                        text: "Previous Step";
+                        enabled: current_step > 0;
+                        clicked => { current_step = current_step - 1; }
+                    }
+
+                    Text {
+                        text: "Step " + (current_step + 1) + " of 7";
+                        color: #9ca3af;
+                        horizontal-alignment: center;
+                    }
+
+                    Button {
+                        text: "Next Step";
+                        enabled: current_step < 6;
+                        clicked => { current_step = current_step + 1; }
+                    }
+                }
+            }
+        }
+    }
+}

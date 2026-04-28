@@ -1,0 +1,99 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+
+export component Wizard inherits Window {
+    width: 600px;
+    height: 500px;
+    title: "Setup Guide";
+
+    property <int> step: 0;
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Setup Guide"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        HorizontalBox {
+            spacing: 10px;
+            alignment: center;
+
+            Rectangle {
+                background: step >= 0 ? #a855f7 : #e2e8f0;
+                border-radius: 12px;
+                width: 24px;
+                height: 24px;
+                HorizontalBox {
+                    padding: 2px;
+                    Text { text: "1"; color: white; horizontal-alignment: center; }
+                }
+            }
+            Text { text: "App Connection"; color: step == 0 ? #1e293b : #64748b; }
+
+            Rectangle {
+                background: step >= 1 ? #a855f7 : #e2e8f0;
+                border-radius: 12px;
+                width: 24px;
+                height: 24px;
+                HorizontalBox {
+                    padding: 2px;
+                    Text { text: "2"; color: white; horizontal-alignment: center; }
+                }
+            }
+            Text { text: "AI Provider"; color: step == 1 ? #1e293b : #64748b; }
+
+            Rectangle {
+                background: step >= 2 ? #a855f7 : #e2e8f0;
+                border-radius: 12px;
+                width: 24px;
+                height: 24px;
+                HorizontalBox {
+                    padding: 2px;
+                    Text { text: "3"; color: white; horizontal-alignment: center; }
+                }
+            }
+            Text { text: "Live Updates"; color: step == 2 ? #1e293b : #64748b; }
+        }
+
+        if (step == 0) : VerticalBox {
+            spacing: 10px;
+            Text { text: "App Connection Settings"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Device Address"; text: "0.0.0.0:18789"; }
+            LineEdit { placeholder-text: "Storage Location"; text: "ohc.db"; }
+        }
+
+        if (step == 1) : VerticalBox {
+            spacing: 10px;
+            Text { text: "AI Assistant Service"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Secret Key"; }
+            LineEdit { placeholder-text: "Default AI Engine"; text: "abab6.5s"; }
+        }
+
+        if (step == 2) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Live Update Service"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Live Update Address"; text: "ws://localhost:8000/connection/websocket"; }
+        }
+
+        Rectangle {}
+
+        HorizontalBox {
+            if (step > 0) : Button {
+                text: "Back";
+                clicked => { step = step - 1; }
+            }
+            Rectangle {}
+            Button {
+                text: step == 2 ? "Save Configuration" : "Next";
+                clicked => {
+                    if (step < 2) {
+                        step = step + 1;
+                    } else {
+                        // Handle save
+                    }
+                }
+            }
+        }
+    }
+}
