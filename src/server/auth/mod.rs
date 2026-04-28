@@ -27,7 +27,7 @@ pub struct User {
     pub password_hash: String,
     pub roles: Vec<String>,
     pub active: bool,
-    pub organization_id: Option<String>,
+    pub tenant_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub oidc_subject: Option<String>,
@@ -40,7 +40,7 @@ pub struct UserPublic {
     pub email: String,
     pub roles: Vec<String>,
     pub active: bool,
-    pub organization_id: Option<String>,
+    pub tenant_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub oidc_subject: Option<String>,
@@ -54,7 +54,7 @@ impl User {
             email: self.email.clone(),
             roles: self.roles.clone(),
             active: self.active,
-            organization_id: self.organization_id.clone(),
+            tenant_id: self.tenant_id.clone(),
             created_at: self.created_at,
             updated_at: self.updated_at,
             oidc_subject: self.oidc_subject.clone(),
@@ -68,7 +68,7 @@ pub struct Claims {
     pub username: String,
     pub email: String,
     pub roles: Vec<String>,
-    pub organization_id: Option<String>,
+    pub tenant_id: Option<String>,
     pub session_id: Option<String>,
     pub iat: i64,
     pub exp: i64,
@@ -85,7 +85,7 @@ pub struct Role {
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct TenantKey {
-    pub org_id: String,
+    pub tenant_id: String,
     pub key: String,
 }
 
@@ -98,14 +98,14 @@ pub struct OIDCConfig {
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String>;
-    async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String>;
-    async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String>;
-    async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String>;
-    async fn update_user(&self, user: User, org_id: &str) -> Result<(), String>;
-    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String>;
+    async fn create_user(&self, user: User, tenant_id: &str) -> Result<(), String>;
+    async fn get_by_id(&self, id: &str, tenant_id: &str) -> Result<User, String>;
+    async fn get_by_username(&self, username: &str, tenant_id: &str) -> Result<User, String>;
+    async fn get_by_email(&self, email: &str, tenant_id: &str) -> Result<User, String>;
+    async fn get_by_oidc_subject(&self, sub: &str, tenant_id: &str) -> Result<User, String>;
+    async fn list_users(&self, tenant_id: &str) -> Result<Vec<User>, String>;
+    async fn update_user(&self, user: User, tenant_id: &str) -> Result<(), String>;
+    async fn delete_user(&self, id: &str, tenant_id: &str) -> Result<(), String>;
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>) -> Result<(), String>;
     async fn is_revoked(&self, jti: &str) -> Result<bool, String>;
 }
@@ -192,18 +192,18 @@ impl Store {
             password_hash: hash,
             roles: vec![ROLE_ADMIN.to_string()],
             active: true,
-            organization_id: None,
+            tenant_id: None,
             created_at: now,
             updated_at: now,
             oidc_subject: None,
         };
 
         self.users.write().unwrap().insert(id.clone(), admin);
-        self.by_name.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_user }, id.clone());
-        self.by_email.write().unwrap().insert(TenantKey { org_id: "".to_string(), key: admin_email }, id);
+        self.by_name.write().unwrap().insert(TenantKey { tenant_id: "".to_string(), key: admin_user }, id.clone());
+        self.by_email.write().unwrap().insert(TenantKey { tenant_id: "".to_string(), key: admin_email }, id);
     }
 
-    pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, org_id: String) -> Result<User, String> {
+    pub fn create_user(&self, username: String, email: String, password: String, roles: Vec<String>, tenant_id: String) -> Result<User, String> {
         if username.is_empty() {
             return Err("username is required".to_string());
         }
@@ -215,12 +215,12 @@ impl Store {
         let mut by_name = self.by_name.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
 
-        let name_key = TenantKey { org_id: org_id.clone(), key: username.clone() };
+        let name_key = TenantKey { tenant_id: tenant_id.clone(), key: username.clone() };
         if by_name.contains_key(&name_key) {
             return Err("username already taken".to_string());
         }
 
-        let email_key = TenantKey { org_id: org_id.clone(), key: email.clone() };
+        let email_key = TenantKey { tenant_id: tenant_id.clone(), key: email.clone() };
         if by_email.contains_key(&email_key) {
             return Err("email already registered".to_string());
         }
@@ -237,7 +237,7 @@ impl Store {
             password_hash: hash,
             roles,
             active: true,
-            organization_id: Some(org_id),
+            tenant_id: Some(tenant_id),
             created_at: now,
             updated_at: now,
             oidc_subject: None,
@@ -250,15 +250,15 @@ impl Store {
         Ok(user)
     }
 
-    pub fn authenticate(&self, username: &str, password: &str, org_id: &str) -> Result<User, String> {
+    pub fn authenticate(&self, username: &str, password: &str, tenant_id: &str) -> Result<User, String> {
         let by_name = self.by_name.read().unwrap();
         let users = self.users.read().unwrap();
 
-        let name_key = TenantKey { org_id: org_id.to_string(), key: username.to_string() };
+        let name_key = TenantKey { tenant_id: tenant_id.to_string(), key: username.to_string() };
         let mut user_id_opt = by_name.get(&name_key).cloned();
 
-        if user_id_opt.is_none() && (org_id == "sys" || org_id.is_empty()) {
-            user_id_opt = by_name.get(&TenantKey { org_id: "".to_string(), key: username.to_string() }).cloned();
+        if user_id_opt.is_none() && (tenant_id == "sys" || tenant_id.is_empty()) {
+            user_id_opt = by_name.get(&TenantKey { tenant_id: "".to_string(), key: username.to_string() }).cloned();
         }
 
         let user_id = user_id_opt.ok_or_else(|| "invalid credentials".to_string())?;
@@ -268,8 +268,8 @@ impl Store {
             return Err("account disabled".to_string());
         }
 
-        if let Some(ref user_org) = user.organization_id {
-            if !org_id.is_empty() && org_id != "sys" && user_org != org_id {
+        if let Some(ref user_org) = user.tenant_id {
+            if !tenant_id.is_empty() && tenant_id != "sys" && user_org != tenant_id {
                 return Err("invalid credentials".to_string());
             }
         }
@@ -281,13 +281,13 @@ impl Store {
         }
     }
 
-    pub fn get_user(&self, id: &str, org_id: &str) -> Option<User> {
+    pub fn get_user(&self, id: &str, tenant_id: &str) -> Option<User> {
         let users = self.users.read().unwrap();
         let u = users.get(id)?;
         
-        if !org_id.is_empty() && org_id != "sys" {
-            if let Some(ref user_org) = u.organization_id {
-                if user_org != org_id {
+        if !tenant_id.is_empty() && tenant_id != "sys" {
+            if let Some(ref user_org) = u.tenant_id {
+                if user_org != tenant_id {
                     return None;
                 }
             } else {
@@ -297,36 +297,36 @@ impl Store {
         Some(u.clone())
     }
 
-    pub fn list_users(&self, org_id: &str) -> Vec<User> {
+    pub fn list_users(&self, tenant_id: &str) -> Vec<User> {
         let users = self.users.read().unwrap();
         users.values()
             .filter(|u| {
-                org_id.is_empty() || org_id == "sys" || u.organization_id.as_deref() == Some(org_id)
+                tenant_id.is_empty() || tenant_id == "sys" || u.tenant_id.as_deref() == Some(tenant_id)
             })
             .cloned()
             .collect()
     }
 
-    pub fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, org_id: &str) -> Result<User, String> {
+    pub fn update_user(&self, id: &str, email_ptr: Option<String>, roles: Option<Vec<String>>, active_ptr: Option<bool>, tenant_id: &str) -> Result<User, String> {
         let mut users = self.users.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
 
         let u = users.get_mut(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() && org_id != "sys" {
-             if u.organization_id.as_deref() != Some(org_id) {
+        if !tenant_id.is_empty() && tenant_id != "sys" {
+             if u.tenant_id.as_deref() != Some(tenant_id) {
                  return Err("user not found".to_string());
              }
         }
 
         if let Some(email) = email_ptr {
             if email != u.email {
-                let org = u.organization_id.clone().unwrap_or_default();
-                let email_key = TenantKey { org_id: org, key: email.clone() };
+                let org = u.tenant_id.clone().unwrap_or_default();
+                let email_key = TenantKey { tenant_id: org, key: email.clone() };
                 if by_email.contains_key(&email_key) {
                     return Err("email already registered".to_string());
                 }
-                by_email.remove(&TenantKey { org_id: u.organization_id.clone().unwrap_or_default(), key: u.email.clone() });
+                by_email.remove(&TenantKey { tenant_id: u.tenant_id.clone().unwrap_or_default(), key: u.email.clone() });
                 u.email = email;
                 by_email.insert(email_key, id.to_string());
             }
@@ -345,7 +345,7 @@ impl Store {
         Ok(u.clone())
     }
 
-    pub fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+    pub fn delete_user(&self, id: &str, tenant_id: &str) -> Result<(), String> {
         let mut users = self.users.write().unwrap();
         let mut by_name = self.by_name.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
@@ -353,17 +353,17 @@ impl Store {
 
         let u = users.get(id).ok_or_else(|| "user not found".to_string())?;
 
-        if !org_id.is_empty() && org_id != "sys" {
-             if u.organization_id.as_deref() != Some(org_id) {
+        if !tenant_id.is_empty() && tenant_id != "sys" {
+             if u.tenant_id.as_deref() != Some(tenant_id) {
                  return Err("user not found".to_string());
              }
         }
 
-        let org = u.organization_id.clone().unwrap_or_default();
-        by_name.remove(&TenantKey { org_id: org.clone(), key: u.username.clone() });
-        by_email.remove(&TenantKey { org_id: org.clone(), key: u.email.clone() });
+        let org = u.tenant_id.clone().unwrap_or_default();
+        by_name.remove(&TenantKey { tenant_id: org.clone(), key: u.username.clone() });
+        by_email.remove(&TenantKey { tenant_id: org.clone(), key: u.email.clone() });
         if let Some(ref oidc) = u.oidc_subject {
-            by_oidc.remove(&TenantKey { org_id: org, key: oidc.clone() });
+            by_oidc.remove(&TenantKey { tenant_id: org, key: oidc.clone() });
         }
 
         users.remove(id);
@@ -396,7 +396,7 @@ impl Store {
             username: user.username.clone(),
             email: user.email.clone(),
             roles: user.roles.clone(),
-            organization_id: user.organization_id.clone(),
+            tenant_id: user.tenant_id.clone(),
             session_id: None,
             iat: now.timestamp(),
             exp: (now + chrono::Duration::hours(24)).timestamp(),
@@ -439,13 +439,13 @@ impl Store {
             }
         }
     }
-    pub fn get_or_create_oidc_user(&self, sub: &str, email: &str, preferred_username: &str, org_id: &str) -> User {
+    pub fn get_or_create_oidc_user(&self, sub: &str, email: &str, preferred_username: &str, tenant_id: &str) -> User {
         let mut users = self.users.write().unwrap();
         let mut by_oidc = self.by_oidc.write().unwrap();
         let mut by_email = self.by_email.write().unwrap();
         let mut by_name = self.by_name.write().unwrap();
 
-        let oidc_key = TenantKey { org_id: org_id.to_string(), key: sub.to_string() };
+        let oidc_key = TenantKey { tenant_id: tenant_id.to_string(), key: sub.to_string() };
         if let Some(user_id) = by_oidc.get(&oidc_key) {
             if let Some(user) = users.get(user_id) {
                 return user.clone();
@@ -453,7 +453,7 @@ impl Store {
         }
 
         if !email.is_empty() {
-            let email_key = TenantKey { org_id: org_id.to_string(), key: email.to_string() };
+            let email_key = TenantKey { tenant_id: tenant_id.to_string(), key: email.to_string() };
             if let Some(user_id) = by_email.get(&email_key) {
                 if let Some(user) = users.get_mut(user_id) {
                     user.oidc_subject = Some(sub.to_string());
@@ -468,7 +468,7 @@ impl Store {
             uname = email.to_string();
         }
         // de-duplicate username
-        let name_key = TenantKey { org_id: org_id.to_string(), key: uname.clone() };
+        let name_key = TenantKey { tenant_id: tenant_id.to_string(), key: uname.clone() };
         if by_name.contains_key(&name_key) {
              uname = format!("{}_{}", uname, hex::encode(random_bytes(3)));
         }
@@ -482,7 +482,7 @@ impl Store {
             password_hash: String::new(), // No password for OIDC users
             roles: vec![ROLE_VIEWER.to_string()],
             active: true,
-            organization_id: Some(org_id.to_string()),
+            tenant_id: Some(tenant_id.to_string()),
             oidc_subject: Some(sub.to_string()),
             created_at: now,
             updated_at: now,
@@ -490,10 +490,10 @@ impl Store {
 
         users.insert(id.clone(), user.clone());
         if !uname.is_empty() {
-            by_name.insert(TenantKey { org_id: org_id.to_string(), key: uname }, id.clone());
+            by_name.insert(TenantKey { tenant_id: tenant_id.to_string(), key: uname }, id.clone());
         }
         if !email.is_empty() {
-            by_email.insert(TenantKey { org_id: org_id.to_string(), key: email.to_string() }, id.clone());
+            by_email.insert(TenantKey { tenant_id: tenant_id.to_string(), key: email.to_string() }, id.clone());
         }
         by_oidc.insert(oidc_key, id);
 
@@ -514,7 +514,7 @@ impl AuthService for Arc<Store> {
     async fn login(&self, request: Request<LoginRequest>) -> Result<Response<LoginResponse>, Status> {
         let req = request.into_inner();
         
-        match self.as_ref().authenticate(&req.username, &req.password, &req.organization_id) {
+        match self.as_ref().authenticate(&req.username, &req.password, &req.tenant_id) {
             Ok(user) => {
                 match self.as_ref().issue_token(&user) {
                     Ok(token) => {
@@ -539,7 +539,7 @@ impl AuthService for Arc<Store> {
             req.roles
         };
         
-        match self.as_ref().create_user(req.username, req.email, req.password, roles, req.organization_id) {
+        match self.as_ref().create_user(req.username, req.email, req.password, roles, req.tenant_id) {
             Ok(user) => {
                 match self.as_ref().issue_token(&user) {
                     Ok(token) => {
@@ -568,14 +568,14 @@ impl AuthService for Arc<Store> {
 
     async fn list_users(&self, request: Request<ListUsersRequest>) -> Result<Response<ListUsersResponse>, Status> {
         let req = request.into_inner();
-        let users = self.as_ref().list_users(&req.organization_id);
+        let users = self.as_ref().list_users(&req.tenant_id);
         let proto_users = users.into_iter().map(|u| UserProto {
             id: u.id,
             username: u.username,
             email: u.email,
             roles: u.roles,
             active: u.active,
-            organization_id: u.organization_id.unwrap_or_default(),
+            tenant_id: u.tenant_id.unwrap_or_default(),
             created_at_unix: u.created_at.timestamp(),
             updated_at_unix: u.updated_at.timestamp(),
             oidc_subject: u.oidc_subject.unwrap_or_default(),
@@ -586,14 +586,14 @@ impl AuthService for Arc<Store> {
 
     async fn create_user(&self, request: Request<CreateUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.as_ref().create_user(req.username, req.email, req.password, req.roles, req.organization_id) {
+        match self.as_ref().create_user(req.username, req.email, req.password, req.roles, req.tenant_id) {
             Ok(u) => Ok(Response::new(UserProto {
                 id: u.id,
                 username: u.username,
                 email: u.email,
                 roles: u.roles,
                 active: u.active,
-                organization_id: u.organization_id.unwrap_or_default(),
+                tenant_id: u.tenant_id.unwrap_or_default(),
                 created_at_unix: u.created_at.timestamp(),
                 updated_at_unix: u.updated_at.timestamp(),
                 oidc_subject: u.oidc_subject.unwrap_or_default(),
@@ -604,14 +604,14 @@ impl AuthService for Arc<Store> {
 
     async fn get_user(&self, request: Request<GetUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.as_ref().get_user(&req.id, &req.organization_id) {
+        match self.as_ref().get_user(&req.id, &req.tenant_id) {
             Some(u) => Ok(Response::new(UserProto {
                 id: u.id,
                 username: u.username,
                 email: u.email,
                 roles: u.roles,
                 active: u.active,
-                organization_id: u.organization_id.unwrap_or_default(),
+                tenant_id: u.tenant_id.unwrap_or_default(),
                 created_at_unix: u.created_at.timestamp(),
                 updated_at_unix: u.updated_at.timestamp(),
                 oidc_subject: u.oidc_subject.unwrap_or_default(),
@@ -622,14 +622,14 @@ impl AuthService for Arc<Store> {
 
     async fn update_user(&self, request: Request<UpdateUserRequest>) -> Result<Response<UserProto>, Status> {
         let req = request.into_inner();
-        match self.as_ref().update_user(&req.id, req.email, Some(req.roles), req.active, &req.organization_id) {
+        match self.as_ref().update_user(&req.id, req.email, Some(req.roles), req.active, &req.tenant_id) {
             Ok(u) => Ok(Response::new(UserProto {
                 id: u.id,
                 username: u.username,
                 email: u.email,
                 roles: u.roles,
                 active: u.active,
-                organization_id: u.organization_id.unwrap_or_default(),
+                tenant_id: u.tenant_id.unwrap_or_default(),
                 created_at_unix: u.created_at.timestamp(),
                 updated_at_unix: u.updated_at.timestamp(),
                 oidc_subject: u.oidc_subject.unwrap_or_default(),
@@ -640,7 +640,7 @@ impl AuthService for Arc<Store> {
 
     async fn delete_user(&self, request: Request<DeleteUserRequest>) -> Result<Response<EmptyResponse>, Status> {
         let req = request.into_inner();
-        match self.as_ref().delete_user(&req.id, &req.organization_id) {
+        match self.as_ref().delete_user(&req.id, &req.tenant_id) {
             Ok(_) => Ok(Response::new(EmptyResponse {})),
             Err(e) => Err(Status::not_found(e)),
         }
@@ -796,7 +796,7 @@ mod tests {
         let req = Request::new(LoginRequest {
             username: "admin".to_string(),
             password: "admin".to_string(),
-            organization_id: "".to_string(),
+            tenant_id: "".to_string(),
         });
         
         let resp = s.login(req).await.unwrap();
@@ -812,7 +812,7 @@ mod tests {
             email: "new@test.com".to_string(),
             password: "password123".to_string(),
             roles: vec![],
-            organization_id: "".to_string(),
+            tenant_id: "".to_string(),
         });
         
         let resp = s.register(req).await.unwrap();
@@ -824,7 +824,7 @@ mod tests {
     async fn test_auth_service_list_users() {
         let s = Arc::new(Store::new());
         let req = Request::new(ListUsersRequest {
-            organization_id: "".to_string(),
+            tenant_id: "".to_string(),
         });
         
         let resp = s.list_users(req).await.unwrap();
@@ -865,35 +865,35 @@ pub fn parse_spiffe_id(spiffe_id: &str) -> Result<(String, String), String> {
     
     let domain = parts[0];
     let agent_id: String;
-    let org_id: String;
+    let tenant_id: String;
     
     if domain == "onehumancorp.io" {
         if parts.len() != 3 {
             return Err(format!("invalid SPIFFE ID path structure for domain onehumancorp.io: {}", spiffe_id));
         }
-        org_id = parts[1].to_string();
+        tenant_id = parts[1].to_string();
         agent_id = parts[2].to_string();
     } else if domain == "ohc.local" {
         if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
             return Err(format!("invalid SPIFFE ID path structure for domain ohc.local: {}", spiffe_id));
         }
-        org_id = parts[2].to_string();
+        tenant_id = parts[2].to_string();
         agent_id = parts[4].to_string();
     } else if domain == "ohc.os" {
         if parts.len() != 3 || parts[1] != "agent" {
             return Err(format!("invalid SPIFFE ID path structure for domain ohc.os: {}", spiffe_id));
         }
-        org_id = String::new();
+        tenant_id = String::new();
         agent_id = parts[2].to_string();
     } else if domain == "ohc.global" || domain.ends_with(".ohc.global") {
         if parts.len() != 5 || parts[1] != "org" || parts[3] != "agent" {
             return Err(format!("invalid SPIFFE ID path structure for domain {}: {}", domain, spiffe_id));
         }
-        org_id = parts[2].to_string();
+        tenant_id = parts[2].to_string();
         agent_id = parts[4].to_string();
     } else {
         return Err(format!("unsupported SPIFFE trust domain in ID: {}", spiffe_id));
     }
     
-    Ok((org_id, agent_id))
+    Ok((tenant_id, agent_id))
 }

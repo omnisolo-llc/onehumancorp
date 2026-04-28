@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS autodream_memories (
 
 CREATE TABLE IF NOT EXISTS agent_memories (
     id TEXT PRIMARY KEY,
-    organization_id VARCHAR NOT NULL,
+    tenant_id VARCHAR NOT NULL,
     content TEXT NOT NULL,
     embedding VECTOR(1536),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

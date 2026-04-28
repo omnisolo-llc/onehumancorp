@@ -1,3 +1,4 @@
+use crate::db::TenantPool;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use sqlx::Row;
@@ -38,16 +39,16 @@ struct MessageModel {
 
 pub struct SipDB {
     pool: PgPool,
-    org_id: String,
+    tenant_id: String,
     local_cache: RwLock<HashMap<String, String>>,
     cache_expirations: RwLock<HashMap<String, Instant>>,
 }
 
 impl SipDB {
-    pub fn new(pool: PgPool, org_id: String) -> Self {
+    pub fn new(pool: PgPool, tenant_id: String) -> Self {
         SipDB {
             pool,
-            org_id,
+            tenant_id,
             local_cache: RwLock::new(HashMap::new()),
             cache_expirations: RwLock::new(HashMap::new()),
         }
@@ -85,14 +86,14 @@ impl SipDB {
     }
 
     pub async fn sync_memory(&self, key: &str) -> Result<Option<String>, sqlx::Error> {
-        let cache_key = format!("sip:memory:{}:{}", self.org_id, key);
+        let cache_key = format!("sip:memory:{}:{}", self.tenant_id, key);
         if let Some(val) = self.get_cache(&cache_key) {
             return Ok(Some(val));
         }
 
-        let row = sqlx::query("SELECT value FROM swarm_memory WHERE key = $1 AND organization_id = $2")
+        let row = sqlx::query("SELECT value FROM swarm_memory WHERE key = $1 AND tenant_id = $2")
             .bind(key)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .fetch_optional(&self.pool)
             .await?;
             
@@ -105,34 +106,34 @@ impl SipDB {
     }
 
     pub async fn update_memory(&self, key: &str, value: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT INTO swarm_memory (key, value, updated_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP")
+        sqlx::query("INSERT INTO swarm_memory (key, value, updated_at, tenant_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP")
             .bind(key)
             .bind(value)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
-        self.invalidate_cache(&format!("sip:memory:{}:{}", self.org_id, key));
+        self.invalidate_cache(&format!("sip:memory:{}:{}", self.tenant_id, key));
             
         Ok(())
     }
 
     pub async fn get_pending_missions(&self, role: &str) -> Result<Vec<crate::ohc::orchestration::Message>, sqlx::Error> {
         let query = if role == "ANY" {
-            "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1 ORDER BY created_at DESC LIMIT 500"
+            "SELECT id, payload FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at DESC LIMIT 500"
         } else {
-            "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND organization_id = $2 ORDER BY created_at DESC LIMIT 500"
+            "SELECT id, payload FROM agent_missions WHERE payload::json->>'role' = $1 AND status = 'PENDING' AND tenant_id = $2 ORDER BY created_at DESC LIMIT 500"
         };
         
         let rows = if role == "ANY" {
             sqlx::query(query)
-                .bind(&self.org_id)
+                .bind(&self.tenant_id)
                 .fetch_all(&self.pool)
                 .await?
         } else {
             sqlx::query(query)
                 .bind(role)
-                .bind(&self.org_id)
+                .bind(&self.tenant_id)
                 .fetch_all(&self.pool)
                 .await?
         };
@@ -175,9 +176,9 @@ impl SipDB {
     }
 
     pub async fn complete_mission(&self, mission_id: &str) -> Result<(), sqlx::Error> {
-        let result = sqlx::query("UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+        let result = sqlx::query("UPDATE agent_missions SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(mission_id)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
@@ -189,11 +190,11 @@ impl SipDB {
     }
 
     pub async fn heartbeat(&self, agent_id: &str, role: &str, status: &str) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT INTO agent_status (agent_id, role, status, last_heartbeat, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP")
+        sqlx::query("INSERT INTO agent_status (agent_id, role, status, last_heartbeat, tenant_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4) ON CONFLICT(agent_id) DO UPDATE SET role=excluded.role, status=excluded.status, last_heartbeat=CURRENT_TIMESTAMP")
             .bind(agent_id)
             .bind(role)
             .bind(status)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
@@ -202,7 +203,7 @@ impl SipDB {
 
     pub async fn register_capability_plugin(&self, plugin: CapabilityPlugin) -> Result<(), sqlx::Error> {
         sqlx::query(
-            "INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at, organization_id)
+            "INSERT INTO capability_plugins (plugin_id, name, version, manifest_url, status, registered_at, tenant_id)
              VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6)
              ON CONFLICT(plugin_id) DO UPDATE SET
              name=excluded.name, version=excluded.version,
@@ -214,7 +215,7 @@ impl SipDB {
         .bind(plugin.version)
         .bind(plugin.manifest_url)
         .bind(plugin.status)
-        .bind(&self.org_id)
+        .bind(&self.tenant_id)
         .execute(&self.pool)
         .await?;
         
@@ -223,20 +224,20 @@ impl SipDB {
 
     pub async fn get_capability_plugins(&self, status: &str) -> Result<Vec<CapabilityPlugin>, sqlx::Error> {
         let query = if status.is_empty() {
-            "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE organization_id = $1"
+            "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE tenant_id = $1"
         } else {
-            "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE status = $1 AND organization_id = $2"
+            "SELECT plugin_id, name, version, manifest_url, status, registered_at FROM capability_plugins WHERE status = $1 AND tenant_id = $2"
         };
         
         let rows = if status.is_empty() {
             sqlx::query(query)
-                .bind(&self.org_id)
+                .bind(&self.tenant_id)
                 .fetch_all(&self.pool)
                 .await?
         } else {
             sqlx::query(query)
                 .bind(status)
-                .bind(&self.org_id)
+                .bind(&self.tenant_id)
                 .fetch_all(&self.pool)
                 .await?
         };
@@ -258,7 +259,7 @@ impl SipDB {
 
     pub async fn store_episodic_memory(&self, memory: EpisodicMemory) -> Result<(), sqlx::Error> {
         sqlx::query(
-            "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id)
+            "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, tenant_id)
              VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)
              ON CONFLICT(memory_id) DO UPDATE SET
              context=excluded.context, vector_embedding=excluded.vector_embedding,
@@ -268,7 +269,7 @@ impl SipDB {
         .bind(memory.context)
         .bind(memory.vector_embedding)
         .bind(memory.source_plugin)
-        .bind(&self.org_id)
+        .bind(&self.tenant_id)
         .execute(&self.pool)
         .await?;
         
@@ -277,20 +278,20 @@ impl SipDB {
 
     pub async fn get_episodic_memories_by_plugin(&self, plugin: &str) -> Result<Vec<EpisodicMemory>, sqlx::Error> {
         let query = if plugin.is_empty() {
-            "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE organization_id = $1"
+            "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE tenant_id = $1"
         } else {
-            "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE source_plugin = $1 AND organization_id = $2"
+            "SELECT memory_id, context, vector_embedding, source_plugin, created_at FROM swarm_memory_embeddings WHERE source_plugin = $1 AND tenant_id = $2"
         };
         
         let rows = if plugin.is_empty() {
             sqlx::query(query)
-                .bind(&self.org_id)
+                .bind(&self.tenant_id)
                 .fetch_all(&self.pool)
                 .await?
         } else {
             sqlx::query(query)
                 .bind(plugin)
-                .bind(&self.org_id)
+                .bind(&self.tenant_id)
                 .fetch_all(&self.pool)
                 .await?
         };
@@ -312,9 +313,9 @@ impl SipDB {
     pub async fn prune_buffered_metrics(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
         let threshold_time = Utc::now() - age_threshold;
         
-        sqlx::query("WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND organization_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)")
+        sqlx::query("WITH cte AS (SELECT id FROM telemetry_buffer WHERE created_at < $1 AND tenant_id = $2 LIMIT 1000) DELETE FROM telemetry_buffer WHERE id IN (SELECT id FROM cte)")
             .bind(threshold_time)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
@@ -326,29 +327,29 @@ impl SipDB {
         let fail_threshold = Utc::now() - age_threshold;
         
         // 1. Mark stagnant PENDING missions as STUCK after 1 hour
-        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+        sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
             .bind(stuck_threshold)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
         // 1b. Immediately requeue STUCK missions
-        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
-            .bind(&self.org_id)
+        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND tenant_id = $1")
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
         // 2. Mark missions as FAILED if they exceed the absolute age threshold
-        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
+        sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
             .bind(fail_threshold)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
         // 3. Remove COMPLETED, or very old FAILED missions
-        sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND organization_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
+        sqlx::query("WITH cte AS (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK' OR status = 'BURSTING') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) DELETE FROM agent_missions WHERE id IN (SELECT id FROM cte)")
             .bind(fail_threshold)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
@@ -358,8 +359,8 @@ impl SipDB {
     pub async fn sync_buffered_metrics(&self, remote_endpoint: &str, batch_size: usize) -> Result<usize, sqlx::Error> {
         let batch_size = if batch_size == 0 { 500 } else { batch_size };
         
-        let rows = sqlx::query("SELECT id, metric_type, payload FROM telemetry_buffer WHERE organization_id = $1 ORDER BY id ASC LIMIT $2")
-            .bind(&self.org_id)
+        let rows = sqlx::query("SELECT id, metric_type, payload FROM telemetry_buffer WHERE tenant_id = $1 ORDER BY id ASC LIMIT $2")
+            .bind(&self.tenant_id)
             .bind(batch_size as i64)
             .fetch_all(&self.pool)
             .await?;
@@ -407,8 +408,8 @@ impl SipDB {
     }
 
     pub async fn sync_context_sync(&self, remote_endpoint: &str) -> Result<usize, sqlx::Error> {
-        let rows = sqlx::query("SELECT memory_id, context FROM swarm_memory_embeddings WHERE organization_id = $1 ORDER BY created_at ASC LIMIT 100")
-            .bind(&self.org_id)
+        let rows = sqlx::query("SELECT memory_id, context FROM swarm_memory_embeddings WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 100")
+            .bind(&self.tenant_id)
             .fetch_all(&self.pool)
             .await?;
             
@@ -453,8 +454,8 @@ impl SipDB {
     }
 
     pub async fn sync_missions(&self, remote_endpoint: &str) -> Result<usize, sqlx::Error> {
-        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE status IN ('PENDING', 'BURSTING') AND organization_id = $1 ORDER BY created_at ASC LIMIT 100")
-            .bind(&self.org_id)
+        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE status IN ('PENDING', 'BURSTING') AND tenant_id = $1 ORDER BY created_at ASC LIMIT 100")
+            .bind(&self.tenant_id)
             .fetch_all(&self.pool)
             .await?;
             
@@ -503,9 +504,9 @@ impl SipDB {
     }
 
     pub async fn burst_mission(&self, mission_id: &str, remote_endpoint: &str) -> Result<(), sqlx::Error> {
-        let result = sqlx::query("UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND organization_id = $2")
+        let result = sqlx::query("UPDATE agent_missions SET status = 'BURSTING', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(mission_id)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
@@ -543,11 +544,11 @@ impl SipDB {
             bytes.extend_from_slice(&f.to_le_bytes());
         }
         
-        sqlx::query("INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, created_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, vector_embedding=EXCLUDED.vector_embedding")
+        sqlx::query("INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, created_at, tenant_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, vector_embedding=EXCLUDED.vector_embedding")
             .bind(memory_id)
             .bind(context)
             .bind(bytes)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .execute(&self.pool)
             .await?;
             
@@ -557,46 +558,46 @@ impl SipDB {
     pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
 
-        let row = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED")
+        let row = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND tenant_id = $2 FOR UPDATE SKIP LOCKED")
             .bind(mission_id)
-            .bind(&self.org_id)
+            .bind(&self.tenant_id)
             .fetch_optional(&mut *tx)
             .await?;
 
         if let Some(r) = row {
             let existing_id: String = r.get("id");
             if !existing_id.is_empty() && force_local {
-                sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4")
+                sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4")
                     .bind(status)
                     .bind(payload)
                     .bind(mission_id)
-                    .bind(&self.org_id)
+                    .bind(&self.tenant_id)
                     .execute(&mut *tx)
                     .await?;
             }
         } else {
-            let row_check = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2")
+            let row_check = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND tenant_id = $2")
                 .bind(mission_id)
-                .bind(&self.org_id)
+                .bind(&self.tenant_id)
                 .fetch_optional(&mut *tx)
                 .await?;
 
             if let Some(_) = row_check {
                  if force_local {
-                     sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND organization_id = $4")
+                     sqlx::query("UPDATE agent_missions SET status = $1, payload = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 AND tenant_id = $4")
                          .bind(status)
                          .bind(payload)
                          .bind(mission_id)
-                         .bind(&self.org_id)
+                         .bind(&self.tenant_id)
                          .execute(&mut *tx)
                          .await?;
                  }
             } else {
-                 sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
+                 sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
                      .bind(mission_id)
                      .bind(status)
                      .bind(payload)
-                     .bind(&self.org_id)
+                     .bind(&self.tenant_id)
                      .execute(&mut *tx)
                      .await?;
             }

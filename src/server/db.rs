@@ -64,29 +64,29 @@ impl DB {
     }
 
     pub async fn get_completed_tasks(&self) -> Result<Vec<(String, String, String)>, Box<dyn std::error::Error>> {
-        let rows = sqlx::query("SELECT id, organization_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 50")
+        let rows = sqlx::query("SELECT id, tenant_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 50")
             .fetch_all(&self.pool)
             .await?;
             
         let mut result = Vec::new();
         for row in rows {
             let id: String = row.get("id");
-            let org_id: String = row.get("organization_id");
+            let tenant_id: String = row.get("tenant_id");
             let payload: String = row.get("payload");
-            result.push((id, org_id, payload));
+            result.push((id, tenant_id, payload));
         }
         
         Ok(result)
     }
 
-    pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
-        sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+    pub async fn insert_agent_memory(&self, id: &str, tenant_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
             .bind(id)
-            .bind(org_id)
+            .bind(tenant_id)
             .bind(task_id)
             .bind(content)
             .bind(embedding)
-            .execute(&self.pool)
+            .execute(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?)
             .await?;
             
         Ok(())

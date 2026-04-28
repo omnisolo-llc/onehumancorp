@@ -1,3 +1,4 @@
+use crate::db::TenantPool;
 use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::auth::{User, UserRepository};
@@ -16,12 +17,12 @@ impl PgUserRepository {
 
 #[async_trait]
 impl UserRepository for PgUserRepository {
-    async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
+    async fn create_user(&self, user: User, tenant_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
@@ -31,28 +32,28 @@ impl UserRepository for PgUserRepository {
         .bind(&user.password_hash)
         .bind(roles_json) // Using JSON string for simplicity, assuming TEXT or JSONB column
         .bind(user.active)
-        .bind(&user.organization_id)
+        .bind(&user.tenant_id)
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
-        .execute(&self.pool)
+        .execute(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?)
         .await
         .map_err(|e| e.to_string())?;
 
         Ok(())
     }
 
-    async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = if org_id.is_empty() || org_id == "sys" {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
+    async fn get_by_id(&self, id: &str, tenant_id: &str) -> Result<User, String> {
+        let query = if tenant_id.is_empty() || tenant_id == "system" {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND organization_id = $2"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2"
         };
 
-        let row = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(id).fetch_one(&self.pool).await
+        let row = if tenant_id.is_empty() || tenant_id == "system" {
+            sqlx::query(query).bind(id).fetch_one(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         } else {
-            sqlx::query(query).bind(id).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(id).bind(tenant_id).fetch_one(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         }.map_err(|e| e.to_string())?;
 
         // Parse roles from JSON string
@@ -66,25 +67,25 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            tenant_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
         })
     }
 
-    async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
+    async fn get_by_username(&self, username: &str, tenant_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by username
-        let query = if org_id.is_empty() || org_id == "sys" {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
+        let query = if tenant_id.is_empty() || tenant_id == "system" {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND organization_id = $2"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1 AND tenant_id = $2"
         };
 
-        let row = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(username).fetch_one(&self.pool).await
+        let row = if tenant_id.is_empty() || tenant_id == "system" {
+            sqlx::query(query).bind(username).fetch_one(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         } else {
-            sqlx::query(query).bind(username).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(username).bind(tenant_id).fetch_one(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -97,25 +98,25 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            tenant_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
         })
     }
 
-    async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
+    async fn get_by_email(&self, email: &str, tenant_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by email
-        let query = if org_id.is_empty() || org_id == "sys" {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
+        let query = if tenant_id.is_empty() || tenant_id == "system" {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND organization_id = $2"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1 AND tenant_id = $2"
         };
 
-        let row = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(email).fetch_one(&self.pool).await
+        let row = if tenant_id.is_empty() || tenant_id == "system" {
+            sqlx::query(query).bind(email).fetch_one(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         } else {
-            sqlx::query(query).bind(email).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(email).bind(tenant_id).fetch_one(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -128,25 +129,25 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            tenant_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
         })
     }
 
-    async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
+    async fn get_by_oidc_subject(&self, sub: &str, tenant_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by oidc_subject
-        let query = if org_id.is_empty() || org_id == "sys" {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
+        let query = if tenant_id.is_empty() || tenant_id == "system" {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND organization_id = $2"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1 AND tenant_id = $2"
         };
 
-        let row = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(sub).fetch_one(&self.pool).await
+        let row = if tenant_id.is_empty() || tenant_id == "system" {
+            sqlx::query(query).bind(sub).fetch_one(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         } else {
-            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(sub).bind(tenant_id).fetch_one(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -159,24 +160,24 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            tenant_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
         })
     }
 
-    async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        let query = if org_id.is_empty() || org_id == "sys" {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
+    async fn list_users(&self, tenant_id: &str) -> Result<Vec<User>, String> {
+        let query = if tenant_id.is_empty() || tenant_id == "system" {
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
-            "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE organization_id = $1 ORDER BY created_at"
+            "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE tenant_id = $1 ORDER BY created_at"
         };
 
-        let rows = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).fetch_all(&self.pool).await
+        let rows = if tenant_id.is_empty() || tenant_id == "system" {
+            sqlx::query(query).fetch_all(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         } else {
-            sqlx::query(query).bind(org_id).fetch_all(&self.pool).await
+            sqlx::query(query).bind(tenant_id).fetch_all(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         }.map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
@@ -191,7 +192,7 @@ impl UserRepository for PgUserRepository {
                 password_hash: row.get("password_hash"),
                 roles,
                 active: row.get("active"),
-                organization_id: row.get("organization_id"),
+                tenant_id: row.get("tenant_id"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
                 oidc_subject: row.get("oidc_subject"),
@@ -200,24 +201,24 @@ impl UserRepository for PgUserRepository {
         Ok(users)
     }
 
-    async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
+    async fn update_user(&self, user: User, tenant_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         
-        let query = if org_id.is_empty() || org_id == "sys" {
+        let query = if tenant_id.is_empty() || tenant_id == "system" {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            organization_id=$7, oidc_subject=$8, updated_at=$9
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
             WHERE id=$1
             "#
         } else {
             r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            organization_id=$7, oidc_subject=$8, updated_at=$9
-            WHERE id=$1 AND organization_id=$10
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
+            WHERE id=$1 AND tenant_id=$10
             "#
         };
 
-        let res = if org_id.is_empty() || org_id == "sys" {
+        let res = if tenant_id.is_empty() || tenant_id == "system" {
             sqlx::query(query)
                 .bind(&user.id)
                 .bind(&user.username)
@@ -225,10 +226,10 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.password_hash)
                 .bind(roles_json)
                 .bind(user.active)
-                .bind(&user.organization_id)
+                .bind(&user.tenant_id)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .execute(&self.pool)
+                .execute(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?)
                 .await
         } else {
             sqlx::query(query)
@@ -238,11 +239,11 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.password_hash)
                 .bind(roles_json)
                 .bind(user.active)
-                .bind(&user.organization_id)
+                .bind(&user.tenant_id)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .bind(org_id)
-                .execute(&self.pool)
+                .bind(tenant_id)
+                .execute(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?)
                 .await
         }.map_err(|e| e.to_string())?;
 
@@ -253,17 +254,17 @@ impl UserRepository for PgUserRepository {
         Ok(())
     }
 
-    async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
-        let query = if org_id.is_empty() || org_id == "sys" {
+    async fn delete_user(&self, id: &str, tenant_id: &str) -> Result<(), String> {
+        let query = if tenant_id.is_empty() || tenant_id == "system" {
             "DELETE FROM users WHERE id = $1"
         } else {
-            "DELETE FROM users WHERE id = $1 AND organization_id = $2"
+            "DELETE FROM users WHERE id = $1 AND tenant_id = $2"
         };
 
-        let res = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(id).execute(&self.pool).await
+        let res = if tenant_id.is_empty() || tenant_id == "system" {
+            sqlx::query(query).bind(id).execute(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         } else {
-            sqlx::query(query).bind(id).bind(org_id).execute(&self.pool).await
+            sqlx::query(query).bind(id).bind(tenant_id).execute(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?).await
         }.map_err(|e| e.to_string())?;
 
         if res.rows_affected() == 0 {
@@ -282,13 +283,13 @@ impl UserRepository for PgUserRepository {
         )
         .bind(jti)
         .bind(exp)
-        .execute(&self.pool)
+        .execute(&mut *self.pool.acquire_tenant("system").await.map_err(|e| e.to_string())?)
         .await
         .map_err(|e| e.to_string())?;
 
         // GC expired entries
         let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP")
-            .execute(&self.pool)
+            .execute(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?)
             .await;
 
         Ok(())
@@ -297,7 +298,7 @@ impl UserRepository for PgUserRepository {
     async fn is_revoked(&self, jti: &str) -> Result<bool, String> {
         let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
             .bind(jti)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *self.pool.acquire_tenant("system").await.map_err(|e| e.to_string())?)
             .await
             .map_err(|e| e.to_string())?;
 

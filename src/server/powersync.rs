@@ -58,7 +58,7 @@ pub fn get_powersync_jwks() -> serde_json::Value {
     })
 }
 
-pub fn generate_powersync_token(sub: &str, org_id: &str) -> Result<String, String> {
+pub fn generate_powersync_token(sub: &str, tenant_id: &str) -> Result<String, String> {
     let (priv_key, _) = get_powersync_keys();
 
     let now = Utc::now();
@@ -70,7 +70,7 @@ pub fn generate_powersync_token(sub: &str, org_id: &str) -> Result<String, Strin
         "aud": "powersync",
         "iat": now.timestamp(),
         "exp": exp,
-        "organization_id": org_id,
+        "tenant_id": tenant_id,
     });
 
     let hdr = json!({

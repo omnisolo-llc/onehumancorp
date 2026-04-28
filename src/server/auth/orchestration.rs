@@ -4,7 +4,7 @@ use crate::ohc::orchestration::*;
 
 #[derive(Debug, Clone)]
 pub struct AuthInfo {
-    pub org_id: String,
+    pub tenant_id: String,
     pub agent_id: String,
     pub spiffe_id: String,
 }
@@ -16,12 +16,12 @@ pub fn interceptor(req: Request<()>) -> Result<Request<()>, Status> {
         .map_err(|_| Status::unauthenticated("invalid x-spiffe-id header"))?
         .to_string();
 
-    let (org_id, agent_id) = parse_spiffe_id(&spiffe_id_str)
+    let (tenant_id, agent_id) = parse_spiffe_id(&spiffe_id_str)
         .map_err(|e| Status::permission_denied(e))?;
 
     let mut req = req;
     req.extensions_mut().insert(AuthInfo {
-        org_id,
+        tenant_id,
         agent_id,
         spiffe_id: spiffe_id_str,
     });
@@ -34,8 +34,8 @@ pub fn authorize_register_agent(auth: &AuthInfo, req: &RegisterAgentRequest) -> 
         if auth.agent_id != agent.id {
             return Err(Status::permission_denied(format!("SPIFFE ID {} cannot register agent {}", auth.spiffe_id, agent.id)));
         }
-        if !auth.org_id.is_empty() && !agent.organization_id.is_empty() && auth.org_id != agent.organization_id {
-            return Err(Status::permission_denied(format!("SPIFFE ID {} cannot register into organization {}", auth.spiffe_id, agent.organization_id)));
+        if !auth.tenant_id.is_empty() && !agent.tenant_id.is_empty() && auth.tenant_id != agent.tenant_id {
+            return Err(Status::permission_denied(format!("SPIFFE ID {} cannot register into organization {}", auth.spiffe_id, agent.tenant_id)));
         }
     }
     Ok(())
@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn test_authorize_register_agent() {
         let auth = AuthInfo {
-            org_id: "org-1".to_string(),
+            tenant_id: "org-1".to_string(),
             agent_id: "agent-1".to_string(),
             spiffe_id: "spiffe://onehumancorp.io/org-1/agent-1".to_string(),
         };
@@ -94,7 +94,7 @@ mod tests {
         let mut req = RegisterAgentRequest::default();
         let mut agent = Agent::default();
         agent.id = "agent-1".to_string();
-        agent.organization_id = "org-1".to_string();
+        agent.tenant_id = "org-1".to_string();
         req.agent = Some(agent);
         
         assert!(authorize_register_agent(&auth, &req).is_ok());
@@ -102,7 +102,7 @@ mod tests {
         let mut req2 = RegisterAgentRequest::default();
         let mut agent2 = Agent::default();
         agent2.id = "agent-2".to_string();
-        agent2.organization_id = "org-1".to_string();
+        agent2.tenant_id = "org-1".to_string();
         req2.agent = Some(agent2);
         
         assert!(authorize_register_agent(&auth, &req2).is_err());

@@ -196,7 +196,7 @@ impl McpService for MyMcpService {
     ) -> Result<Response<EmptyResponse>, Status> {
         let req = request.into_inner();
         for m in req.missions {
-            let query = "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) \
+            let query = "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, tenant_id) \
                          VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'system') \
                          ON CONFLICT (id) DO UPDATE SET \
                              status = CASE WHEN $4 THEN EXCLUDED.status ELSE agent_missions.status END, \
@@ -220,7 +220,7 @@ impl McpService for MyMcpService {
         request: Request<SyncContextRequest>,
     ) -> Result<Response<EmptyResponse>, Status> {
         let req = request.into_inner();
-        let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id) \
+        let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, tenant_id) \
                      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, 'system') \
                      ON CONFLICT (memory_id) DO UPDATE SET \
                          context = EXCLUDED.context, \

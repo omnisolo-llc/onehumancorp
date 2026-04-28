@@ -36,7 +36,7 @@ impl SchedulerService for MySchedulerService {
         
         let task = Task {
             id: format!("task-{}", Utc::now().timestamp()),
-            organization_id: "system".to_string(),
+            tenant_id: "system".to_string(),
             agent_id: req.agent_id,
             name: req.name,
             schedule: convert_from_proto_schedule(schedule),
@@ -68,7 +68,7 @@ impl SchedulerService for MySchedulerService {
 fn convert_to_proto(t: Task) -> ProtoTask {
     ProtoTask {
         id: t.id,
-        organization_id: t.organization_id,
+        tenant_id: t.tenant_id,
         agent_id: t.agent_id,
         name: t.name,
         schedule: Some(ProtoSchedule {

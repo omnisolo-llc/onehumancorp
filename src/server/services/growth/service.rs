@@ -257,7 +257,7 @@ impl GrowthService for MyGrowthService {
         
         Ok(Response::new(ViralCoefficientMetricsResponse {
             viral_coefficient: k_factor,
-            organization_id: "default".to_string(),
+            tenant_id: "default".to_string(),
         }))
     }
 

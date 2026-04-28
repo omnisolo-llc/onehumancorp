@@ -175,7 +175,7 @@ impl OpsService for MyOpsService {
         
         let alert = BudgetAlert {
             id: format!("alert-{}", Utc::now().timestamp()),
-            organization_id: req.organization_id,
+            tenant_id: req.tenant_id,
             threshold_usd: req.threshold_usd,
             notify_at_pct: req.notify_at_pct,
             predictive: req.predictive,
@@ -319,7 +319,7 @@ impl OpsService for MyOpsService {
                     id: id.clone(),
                     name: req.role.clone(),
                     role: req.role.clone(),
-                    organization_id: "system".to_string(),
+                    tenant_id: "system".to_string(),
                     status: "IDLE".to_string(),
                     provider_type: "mock".to_string(),
                 };

@@ -34,7 +34,7 @@ pub struct AppConfig {
     pub cloud_missions_endpoint: Option<String>,
     pub cloud_context_endpoint: Option<String>,
     pub telemetry_enabled: bool,
-    pub bootstrap_org_id: String,
+    pub bootstrap_tenant_id: String,
     pub bootstrap_org_name: String,
     pub bootstrap_ceo_name: String,
     pub bootstrap_org_domain: Option<String>,
@@ -59,7 +59,7 @@ fn load() -> Result<AppConfig, config::ConfigError> {
         .set_default("agent_address", "127.0.0.1:50051")?
         .set_default("max_tokens", 2048)?
         .set_default("s3_bucket_blobs", "ohc-blobs")?
-        .set_default("bootstrap_org_id", "bootstrap")?
+        .set_default("bootstrap_tenant_id", "bootstrap")?
         .set_default("bootstrap_org_name", "Bootstrap Organization")?
         .set_default("bootstrap_ceo_name", "Platform Admin")?
         .set_default("standalone", false)?

@@ -108,11 +108,11 @@ impl TaskQueue for PostgresTaskQueue {
         
         let new_payload = serde_json::to_string(&payload_map).unwrap_or_default();
         
-        let org_id = payload_map["organization_id"].as_str().unwrap_or("").to_string();
+        let tenant_id = payload_map["tenant_id"].as_str().unwrap_or("").to_string();
         
-        sqlx::query("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(job.id)
-            .bind(org_id)
+            .bind(tenant_id)
             .bind(job.parent_task_id)
             .bind(new_payload)
             .bind("PENDING")
@@ -125,7 +125,7 @@ impl TaskQueue for PostgresTaskQueue {
     }
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_task_id, payload, status, scheduled_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'PENDING' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
             .bind(&roles)
             .fetch_optional(&self.pool)
             .await
@@ -347,7 +347,7 @@ impl WorkerPool {
 #[derive(Debug, Clone)]
 pub struct SubAgentJob {
     pub id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub parent_task_id: String,
     pub payload: serde_json::Value,
     pub status: String,
@@ -368,9 +368,9 @@ impl QueueManager {
     pub async fn enqueue(&self, job: SubAgentJob) -> Result<(), sqlx::Error> {
         let payload_str = serde_json::to_string(&job.payload).unwrap_or_default();
         
-        sqlx::query("INSERT INTO sub_agent_queue (id, organization_id, parent_task_id, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
             .bind(job.id)
-            .bind(job.organization_id)
+            .bind(job.tenant_id)
             .bind(job.parent_task_id)
             .bind(payload_str)
             .bind("QUEUED")
@@ -383,7 +383,7 @@ impl QueueManager {
     }
 
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, tenant_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
             .bind(worker_id)
             .fetch_optional(&self.pool)
             .await?;
@@ -394,7 +394,7 @@ impl QueueManager {
             
             Ok(Some(SubAgentJob {
                 id: row.get("id"),
-                organization_id: row.get("organization_id"),
+                tenant_id: row.get("tenant_id"),
                 parent_task_id: row.get("parent_task_id"),
                 payload,
                 status: row.get("status"),
@@ -472,7 +472,7 @@ impl QueueManager {
 #[derive(Debug, Clone)]
 pub struct SharedTaskModel {
     pub id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub parent_id: Option<String>,
     pub epic_id: Option<String>,
     pub title: String,
@@ -495,7 +495,7 @@ impl TaskQueueService {
     pub async fn push_task(&self, task: SharedTaskModel) -> Result<(), sqlx::Error> {
         let payload_str = serde_json::to_string(&task.payload).unwrap_or_default();
         
-        sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, organization_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
+        sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, tenant_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
             .bind(task.id)
             .bind(task.parent_id)
             .bind(task.epic_id)
@@ -503,7 +503,7 @@ impl TaskQueueService {
             .bind("PENDING")
             .bind(task.assigned_agent)
             .bind(payload_str)
-            .bind(task.organization_id)
+            .bind(task.tenant_id)
             .execute(&self.pool)
             .await?;
             
@@ -511,7 +511,7 @@ impl TaskQueueService {
     }
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT id FROM shared_tasks WHERE status = 'PENDING' AND (assigned_agent IS NULL OR assigned_agent = $1) ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at")
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT id FROM shared_tasks WHERE status = 'PENDING' AND (assigned_agent IS NULL OR assigned_agent = $1) ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at")
             .bind(agent_id)
             .fetch_optional(&self.pool)
             .await?;
@@ -522,7 +522,7 @@ impl TaskQueueService {
             
             Ok(Some(SharedTaskModel {
                 id: row.get("id"),
-                organization_id: row.get("organization_id"),
+                tenant_id: row.get("tenant_id"),
                 parent_id: row.get("parent_id"),
                 epic_id: row.get("epic_id"),
                 title: row.get("title"),
@@ -547,7 +547,7 @@ impl TaskQueueService {
     }
 
     pub async fn get_completed_tasks(&self, limit: i64) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
-        let rows = sqlx::query("SELECT id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
+        let rows = sqlx::query("SELECT id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
             .bind(limit)
             .fetch_all(&self.pool)
             .await?;
@@ -559,7 +559,7 @@ impl TaskQueueService {
             
             tasks.push(SharedTaskModel {
                 id: row.get("id"),
-                organization_id: row.get("organization_id"),
+                tenant_id: row.get("tenant_id"),
                 parent_id: row.get("parent_id"),
                 epic_id: row.get("epic_id"),
                 title: row.get("title"),

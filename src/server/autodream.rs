@@ -78,7 +78,7 @@ impl AutoDreamWorker {
     async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let tasks = db.get_completed_tasks().await?;
         
-        for (id, org_id, payload) in tasks {
+        for (id, tenant_id, payload) in tasks {
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             let client = crate::minimax::MinimaxClient::new(api_key);
             let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:\n{}", payload);
@@ -97,7 +97,7 @@ impl AutoDreamWorker {
                 }
             };
             
-            db.insert_agent_memory(&mem_id, &org_id, &id, &summary, &embedding).await?;
+            db.insert_agent_memory(&mem_id, &tenant_id, &id, &summary, &embedding).await?;
             db.mark_task_auto_dreamed(&id).await?;
             
             println!("AutoDream: ingested completed task {}", id);

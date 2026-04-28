@@ -91,12 +91,14 @@ where
     let _ = tx.try_send(Box::new(f));
 }
 
-fn spiffe_interceptor(req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
+fn spiffe_interceptor(mut req: tonic::Request<()>) -> Result<tonic::Request<()>, tonic::Status> {
     if let Some(spiffe_id) = req.metadata().get("x-spiffe-id") {
         if let Ok(spiffe_id_str) = spiffe_id.to_str() {
              match crate::auth::parse_spiffe_id(spiffe_id_str) {
-                 Ok((org_id, agent_id)) => {
-                     println!("Authenticated SPIFFE ID: org={}, agent={}", org_id, agent_id);
+                 Ok((tenant_id, agent_id)) => {
+                     println!("Authenticated SPIFFE ID: org={}, agent={}", tenant_id, agent_id);
+                     // Inject the extracted tenant ID into the request extensions for per-request tenant scoping
+                     req.extensions_mut().insert(crate::db::TenantId(tenant_id));
                  }
                  Err(e) => return Err(tonic::Status::permission_denied(e)),
              }
@@ -481,7 +483,7 @@ impl HubService for MyHubService {
         
         Ok(Response::new(SharedTask {
             id: task.id,
-            organization_id: task.organization_id,
+            tenant_id: task.tenant_id,
             parent_plan_id: task.parent_plan_id,
             dependencies: task.dependencies,
             title: task.title,
@@ -511,7 +513,7 @@ impl HubService for MyHubService {
         let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
             Ok(SharedTask {
                 id: task.id,
-                organization_id: task.organization_id,
+                tenant_id: task.tenant_id,
                 parent_plan_id: task.parent_plan_id,
                 dependencies: task.dependencies,
                 title: task.title,
@@ -572,7 +574,7 @@ impl HubService for MyHubService {
             }
             
             self.hub.task_manager().create_task_with_plan(
-                req.organization_id.clone(),
+                req.tenant_id.clone(),
                 String::new(),
                 req.task_id.clone(),
                 filtered_deps,
@@ -649,7 +651,7 @@ impl HubService for MyHubService {
             id: sub_agent_id.clone(),
             name: format!("Specialized {} Agent", req.target_role),
             role: req.target_role.clone(),
-            organization_id: "dynamic-delegation".to_string(),
+            tenant_id: "dynamic-delegation".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
         };
@@ -861,7 +863,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("executing scheduled task: {} ({})", task.name, task.id);
                 
                 // Mark as running
-                if let Err(e) = hub_for_sched.scheduler().mark_running(&task.organization_id, &task.id) {
+                if let Err(e) = hub_for_sched.scheduler().mark_running(&task.tenant_id, &task.id) {
                     println!("failed to mark task as running: {}", e);
                     continue;
                 }
@@ -879,11 +881,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 
                 match hub_for_sched.clone().publish(msg) {
                     Ok(_) => {
-                        let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, true);
+                        let _ = hub_for_sched.scheduler().mark_done(&task.tenant_id, &task.id, true);
                     }
                     Err(e) => {
                         println!("failed to publish scheduled task message: {}", e);
-                        let _ = hub_for_sched.scheduler().mark_done(&task.organization_id, &task.id, false);
+                        let _ = hub_for_sched.scheduler().mark_done(&task.tenant_id, &task.id, false);
                     }
                 }
             }

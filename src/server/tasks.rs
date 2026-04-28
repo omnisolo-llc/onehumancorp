@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedTask {
     pub id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub mission_id: String,
     pub parent_plan_id: String,
     pub dependencies: Vec<String>,
@@ -40,17 +40,17 @@ impl TaskManager {
         }
     }
 
-    pub fn create_task(&self, org_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
-        self.create_task_with_plan(org_id, mission_id, String::new(), vec![], title, description, priority)
+    pub fn create_task(&self, tenant_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
+        self.create_task_with_plan(tenant_id, mission_id, String::new(), vec![], title, description, priority)
     }
 
-    pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
+    pub fn create_task_with_plan(&self, tenant_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
         
         let task = SharedTask {
             id: id.clone(),
-            organization_id: org_id,
+            tenant_id: tenant_id,
             mission_id,
             parent_plan_id,
             dependencies,

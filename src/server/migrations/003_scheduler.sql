@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS scheduled_tasks (
     id              TEXT PRIMARY KEY,
-    organization_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
     agent_id        TEXT NOT NULL,
     name            TEXT NOT NULL,
     schedule_type   TEXT NOT NULL,         -- 'once', 'interval', 'cron'
@@ -17,6 +17,6 @@ CREATE TABLE IF NOT EXISTS scheduled_tasks (
     next_run_at     TIMESTAMPTZ
 );
 
-CREATE INDEX idx_sched_tasks_org ON scheduled_tasks (organization_id);
+CREATE INDEX idx_sched_tasks_org ON scheduled_tasks (tenant_id);
 CREATE INDEX idx_sched_tasks_due ON scheduled_tasks (next_run_at)
     WHERE status = 'pending';

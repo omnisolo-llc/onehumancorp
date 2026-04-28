@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS agents (
     id              TEXT PRIMARY KEY,
     name            TEXT NOT NULL,
     role            TEXT NOT NULL,
-    organization_id TEXT NOT NULL DEFAULT '',
+    tenant_id TEXT NOT NULL DEFAULT '',
     status          TEXT NOT NULL DEFAULT 'IDLE',
     provider_type   TEXT NOT NULL DEFAULT '',
     region          TEXT NOT NULL DEFAULT '',

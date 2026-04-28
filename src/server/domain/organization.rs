@@ -15,7 +15,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::Ceo as i32,
             is_human: true,
             manager_id: "".to_string(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: director_id.clone(),
@@ -23,7 +23,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::EngineeringDirector as i32,
             is_human: false,
             manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-pm-1", id),
@@ -31,7 +31,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::ProductManager as i32,
             is_human: false,
             manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-marketing-1", id),
@@ -39,7 +39,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::MarketingManager as i32,
             is_human: false,
             manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-designer-1", id),
@@ -47,7 +47,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::Designer as i32,
             is_human: false,
             manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-swe-1", id),
@@ -55,7 +55,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::SoftwareEngineer as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-swe-2", id),
@@ -63,7 +63,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::SoftwareEngineer as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-qa-1", id),
@@ -71,7 +71,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::QaTester as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-security-1", id),
@@ -79,7 +79,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::SecurityEngineer as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-news-1", id),
@@ -87,7 +87,7 @@ pub fn new_software_company(id: &str, name: &str, ceo_name: &str, now: DateTime<
             role: Role::AiNewsCollector as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
     ];
 
@@ -138,7 +138,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             role: Role::Ceo as i32,
             is_human: true,
             manager_id: "".to_string(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: director_id.clone(),
@@ -146,7 +146,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             role: Role::MarketingManager as i32,
             is_human: false,
             manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-growth-1", id),
@@ -154,7 +154,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             role: Role::GrowthAgent as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-content-1", id),
@@ -162,7 +162,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             role: Role::ContentStrategist as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-seo-1", id),
@@ -170,7 +170,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             role: Role::SeoSpecialist as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-media-1", id),
@@ -178,7 +178,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             role: Role::PaidMediaManager as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-analytics-1", id),
@@ -186,7 +186,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             role: Role::AnalyticsEngineer as i32,
             is_human: false,
             manager_id: director_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-designer-1", id),
@@ -194,7 +194,7 @@ pub fn new_digital_marketing_agency(id: &str, name: &str, ceo_name: &str, now: D
             role: Role::Designer as i32,
             is_human: false,
             manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
     ];
 
@@ -221,7 +221,7 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
             role: Role::Ceo as i32,
             is_human: true,
             manager_id: "".to_string(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: cfo_id.clone(),
@@ -229,7 +229,7 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
             role: Role::Cfo as i32,
             is_human: false,
             manager_id: ceo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-bookkeeper-1", id),
@@ -237,7 +237,7 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
             role: Role::Bookkeeper as i32,
             is_human: false,
             manager_id: cfo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-bookkeeper-2", id),
@@ -245,7 +245,7 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
             role: Role::Bookkeeper as i32,
             is_human: false,
             manager_id: cfo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-tax-1", id),
@@ -253,7 +253,7 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
             role: Role::TaxSpecialist as i32,
             is_human: false,
             manager_id: cfo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-audit-1", id),
@@ -261,7 +261,7 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
             role: Role::AuditManager as i32,
             is_human: false,
             manager_id: cfo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
         TeamMember {
             id: format!("{}-payroll-1", id),
@@ -269,7 +269,7 @@ pub fn new_accounting_firm(id: &str, name: &str, ceo_name: &str, now: DateTime<U
             role: Role::PayrollManager as i32,
             is_human: false,
             manager_id: cfo_id.clone(),
-            organization_id: id.to_string(),
+            tenant_id: id.to_string(),
         },
     ];
 

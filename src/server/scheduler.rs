@@ -30,7 +30,7 @@ pub struct Schedule {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Task {
     pub id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub agent_id: String,
     pub name: String,
     pub schedule: Schedule,
@@ -61,10 +61,10 @@ impl Scheduler {
         Ok(())
     }
 
-    pub fn cancel(&self, org_id: &str, id: &str) -> Result<(), String> {
+    pub fn cancel(&self, tenant_id: &str, id: &str) -> Result<(), String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(id) {
-            if task.organization_id == org_id {
+            if task.tenant_id == tenant_id {
                 task.status = TaskStatus::Cancelled;
                 return Ok(());
             }
@@ -72,9 +72,9 @@ impl Scheduler {
         Err("task not found or does not belong to organization".to_string())
     }
 
-    pub fn list_for_org(&self, org_id: &str) -> Vec<Task> {
+    pub fn list_for_org(&self, tenant_id: &str) -> Vec<Task> {
         let tasks = self.tasks.read().unwrap();
-        tasks.values().filter(|t| t.organization_id == org_id).cloned().collect()
+        tasks.values().filter(|t| t.tenant_id == tenant_id).cloned().collect()
     }
 
     pub fn poll_due(&self) -> Vec<Task> {
@@ -86,10 +86,10 @@ impl Scheduler {
             .collect()
     }
 
-    pub fn mark_running(&self, org_id: &str, id: &str) -> Result<Task, String> {
+    pub fn mark_running(&self, tenant_id: &str, id: &str) -> Result<Task, String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(id) {
-            if task.organization_id == org_id {
+            if task.tenant_id == tenant_id {
                 let now = Utc::now();
                 task.status = TaskStatus::Running;
                 task.last_run_at = Some(now);
@@ -99,10 +99,10 @@ impl Scheduler {
         Err("task not found or does not belong to organization".to_string())
     }
 
-    pub fn mark_done(&self, org_id: &str, id: &str, success: bool) -> Result<(), String> {
+    pub fn mark_done(&self, tenant_id: &str, id: &str, success: bool) -> Result<(), String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(id) {
-            if task.organization_id == org_id {
+            if task.tenant_id == tenant_id {
                 if success {
                     task.status = TaskStatus::Succeeded;
                     if let ScheduleType::Interval = task.schedule.r#type {
@@ -139,7 +139,7 @@ mod tests {
         
         let task = Task {
             id: "task1".to_string(),
-            organization_id: "org1".to_string(),
+            tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             name: "Test Task".to_string(),
             schedule: Schedule {
@@ -169,7 +169,7 @@ mod tests {
         
         let task = Task {
             id: "task2".to_string(),
-            organization_id: "org1".to_string(),
+            tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             name: "Test Task 2".to_string(),
             schedule: Schedule {

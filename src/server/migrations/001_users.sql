@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash   TEXT NOT NULL DEFAULT '',
     roles           TEXT[] NOT NULL DEFAULT '{}',
     active          BOOLEAN NOT NULL DEFAULT TRUE,
-    organization_id TEXT NOT NULL DEFAULT '',
+    tenant_id TEXT NOT NULL DEFAULT '',
     oidc_subject    TEXT UNIQUE DEFAULT NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP

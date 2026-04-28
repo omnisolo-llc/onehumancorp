@@ -1,3 +1,4 @@
+use crate::db::TenantPool;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::OnceLock;
@@ -95,10 +96,10 @@ impl Hub {
         agents_vec
     }
 
-    pub fn get_agents_by_org(&self, org_id: &str) -> Vec<Agent> {
+    pub fn get_agents_by_org(&self, tenant_id: &str) -> Vec<Agent> {
         let agents = self.agents.read().unwrap();
         let mut agents_vec: Vec<Agent> = agents.values()
-            .filter(|a| a.organization_id == org_id || a.id.starts_with(&format!("{}-", org_id)))
+            .filter(|a| a.tenant_id == tenant_id || a.id.starts_with(&format!("{}-", tenant_id)))
             .cloned()
             .collect();
         agents_vec.sort_by(|a, b| a.id.cmp(&b.id));
@@ -250,7 +251,7 @@ impl Hub {
             id: sub_agent_id.clone(),
             name: format!("Specialized {} Agent", target_role),
             role: target_role.to_string(),
-            organization_id: "dynamic-delegation".to_string(),
+            tenant_id: "dynamic-delegation".to_string(),
             status: "IDLE".to_string(),
             provider_type: "builtin".to_string(),
         };
@@ -384,10 +385,10 @@ impl Hub {
             let mut history = self.token_usage_history.write().unwrap();
             let mut active_orgs = HashMap::new();
             
-            for (org_id, total_tokens) in usages {
-                active_orgs.insert(org_id.clone(), true);
+            for (tenant_id, total_tokens) in usages {
+                active_orgs.insert(tenant_id.clone(), true);
                 if total_tokens > 0 {
-                    let hist = history.entry(org_id.clone()).or_insert_with(Vec::new);
+                    let hist = history.entry(tenant_id.clone()).or_insert_with(Vec::new);
                     hist.push(total_tokens);
                     
                     if hist.len() > 5 {
@@ -396,14 +397,14 @@ impl Hub {
                     
                     if hist.len() > 1 {
                         let rate = (hist[hist.len() - 1] - hist[0]) as f64 / (hist.len() - 1) as f64;
-                        println!("Telemetry: Token burn rate for {}: {}", org_id, rate);
+                        println!("Telemetry: Token burn rate for {}: {}", tenant_id, rate);
                     }
                 } else {
-                    history.remove(&org_id);
+                    history.remove(&tenant_id);
                 }
             }
             
-            history.retain(|org_id, _| active_orgs.contains_key(org_id));
+            history.retain(|tenant_id, _| active_orgs.contains_key(tenant_id));
         }
     }
 
@@ -459,7 +460,7 @@ impl Hub {
             id: child_id.clone(),
             name: format!("{} (Fork)", parent.name),
             role: parent.role.clone(),
-            organization_id: parent.organization_id.clone(),
+            tenant_id: parent.tenant_id.clone(),
             status: "IDLE".to_string(),
             provider_type: parent.provider_type.clone(),
         };
@@ -498,7 +499,7 @@ impl Hub {
 
     pub async fn check_health(&self) -> Result<serde_json::Value, String> {
         let start = std::time::Instant::now();
-        let db_ping = match sqlx::query("SELECT 1").execute(&self.pool).await {
+        let db_ping = match sqlx::query("SELECT 1").execute(&mut *self.pool.acquire_tenant("system").await.map_err(|e| tonic::Status::internal(e.to_string()))?).await {
             Ok(_) => start.elapsed().as_millis() as u64,
             Err(_) => 0,
         };

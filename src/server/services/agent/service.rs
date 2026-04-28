@@ -63,7 +63,7 @@ impl AgentManagerService for MyAgentManagerService {
             id,
             name: req.name,
             role: req.role,
-            organization_id: "system".to_string(),
+            tenant_id: "system".to_string(),
             status: "IDLE".to_string(),
             provider_type: if req.provider_type.is_empty() { "builtin".to_string() } else { req.provider_type },
         };
@@ -209,7 +209,7 @@ impl AgentManagerService for MyAgentManagerService {
         let snap = OrgSnapshot {
             id: format!("snap-{}", now.timestamp()),
             label,
-            org_id: "system".to_string(),
+            tenant_id: "system".to_string(),
             org_name: "System".to_string(),
             domain: "default".to_string(),
             agent_count: agents.len() as i32,

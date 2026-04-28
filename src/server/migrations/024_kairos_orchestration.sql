@@ -4,7 +4,7 @@
 CREATE TABLE IF NOT EXISTS shared_tasks (
     id UUID PRIMARY KEY,
     mission_id TEXT NOT NULL,
-    organization_id VARCHAR NOT NULL,
+    tenant_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING',
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 CREATE TABLE IF NOT EXISTS agent_memories (
     id UUID PRIMARY KEY,
     mission_id TEXT NOT NULL,
-    organization_id VARCHAR NOT NULL,
+    tenant_id VARCHAR NOT NULL,
     content TEXT NOT NULL,
     embedding vector(1536),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

@@ -5,7 +5,7 @@ use crate::tasks::SharedTask;
 
 #[async_trait]
 pub trait TaskOrchestrator: Send + Sync {
-    async fn receive_high_level_request(&self, org_id: &str, title: &str) -> Result<String, String>;
+    async fn receive_high_level_request(&self, tenant_id: &str, title: &str) -> Result<String, String>;
     async fn enqueue_task(&self, task: SharedTask, depends_on: Vec<String>) -> Result<SharedTask, String>;
     async fn acquire_ready_task(&self, agent_id: &str, capabilities: Vec<String>) -> Result<Option<SharedTask>, String>;
     async fn complete_task(&self, task_id: &str, agent_id: &str, result: &str) -> Result<(), String>;
@@ -23,9 +23,9 @@ impl DefaultTaskOrchestrator {
 
 #[async_trait]
 impl TaskOrchestrator for DefaultTaskOrchestrator {
-    async fn receive_high_level_request(&self, org_id: &str, title: &str) -> Result<String, String> {
+    async fn receive_high_level_request(&self, tenant_id: &str, title: &str) -> Result<String, String> {
         let task = self.hub.task_manager().create_task(
-            org_id.to_string(),
+            tenant_id.to_string(),
             String::new(),
             title.to_string(),
             "High level request".to_string(),
@@ -72,15 +72,15 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
                 Ok(embedding) => {
                     println!("AutoDream: Generated embedding for task: {}", task_id);
                     
-                    let org_id = match hub.task_manager().get_task(&task_id) {
-                        Ok(task) => task.organization_id.clone(),
+                    let tenant_id = match hub.task_manager().get_task(&task_id) {
+                        Ok(task) => task.tenant_id.clone(),
                         Err(_) => {
-                            println!("AutoDream: Failed to get task {} to find org_id", task_id);
+                            println!("AutoDream: Failed to get task {} to find tenant_id", task_id);
                             "system".to_string() // Fallback
                         }
                     };
                     
-                    let sip_db = crate::sip::SipDB::new(hub.pool.clone(), org_id);
+                    let sip_db = crate::sip::SipDB::new(hub.pool.clone(), tenant_id);
                     let mem_id = format!("task-completion-{}", task_id);
                     
                     match sip_db.inject_truth(&mem_id, &context_str, embedding).await {
@@ -112,11 +112,11 @@ pub fn start_token_burn_forecaster(
 
             let orgs = vec!["org1".to_string(), "org2".to_string()];
             
-            for org_id in orgs {
+            for tenant_id in orgs {
                 let total_tokens = 1000; 
                 
                 if total_tokens > 0 {
-                    let h = history.entry(org_id.clone()).or_insert_with(Vec::new);
+                    let h = history.entry(tenant_id.clone()).or_insert_with(Vec::new);
                     h.push(total_tokens);
                     
                     if h.len() > 5 {
@@ -125,13 +125,13 @@ pub fn start_token_burn_forecaster(
                     
                     if h.len() > 1 {
                         let rate = (h.last().unwrap() - h.first().unwrap()) as f64 / (h.len() - 1) as f64;
-                        println!("TokenBurnForecaster: Org {} rate: {}", org_id, rate);
+                        println!("TokenBurnForecaster: Org {} rate: {}", tenant_id, rate);
                         
                         let prediction_24h = rate * 60.0 * 24.0;
-                        println!("TokenBurnForecaster: Org {} predicted 24h: {}", org_id, prediction_24h);
+                        println!("TokenBurnForecaster: Org {} predicted 24h: {}", tenant_id, prediction_24h);
                         
                         if prediction_24h > 0.0 {
-                            println!("TokenBurnForecaster: Predictive cost alert for {}", org_id);
+                            println!("TokenBurnForecaster: Predictive cost alert for {}", tenant_id);
                         }
                     }
                 }

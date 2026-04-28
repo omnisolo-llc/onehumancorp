@@ -1,3 +1,4 @@
+use crate::db::TenantPool;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use async_trait::async_trait;
@@ -5,7 +6,7 @@ use async_trait::async_trait;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EmbeddingRecord {
     pub id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub agent_id: String,
     pub content: String,
     pub embedding: Vec<f32>,
@@ -26,7 +27,7 @@ impl VectorRepository {
         let emb_str = serde_json::to_string(&record.embedding).map_err(|e| e.to_string())?;
 
         sqlx::query(
-            "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at) \
+            "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at) \
              VALUES ($1, $2, $3, $4, $5::vector, $6, $7) \
              ON CONFLICT(id) DO UPDATE SET \
                  content=excluded.content, \
@@ -34,7 +35,7 @@ impl VectorRepository {
                  created_at=excluded.created_at"
         )
         .bind(&record.id)
-        .bind(&record.organization_id)
+        .bind(&record.tenant_id)
         .bind(&record.agent_id)
         .bind(&record.content)
         .bind(emb_str)
@@ -47,27 +48,27 @@ impl VectorRepository {
         Ok(())
     }
 
-    pub async fn semantic_search(&self, organization_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
+    pub async fn semantic_search(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<EmbeddingRecord>, String> {
         let emb_str = serde_json::to_string(query_embedding).map_err(|e| e.to_string())?;
 
         let rows = sqlx::query(
-            "SELECT id, organization_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at \
+            "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at \
              FROM consolidated_memory \
-             WHERE organization_id = $1 \
+             WHERE tenant_id = $1 \
              ORDER BY embedding <-> $2::vector \
              LIMIT $3"
         )
-        .bind(organization_id)
+        .bind(tenant_id)
         .bind(emb_str)
         .bind(limit)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *self.pool.acquire_tenant(tenant_id).await.map_err(|e| e.to_string())?)
         .await
         .map_err(|e| e.to_string())?;
 
         let mut results = Vec::new();
         for row in rows {
             let id: String = row.get("id");
-            let organization_id: String = row.get("organization_id");
+            let tenant_id: String = row.get("tenant_id");
             let agent_id: String = row.get("agent_id");
             let content: String = row.get("content");
             let emb_str_res: String = row.get("embedding");
@@ -78,7 +79,7 @@ impl VectorRepository {
 
             results.push(EmbeddingRecord {
                 id,
-                organization_id,
+                tenant_id,
                 agent_id,
                 content,
                 embedding,
@@ -169,7 +170,7 @@ mod tests {
         let now = Utc.with_ymd_and_hms(2026, 4, 26, 0, 0, 0).unwrap();
         let record = EmbeddingRecord {
             id: "rec1".to_string(),
-            organization_id: "org1".to_string(),
+            tenant_id: "org1".to_string(),
             agent_id: "agent1".to_string(),
             content: "Hello world".to_string(),
             embedding: vec![1.0, 2.0, 3.0],
