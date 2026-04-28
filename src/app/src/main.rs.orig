@@ -158,14 +158,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
     ui.run()?;
-    
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_welcome_checklist_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {

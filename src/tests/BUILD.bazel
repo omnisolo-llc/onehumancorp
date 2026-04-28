@@ -1,0 +1,4 @@
+py_test(
+    name = "e2e_growth_test",
+    srcs = ["e2e_growth_test.py"],
+)
