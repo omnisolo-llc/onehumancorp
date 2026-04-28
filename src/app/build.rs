@@ -3,7 +3,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Set PROTOC environment variable to point to the built protoc in runfiles
     let protoc_path = std::path::PathBuf::from("../../../protobuf+/protoc");
-    unsafe { std::env::set_var("PROTOC", protoc_path); } // ("PROTOC", protoc_path);
+    std::env::set_var("PROTOC", protoc_path);
     
     tonic_build::configure()
         .compile_protos(
