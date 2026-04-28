@@ -19,13 +19,13 @@ export component FixAgent inherits Window {
 
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "We lost connection to your main storage. Your helper couldn't find the information it needed."; color: #1e293b; wrap: word-wrap; }
+            Text { text: "We detected a connection timeout with the primary database. The agent was unable to read the required state."; color: #1e293b; wrap: word-wrap; }
             Button { text: "View Suggested Fix"; clicked => { step = 1; } }
         }
 
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "Suggested fix: Restart your helper and clear temporary memory to fix the connection."; color: #1e293b; wrap: word-wrap; }
+            Text { text: "Suggested fix: Restart the agent process and clear local cache to reconnect."; color: #1e293b; wrap: word-wrap; }
             Button {
                 text: "Apply Fix";
                 clicked => {
