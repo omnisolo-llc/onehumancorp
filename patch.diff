@@ -1,0 +1,113 @@
+--- a/src/server/autodream.rs
++++ b/src/server/autodream.rs
+@@ -33,16 +33,23 @@
+         tokio::spawn(async move {
+             loop {
+                 println!("AutoDream: running completed tasks ingestion pipeline...");
+-                if let Err(e) = Self::ingest_completed_tasks(&db).await {
++                let (r1, r2, r3, r4) = tokio::join!(
++                    Self::ingest_completed_tasks(&db),
++                    Self::process_db_memories(&db),
++                    Self::process_fs_memories(&db),
++                    Self::process_mesh_messages(&db)
++                );
++
++                if let Err(e) = r1 {
+                     println!("AutoDream: tasks ingestion failed: {}", e);
+                 }
+-                if let Err(e) = Self::process_db_memories(&db).await {
++                if let Err(e) = r2 {
+                     println!("AutoDream: DB memories processing failed: {}", e);
+                 }
+-                if let Err(e) = Self::process_fs_memories(&db).await {
++                if let Err(e) = r3 {
+                     println!("AutoDream: FS memories processing failed: {}", e);
+                 }
+-                if let Err(e) = Self::process_mesh_messages(&db).await {
++                if let Err(e) = r4 {
+                     println!("AutoDream: Mesh messages processing failed: {}", e);
+                 }
+                 sleep(Duration::from_secs(120)).await;
+--- a/src/server/services/agent/service.rs
++++ b/src/server/services/agent/service.rs
+@@ -20,9 +20,15 @@
+         }
+     }
+
+-    fn get_snapshot(&self) -> DashboardSnapshot {
++    fn get_snapshot(&self, is_mobile: bool) -> DashboardSnapshot {
+         let agents = self.hub.get_agents();
+-        let meetings = self.hub.get_meetings();
++        let mut meetings = self.hub.get_meetings();
++
++        if is_mobile {
++            for m in meetings.iter_mut() {
++                m.transcript.clear(); // Mobile Payload Optimization
++            }
++        }
+
+         let costs = Summary {
+             total_cost_usd: 100.0,
+@@ -53,6 +59,7 @@
+         &self,
+         request: Request<HireAgentRequest>,
+     ) -> Result<Response<DashboardSnapshot>, Status> {
++        let is_mobile = request.metadata().get("x-mobile-client").is_some();
+         let req = request.into_inner();
+         if req.name.is_empty() || req.role.is_empty() {
+             return Err(Status::invalid_argument("name and role are required"));
+@@ -70,13 +77,14 @@
+
+         self.hub.register_agent(agent);
+
+-        Ok(Response::new(self.get_snapshot()))
++        Ok(Response::new(self.get_snapshot(is_mobile)))
+     }
+
+     async fn fire_agent(
+         &self,
+         request: Request<FireAgentRequest>,
+     ) -> Result<Response<DashboardSnapshot>, Status> {
++        let is_mobile = request.metadata().get("x-mobile-client").is_some();
+         let req = request.into_inner();
+         if req.agent_id.is_empty() {
+             return Err(Status::invalid_argument("agentId is required"));
+@@ -84,13 +92,14 @@
+
+         self.hub.fire_agent(&req.agent_id);
+
+-        Ok(Response::new(self.get_snapshot()))
++        Ok(Response::new(self.get_snapshot(is_mobile)))
+     }
+
+     async fn delegate_task(
+         &self,
+         request: Request<DelegateTaskRequest>,
+     ) -> Result<Response<DashboardSnapshot>, Status> {
++        let is_mobile = request.metadata().get("x-mobile-client").is_some();
+         let req = request.into_inner();
+         let task = req.task.ok_or_else(|| Status::invalid_argument("task is required"))?;
+
+@@ -101,7 +110,7 @@
+         self.hub.clone().delegate_task(req.from_agent_id.clone(), req.to_agent_id.clone(), task)
+             .map_err(|e| Status::invalid_argument(e))?;
+
+-        Ok(Response::new(self.get_snapshot()))
++        Ok(Response::new(self.get_snapshot(is_mobile)))
+     }
+
+     async fn get_agent_providers(
+@@ -228,11 +237,12 @@
+         &self,
+         request: Request<RestoreSnapshotRequest>,
+     ) -> Result<Response<DashboardSnapshot>, Status> {
++        let is_mobile = request.metadata().get("x-mobile-client").is_some();
+         let req = request.into_inner();
+         if req.snapshot_id.is_empty() {
+             return Err(Status::invalid_argument("snapshotId is required"));
+         }
+
+-        Ok(Response::new(self.get_snapshot()))
++        Ok(Response::new(self.get_snapshot(is_mobile)))
+     }
+ }

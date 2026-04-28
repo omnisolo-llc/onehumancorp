@@ -33,16 +33,23 @@ impl AutoDreamWorker {
         tokio::spawn(async move {
             loop {
                 println!("AutoDream: running completed tasks ingestion pipeline...");
-                if let Err(e) = Self::ingest_completed_tasks(&db).await {
+                let (r1, r2, r3, r4) = tokio::join!(
+                    Self::ingest_completed_tasks(&db),
+                    Self::process_db_memories(&db),
+                    Self::process_fs_memories(&db),
+                    Self::process_mesh_messages(&db)
+                );
+
+                if let Err(e) = r1 {
                     println!("AutoDream: tasks ingestion failed: {}", e);
                 }
-                if let Err(e) = Self::process_db_memories(&db).await {
+                if let Err(e) = r2 {
                     println!("AutoDream: DB memories processing failed: {}", e);
                 }
-                if let Err(e) = Self::process_fs_memories(&db).await {
+                if let Err(e) = r3 {
                     println!("AutoDream: FS memories processing failed: {}", e);
                 }
-                if let Err(e) = Self::process_mesh_messages(&db).await {
+                if let Err(e) = r4 {
                     println!("AutoDream: Mesh messages processing failed: {}", e);
                 }
                 sleep(Duration::from_secs(120)).await;
