@@ -14,11 +14,11 @@ pub struct EmbeddingRecord {
 }
 
 pub struct VectorRepository {
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
 }
 
 impl VectorRepository {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+    pub fn new(pool: crate::DbPool) -> Self {
         VectorRepository { pool }
     }
 

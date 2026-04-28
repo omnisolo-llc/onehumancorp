@@ -3,12 +3,12 @@ use tokio::time::{self, Duration};
 use sqlx::Row;
 
 pub struct SyncEscalator {
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
     client: reqwest::Client,
 }
 
 impl SyncEscalator {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+    pub fn new(pool: crate::DbPool) -> Self {
         SyncEscalator {
             pool,
             client: reqwest::Client::new(),
@@ -85,7 +85,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sync_escalator() {
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
+        let pool = crate::DbPool::connect_lazy("postgres://localhost/mydb").unwrap();
         let escalator = Arc::new(SyncEscalator::new(pool));
         
         let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);

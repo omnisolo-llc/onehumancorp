@@ -4,7 +4,8 @@ use tokio_stream::StreamExt;
 use chrono::Utc;
 use std::pin::Pin;
 
-mod db;
+pub mod db;
+pub use db::{DbPool, DbPoolOptions};
 mod auth;
 mod hub;
 mod minimax;

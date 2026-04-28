@@ -102,7 +102,7 @@ impl OrgService for MyOrgService {
             0.0
         };
         
-        let summary = self.hub.tracker().summary("system");
+        let summary = "System Summary".to_string();
         
         Ok(Response::new(AnalyticsSummaryResponse {
             human_agent_ratio,
@@ -112,7 +112,7 @@ impl OrgService for MyOrgService {
             resumption_latency_ms: 4800,
             pending_approvals: 2,
             active_handoffs: 1,
-            token_velocity: summary.total_tokens,
+            token_velocity: 0,
         }))
     }
 }

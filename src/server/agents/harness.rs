@@ -160,7 +160,7 @@ pub trait CapabilityStore: Send + Sync {
 }
 
 pub struct DBCapabilityStore {
-    pub pool: sqlx::PgPool,
+    pub pool: crate::DbPool,
 }
 
 #[async_trait]

@@ -13,12 +13,12 @@ pub struct SVID {
 }
 
 pub struct DiscoveryProxy {
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
     switchboard: String,
 }
 
 impl DiscoveryProxy {
-    pub fn new(pool: sqlx::PgPool, switchboard: String) -> Self {
+    pub fn new(pool: crate::DbPool, switchboard: String) -> Self {
         DiscoveryProxy { pool, switchboard }
     }
 
@@ -107,7 +107,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_discovery_proxy() {
-        let pool = sqlx::PgPool::connect_lazy("postgres://localhost/mydb").unwrap();
+        let pool = crate::DbPool::connect_lazy("postgres://localhost/mydb").unwrap();
         let proxy = DiscoveryProxy::new(pool, "localhost:50051".to_string());
         assert_eq!(proxy.switchboard, "localhost:50051");
     }

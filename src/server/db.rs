@@ -1,19 +1,33 @@
-use sqlx::PgPool;
 use std::env;
 use sqlx::Row;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 
+#[cfg(feature = "standalone")]
+pub type DbPool = sqlx::SqlitePool;
+#[cfg(feature = "standalone")]
+pub type DbPoolOptions = sqlx::sqlite::SqlitePoolOptions;
+
+#[cfg(not(feature = "standalone"))]
+pub type DbPool = sqlx::PgPool;
+#[cfg(not(feature = "standalone"))]
+pub type DbPoolOptions = sqlx::postgres::PgPoolOptions;
+
 pub struct DB {
-    pub pool: PgPool,
+    pub pool: crate::DbPool,
 }
+
 
 impl DB {
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+#[cfg(feature = "standalone")]
+        let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://ohc-standalone.db".to_string());
 
-        let pool = PgPool::connect(&database_url).await?;
+        #[cfg(not(feature = "standalone"))]
+        let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+
+
+        let pool = DbPool::connect(&database_url).await?;
 
         Ok(DB { pool })
     }

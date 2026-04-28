@@ -5,7 +5,7 @@ use regex::Regex;
 use crate::ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities, MeshEvent, TeammateMeshEvent};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
-use crate::billing::Tracker;
+use crate::analytics::Tracker;
 use crate::tasks::TaskManager;
 use crate::scheduler::Scheduler;
 use chrono::{DateTime, Utc};
@@ -35,12 +35,12 @@ pub struct Hub {
     get_token_usage: Option<Box<dyn Fn() -> HashMap<String, i64> + Send + Sync>>,
     auto_cor_track: RwLock<std::collections::HashSet<String>>,
     event_log_tx: mpsc::Sender<serde_json::Value>,
-    pub(crate) pool: sqlx::PgPool,
+    pub(crate) pool: crate::DbPool,
     pub(crate) wizard_state: RwLock<HashMap<String, serde_json::Value>>,
 }
 
 impl Hub {
-    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
+    pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: crate::DbPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
         Hub {

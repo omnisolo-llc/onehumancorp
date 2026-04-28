@@ -20,16 +20,7 @@ pub struct IntegrationsRegistry {
 impl IntegrationsRegistry {
     pub fn new() -> Self {
         let mut instances = std::collections::HashMap::new();
-        for provider in crate::integrations::catalog::get_catalog() {
-            let id = provider.metadata.id.clone();
-            instances.insert(id.clone(), IntegrationInstance {
-                id: id.clone(),
-                name: provider.metadata.name.clone(),
-                category: provider.metadata.category.clone(),
-                status: "disconnected".to_string(),
-                base_url: provider.metadata.base_url.clone(),
-            });
-        }
+
 
         IntegrationsRegistry {
             messages: RwLock::new(std::collections::HashMap::new()),

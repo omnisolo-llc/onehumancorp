@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use crate::DbPool;
 use sqlx::Row;
 use chrono::{DateTime, Utc};
 use std::collections::HashMap;
@@ -37,14 +37,14 @@ struct MessageModel {
 }
 
 pub struct SipDB {
-    pool: PgPool,
+    pool: crate::DbPool,
     org_id: String,
     local_cache: RwLock<HashMap<String, String>>,
     cache_expirations: RwLock<HashMap<String, Instant>>,
 }
 
 impl SipDB {
-    pub fn new(pool: PgPool, org_id: String) -> Self {
+    pub fn new(pool: crate::DbPool, org_id: String) -> Self {
         SipDB {
             pool,
             org_id,

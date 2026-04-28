@@ -322,12 +322,12 @@ impl ResilientClient {
 
 pub struct CachedMinimaxClient {
     client: MinimaxClient,
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
     redis: Option<redis::Client>,
 }
 
 impl CachedMinimaxClient {
-    pub fn new(client: MinimaxClient, pool: sqlx::PgPool, redis: Option<redis::Client>) -> Self {
+    pub fn new(client: MinimaxClient, pool: crate::DbPool, redis: Option<redis::Client>) -> Self {
         CachedMinimaxClient { client, pool, redis }
     }
 

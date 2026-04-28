@@ -4,11 +4,11 @@ use crate::ohc::orchestration::sync_service_server::SyncService;
 use crate::sip::SipDB;
 
 pub struct MySyncService {
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
 }
 
 impl MySyncService {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+    pub fn new(pool: crate::DbPool) -> Self {
         MySyncService { pool }
     }
 }
@@ -214,7 +214,7 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
-        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/ohc").await.unwrap_or_else(|_| {
+        let pool = crate::DbPool::connect("postgres://postgres:postgres@localhost:5432/ohc").await.unwrap_or_else(|_| {
             // Fallback or skip if no DB.
             // Since we can't easily skip in Rust without specific crates or flags,
             // we just use a dummy pool that will fail if used.
@@ -224,7 +224,7 @@ mod tests {
             // Let's just use a dummy pool if we can create one without connecting.
             // `PgPoolOptions::new().connect_lazy("...")` is lazy! So it won't fail on creation!
             // That is perfect for this test!
-            sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap()
+            crate::DbPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap()
         });
         let service = MySyncService::new(pool);
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
@@ -235,7 +235,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_push() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::DbPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPushRequest { payload: "test payload".to_string() });
         let resp = service.power_sync_push(req).await.unwrap();
@@ -244,7 +244,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_power_sync_pull() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::DbPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(PowerSyncPullRequest {});
         let resp = service.power_sync_pull(req).await.unwrap();
@@ -252,7 +252,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_sync_mcp_deltas_empty() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::DbPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
         let resp = service.sync_mcp_deltas(req).await.unwrap();
@@ -261,7 +261,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_sync_escalation_empty() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::DbPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(SyncEscalationRequest { payloads: vec![] });
         let resp = service.sync_escalation(req).await.unwrap();
@@ -270,7 +270,7 @@ mod tests {
     }
     #[tokio::test]
     async fn test_vector_sync() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::DbPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(VectorSyncRequest {});
         let resp = service.vector_sync(req).await.unwrap();

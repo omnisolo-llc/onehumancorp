@@ -14,11 +14,11 @@ pub struct TeamInvite {
 }
 
 pub struct InviteRepository {
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
 }
 
 impl InviteRepository {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+    pub fn new(pool: crate::DbPool) -> Self {
         InviteRepository { pool }
     }
 

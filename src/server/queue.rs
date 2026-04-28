@@ -87,11 +87,11 @@ impl TaskQueue for MemoryTaskQueue {
 }
 
 pub struct PostgresTaskQueue {
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
 }
 
 impl PostgresTaskQueue {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+    pub fn new(pool: crate::DbPool) -> Self {
         PostgresTaskQueue { pool }
     }
 }
@@ -357,11 +357,11 @@ pub struct SubAgentJob {
 }
 
 pub struct QueueManager {
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
 }
 
 impl QueueManager {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+    pub fn new(pool: crate::DbPool) -> Self {
         QueueManager { pool }
     }
 
@@ -484,11 +484,11 @@ pub struct SharedTaskModel {
 }
 
 pub struct TaskQueueService {
-    pool: sqlx::PgPool,
+    pool: crate::DbPool,
 }
 
 impl TaskQueueService {
-    pub fn new(pool: sqlx::PgPool) -> Self {
+    pub fn new(pool: crate::DbPool) -> Self {
         TaskQueueService { pool }
     }
 

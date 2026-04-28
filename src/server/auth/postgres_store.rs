@@ -1,15 +1,15 @@
 use async_trait::async_trait;
-use sqlx::PgPool;
+use crate::DbPool;
 use crate::auth::{User, UserRepository};
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 
 pub struct PgUserRepository {
-    pool: PgPool,
+    pool: crate::DbPool,
 }
 
 impl PgUserRepository {
-    pub fn new(pool: PgPool) -> Self {
+    pub fn new(pool: crate::DbPool) -> Self {
         PgUserRepository { pool }
     }
 }

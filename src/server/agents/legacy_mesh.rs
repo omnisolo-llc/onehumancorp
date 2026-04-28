@@ -76,7 +76,7 @@ pub struct Mission {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
-pub async fn claim_mission(pool: &sqlx::PgPool, agent_id: &str) -> Result<Option<Mission>, String> {
+pub async fn claim_mission(pool: &crate::DbPool, agent_id: &str) -> Result<Option<Mission>, String> {
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
 
     let query = r#"
@@ -125,7 +125,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_claim_mission_no_db() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = crate::DbPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let res = claim_mission(&pool, "agent-1").await;
         // Should fail because table doesn't exist or connection fails on execution!
         assert!(res.is_err());
