@@ -66,7 +66,6 @@ rust_test(
     crate_root = "main.rs",
     data = glob(["migrations/*.sql"]),
     edition = "2021",
-    size = "large",
     env = {
         "RUST_TEST_THREADS": "1",
     },

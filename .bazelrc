@@ -1,3 +1,5 @@
+startup --output_base=/usr/local/google/home/kxw/.cache/bazel-output-mono
+
 # Bazel configuration for MCP Any
 
 # ── Default: use BuildBuddy official for all builds and tests ─────────────────
@@ -15,13 +17,14 @@ build --remote_download_toplevel
 build --action_env=CGO_ENABLED=1
 
 # ── Sandboxing ────────────────────────────────────────────────────────────────
-common --spawn_strategy=sandboxed,local
+build --spawn_strategy=remote,sandboxed,local
 build --incompatible_strict_action_env
 build --announce_rc
 build --linkopt=-fuse-ld=bfd
 build --host_linkopt=-fuse-ld=bfd
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
+build --@rules_rust//rust/toolchain/channel=nightly
 
 # ── Remote execution resilience ───────────────────────────────────────────────
 # Automatically rewind and retry actions when their remote inputs are lost
@@ -67,7 +70,7 @@ build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
 build:buildbuddy-official --bes_upload_mode=fully_async
 build:buildbuddy-official --verbose_failures
 common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
-common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
+# common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
 # Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
 common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
 common:buildbuddy-official --remote_upload_local_results
@@ -91,7 +94,7 @@ common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
 common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_local_fallback
 common:buildbuddy --remote_upload_local_results
 # common:buildbuddy --remote_cache_compression
