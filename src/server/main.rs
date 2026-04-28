@@ -847,6 +847,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start AutoDream worker
+    let hub_for_health = hub.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+            if let Ok(health) = hub_for_health.sip.hybrid_health_probe().await {
+                // println!("Hybrid Health: {}", health);
+            }
+            let _ = hub_for_health.sip.sanitize_and_prioritize_missions().await;
+        }
+    });
+
     let autodream_worker = autodream::AutoDreamWorker::new(db.clone());
     autodream_worker.start();
 

@@ -108,7 +108,7 @@ pub fn start_token_burn_forecaster(
 
         loop {
             interval.tick().await;
-            println!("TokenBurnForecaster: tick");
+            // println!("TokenBurnForecaster: tick");
 
             let orgs = vec!["org1".to_string(), "org2".to_string()];
             

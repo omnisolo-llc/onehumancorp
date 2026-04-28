@@ -317,13 +317,13 @@ impl WorkerPool {
             let mut rx = shutdown_rx.subscribe();
             
             tokio::spawn(async move {
-                println!("Worker {} starting", i);
+                // println!("Worker {} starting", i);
                 loop {
                     tokio::select! {
                         res = queue.pop(&topic) => {
                             match res {
                                 Ok(payload) => {
-                                    println!("Worker {} processing job", i);
+                                    // println!("Worker {} processing job", i);
                                     if let Err(e) = handler.handle(payload).await {
                                         println!("Worker {} handler failed: {}", i, e);
                                     }
@@ -438,7 +438,7 @@ impl QueueManager {
                     loop {
                         match self.poll(worker_id).await {
                             Ok(Some(job)) => {
-                                println!("QueueManager dispatched job: {}", job.id);
+                                // println!("QueueManager dispatched job: {}", job.id);
                                 match handler(job.clone()).await {
                                     Ok(_) => {
                                         println!("Job handler succeeded: {}", job.id);

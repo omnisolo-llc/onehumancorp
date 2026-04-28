@@ -14,7 +14,7 @@ pub struct CapabilityPlugin {
     pub manifest_url: String,
     pub status: String,
     pub registered_at: DateTime<Utc>,
-}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EpisodicMemory {
@@ -23,7 +23,7 @@ pub struct EpisodicMemory {
     pub vector_embedding: Option<Vec<u8>>,
     pub source_plugin: String,
     pub created_at: DateTime<Utc>,
-}
+
 
 #[derive(Deserialize)]
 struct MessageModel {
@@ -34,14 +34,14 @@ struct MessageModel {
     content: String,
     meeting_id: String,
     occurred_at_unix: i64,
-}
+
 
 pub struct SipDB {
     pool: PgPool,
     org_id: String,
     local_cache: RwLock<HashMap<String, String>>,
     cache_expirations: RwLock<HashMap<String, Instant>>,
-}
+
 
 impl SipDB {
     pub fn new(pool: PgPool, org_id: String) -> Self {
@@ -605,4 +605,44 @@ impl SipDB {
         tx.commit().await?;
         Ok(())
     }
+
+
+    pub async fn hybrid_health_probe(&self) -> Result<serde_json::Value, sqlx::Error> {
+        let pending = sqlx::query!("SELECT COUNT(*) as count FROM agent_missions WHERE status = 'PENDING' AND organization_id = $1", self.org_id)
+            .fetch_one(&self.pool).await?.count.unwrap_or(0);
+        let stuck = sqlx::query!("SELECT COUNT(*) as count FROM agent_missions WHERE status = 'STUCK' AND organization_id = $1", self.org_id)
+            .fetch_one(&self.pool).await?.count.unwrap_or(0);
+        let bursting = sqlx::query!("SELECT COUNT(*) as count FROM agent_missions WHERE status = 'BURSTING' AND organization_id = $1", self.org_id)
+            .fetch_one(&self.pool).await?.count.unwrap_or(0);
+
+        Ok(serde_json::json!({
+            "status": "ok",
+            "mode": "hybrid",
+            "missions": {
+                "pending": pending,
+                "stuck": stuck,
+                "bursting": bursting,
+            }
+        }))
+    }
+
+    pub async fn sanitize_and_prioritize_missions(&self) -> Result<(), sqlx::Error> {
+        // Sanitize: move STUCK missions back to PENDING if they haven't failed yet
+        // and ensure priority is maintained.
+        sqlx::query("UPDATE agent_missions SET status = 'PENDING', updated_at = CURRENT_TIMESTAMP WHERE status = 'STUCK' AND organization_id = $1")
+            .bind(&self.org_id)
+            .execute(&self.pool)
+            .await?;
+
+        // Clean up failed missions older than 24h
+        let cutoff = chrono::Utc::now() - chrono::Duration::hours(24);
+        sqlx::query("DELETE FROM agent_missions WHERE status = 'FAILED' AND updated_at < $1 AND organization_id = $2")
+            .bind(cutoff)
+            .bind(&self.org_id)
+            .execute(&self.pool)
+            .await?;
+
+        Ok(())
+    }
+
 }

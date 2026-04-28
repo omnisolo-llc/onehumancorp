@@ -192,7 +192,7 @@ impl AutoDreamWorker {
     }
 
     async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
-        println!("AutoDreamWorker: stub for process_mesh_messages");
+        // println!("AutoDreamWorker: stub for process_mesh_messages");
         Ok(())
     }
 }
