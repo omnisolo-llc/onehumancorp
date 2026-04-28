@@ -25,6 +25,37 @@ impl VectorRepository {
     pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
         let emb_str = serde_json::to_string(&record.embedding).map_err(|e| e.to_string())?;
 
+        // Semantic search to check for exact semantic duplication across ANY agent (cross-department)
+        // Since organization_id is bound but agent_id is not explicitly filtered, it acts as a cross-department search.
+        let duplicates = self.semantic_search(&record.organization_id, &record.embedding, 1).await?;
+        if let Some(existing) = duplicates.first() {
+            let mut dot = 0.0;
+            let mut mag_a = 0.0;
+            let mut mag_b = 0.0;
+            for i in 0..record.embedding.len().min(existing.embedding.len()) {
+                dot += record.embedding[i] * existing.embedding[i];
+                mag_a += record.embedding[i] * record.embedding[i];
+                mag_b += existing.embedding[i] * existing.embedding[i];
+            }
+            let sim = if mag_a == 0.0 || mag_b == 0.0 { 0.0 } else { dot / (mag_a.sqrt() * mag_b.sqrt()) };
+
+            if sim > 0.95 {
+                // We have a strong semantic match. Update the old record to resolve conflict
+                // by replacing its content if this is newer, otherwise skip.
+                if record.created_at > existing.created_at {
+                    sqlx::query("UPDATE consolidated_memory SET content = $1, created_at = $2, agent_id = $3 WHERE id = $4")
+                        .bind(&record.content)
+                        .bind(record.created_at)
+                        .bind(&record.agent_id)
+                        .bind(&existing.id)
+                        .execute(&self.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                return Ok(());
+            }
+        }
+
         sqlx::query(
             "INSERT INTO consolidated_memory (id, organization_id, agent_id, content, embedding, source_type, created_at) \
              VALUES ($1, $2, $3, $4, $5::vector, $6, $7) \
@@ -200,4 +231,19 @@ mod tests {
 
         let _ = tokio::fs::remove_dir_all(dir).await;
     }
+}
+
+fn cosine_similarity(a: &[f32], b: &[f32]) -> f32 {
+    if a.len() != b.len() || a.is_empty() {
+        return 0.0;
+    }
+    let mut dot = 0.0;
+    let mut mag_a = 0.0;
+    let mut mag_b = 0.0;
+    for i in 0..a.len() {
+        dot += a[i] * b[i];
+        mag_a += a[i] * a[i];
+        mag_b += b[i] * b[i];
+    }
+    if mag_a == 0.0 || mag_b == 0.0 { 0.0 } else { dot / (mag_a.sqrt() * mag_b.sqrt()) }
 }
