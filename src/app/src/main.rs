@@ -278,6 +278,19 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::SetupWizard::new().unwrap();
     }
+
+    #[test]
+    fn test_user_management_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::UserManagement::new().unwrap();
+    }
+
+    #[test]
+    fn test_dashboard_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Dashboard::new().unwrap();
+    }
+
     #[test]
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }

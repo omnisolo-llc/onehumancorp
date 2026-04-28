@@ -18,6 +18,8 @@ export component Dashboard inherits Window {
     in property <int> scheduled_calls_count: 0;
     in property <int> team_members_count: 0;
 
+    callback share_business();
+
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
 
@@ -29,6 +31,7 @@ export component Dashboard inherits Window {
         HorizontalBox {
             Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
             Rectangle {}
+            Button { text: "Share My Business"; clicked => { share_business(); } }
             Button { text: "Billing & Credits"; }
         }
 
