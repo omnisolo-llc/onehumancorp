@@ -20,10 +20,9 @@ bazel_dep(name = "rules_rust", version = "0.70.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
-    edition = "2024",
+    edition = "2021",
     versions = [
-        "1.95.0",
-        "nightly/2024-01-01",
+        "1.90.0",
     ],
 )
 use_repo(rust, "rust_toolchains")
