@@ -4,7 +4,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
-use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
+use crate::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
@@ -269,14 +269,47 @@ impl Agent {
             .find(|t| t.name == tc.name)
             .ok_or_else(|| format!("unknown tool: {}", tc.name))?;
 
-        tool.execute.execute(tc.arguments.clone()).await
+        let mut retries = 0;
+        let mut base_delay = std::time::Duration::from_millis(100);
+
+        loop {
+            match tool.execute.execute(tc.arguments.clone()).await {
+                Ok(res) => return Ok(res),
+                Err(e) => {
+                    if let Some(tool_err) = e.downcast_ref::<crate::types::ToolError>() {
+                        match tool_err {
+                            crate::types::ToolError::Transient(msg) => {
+                                if retries < 3 {
+                                    retries += 1;
+                                    tokio::time::sleep(base_delay).await;
+                                    base_delay *= 2;
+                                    continue;
+                                }
+                                return Err(format!("Transient error after 3 retries: {}", msg).into());
+                            }
+                            crate::types::ToolError::LlmRecoverable(msg) => {
+                                return Ok(format!("Error: {}", msg));
+                            }
+                            crate::types::ToolError::UserFixable(_) => {
+                                return Err(e);
+                            }
+                            crate::types::ToolError::Unexpected(_) => {
+                                return Err(e);
+                            }
+                        }
+                    } else {
+                        return Err(e);
+                    }
+                }
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
+    use crate::types::{ToolDefinition, ToolResult, ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
     use ohc_builtin_agent_tools::ToolExecutor;
     use serde_json::Value;
@@ -374,5 +407,115 @@ mod tests {
         // We can't directly inspect `messages` from the outside, but we can verify it compiled
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
+    }
+
+    struct TransientMockExecutor {
+        calls: tokio::sync::Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for TransientMockExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            let mut calls = self.calls.lock().await;
+            *calls += 1;
+            if *calls <= 3 {
+                Err(Box::new(crate::types::ToolError::Transient("timeout".to_string())) as Box<dyn std::error::Error + Send + Sync>)
+            } else {
+                Ok("success after retries".to_string())
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_transient_error_retry() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let executor = Arc::new(TransientMockExecutor { calls: tokio::sync::Mutex::new(0) });
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: executor.clone(),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let mut cfg = AgentRunConfig::default();
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let _ = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        let calls = *executor.calls.lock().await;
+        assert_eq!(calls, 4); // 1 initial + 3 retries
+    }
+
+    struct LlmRecoverableMockExecutor;
+
+    #[async_trait::async_trait]
+    impl ToolExecutor for LlmRecoverableMockExecutor {
+        async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+            Err(Box::new(crate::types::ToolError::LlmRecoverable("missing required parameter 'xyz'".to_string())) as Box<dyn std::error::Error + Send + Sync>)
+        }
+    }
+
+    #[tokio::test]
+    async fn test_llm_recoverable_error() {
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: Value::Null,
+                        }],
+                        tool_results: vec![],
+                    },
+                    usage: Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                },
+            ]),
+        });
+
+        let tools = vec![Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            parameters: Value::Null,
+            execute: Arc::new(LlmRecoverableMockExecutor),
+        }];
+
+        let agent = Agent::new(client, tools);
+        let mut cfg = AgentRunConfig::default();
+
+        let mut tool_results_captured = vec![];
+        let mut on_event = |e| {
+            if let AgentEvent::ToolCall { result, .. } = e {
+                tool_results_captured.push(result);
+            }
+        };
+
+        let _ = agent.run(&cfg, "Hello", &mut on_event).await;
+
+        assert_eq!(tool_results_captured.len(), 1);
+        assert_eq!(tool_results_captured[0], "Error: missing required parameter 'xyz'");
     }
 }

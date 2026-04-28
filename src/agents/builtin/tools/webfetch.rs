@@ -1,6 +1,7 @@
 use reqwest::Client;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use crate::types::ToolError;
 
 use super::{Tool, ToolExecutor};
 
@@ -23,10 +24,16 @@ impl ToolExecutor for WebFetchExecutor {
             .header("User-Agent", "OHC-Agent/1.0")
             .send()
             .await
-            .map_err(|e| format!("webfetch: GET {}: {}", url, e))?;
+            .map_err(|e| {
+                if e.is_timeout() || e.is_connect() {
+                    Box::new(crate::types::ToolError::Transient(format!("webfetch timeout or connection error: {}", e))) as Box<dyn std::error::Error + Send + Sync>
+                } else {
+                    Box::new(crate::types::ToolError::Unexpected(format!("webfetch: GET {}: {}", url, e))) as Box<dyn std::error::Error + Send + Sync>
+                }
+            })?;
 
         if !resp.status().is_success() {
-            return Err(format!("webfetch: HTTP {}", resp.status()).into());
+            return Err(Box::new(crate::types::ToolError::Unexpected(format!("webfetch: HTTP {}", resp.status()))) as Box<dyn std::error::Error + Send + Sync>);
         }
 
         let content_type = resp
@@ -39,7 +46,13 @@ impl ToolExecutor for WebFetchExecutor {
         let body = resp
             .text()
             .await
-            .map_err(|e| format!("webfetch: read body: {}", e))?;
+            .map_err(|e| {
+                if e.is_timeout() || e.is_connect() {
+                    Box::new(crate::types::ToolError::Transient(format!("webfetch read timeout: {}", e))) as Box<dyn std::error::Error + Send + Sync>
+                } else {
+                    Box::new(crate::types::ToolError::Unexpected(format!("webfetch: read body: {}", e))) as Box<dyn std::error::Error + Send + Sync>
+                }
+            })?;
 
         // Strip HTML tags for HTML content.
         let text = if content_type.contains("html") {
