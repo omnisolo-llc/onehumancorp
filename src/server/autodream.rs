@@ -21,9 +21,7 @@ impl AutoDreamWorker {
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
-                println!("AutoDream: running pruning pipeline...");
                 if let Err(e) = Self::prune_stale_sessions(&db).await {
-                    println!("AutoDream: pruning failed: {}", e);
                 }
                 sleep(Duration::from_secs(60)).await;
             }
@@ -32,18 +30,13 @@ impl AutoDreamWorker {
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
-                println!("AutoDream: running completed tasks ingestion pipeline...");
                 if let Err(e) = Self::ingest_completed_tasks(&db).await {
-                    println!("AutoDream: tasks ingestion failed: {}", e);
                 }
                 if let Err(e) = Self::process_db_memories(&db).await {
-                    println!("AutoDream: DB memories processing failed: {}", e);
                 }
                 if let Err(e) = Self::process_fs_memories(&db).await {
-                    println!("AutoDream: FS memories processing failed: {}", e);
                 }
                 if let Err(e) = Self::process_mesh_messages(&db).await {
-                    println!("AutoDream: Mesh messages processing failed: {}", e);
                 }
                 sleep(Duration::from_secs(120)).await;
             }
@@ -52,7 +45,6 @@ impl AutoDreamWorker {
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
-                println!("AutoDream: running conflict resolution pipeline...");
                 // TODO: implement conflict resolution
                 sleep(Duration::from_secs(1800)).await;
             }
@@ -65,7 +57,6 @@ impl AutoDreamWorker {
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
         
         for (id, data) in stale_sessions {
-             println!("AutoDream: pruned session {}: {}", id, data);
              
              // Mock summarization and injection for now
              let summary = format!("Summarized context from session {}: {}", id, data);
@@ -83,7 +74,6 @@ impl AutoDreamWorker {
             let client = crate::minimax::MinimaxClient::new(api_key);
             let prompt = format!("Summarize the key technical decisions, user preferences, and permanent facts from these logs:\n{}", payload);
             let summary = client.reason(&prompt).await.unwrap_or_else(|e| {
-                println!("AutoDream: failed to summarize logs: {}. Using raw payload.", e);
                 format!("Summary of task: {}", payload)
             });
             
@@ -92,7 +82,6 @@ impl AutoDreamWorker {
             let embedding = match client.generate_embedding(&summary).await {
                 Ok(emb) => serde_json::to_string(&emb).unwrap(),
                 Err(e) => {
-                    println!("AutoDream: failed to generate embedding: {}", e);
                     "[0.0]".to_string()
                 }
             };
@@ -100,19 +89,16 @@ impl AutoDreamWorker {
             db.insert_agent_memory(&mem_id, &org_id, &id, &summary, &embedding).await?;
             db.mark_task_auto_dreamed(&id).await?;
             
-            println!("AutoDream: ingested completed task {}", id);
         }
         
         Ok(())
     }
 
     pub async fn consolidate_epoch(&self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("AutoDream: consolidating epoch...");
         Ok(())
     }
 
     pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<crate::ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
-        println!("AutoDream: searching memories with embedding {} and limit {}", embedding, limit);
         Ok(vec![
             crate::ohc::orchestration::TruthSearchResult {
                 id: "mem1".to_string(),

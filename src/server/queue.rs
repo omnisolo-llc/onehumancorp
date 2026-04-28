@@ -217,14 +217,11 @@ impl Worker {
                 _ = interval.tick() => {
                     match self.queue.dequeue(self.roles.clone()).await {
                         Ok(Some(job)) => {
-                            println!("Worker processing job: {}", job.id);
                             match self.handler.handle(job.clone()).await {
                                 Ok(_) => {
-                                    println!("Worker successfully processed job: {}", job.id);
                                     let _ = self.queue.complete(&job.id).await;
                                 }
                                 Err(e) => {
-                                    println!("Worker failed to process job: {}, error: {}", job.id, e);
                                     let _ = self.queue.fail(&job.id, &e).await;
                                 }
                             }
@@ -233,12 +230,10 @@ impl Worker {
                             // No job available
                         }
                         Err(e) => {
-                            println!("Worker failed to dequeue job: {}", e);
                         }
                     }
                 }
                 _ = shutdown_rx.recv() => {
-                    println!("Worker shutting down");
                     break;
                 }
             }
@@ -317,24 +312,19 @@ impl WorkerPool {
             let mut rx = shutdown_rx.subscribe();
             
             tokio::spawn(async move {
-                println!("Worker {} starting", i);
                 loop {
                     tokio::select! {
                         res = queue.pop(&topic) => {
                             match res {
                                 Ok(payload) => {
-                                    println!("Worker {} processing job", i);
                                     if let Err(e) = handler.handle(payload).await {
-                                        println!("Worker {} handler failed: {}", i, e);
                                     }
                                 }
                                 Err(e) => {
-                                    println!("Worker {} failed to pop: {}", i, e);
                                 }
                             }
                         }
                         _ = rx.recv() => {
-                            println!("Worker {} shutting down", i);
                             break;
                         }
                     }

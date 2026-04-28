@@ -57,25 +57,21 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
         let hub = self.hub.clone();
         
         tokio::spawn(async move {
-            println!("AutoDream: Triggering embedding for completed task: {}", task_id);
             
             let context_str = format!("Task ID: {}, Result: {}", task_id, result);
             
             let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
             if api_key.is_empty() {
-                println!("AutoDream: MINIMAX_API_KEY not set, skipping embedding");
                 return;
             }
             let client = crate::minimax::MinimaxClient::new(api_key);
             
             match client.generate_embedding(&context_str).await {
                 Ok(embedding) => {
-                    println!("AutoDream: Generated embedding for task: {}", task_id);
                     
                     let org_id = match hub.task_manager().get_task(&task_id) {
                         Ok(task) => task.organization_id.clone(),
                         Err(_) => {
-                            println!("AutoDream: Failed to get task {} to find org_id", task_id);
                             "system".to_string() // Fallback
                         }
                     };
@@ -84,12 +80,9 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
                     let mem_id = format!("task-completion-{}", task_id);
                     
                     match sip_db.inject_truth(&mem_id, &context_str, embedding).await {
-                        Ok(_) => println!("AutoDream: Successfully injected truth for task: {}", task_id),
-                        Err(e) => println!("AutoDream: Failed to inject truth for task: {}, error: {}", task_id, e),
                     }
                 }
                 Err(e) => {
-                    println!("AutoDream: Failed to generate embedding: {}", e);
                 }
             }
         });
@@ -108,7 +101,6 @@ pub fn start_token_burn_forecaster(
 
         loop {
             interval.tick().await;
-            println!("TokenBurnForecaster: tick");
 
             let orgs = vec!["org1".to_string(), "org2".to_string()];
             
