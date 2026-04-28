@@ -4,13 +4,15 @@ use uuid::Uuid;
 use tokio::sync::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::ohc::orchestration::{MeshEvent, TeammateMeshEvent};
+use prost::Message;
 
 /// Protocol for the Teammate Mesh Communication Layer.
 /// Works in both Cloud mode (Redis Pub/Sub) and Standalone mode (local IPC).
 #[async_trait]
 pub trait HybridTransport: Send + Sync {
-    async fn publish(&self, channel: &str, message: &[u8]) -> Result<(), String>;
-    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::broadcast::Receiver<Vec<u8>>, String>;
+    async fn publish(&self, channel: &str, message: &TeammateMeshEvent) -> Result<(), String>;
+    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::broadcast::Receiver<TeammateMeshEvent>, String>;
 }
 
 /// Abstract distributed locking scheme.
@@ -34,7 +36,7 @@ pub trait StateHandoff: Send + Sync {
 
 /// Local memory-based transport for Standalone mode.
 pub struct StandaloneTransport {
-    subs: Arc<Mutex<HashMap<String, tokio::sync::broadcast::Sender<Vec<u8>>>>>,
+    subs: Arc<Mutex<HashMap<String, tokio::sync::broadcast::Sender<TeammateMeshEvent>>>>,
 }
 
 impl StandaloneTransport {
@@ -47,19 +49,19 @@ impl StandaloneTransport {
 
 #[async_trait]
 impl HybridTransport for StandaloneTransport {
-    async fn publish(&self, channel: &str, message: &[u8]) -> Result<(), String> {
+    async fn publish(&self, channel: &str, message: &TeammateMeshEvent) -> Result<(), String> {
         let mut subs = self.subs.lock().await;
         if let Some(tx) = subs.get(channel) {
-            let _ = tx.send(message.to_vec());
+            let _ = tx.send(message.clone());
         } else {
             let (tx, _) = tokio::sync::broadcast::channel(100);
-            let _ = tx.send(message.to_vec());
+            let _ = tx.send(message.clone());
             subs.insert(channel.to_string(), tx);
         }
         Ok(())
     }
 
-    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::broadcast::Receiver<Vec<u8>>, String> {
+    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::broadcast::Receiver<TeammateMeshEvent>, String> {
         let mut subs = self.subs.lock().await;
         let tx = subs.entry(channel.to_string()).or_insert_with(|| {
             let (tx, _) = tokio::sync::broadcast::channel(100);
@@ -166,10 +168,16 @@ mod tests {
         let transport = StandaloneTransport::new();
         let mut rx = transport.subscribe("test_channel").await.unwrap();
 
-        transport.publish("test_channel", b"hello mesh").await.unwrap();
+        let event = TeammateMeshEvent {
+            agent_id: "agent_1".to_string(),
+            action: "test_action".to_string(),
+            status: "test_status".to_string(),
+            payload: b"hello mesh".to_vec(),
+        };
+        transport.publish("test_channel", &event).await.unwrap();
 
         let msg = rx.recv().await.unwrap();
-        assert_eq!(msg, b"hello mesh");
+        assert_eq!(msg.payload, b"hello mesh");
     }
 
     #[tokio::test]
@@ -241,13 +249,17 @@ impl RedisTransport {
 
 #[async_trait]
 impl HybridTransport for RedisTransport {
-    async fn publish(&self, channel: &str, message: &[u8]) -> Result<(), String> {
+    async fn publish(&self, channel: &str, message: &TeammateMeshEvent) -> Result<(), String> {
         let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
-        con.publish::<_, _, ()>(channel, message).await.map_err(|e| e.to_string())?;
+
+        let mut buf = Vec::new();
+        message.encode(&mut buf).map_err(|e| e.to_string())?;
+
+        con.publish::<_, _, ()>(channel, buf).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::broadcast::Receiver<Vec<u8>>, String> {
+    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::broadcast::Receiver<TeammateMeshEvent>, String> {
         // Implementation detail for subscribing to Redis pub/sub and forwarding to broadcast channel
         let (tx, rx) = tokio::sync::broadcast::channel(100);
 
@@ -273,7 +285,9 @@ impl HybridTransport for RedisTransport {
 
             while let Some(msg) = stream.next().await {
                 if let Ok(payload) = msg.get_payload::<Vec<u8>>() {
-                    let _ = tx.send(payload);
+                    if let Ok(event) = TeammateMeshEvent::decode(&payload[..]) {
+                        let _ = tx.send(event);
+                    }
                 }
             }
         });
