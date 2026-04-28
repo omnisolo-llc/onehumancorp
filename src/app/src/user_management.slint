@@ -9,28 +9,6 @@ export struct UiUser {
     avatar_letter: string,
 }
 
-export component GrowthReferralWidget inherits Rectangle {
-    background: white;
-    border-color: #e2e8f0;
-    border-width: 1px;
-    border-radius: 8px;
-
-    callback create_referral();
-
-    VerticalBox {
-        padding: 16px;
-        spacing: 12px;
-
-        Text { text: "Growth & Referrals"; font-weight: 700; color: #1e293b; font-size: 16px; }
-        Text { text: "Invite more users to unlock premium features and grow your business network."; color: #64748b; wrap: word-wrap; }
-
-        Button {
-            text: "Generate Referral Link";
-            clicked => { create_referral(); }
-        }
-    }
-}
-
 export component UserManagement inherits Window {
     width: 500px;
     height: 600px;
@@ -38,7 +16,6 @@ export component UserManagement inherits Window {
 
     in property <[UiUser]> users;
     callback delete_user(string);
-    callback create_referral();
 
     background: #f8fafc;
 
@@ -52,9 +29,15 @@ export component UserManagement inherits Window {
             Button { text: "Invite User"; }
         }
 
-        GrowthReferralWidget {
-            create_referral => {
-                root.create_referral();
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 8px;
+
+            HorizontalBox {
+                padding: 16px;
+                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
             }
         }
 
