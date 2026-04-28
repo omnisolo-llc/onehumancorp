@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use crate::agents::provider::{
     Provider, ProviderType, Credentials, ClaudeProvider, GeminiProvider,
-    OpenCodeProvider, OpenClawProvider, IronClawProvider, MiniMaxiProvider,
+    OpenCodeProvider, OpenClawProvider, MiniMaxiProvider,
     BuiltinProvider, ScoutProvider
 };
 
@@ -24,7 +24,6 @@ impl Registry {
         r.register(Arc::new(GeminiProvider::new()));
         r.register(Arc::new(OpenCodeProvider::new()));
         r.register(Arc::new(OpenClawProvider::new()));
-        r.register(Arc::new(IronClawProvider::new()));
         r.register(Arc::new(MiniMaxiProvider::new()));
         r.register(Arc::new(BuiltinProvider::new()));
         r.register(Arc::new(ScoutProvider::new()));
@@ -51,7 +50,6 @@ impl Registry {
             ProviderType::Gemini,
             ProviderType::OpenCode,
             ProviderType::OpenClaw,
-            ProviderType::IronClaw,
             ProviderType::Builtin,
             ProviderType::Scout,
             ProviderType::MiniMaxi,
@@ -116,7 +114,6 @@ mod tests {
             ProviderType::Gemini,
             ProviderType::OpenCode,
             ProviderType::OpenClaw,
-            ProviderType::IronClaw,
             ProviderType::MiniMaxi,
         ];
 
