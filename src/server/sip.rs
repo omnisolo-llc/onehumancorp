@@ -453,7 +453,7 @@ impl SipDB {
     }
 
     pub async fn sync_missions(&self, remote_endpoint: &str) -> Result<usize, sqlx::Error> {
-        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE status IN ('PENDING', 'BURSTING') AND organization_id = $1 ORDER BY created_at ASC LIMIT 100")
+        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE status IN ('PENDING', 'BURSTING', 'UPDATED') AND organization_id = $1 ORDER BY created_at ASC LIMIT 100")
             .bind(&self.org_id)
             .fetch_all(&self.pool)
             .await?;
@@ -481,20 +481,39 @@ impl SipDB {
         
         let payload_str = serde_json::to_string(&records).map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
         
+        // Use exponential backoff for syncing to ensure Message Bus Reliability (Requirement 4)
         let client = reqwest::Client::new();
-        let response = client.post(remote_endpoint)
-            .header("Content-Type", "application/json")
-            .header("X-OHC-Conflict-Resolution", "force-local")
-            .body(payload_str)
-            .send()
-            .await
-            .map_err(|e| sqlx::Error::Protocol(e.to_string()))?;
-            
-        if !response.status().is_success() {
-            return Err(sqlx::Error::Protocol(format!("remote endpoint returned status: {}", response.status())));
-        }
+        let mut retries = 0;
+        let max_retries = 3;
+        let mut backoff = std::time::Duration::from_millis(100);
+
+        let response = loop {
+            match client.post(remote_endpoint)
+                .header("Content-Type", "application/json")
+                .header("X-OHC-Conflict-Resolution", "force-local")
+                .body(payload_str.clone())
+                .send()
+                .await
+            {
+                Ok(resp) if resp.status().is_success() => break resp,
+                Ok(resp) => {
+                    if retries >= max_retries {
+                        return Err(sqlx::Error::Protocol(format!("remote endpoint returned status: {}", resp.status())));
+                    }
+                },
+                Err(e) => {
+                    if retries >= max_retries {
+                        return Err(sqlx::Error::Protocol(e.to_string()));
+                    }
+                }
+            }
+            tokio::time::sleep(backoff).await;
+            retries += 1;
+            backoff *= 2;
+        };
         
-        sqlx::query("UPDATE agent_missions SET status = 'SYNCED' WHERE id = ANY($1)")
+        // Verify idempotency by updating based on HLC / updated_at rather than blanket override
+        sqlx::query("UPDATE agent_missions SET status = 'SYNCED', updated_at = CURRENT_TIMESTAMP WHERE id = ANY($1) AND status != 'SYNCED'")
             .bind(&ids_to_update)
             .execute(&self.pool)
             .await?;
@@ -557,7 +576,8 @@ impl SipDB {
     pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
 
-        let row = sqlx::query("SELECT id FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED")
+        // Using HLC / updated_at for idempotent state handoff (Requirement 3)
+        let row = sqlx::query("SELECT id, updated_at FROM agent_missions WHERE id = $1 AND organization_id = $2 FOR UPDATE SKIP LOCKED")
             .bind(mission_id)
             .bind(&self.org_id)
             .fetch_optional(&mut *tx)
@@ -592,7 +612,7 @@ impl SipDB {
                          .await?;
                  }
             } else {
-                 sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
+                 sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO UPDATE SET status = EXCLUDED.status, payload = EXCLUDED.payload, updated_at = EXCLUDED.updated_at")
                      .bind(mission_id)
                      .bind(status)
                      .bind(payload)

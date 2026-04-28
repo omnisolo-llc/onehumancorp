@@ -33,11 +33,35 @@ pub const AVAILABLE_MCP_BUNDLES: &[&str] = &[
     "github",
 ];
 
-#[async_trait]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+pub struct HealthProbe {
+    pub agent_id: String,
+    pub status: String,
+    pub timestamp: i64,
+}
+
+#[async_trait::async_trait]
 pub trait Transport: Send + Sync {
     async fn send(&self, message: &[u8]) -> Result<(), String>;
     async fn receive(&self) -> Result<Vec<u8>, String>;
     async fn close(&self) -> Result<(), String>;
+    async fn send_with_retry(&self, message: &[u8]) -> Result<(), String> {
+        let mut retries = 0;
+        let max_retries = 3;
+        let mut backoff = 100;
+
+        loop {
+            match self.send(message).await {
+                Ok(_) => return Ok(()),
+                Err(_) if retries < max_retries => {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(backoff)).await;
+                    retries += 1;
+                    backoff *= 2;
+                }
+                Err(e) => return Err(format!("send failed after {} retries: {}", max_retries, e)),
+            }
+        }
+    }
 }
 
 pub struct InProcessTransport<R, W> {
@@ -58,7 +82,7 @@ where
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl<R, W> Transport for InProcessTransport<R, W>
 where
     R: tokio::io::AsyncRead + Unpin + Send + Sync + 'static,
@@ -95,6 +119,7 @@ where
 pub struct RedisPubSubTransport {
     client: redis::Client,
     publish_chan: String,
+    subscribe_chan: String,
     pubsub: tokio::sync::Mutex<redis::aio::PubSub>,
 }
 
@@ -106,12 +131,21 @@ impl RedisPubSubTransport {
         Ok(RedisPubSubTransport {
             client,
             publish_chan: publish_chan.to_string(),
+            subscribe_chan: subscribe_chan.to_string(),
             pubsub: tokio::sync::Mutex::new(pubsub),
         })
     }
+
+    async fn reconnect(&self) -> Result<(), String> {
+        let mut pubsub_lock = self.pubsub.lock().await;
+        let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
+        pubsub.subscribe(&self.subscribe_chan).await.map_err(|e| e.to_string())?;
+        *pubsub_lock = pubsub;
+        Ok(())
+    }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Transport for RedisPubSubTransport {
     async fn send(&self, message: &[u8]) -> Result<(), String> {
         let mut con = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
@@ -120,13 +154,20 @@ impl Transport for RedisPubSubTransport {
     }
 
     async fn receive(&self) -> Result<Vec<u8>, String> {
-        let mut pubsub = self.pubsub.lock().await;
-        let mut stream = pubsub.on_message();
-        if let Some(msg) = stream.next().await {
-            let payload: Vec<u8> = msg.get_payload().map_err(|e| e.to_string())?;
-            Ok(payload)
-        } else {
-            Err("stream closed".to_string())
+        loop {
+            let mut pubsub = self.pubsub.lock().await;
+            let mut stream = pubsub.on_message();
+            if let Some(msg) = stream.next().await {
+                let payload: Vec<u8> = msg.get_payload().map_err(|e| e.to_string())?;
+                return Ok(payload);
+            } else {
+                drop(pubsub); // Release lock before reconnecting
+                // Connection lost, try to reconnect
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                if let Err(e) = self.reconnect().await {
+                    eprintln!("RedisPubSubTransport reconnect failed: {}", e);
+                }
+            }
         }
     }
 
