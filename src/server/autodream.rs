@@ -59,6 +59,93 @@ impl AutoDreamWorker {
         });
     }
 
+    async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let rows = sqlx::query(
+            "SELECT id, entity_id, agent_id FROM state_machine_transitions WHERE entity_type = 'shared_task' AND to_state = 'COMPLETED'"
+        ).fetch_all(&db.pool).await?;
+
+        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        if api_key.is_empty() {
+            return Ok(());
+        }
+        let client = crate::minimax::MinimaxClient::new(api_key);
+
+        for row in rows {
+            let transition_id: String = row.get("id");
+            let entity_id: String = row.get("entity_id");
+
+            let task_row_res = sqlx::query("SELECT organization_id, title, payload FROM shared_tasks_v4 WHERE id = $1")
+                .bind(&entity_id)
+                .fetch_optional(&db.pool)
+                .await?;
+
+            if let Some(task_row) = task_row_res {
+                let org_id: String = task_row.get("organization_id");
+                let title: String = task_row.get("title");
+                let payload: String = task_row.get("payload");
+
+                let context_str = format!("Task: {}\nResult: {}", title, payload);
+
+                if let Ok(embedding) = client.generate_embedding(&context_str).await {
+                    let mem_id = format!("task-{}", entity_id);
+                    let sip_db = crate::sip::SipDB::new(db.pool.clone(), org_id);
+                    let _ = sip_db.inject_truth(&mem_id, &context_str, embedding).await;
+                }
+            }
+
+            sqlx::query("DELETE FROM state_machine_transitions WHERE id = $1")
+                .bind(&transition_id)
+                .execute(&db.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+
+    async fn ingest_completed_tasks(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let rows = sqlx::query(
+            "SELECT id, entity_id, agent_id FROM state_machine_transitions WHERE entity_type = 'shared_task' AND to_state = 'COMPLETED'"
+        ).fetch_all(&db.pool).await?;
+
+        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        if api_key.is_empty() {
+            return Ok(());
+        }
+        let client = crate::minimax::MinimaxClient::new(api_key);
+
+        for row in rows {
+            let transition_id: String = row.get("id");
+            let entity_id: String = row.get("entity_id");
+
+            let task_row_res = sqlx::query("SELECT organization_id, title, payload FROM shared_tasks_v4 WHERE id = $1")
+                .bind(&entity_id)
+                .fetch_optional(&db.pool)
+                .await?;
+
+            if let Some(task_row) = task_row_res {
+                let org_id: String = task_row.get("organization_id");
+                let title: String = task_row.get("title");
+                let payload: String = task_row.get("payload");
+
+                let context_str = format!("Task: {}\nResult: {}", title, payload);
+
+                if let Ok(embedding) = client.generate_embedding(&context_str).await {
+                    let mem_id = format!("task-{}", entity_id);
+                    let sip_db = crate::sip::SipDB::new(db.pool.clone(), org_id);
+                    let _ = sip_db.inject_truth(&mem_id, &context_str, embedding).await;
+                }
+            }
+
+            sqlx::query("DELETE FROM state_machine_transitions WHERE id = $1")
+                .bind(&transition_id)
+                .execute(&db.pool)
+                .await?;
+        }
+
+        Ok(())
+    }
+
     async fn prune_stale_sessions(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::hours(24);
         

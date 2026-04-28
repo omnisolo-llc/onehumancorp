@@ -1,12 +1,8 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::sync::Arc;
-use std::sync::Arc;
-use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
-use sqlx::{PgPool, Row};
-use sqlx::{PgPool, Row};
 use sqlx::{PgPool, Row};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,15 +55,15 @@ impl TaskManager {
         
         let task = SharedTask {
             id: id.clone(),
-            organization_id: org_id.clone(),
+            organization_id: org_id,
             mission_id,
-            parent_plan_id: parent_plan_id.clone(),
-            dependencies: dependencies.clone(),
-            title: title.clone(),
-            description: Some(description.clone()),
+            parent_plan_id,
+            dependencies,
+            title,
+            description: Some(description),
             assigned_agent_id: None,
             status: "PENDING".to_string(),
-            priority: priority.clone(),
+            priority,
             payload: String::new(),
             locked_until: None,
             ultraplan_phase: Some("PROPOSE".to_string()),
@@ -81,8 +77,28 @@ impl TaskManager {
         };
         
         let mut tasks = self.tasks.write().unwrap();
-        tasks.insert(id, task.clone());
+        tasks.insert(id.clone(), task.clone());
+
+        let pool = self.pool.clone();
+        let id_clone = id.clone();
+        let deps_json = serde_json::to_string(&dependencies).unwrap_or_else(|_| "[]".to_string());
         
+        tokio::spawn(async move {
+            let res = sqlx::query(
+                "INSERT INTO shared_tasks_v4 (id, organization_id, title, description, priority, parent_plan_id, dependencies)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)"
+            )
+            .bind(&id_clone)
+            .bind(&org_id)
+            .bind(&title)
+            .bind(&description)
+            .bind(&priority)
+            .bind(&parent_plan_id)
+            .bind(&deps_json)
+            .execute(&*pool)
+            .await;
+        });
+
         Ok(task)
     }
 
@@ -99,8 +115,18 @@ impl TaskManager {
     pub fn update_task_status(&self, task_id: &str, new_status: String) -> Result<(), String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(task_id) {
-            task.status = new_status;
+            task.status = new_status.clone();
             task.updated_at = Utc::now();
+
+            let pool = self.pool.clone();
+            let id = task_id.to_string();
+            tokio::spawn(async move {
+                let _ = sqlx::query("UPDATE shared_tasks_v4 SET status = $1, updated_at = NOW() WHERE id = $2")
+                    .bind(new_status)
+                    .bind(id)
+                    .execute(&*pool)
+                    .await;
+            });
             Ok(())
         } else {
             Err("task not found".to_string())
@@ -112,8 +138,18 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             if task.status == "PENDING" {
                 task.status = "IN_PROGRESS".to_string();
-                task.assigned_agent_id = Some(agent_id);
+                task.assigned_agent_id = Some(agent_id.clone());
                 task.updated_at = Utc::now();
+
+                let pool = self.pool.clone();
+                let id = task_id.to_string();
+                tokio::spawn(async move {
+                    let _ = sqlx::query("UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = NOW() WHERE id = $2")
+                        .bind(agent_id)
+                        .bind(id)
+                        .execute(&*pool)
+                        .await;
+                });
                 return Ok(Some(task.clone()));
             }
         }
@@ -126,6 +162,15 @@ impl TaskManager {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
                 task.updated_at = Utc::now();
+
+                let pool = self.pool.clone();
+                let id = task_id.to_string();
+                tokio::spawn(async move {
+                    let _ = sqlx::query("UPDATE shared_tasks_v4 SET status = 'REVIEW', updated_at = NOW() WHERE id = $1")
+                        .bind(id)
+                        .execute(&*pool)
+                        .await;
+                });
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -151,6 +196,26 @@ impl TaskManager {
                 
                 task.payload = payload_map.to_string();
                 task.updated_at = Utc::now();
+
+                let pool = self.pool.clone();
+                let id = task_id.to_string();
+                let p = task.payload.clone();
+                let agent = agent_id.to_string();
+
+                tokio::spawn(async move {
+                    let _ = sqlx::query("UPDATE shared_tasks_v4 SET status = 'COMPLETED', payload = $1, updated_at = NOW() WHERE id = $2")
+                        .bind(p)
+                        .bind(id.clone())
+                        .execute(&*pool)
+                        .await;
+
+                    let _ = sqlx::query("INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id) VALUES ($1, $2, 'shared_task', 'IN_PROGRESS', 'COMPLETED', $3)")
+                        .bind(uuid::Uuid::new_v4().to_string())
+                        .bind(id)
+                        .bind(agent)
+                        .execute(&*pool)
+                        .await;
+                });
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -160,9 +225,41 @@ impl TaskManager {
     }
 
     pub fn poll_tasks(&self, agent_id: &str, limit: usize) -> Vec<SharedTask> {
-        let mut tasks = self.tasks.write().unwrap();
+        let pool = self.pool.clone();
+        let agent_id_str = agent_id.to_string();
+
+        let tasks_lock = self.tasks.clone();
         let mut claimed_tasks = Vec::new();
         
+        let pool_for_spawn = pool.clone();
+        tokio::spawn(async move {
+            let res = sqlx::query("UPDATE shared_tasks_v4 SET status = 'IN_PROGRESS', agent_id = $1, updated_at = NOW() WHERE id IN (SELECT id FROM shared_tasks_v4 WHERE status = 'PENDING' ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT $2) RETURNING id")
+                .bind(&agent_id_str)
+                .bind(limit as i64)
+                .fetch_all(&*pool_for_spawn)
+                .await;
+
+            if let Ok(rows) = res {
+                let mut ids_to_claim = Vec::new();
+                for row in rows {
+                    let id: String = row.get("id");
+                    ids_to_claim.push(id);
+                }
+
+                let mut t_lock = tasks_lock.write().unwrap();
+                for id in ids_to_claim {
+                    if let Some(task) = t_lock.get_mut(&id) {
+                        task.status = "IN_PROGRESS".to_string();
+                        task.assigned_agent_id = Some(agent_id_str.clone());
+                        task.updated_at = Utc::now();
+                    }
+                }
+            }
+        });
+
+        let mut tasks = self.tasks.write().unwrap();
+
+
         for task in tasks.values_mut() {
             if task.status == "PENDING" {
                 task.status = "IN_PROGRESS".to_string();
