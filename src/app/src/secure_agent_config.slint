@@ -20,13 +20,13 @@ export component SecureAgentConfig inherits Window {
         Text { text: "Agent Configuration"; font-size: 24px; font-weight: 700; color: #1e293b; }
         
         Text {
-            text: "Enter your secure SPIFFE Enrollment Token to authenticate the agent.";
+            text: "Enter your Secure Connection Code to authenticate the agent.";
             color: #64748b;
             wrap: word-wrap;
         }
 
         LineEdit {
-            placeholder-text: "spiffe://ohc.os/agent/1234";
+            placeholder-text: "secure-code-1234";
             text: token;
         }
         
