@@ -7,7 +7,8 @@ export struct UiRoleCount {
 }
 
 export component Dashboard inherits Window {
-    width: 800px;
+    min-width: 375px;
+    preferred-width: 800px;
     height: 800px;
     title: "Dashboard";
 
@@ -27,61 +28,68 @@ export component Dashboard inherits Window {
 
         // Header
         HorizontalBox {
-            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
             Rectangle {}
-            Button { text: "Billing & Credits"; }
+            Button { text: "Billing & Credits"; height: 44px; }
         }
 
         // Stat Cards
-        HorizontalBox {
+        VerticalBox {
             spacing: 16px;
-            
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Agents"; color: #64748b; }
-                    Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
+
+            HorizontalBox {
+                spacing: 16px;
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 150px;
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Today's Sales"; color: #64748b; font-family: "Inter"; }
+                        Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; font-family: "Outfit"; }
+                    }
+                }
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 150px;
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Tasks"; color: #64748b; font-family: "Inter"; }
+                        Text { text: active_tasks_count; font-size: 32px; font-weight: 700; color: #06b6d4; font-family: "Outfit"; }
+                    }
                 }
             }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Active Tasks"; color: #64748b; }
-                    Text { text: active_tasks_count; font-size: 32px; font-weight: 700; color: #06b6d4; }
+
+            HorizontalBox {
+                spacing: 16px;
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 150px;
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Scheduled Calls"; color: #64748b; font-family: "Inter"; }
+                        Text { text: scheduled_calls_count; font-size: 32px; font-weight: 700; color: #10b981; font-family: "Outfit"; }
+                    }
                 }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Scheduled Calls"; color: #64748b; }
-                    Text { text: scheduled_calls_count; font-size: 32px; font-weight: 700; color: #10b981; }
-                }
-            }
-            Rectangle {
-                background: white;
-                border-color: #e2e8f0;
-                border-width: 1px;
-                border-radius: 8px;
-                width: 180px;
-                VerticalBox {
-                    padding: 16px;
-                    Text { text: "Team Members"; color: #64748b; }
-                    Text { text: team_members_count; font-size: 32px; font-weight: 700; color: #f59e0b; }
+                Rectangle {
+                    background: white;
+                    border-color: #e2e8f0;
+                    border-width: 1px;
+                    border-radius: 8px;
+                    width: 150px;
+                    VerticalBox {
+                        padding: 16px;
+                        Text { text: "Team Members"; color: #64748b; font-family: "Inter"; }
+                        Text { text: team_members_count; font-size: 32px; font-weight: 700; color: #f59e0b; font-family: "Outfit"; }
+                    }
                 }
             }
         }
@@ -91,7 +99,7 @@ export component Dashboard inherits Window {
         }
 
         // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; font-family: "Outfit"; }
         
         VerticalBox {
             spacing: 10px;
@@ -106,9 +114,9 @@ export component Dashboard inherits Window {
                     padding: 16px;
                     Text { text: role_count.role; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                     Rectangle {}
-                    Button { text: "-"; }
+                    Button { text: "-"; height: 44px; }
                     Text { text: role_count.count; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                    Button { text: "+"; }
+                    Button { text: "+"; height: 44px; }
                 }
             }
         }
