@@ -148,13 +148,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 
 
-    let um_ui = app::UserManagement::new()?;
+let um_ui = app::UserManagement::new()?;
     let um_ui_handle = um_ui.as_weak();
 
-    // Generate simple referral code
+    // Generate simple referral code if none exists, or fetch it
     let user_id = uuid::Uuid::new_v4().to_string();
     let referral_code = format!("ohc.to/ref/{}", &user_id[0..6]);
     um_ui.set_referral_link(referral_code.clone().into());
+
+    let backend_url_init = std::env::var("OHC_CORE_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+
+    let um_ui_handle_init = um_ui.as_weak();
+    slint::spawn_local(async move {
+        if let Ok(mut client) = GrowthServiceClient::connect(backend_url_init).await {
+            let request = tonic::Request::new(ohc::orchestration::EmptyRequest {});
+            if let Ok(response) = client.get_referrals(request).await {
+                // For simplicity in this demo, just sum up invites_sent across all referrals
+                // since we don't have a GetUserStats endpoint.
+                let mut total_sent = 0;
+                for ref_obj in response.into_inner().referrals {
+                    total_sent += 1; // Or parse invites_sent if added to proto
+                }
+                if let Some(ui) = um_ui_handle_init.upgrade() {
+                    ui.set_invites_sent(total_sent);
+                }
+            }
+        }
+    }).unwrap();
 
     um_ui.on_share_referral(move || {
         let ui = um_ui_handle.unwrap();

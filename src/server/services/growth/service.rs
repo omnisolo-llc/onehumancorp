@@ -83,9 +83,40 @@ impl GrowthService for MyGrowthService {
         &self,
         _request: Request<EmptyRequest>,
     ) -> Result<Response<ReferralsResponse>, Status> {
-        let refs = self.referrals.read().unwrap();
+        let mut refs = Vec::new();
+        if let Some(pool) = &self.pool {
+            let mut tx = pool.begin().await.unwrap();
+            let _ = sqlx::query("SET LOCAL app.current_tenant = 'default_tenant'")
+                .execute(&mut *tx)
+                .await;
+
+            let db_refs = sqlx::query!(
+                r#"
+                SELECT user_id, referral_code, invites_sent FROM user_referrals
+                "#
+            )
+            .fetch_all(&mut *tx)
+            .await;
+
+            let _ = tx.commit().await;
+
+            if let Ok(db_refs) = db_refs {
+                for r in db_refs {
+                    refs.push(Referral {
+                        id: "".to_string(),
+                        user_id: r.user_id,
+                        referral_code: r.referral_code,
+                        clicks: 0,
+                        conversions: 0,
+                        invites_sent: r.invites_sent.unwrap_or(0),
+                        created_at_unix: 0,
+                    });
+                }
+            }
+        }
+
         Ok(Response::new(ReferralsResponse {
-            referrals: refs.clone(),
+            referrals: refs,
         }))
     }
 
@@ -108,6 +139,11 @@ impl GrowthService for MyGrowthService {
         };
 
         if let Some(pool) = &self.pool {
+            let mut tx = pool.begin().await.unwrap();
+            let _ = sqlx::query("SET LOCAL app.current_tenant = 'default_tenant'")
+                .execute(&mut *tx)
+                .await;
+
             let res = sqlx::query(
                 r#"
                 INSERT INTO user_referrals (tenant_id, user_id, referral_code, invites_sent)
@@ -120,8 +156,10 @@ impl GrowthService for MyGrowthService {
             .bind("default_tenant")
             .bind(&req.user_id)
             .bind(&req.referral_code)
-            .fetch_one(pool)
+            .fetch_one(&mut *tx)
             .await;
+
+            let _ = tx.commit().await;
 
             if let Err(e) = res {
                 println!("Failed to insert referral into DB: {:?}", e);

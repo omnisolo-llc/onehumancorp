@@ -577,6 +577,7 @@ message Referral {
   string referral_code = 3;
   int32 clicks = 4;
   int32 conversions = 5;
+  int32 invites_sent = 7;
   int64 created_at_unix = 6;
 }
 
