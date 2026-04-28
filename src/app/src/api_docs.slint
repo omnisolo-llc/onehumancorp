@@ -1,0 +1,21 @@
+import { VerticalBox, LineEdit, ScrollView, HorizontalBox, Button } from "std-widgets.slint";
+
+export component ApiDocs inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #f8fafc;
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        Text { text: "API Documentation"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Advanced use only."; font-size: 14px; color: #ef4444; }
+        ScrollView {
+            VerticalBox {
+                spacing: 10px;
+                Text { text: "GET /api/v1/products"; font-size: 16px; font-family: "monospace"; color: #334155; }
+                Text { text: "POST /api/v1/orders"; font-size: 16px; font-family: "monospace"; color: #334155; }
+            }
+        }
+    }
+}

@@ -1,0 +1,25 @@
+import { VerticalBox, LineEdit, ScrollView, HorizontalBox, Button } from "std-widgets.slint";
+
+export component HelpCenter inherits Rectangle {
+    width: 375px; // mobile-first
+    height: 812px;
+    background: #f8fafc;
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        Text { text: "Help Center"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        LineEdit { placeholder-text: "Search articles..."; font-size: 16px; }
+        ScrollView {
+            VerticalBox {
+                spacing: 10px;
+                Text { text: "Getting Started"; font-size: 18px; font-weight: 600; color: #334155; }
+                Text { text: "My Store"; font-size: 18px; font-weight: 600; color: #334155; }
+                Text { text: "Payments"; font-size: 18px; font-weight: 600; color: #334155; }
+                Text { text: "AI Agents"; font-size: 18px; font-weight: 600; color: #334155; }
+                Text { text: "Marketing"; font-size: 18px; font-weight: 600; color: #334155; }
+                Text { text: "Account & Billing"; font-size: 18px; font-weight: 600; color: #334155; }
+            }
+        }
+    }
+}

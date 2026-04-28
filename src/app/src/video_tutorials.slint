@@ -1,0 +1,26 @@
+import { VerticalBox, LineEdit, ScrollView, HorizontalBox, Button } from "std-widgets.slint";
+
+export component VideoTutorials inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #f8fafc;
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        Text { text: "Video Tutorials"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        ScrollView {
+            VerticalBox {
+                spacing: 20px;
+                Rectangle {
+                    width: 335px; height: 200px; background: #cbd5e1; border-radius: 8px;
+                    Text { text: "Video Player Placeholder\nHow to add a product"; color: #475569; horizontal-alignment: center; vertical-alignment: center; }
+                }
+                Rectangle {
+                    width: 335px; height: 200px; background: #cbd5e1; border-radius: 8px;
+                    Text { text: "Video Player Placeholder\nHow to setup payments"; color: #475569; horizontal-alignment: center; vertical-alignment: center; }
+                }
+            }
+        }
+    }
+}

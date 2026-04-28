@@ -1,0 +1,27 @@
+import { VerticalBox, LineEdit, ScrollView, HorizontalBox, Button } from "std-widgets.slint";
+
+export component InteractiveWalkthrough inherits Window {
+    width: 375px;
+    height: 812px;
+    background: transparent;
+
+    Rectangle {
+        background: rgba(0, 0, 0, 0.5);
+        width: parent.width;
+        height: parent.height;
+
+        Rectangle {
+            x: 50px; y: 200px; width: 275px; height: 150px;
+            background: white;
+            border-radius: 12px;
+
+            VerticalBox {
+                padding: 15px;
+                spacing: 10px;
+                Text { text: "Step 1: Set up your store"; font-size: 18px; font-weight: 700; color: black; }
+                Text { text: "Add your first product to get started."; font-size: 14px; color: gray; wrap: word-wrap; }
+                Button { text: "Next"; }
+            }
+        }
+    }
+}

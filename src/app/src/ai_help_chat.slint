@@ -1,0 +1,25 @@
+import { VerticalBox, LineEdit, ScrollView, HorizontalBox, Button } from "std-widgets.slint";
+
+export component AiHelpChat inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #f8fafc;
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        Text { text: "Ask Anything"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        ScrollView {
+            VerticalBox {
+                spacing: 10px;
+                Text { text: "Hi! How can I help you today?"; color: #334155; font-size: 16px; wrap: word-wrap; }
+                Text { text: "Read the full article ->"; color: #2563eb; font-size: 14px; }
+            }
+        }
+        HorizontalBox {
+            spacing: 10px;
+            LineEdit { placeholder-text: "Type your question..."; font-size: 16px; }
+            Button { text: "Send"; }
+        }
+    }
+}

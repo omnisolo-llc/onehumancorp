@@ -1,0 +1,20 @@
+import { VerticalBox, LineEdit, ScrollView, HorizontalBox, Button } from "std-widgets.slint";
+
+export component ReleaseNotes inherits Window {
+    width: 375px;
+    height: 812px;
+    background: #f8fafc;
+
+    VerticalBox {
+        padding: 20px;
+        spacing: 15px;
+        Text { text: "What's New"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        ScrollView {
+            VerticalBox {
+                spacing: 15px;
+                Text { text: "Version 1.1\n- Added AI Help Chat\n- New Tooltip System"; font-size: 16px; color: #334155; wrap: word-wrap; }
+                Text { text: "Version 1.0\n- Initial Release"; font-size: 16px; color: #334155; wrap: word-wrap; }
+            }
+        }
+    }
+}
