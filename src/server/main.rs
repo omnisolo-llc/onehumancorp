@@ -851,15 +851,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Start AutoDream worker
     let autodream_worker = autodream::AutoDreamWorker::new(db.clone());
-    autodream_worker.start();
-
-    tokio::spawn(async move {
-        if let Ok(autodream_sync_worker) = autodream_sync::AutoDreamSyncWorker::new().await {
-            autodream_sync_worker.start();
-        }
-    });
-
-    tokio::spawn(async move {
+    autodream_worker.start();tokio::spawn(async move {
         if let Ok(autodream_sync_worker) = autodream_sync::AutoDreamSyncWorker::new().await {
             autodream_sync_worker.start();
         }
