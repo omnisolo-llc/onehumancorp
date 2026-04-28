@@ -11,6 +11,9 @@ mod minimax;
 mod billing;
 mod ultraplan;
 mod autodream;
+pub mod autodream_sync;
+#[cfg(test)]
+mod autodream_sync_test;
 mod tasks;
 mod settings;
 mod scheduler;
@@ -849,6 +852,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start AutoDream worker
     let autodream_worker = autodream::AutoDreamWorker::new(db.clone());
     autodream_worker.start();
+
+    tokio::spawn(async move {
+        if let Ok(autodream_sync_worker) = autodream_sync::AutoDreamSyncWorker::new().await {
+            autodream_sync_worker.start();
+        }
+    });
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
