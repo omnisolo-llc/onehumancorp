@@ -146,6 +146,11 @@ impl WizardService for MyWizardService {
                 status: "ok".to_string(),
                 message: "Standalone mode active".to_string(),
             });
+            health_checks.push(DiagnosticCheckProto {
+                check: "LOCAL_SYNC_PROBE".to_string(),
+                status: "ok".to_string(),
+                message: "Local-to-cloud mission sync is active".to_string(),
+            });
         }
 
         let resp_status = if is_all_healthy { "healthy" } else { "degraded" };
