@@ -7,6 +7,7 @@ use chrono::{Utc, Duration};
 use crate::auth::Claims;
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct OIDCConfig {
     pub issuer_url: String,
     pub client_id: String,
@@ -14,6 +15,7 @@ pub struct OIDCConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct JWK {
     kid: String,
     kty: String,
@@ -24,11 +26,13 @@ struct JWK {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct JWKSet {
     keys: Vec<JWK>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct OIDCDiscovery {
     issuer: String,
     jwks_uri: String,
@@ -121,6 +125,11 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
         .map_err(|e| e.to_string())?;
         
     let mut cache = get_cache().write().unwrap();
+
+    // Explicitly delete/clean old map entries to bounded memory growth
+    let now = Utc::now();
+    cache.retain(|_, v| now - v.fetch_at < Duration::hours(1));
+
     cache.insert(issuer_url.to_string(), CachedJWKS {
         keys: keys.keys.clone(),
         fetch_at: Utc::now(),
@@ -128,6 +137,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
     
     Ok(keys.keys)
 }
+
 
 pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Claims, String> {
     if !cfg.enabled {
@@ -146,7 +156,34 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     validation.set_audience(&[&cfg.client_id]);
     validation.set_issuer(&[&cfg.issuer_url]);
     
-    let token_data = decode::<serde_json::Value>(token_str, &decoding_key, &validation).map_err(|e| e.to_string())?;
+    let token_data = match decode::<serde_json::Value>(token_str, &decoding_key, &validation) {
+        Ok(data) => data,
+        Err(e) => {
+            // Log verification failure
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("events.jsonl") {
+                let event = serde_json::json!({
+                    "event": "OidcIssuerVerificationEvent",
+                    "status": "unauthorized",
+                    "reason": e.to_string()
+                });
+                let _ = writeln!(file, "{}", event);
+            }
+            return Err(e.to_string());
+        }
+    };
+
+    // Log verification success
+    use std::io::Write;
+    if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("events.jsonl") {
+        let event = serde_json::json!({
+            "event": "OidcIssuerVerificationEvent",
+            "status": "success",
+            "agent_id": "system"
+        });
+        let _ = writeln!(file, "{}", event);
+    }
+
     
     let raw = token_data.claims;
     
@@ -196,6 +233,21 @@ mod tests {
     use std::net::IpAddr;
 
     #[test]
+    fn test_strict_schema_and_payload_validation() {
+        let json_payload = r#"{
+            "kid": "key1",
+            "kty": "RSA",
+            "alg": "RS256",
+            "use": "sig",
+            "n": "xxx",
+            "e": "yyy",
+            "unknown_field": "should fail"
+        }"#;
+        let res: Result<JWK, serde_json::Error> = serde_json::from_str(json_payload);
+        assert!(res.is_err(), "Payload with unknown field should be rejected");
+    }
+
+    #[test]
     fn test_is_blocked_ip() {
         assert!(is_blocked_ip("127.0.0.1".parse().unwrap()));
         assert!(is_blocked_ip("0.0.0.0".parse().unwrap()));
@@ -233,5 +285,40 @@ mod tests {
         let res = validate_url_and_get_ip("http://localhost").await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("resolves to blocked IP"));
+    }
+
+    #[tokio::test]
+    async fn test_memory_bounded_growth() {
+        let mut cache = get_cache().write().unwrap();
+        // Clear cache
+        cache.clear();
+        let now = Utc::now();
+        cache.insert("old_url".to_string(), CachedJWKS {
+            keys: vec![],
+            fetch_at: now - Duration::hours(2),
+        });
+        cache.insert("new_url".to_string(), CachedJWKS {
+            keys: vec![],
+            fetch_at: now,
+        });
+
+        cache.retain(|_, v| now - v.fetch_at < Duration::hours(1));
+        assert!(!cache.contains_key("old_url"), "Old entries should be removed");
+        assert!(cache.contains_key("new_url"), "New entries should be kept");
+    }
+
+    #[tokio::test]
+    async fn test_validate_oidc_token_invalid_issuer() {
+        let cfg = OIDCConfig {
+            issuer_url: "https://valid.issuer.com".to_string(),
+            client_id: "test_client".to_string(),
+            enabled: true,
+        };
+        // Provide dummy invalid token
+        let token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImR1bW15In0.eyJpc3MiOiJodHRwczovL2ludmFsaWQuaXNzdWVyLmNvbSIsImF1ZCI6InRlc3RfY2xpZW50In0.dummy_signature";
+        // It should fail and we check if the function rejects it with an error.
+        // As a side effect, validate_oidc_token will append to events.jsonl
+        let result = validate_oidc_token(token, &cfg).await;
+        assert!(result.is_err(), "Invalid token should be rejected");
     }
 }

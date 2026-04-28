@@ -37,6 +37,7 @@ pub struct Hub {
     event_log_tx: mpsc::Sender<serde_json::Value>,
     pub(crate) pool: sqlx::PgPool,
     pub(crate) wizard_state: RwLock<HashMap<String, serde_json::Value>>,
+    oidc_events_tx: Option<mpsc::Sender<serde_json::Value>>,
 }
 
 impl Hub {

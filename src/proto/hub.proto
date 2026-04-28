@@ -1500,3 +1500,9 @@ service McpService {
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
 }
+
+message OidcIssuerVerificationEvent {
+  string event_id = 1;
+  string agent_id = 2;
+  bytes payload = 3;
+}

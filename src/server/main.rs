@@ -837,9 +837,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start event log worker
     let hub_clone = hub.clone();
     tokio::spawn(async move {
+        use tokio::io::AsyncWriteExt;
+        let mut events_file = tokio::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("events.jsonl")
+            .await.ok();
         while let Some(raw_event) = event_rx.recv().await {
-            let event = hub_clone.sanitize_hub_event(raw_event);
+            let event = hub_clone.sanitize_hub_event(raw_event.clone());
             hub_clone.append_recent_event(event);
+            if let Some(f) = &mut events_file {
+                if let Ok(json_str) = serde_json::to_string(&raw_event) {
+                    let _ = f.write_all(format!("{}
+", json_str).as_bytes()).await;
+                }
+            }
         }
     });
 
