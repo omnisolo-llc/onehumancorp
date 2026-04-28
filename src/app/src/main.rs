@@ -139,10 +139,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::Referrals::new()?;
-    ui.on_share_clicked(move |msg, link| {
-        println!("Sharing to clipboard: {} {}", msg, link);
-    });
+    let ui = app::AgentStatusIndicatorWindow::new()?;
+
+    // If we had the root window active, we'd hook up share_clicked here.
+    // For example:
+    // ui.on_share_clicked(move |msg, link| {
+    //     // Native implementation of clipboard or OS share intent
+    // });
     let ui_handle = ui.as_weak();
 
     // In a real implementation this binds the root app window share clicked
@@ -331,5 +334,10 @@ mod tests {
             assert_eq!(link, "https://onehumancorp.com/invite");
         });
         ui.invoke_share_clicked("Check out OneHumanCorp! It's the simplest way to run your business.".into(), "https://onehumancorp.com/invite".into());
+    }
+    #[test]
+    fn test_referrals_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::Referrals::new().unwrap();
     }
 }
