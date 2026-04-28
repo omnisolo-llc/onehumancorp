@@ -17,6 +17,7 @@ cargo_build_script(
         "src/diagnostics.slint",
         "src/chat.slint",
         "src/dashboard.slint",
+        "src/business_share.slint",
         "src/glass_card.slint",
         "src/handoffs.slint",
         "src/grow_business.slint",
@@ -68,6 +69,8 @@ rust_binary(
         "src/local_manager.rs",
         "src/desktop_platform.rs",
         "src/main.rs",
+        "src/business_share_handler.rs",
+
     ],
     data = [
         "src/agent_hire.slint",
@@ -82,6 +85,7 @@ rust_binary(
         "src/cost_dashboard.slint",
         "src/chat.slint",
         "src/dashboard.slint",
+        "src/business_share.slint",
         "src/glass_card.slint",
         "src/handoffs.slint",
         "src/grow_business.slint",
@@ -145,8 +149,11 @@ rust_test(
         "src/local_manager.rs",
         "src/desktop_platform.rs",
         "src/main.rs",
+        "src/business_share_handler.rs",
+
     ],
     crate_root = "src/main.rs",
+
     data = [
         "src/agent_hire.slint",
         "src/agent_status_indicator.slint",
@@ -158,6 +165,7 @@ rust_test(
         "src/channels.slint",
         "src/chat.slint",
         "src/dashboard.slint",
+        "src/business_share.slint",
         "src/glass_card.slint",
         "src/handoffs.slint",
         "src/grow_business.slint",

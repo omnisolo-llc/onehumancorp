@@ -1,0 +1,99 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component BusinessShare inherits Window {
+    width: 375px;
+    height: 600px;
+    title: "Share My Business";
+
+    in property <string> business_name: "Maya's Cakes";
+    in property <string> tagline: "Custom cakes for every occasion";
+    in property <string> logo_url: "🎂";
+    in property <string> share_link: "mayascakes.ohc.app";
+
+    callback copy_link();
+    callback share_to_instagram();
+    callback share_to_whatsapp();
+    callback share_to_x();
+
+    background: #f8fafc;
+
+    VerticalBox {
+        padding: 24px;
+        spacing: 24px;
+
+        Text {
+            text: "Share My Business";
+            font-size: 24px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        // OpenGraph Preview Card
+        Rectangle {
+            background: white;
+            border-radius: 12px;
+            border-width: 1px;
+            border-color: #e2e8f0;
+            drop-shadow-blur: 10px;
+            drop-shadow-color: #0000001a;
+
+            VerticalBox {
+                padding: 20px;
+                spacing: 12px;
+
+                Text {
+                    text: logo_url;
+                    font-size: 48px;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: business_name;
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #1e293b;
+                    horizontal-alignment: center;
+                }
+
+                Text {
+                    text: tagline;
+                    font-size: 14px;
+                    color: #64748b;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+
+                Text {
+                    text: share_link;
+                    font-size: 12px;
+                    color: #a855f7;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+
+            Button {
+                text: "Copy Link";
+                clicked => { copy_link(); }
+            }
+
+            Button {
+                text: "Share to Instagram";
+                clicked => { share_to_instagram(); }
+            }
+
+            Button {
+                text: "Share to WhatsApp";
+                clicked => { share_to_whatsapp(); }
+            }
+
+            Button {
+                text: "Share to X";
+                clicked => { share_to_x(); }
+            }
+        }
+    }
+}
