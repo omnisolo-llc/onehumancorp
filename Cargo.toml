@@ -45,14 +45,13 @@ futures = { workspace = true }
 urlencoding = "2"
 qrcode = { version = "0.14", default-features = false }
 async-recursion = "1"
-sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 opentelemetry = { version = "0.27", features = ["metrics", "trace"] }
 opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
 tracing-opentelemetry = "0.28"
 tonic-build = "0.12"
 axum = "0.8.1"
-smol_str = "=0.3.4"
 
 [build-dependencies]
 tonic-build = "0.12"
@@ -61,6 +60,7 @@ tonic-build = "0.12"
 members = ["src/app"]
 
 [workspace.dependencies]
+indexmap = "=1.9.3"
 tokio = { version = "1", features = ["full"] }
 tonic = "0.12"
 prost = "0.13"
@@ -70,6 +70,3 @@ chrono = { version = "0.4", features = ["serde"] }
 serde_yaml = "0.9"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 futures = "0.3"
-
-[patch.crates-io]
-smol_str = { git = "https://github.com/rust-analyzer/smol_str.git", tag = "v0.3.4" }

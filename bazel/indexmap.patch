@@ -1,0 +1,35 @@
+diff --git a/src/map/mutable.rs b/src/map/mutable.rs
+--- a/src/map/mutable.rs
++++ b/src/map/mutable.rs
+@@ -19,3 +19,2 @@
+
+-#[expect(private_bounds)]
+ impl<'a, K, V> ExactSizeIterator for ValuesMut<'a, K, V> {}
+@@ -105,3 +104,2 @@
+
+-#[expect(private_bounds)]
+ impl<'a, K, V> ExactSizeIterator for IterMut<'a, K, V> {}
+diff --git a/src/map/raw_entry_v1.rs b/src/map/raw_entry_v1.rs
+--- a/src/map/raw_entry_v1.rs
++++ b/src/map/raw_entry_v1.rs
+@@ -20,3 +20,2 @@
+
+-#[expect(private_bounds)]
+ impl<'a, K, V, S> RawEntryBuilderMut<'a, K, V, S> {
+diff --git a/src/set/mutable.rs b/src/set/mutable.rs
+--- a/src/set/mutable.rs
++++ b/src/set/mutable.rs
+@@ -18,3 +18,2 @@
+
+-#[expect(private_bounds)]
+ impl<'a, T> ExactSizeIterator for IterMut<'a, T> {}
+diff --git a/src/lib.rs b/src/lib.rs
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -254,3 +254,2 @@
+
+-impl core::error::Error for TryReserveError {}
+
+@@ -282,3 +281,2 @@
+
+-impl core::error::Error for GetDisjointMutError {}

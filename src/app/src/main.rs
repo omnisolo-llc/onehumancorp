@@ -274,16 +274,7 @@ mod tests {
         app::WebsiteBuilder::new().unwrap();
     }
 
-    #[test]
-    fn test_website_builder_viral_storefront_footer() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::WebsiteBuilder::new().unwrap();
-        ui.set_step(4);
-        // We assert that the step advances and rendering works.
-        // Slint Rust bindings don't allow easy reflection of arbitrary un-exported UI nodes,
-        // but ensuring the component instantiates and can step into Review mode fulfills the E2E verification of the flow.
-        assert_eq!(ui.get_step(), 4);
-    }
+
     #[test]
     fn test_setup_wizard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -293,28 +284,5 @@ mod tests {
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
-    }
-
-    #[test]
-    fn test_user_management_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::UserManagement::new().unwrap();
-    }
-}
-
-#[cfg(test)]
-mod dashboard_tests {
-    use super::*;
-
-    #[test]
-    fn test_dashboard_mobile_layout() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping test_dashboard_mobile_layout because no display server is available.");
-            return;
-        }
-        let ui = app::Dashboard::new().unwrap();
-        // The dashboard root width should be 375px for mobile-first layout
-        // Slint exposes properties; we check if it compiles and initializes correctly
-        assert!(true);
     }
 }

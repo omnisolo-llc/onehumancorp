@@ -15,13 +15,14 @@ build --remote_download_toplevel
 build --action_env=CGO_ENABLED=1
 
 # ── Sandboxing ────────────────────────────────────────────────────────────────
-common --spawn_strategy=sandboxed,local
+build --spawn_strategy=remote,sandboxed,local
 build --incompatible_strict_action_env
 build --announce_rc
 build --linkopt=-fuse-ld=bfd
 build --host_linkopt=-fuse-ld=bfd
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
+build --@rules_rust//rust/toolchain/channel=stable
 
 # ── Remote execution resilience ───────────────────────────────────────────────
 # Automatically rewind and retry actions when their remote inputs are lost
@@ -80,7 +81,7 @@ common:buildbuddy-official --experimental_remote_downloader_local_fallback
 common:buildbuddy-official --jobs=200
 # Default read-only API key (public, read-only – cannot push artifacts or
 # modify any BuildBuddy state; safe to keep in version control).
-common:buildbuddy-official --remote_header=x-buildbuddy-api-key=0kY0rwFuU8wZVQ5339w6
+common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
 
 # ── BuildBuddy self-hosted ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
@@ -99,7 +100,7 @@ common:buildbuddy --remote_upload_local_results
 common:buildbuddy --experimental_remote_downloader_local_fallback
 common:buildbuddy --jobs=200
 # Read only Bazel cache
-common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
+common:buildbuddy --remote_header=x-buildbuddy-api-key=h2FUJLgaH6D2RL7T3PAV
 common:buildbuddy --remote_timeout=10m
 build:buildbuddy --verbose_failures
 build:buildbuddy --bes_upload_mode=fully_async
