@@ -49,15 +49,13 @@ oci_push(
 )
 
 # ── agent image (onehumancorp/agent) ──────────────────────────────────────────
-# The agent image bundles the ironclaw CLI alongside the ohc server binary so
+# The agent image bundles the ohc server binary so
 # that any specialised AI agent container can be started from this base.
 
 pkg_tar(
     name = "agent_pkg",
     srcs = [
         "//src/server:server-rust",
-        "//src/server/agents/mcp:github",
-        "//src/server/ironclaw",
     ],
     package_dir = "/usr/local/bin",
 )
@@ -65,8 +63,7 @@ pkg_tar(
 oci_image(
     name = "agent_image",
     base = "@distroless_cc",
-    # The agent container runs the ohc server; the ironclaw binary is available
-    # as a sidecar tool inside the container.
+    # The agent container runs the ohc server
     entrypoint = ["/usr/local/bin/ohc"],
     tars = [":agent_pkg"],
 )
