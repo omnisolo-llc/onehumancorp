@@ -2,7 +2,7 @@ use reqwest::Client;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, ToolExecutor, ToolError};
 
 struct WebFetchExecutor {
     client: Client,
@@ -13,7 +13,7 @@ impl ToolExecutor for WebFetchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let url = args["url"].as_str().ok_or("webfetch: url is required")?;
         let prompt = args["prompt"].as_str().unwrap_or("");
 

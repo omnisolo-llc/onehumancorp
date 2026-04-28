@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, ToolExecutor, ToolError};
 
 struct ToolSearchExecutor;
 
@@ -10,7 +10,7 @@ impl ToolExecutor for ToolSearchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let query = args["query"]
             .as_str()
             .ok_or("toolsearch: query is required")?

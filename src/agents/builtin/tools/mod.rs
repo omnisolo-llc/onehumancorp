@@ -46,12 +46,52 @@ impl Clone for Tool {
     }
 }
 
+
+#[derive(Debug, Clone)]
+pub enum ToolError {
+    Transient(String),
+    LlmRecoverable(String),
+    UserFixable(String),
+    Unexpected(String),
+}
+
+impl std::fmt::Display for ToolError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToolError::Transient(msg) => write!(f, "Transient error: {}", msg),
+            ToolError::LlmRecoverable(msg) => write!(f, "{}", msg),
+            ToolError::UserFixable(msg) => write!(f, "User action required: {}", msg),
+            ToolError::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
+        }
+    }
+}
+
+impl std::error::Error for ToolError {}
+
+impl From<String> for ToolError {
+    fn from(s: String) -> Self {
+        ToolError::LlmRecoverable(s)
+    }
+}
+
+impl From<&str> for ToolError {
+    fn from(s: &str) -> Self {
+        ToolError::LlmRecoverable(s.to_string())
+    }
+}
+
+impl ToolError {
+    pub fn from_err<E: std::error::Error + Send + Sync + 'static>(err: E) -> Self {
+        ToolError::LlmRecoverable(err.to_string())
+    }
+}
+
 #[async_trait::async_trait]
 pub trait ToolExecutor: Send + Sync {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>;
+    ) -> Result<String, ToolError>;
 }
 
 /// Shared todo list state.

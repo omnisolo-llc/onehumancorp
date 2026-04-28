@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::process::Command;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, ToolExecutor, ToolError};
 
 struct BashExecutor;
 
@@ -12,7 +12,7 @@ impl ToolExecutor for BashExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let command = args["command"]
             .as_str()
             .ok_or("bash: command is required")?
