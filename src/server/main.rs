@@ -572,3 +572,28 @@ mod benchmark_tests {
         }
     }
 }
+
+#[cfg(test)]
+mod benchmark_tests {
+    use super::*;
+    use sqlx::SqlitePool;
+
+    #[tokio::test]
+    async fn test_hybrid_latency_benchmarks() {
+        // Fallback or override logic for DB connection can be provided here.
+        // We use the env var for actual execution vs benchmark modes.
+        if let Ok(db) = crate::db::DB::new().await {
+            let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+            let results = crate::domain::benchmarks::hybrid_latency::run_hybrid_latency_benchmark(db.pool.clone(), is_standalone).await;
+
+            println!("--- Hybrid Latency Benchmark Results ---");
+            for res in results {
+                println!("[{}] {} - p50: {:.2}ms, p95: {:.2}ms, p99: {:.2}ms, avg: {:.2}ms (samples: {})",
+                    res.mode, res.name, res.p50_ms, res.p95_ms, res.p99_ms, res.avg_ms, res.samples);
+            }
+            println!("----------------------------------------");
+        } else {
+            println!("DB connection failed, skipping benchmark test.");
+        }
+    }
+}
