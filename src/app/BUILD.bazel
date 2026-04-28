@@ -156,6 +156,7 @@ rust_test(
         "src/security.slint",
         "src/app.slint",
         "src/channels.slint",
+        "src/cost_dashboard.slint",
         "src/chat.slint",
         "src/dashboard.slint",
         "src/glass_card.slint",

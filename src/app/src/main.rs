@@ -259,6 +259,16 @@ mod tests {
         app::Pricing::new().unwrap();
     }
     #[test]
+    fn test_my_plan_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::MyPlan::new().unwrap();
+    }
+    #[test]
+    fn test_cost_dashboard_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::CostDashboard::new().unwrap();
+    }
+    #[test]
     fn test_scaling_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Scaling::new().unwrap();
