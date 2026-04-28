@@ -281,6 +281,8 @@ mod tests {
         ui.set_step(4);
         assert_eq!(ui.get_step(), 4);
     }
+
+
     #[test]
     fn test_setup_wizard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
