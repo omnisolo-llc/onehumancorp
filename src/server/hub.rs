@@ -25,6 +25,7 @@ pub struct Hub {
     subs: RwLock<HashMap<String, broadcast::Sender<Message>>>,
     minimax_api_key: String,
     caps_tx: broadcast::Sender<AgentCapabilities>,
+    pub mesh_transport: Arc<crate::msgbus::MeshTransport>,
     mesh_events: RwLock<HashMap<String, broadcast::Sender<MeshEvent>>>,
     teammate_events: RwLock<HashMap<String, broadcast::Sender<TeammateMeshEvent>>>,
     tracker: Tracker,
@@ -43,7 +44,24 @@ impl Hub {
     pub fn new(event_log_tx: mpsc::Sender<serde_json::Value>, pool: sqlx::PgPool) -> Self {
         let minimax_api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let (caps_tx, _) = broadcast::channel(100);
+
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let bus: Box<dyn crate::msgbus::Bus> = if is_standalone {
+            Box::new(crate::msgbus::MemoryBus::new())
+        } else {
+            let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+            match crate::msgbus::RedisBus::new(&redis_url) {
+                Ok(b) => Box::new(b),
+                Err(e) => {
+                    eprintln!("Failed to connect to redis at {}, falling back to MemoryBus. Error: {}", redis_url, e);
+                    Box::new(crate::msgbus::MemoryBus::new())
+                }
+            }
+        };
+        let mesh_transport = Arc::new(crate::msgbus::MeshTransport::new(bus));
+
         Hub {
+            mesh_transport,
             agents: RwLock::new(HashMap::new()),
             meetings: RwLock::new(HashMap::new()),
             inbox: RwLock::new(HashMap::new()),

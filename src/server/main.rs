@@ -744,7 +744,15 @@ impl HubService for MyHubService {
             return Err(Status::invalid_argument("channel is required"));
         }
         if let Some(event) = req.event {
-            match self.hub.publish_teammate_event(req.channel, event) {
+            let _ = self.hub.publish_teammate_event(req.channel.clone(), event.clone());
+
+            use prost::Message;
+            let mut payload = Vec::new();
+            let _ = event.encode(&mut payload);
+            match self.hub.mesh_transport.publish(crate::msgbus::Message {
+                topic: req.channel,
+                payload,
+            }).await {
                 Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
