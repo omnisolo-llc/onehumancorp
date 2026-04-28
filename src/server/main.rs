@@ -211,7 +211,15 @@ impl HubService for MyHubService {
         request: Request<DelegateTaskRequest>,
     ) -> Result<Response<DelegateTaskResponse>, Status> {
         let req = request.into_inner();
-        if let Some(task) = req.task {
+        if let Some(mut task) = req.task {
+
+            let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), "system".to_string());
+            let payload = serde_json::to_string(&task).unwrap_or_default();
+            if let Ok(modified_payload) = sip_db.delegate_mission(&task.id, &payload).await {
+                if let Ok(modified_task) = serde_json::from_str::<crate::ohc::orchestration::Message>(&modified_payload) {
+                    task = modified_task;
+                }
+            }
             match self.hub.clone().delegate_task(req.from_agent_id, req.to_agent_id, task) {
                 Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
@@ -674,8 +682,17 @@ impl HubService for MyHubService {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
         };
+
+        let sip_db = crate::sip::SipDB::new(self.hub.pool.clone(), "system".to_string());
+        let payload = serde_json::to_string(&msg).unwrap_or_default();
+        let mut final_msg = msg;
+        if let Ok(modified_payload) = sip_db.delegate_mission(&final_msg.id, &payload).await {
+            if let Ok(modified_task) = serde_json::from_str::<crate::ohc::orchestration::Message>(&modified_payload) {
+                final_msg = modified_task;
+            }
+        }
         
-        match self.hub.clone().publish(msg) {
+        match self.hub.clone().publish(final_msg) {
             Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
         }

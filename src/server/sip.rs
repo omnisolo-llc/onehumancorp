@@ -41,6 +41,7 @@ pub struct SipDB {
     org_id: String,
     local_cache: RwLock<HashMap<String, String>>,
     cache_expirations: RwLock<HashMap<String, Instant>>,
+    pub context_root: Option<String>,
 }
 
 impl SipDB {
@@ -50,6 +51,7 @@ impl SipDB {
             org_id,
             local_cache: RwLock::new(HashMap::new()),
             cache_expirations: RwLock::new(HashMap::new()),
+            context_root: std::env::current_dir().ok().map(|p| p.to_string_lossy().to_string()),
         }
     }
 
@@ -554,6 +556,63 @@ impl SipDB {
         Ok(())
     }
 
+
+                        final_payload = serde_json::to_string(&json).unwrap_or(final_payload);
+                    } else {
+                        final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", final_payload, content);
+                    }
+                } else {
+                    final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", final_payload, content);
+                }
+            }
+        }
+
+        self.upsert_mission(mission_id, "PENDING", &final_payload, true).await?;
+        Ok(final_payload)
+    }
+
+    pub async fn inject_omni_context(&self, payload: &str) -> String {
+        let mut final_payload = payload.to_string();
+
+        if let Some(root) = &self.context_root {
+            let agents_path = std::path::Path::new(root).join("AGENTS.md");
+            let claude_path = std::path::Path::new(root).join("CLAUDE.md");
+
+            let grounding = if let Ok(content) = tokio::fs::read_to_string(&agents_path).await {
+                Some(content)
+            } else if let Ok(content) = tokio::fs::read_to_string(&claude_path).await {
+                Some(content)
+            } else {
+                None
+            };
+
+            if let Some(content) = grounding {
+                if let Ok(mut json) = serde_json::from_str::<serde_json::Value>(&final_payload) {
+                    if json.is_object() {
+                        if let Some(task_content) = json.get_mut("content").and_then(|v| v.as_str()) {
+                            let new_content = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", task_content, content);
+                            json["content"] = serde_json::Value::String(new_content);
+                        } else {
+                            let new_content = format!("\n\n[SYSTEM GROUNDING]:\n{}", content);
+                            json["content"] = serde_json::Value::String(new_content);
+                        }
+                        final_payload = serde_json::to_string(&json).unwrap_or(final_payload);
+                    } else {
+                        final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", final_payload, content);
+                    }
+                } else {
+                    final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", final_payload, content);
+                }
+            }
+        }
+        final_payload
+    }
+
+    pub async fn delegate_mission(&self, mission_id: &str, payload: &str) -> Result<String, sqlx::Error> {
+        let final_payload = self.inject_omni_context(payload).await;
+        self.upsert_mission(mission_id, "PENDING", &final_payload, true).await?;
+        Ok(final_payload)
+    }
     pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
 
@@ -604,5 +663,100 @@ impl SipDB {
 
         tx.commit().await?;
         Ok(())
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::env;
+
+    // Helper to get SipDB with specific context_root without actual DB connection checks
+    fn get_test_sip_db(context_root: Option<String>) -> SipDB {
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap();
+        SipDB {
+            pool,
+            org_id: "system".to_string(),
+            local_cache: RwLock::new(HashMap::new()),
+            cache_expirations: RwLock::new(HashMap::new()),
+            context_root,
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tc1_standard_delegation() {
+        let payload = r#"{"content": "Build Dashboard"}"#;
+        let db = get_test_sip_db(None);
+        let result = db.inject_omni_context(payload).await;
+        assert_eq!(result, payload);
+    }
+
+    #[tokio::test]
+    async fn test_tc2_grounding_file_injection_agents() {
+        let dir = env::temp_dir().join("tc2_test");
+        fs::create_dir_all(&dir).unwrap();
+        let agents_path = dir.join("AGENTS.md");
+        fs::write(&agents_path, "Always write clean code.").unwrap();
+
+        let payload = r#"{"content":"Build Dashboard"}"#;
+        let db = get_test_sip_db(Some(dir.to_string_lossy().to_string()));
+        let result = db.inject_omni_context(payload).await;
+
+        let json: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(json["content"].as_str().unwrap(), "Build Dashboard\n\n[SYSTEM GROUNDING]:\nAlways write clean code.");
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_tc3_grounding_file_injection_claude_fallback() {
+        let dir = env::temp_dir().join("tc3_test");
+        fs::create_dir_all(&dir).unwrap();
+        let claude_path = dir.join("CLAUDE.md");
+        fs::write(&claude_path, "Use specialized tokens.").unwrap();
+
+        let payload = r#"{"content":"Build Dashboard"}"#;
+        let db = get_test_sip_db(Some(dir.to_string_lossy().to_string()));
+        let result = db.inject_omni_context(payload).await;
+
+        let json: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(json["content"].as_str().unwrap(), "Build Dashboard\n\n[SYSTEM GROUNDING]:\nUse specialized tokens.");
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_tc4_grounding_priority() {
+        let dir = env::temp_dir().join("tc4_test");
+        fs::create_dir_all(&dir).unwrap();
+        let agents_path = dir.join("AGENTS.md");
+        let claude_path = dir.join("CLAUDE.md");
+        fs::write(&agents_path, "AGENTS content").unwrap();
+        fs::write(&claude_path, "CLAUDE content").unwrap();
+
+        let payload = r#"{"content":"Build Dashboard"}"#;
+        let db = get_test_sip_db(Some(dir.to_string_lossy().to_string()));
+        let result = db.inject_omni_context(payload).await;
+
+        let json: serde_json::Value = serde_json::from_str(&result).unwrap();
+        assert_eq!(json["content"].as_str().unwrap(), "Build Dashboard\n\n[SYSTEM GROUNDING]:\nAGENTS content");
+
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_tc5_missing_files() {
+        let dir = env::temp_dir().join("tc5_test");
+        fs::create_dir_all(&dir).unwrap();
+
+        let payload = r#"{"content":"Build Dashboard"}"#;
+        let db = get_test_sip_db(Some(dir.to_string_lossy().to_string()));
+        let result = db.inject_omni_context(payload).await;
+
+        assert_eq!(result, payload);
+
+        fs::remove_dir_all(&dir).unwrap();
     }
 }
