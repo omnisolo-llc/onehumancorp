@@ -21,8 +21,7 @@ impl AutoDreamWorker {
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
-                println!("AutoDream: running pruning pipeline...");
-                if let Err(e) = Self::prune_stale_sessions(&db).await {
+                                if let Err(e) = Self::prune_stale_sessions(&db).await {
                     println!("AutoDream: pruning failed: {}", e);
                 }
                 sleep(Duration::from_secs(60)).await;
@@ -32,8 +31,7 @@ impl AutoDreamWorker {
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
-                println!("AutoDream: running completed tasks ingestion pipeline...");
-                if let Err(e) = Self::ingest_completed_tasks(&db).await {
+                                if let Err(e) = Self::ingest_completed_tasks(&db).await {
                     println!("AutoDream: tasks ingestion failed: {}", e);
                 }
                 if let Err(e) = Self::process_db_memories(&db).await {
@@ -52,8 +50,7 @@ impl AutoDreamWorker {
         let db = self.db.clone();
         tokio::spawn(async move {
             loop {
-                println!("AutoDream: running conflict resolution pipeline...");
-                // TODO: implement conflict resolution
+                                // TODO: implement conflict resolution
                 sleep(Duration::from_secs(1800)).await;
             }
         });
@@ -107,8 +104,7 @@ impl AutoDreamWorker {
     }
 
     pub async fn consolidate_epoch(&self) -> Result<(), Box<dyn std::error::Error>> {
-        println!("AutoDream: consolidating epoch...");
-        Ok(())
+                Ok(())
     }
 
     pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<crate::ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
@@ -192,7 +188,6 @@ impl AutoDreamWorker {
     }
 
     async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
-        println!("AutoDreamWorker: stub for process_mesh_messages");
-        Ok(())
+                Ok(())
     }
 }
