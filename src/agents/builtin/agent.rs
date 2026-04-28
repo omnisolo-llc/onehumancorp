@@ -15,52 +15,6 @@ pub enum AgentEvent {
     TaskComplete { content: String },
     TaskError { error: String },
     IterationStarted { iteration: i32, message_count: usize },
-    #[tokio::test]
-    async fn test_tool_error_interruption() {
-        use crate::types::ToolError;
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_fail".to_string(),
-                            name: "fail_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-            ]),
-        });
-
-        struct FailToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailToolExecutor {
-            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-                Err(Box::new(ToolError::Unexpected("Critical failure".to_string())))
-            }
-        }
-
-        let tools = vec![Tool {
-            name: "fail_tool".to_string(),
-            description: "test".to_string(),
-            parameters: Value::Null,
-            execute: Arc::new(FailToolExecutor),
-        }];
-
-        let agent = Agent::new(client, tools);
-        let cfg = AgentRunConfig::default();
-        let mut events = vec![];
-
-        let result = agent.run(&cfg, "Do it", &mut |e| { events.push(e); }).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Critical failure"));
-    }
 }
 
 /// Configuration for a single agent run.
@@ -74,52 +28,6 @@ pub struct AgentRunConfig {
     pub max_task_tokens: i32, // budget for token tracking
     pub confidence_threshold: f32,
     pub enable_observation_masking: bool,
-    #[tokio::test]
-    async fn test_tool_error_interruption() {
-        use crate::types::ToolError;
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_fail".to_string(),
-                            name: "fail_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-            ]),
-        });
-
-        struct FailToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailToolExecutor {
-            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-                Err(Box::new(ToolError::Unexpected("Critical failure".to_string())))
-            }
-        }
-
-        let tools = vec![Tool {
-            name: "fail_tool".to_string(),
-            description: "test".to_string(),
-            parameters: Value::Null,
-            execute: Arc::new(FailToolExecutor),
-        }];
-
-        let agent = Agent::new(client, tools);
-        let cfg = AgentRunConfig::default();
-        let mut events = vec![];
-
-        let result = agent.run(&cfg, "Do it", &mut |e| { events.push(e); }).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Critical failure"));
-    }
 }
 
 impl Default for AgentRunConfig {
@@ -135,52 +43,6 @@ impl Default for AgentRunConfig {
             enable_observation_masking: true,
         }
     }
-    #[tokio::test]
-    async fn test_tool_error_interruption() {
-        use crate::types::ToolError;
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_fail".to_string(),
-                            name: "fail_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-            ]),
-        });
-
-        struct FailToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailToolExecutor {
-            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-                Err(Box::new(ToolError::Unexpected("Critical failure".to_string())))
-            }
-        }
-
-        let tools = vec![Tool {
-            name: "fail_tool".to_string(),
-            description: "test".to_string(),
-            parameters: Value::Null,
-            execute: Arc::new(FailToolExecutor),
-        }];
-
-        let agent = Agent::new(client, tools);
-        let cfg = AgentRunConfig::default();
-        let mut events = vec![];
-
-        let result = agent.run(&cfg, "Do it", &mut |e| { events.push(e); }).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Critical failure"));
-    }
 }
 
 /// Progress metrics for a running agent task.
@@ -188,52 +50,6 @@ impl Default for AgentRunConfig {
 pub struct AgentProgress {
     tool_use_count: AtomicU64,
     token_count: AtomicI64,
-    #[tokio::test]
-    async fn test_tool_error_interruption() {
-        use crate::types::ToolError;
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_fail".to_string(),
-                            name: "fail_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-            ]),
-        });
-
-        struct FailToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailToolExecutor {
-            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-                Err(Box::new(ToolError::Unexpected("Critical failure".to_string())))
-            }
-        }
-
-        let tools = vec![Tool {
-            name: "fail_tool".to_string(),
-            description: "test".to_string(),
-            parameters: Value::Null,
-            execute: Arc::new(FailToolExecutor),
-        }];
-
-        let agent = Agent::new(client, tools);
-        let cfg = AgentRunConfig::default();
-        let mut events = vec![];
-
-        let result = agent.run(&cfg, "Do it", &mut |e| { events.push(e); }).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Critical failure"));
-    }
 }
 
 impl AgentProgress {
@@ -252,52 +68,6 @@ impl AgentProgress {
     pub fn token_count(&self) -> i64 {
         self.token_count.load(Ordering::Relaxed)
     }
-    #[tokio::test]
-    async fn test_tool_error_interruption() {
-        use crate::types::ToolError;
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_fail".to_string(),
-                            name: "fail_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-            ]),
-        });
-
-        struct FailToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailToolExecutor {
-            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-                Err(Box::new(ToolError::Unexpected("Critical failure".to_string())))
-            }
-        }
-
-        let tools = vec![Tool {
-            name: "fail_tool".to_string(),
-            description: "test".to_string(),
-            parameters: Value::Null,
-            execute: Arc::new(FailToolExecutor),
-        }];
-
-        let agent = Agent::new(client, tools);
-        let cfg = AgentRunConfig::default();
-        let mut events = vec![];
-
-        let result = agent.run(&cfg, "Do it", &mut |e| { events.push(e); }).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Critical failure"));
-    }
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
@@ -305,52 +75,6 @@ pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
     pub progress: Arc<AgentProgress>,
-    #[tokio::test]
-    async fn test_tool_error_interruption() {
-        use crate::types::ToolError;
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_fail".to_string(),
-                            name: "fail_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-            ]),
-        });
-
-        struct FailToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailToolExecutor {
-            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-                Err(Box::new(ToolError::Unexpected("Critical failure".to_string())))
-            }
-        }
-
-        let tools = vec![Tool {
-            name: "fail_tool".to_string(),
-            description: "test".to_string(),
-            parameters: Value::Null,
-            execute: Arc::new(FailToolExecutor),
-        }];
-
-        let agent = Agent::new(client, tools);
-        let cfg = AgentRunConfig::default();
-        let mut events = vec![];
-
-        let result = agent.run(&cfg, "Do it", &mut |e| { events.push(e); }).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Critical failure"));
-    }
 }
 
 impl Agent {
@@ -575,52 +299,6 @@ impl Agent {
 
         tool.execute.execute(tc.arguments.clone()).await
     }
-    #[tokio::test]
-    async fn test_tool_error_interruption() {
-        use crate::types::ToolError;
-
-        let client = Arc::new(MockLlmClient {
-            responses: tokio::sync::Mutex::new(vec![
-                ChatResponse {
-                    message: Message {
-                        role: Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![ToolCall {
-                            id: "call_fail".to_string(),
-                            name: "fail_tool".to_string(),
-                            arguments: Value::Null,
-                        }],
-                        tool_results: vec![],
-                    },
-                    usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                },
-            ]),
-        });
-
-        struct FailToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for FailToolExecutor {
-            async fn execute(&self, _args: Value) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-                Err(Box::new(ToolError::Unexpected("Critical failure".to_string())))
-            }
-        }
-
-        let tools = vec![Tool {
-            name: "fail_tool".to_string(),
-            description: "test".to_string(),
-            parameters: Value::Null,
-            execute: Arc::new(FailToolExecutor),
-        }];
-
-        let agent = Agent::new(client, tools);
-        let cfg = AgentRunConfig::default();
-        let mut events = vec![];
-
-        let result = agent.run(&cfg, "Do it", &mut |e| { events.push(e); }).await;
-        assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Critical failure"));
-    }
 }
 
 #[cfg(test)]
@@ -725,6 +403,7 @@ mod tests {
         // and ran without errors, which covers the logic path.
         // Also checking the length constraint logic.
     }
+
     #[tokio::test]
     async fn test_tool_error_interruption() {
         use crate::types::ToolError;
