@@ -701,6 +701,7 @@ service GrowthService {
   rpc GetTeamInvites(EmptyRequest) returns (TeamInvitesResponse);
   rpc CreateTeamInvite(CreateTeamInviteRequest) returns (TeamInviteProto);
   rpc AcceptTeamInvite(GrowthIdRequest) returns (TeamInviteProto);
+  rpc ProcessStandaloneReferral(ProcessStandaloneReferralRequest) returns (ProcessStandaloneReferralResponse);
   
   rpc GetViralCoefficient(EmptyRequest) returns (ViralCoefficientResponse);
   rpc GetViralCoefficientMetrics(EmptyRequest) returns (ViralCoefficientMetricsResponse);

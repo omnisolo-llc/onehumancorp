@@ -125,6 +125,7 @@ pub mod ohc {
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use ohc::orchestration::growth_service_server::GrowthServiceServer;
 use ohc::orchestration::*;
 
 use std::sync::Arc;
@@ -892,8 +893,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server listening on {}", addr);
 
+    let growth_service = crate::services::growth::service::MyGrowthService::new();
+
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(GrowthServiceServer::new(growth_service))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(store))
         .serve(addr)
         .await?;

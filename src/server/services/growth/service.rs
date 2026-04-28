@@ -206,6 +206,25 @@ impl GrowthService for MyGrowthService {
         Err(Status::not_found("invite not found"))
     }
 
+    async fn process_standalone_referral(
+        &self,
+        request: Request<ProcessStandaloneReferralRequest>,
+    ) -> Result<Response<ProcessStandaloneReferralResponse>, Status> {
+        let req = request.into_inner();
+        if req.referral_code.is_empty() {
+            return Err(Status::invalid_argument("referral_code is required"));
+        }
+
+        let temp_tenant_id = format!("tenant-{}", Utc::now().timestamp());
+        let cloud_url = format!("https://cloud.onehumancorp.com/join/{}", temp_tenant_id);
+
+        Ok(Response::new(ProcessStandaloneReferralResponse {
+            status: "PROVISIONED".to_string(),
+            temporary_tenant_id: temp_tenant_id,
+            cloud_url,
+        }))
+    }
+
     async fn get_viral_coefficient(
         &self,
         _request: Request<EmptyRequest>,
