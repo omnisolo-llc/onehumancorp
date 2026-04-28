@@ -1,7 +1,13 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
+use std::sync::Arc;
+use std::sync::Arc;
+use std::sync::Arc;
 use serde::{Serialize, Deserialize};
 use chrono::{DateTime, Utc};
+use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Row};
+use sqlx::{PgPool, Row};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedTask {
@@ -27,15 +33,18 @@ pub struct SharedTask {
     pub proposed_content: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct TaskManager {
-    pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
+    pool: Arc<PgPool>,
+    pub(crate) tasks: Arc<RwLock<HashMap<String, SharedTask>>>,
     event_tx: tokio::sync::mpsc::Sender<serde_json::Value>,
 }
 
 impl TaskManager {
-    pub fn new(event_tx: tokio::sync::mpsc::Sender<serde_json::Value>) -> Self {
+    pub fn new(pool: Arc<PgPool>, event_tx: tokio::sync::mpsc::Sender<serde_json::Value>) -> Self {
         TaskManager {
-            tasks: RwLock::new(HashMap::new()),
+            pool,
+            tasks: Arc::new(RwLock::new(HashMap::new())),
             event_tx,
         }
     }
@@ -50,15 +59,15 @@ impl TaskManager {
         
         let task = SharedTask {
             id: id.clone(),
-            organization_id: org_id,
+            organization_id: org_id.clone(),
             mission_id,
-            parent_plan_id,
-            dependencies,
-            title,
-            description: Some(description),
+            parent_plan_id: parent_plan_id.clone(),
+            dependencies: dependencies.clone(),
+            title: title.clone(),
+            description: Some(description.clone()),
             assigned_agent_id: None,
             status: "PENDING".to_string(),
-            priority,
+            priority: priority.clone(),
             payload: String::new(),
             locked_until: None,
             ultraplan_phase: Some("PROPOSE".to_string()),
