@@ -96,7 +96,15 @@ impl SipDB {
             .fetch_optional(&self.pool)
             .await?;
             
-        let value: Option<String> = row.map(|r| r.get("value"));
+        let mut value: Option<String> = row.map(|r| r.get("value"));
+
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        if is_standalone {
+            if let Some(val) = value {
+                value = Some(crate::crypto::decrypt_deterministic(&val));
+            }
+        }
+
         if let Some(ref val) = value {
             self.set_cache(cache_key, val.clone());
         }
@@ -105,9 +113,16 @@ impl SipDB {
     }
 
     pub async fn update_memory(&self, key: &str, value: &str) -> Result<(), sqlx::Error> {
+        let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let final_value = if is_standalone {
+            crate::crypto::encrypt_deterministic(value)
+        } else {
+            value.to_string()
+        };
+
         sqlx::query("INSERT INTO swarm_memory (key, value, updated_at, organization_id) VALUES ($1, $2, CURRENT_TIMESTAMP, $3) ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP")
             .bind(key)
-            .bind(value)
+            .bind(final_value)
             .bind(&self.org_id)
             .execute(&self.pool)
             .await?;

@@ -18,7 +18,11 @@ impl PgUserRepository {
 impl UserRepository for PgUserRepository {
     async fn create_user(&self, user: User, org_id: &str) -> Result<(), String> {
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         
+        let effective_org = if org_id.is_empty() || org_id == "sys" { "system" } else { org_id };
+        crate::db::DB::set_org_context(&mut tx, effective_org).await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             r#"
             INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
@@ -29,20 +33,26 @@ impl UserRepository for PgUserRepository {
         .bind(&user.username)
         .bind(&user.email)
         .bind(&user.password_hash)
-        .bind(roles_json) // Using JSON string for simplicity, assuming TEXT or JSONB column
+        .bind(roles_json)
         .bind(user.active)
         .bind(&user.organization_id)
         .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let effective_org = if org_id.is_empty() || org_id == "sys" { "system" } else { org_id };
+        crate::db::DB::set_org_context(&mut tx, effective_org).await.map_err(|e| e.to_string())?;
+
         let query = if org_id.is_empty() || org_id == "sys" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1"
         } else {
@@ -50,12 +60,11 @@ impl UserRepository for PgUserRepository {
         };
 
         let row = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(id).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(id).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(id).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
-        // Parse roles from JSON string
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
@@ -74,7 +83,11 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
-        // Similar to get_by_id but query by username
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let effective_org = if org_id.is_empty() || org_id == "sys" { "system" } else { org_id };
+        crate::db::DB::set_org_context(&mut tx, effective_org).await.map_err(|e| e.to_string())?;
+
         let query = if org_id.is_empty() || org_id == "sys" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1"
         } else {
@@ -82,9 +95,9 @@ impl UserRepository for PgUserRepository {
         };
 
         let row = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(username).fetch_one(&self.pool).await
+            sqlx::query(query).bind(username).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(username).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(username).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -105,7 +118,11 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
-        // Similar to get_by_id but query by email
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let effective_org = if org_id.is_empty() || org_id == "sys" { "system" } else { org_id };
+        crate::db::DB::set_org_context(&mut tx, effective_org).await.map_err(|e| e.to_string())?;
+
         let query = if org_id.is_empty() || org_id == "sys" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1"
         } else {
@@ -113,9 +130,9 @@ impl UserRepository for PgUserRepository {
         };
 
         let row = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(email).fetch_one(&self.pool).await
+            sqlx::query(query).bind(email).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(email).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(email).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -136,7 +153,11 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
-        // Similar to get_by_id but query by oidc_subject
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let effective_org = if org_id.is_empty() || org_id == "sys" { "system" } else { org_id };
+        crate::db::DB::set_org_context(&mut tx, effective_org).await.map_err(|e| e.to_string())?;
+
         let query = if org_id.is_empty() || org_id == "sys" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1"
         } else {
@@ -144,9 +165,9 @@ impl UserRepository for PgUserRepository {
         };
 
         let row = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(sub).fetch_one(&self.pool).await
+            sqlx::query(query).bind(sub).fetch_one(&mut *tx).await
         } else {
-            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&self.pool).await
+            sqlx::query(query).bind(sub).bind(org_id).fetch_one(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
@@ -167,6 +188,11 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let effective_org = if org_id.is_empty() || org_id == "sys" { "system" } else { org_id };
+        crate::db::DB::set_org_context(&mut tx, effective_org).await.map_err(|e| e.to_string())?;
+
         let query = if org_id.is_empty() || org_id == "sys" {
             "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at"
         } else {
@@ -174,9 +200,9 @@ impl UserRepository for PgUserRepository {
         };
 
         let rows = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).fetch_all(&self.pool).await
+            sqlx::query(query).fetch_all(&mut *tx).await
         } else {
-            sqlx::query(query).bind(org_id).fetch_all(&self.pool).await
+            sqlx::query(query).bind(org_id).fetch_all(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         let mut users = Vec::new();
@@ -201,6 +227,11 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn update_user(&self, user: User, org_id: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let effective_org = if org_id.is_empty() || org_id == "sys" { "system" } else { org_id };
+        crate::db::DB::set_org_context(&mut tx, effective_org).await.map_err(|e| e.to_string())?;
+
         let roles_json = serde_json::to_string(&user.roles).unwrap_or_default();
         
         let query = if org_id.is_empty() || org_id == "sys" {
@@ -228,7 +259,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.organization_id)
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await
         } else {
             sqlx::query(query)
@@ -242,7 +273,7 @@ impl UserRepository for PgUserRepository {
                 .bind(&user.oidc_subject)
                 .bind(user.updated_at)
                 .bind(org_id)
-                .execute(&self.pool)
+                .execute(&mut *tx)
                 .await
         }.map_err(|e| e.to_string())?;
 
@@ -250,10 +281,16 @@ impl UserRepository for PgUserRepository {
             return Err("user not found or unauthorized".to_string());
         }
 
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn delete_user(&self, id: &str, org_id: &str) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+
+        let effective_org = if org_id.is_empty() || org_id == "sys" { "system" } else { org_id };
+        crate::db::DB::set_org_context(&mut tx, effective_org).await.map_err(|e| e.to_string())?;
+
         let query = if org_id.is_empty() || org_id == "sys" {
             "DELETE FROM users WHERE id = $1"
         } else {
@@ -261,19 +298,23 @@ impl UserRepository for PgUserRepository {
         };
 
         let res = if org_id.is_empty() || org_id == "sys" {
-            sqlx::query(query).bind(id).execute(&self.pool).await
+            sqlx::query(query).bind(id).execute(&mut *tx).await
         } else {
-            sqlx::query(query).bind(id).bind(org_id).execute(&self.pool).await
+            sqlx::query(query).bind(id).bind(org_id).execute(&mut *tx).await
         }.map_err(|e| e.to_string())?;
 
         if res.rows_affected() == 0 {
             return Err("user not found or unauthorized".to_string());
         }
 
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn revoke_token(&self, jti: String, exp: DateTime<Utc>) -> Result<(), String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::db::DB::set_org_context(&mut tx, "system").await.map_err(|e| e.to_string())?;
+
         sqlx::query(
             r#"
             INSERT INTO revoked_tokens (jti, expires_at) VALUES ($1, $2)
@@ -282,22 +323,25 @@ impl UserRepository for PgUserRepository {
         )
         .bind(jti)
         .bind(exp)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
-        // GC expired entries
         let _ = sqlx::query("DELETE FROM revoked_tokens WHERE expires_at < CURRENT_TIMESTAMP")
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await;
 
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn is_revoked(&self, jti: &str) -> Result<bool, String> {
+        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
+        crate::db::DB::set_org_context(&mut tx, "system").await.map_err(|e| e.to_string())?;
+
         let row = sqlx::query("SELECT COUNT(*) FROM revoked_tokens WHERE jti = $1 AND expires_at >= CURRENT_TIMESTAMP")
             .bind(jti)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
 

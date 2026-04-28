@@ -32,72 +32,117 @@ impl DB {
     }
 
     pub async fn delete_stale_sessions(&self, threshold: DateTime<Utc>) -> Result<Vec<(String, String)>, Box<dyn std::error::Error>> {
+        let mut tx = self.pool.begin().await?;
+        Self::set_org_context(&mut tx, "system").await?;
+
         let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE last_accessed < $1")
             .bind(threshold)
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *tx)
             .await?;
             
         let mut result = Vec::new();
+        let is_standalone = env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+
         for row in rows {
             let id: String = row.get("session_id");
-            let data: String = row.get("context_data");
+            let mut data: String = row.get("context_data");
+            if is_standalone {
+                data = crate::crypto::decrypt_deterministic(&data);
+            }
             result.push((id, data));
         }
         
         sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1")
             .bind(threshold)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
             
+        tx.commit().await?;
         Ok(result)
     }
 
     pub async fn inject_truth(&self, memory_id: &str, context: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut tx = self.pool.begin().await?;
+        Self::set_org_context(&mut tx, "system").await?;
+
         sqlx::query("INSERT INTO swarm_truth_embeddings (memory_id, context, embedding) VALUES ($1, $2, $3) ON CONFLICT(memory_id) DO UPDATE SET context=EXCLUDED.context, embedding=EXCLUDED.embedding")
             .bind(memory_id)
             .bind(context)
             .bind(embedding)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
             
+        tx.commit().await?;
         Ok(())
     }
 
     pub async fn get_completed_tasks(&self) -> Result<Vec<(String, String, String)>, Box<dyn std::error::Error>> {
+        let mut tx = self.pool.begin().await?;
+        Self::set_org_context(&mut tx, "system").await?;
+
         let rows = sqlx::query("SELECT id, organization_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 50")
-            .fetch_all(&self.pool)
+            .fetch_all(&mut *tx)
             .await?;
             
         let mut result = Vec::new();
+        let is_standalone = env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+
         for row in rows {
             let id: String = row.get("id");
             let org_id: String = row.get("organization_id");
-            let payload: String = row.get("payload");
+            let mut payload: String = row.get("payload");
+            if is_standalone {
+                payload = crate::crypto::decrypt_deterministic(&payload);
+            }
             result.push((id, org_id, payload));
         }
         
+        tx.commit().await?;
         Ok(result)
     }
 
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut tx = self.pool.begin().await?;
+        Self::set_org_context(&mut tx, org_id).await?;
+
+        let is_standalone = env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+        let final_content = if is_standalone {
+            crate::crypto::encrypt_deterministic(content)
+        } else {
+            content.to_string()
+        };
+
         sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
             .bind(id)
             .bind(org_id)
             .bind(task_id)
-            .bind(content)
+            .bind(final_content)
             .bind(embedding)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
             
+        tx.commit().await?;
         Ok(())
     }
 
     pub async fn mark_task_auto_dreamed(&self, task_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut tx = self.pool.begin().await?;
+        Self::set_org_context(&mut tx, "system").await?;
+
         sqlx::query("UPDATE tasks SET auto_dreamed = TRUE WHERE id = $1")
             .bind(task_id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await?;
             
+        tx.commit().await?;
+        Ok(())
+    }
+
+    pub async fn set_org_context(tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, org_id: &str) -> Result<(), sqlx::Error> {
+        sqlx::query("SELECT set_config('ohc.current_organization_id', $1, true)")
+            .bind(org_id)
+            .execute(&mut **tx)
+            .await?;
         Ok(())
     }
 }
