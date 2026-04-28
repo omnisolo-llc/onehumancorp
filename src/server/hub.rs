@@ -545,12 +545,24 @@ impl Hub {
 
         let status = if db_ping > 0 { "healthy" } else { "degraded" };
 
+        let (stuck_missions, sync_backlog): (i64, i64) = sqlx::query_as(
+            "SELECT
+                COUNT(*) FILTER (WHERE status = 'STUCK'),
+                COUNT(*) FILTER (WHERE status IN ('PENDING', 'BURSTING'))
+             FROM agent_missions"
+        )
+        .fetch_one(&self.pool)
+        .await
+        .unwrap_or((0, 0));
+
         Ok(serde_json::json!({
             "mode": mode,
             "status": status,
             "db_ping_ms": db_ping,
             "mesh_active": true, 
             "cloud_connected": true,
+            "stuck_missions": stuck_missions,
+            "sync_backlog": sync_backlog,
         }))
     }
 }
