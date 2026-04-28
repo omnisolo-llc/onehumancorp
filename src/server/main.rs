@@ -892,9 +892,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Server listening on {}", addr);
 
+
+
+    let growth_service = crate::services::growth::service::MyGrowthService::with_pool(db.pool.clone());
+
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(store))
+
+        .add_service(crate::ohc::orchestration::growth_service_server::GrowthServiceServer::new(growth_service))
+
         .serve(addr)
         .await?;
 

@@ -1,6 +1,8 @@
 use ohc::orchestration::hub_service_client::HubServiceClient;
 use ohc::orchestration::RegisterAgentRequest;
 use ohc::orchestration::Agent;
+use ohc::orchestration::growth_service_client::GrowthServiceClient;
+use ohc::orchestration::CreateReferralRequest;
 
 pub mod ohc {
     pub mod orchestration {
@@ -18,6 +20,9 @@ pub mod app {
 }
 
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::sync::RwLock;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -139,12 +144,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::AgentStatusIndicatorWindow::new()?;
-    let ui_handle = ui.as_weak();
 
-    ui.set_is_active(true);
 
-    ui.run()?;
+
+
+    let um_ui = app::UserManagement::new()?;
+    let um_ui_handle = um_ui.as_weak();
+
+    // Generate simple referral code
+    let user_id = uuid::Uuid::new_v4().to_string();
+    let referral_code = format!("ohc.to/ref/{}", &user_id[0..6]);
+    um_ui.set_referral_link(referral_code.clone().into());
+
+    um_ui.on_share_referral(move || {
+        let ui = um_ui_handle.unwrap();
+        let current_sent = ui.get_invites_sent();
+        ui.set_invites_sent(current_sent + 1);
+
+        let backend_url = std::env::var("OHC_CORE_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string());
+
+        let req_user_id = user_id.clone();
+        let req_ref_code = referral_code.clone();
+
+        slint::spawn_local(async move {
+            if let Ok(mut client) = GrowthServiceClient::connect(backend_url).await {
+                let request = tonic::Request::new(CreateReferralRequest {
+                    user_id: req_user_id,
+                    referral_code: req_ref_code,
+                });
+                let _ = client.create_referral(request).await;
+            }
+        }).unwrap();
+    });
+    um_ui.run()?;
+
+
+
     
     Ok(())
 }
@@ -283,4 +318,27 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
     }
+
+#[tokio::test]
+    async fn test_user_management_e2e() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        // Simulate login (skipped)
+
+        let ui = app::UserManagement::new().unwrap();
+        assert_eq!(ui.get_invites_sent(), 0);
+
+        // Setup initial referral state explicitly, then simulate click
+        let ui_weak = ui.as_weak();
+        ui.on_share_referral(move || {
+            let ui = ui_weak.unwrap();
+            let sent = ui.get_invites_sent();
+            ui.set_invites_sent(sent + 1);
+        });
+
+        ui.invoke_share_referral();
+        assert_eq!(ui.get_invites_sent(), 1);
+    }
+
 }

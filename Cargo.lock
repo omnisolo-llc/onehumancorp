@@ -178,6 +178,7 @@ dependencies = [
  "slint-build",
  "tokio",
  "tonic",
+ "uuid",
 ]
 
 [[package]]

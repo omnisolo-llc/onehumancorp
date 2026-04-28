@@ -14,8 +14,15 @@ export component UserManagement inherits Window {
     height: 600px;
     title: "User Management";
 
+
     in property <[UiUser]> users;
+    in property <string> referral_link: "ohc.to/ref/YOUR_CODE";
+    in property <int> invites_sent: 0;
+    in property <int> invites_accepted: 0;
+    in property <int> pro_credits_earned: 0;
     callback delete_user(string);
+    callback share_referral();
+
 
     background: #f8fafc;
 
@@ -35,9 +42,37 @@ export component UserManagement inherits Window {
             border-width: 1px;
             border-radius: 8px;
             
-            HorizontalBox {
+            VerticalBox {
                 padding: 16px;
-                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
+                spacing: 12px;
+                Text { text: "Refer a Friend, Get 1 Month Free Pro"; font-size: 16px; font-weight: 700; color: #1e293b; }
+
+                HorizontalBox {
+                    spacing: 8px;
+                    Rectangle {
+                        background: #f1f5f9;
+                        border-radius: 4px;
+                        padding: 8px;
+                        Text { text: referral_link; color: #64748b; font-size: 14px; }
+                    }
+                    Button { text: "Share Link"; clicked => { share_referral(); } }
+                }
+
+                HorizontalBox {
+                    spacing: 16px;
+                    VerticalBox {
+                        Text { text: invites_sent; font-size: 20px; font-weight: 700; color: #a855f7; }
+                        Text { text: "Invites Sent"; color: #64748b; font-size: 12px; }
+                    }
+                    VerticalBox {
+                        Text { text: invites_accepted; font-size: 20px; font-weight: 700; color: #10b981; }
+                        Text { text: "Accepted"; color: #64748b; font-size: 12px; }
+                    }
+                    VerticalBox {
+                        Text { text: pro_credits_earned; font-size: 20px; font-weight: 700; color: #f59e0b; }
+                        Text { text: "Pro Credits"; color: #64748b; font-size: 12px; }
+                    }
+                }
             }
         }
 

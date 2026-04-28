@@ -1,6 +1,8 @@
 use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::growth_service_server::GrowthService;
+use sqlx::PgPool;
+use uuid::Uuid;
 use std::sync::RwLock;
 use std::collections::HashMap;
 use chrono::Utc;
@@ -10,8 +12,9 @@ pub struct MyGrowthService {
     referrals: RwLock<Vec<Referral>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
-    waitlist: RwLock<Vec<WaitlistEntry>>,
     onboarding_funnels: RwLock<Vec<OnboardingFunnel>>,
+    waitlist: RwLock<Vec<WaitlistEntry>>,
+    pool: Option<PgPool>,
 }
 
 impl MyGrowthService {
@@ -21,10 +24,24 @@ impl MyGrowthService {
             referrals: RwLock::new(Vec::new()),
             downloads: RwLock::new(Vec::new()),
             team_invites: RwLock::new(Vec::new()),
-            waitlist: RwLock::new(Vec::new()),
             onboarding_funnels: RwLock::new(Vec::new()),
+            waitlist: RwLock::new(Vec::new()),
+            pool: None,
         }
     }
+
+    pub fn with_pool(pool: PgPool) -> Self {
+        MyGrowthService {
+            experiments: RwLock::new(Vec::new()),
+            referrals: RwLock::new(Vec::new()),
+            downloads: RwLock::new(Vec::new()),
+            team_invites: RwLock::new(Vec::new()),
+            onboarding_funnels: RwLock::new(Vec::new()),
+            waitlist: RwLock::new(Vec::new()),
+            pool: Some(pool),
+        }
+    }
+
 }
 
 #[tonic::async_trait]
@@ -83,12 +100,33 @@ impl GrowthService for MyGrowthService {
         
         let ref_obj = Referral {
             id: format!("ref-{}", Utc::now().timestamp()),
-            user_id: req.user_id,
-            referral_code: req.referral_code,
+            user_id: req.user_id.clone(),
+            referral_code: req.referral_code.clone(),
             clicks: 0,
             conversions: 0,
             created_at_unix: Utc::now().timestamp(),
         };
+
+        if let Some(pool) = &self.pool {
+            let res = sqlx::query(
+                r#"
+                INSERT INTO user_referrals (tenant_id, user_id, referral_code, invites_sent)
+                VALUES ($1, $2, $3, 1)
+                ON CONFLICT (referral_code) DO UPDATE
+                SET invites_sent = user_referrals.invites_sent + 1
+                RETURNING id
+                "#
+            )
+            .bind("default_tenant")
+            .bind(&req.user_id)
+            .bind(&req.referral_code)
+            .fetch_one(pool)
+            .await;
+
+            if let Err(e) = res {
+                println!("Failed to insert referral into DB: {:?}", e);
+            }
+        }
         
         let mut refs = self.referrals.write().unwrap();
         refs.push(ref_obj.clone());

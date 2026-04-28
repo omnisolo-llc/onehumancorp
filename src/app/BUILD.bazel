@@ -129,6 +129,7 @@ rust_binary(
         "@crates//:slint",
         "@crates//:tokio",
         "@crates//:tonic",
+        "@crates//:uuid",
     ],
 )
 
@@ -205,5 +206,6 @@ rust_test(
         "@crates//:slint",
         "@crates//:tokio",
         "@crates//:tonic",
+        "@crates//:uuid",
     ],
 )
