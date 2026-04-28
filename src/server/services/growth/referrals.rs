@@ -31,6 +31,7 @@ impl ReferralTracker {
         let bytes: [u8; 4] = rng.gen();
         let code = hex::encode(bytes);
 
+        // Store the code
         user_codes.insert(user_id.to_string(), code.clone());
         let mut code_to_user = self.code_to_user.write().unwrap();
         code_to_user.insert(code.clone(), user_id.to_string());

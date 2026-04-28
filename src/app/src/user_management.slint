@@ -16,6 +16,11 @@ export component UserManagement inherits Window {
 
     in property <[UiUser]> users;
     callback delete_user(string);
+    callback generate_referral_link(string);
+    in-out property <string> generated_link;
+    in property <int> invites_sent;
+    in property <int> invites_accepted;
+    in property <string> reward_tier: "Bronze";
 
     background: #f8fafc;
 
@@ -35,9 +40,46 @@ export component UserManagement inherits Window {
             border-width: 1px;
             border-radius: 8px;
             
-            HorizontalBox {
+            VerticalBox {
                 padding: 16px;
-                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
+                spacing: 8px;
+                Text { text: "Your Referrals Dashboard"; font-size: 16px; font-weight: 700; color: #1e293b; }
+                HorizontalBox {
+                    Text { text: "Invites Sent: " + root.invites_sent; color: #64748b; }
+                    Rectangle {}
+                    Text { text: "Invites Accepted: " + root.invites_accepted; color: #64748b; }
+                }
+                Text { text: "Current Reward Tier: " + root.reward_tier; color: #a855f7; font-weight: 700; }
+            }
+        }
+
+        Rectangle {
+            // Glassmorphism styling per design docs
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
+            border-width: 1px;
+            border-radius: 12px;
+
+            VerticalBox {
+                padding: 24px;
+                spacing: 12px;
+
+                Text { text: "Invite a Friend & Get 1 Month Free"; font-size: 18px; font-weight: 700; color: #1e293b; }
+                Text { text: "Share OHC with a fellow business owner. When they join, you both get 1 month of Pro for free! Share your link to help them start their journey."; color: #64748b; wrap: word-wrap; }
+
+                if (root.generated_link == "") : HorizontalBox {
+                    Button {
+                        text: "Generate Viral Invite Link";
+                        clicked => {
+                            generate_referral_link("user_123");
+                        }
+                    }
+                    Rectangle {}
+                }
+                if (root.generated_link != "") : HorizontalBox {
+                    Text { text: root.generated_link; color: #a855f7; }
+                    Rectangle {}
+                }
             }
         }
 
