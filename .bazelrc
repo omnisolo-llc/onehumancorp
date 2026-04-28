@@ -15,14 +15,13 @@ build --remote_download_toplevel
 build --action_env=CGO_ENABLED=1
 
 # ── Sandboxing ────────────────────────────────────────────────────────────────
-build --spawn_strategy=remote,sandboxed,local
+common --spawn_strategy=sandboxed,local
 build --incompatible_strict_action_env
 build --announce_rc
 build --linkopt=-fuse-ld=bfd
 build --host_linkopt=-fuse-ld=bfd
 build --features=-supports_start_end_lib
 build --host_features=-supports_start_end_lib
-build --@rules_rust//rust/toolchain/channel=nightly
 
 # ── Remote execution resilience ───────────────────────────────────────────────
 # Automatically rewind and retry actions when their remote inputs are lost
@@ -68,7 +67,7 @@ build:buildbuddy-official --bes_backend=grpcs://onehumancorp.buildbuddy.io
 build:buildbuddy-official --bes_upload_mode=fully_async
 build:buildbuddy-official --verbose_failures
 common:buildbuddy-official --remote_cache=grpcs://onehumancorp.buildbuddy.io
-# common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
+common:buildbuddy-official --remote_executor=grpcs://onehumancorp.buildbuddy.io
 # Proxy artifact downloads through BuildBuddy's CAS for faster blob fetches.
 common:buildbuddy-official --experimental_remote_downloader=grpcs://onehumancorp.buildbuddy.io
 common:buildbuddy-official --remote_upload_local_results
@@ -81,7 +80,7 @@ common:buildbuddy-official --experimental_remote_downloader_local_fallback
 common:buildbuddy-official --jobs=200
 # Default read-only API key (public, read-only – cannot push artifacts or
 # modify any BuildBuddy state; safe to keep in version control).
-common:buildbuddy-official --remote_header=x-buildbuddy-api-key=4yVAnCk4r5PE3JeeUIE9
+common:buildbuddy-official --remote_header=x-buildbuddy-api-key=0kY0rwFuU8wZVQ5339w6
 
 # ── BuildBuddy self-hosted ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
@@ -92,7 +91,7 @@ common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
 common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --experimental_remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_local_fallback
 common:buildbuddy --remote_upload_local_results
 # common:buildbuddy --remote_cache_compression
@@ -100,7 +99,7 @@ common:buildbuddy --remote_upload_local_results
 common:buildbuddy --experimental_remote_downloader_local_fallback
 common:buildbuddy --jobs=200
 # Read only Bazel cache
-common:buildbuddy --remote_header=x-buildbuddy-api-key=h2FUJLgaH6D2RL7T3PAV
+common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
 common:buildbuddy --remote_timeout=10m
 build:buildbuddy --verbose_failures
 build:buildbuddy --bes_upload_mode=fully_async
