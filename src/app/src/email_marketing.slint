@@ -1,0 +1,49 @@
+import { Button, VerticalBox, HorizontalBox, TextEdit, ComboBox } from "std-widgets.slint";
+
+export component EmailMarketing inherits Window {
+    width: 600px;
+    height: 600px;
+    title: "Email Marketing";
+
+    background: #f8fafc;
+
+    in-out property <string> template_choice: "New Arrivals";
+    in-out property <string> generated_content: "Hi everyone, check out our new arrivals!";
+
+    callback preview_email();
+    callback send_email();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Email Campaigns"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        HorizontalBox {
+            Text { text: "Select Template:"; color: #1e293b; vertical-alignment: center; }
+            ComboBox {
+                model: ["New Arrivals", "Flash Sale", "Thank You"];
+                current-value <=> template_choice;
+            }
+        }
+
+        TextEdit {
+            text <=> generated_content;
+            height: 200px;
+        }
+
+        HorizontalBox {
+            alignment: space-around;
+            Button {
+                text: "Preview";
+                clicked => { preview_email(); }
+            }
+            Button {
+                text: "Send Campaign";
+                clicked => { send_email(); }
+            }
+        }
+
+        Rectangle {} // Spacer
+    }
+}

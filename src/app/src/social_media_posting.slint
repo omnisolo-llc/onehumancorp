@@ -1,0 +1,53 @@
+import { Button, VerticalBox, HorizontalBox, TextEdit, CheckBox } from "std-widgets.slint";
+
+export component SocialMediaPosting inherits Window {
+    width: 400px;
+    height: 600px;
+    title: "AI Social Media Auto-Posting";
+
+    background: #f8fafc;
+
+    in-out property <bool> instagram_connected: true;
+    in-out property <bool> facebook_connected: false;
+    in-out property <string> generated_post: "Check out our latest product! 🚀 #newarrival";
+
+    callback approve_post();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Social Media Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        VerticalBox {
+            spacing: 8px;
+            Text { text: "Connected Accounts"; font-weight: 700; color: #1e293b; }
+            CheckBox { text: "Instagram"; checked <=> instagram_connected; }
+            CheckBox { text: "Facebook"; checked <=> facebook_connected; }
+        }
+
+        VerticalBox {
+            spacing: 8px;
+            Text { text: "Drafted Post Review"; font-weight: 700; color: #1e293b; }
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                height: 150px;
+
+                TextEdit {
+                    text <=> generated_post;
+                }
+            }
+        }
+
+        Button {
+            text: "Approve & Schedule";
+            height: 44px;
+            clicked => { approve_post(); }
+        }
+
+        Rectangle {} // Spacer
+    }
+}

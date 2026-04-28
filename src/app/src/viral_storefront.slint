@@ -1,0 +1,60 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component ViralStorefront inherits Window {
+    width: 375px;
+    height: 800px;
+    title: "Public Storefront";
+
+    background: #f8fafc;
+
+    callback click_viral_link();
+
+    VerticalBox {
+        spacing: 0px;
+
+        // Content
+        VerticalBox {
+            spacing: 20px;
+            padding: 24px;
+
+            Text { text: "Maya's Cakes"; font-size: 32px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+            Text { text: "The best custom cakes in town!"; color: #64748b; horizontal-alignment: center; }
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                height: 300px;
+
+                VerticalBox {
+                    padding: 16px;
+                    Text { text: "Product Catalog"; font-weight: 700; color: #1e293b; }
+                    Text { text: "• Vegan Chocolate Cake ($45)"; color: #1e293b; }
+                    Text { text: "• Strawberry Shortcake ($35)"; color: #1e293b; }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+
+        // Viral Footer
+        Rectangle {
+            background: #f1f5f9;
+            height: 60px;
+
+            VerticalBox {
+                alignment: center;
+                padding: 10px;
+
+                HorizontalBox {
+                    alignment: center;
+                    Button {
+                        text: "Built with OHC — Start your free business →";
+                        clicked => { click_viral_link(); }
+                    }
+                }
+            }
+        }
+    }
+}

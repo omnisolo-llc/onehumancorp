@@ -1,0 +1,46 @@
+import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+
+export component SuccessNotifications inherits Window {
+    width: 400px;
+    height: 500px;
+    title: "Success Milestones";
+
+    background: #f8fafc;
+
+    in-out property <bool> enable_milestones: true;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Success Notifications"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        Text {
+            text: "Get push notifications to celebrate your wins!";
+            color: #64748b;
+            wrap: word-wrap;
+        }
+
+        CheckBox {
+            text: "Enable milestone notifications (e.g. 10th order)";
+            checked <=> enable_milestones;
+        }
+
+        Rectangle {
+            background: #dcfce7;
+            border-radius: 8px;
+            padding: 16px;
+
+            HorizontalBox {
+                spacing: 12px;
+                Text { text: "🎉"; font-size: 24px; }
+                VerticalBox {
+                    Text { text: "You just got your 10th order!"; font-weight: 700; color: #166534; }
+                    Text { text: "Keep up the great work!"; color: #166534; }
+                }
+            }
+        }
+
+        Rectangle {} // Spacer
+    }
+}

@@ -139,6 +139,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let dashboard = app::Dashboard::new().unwrap();
+    dashboard.on_share_business(move || {
+        let share_ui = app::BusinessShare::new().unwrap();
+        share_ui.show().unwrap();
+    });
+
     let ui = app::AgentStatusIndicatorWindow::new()?;
     let ui_handle = ui.as_weak();
 
@@ -283,4 +289,40 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
     }
+    #[test]
+    fn test_business_share_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::BusinessShare::new().unwrap();
+    }
+
+    #[test]
+    fn test_email_marketing_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::EmailMarketing::new().unwrap();
+    }
+
+    #[test]
+    fn test_social_media_posting_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::SocialMediaPosting::new().unwrap();
+    }
+
+    #[test]
+    fn test_success_notifications_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::SuccessNotifications::new().unwrap();
+    }
+
+    #[test]
+    fn test_free_tier_upgrade_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::FreeTierUpgrade::new().unwrap();
+    }
+
+    #[test]
+    fn test_viral_storefront_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::ViralStorefront::new().unwrap();
+    }
+
 }

@@ -1,0 +1,78 @@
+import { Button, VerticalBox, HorizontalBox, TextEdit } from "std-widgets.slint";
+
+export component FreeTierUpgrade inherits Window {
+    width: 500px;
+    height: 400px;
+    title: "Upgrade to Starter";
+
+    background: #f8fafc;
+
+    callback upgrade();
+    callback dismiss();
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "You've Hit the Free Tier Limit!"; font-size: 24px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+
+        Text {
+            text: "Great job growing your business! You've successfully added 10 products. To add more and unlock unlimited AI agents, upgrade to our Starter tier.";
+            color: #64748b;
+            wrap: word-wrap;
+            horizontal-alignment: center;
+        }
+
+        HorizontalBox {
+            alignment: space-around;
+
+            Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+                padding: 16px;
+                width: 200px;
+
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Free"; font-weight: 700; color: #64748b; horizontal-alignment: center; }
+                    Text { text: "Current Plan"; color: #94a3b8; font-size: 12px; horizontal-alignment: center; }
+                    Text { text: "• 1 AI Agent"; color: #1e293b; }
+                    Text { text: "• 10 Products"; color: #1e293b; }
+                    Text { text: "• OHC Subdomain"; color: #1e293b; }
+                }
+            }
+
+            Rectangle {
+                background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                border-color: #a855f7;
+                border-width: 2px;
+                border-radius: 8px;
+                padding: 16px;
+                width: 200px;
+
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Starter"; font-weight: 700; color: white; horizontal-alignment: center; }
+                    Text { text: "$19/mo"; color: #a855f7; font-size: 16px; font-weight: 700; horizontal-alignment: center; }
+                    Text { text: "• Unlimited Agents"; color: #cbd5e1; }
+                    Text { text: "• Unlimited Products"; color: #cbd5e1; }
+                    Text { text: "• Custom Domain"; color: #cbd5e1; }
+                }
+            }
+        }
+
+        HorizontalBox {
+            alignment: space-around;
+            Button {
+                text: "Maybe Later";
+                clicked => { dismiss(); }
+            }
+            Button {
+                text: "Upgrade Now";
+                clicked => { upgrade(); }
+            }
+        }
+    }
+}

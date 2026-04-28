@@ -7,6 +7,7 @@ export struct UiRoleCount {
 }
 
 export component Dashboard inherits Window {
+    callback share_business();
     width: 800px;
     height: 800px;
     title: "Dashboard";
@@ -88,6 +89,11 @@ export component Dashboard inherits Window {
 
         SwarmObservability {
             messages: mesh_messages;
+        }
+
+        Button {
+            text: "Share My Business";
+            clicked => { share_business(); }
         }
 
         // Company Structure

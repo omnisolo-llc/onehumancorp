@@ -1,0 +1,71 @@
+import { Button, VerticalBox, HorizontalBox, TextEdit } from "std-widgets.slint";
+
+export component BusinessShare inherits Window {
+    width: 375px;
+    height: 600px;
+    title: "Share My Business";
+
+    in property <string> business_name: "My Business";
+    in property <string> business_tagline: "The best business in town";
+    in property <string> share_link: "https://mybusiness.ohc.app";
+
+    callback share_to_instagram();
+    callback share_to_whatsapp();
+    callback share_to_x();
+    callback copy_link();
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+
+        Text { text: "Share My Business"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        Rectangle {
+            background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+            border-radius: 12px;
+            height: 200px;
+
+            VerticalBox {
+                padding: 20px;
+                alignment: center;
+                spacing: 12px;
+
+                Text { text: business_name; font-size: 28px; font-weight: 700; color: white; horizontal-alignment: center; font-family: "Outfit"; }
+                Text { text: business_tagline; font-size: 16px; color: #cbd5e1; horizontal-alignment: center; font-family: "Inter"; }
+                Text { text: "Built with OHC — Start your free business →"; font-size: 12px; color: #94a3b8; horizontal-alignment: center; font-family: "Inter"; }
+            }
+        }
+
+        VerticalBox {
+            spacing: 12px;
+
+            Button {
+                text: "Copy Link";
+                height: 44px;
+                clicked => { copy_link(); }
+            }
+
+            Button {
+                text: "Share to Instagram";
+                height: 44px;
+                clicked => { share_to_instagram(); }
+            }
+
+            Button {
+                text: "Share to WhatsApp";
+                height: 44px;
+                clicked => { share_to_whatsapp(); }
+            }
+
+            Button {
+                text: "Share to X (Twitter)";
+                height: 44px;
+                clicked => { share_to_x(); }
+            }
+        }
+
+        Rectangle {} // Spacer
+    }
+}
