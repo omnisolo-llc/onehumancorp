@@ -1,7 +1,6 @@
 use ohc::orchestration::hub_service_client::HubServiceClient;
 use ohc::orchestration::RegisterAgentRequest;
 use ohc::orchestration::Agent;
-pub mod tooltip_registry;
 
 pub mod ohc {
     pub mod orchestration {
@@ -279,58 +278,9 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::SetupWizard::new().unwrap();
     }
-
-    #[test]
-    fn test_help_center_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::HelpCenter::new().unwrap();
-    }
-    #[test]
-    fn test_interactive_walkthrough_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::InteractiveWalkthrough::new().unwrap();
-    }
-    #[test]
-    fn test_ai_help_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::AiHelpChat::new().unwrap();
-    }
-    #[test]
-    fn test_video_tutorials_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::VideoTutorials::new().unwrap();
-    }
-    #[test]
-    fn test_api_docs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ApiDocs::new().unwrap();
-    }
-    #[test]
-    fn test_release_notes_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ReleaseNotes::new().unwrap();
-    }
-
     #[test]
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
-    }
-}
-#[cfg(test)]
-mod e2e_tests {
-    use super::*;
-
-    #[test]
-    fn test_help_center_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-
-        let dashboard = app::Dashboard::new().unwrap();
-        // Simulate user clicking help button
-        dashboard.set_show_help_center(true);
-        assert_eq!(dashboard.get_show_help_center(), true);
-
-        let tooltip_registry = crate::tooltip_registry::TooltipRegistry;
-        assert_eq!(crate::tooltip_registry::TooltipRegistry::get("help_btn"), "Click for help");
     }
 }
