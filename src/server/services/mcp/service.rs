@@ -4,6 +4,8 @@ use crate::ohc::orchestration::mcp_service_server::McpService;
 use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
 #[allow(unused_imports)]
+#[allow(unused_imports)]
+#[allow(unused_imports)]
 use crate::integrations::rate_limiter::rate_limiter::*;
 use std::env;
 
@@ -17,7 +19,7 @@ pub struct MyMcpService {
 impl MyMcpService {
     pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
         let is_cloud = env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
-        let rate_limiter = create_rate_limiter(
+        let rate_limiter = crate::integrations::rate_limiter::rate_limiter::create_rate_limiter(
             is_cloud,
             None,
             100, // 100 requests capacity
