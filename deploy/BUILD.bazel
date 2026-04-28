@@ -56,6 +56,8 @@ pkg_tar(
     name = "agent_pkg",
     srcs = [
         "//src/server:server-rust",
+        "//src/server/agents/mcp:github",
+        "//src/server/ironclaw",
     ],
     package_dir = "/usr/local/bin",
 )
