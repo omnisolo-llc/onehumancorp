@@ -8,8 +8,6 @@ pub mod ohc {
     }
 }
 
-use slint::ComponentHandle;
-
 pub mod app {
     include!(concat!(env!("OUT_DIR"), "/app.rs"));
 }
