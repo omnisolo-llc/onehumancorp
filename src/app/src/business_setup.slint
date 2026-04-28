@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component BusinessSetup inherits Window {
     width: 600px;
@@ -15,58 +16,74 @@ export component BusinessSetup inherits Window {
     in-out property <string> first_product_desc: "";
     in-out property <string> first_product_price: "";
     in-out property <string> domain_name: "";
+    in-out property <string> admin_name: "";
+    in-out property <string> admin_email: "";
+    in-out property <string> admin_password: "";
 
     callback launch();
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Business Setup"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
+
+        GlassCard {
+            VerticalBox {
+                spacing: 16px;
+                padding: 24px;
 
         // Step 0: Welcome
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Welcome! Your AI team, ready in minutes."; color: #1e293b; }
+            Text { text: "Welcome! Your AI team, ready in minutes."; color: white; font-family: "Inter"; }
         }
 
         // Step 1: Type & Name
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            LineEdit {
-                placeholder-text: "Business Type (e.g. Baker, Handyman)";
-                text <=> business_type;
+            Text { text: "What kind of business are you starting?"; color: white; font-family: "Inter"; }
+            HorizontalBox {
+                Button { height: 44px; text: "Online Store"; clicked => { business_type = "Online Store"; } }
+                Button { height: 44px; text: "Service Business"; clicked => { business_type = "Service Business"; } }
             }
-            LineEdit {
-                placeholder-text: "Company Name";
-                text <=> company_name;
+            HorizontalBox {
+                Button { height: 44px; text: "Restaurant / Food"; clicked => { business_type = "Restaurant / Food"; } }
+                Button { height: 44px; text: "Local Business"; clicked => { business_type = "Local Business"; } }
             }
+            Text { text: "Selected: " + business_type; color: #a855f7; font-family: "Inter"; }
+            LineEdit { placeholder-text: "Company Name"; text <=> company_name; }
         }
 
         // Step 2: Products & Payment
         if (step == 2) : VerticalBox {
             spacing: 10px;
-            LineEdit {
-                placeholder-text: "What do you sell?";
-                text <=> products_services;
-            }
-            Text { text: "Payment Preference: " + payment_pref; color: #1e293b; }
+            Text { text: "What do you sell?"; color: white; font-family: "Inter"; }
             HorizontalBox {
-                Button { text: "Stripe"; clicked => { payment_pref = "stripe"; } }
-                Button { text: "PayPal"; clicked => { payment_pref = "paypal"; } }
+                Button { height: 44px; text: "Physical Products"; clicked => { products_services = "Physical Products"; } }
+                Button { height: 44px; text: "Digital Downloads"; clicked => { products_services = "Digital Downloads"; } }
             }
+            HorizontalBox {
+                Button { height: 44px; text: "Services / Appointments"; clicked => { products_services = "Services / Appointments"; } }
+            }
+            Text { text: "How do you want to receive payments?"; color: white; font-family: "Inter"; }
+            HorizontalBox {
+                Button { height: 44px; text: "Online Only"; clicked => { payment_pref = "online"; } }
+                Button { height: 44px; text: "In-Person (POS)"; clicked => { payment_pref = "in-person"; } }
+            }
+            Text { text: "Payment Preference: " + payment_pref; color: #a855f7; font-family: "Inter"; }
         }
 
         // Step 3: Template
         if (step == 3) : VerticalBox {
             spacing: 10px;
-            Text { text: "Template Selection: " + template_id; color: #1e293b; }
+            Text { text: "Template Selection: " + template_id; color: white; font-family: "Inter"; }
             HorizontalBox {
-                Button { text: "Modern"; clicked => { template_id = "modern"; } }
-                Button { text: "Classic"; clicked => { template_id = "classic"; } }
-                Button { text: "Bold"; clicked => { template_id = "bold"; } }
+                Button { height: 44px; text: "Modern"; clicked => { template_id = "modern"; } }
+                Button { height: 44px; text: "Classic"; clicked => { template_id = "classic"; } }
+                Button { height: 44px; text: "Bold"; clicked => { template_id = "bold"; } }
             }
         }
 
@@ -83,23 +100,32 @@ export component BusinessSetup inherits Window {
             spacing: 10px;
             HorizontalBox {
                 LineEdit { placeholder-text: "Domain Name"; text <=> domain_name; }
-                Text { text: ".ohc.app"; color: #1e293b; horizontal-alignment: center; }
+                Text { text: ".ohc.app"; color: white; font-family: "Inter"; horizontal-alignment: center; }
             }
+        }
+
+        // Step 6: Administrator
+        if (step == 6) : VerticalBox {
+            spacing: 10px;
+            Text { text: "Administrator Account"; color: white; font-family: "Inter"; }
+            LineEdit { placeholder-text: "Full Name"; text <=> admin_name; }
+            LineEdit { placeholder-text: "Email Address"; text <=> admin_email; }
+            LineEdit { placeholder-text: "Password"; text <=> admin_password; }
         }
 
         Rectangle {} // Spacer
 
         // Navigation
         HorizontalBox {
-            if (step > 0) : Button {
+            if (step > 0) : Button { height: 44px;
                 text: "Back";
                 clicked => { step = step - 1; }
             }
             Rectangle {} // Spacer
-            Button {
-                text: step == 5 ? "Launch My AI Team" : "Next";
+            Button { height: 44px;
+                text: step == 6 ? "Launch My Business →" : "Next";
                 clicked => {
-                    if (step < 5) {
+                    if (step < 6) {
                         step = step + 1;
                     } else {
                         launch();
@@ -107,5 +133,8 @@ export component BusinessSetup inherits Window {
                 }
             }
         }
+        }
+
+    }
     }
 }

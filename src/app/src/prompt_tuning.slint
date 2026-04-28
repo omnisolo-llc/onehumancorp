@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export struct UiPromptExample {
     q: string,
@@ -23,7 +24,7 @@ export component PromptTuning inherits Window {
     callback add_example();
     callback save_prompt();
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     HorizontalBox {
         spacing: 20px;
@@ -34,22 +35,27 @@ export component PromptTuning inherits Window {
             width: 320px;
             spacing: 20px;
             
-            Text { text: "Prompt Tuning"; font-size: 24px; font-weight: 700; color: #1e293b; }
+            Text { text: "Prompt Tuning"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
+
+            GlassCard {
+                VerticalBox {
+                    spacing: 16px;
+                    padding: 24px;
 
             // Step 0: Tone
             if (step == 0) : VerticalBox {
                 spacing: 10px;
-                Text { text: "Personality & tone"; color: #1e293b; }
-                Button { text: "Formal"; clicked => { tone = "Formal"; } }
-                Button { text: "Friendly"; clicked => { tone = "Friendly"; } }
-                Button { text: "Concise"; clicked => { tone = "Concise"; } }
+                Text { text: "Personality & tone"; color: white; font-family: "Inter"; }
+                Button { height: 44px; text: "Formal"; clicked => { tone = "Formal"; } }
+                Button { height: 44px; text: "Friendly"; clicked => { tone = "Friendly"; } }
+                Button { height: 44px; text: "Concise"; clicked => { tone = "Concise"; } }
                 Text { text: "Selected: " + tone; color: #a855f7; }
             }
 
             // Step 1: Focus
             if (step == 1) : VerticalBox {
                 spacing: 10px;
-                Text { text: "Domain focus"; color: #1e293b; }
+                Text { text: "Domain focus"; color: white; font-family: "Inter"; }
                 CheckBox { text: "Only discuss business"; checked: focus_only_business; toggled => { focus_only_business = !focus_only_business; } }
                 CheckBox { text: "Avoid competitors"; checked: focus_avoid_competitors; toggled => { focus_avoid_competitors = !focus_avoid_competitors; } }
                 CheckBox { text: "Always reply in Spanish"; checked: focus_reply_spanish; toggled => { focus_reply_spanish = !focus_reply_spanish; } }
@@ -58,31 +64,34 @@ export component PromptTuning inherits Window {
             // Step 2: Examples
             if (step == 2) : VerticalBox {
                 spacing: 10px;
-                Text { text: "Example interactions"; color: #1e293b; }
-                Button { 
+                Text { text: "Example interactions"; color: white; font-family: "Inter"; }
+                Button { height: 44px;
                     text: "Add Example"; 
                     clicked => { add_example(); }
                 }
-                for ex in examples : Text { text: "Q: " + ex.q + "\nA: " + ex.a; color: #64748b; }
+                for ex in examples : Text { text: "Q: " + ex.q + "\nA: " + ex.a; color: #94a3b8; font-family: "Inter"; }
             }
 
             // Step 3: Review
             if (step == 3) : VerticalBox {
                 spacing: 10px;
-                Text { text: "Review & Save"; color: #1e293b; }
-                Text { text: "Ready to update the agent?"; color: #64748b; }
+                Text { text: "Review & Save"; color: white; font-family: "Inter"; }
+                Text { text: "Ready to update the agent?"; color: #94a3b8; font-family: "Inter"; }
             }
 
             Rectangle {} // Spacer
 
+                }
+            }
+
             // Navigation
             HorizontalBox {
-                if (step > 0) : Button {
+                if (step > 0) : Button { height: 44px;
                     text: "Back";
                     clicked => { step = step - 1; }
                 }
                 Rectangle {} // Spacer
-                Button {
+                Button { height: 44px;
                     text: step == 3 ? "Save" : "Next";
                     clicked => {
                         if (step < 3) {
@@ -101,14 +110,14 @@ export component PromptTuning inherits Window {
             spacing: 10px;
             
             HorizontalBox {
-                Text { text: "Live Preview"; font-size: 18px; font-weight: 700; color: #1e293b; }
+                Text { text: "Live Preview"; font-size: 18px; font-weight: 700; color: white; font-family: "Outfit"; }
                 Rectangle {}
-                Button { text: show_raw ? "Hide raw" : "Show raw"; clicked => { show_raw = !show_raw; } }
+                Button { height: 44px; text: show_raw ? "Hide raw" : "Show raw"; clicked => { show_raw = !show_raw; } }
             }
             
             Rectangle {
-                background: white;
-                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.2);
                 border-width: 1px;
                 border-radius: 8px;
                 
@@ -119,12 +128,12 @@ export component PromptTuning inherits Window {
                             + (focus_only_business ? "Domain Focus: Only discuss business.\n" : "")
                             + (focus_avoid_competitors ? "Domain Focus: Avoid competitors.\n" : "")
                             + (focus_reply_spanish ? "Domain Focus: Always reply in Spanish.\n" : "");
-                        color: #1e293b;
+                        color: white; font-family: "Inter";
                         wrap: word-wrap;
                     }
                     if (!show_raw) : Text {
                         text: "Chat sandbox placeholder";
-                        color: #64748b;
+                        color: #94a3b8; font-family: "Inter";
                         horizontal-alignment: center;
                     }
                 }

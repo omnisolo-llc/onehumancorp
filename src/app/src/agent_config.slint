@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, CheckBox } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component AgentConfig inherits Window {
     width: 600px;
@@ -13,23 +14,28 @@ export component AgentConfig inherits Window {
     property <bool> can_social: false;
     property <string> frequency: "Daily";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Configure AI Agent"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
+
+        GlassCard {
+            VerticalBox {
+                spacing: 16px;
+                padding: 24px;
 
         // Step 0: Choose Agent
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Choose an agent to add to your team"; color: #1e293b; }
+            Text { text: "Choose an agent to add to your team"; color: white; font-family: "Inter"; }
             
             HorizontalBox {
                 spacing: 10px;
-                Button { text: "Customer Support"; clicked => { selected_agent = "Customer Support"; } }
-                Button { text: "Social Media Manager"; clicked => { selected_agent = "Social Media Manager"; } }
+                Button { height: 44px; text: "Customer Support"; clicked => { selected_agent = "Customer Support"; } }
+                Button { height: 44px; text: "Social Media Manager"; clicked => { selected_agent = "Social Media Manager"; } }
             }
             Text { text: "Selected: " + selected_agent; color: #a855f7; }
         }
@@ -37,14 +43,14 @@ export component AgentConfig inherits Window {
         // Step 1: Capabilities
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "What should this agent do?"; color: #1e293b; }
+            Text { text: "What should this agent do?"; color: white; font-family: "Inter"; }
             
             HorizontalBox {
-                Text { text: "Reply to customer messages"; color: #1e293b; }
+                Text { text: "Reply to customer messages"; color: white; font-family: "Inter"; }
                 CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
             }
             HorizontalBox {
-                Text { text: "Post to Instagram & Facebook"; color: #1e293b; }
+                Text { text: "Post to Instagram & Facebook"; color: white; font-family: "Inter"; }
                 CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
             }
         }
@@ -52,33 +58,33 @@ export component AgentConfig inherits Window {
         // Step 2: Frequency
         if (step == 2) : VerticalBox {
             spacing: 10px;
-            Text { text: "How often should this agent work?"; color: #1e293b; }
+            Text { text: "How often should this agent work?"; color: white; font-family: "Inter"; }
             Text { text: frequency; font-size: 24px; color: #a855f7; horizontal-alignment: center; }
             
             HorizontalBox {
                 alignment: center;
-                Button { text: "Weekly"; clicked => { frequency = "Weekly"; } }
-                Button { text: "Daily"; clicked => { frequency = "Daily"; } }
-                Button { text: "Hourly"; clicked => { frequency = "Hourly"; } }
+                Button { height: 44px; text: "Weekly"; clicked => { frequency = "Weekly"; } }
+                Button { height: 44px; text: "Daily"; clicked => { frequency = "Daily"; } }
+                Button { height: 44px; text: "Hourly"; clicked => { frequency = "Hourly"; } }
             }
         }
 
         // Step 3: Review
         if (step == 3) : VerticalBox {
             spacing: 10px;
-            Text { text: "Review & Activate"; color: #1e293b; }
+            Text { text: "Review & Activate"; color: white; font-family: "Inter"; }
             Rectangle {
-                background: white;
-                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.2);
                 border-width: 1px;
                 border-radius: 8px;
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Agent: " + selected_agent; color: #1e293b; }
-                    Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: #1e293b; }
-                    Text { text: "Social: " + (can_social ? "Yes" : "No"); color: #1e293b; }
-                    Text { text: "Schedule: " + frequency; color: #1e293b; }
+                    Text { text: "Agent: " + selected_agent; color: white; font-family: "Inter"; }
+                    Text { text: "Reply: " + (can_reply ? "Yes" : "No"); color: white; font-family: "Inter"; }
+                    Text { text: "Social: " + (can_social ? "Yes" : "No"); color: white; font-family: "Inter"; }
+                    Text { text: "Schedule: " + frequency; color: white; font-family: "Inter"; }
                 }
             }
         }
@@ -87,12 +93,12 @@ export component AgentConfig inherits Window {
 
         // Navigation
         HorizontalBox {
-            if (step > 0) : Button {
+            if (step > 0) : Button { height: 44px;
                 text: "Back";
                 clicked => { step = step - 1; }
             }
             Rectangle {} // Spacer
-            Button {
+            Button { height: 44px;
                 text: step == 3 ? "Activate" : "Next";
                 clicked => {
                     if (step < 3) {
@@ -104,5 +110,8 @@ export component AgentConfig inherits Window {
                 }
             }
         }
+        }
+
+    }
     }
 }

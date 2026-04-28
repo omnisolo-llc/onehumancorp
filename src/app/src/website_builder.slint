@@ -1,4 +1,5 @@
 import { Button, VerticalBox, HorizontalBox, LineEdit } from "std-widgets.slint";
+import { GlassCard } from "glass_card.slint";
 
 export component WebsiteBuilder inherits Window {
     width: 600px;
@@ -13,23 +14,28 @@ export component WebsiteBuilder inherits Window {
     property <string> product_name: "";
     property <string> domain_choice: "subdomain";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
         spacing: 20px;
         padding: 24px;
 
-        Text { text: "Website Builder"; font-size: 24px; font-weight: 700; color: #1e293b; }
+        Text { text: "Website Builder"; font-size: 24px; font-weight: 700; color: white; font-family: "Outfit"; }
+
+        GlassCard {
+            VerticalBox {
+                spacing: 16px;
+                padding: 24px;
 
         // Step 0: Template
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Choose a template"; color: #1e293b; }
+            Text { text: "Choose a template"; color: white; font-family: "Inter"; }
             
             HorizontalBox {
                 spacing: 10px;
-                Button { text: "E-commerce"; clicked => { selected_template = "E-commerce"; } }
-                Button { text: "Portfolio"; clicked => { selected_template = "Portfolio"; } }
+                Button { height: 44px; text: "E-commerce"; clicked => { selected_template = "E-commerce"; } }
+                Button { height: 44px; text: "Portfolio"; clicked => { selected_template = "Portfolio"; } }
             }
             Text { text: "Selected: " + selected_template; color: #a855f7; }
         }
@@ -37,20 +43,20 @@ export component WebsiteBuilder inherits Window {
         // Step 1: Colors
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "Brand Colors & Logo"; color: #1e293b; }
-            Text { text: "Selected Color: " + primary_color; color: #64748b; }
+            Text { text: "Brand Colors & Logo"; color: white; font-family: "Inter"; }
+            Text { text: "Selected Color: " + primary_color; color: #94a3b8; font-family: "Inter"; }
             HorizontalBox {
                 spacing: 10px;
-                Button { text: "Red"; clicked => { primary_color = "#FF3B30"; } }
-                Button { text: "Green"; clicked => { primary_color = "#34C759"; } }
-                Button { text: "Blue"; clicked => { primary_color = "#007AFF"; } }
+                Button { height: 44px; text: "Red"; clicked => { primary_color = "#FF3B30"; } }
+                Button { height: 44px; text: "Green"; clicked => { primary_color = "#34C759"; } }
+                Button { height: 44px; text: "Blue"; clicked => { primary_color = "#007AFF"; } }
             }
         }
 
         // Step 2: Product
         if (step == 2) : VerticalBox {
             spacing: 10px;
-            Text { text: "Add your first product or service"; color: #1e293b; }
+            Text { text: "Add your first product or service"; color: white; font-family: "Inter"; }
             LineEdit {
                 placeholder-text: "Product Name";
                 text: product_name;
@@ -66,28 +72,28 @@ export component WebsiteBuilder inherits Window {
         // Step 3: Domain
         if (step == 3) : VerticalBox {
             spacing: 10px;
-            Text { text: "Connect a domain"; color: #1e293b; }
-            Button { text: "Use free subdomain"; clicked => { domain_choice = "subdomain"; } }
-            Button { text: "Use my own domain"; clicked => { domain_choice = "custom"; } }
+            Text { text: "Connect a domain"; color: white; font-family: "Inter"; }
+            Button { height: 44px; text: "Use free subdomain"; clicked => { domain_choice = "subdomain"; } }
+            Button { height: 44px; text: "Use my own domain"; clicked => { domain_choice = "custom"; } }
             Text { text: "Choice: " + domain_choice; color: #a855f7; }
         }
 
         // Step 4: Review
         if (step == 4) : VerticalBox {
             spacing: 10px;
-            Text { text: "Go Live: Review your site"; color: #1e293b; }
+            Text { text: "Go Live: Review your site"; color: white; font-family: "Inter"; }
             Rectangle {
-                background: white;
-                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.2);
                 border-width: 1px;
                 border-radius: 8px;
                 
                 VerticalBox {
                     padding: 16px;
-                    Text { text: "Template: " + selected_template; color: #1e293b; }
-                    Text { text: "Color: " + primary_color; color: #1e293b; }
-                    Text { text: "Product: " + product_name; color: #1e293b; }
-                    Text { text: "Domain: " + domain_choice; color: #1e293b; }
+                    Text { text: "Template: " + selected_template; color: white; font-family: "Inter"; }
+                    Text { text: "Color: " + primary_color; color: white; font-family: "Inter"; }
+                    Text { text: "Product: " + product_name; color: white; font-family: "Inter"; }
+                    Text { text: "Domain: " + domain_choice; color: white; font-family: "Inter"; }
                 }
             }
         }
@@ -96,12 +102,12 @@ export component WebsiteBuilder inherits Window {
 
         // Navigation
         HorizontalBox {
-            if (step > 0) : Button {
+            if (step > 0) : Button { height: 44px;
                 text: "Back";
                 clicked => { step = step - 1; }
             }
             Rectangle {} // Spacer
-            Button {
+            Button { height: 44px;
                 text: step == 4 ? "Publish" : "Next";
                 clicked => {
                     if (step < 4) {
@@ -113,5 +119,8 @@ export component WebsiteBuilder inherits Window {
                 }
             }
         }
+        }
+
+    }
     }
 }
