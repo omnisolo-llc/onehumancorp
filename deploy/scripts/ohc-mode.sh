@@ -23,9 +23,9 @@ case $MODE in
     export OHC_MULTITENANT=false
     export OHC_HEADLESS=false
     export OHC_SOURCE_MODE=standalone
-    export GOMAXPROCS=2
+    export GOMAXPROCS=1
     export OHC_STANDALONE=true
-    export GOMEMLIMIT="256MiB"
+    export GOMEMLIMIT="128MiB"
     export GOGC=50
     mkdir -p .ohc/memory/auto/ .ohc/memory/team/
     export LOG_FORMAT="text"

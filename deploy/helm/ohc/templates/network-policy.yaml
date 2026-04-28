@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ .Release.Name }}-backend-isolation
+  name: {{ .Release.Name }}-tenant-isolation
 spec:
   podSelector:
     matchLabels:

@@ -10,11 +10,11 @@ backend:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
-      cpu: "250m"
+      cpu: "200m"
       memory: "256Mi"
     limits:
       cpu: "1000m"
@@ -52,8 +52,8 @@ ohcCore:
     enabled: true
     minReplicas: 2
     maxReplicas: 20
-    targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
@@ -94,8 +94,8 @@ chatwoot:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "250m"
@@ -135,8 +135,8 @@ powersync:
     enabled: true
     minReplicas: 1
     maxReplicas: 5
-    targetCPUUtilizationPercentage: 60
-    targetMemoryUtilizationPercentage: 75
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
   resources:
     requests:
       cpu: "50m"
@@ -166,3 +166,7 @@ pushgateway:
     limits:
       cpu: "200m"
       memory: "256Mi"
+
+# Promtail for Unified Logging
+promtail:
+  enabled: true
