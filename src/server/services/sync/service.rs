@@ -100,14 +100,14 @@ impl SyncService for MySyncService {
 
     async fn sync_mcp_deltas(
         &self,
-        request: Request<SyncMcpDeltasRequest>,
-    ) -> Result<Response<SyncMcpDeltasResponse>, Status> {
+        request: Request<SyncMCPDeltasRequest>,
+    ) -> Result<Response<SyncMCPDeltasResponse>, Status> {
         let req = request.into_inner();
         let deltas = req.deltas;
         let tenant_id = req.tenant_id;
 
         if deltas.is_empty() {
-            return Ok(Response::new(SyncMcpDeltasResponse {
+            return Ok(Response::new(SyncMCPDeltasResponse {
                 status: "success".to_string(),
                 message: "no deltas to sync".to_string(),
                 synced_count: 0,
@@ -144,7 +144,7 @@ impl SyncService for MySyncService {
             }
         }
 
-        Ok(Response::new(SyncMcpDeltasResponse {
+        Ok(Response::new(SyncMCPDeltasResponse {
             status: "success".to_string(),
             message: "deltas synced successfully".to_string(),
             synced_count,
@@ -254,7 +254,7 @@ mod tests {
     async fn test_sync_mcp_deltas_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
+        let req = Request::new(SyncMCPDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
         let resp = service.sync_mcp_deltas(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);
