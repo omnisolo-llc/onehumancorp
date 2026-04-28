@@ -1,8 +1,6 @@
 """E2E tests for the OHC platform using Vitest and Playwright."""
 
-load("@npm//:defs.bzl", "npm_link_all_packages")
 
-npm_link_all_packages(name = "node_modules")
 
 # Test source files
 _TEST_SRCS = glob([
