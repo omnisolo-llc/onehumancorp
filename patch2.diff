@@ -1,0 +1,40 @@
+--- src/agents/builtin/agent.rs
++++ src/agents/builtin/agent.rs
+@@ -216,6 +216,39 @@
+         tool.execute.execute(tc.arguments.clone()).await
+     }
++
++    async fn execute_and_format_tool(&self, tc: ToolCall, iteration: i32) -> (ToolResult, Option<AgentEvent>) {
++        let result = self.execute_tool(&tc).await;
++        let (content, error) = match result {
++            Ok(r) => {
++                self.progress.record_tool_use();
++                let event = AgentEvent::ToolCall {
++                    name: tc.name.clone(),
++                    args_json: tc.arguments.to_string(),
++                    result: r.clone(),
++                    iteration,
++                };
++                (r, String::new(), Some(event))
++            }
++            Err(e) => {
++                let err = e.to_string();
++                let event = AgentEvent::ToolCall {
++                    name: tc.name.clone(),
++                    args_json: tc.arguments.to_string(),
++                    result: format!("Error: {}", err),
++                    iteration,
++                };
++                (String::new(), err, Some(event))
++            }
++        };
++
++        (ToolResult {
++            tool_call_id: tc.id,
++            content,
++            error,
++        }, error.is_empty().then(|| content).map(|_| ())) // Handle events properly in caller
++    }
+ }
+
+ #[cfg(test)]

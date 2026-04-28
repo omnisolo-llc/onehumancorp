@@ -1,0 +1,71 @@
+--- src/agents/builtin/agent.rs
++++ src/agents/builtin/agent.rs
+@@ -165,40 +165,65 @@
+
+             // Execute tool calls and collect results.
+             let mut tool_results: Vec<ToolResult> = Vec::new();
+-            for tc in &tool_calls {
+-                let result = self.execute_tool(&tc).await;
+-                let (content, error) = match result {
+-                    Ok(r) => {
+-                        self.progress.record_tool_use();
+-                        on_event(AgentEvent::ToolCall {
+-                            name: tc.name.clone(),
+-                            args_json: tc.arguments.to_string(),
+-                            result: r.clone(),
+-                            iteration,
+-                        });
+-                        (r, String::new())
+-                    }
+-                    Err(e) => {
+-                        let err = e.to_string();
+-                        on_event(AgentEvent::ToolCall {
+-                            name: tc.name.clone(),
+-                            args_json: tc.arguments.to_string(),
+-                            result: format!("Error: {}", err),
+-                            iteration,
+-                        });
+-                        (String::new(), err)
++
++            let mut current_batch = Vec::new();
++
++            for tc in tool_calls.into_iter() {
++                let tool_def = self.tools.iter().find(|t| t.name == tc.name);
++                let is_mutating = tool_def.map(|t| t.is_mutating).unwrap_or(true); // Default to mutating if not found
++
++                if is_mutating {
++                    // Execute pending batch concurrently first
++                    if !current_batch.is_empty() {
++                        let results = join_all(current_batch.drain(..).map(|c| self.execute_and_format_tool(c, iteration))).await;
++                        for res in results {
++                            if let Some(mut event) = res.1 { on_event(event); }
++                            tool_results.push(res.0);
++                        }
+                     }
+-                };
+-                tool_results.push(ToolResult {
+-                    tool_call_id: tc.id.clone(),
+-                    content,
+-                    error,
+-                });
++
++                    // Execute the mutating tool serially
++                    let (res, event) = self.execute_and_format_tool(tc, iteration).await;
++                    if let Some(event) = event { on_event(event); }
++                    tool_results.push(res);
++                } else {
++                    // Add to concurrent batch
++                    current_batch.push(tc);
++                }
++            }
++
++            // Execute remaining non-mutating batch
++            if !current_batch.is_empty() {
++                let results = join_all(current_batch.into_iter().map(|c| self.execute_and_format_tool(c, iteration))).await;
++                for res in results {
++                    if let Some(event) = res.1 { on_event(event); }
++                    tool_results.push(res.0);
++                }
+             }
+
+             if cfg.enable_observation_masking {
