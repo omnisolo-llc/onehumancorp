@@ -325,6 +325,41 @@ impl SipDB {
         let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
         let fail_threshold = Utc::now() - age_threshold;
         
+        // 0. Archive stale IN_PROGRESS and BLOCKED missions to .agent-task/archive/
+        let archive_rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE (status = 'IN_PROGRESS' OR status = 'BLOCKED') AND created_at < $1 AND organization_id = $2 LIMIT 100")
+            .bind(stuck_threshold)
+            .bind(&self.org_id)
+            .fetch_all(&self.pool)
+            .await?;
+
+        if !archive_rows.is_empty() {
+            let _ = tokio::fs::create_dir_all(".agent-task/archive").await;
+
+            for row in archive_rows {
+                let id: String = row.get("id");
+                let status: String = row.get("status");
+                let payload: String = row.get("payload");
+
+                let file_path = format!(".agent-task/archive/{}.json", id);
+                let archive_data = serde_json::json!({
+                    "id": id,
+                    "status": status,
+                    "payload": payload,
+                    "archived_at": Utc::now().to_rfc3339()
+                });
+
+                if let Ok(json_str) = serde_json::to_string_pretty(&archive_data) {
+                    let _ = tokio::fs::write(&file_path, json_str).await;
+                }
+
+                sqlx::query("DELETE FROM agent_missions WHERE id = $1 AND organization_id = $2")
+                    .bind(&id)
+                    .bind(&self.org_id)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+
         // 1. Mark stagnant PENDING missions as STUCK after 1 hour
         sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND organization_id = $2")
             .bind(stuck_threshold)
