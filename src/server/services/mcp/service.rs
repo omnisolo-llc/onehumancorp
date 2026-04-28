@@ -3,19 +3,31 @@ use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::mcp_service_server::McpService;
 use std::sync::{Arc, RwLock};
 use crate::integrations::registry::IntegrationsRegistry;
+use crate::integrations::rate_limiter::rate_limiter::*;
+use std::env;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
     registry: Arc<IntegrationsRegistry>,
     hub: Arc<crate::hub::Hub>,
+    rate_limiter: Box<dyn RateLimiterManager>,
 }
 
 impl MyMcpService {
     pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
+        let is_cloud = env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
+        let rate_limiter = crate::integrations::rate_limiter::rate_limiter::create_rate_limiter(
+            is_cloud,
+            None,
+            100, // 100 requests capacity
+            10.0 // 10 requests per second
+        );
+
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
             hub,
+            rate_limiter,
         }
     }
 }
@@ -66,10 +78,31 @@ impl McpService for MyMcpService {
         &self,
         request: Request<McpInvokeRequest>,
     ) -> Result<Response<McpInvokeResponse>, Status> {
+        let tenant_id = request.metadata()
+            .get("organization_id")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("system")
+            .to_string();
+
         let req = request.into_inner();
         
         if req.tool_id.is_empty() {
             return Err(Status::invalid_argument("toolId is required"));
+        }
+
+        // Apply Rate Limiting
+        let bucket = format!("tool:{}", req.tool_id);
+
+        match self.rate_limiter.request_tokens(&tenant_id, &bucket, 1).await {
+            Ok(true) => {
+                // Proceed
+            }
+            Ok(false) => {
+                return Err(Status::resource_exhausted(format!("Rate limit exceeded for tool {}", req.tool_id)));
+            }
+            Err(e) => {
+                return Err(Status::internal(format!("Rate limiter error: {}", e)));
+            }
         }
 
         return match req.tool_id.as_str() {
@@ -188,54 +221,5 @@ impl McpService for MyMcpService {
                 Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
             }
         }
-    }
-
-    async fn sync_missions(
-        &self,
-        request: Request<SyncMissionsRequest>,
-    ) -> Result<Response<EmptyResponse>, Status> {
-        let req = request.into_inner();
-        for m in req.missions {
-            let query = "INSERT INTO agent_missions (id, status, payload, created_at, updated_at, organization_id) \
-                         VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'system') \
-                         ON CONFLICT (id) DO UPDATE SET \
-                             status = CASE WHEN $4 THEN EXCLUDED.status ELSE agent_missions.status END, \
-                             payload = CASE WHEN $4 THEN EXCLUDED.payload ELSE agent_missions.payload END, \
-                             updated_at = CASE WHEN $4 THEN CURRENT_TIMESTAMP ELSE agent_missions.updated_at END";
-            
-            sqlx::query(query)
-                .bind(&m.id)
-                .bind(&m.status)
-                .bind(&m.payload)
-                .bind(m.force_local)
-                .execute(&self.hub.pool)
-                .await
-                .map_err(|e| Status::internal(e.to_string()))?;
-        }
-        Ok(Response::new(EmptyResponse {}))
-    }
-
-    async fn sync_context(
-        &self,
-        request: Request<SyncContextRequest>,
-    ) -> Result<Response<EmptyResponse>, Status> {
-        let req = request.into_inner();
-        let query = "INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin, created_at, organization_id) \
-                     VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, 'system') \
-                     ON CONFLICT (memory_id) DO UPDATE SET \
-                         context = EXCLUDED.context, \
-                         vector_embedding = EXCLUDED.vector_embedding, \
-                         source_plugin = EXCLUDED.source_plugin";
-        
-        sqlx::query(query)
-            .bind(&req.memory_id)
-            .bind(&req.context)
-            .bind(req.vector_embedding.as_bytes())
-            .bind(&req.source_plugin)
-            .execute(&self.hub.pool)
-            .await
-            .map_err(|e| Status::internal(e.to_string()))?;
-            
-        Ok(Response::new(EmptyResponse {}))
     }
 }
