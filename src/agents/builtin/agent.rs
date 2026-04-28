@@ -206,27 +206,14 @@ impl Agent {
                         (r, String::new())
                     }
                     Err(e) => {
-                        let err_str = e.to_string();
-                        if let Some(tool_err) = e.downcast_ref::<crate::types::ToolError>() {
-                            match tool_err {
-                                crate::types::ToolError::UserFixable(_) | crate::types::ToolError::Unexpected(_) => {
-                                    // Interrupt execution for unrecoverable errors.
-                                    on_event(AgentEvent::TaskError { error: err_str.clone() });
-                                    return Err(e);
-                                }
-                                _ => {
-                                    // Let Transient and LlmRecoverable be fed back to the LLM.
-                                }
-                            }
-                        }
-
+                        let err = e.to_string();
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
-                            result: format!("Error: {}", err_str),
+                            result: format!("Error: {}", err),
                             iteration,
                         });
-                        (String::new(), err_str)
+                        (String::new(), err)
                     }
                 };
                 tool_results.push(ToolResult {

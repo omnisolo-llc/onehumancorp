@@ -104,38 +104,3 @@ pub struct ToolDefinition {
     pub description: String,
     pub parameters: serde_json::Value,
 }
-
-
-/// A structured error type for tool execution, following the LangGraph 4-type mechanic.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ToolError {
-    Transient(String),
-    LlmRecoverable(String),
-    UserFixable(String),
-    Unexpected(String),
-}
-
-impl std::fmt::Display for ToolError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ToolError::Transient(msg) => write!(f, "Transient error: {}", msg),
-            ToolError::LlmRecoverable(msg) => write!(f, "LLM-recoverable error: {}", msg),
-            ToolError::UserFixable(msg) => write!(f, "User-fixable error: {}", msg),
-            ToolError::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for ToolError {}
-
-impl From<String> for ToolError {
-    fn from(msg: String) -> Self {
-        ToolError::LlmRecoverable(msg)
-    }
-}
-
-impl From<&str> for ToolError {
-    fn from(msg: &str) -> Self {
-        ToolError::LlmRecoverable(msg.to_string())
-    }
-}
