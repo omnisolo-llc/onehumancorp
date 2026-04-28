@@ -1,5 +1,4 @@
 import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
-import { GlassCard } from "glass_card.slint";
 
 export component WelcomeChecklist inherits Window {
     width: 600px;
@@ -15,7 +14,15 @@ export component WelcomeChecklist inherits Window {
         spacing: 20px;
         padding: 24px;
 
-        GlassCard {
+        Rectangle {
+            background: #ffffff1a;
+            border-radius: 16px;
+            border-width: 1px;
+            border-color: #ffffff33;
+            drop-shadow-blur: 20px;
+            drop-shadow-color: #00000033;
+            drop-shadow-offset-x: 0px;
+            drop-shadow-offset-y: 8px;
             VerticalBox {
                 spacing: 16px;
                 padding: 24px;
