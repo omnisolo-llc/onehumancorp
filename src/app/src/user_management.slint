@@ -15,7 +15,10 @@ export component UserManagement inherits Window {
     title: "User Management";
 
     in property <[UiUser]> users;
+    in property <string> referral_link;
     callback delete_user(string);
+    callback copy_referral_link();
+    callback share_referral_link();
 
     background: #f8fafc;
 
@@ -30,14 +33,32 @@ export component UserManagement inherits Window {
         }
 
         Rectangle {
-            background: white;
-            border-color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.1);
             border-width: 1px;
-            border-radius: 8px;
+            border-radius: 12px;
             
-            HorizontalBox {
-                padding: 16px;
-                Text { text: "Growth & Referrals Widget Placeholder"; color: #64748b; horizontal-alignment: center; }
+            VerticalBox {
+                padding: 24px;
+                spacing: 12px;
+                Text { text: "Get 1 Month Free Pro"; font-weight: 700; color: #1e293b; font-size: 16px; }
+                Text { text: "Share OHC with a friend, both get 1 month free Pro."; color: #64748b; wrap: word-wrap; }
+
+                HorizontalBox {
+                    spacing: 8px;
+                    Rectangle {
+                        background: white;
+                        border-color: #e2e8f0;
+                        border-width: 1px;
+                        border-radius: 4px;
+                        HorizontalBox {
+                            padding: 8px;
+                            Text { text: referral_link; color: #64748b; }
+                        }
+                    }
+                    Button { text: "Copy"; clicked => { copy_referral_link(); } }
+                }
+                Button { text: "Share via Message"; clicked => { share_referral_link(); } }
             }
         }
 
