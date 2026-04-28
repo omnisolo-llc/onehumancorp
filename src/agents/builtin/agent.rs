@@ -113,6 +113,8 @@ impl Agent {
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
         let mut last_assistant_content = String::new();
+        let mut has_attempted_reactive_compact = false;
+        let mut max_output_tokens_recovery_count = 0;
 
         let max_iterations = if cfg.max_iterations <= 0 { 100 } else { cfg.max_iterations };
 
@@ -158,19 +160,49 @@ impl Agent {
 
             // Token budget check when LLM stops due to length.
             if stop_reason == "max_tokens" || stop_reason == "length" {
-                let decision = check_token_budget(
-                    &mut budget_tracker,
-                    cfg.max_task_tokens,
-                    global_turn_tokens,
-                );
-                if decision.action == BudgetAction::Continue {
-                    // Add the budget nudge to messages and continue.
-                    if !resp.message.content.is_empty() {
-                        messages.push(resp.message.clone());
+                if cfg.max_task_tokens > 0 {
+                    let decision = check_token_budget(
+                        &mut budget_tracker,
+                        cfg.max_task_tokens,
+                        global_turn_tokens,
+                    );
+                    if decision.action == BudgetAction::Continue {
+                        // Add the budget nudge to messages and continue.
+                        if !resp.message.content.is_empty() {
+                            messages.push(resp.message.clone());
+                        }
+                        messages.push(Message::user(&decision.nudge_message));
+                        continue;
+                    } else if decision.action == BudgetAction::Stop && decision.diminishing {
+                        on_event(AgentEvent::TaskComplete {
+                            content: format!("Stopped due to token budget limit or diminishing returns.\n{}", resp.message.content),
+                        });
+                        break;
                     }
-                    messages.push(Message::user(&decision.nudge_message));
-                    continue;
+                } else {
+                    // Fallback generic recovery for max tokens if budget isn't strictly used.
+                    if max_output_tokens_recovery_count < 3 {
+                        max_output_tokens_recovery_count += 1;
+                        if !resp.message.content.is_empty() {
+                            messages.push(resp.message.clone());
+                        }
+                        messages.push(Message::user("Output token limit hit. Resume directly — no apology, no recap of what you were doing. Pick up mid-thought if that is where the cut happened. Break remaining work into smaller pieces."));
+                        continue;
+                    }
                 }
+            } else if stop_reason == "prompt_too_long" {
+                if !has_attempted_reactive_compact {
+                    if messages.len() > 4 {
+                        has_attempted_reactive_compact = true;
+                        let first_message = messages.first().cloned().unwrap();
+                        let tail_messages = messages[messages.len() - 3..].to_vec();
+                        let mut compacted_messages = vec![first_message];
+                        compacted_messages.extend(tail_messages);
+                        messages = compacted_messages;
+                        continue;
+                    }
+                }
+                return Err("prompt_too_long: unable to recover".into());
             }
 
             let tool_calls = resp.message.tool_calls.clone();
