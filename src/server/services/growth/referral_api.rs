@@ -6,7 +6,7 @@ pub fn generate_referral_link(user_id: &str) -> Result<String, String> {
     }
 
     let mut rng = rand::thread_rng();
-    let bytes: [u8; 8] = rng.gen();
+    let bytes: [u8; 8] = rand::Rng::gen(&mut rng);
     let referral_code = hex::encode(bytes);
 
     // Standalone mode specific deep link

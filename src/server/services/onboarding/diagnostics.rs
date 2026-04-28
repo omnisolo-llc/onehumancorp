@@ -48,9 +48,11 @@ mod tests {
         let memory_dir = format!("{}/.ohc/runtime/memory", temp_dir);
         let status_dir = format!("{}/.ohc/runtime/status", temp_dir);
 
-        std::env::set_var("OHC_RUNTIME_DIR", &runtime_dir);
-        std::env::set_var("OHC_MEMORY_DIR", &memory_dir);
-        std::env::set_var("OHC_STATUS_DIR", &status_dir);
+        unsafe {
+            std::env::set_var("OHC_RUNTIME_DIR", &runtime_dir);
+            std::env::set_var("OHC_MEMORY_DIR", &memory_dir);
+            std::env::set_var("OHC_STATUS_DIR", &status_dir);
+        }
 
         // Scenario 1: All paths are missing
         let res = run_diagnostics();
@@ -75,8 +77,10 @@ mod tests {
 
         fs::remove_dir_all(temp_dir).unwrap();
         
-        std::env::remove_var("OHC_RUNTIME_DIR");
-        std::env::remove_var("OHC_MEMORY_DIR");
-        std::env::remove_var("OHC_STATUS_DIR");
+        unsafe {
+            std::env::remove_var("OHC_RUNTIME_DIR");
+            std::env::remove_var("OHC_MEMORY_DIR");
+            std::env::remove_var("OHC_STATUS_DIR");
+        }
     }
 }
