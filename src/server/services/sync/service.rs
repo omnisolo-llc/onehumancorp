@@ -2,6 +2,8 @@ use tonic::{Request, Response, Status};
 use crate::ohc::orchestration::*;
 use crate::ohc::orchestration::sync_service_server::SyncService;
 use crate::sip::SipDB;
+use crate::services::sync::metrics;
+use opentelemetry::KeyValue;
 
 pub struct MySyncService {
     pool: sqlx::PgPool,
@@ -19,9 +21,19 @@ impl SyncService for MySyncService {
         &self,
         request: Request<HybridSyncMissionsRequest>,
     ) -> Result<Response<HybridSyncMissionsResponse>, Status> {
+        let start_time = std::time::Instant::now();
+        let mode = if std::env::var("DATABASE_URL").unwrap_or_default().contains("sqlite") {
+            "Standalone"
+        } else {
+            "Cloud"
+        };
+        let mode_kv = vec![KeyValue::new("mode", mode)];
+
         let md = request.metadata().clone();
         let req = request.into_inner();
         let payloads = req.payloads;
+
+        metrics::SYNC_BATCH_SIZE.record(payloads.len() as f64, &mode_kv);
 
         if payloads.is_empty() {
             return Ok(Response::new(HybridSyncMissionsResponse {
@@ -49,15 +61,20 @@ impl SyncService for MySyncService {
                 .map(|v| v.to_str().unwrap_or_default() == "force-local")
                 .unwrap_or(false);
 
+            metrics::SYNC_PAYLOAD_SIZE.record(p.payload.len() as f64, &mode_kv);
+
             match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
                 Ok(_) => {
                     synced_count += 1;
                 }
                 Err(e) => {
                     eprintln!("failed to upsert mission from sync daemon: id={}, error={}", p.id, e);
+                    metrics::SYNC_DAEMON_ERROR_TOTAL.add(1, &mode_kv);
                 }
             }
         }
+
+        metrics::SYNC_LATENCY.record(start_time.elapsed().as_secs_f64(), &mode_kv);
 
         Ok(Response::new(HybridSyncMissionsResponse {
             status: "success".to_string(),

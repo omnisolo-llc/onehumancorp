@@ -4,6 +4,7 @@ use std::sync::Arc;
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
 use chrono::{Utc, DateTime};
+use crate::services::autodream::metrics;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
@@ -123,6 +124,7 @@ impl AutoDreamWorker {
     }
 
     async fn process_db_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let start_time = std::time::Instant::now();
         let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
             .fetch_all(&db.pool)
             .await?;
@@ -130,6 +132,7 @@ impl AutoDreamWorker {
         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let client = crate::minimax::MinimaxClient::new(api_key);
 
+        let mut success_count = 0;
         for row in rows {
             let session_id: String = row.get("session_id");
             let agent_id: String = row.get("agent_id");
@@ -146,16 +149,23 @@ impl AutoDreamWorker {
                         .bind(&session_id)
                         .execute(&db.pool)
                         .await?;
+                    success_count += 1;
                 }
                 Err(e) => {
                     println!("AutoDreamWorker: failed to embed session {}: {}", session_id, e);
+                    metrics::CONSOLIDATION_ERRORS_TOTAL.add(1, &[]);
                 }
             }
+        }
+        if success_count > 0 {
+            metrics::MEMORIES_PROCESSED_TOTAL.add(success_count, &[]);
+            metrics::BATCH_PROCESSING_DURATION.record(start_time.elapsed().as_secs_f64(), &[]);
         }
         Ok(())
     }
 
     async fn process_fs_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let start_time = std::time::Instant::now();
         let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
         
@@ -168,6 +178,7 @@ impl AutoDreamWorker {
         let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
         let client = crate::minimax::MinimaxClient::new(api_key);
 
+        let mut success_count = 0;
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
             if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
@@ -181,12 +192,18 @@ impl AutoDreamWorker {
                         db.insert_agent_memory(&mem_id, "system", "fs-agent", &content, &emb_str).await?;
                         
                         tokio::fs::remove_file(path).await?;
+                        success_count += 1;
                     }
                     Err(e) => {
                         println!("AutoDreamWorker: failed to embed fs memory {:?}: {}", path, e);
+                        metrics::CONSOLIDATION_ERRORS_TOTAL.add(1, &[]);
                     }
                 }
             }
+        }
+        if success_count > 0 {
+            metrics::MEMORIES_PROCESSED_TOTAL.add(success_count, &[]);
+            metrics::BATCH_PROCESSING_DURATION.record(start_time.elapsed().as_secs_f64(), &[]);
         }
         Ok(())
     }
