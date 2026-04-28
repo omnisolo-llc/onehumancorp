@@ -16,6 +16,7 @@ export component Login inherits Window {
     callback login(string, string);
     callback oauth_login(string);
     callback open_settings();
+    callback resend_verification(string);
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -69,6 +70,11 @@ export component Login inherits Window {
                     color: #ef4444;
                     horizontal-alignment: center;
                     font-family: "Inter";
+                }
+
+                if (is_sign_up || error_message == "Email unverified") : Button {
+                    text: "Resend Verification Email";
+                    clicked => { resend_verification(username); }
                 }
 
                 Button {
