@@ -8,6 +8,9 @@ pub mod ohc {
     }
 }
 
+
+
+
 pub mod agent;
 pub mod local_manager;
 pub mod api_service;
@@ -139,11 +142,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::AgentStatusIndicatorWindow::new()?;
-    let ui_handle = ui.as_weak();
 
-    ui.set_is_active(true);
 
+    let ui = app::AppWindow::new()?;
     ui.run()?;
     
     Ok(())
@@ -183,6 +184,48 @@ mod tests {
         assert_eq!(ui.get_step(), 0);
         assert_eq!(ui.get_company_name(), "");
     }
+
+    #[test]
+    fn test_business_setup_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_business_setup_flow because no display server is available.");
+            return;
+        }
+        let ui = app::BusinessSetup::new().unwrap();
+
+        // Initial state
+        assert_eq!(ui.get_step(), 0);
+
+        // Step 1: Type
+        ui.set_step(1);
+        ui.set_business_type("Online Store".into());
+        assert_eq!(ui.get_business_type(), "Online Store");
+
+        // Step 2: Name
+        ui.set_step(2);
+        ui.set_company_name("Test Bakery".into());
+        assert_eq!(ui.get_company_name(), "Test Bakery");
+
+        // Step 3: Selling
+        ui.set_step(3);
+        ui.set_products_services("Physical products, ".into());
+        assert_eq!(ui.get_products_services(), "Physical products, ");
+
+        // Step 4: Payments
+        ui.set_step(4);
+        ui.set_payment_pref("both".into());
+        assert_eq!(ui.get_payment_pref(), "both");
+
+        // Step 5: Admin Account
+        ui.set_step(5);
+        ui.set_admin_name("John Doe".into());
+        ui.set_admin_email("john@test.com".into());
+        assert_eq!(ui.get_admin_email(), "john@test.com");
+
+        // Step 6: Review & Launch
+        ui.set_step(6);
+    }
+
 
     #[test]
     fn test_agent_hire_next_button_disabled_by_default() {
@@ -273,11 +316,42 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::WebsiteBuilder::new().unwrap();
     }
+
     #[test]
-    fn test_setup_wizard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::SetupWizard::new().unwrap();
+    fn test_website_builder_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping test_website_builder_flow because no display server is available.");
+            return;
+        }
+        let ui = app::WebsiteBuilder::new().unwrap();
+
+        // Initial state
+        assert_eq!(ui.get_step(), 0);
+
+        // Step 0: Template
+        ui.set_selected_template("Modern".into());
+        assert_eq!(ui.get_selected_template(), "Modern");
+
+        // Step 1: Color
+        ui.set_step(1);
+        ui.set_primary_color("#FF3B30".into());
+        assert_eq!(ui.get_primary_color(), "#FF3B30");
+
+        // Step 2: Product
+        ui.set_step(2);
+        ui.set_product_name("Cake".into());
+        assert_eq!(ui.get_product_name(), "Cake");
+
+        // Step 3: Domain
+        ui.set_step(3);
+        ui.set_domain_choice("subdomain".into());
+        assert_eq!(ui.get_domain_choice(), "subdomain");
+
+        // Step 4: Review
+        ui.set_step(4);
     }
+
+
     #[test]
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
