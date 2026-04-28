@@ -13,11 +13,12 @@ pub trait TaskOrchestrator: Send + Sync {
 
 pub struct DefaultTaskOrchestrator {
     hub: Arc<Hub>,
+    pool: sqlx::PgPool,
 }
 
 impl DefaultTaskOrchestrator {
-    pub fn new(hub: Arc<Hub>) -> Self {
-        DefaultTaskOrchestrator { hub }
+    pub fn new(hub: Arc<Hub>, pool: sqlx::PgPool) -> Self {
+        DefaultTaskOrchestrator { hub, pool }
     }
 }
 
@@ -44,8 +45,51 @@ impl TaskOrchestrator for DefaultTaskOrchestrator {
     }
 
     async fn acquire_ready_task(&self, agent_id: &str, _capabilities: Vec<String>) -> Result<Option<SharedTask>, String> {
-        let tasks = self.hub.task_manager().poll_tasks(agent_id, 1);
-        Ok(tasks.into_iter().next())
+        let row = sqlx::query("SELECT * FROM shared_tasks_decomposition WHERE status = 'PENDING' FOR UPDATE SKIP LOCKED LIMIT 1")
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        if let Some(row) = row {
+            use sqlx::Row;
+            let id: uuid::Uuid = row.get("id");
+            let organization_id: String = row.get("organization_id");
+            let title: String = row.get("title");
+
+            sqlx::query("UPDATE shared_tasks_decomposition SET status = 'IN_PROGRESS', assigned_agent_id = $1 WHERE id = $2")
+                .bind(agent_id)
+                .bind(id)
+                .execute(&self.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let mut task = SharedTask {
+                id: id.to_string(),
+                organization_id,
+                mission_id: String::new(),
+                parent_plan_id: String::new(),
+                dependencies: vec![],
+                title,
+                description: None,
+                assigned_agent_id: Some(agent_id.to_string()),
+                status: "IN_PROGRESS".to_string(),
+                priority: "P2".to_string(),
+                payload: String::new(),
+                locked_until: None,
+                ultraplan_phase: None,
+                deliberation_log: None,
+                depth: None,
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+                action_risk: None,
+                approval_status: None,
+                proposed_content: None,
+            };
+            Ok(Some(task))
+        } else {
+            let tasks = self.hub.task_manager().poll_tasks(agent_id, 1);
+            Ok(tasks.into_iter().next())
+        }
     }
 
     async fn complete_task(&self, task_id: &str, agent_id: &str, result: &str) -> Result<(), String> {

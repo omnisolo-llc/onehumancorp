@@ -28,6 +28,10 @@ pub mod pricing;
 pub mod analytics;
 pub mod telemetry;
 pub mod chaos;
+
+#[cfg(test)]
+mod orchestrator_tests;
+pub mod mesh;
 pub mod integrations;
 pub mod utils;
 pub mod storage;
@@ -826,13 +830,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr = "[::1]:50051".parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
-    // let http_addr = "[::1]:8080".parse()?;
-    // let hub_for_http = hub.clone();
-    // tokio::spawn(async move {
-    //     if let Err(e) = http::run(http_addr, hub_for_http).await {
-    //         eprintln!("HTTP server error: {}", e);
-    //     }
-    // });
+    // Start Axum HTTP server for Mesh APIs
+    let app = axum::Router::new()
+        .nest("/api/mesh/v2", mesh::router());
+
+    let http_addr = "0.0.0.0:8080";
+    let listener = tokio::net::TcpListener::bind(http_addr).await.unwrap();
+    println!("HTTP server listening on {}", http_addr);
+
+    tokio::spawn(async move {
+        if let Err(e) = axum::serve(listener, app).await {
+            eprintln!("HTTP server error: {}", e);
+        }
+    });
     
     // Start event log worker
     let hub_clone = hub.clone();
