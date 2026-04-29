@@ -193,8 +193,51 @@ impl Agent {
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
             for tc in &tool_calls {
-                let result = self.execute_tool(&tc).await;
-                let (content, error) = match result {
+                let mut attempts = 0;
+                let mut max_attempts = 3;
+                let mut final_result = None;
+
+                while attempts < max_attempts {
+                    let result = self.execute_tool(&tc).await;
+                    match result {
+                        Ok(r) => {
+                            final_result = Some(Ok(r));
+                            break;
+                        }
+                        Err(e) => {
+                            if let Some(tool_err) = e.downcast_ref::<ohc_builtin_agent_core::types::ToolError>() {
+                                match tool_err {
+                                    ohc_builtin_agent_core::types::ToolError::Transient(_) => {
+                                        attempts += 1;
+                                        if attempts < max_attempts {
+                                            let backoff = std::time::Duration::from_millis(100 * (2_u64.pow(attempts as u32)));
+                                            tokio::time::sleep(backoff).await;
+                                            continue;
+                                        } else {
+                                            final_result = Some(Err(e));
+                                            break;
+                                        }
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::LlmRecoverable(_) => {
+                                        final_result = Some(Err(e));
+                                        break;
+                                    }
+                                    ohc_builtin_agent_core::types::ToolError::UserFixable(_) |
+                                    ohc_builtin_agent_core::types::ToolError::Unexpected(_) => {
+                                        // Halt the agent loop and bubble up
+                                        return Err(e);
+                                    }
+                                }
+                            } else {
+                                // Legacy or unknown errors act like LlmRecoverable
+                                final_result = Some(Err(e));
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                let (content, error) = match final_result.unwrap() {
                     Ok(r) => {
                         self.progress.record_tool_use();
                         on_event(AgentEvent::ToolCall {
