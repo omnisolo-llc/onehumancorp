@@ -29,7 +29,7 @@ export component Wizard inherits Window {
                     Text { text: "1"; color: white; horizontal-alignment: center; } 
                 }
             }
-            Text { text: "Server"; color: step == 0 ? #1e293b : #64748b; }
+            Text { text: "App"; color: step == 0 ? #1e293b : #64748b; }
             
             Rectangle { 
                 background: step >= 1 ? #a855f7 : #e2e8f0; 
@@ -41,7 +41,7 @@ export component Wizard inherits Window {
                     Text { text: "2"; color: white; horizontal-alignment: center; } 
                 }
             }
-            Text { text: "AI Provider"; color: step == 1 ? #1e293b : #64748b; }
+            Text { text: "AI Assistant"; color: step == 1 ? #1e293b : #64748b; }
             
             Rectangle { 
                 background: step >= 2 ? #a855f7 : #e2e8f0; 
@@ -53,27 +53,27 @@ export component Wizard inherits Window {
                     Text { text: "3"; color: white; horizontal-alignment: center; } 
                 }
             }
-            Text { text: "Real-time"; color: step == 2 ? #1e293b : #64748b; }
+            Text { text: "Live"; color: step == 2 ? #1e293b : #64748b; }
         }
 
         if (step == 0) : VerticalBox {
             spacing: 10px;
-            Text { text: "Server Settings"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Listen Address"; text: "0.0.0.0:18789"; }
-            LineEdit { placeholder-text: "Database Path"; text: "ohc.db"; }
+            Text { text: "App Settings"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Server Address";   }
+            LineEdit { placeholder-text: "Where to save your data";   }
         }
 
         if (step == 1) : VerticalBox {
             spacing: 10px;
-            Text { text: "AI Provider — Minimax"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Minimax API Key"; }
-            LineEdit { placeholder-text: "Default Model"; text: "abab6.5s"; }
+            Text { text: "AI Assistant"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Secret Key"; }
+            LineEdit { placeholder-text: "Assistant Name";   }
         }
 
         if (step == 2) : VerticalBox {
             spacing: 10px;
-            Text { text: "Real-time Messaging (Centrifuge)"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Centrifuge WebSocket URL"; text: "ws://localhost:8000/connection/websocket"; }
+            Text { text: "Live Updates"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Live Updates Address";   }
         }
 
         Rectangle {} 

@@ -3,7 +3,7 @@ import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
 export component ServiceManager inherits Window {
     width: 500px;
     height: 600px;
-    title: "Local Service Manager";
+    title: "App Manager";
 
     property <bool> is_running: false;
     property <string> doctor_output: "";
@@ -26,8 +26,8 @@ export component ServiceManager inherits Window {
                 alignment: center;
                 
                 Text { text: is_running ? "✓" : "✗"; font-size: 48px; color: is_running ? #10b981 : #ef4444; horizontal-alignment: center; }
-                Text { text: is_running ? "Service is Running" : "Service is Stopped"; font-size: 20px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
-                Text { text: "Default Port: 18789"; color: #64748b; horizontal-alignment: center; }
+                Text { text: is_running ? "App is Running" : "App is Stopped"; font-size: 20px; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                Text { text: "Default Port"; color: #64748b; horizontal-alignment: center; }
             }
         }
 
@@ -36,12 +36,12 @@ export component ServiceManager inherits Window {
             alignment: center;
             
             Button {
-                text: is_running ? "Stop Service" : "Start Service";
+                text: is_running ? "Stop App" : "Start App";
                 clicked => { is_running = !is_running; }
             }
             Button {
                 text: "Run Health Check";
-                clicked => { doctor_output = "Running doctor...\nAll systems green."; }
+                clicked => { doctor_output = "Running health check...\nEverything looks good."; }
             }
             Button {
                 text: "Force Restart";
@@ -50,7 +50,7 @@ export component ServiceManager inherits Window {
 
         if (doctor_output != "") : VerticalBox {
             spacing: 8px;
-            Text { text: "Diagnostics"; font-size: 16px; font-weight: 700; color: #1e293b; }
+            Text { text: "Health Check Results"; font-size: 16px; font-weight: 700; color: #1e293b; }
             Rectangle {
                 background: #0f172a;
                 border-radius: 8px;
