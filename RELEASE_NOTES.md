@@ -1,6 +1,12 @@
 # Release Notes
 
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+- Scaling (Cloud): Implement Harness Upgrade with 4-types of Error Handling and Compounding Error Prevention, add cost dashboard and plan UI features, enforce premium dashboard aesthetics and optimize K8s autoscaling, and implement Business Setup Wizard UI with progressive disclosure.
+- Privacy/Offline (Standalone): No specific privacy/offline changes in this release.
+
+
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 - Scaling (Cloud): Implement Business Setup and Website Builder wizard UI scaffolding, onboarding cross-device state, and Business Share & Embed widget.
 - Privacy/Offline (Standalone): Conduct Hybrid Privacy Audit with PII guardrails, implement in-app mobile-first Help Center with tooltips, and add Dashboard Welcome Checklist.
