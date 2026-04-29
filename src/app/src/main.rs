@@ -11,6 +11,7 @@ pub mod ohc {
 pub mod agent;
 pub mod local_manager;
 pub mod api_service;
+pub mod tooltip_registry;
 use slint::ComponentHandle;
 
 pub mod app {
@@ -292,5 +293,41 @@ mod tests {
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
+    }
+}
+
+#[cfg(test)]
+mod docs_tests {
+    use super::*;
+
+    #[test]
+    fn test_help_center_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::HelpCenter::new().unwrap();
+    }
+    #[test]
+    fn test_release_notes_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::ReleaseNotes::new().unwrap();
+    }
+    #[test]
+    fn test_interactive_walkthrough_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::InteractiveWalkthrough::new().unwrap();
+    }
+    #[test]
+    fn test_ai_help_chat_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::AiHelpChat::new().unwrap();
+    }
+    #[test]
+    fn test_video_tutorials_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::VideoTutorials::new().unwrap();
+    }
+    #[test]
+    fn test_api_docs_creation() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        app::ApiDocs::new().unwrap();
     }
 }
