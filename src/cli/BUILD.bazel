@@ -1,4 +1,5 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 js_library(
     name = "lib",
@@ -22,4 +23,17 @@ js_binary(
         "//:node_modules",
     ],
     entry_point = "src/index.tsx",
+)
+
+# Test target - native Bazel test rule
+# Uses src/cli:node_modules which is a proper Bazel dependency
+sh_test(
+    name = "cli_test",
+    srcs = ["test_runner.sh"],
+    data = [
+        ":lib",
+        "//src/cli:node_modules",
+    ],
+    args = ["run", "--coverage"],
+    visibility = ["//visibility:public"],
 )
