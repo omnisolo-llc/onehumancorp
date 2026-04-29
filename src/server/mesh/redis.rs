@@ -59,7 +59,6 @@ impl MeshTransport for RedisMeshTransport {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
