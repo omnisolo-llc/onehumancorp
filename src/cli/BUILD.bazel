@@ -12,6 +12,7 @@ js_library(
     ) + [
         "package.json",
         "tsconfig.json",
+        "vitest.config.ts",
     ],
     visibility = ["//visibility:public"],
 )
