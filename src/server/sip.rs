@@ -556,21 +556,6 @@ impl SipDB {
         Ok(())
     }
 
-
-                        final_payload = serde_json::to_string(&json).unwrap_or(final_payload);
-                    } else {
-                        final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", final_payload, content);
-                    }
-                } else {
-                    final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", final_payload, content);
-                }
-            }
-        }
-
-        self.upsert_mission(mission_id, "PENDING", &final_payload, true).await?;
-        Ok(final_payload)
-    }
-
     pub async fn inject_omni_context(&self, payload: &str) -> String {
         let mut final_payload = payload.to_string();
 
