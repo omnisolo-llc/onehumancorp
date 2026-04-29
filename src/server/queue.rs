@@ -479,6 +479,7 @@ pub struct SharedTaskModel {
     pub status: String,
     pub assigned_agent: Option<String>,
     pub payload: serde_json::Value,
+    pub dependencies: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -494,8 +495,9 @@ impl TaskQueueService {
 
     pub async fn push_task(&self, task: SharedTaskModel) -> Result<(), sqlx::Error> {
         let payload_str = serde_json::to_string(&task.payload).unwrap_or_default();
+        let deps_str = serde_json::to_string(&task.dependencies).unwrap_or_else(|_| "[]".to_string());
         
-        sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, organization_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)")
+        sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, organization_id, dependencies) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)")
             .bind(task.id)
             .bind(task.parent_id)
             .bind(task.epic_id)
@@ -504,6 +506,7 @@ impl TaskQueueService {
             .bind(task.assigned_agent)
             .bind(payload_str)
             .bind(task.organization_id)
+            .bind(deps_str)
             .execute(&self.pool)
             .await?;
             
@@ -511,7 +514,7 @@ impl TaskQueueService {
     }
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT id FROM shared_tasks WHERE status = 'PENDING' AND (assigned_agent IS NULL OR assigned_agent = $1) ORDER BY created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at")
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at")
             .bind(agent_id)
             .fetch_optional(&self.pool)
             .await?;
@@ -519,6 +522,8 @@ impl TaskQueueService {
         if let Some(row) = row {
             let payload_str: String = row.get("payload");
             let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+            let deps_str: String = row.get("dependencies");
+            let dependencies: serde_json::Value = serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
             
             Ok(Some(SharedTaskModel {
                 id: row.get("id"),
@@ -529,6 +534,7 @@ impl TaskQueueService {
                 status: row.get("status"),
                 assigned_agent: row.get("assigned_agent"),
                 payload,
+                dependencies,
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
             }))
@@ -547,7 +553,7 @@ impl TaskQueueService {
     }
 
     pub async fn get_completed_tasks(&self, limit: i64) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
-        let rows = sqlx::query("SELECT id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
+        let rows = sqlx::query("SELECT id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
             .bind(limit)
             .fetch_all(&self.pool)
             .await?;
@@ -556,6 +562,8 @@ impl TaskQueueService {
         for row in rows {
             let payload_str: String = row.get("payload");
             let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+            let deps_str: String = row.get("dependencies");
+            let dependencies: serde_json::Value = serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
             
             tasks.push(SharedTaskModel {
                 id: row.get("id"),
@@ -566,6 +574,7 @@ impl TaskQueueService {
                 status: row.get("status"),
                 assigned_agent: row.get("assigned_agent"),
                 payload,
+                dependencies,
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
             });
@@ -606,5 +615,108 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(500)).await;
         
         let _ = tx.send(());
+    }
+
+    #[tokio::test]
+    async fn test_task_queue_service_push_claim() {
+        // Create an actual pool to hit a local database for integration testing.
+        // During CI, we assume postgres is available at this URL.
+        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+            let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
+            let service = TaskQueueService::new(pool.clone());
+
+            // Initialize schema for test
+            sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id VARCHAR PRIMARY KEY, parent_id VARCHAR, epic_id VARCHAR, title VARCHAR NOT NULL, status VARCHAR NOT NULL, assigned_agent VARCHAR, payload JSONB, organization_id VARCHAR, dependencies JSONB DEFAULT '[]', created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            let task_id = uuid::Uuid::new_v4().to_string();
+            let task = SharedTaskModel {
+                id: task_id.clone(),
+                organization_id: "org1".to_string(),
+                parent_id: None,
+                epic_id: None,
+                title: "Test Task".to_string(),
+                status: "PENDING".to_string(),
+                assigned_agent: None,
+                payload: serde_json::json!({"action": "test"}),
+                dependencies: serde_json::json!([]),
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            };
+
+            // Push
+            let push_res = service.push_task(task).await;
+            assert!(push_res.is_ok());
+
+            // Claim
+            let claim_res = service.claim_task("agent_1").await.unwrap();
+            assert!(claim_res.is_some());
+            let claimed = claim_res.unwrap();
+            assert_eq!(claimed.id, task_id);
+            assert_eq!(claimed.assigned_agent.unwrap(), "agent_1");
+
+            // Complete
+            let comp_res = service.complete_task(&task_id).await;
+            assert!(comp_res.is_ok());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_task_queue_service_with_dependencies() {
+        if let Ok(db_url) = std::env::var("DATABASE_URL") {
+            let pool = sqlx::postgres::PgPoolOptions::new().connect(&db_url).await.unwrap();
+            let service = TaskQueueService::new(pool.clone());
+
+            let task_id_parent = uuid::Uuid::new_v4().to_string();
+            let task_id_child = uuid::Uuid::new_v4().to_string();
+
+            let parent_task = SharedTaskModel {
+                id: task_id_parent.clone(),
+                organization_id: "org1".to_string(),
+                parent_id: None,
+                epic_id: None,
+                title: "Parent Task".to_string(),
+                status: "PENDING".to_string(),
+                assigned_agent: None,
+                payload: serde_json::json!({}),
+                dependencies: serde_json::json!([]),
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            };
+
+            let child_task = SharedTaskModel {
+                id: task_id_child.clone(),
+                organization_id: "org1".to_string(),
+                parent_id: None,
+                epic_id: None,
+                title: "Child Task".to_string(),
+                status: "PENDING".to_string(),
+                assigned_agent: None,
+                payload: serde_json::json!({}),
+                dependencies: serde_json::json!([task_id_parent]),
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            };
+
+            service.push_task(parent_task).await.unwrap();
+            service.push_task(child_task).await.unwrap();
+
+            // Claiming should ONLY claim the parent since child is blocked by parent
+            let claim_1 = service.claim_task("agent_1").await.unwrap().unwrap();
+            assert_eq!(claim_1.id, task_id_parent);
+
+            // Second claim should return None because child is blocked
+            let claim_2 = service.claim_task("agent_1").await.unwrap();
+            assert!(claim_2.is_none());
+
+            // Complete parent
+            service.complete_task(&task_id_parent).await.unwrap();
+
+            // Now child should be claimable
+            let claim_3 = service.claim_task("agent_2").await.unwrap().unwrap();
+            assert_eq!(claim_3.id, task_id_child);
+        }
     }
 }
