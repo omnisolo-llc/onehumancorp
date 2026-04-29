@@ -39,6 +39,8 @@ test --test_timeout=60,120,300,600
 test --local_test_jobs=4
 # Allow up to 200 parallel remote build actions during tests.
 test --jobs=200
+# Sandbox-first spawn strategy ensures CLI tests work locally
+test --spawn_strategy=sandboxed,local
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
