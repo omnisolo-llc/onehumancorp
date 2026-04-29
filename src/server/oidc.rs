@@ -229,7 +229,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_url_and_get_ip_blocked() {
-        std::env::set_var("OHC_ALLOW_LOCAL_IPS", "false");
+        // SAFETY: Test-only code setting environment variables
+        unsafe { std::env::set_var("OHC_ALLOW_LOCAL_IPS", "false") }
         let res = validate_url_and_get_ip("http://localhost").await;
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("resolves to blocked IP"));

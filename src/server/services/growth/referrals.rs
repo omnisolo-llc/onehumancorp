@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
-use rand::Rng;
+use rand::RngCore;
 
 pub struct ReferralTracker {
     total_referrals: RwLock<i32>,
@@ -28,7 +28,7 @@ impl ReferralTracker {
         }
 
         let mut rng = rand::thread_rng();
-        let bytes: [u8; 4] = rng.gen();
+        let bytes: [u8; 4] = rng.next_u32().to_le_bytes();
         let code = hex::encode(bytes);
 
         user_codes.insert(user_id.to_string(), code.clone());

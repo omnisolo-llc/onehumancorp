@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::RngCore;
 
 pub fn generate_referral_link(user_id: &str) -> Result<String, String> {
     if user_id.is_empty() {
@@ -6,7 +6,11 @@ pub fn generate_referral_link(user_id: &str) -> Result<String, String> {
     }
 
     let mut rng = rand::thread_rng();
-    let bytes: [u8; 8] = rng.gen();
+    let bytes: [u8; 8] = {
+        let mut buf = [0u8; 8];
+        rng.fill_bytes(&mut buf);
+        buf
+    };
     let referral_code = hex::encode(bytes);
 
     // Standalone mode specific deep link
