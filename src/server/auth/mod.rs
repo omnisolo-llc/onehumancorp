@@ -693,9 +693,12 @@ mod tests {
     
     #[test]
     fn test_new_store_admin_user_created() {
-        std::env::set_var("ADMIN_USERNAME", "testadmin");
-        std::env::set_var("ADMIN_PASSWORD", "secret99");
-        std::env::set_var("ADMIN_EMAIL", "testadmin@test.com");
+        // SAFETY: Test-only code setting environment variables
+        unsafe {
+            std::env::set_var("ADMIN_USERNAME", "testadmin");
+            std::env::set_var("ADMIN_PASSWORD", "secret99");
+            std::env::set_var("ADMIN_EMAIL", "testadmin@test.com");
+        }
         
         let s = Store::new();
         let users = s.list_users("");
