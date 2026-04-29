@@ -8,16 +8,14 @@ pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
     registry: Arc<IntegrationsRegistry>,
     hub: Arc<crate::hub::Hub>,
-    pubsub_manager: Arc<crate::integrations::pubsub::pubsub::PubSubManager>,
 }
 
 impl MyMcpService {
-    pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>, pubsub_manager: Arc<crate::integrations::pubsub::pubsub::PubSubManager>) -> Self {
+    pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
             hub,
-            pubsub_manager,
         }
     }
 }
@@ -139,40 +137,6 @@ impl McpService for MyMcpService {
                 let mock_data = serde_json::json!({"crdt_state": "latest_mocked_state"});
                 let resp_payload = serde_json::to_string(&mock_data).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
-            }
-
-            "hybrid_pubsub" => {
-                let params: serde_json::Value = serde_json::from_str(&req.params)
-                    .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
-
-                let action = params["action"].as_str().unwrap_or_default();
-                let topic = params["topic"].as_str().unwrap_or_default();
-
-                let manager = self.pubsub_manager.clone();
-
-                match action {
-                    "publish" => {
-                        let payload = params["payload"].as_str().unwrap_or_default().as_bytes().to_vec();
-
-                        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
-                        let final_topic = if is_cloud {
-                            let org_id = "default_org";
-                            format!("{}:{}", org_id, topic)
-                        } else {
-                            topic.to_string()
-                        };
-
-                        manager.publish(&final_topic, payload).await.map_err(|e| Status::internal(e))?;
-                        let resp_payload = serde_json::to_string(&serde_json::json!({"status": "published"})).unwrap();
-                        Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
-                    }
-                    "subscribe" => {
-                        let _rx = manager.subscribe(topic).await.map_err(|e| Status::internal(e))?;
-                        let resp_payload = serde_json::to_string(&serde_json::json!({"status": "subscribed", "message": "Stream subscription initiated"})).unwrap();
-                        Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
-                    }
-                    _ => Err(Status::invalid_argument(format!("unknown pubsub action: {}", action))),
-                }
             }
             "hybrid_sync" => {
                 let params: serde_json::Value = serde_json::from_str(&req.params)

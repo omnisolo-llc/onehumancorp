@@ -7,4 +7,3 @@ pub mod githubissues;
 pub mod imessage;
 pub mod jira;
 pub mod obsidian;
-pub mod pubsub;
