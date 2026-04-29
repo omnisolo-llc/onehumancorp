@@ -93,7 +93,7 @@ fn hmac_token(tok: &str) -> Vec<u8> {
     mac.finalize().into_bytes().to_vec()
 }
 
-pub fn validate_spiffe_id(id: &str) -> Result<(), Status> {
+fn validate_spiffe_id(id: &str) -> Result<(), Status> {
     let lower = id.to_lowercase();
     if lower.contains("%2f") || lower.contains("%25") {
         return Err(Status::permission_denied(format!("invalid SPIFFE ID: encoded slashes: {}", id)));
