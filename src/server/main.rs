@@ -31,7 +31,6 @@ pub mod chaos;
 pub mod integrations;
 pub mod utils;
 pub mod storage;
-pub mod benchmarks;
 pub mod config;
 pub mod http;
 pub mod services {
@@ -541,29 +540,28 @@ mod tests {
 #[cfg(test)]
 mod benchmark_tests {
     use super::*;
-    use sqlx::SqlitePool;
 
     #[tokio::test]
     async fn test_hybrid_latency_benchmarks() {
-        // Run Postgres (Cloud) Benchmark
-        std::env::set_var("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/ohc");
-        if let Ok(db) = crate::db::DB::new().await {
-            let _ = db.run_migrations().await; // ensure schema
-            let pg_results = crate::domain::benchmarks::hybrid_latency::run_hybrid_latency_benchmark_pg(db.pool.clone()).await;
+        // Extract connection string dynamically
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+
+        if let Ok(pool) = sqlx::PgPool::connect(&db_url).await {
+            // Run Cloud Postgres Benchmark
+            let pg_results = crate::domain::benchmarks::hybrid_latency::run_hybrid_latency_benchmark_pg(pool.clone()).await;
             for res in &pg_results {
                 println!("[{}] {} - p50: {:.2}ms, p95: {:.2}ms, p99: {:.2}ms, avg: {:.2}ms",
                     res.mode, res.name, res.p50_ms, res.p95_ms, res.p99_ms, res.avg_ms);
             }
 
             // Run API Latency Parallel execution benchmark
-            let api_results = crate::domain::benchmarks::api_latency::run_api_response_benchmark("Cloud", db.pool.clone()).await;
+            let api_results = crate::domain::benchmarks::api_latency::run_api_response_benchmark("Cloud", pool).await;
             println!("[{}] {} - p50: {:.2}ms, p95: {:.2}ms, p99: {:.2}ms, avg: {:.2}ms",
                 api_results.mode, api_results.name, api_results.p50_ms, api_results.p95_ms, api_results.p99_ms, api_results.avg_ms);
         }
 
-        // Run SQLite (Standalone) Benchmark
-        if let Ok(pool) = SqlitePool::connect("sqlite::memory:").await {
-            // Setup minimum schema for sub_agent_queue and tasks
+        // Run Standalone SQLite Benchmark
+        if let Ok(pool) = sqlx::SqlitePool::connect("sqlite::memory:").await {
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, status TEXT)").execute(&pool).await;
             let _ = sqlx::query("CREATE TABLE IF NOT EXISTS sub_agent_queue (id TEXT PRIMARY KEY, organization_id TEXT, parent_task_id TEXT, payload TEXT, status TEXT, scheduled_at TEXT, created_at TEXT, updated_at TEXT)").execute(&pool).await;
             let sq_results = crate::domain::benchmarks::hybrid_latency::run_hybrid_latency_benchmark_sqlite(pool).await;
