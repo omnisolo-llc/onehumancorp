@@ -18,5 +18,4 @@ actions:
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
-            -- //... \
-            -//src/app:app_test
+            -- //...
