@@ -1,0 +1,81 @@
+import { Button, VerticalBox, HorizontalBox, LineEdit, ScrollView } from "std-widgets.slint";
+
+export component HelpCenter inherits Window {
+    width: 100%;
+    height: 100%;
+    title: "Help Center";
+    background: #f8fafc;
+
+    in-out property <string> search_query: "";
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 16px;
+
+        Text {
+            text: "How can we help?";
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        LineEdit {
+            placeholder-text: "Search help articles...";
+            text <=> search_query;
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 16px;
+
+                Text { text: "Getting Started"; font-weight: 700; font-size: 18px; color: #334155; }
+                Rectangle {
+                    background: white; border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: "Set up your store in 5 minutes"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                        Text { text: "Follow our simple guide to add your first product and go live."; color: #64748b; wrap: word-wrap; }
+                    }
+                }
+
+                Text { text: "Payments & Billing"; font-weight: 700; font-size: 18px; color: #334155; }
+                Rectangle {
+                    background: white; border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: "How to accept Apple Pay"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                        Text { text: "Enable Apple Pay with one click in your payment settings."; color: #64748b; wrap: word-wrap; }
+                    }
+                }
+
+                Text { text: "AI Agents"; font-weight: 700; font-size: 18px; color: #334155; }
+                Rectangle {
+                    background: white; border-radius: 8px;
+                    VerticalBox {
+                        padding: 12px;
+                        Text { text: "What can the Customer Success Agent do?"; font-weight: 700; font-size: 16px; color: #0f172a; }
+                        Text { text: "Your agent can reply to customer emails and Instagram DMs automatically."; color: #64748b; wrap: word-wrap; }
+                    }
+                }
+            }
+        }
+    }
+
+    Rectangle {
+        x: parent.width - self.width - 16px;
+        y: parent.height - self.height - 16px;
+        width: 56px;
+        height: 56px;
+        border-radius: 28px;
+        background: #0ea5e9;
+
+        Text {
+            text: "?";
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}

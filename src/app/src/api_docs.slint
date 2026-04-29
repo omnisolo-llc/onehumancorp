@@ -1,0 +1,45 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export component ApiDocs inherits Window {
+    width: 100%;
+    height: 100%;
+    title: "API Reference (Advanced)";
+    background: #f8fafc;
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 20px;
+
+        Text {
+            text: "Developer API";
+            font-size: 24px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        Text {
+            text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
+            color: #ef4444; // red warning
+            wrap: word-wrap;
+        }
+
+        ScrollView {
+            VerticalBox {
+                spacing: 24px;
+
+                VerticalBox {
+                    spacing: 8px;
+                    Text { text: "Products API"; font-weight: 700; font-size: 18px; color: #334155; }
+                    Rectangle {
+                        background: #1e293b; border-radius: 8px; // dark theme for code
+                        VerticalBox {
+                            padding: 16px; spacing: 8px;
+                            Text { text: "GET /v1/products"; font-weight: 700; color: #10b981; } // green for GET
+                            Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
