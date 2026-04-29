@@ -1,5 +1,5 @@
 actions:
-  - name: "bazel test //... -//src/app:app_test -//src/server:crypto_test -//src/server:server_test"
+  - name: "bazel test -- //... -//src/app:app_test -//src/server:crypto_test -//src/server:server_test"
     resource_requests:
       cpu: 8
       memory: 16GB
@@ -13,7 +13,7 @@ actions:
           - "*"
     steps:
       - run: |
-          bazel test //... -//src/app:app_test -//src/server:crypto_test -//src/server:server_test \
+          bazel test -- //... -//src/app:app_test -//src/server:crypto_test -//src/server:server_test \
             --config=buildbuddy-official \
             --test_output=errors \
             --test_summary=terse \
