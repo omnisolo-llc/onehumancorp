@@ -20,7 +20,7 @@ impl DB {
 
     pub async fn run_migrations(&self) -> Result<(), Box<dyn std::error::Error>> {
         println!("Running migrations...");
-        
+
         sqlx::query("CREATE EXTENSION IF NOT EXISTS vector;")
             .execute(&self.pool)
             .await?;
@@ -36,19 +36,19 @@ impl DB {
             .bind(threshold)
             .fetch_all(&self.pool)
             .await?;
-            
+
         let mut result = Vec::new();
         for row in rows {
             let id: String = row.get("session_id");
             let data: String = row.get("context_data");
             result.push((id, data));
         }
-        
+
         sqlx::query("DELETE FROM agent_session_data WHERE last_accessed < $1")
             .bind(threshold)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(result)
     }
 
@@ -59,7 +59,7 @@ impl DB {
             .bind(embedding)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(())
     }
 
@@ -67,7 +67,7 @@ impl DB {
         let rows = sqlx::query("SELECT id, organization_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 50")
             .fetch_all(&self.pool)
             .await?;
-            
+
         let mut result = Vec::new();
         for row in rows {
             let id: String = row.get("id");
@@ -75,7 +75,7 @@ impl DB {
             let payload: String = row.get("payload");
             result.push((id, org_id, payload));
         }
-        
+
         Ok(result)
     }
 
@@ -88,7 +88,7 @@ impl DB {
             .bind(embedding)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(())
     }
 
@@ -97,7 +97,7 @@ impl DB {
             .bind(task_id)
             .execute(&self.pool)
             .await?;
-            
+
         Ok(())
     }
 }
