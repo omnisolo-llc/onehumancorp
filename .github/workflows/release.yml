@@ -18,6 +18,69 @@ defaults:
     shell: bash
 
 jobs:
+  # ── Build cross-platform ironclaw archives ──────────────────────────────────
+  build-archives:
+    name: Build release archives
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
+          repository-cache: true
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+          bazelrc: |
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
+            test --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_OFFICIAL_API_KEY }}
+            # build --config=buildbuddy-official
+            # test --config=buildbuddy-official
+            build --build_metadata=ROLE=CI
+            test --build_metadata=ROLE=CI
+            build --color=yes
+            build --show_timestamps
+
+      - name: Build ironclaw archives (all platforms)
+        run: |
+          bazelisk build \
+            //release:ironclaw-x86_64-unknown-linux-gnu \
+            //release:ironclaw-aarch64-unknown-linux-gnu \
+            //release:ironclaw-x86_64-apple-darwin \
+            //release:ironclaw-aarch64-apple-darwin \
+            //release:ironclaw-x86_64-pc-windows-msvc
+
+      - name: Collect archives and generate checksums
+        run: |
+          mkdir -p dist
+          # Copy all built archives into dist/ using their canonical names
+          for target in \
+            ironclaw-x86_64-unknown-linux-gnu \
+            ironclaw-aarch64-unknown-linux-gnu \
+            ironclaw-x86_64-apple-darwin \
+            ironclaw-aarch64-apple-darwin \
+            ironclaw-x86_64-pc-windows-msvc; do
+            src=$(bazelisk cquery --output=files //release:${target} 2>/dev/null | head -1)
+            if [ -n "$src" ] && [ -f "$src" ]; then
+              cp "$src" "dist/${target}.tar.gz"
+            fi
+          done
+          ls -lh dist/
+          cd dist && sha256sum *.tar.gz > checksums.txt
+          cat checksums.txt
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-archives
+          path: dist/
+          retention-days: 7
+
   # ── Build Flutter Android APK + App Bundle ──────────────────────────────────
   build-flutter-android:
     name: Build Flutter Android
@@ -301,6 +364,7 @@ jobs:
     name: Publish GitHub Release
     runs-on: ubuntu-latest
     needs:
+      - build-archives
       - build-flutter-android
       - build-flutter-ios
       - build-flutter-macos

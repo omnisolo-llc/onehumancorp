@@ -11,4 +11,3 @@ pub mod mcp;
 pub mod legacy_mesh;
 pub mod sandbox;
 pub mod presence;
-pub mod interop;

@@ -72,8 +72,8 @@ export component Wizard inherits Window {
 
         if (step == 2) : VerticalBox {
             spacing: 10px;
-            Text { text: "Live Updates Connection"; font-size: 18px; font-weight: 700; color: #1e293b; }
-            LineEdit { placeholder-text: "Live Updates Address"; text: "ws://localhost:8000/connection/websocket"; }
+            Text { text: "Real-time Messaging (Centrifuge)"; font-size: 18px; font-weight: 700; color: #1e293b; }
+            LineEdit { placeholder-text: "Centrifuge WebSocket URL"; text: "ws://localhost:8000/connection/websocket"; }
         }
 
         Rectangle {} 

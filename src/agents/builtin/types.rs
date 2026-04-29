@@ -71,33 +71,6 @@ pub struct ToolResult {
     pub error: String,
 }
 
-
-/// 4-Type Tool Errors (LangGraph standard).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ToolError {
-    /// Transient errors (e.g., network timeouts) that should be retried automatically.
-    Transient(String),
-    /// Errors the LLM can fix (e.g., missing parameters) returned to the LLM in `ToolResult`.
-    LlmRecoverable(String),
-    /// Errors requiring user intervention (e.g., invalid auth) which halt the agent loop.
-    UserFixable(String),
-    /// Unrecoverable system errors which halt the agent loop and bubble up.
-    Unexpected(String),
-}
-
-impl std::fmt::Display for ToolError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ToolError::Transient(msg) => write!(f, "Transient error: {}", msg),
-            ToolError::LlmRecoverable(msg) => write!(f, "LLM Recoverable error: {}", msg),
-            ToolError::UserFixable(msg) => write!(f, "User Fixable error: {}", msg),
-            ToolError::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for ToolError {}
-
 /// Request to the LLM.
 #[derive(Debug, Clone)]
 pub struct ChatRequest {

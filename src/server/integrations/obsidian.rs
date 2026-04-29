@@ -1,1 +1,0 @@
-// Stub for obsidian integration
