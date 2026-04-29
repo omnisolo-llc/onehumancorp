@@ -1,4 +1,5 @@
 use crate::db::TenantPool;
+use crate::db::TenantPool;
 use chrono::{DateTime, Utc};
 use sqlx::Row;
 use async_trait::async_trait;

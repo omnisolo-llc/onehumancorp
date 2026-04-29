@@ -1,4 +1,5 @@
 use crate::db::TenantPool;
+use crate::db::TenantPool;
 use async_trait::async_trait;
 use sqlx::PgPool;
 use crate::auth::{User, UserRepository};
