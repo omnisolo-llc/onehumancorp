@@ -319,6 +319,14 @@ impl Hub {
     }
 
     pub fn publish_teammate_event(&self, channel: String, event: TeammateMeshEvent) -> Result<(), String> {
+<<<<<<< HEAD
+        let mut teammate_events = self.teammate_events.write().unwrap();
+        let tx = teammate_events.entry(channel).or_insert_with(|| {
+            let (tx, _) = broadcast::channel(100);
+            tx
+        });
+        let _ = tx.send(event);
+=======
         let mut buf = Vec::new();
         event.encode(&mut buf).map_err(|e| e.to_string())?;
         let mesh_transport = self.mesh_transport.clone();
@@ -327,11 +335,19 @@ impl Hub {
             let _ = mesh_transport.publish(channel_clone, buf).await;
         });
         // Local loopback is handled by the subscriber loop if the implementation demands it, or removed entirely here. Removing direct local send to prevent echo.
+>>>>>>> 724a5ff (🔗 Link: Teammate Mesh Transport)
         Ok(())
     }
 
     pub fn subscribe_teammate_mesh(&self, channel: String) -> broadcast::Receiver<TeammateMeshEvent> {
         let mut teammate_events = self.teammate_events.write().unwrap();
+<<<<<<< HEAD
+        let tx = teammate_events.entry(channel).or_insert_with(|| {
+            let (tx, _) = broadcast::channel(100);
+            tx
+        });
+        tx.subscribe()
+=======
         if !teammate_events.contains_key(&channel) {
             let (tx, _) = broadcast::channel(100);
             teammate_events.insert(channel.clone(), tx.clone());
@@ -356,6 +372,7 @@ impl Hub {
             return tx.subscribe();
         }
         teammate_events.get(&channel).unwrap().subscribe()
+>>>>>>> 724a5ff (🔗 Link: Teammate Mesh Transport)
     }
 
     pub fn tracker(&self) -> &Tracker {
