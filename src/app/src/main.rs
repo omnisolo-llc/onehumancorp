@@ -273,6 +273,16 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::WebsiteBuilder::new().unwrap();
     }
+
+    #[test]
+    fn test_website_builder_viral_storefront_footer() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::WebsiteBuilder::new().unwrap();
+        ui.set_step(4);
+        assert_eq!(ui.get_step(), 4);
+    }
+
+
     #[test]
     fn test_setup_wizard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
