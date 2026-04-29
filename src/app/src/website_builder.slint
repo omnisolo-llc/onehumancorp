@@ -88,16 +88,6 @@ export component WebsiteBuilder inherits Window {
                     Text { text: "Color: " + primary_color; color: #1e293b; }
                     Text { text: "Product: " + product_name; color: #1e293b; }
                     Text { text: "Domain: " + domain_choice; color: #1e293b; }
-                    Rectangle { height: 16px; } // Spacer
-                    HorizontalBox {
-                        alignment: center;
-                        Text { text: "Built with OHC — "; color: #64748b; font-size: 12px; }
-                        Button {
-                            text: "Start your free business →";
-                            // In a real app, this would trigger an external link open callback
-                            clicked => { publish_site(selected_template, primary_color, product_name, domain_choice); }
-                        }
-                    }
                 }
             }
         }

@@ -7,11 +7,11 @@ export component Settings inherits Window {
 
     property <bool> standalone_mode: true;
     property <bool> expert_mode: false;
-    property <string> backend_url;
-    in-out property <string> user_name;
-    in-out property <string> user_email;
-    in-out property <string> org_id;
-    in-out property <string> user_role;
+    property <string> backend_url: "http://localhost:8080";
+    in-out property <string> user_name: "John Doe";
+    in-out property <string> user_email: "john.doe@example.com";
+    in-out property <string> org_id: "org_1";
+    in-out property <string> user_role: "admin";
     in-out property <bool> local_service_running: true;
 
     callback start_stop_service();
@@ -56,13 +56,13 @@ export component Settings inherits Window {
                 padding: 16px;
                 
                 HorizontalBox {
-                    Text { text: standalone_mode ? "💻 Offline Mode" : "☁️ Cloud Mode"; font-weight: 700; color: #1e293b; }
+                    Text { text: standalone_mode ? "💻 Desktop Standalone Mode" : "☁️ Remote Client Mode"; font-weight: 700; color: #1e293b; }
                 }
                 
                 Text {
                     text: standalone_mode ? 
-                        "Your app will run directly on this device without needing internet." :
-                        "Your app will connect to your cloud server.";
+                        "This device manages a local backend and lightweight local services." :
+                        "This app acts as a UI for a remote OHC server.";
                     color: #64748b;
                     wrap: word-wrap;
                 }
@@ -70,12 +70,12 @@ export component Settings inherits Window {
         }
 
         HorizontalBox {
-            Text { text: "Cloud Server Address:"; color: #1e293b; horizontal-alignment: center; }
+            Text { text: "Backend URL:"; color: #1e293b; horizontal-alignment: center; }
             LineEdit { text: backend_url; }
         }
 
         HorizontalBox {
-            Text { text: "Work Offline"; color: #1e293b; }
+            Text { text: "Standalone Mode"; color: #1e293b; }
             CheckBox {
                 checked: standalone_mode;
                 toggled => { standalone_mode = !standalone_mode; }
@@ -85,7 +85,7 @@ export component Settings inherits Window {
         // Local Backend Section (Conditional)
         if (standalone_mode) : VerticalBox {
             spacing: 10px;
-            Text { text: "YOUR DEVICE"; color: #7c3aed; font-weight: 700; }
+            Text { text: "LOCAL BACKEND"; color: #7c3aed; font-weight: 700; }
             
             Rectangle {
                 background: white;
@@ -95,7 +95,7 @@ export component Settings inherits Window {
                 
                 HorizontalBox {
                     padding: 16px;
-                    Text { text: "App Status: " + (local_service_running ? "Running" : "Stopped"); color: #1e293b; horizontal-alignment: center; }
+                    Text { text: "Service Status: " + (local_service_running ? "Running" : "Stopped"); color: #1e293b; horizontal-alignment: center; }
                     Button { 
                         text: local_service_running ? "Stop" : "Start";
                         clicked => { start_stop_service(); }
@@ -139,7 +139,7 @@ export component Settings inherits Window {
         }
 
         Button {
-            text: "Sync with Cloud";
+            text: "Trigger Hybrid Sync";
             clicked => { trigger_hybrid_sync(); }
         }
 

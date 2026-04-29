@@ -2,7 +2,6 @@
 name = "ohc-mono"
 version = "0.1.0"
 edition = "2021"
-build = "src/server/build.rs"
 
 [[bin]]
 name = "server-rust"
@@ -52,7 +51,7 @@ opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
 tracing-opentelemetry = "0.28"
 tonic-build = "0.12"
-axum = { version = "0.8.1", features = ["ws"] }
+axum = "0.8.1"
 
 [build-dependencies]
 tonic-build = "0.12"
@@ -70,7 +69,3 @@ chrono = { version = "0.4", features = ["serde"] }
 serde_yaml = "0.9"
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 futures = "0.3"
-
-[dev-dependencies]
-futures-util = "0.3.32"
-tokio-tungstenite = "0.29.0"

@@ -11,7 +11,6 @@ pub mod ohc {
 pub mod agent;
 pub mod local_manager;
 pub mod api_service;
-pub mod tooltip_registry;
 use slint::ComponentHandle;
 
 pub mod app {
@@ -140,103 +139,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let ui = app::BusinessSetup::new()?;
+    let ui = app::AgentStatusIndicatorWindow::new()?;
     let ui_handle = ui.as_weak();
 
-    ui.on_launch({
-        let ui_handle = ui_handle.clone();
-        move || {
-            let ui = ui_handle.unwrap();
-            let state = std::collections::HashMap::from([
-                ("business_type".to_string(), ui.get_business_type().to_string()),
-                ("company_name".to_string(), ui.get_company_name().to_string()),
-                ("company_description".to_string(), ui.get_company_description().to_string()),
-                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
-                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
-                ("sell_services".to_string(), ui.get_sell_services().to_string()),
-                ("sell_food".to_string(), ui.get_sell_food().to_string()),
-                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
-                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
-                ("admin_name".to_string(), ui.get_admin_name().to_string()),
-                ("admin_email".to_string(), ui.get_admin_email().to_string()),
-            ]);
-
-            let handle_clone = ui_handle.clone();
-
-            tokio::spawn(async move {
-                match HubServiceClient::connect("http://127.0.0.1:18789").await {
-                    Ok(mut client) => {
-                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
-                            state,
-                        });
-                        if let Err(e) = client.save_wizard_state(request).await {
-                            println!("Failed to save wizard state: {:?}", e);
-                        } else {
-                            println!("Wizard state saved to backend.");
-                            slint::invoke_from_event_loop(move || {
-                                if let Some(ui) = handle_clone.upgrade() {
-                                    // Done launching!
-                                }
-                            }).unwrap();
-                        }
-                    }
-                    Err(e) => {
-                        println!("Could not connect to server: {:?}", e);
-                    }
-                }
-            });
-        }
-    });
+    ui.set_is_active(true);
 
     ui.run()?;
     
     Ok(())
-}
-
-#[cfg(test)]
-mod e2e_tests {
-    use super::*;
-
-    #[test]
-    fn test_e2e_wizard_flow() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
-            println!("Skipping E2E test_e2e_wizard_flow because no display server is available.");
-            return;
-        }
-
-        let ui = app::BusinessSetup::new().unwrap();
-
-        // Step 0: Welcome -> Step 1
-        assert_eq!(ui.get_step(), 0);
-        ui.set_step(1);
-
-        // Step 1: Type -> Step 2
-        ui.set_business_type("Online Store".into());
-        ui.set_step(2);
-
-        // Step 2: Name -> Step 3
-        ui.set_company_name("My E2E Store".into());
-        ui.set_step(3);
-
-        // Step 3: What do you sell -> Step 4
-        ui.set_sell_physical(true);
-        ui.set_step(4);
-
-        // Step 4: Payments -> Step 5
-        ui.set_payment_pref("online".into());
-        ui.set_step(5);
-
-        // Step 5: Admin -> Step 6
-        ui.set_admin_email("admin@e2e.test".into());
-        ui.set_step(6);
-
-        // Final state verification
-        assert_eq!(ui.get_company_name(), "My E2E Store");
-        assert_eq!(ui.get_business_type(), "Online Store");
-        assert_eq!(ui.get_admin_email(), "admin@e2e.test");
-        assert_eq!(ui.get_payment_pref(), "online");
-        assert_eq!(ui.get_sell_physical(), true);
-    }
 }
 
 #[cfg(test)]
@@ -363,16 +273,6 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::WebsiteBuilder::new().unwrap();
     }
-
-    #[test]
-    fn test_website_builder_viral_storefront_footer() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::WebsiteBuilder::new().unwrap();
-        ui.set_step(4);
-        assert_eq!(ui.get_step(), 4);
-    }
-
-
     #[test]
     fn test_setup_wizard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -382,41 +282,5 @@ mod tests {
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
-    }
-}
-
-#[cfg(test)]
-mod docs_tests {
-    use super::*;
-
-    #[test]
-    fn test_help_center_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::HelpCenter::new().unwrap();
-    }
-    #[test]
-    fn test_release_notes_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ReleaseNotes::new().unwrap();
-    }
-    #[test]
-    fn test_interactive_walkthrough_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::InteractiveWalkthrough::new().unwrap();
-    }
-    #[test]
-    fn test_ai_help_chat_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::AiHelpChat::new().unwrap();
-    }
-    #[test]
-    fn test_video_tutorials_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::VideoTutorials::new().unwrap();
-    }
-    #[test]
-    fn test_api_docs_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::ApiDocs::new().unwrap();
     }
 }
