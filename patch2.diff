@@ -1,0 +1,216 @@
+diff --git a/src/server/integrations/mod.rs b/src/server/integrations/mod.rs
+index 8ed273c..a62ea38 100644
+--- a/src/server/integrations/mod.rs
++++ b/src/server/integrations/mod.rs
+@@ -7,3 +7,4 @@ pub mod githubissues;
+ pub mod imessage;
+ pub mod jira;
+ pub mod obsidian;
++pub mod pubsub;
+diff --git a/src/server/integrations/pubsub/mod.rs b/src/server/integrations/pubsub/mod.rs
+new file mode 100644
+index 0000000..ae6cc0b
+--- /dev/null
++++ b/src/server/integrations/pubsub/mod.rs
+@@ -0,0 +1,3 @@
++pub mod pubsub;
++#[cfg(test)]
++mod pubsub_test;
+diff --git a/src/server/integrations/pubsub/pubsub.rs b/src/server/integrations/pubsub/pubsub.rs
+new file mode 100644
+index 0000000..9b80a7b
+--- /dev/null
++++ b/src/server/integrations/pubsub/pubsub.rs
+@@ -0,0 +1,90 @@
++
++use std::env;
++use std::sync::Arc;
++use tokio::sync::mpsc;
++use tokio::sync::RwLock;
++
++pub struct PubSubManager {
++    is_cloud: bool,
++    redis_client: Option<redis::Client>,
++    local_bus: Arc<RwLock<std::collections::HashMap<String, Vec<mpsc::Sender<Vec<u8>>>>>>,
++}
++
++impl PubSubManager {
++    pub fn new() -> Self {
++        let is_cloud = env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
++        let mut redis_client = None;
++        if is_cloud {
++            if let Ok(url) = env::var("REDIS_URL") {
++                 if let Ok(client) = redis::Client::open(url) {
++                      redis_client = Some(client);
++                 }
++            }
++        }
++
++        PubSubManager {
++            is_cloud,
++            redis_client,
++            local_bus: Arc::new(RwLock::new(std::collections::HashMap::new())),
++        }
++    }
++
++    pub async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
++        if self.is_cloud {
++            if let Some(client) = &self.redis_client {
++                let mut con = client.get_async_connection().await.map_err(|e| e.to_string())?;
++                redis::cmd("PUBLISH")
++                    .arg(topic)
++                    .arg(payload)
++                    .query_async(&mut con)
++                    .await
++                    .map_err(|e| e.to_string())?;
++                return Ok(());
++            } else {
++                 return Err("Redis client not initialized".to_string());
++            }
++        } else {
++            let mut bus = self.local_bus.write().await;
++            if let Some(senders) = bus.get_mut(topic) {
++                senders.retain(|sender| {
++                    match sender.try_send(payload.clone()) {
++                        Ok(_) => true,
++                        Err(tokio::sync::mpsc::error::TrySendError::Full(_)) => true, // Keep if full, but ideally we await
++                        Err(tokio::sync::mpsc::error::TrySendError::Closed(_)) => false, // Remove if closed
++                    }
++                });
++            }
++            Ok(())
++        }
++    }
++
++    pub async fn subscribe(&self, topic: &str) -> Result<mpsc::Receiver<Vec<u8>>, String> {
++        let (tx, rx) = mpsc::channel(100);
++
++        if self.is_cloud {
++             if let Some(client) = &self.redis_client {
++                  let mut pubsub = client.get_async_pubsub().await.map_err(|e| e.to_string())?;
++                  pubsub.subscribe(topic).await.map_err(|e| e.to_string())?;
++
++                  tokio::spawn(async move {
++                      use futures_util::StreamExt;
++                      let mut stream = pubsub.on_message();
++                      while let Some(msg) = stream.next().await {
++                           if let Ok(payload) = msg.get_payload::<Vec<u8>>() {
++                                if tx.send(payload).await.is_err() {
++                                     break;
++                                }
++                           }
++                      }
++                  });
++                  return Ok(rx);
++             } else {
++                  return Err("Redis client not initialized".to_string());
++             }
++        } else {
++            let mut bus = self.local_bus.write().await;
++            bus.entry(topic.to_string()).or_insert_with(Vec::new).push(tx);
++            Ok(rx)
++        }
++    }
++}
+diff --git a/src/server/integrations/pubsub/pubsub_test.rs b/src/server/integrations/pubsub/pubsub_test.rs
+new file mode 100644
+index 0000000..d3c2177
+--- /dev/null
++++ b/src/server/integrations/pubsub/pubsub_test.rs
+@@ -0,0 +1,33 @@
++
++use super::pubsub::PubSubManager;
++use std::env;
++
++#[tokio::test]
++async fn test_standalone_pubsub() {
++    env::set_var("OHC_MULTITENANT", "false");
++
++    let manager = PubSubManager::new();
++    let topic = "test_topic";
++
++    let mut rx = manager.subscribe(topic).await.unwrap();
++
++    manager.publish(topic, b"hello world".to_vec()).await.unwrap();
++
++    let msg = rx.recv().await.unwrap();
++    assert_eq!(msg, b"hello world");
++}
++
++#[tokio::test]
++async fn test_cloud_pubsub_no_redis() {
++    env::set_var("OHC_MULTITENANT", "true");
++    env::remove_var("REDIS_URL");
++
++    let manager = PubSubManager::new();
++    let topic = "test_topic";
++
++    let err = manager.subscribe(topic).await.unwrap_err();
++    assert_eq!(err, "Redis client not initialized");
++
++    let err = manager.publish(topic, b"hello world".to_vec()).await.unwrap_err();
++    assert_eq!(err, "Redis client not initialized");
++}
+diff --git a/src/server/services/mcp/service.rs b/src/server/services/mcp/service.rs
+index 909f28e..e7b02a6 100644
+--- a/src/server/services/mcp/service.rs
++++ b/src/server/services/mcp/service.rs
+@@ -8,14 +8,16 @@ pub struct MyMcpService {
+     dynamic_tools: RwLock<Vec<McpToolProto>>,
+     registry: Arc<IntegrationsRegistry>,
+     hub: Arc<crate::hub::Hub>,
++    pubsub_manager: Arc<crate::integrations::pubsub::pubsub::PubSubManager>,
+ }
+
+ impl MyMcpService {
+-    pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
++    pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>, pubsub_manager: Arc<crate::integrations::pubsub::pubsub::PubSubManager>) -> Self {
+         MyMcpService {
+             dynamic_tools: RwLock::new(Vec::new()),
+             registry,
+             hub,
++            pubsub_manager,
+         }
+     }
+ }
+@@ -138,6 +140,40 @@ impl McpService for MyMcpService {
+                 let resp_payload = serde_json::to_string(&mock_data).unwrap();
+                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
+             }
++
++            "hybrid_pubsub" => {
++                let params: serde_json::Value = serde_json::from_str(&req.params)
++                    .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
++
++                let action = params["action"].as_str().unwrap_or_default();
++                let topic = params["topic"].as_str().unwrap_or_default();
++
++                let manager = self.pubsub_manager.clone();
++
++                match action {
++                    "publish" => {
++                        let payload = params["payload"].as_str().unwrap_or_default().as_bytes().to_vec();
++
++                        let is_cloud = std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true";
++                        let final_topic = if is_cloud {
++                            let org_id = "default_org";
++                            format!("{}:{}", org_id, topic)
++                        } else {
++                            topic.to_string()
++                        };
++
++                        manager.publish(&final_topic, payload).await.map_err(|e| Status::internal(e))?;
++                        let resp_payload = serde_json::to_string(&serde_json::json!({"status": "published"})).unwrap();
++                        Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
++                    }
++                    "subscribe" => {
++                        let _rx = manager.subscribe(topic).await.map_err(|e| Status::internal(e))?;
++                        let resp_payload = serde_json::to_string(&serde_json::json!({"status": "subscribed", "message": "Stream subscription initiated"})).unwrap();
++                        Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
++                    }
++                    _ => Err(Status::invalid_argument(format!("unknown pubsub action: {}", action))),
++                }
++            }
+             "hybrid_sync" => {
+                 let params: serde_json::Value = serde_json::from_str(&req.params)
+                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
