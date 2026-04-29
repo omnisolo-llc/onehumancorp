@@ -1,4 +1,4 @@
-{{- if index .Values "kube-prometheus-stack" "enabled" }}
+{{- if index .Values "kube-prometheus-stack" | default dict | pluck "enabled" | first }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
