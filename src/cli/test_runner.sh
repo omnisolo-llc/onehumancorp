@@ -3,11 +3,9 @@
 set -e
 
 # Script location in Bazel runfiles: _main/src/cli/test_runner.sh
+# The data dependency //src/cli:node_modules is symlinked to the source tree
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Set NODE_PATH to help module resolution in deep sandbox paths
-export NODE_PATH="$SCRIPT_DIR/node_modules"
-
-# Run vitest without coverage (rolldown has issues in sandbox)
+# Run vitest from Bazel-managed node_modules (hermetic, no system deps needed)
 exec ./node_modules/.bin/vitest run
