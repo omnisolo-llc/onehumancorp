@@ -2518,7 +2518,7 @@ dependencies = [
  "rowan",
  "rspolib",
  "skrifa",
- "smol_str 0.3.4",
+ "smol_str 0.3.6",
  "strum",
  "swash",
  "typed-index-collections",
@@ -3192,7 +3192,6 @@ version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e99fb7a497b1e3339bc746195567ed8d3e24945ecd636e3619d20b9de9e9149"
 dependencies = [
- "cc",
  "pkg-config",
  "vcpkg",
 ]
@@ -4092,7 +4091,6 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "sha2",
- "smol_str 0.3.4",
  "sqlx",
  "tokio",
  "tokio-stream",
@@ -5764,8 +5762,9 @@ dependencies = [
 
 [[package]]
 name = "smol_str"
-version = "0.3.4"
-source = "git+https://github.com/rust-analyzer/smol_str.git?tag=v0.3.4#02336c59bed57d292997c0b5a69e436785aa3be3"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4aaa7368fcf4852a4c2dd92df0cace6a71f2091ca0a23391ce7f3a31833f1523"
 dependencies = [
  "borsh",
  "serde_core",

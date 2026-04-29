@@ -152,59 +152,6 @@ flutter pub get
 flutter run -d macos    # or -d windows / -d android / -d ios / -d chrome
 ```
 
-### Desktop App (Rust + Slint)
-
-The desktop application is built with Rust and Slint (a cross-platform UI toolkit).
-
-**Prerequisites:**
-- Rust 1.75+ (install via [rustup](https://rustup.rs/))
-- For Windows: Visual Studio Build Tools with "Desktop development with C++"
-- For macOS: Xcode Command Line Tools
-- For Linux: `libudev-dev`, `libasound2-dev` (Debian/Ubuntu) or equivalent
-
-**Build the desktop app:**
-
-```bash
-# Build the Rust binary
-bazelisk build //src/app:app-rust
-
-# Run directly
-./bazel-bin/src/app/app-rust
-```
-
-**Platform-specific verification:**
-
-| Platform | Build Command | Run Command | Notes |
-|----------|--------------|-------------|-------|
-| **Linux** | `bazelisk build //src/app:app-rust` | `./bazel-bin/src/app/app-rust` | Requires X11 or Wayland |
-| **macOS** | `bazelisk build //src/app:app-rust` | `./bazel-bin/src/app/app-rust` | Requires Xcode 15+ |
-| **Windows** | `bazelisk build //src/app:app-rust` | `bazel-bin\src\app\app-rust.exe` | Run in PowerShell or CMD |
-
-**Windows-specific steps:**
-1. Install Rust via `rustup-init.exe` from https://rustup.rs/
-2. Install Visual Studio Build Tools 2022 with "Desktop development with C++"
-3. Open "x64 Native Tools Command Prompt"
-4. Run: `bazelisk build //src/app:app-rust`
-5. Run: `bazel-bin\src\app\app-rust.exe`
-
-**macOS-specific steps:**
-1. Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
-2. Install Xcode: `xcode-select --install`
-3. Run: `bazelisk build //src/app:app-rust`
-4. Run: `./bazel-bin/src/app/app-rust`
-
-**Linux-specific steps:**
-```bash
-# Ubuntu/Debian
-sudo apt install libudev-dev libasound2-dev
-
-# Build and run
-bazelisk build //src/app:app-rust
-./bazel-bin/src/app/app-rust
-```
-
-**Note:** The app requires a display server (X11 or Wayland) to render the UI. For headless environments, use the server CLI instead.
-
 ### Server binary
 
 ```bash
