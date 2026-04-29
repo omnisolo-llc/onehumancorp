@@ -1,5 +1,16 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Harness Upgrade with 4-types of Error Handling and Compounding Error Prevention.
+- Add cost dashboard and plan UI features.
+- Enforce premium dashboard aesthetics and optimize K8s autoscaling.
+- Implement Business Setup Wizard UI with progressive disclosure.
+
+### Privacy/Offline Improvements
+- No specific privacy/offline changes in this release.
+
+
 ## v0.4.7 (Cloud) / v0.4.7+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Business Setup and Website Builder wizard UI scaffolding (#86b87bbd).
