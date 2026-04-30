@@ -66,7 +66,7 @@ cargo_build_script(
 )
 
 rust_binary(
-    name = "app-rust",
+    name = "app",
     srcs = [
         "src/main.rs",
         "src/tooltip_registry.rs",

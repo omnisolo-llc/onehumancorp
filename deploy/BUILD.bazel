@@ -14,7 +14,7 @@ exports_files([
 # Package backend binary
 pkg_tar(
     name = "backend_pkg",
-    srcs = ["//src/server:server-rust"],
+    srcs = ["//src/server:server"],
     package_dir = "/usr/local/bin",
 )
 
@@ -55,9 +55,7 @@ oci_push(
 pkg_tar(
     name = "agent_pkg",
     srcs = [
-        "//src/server:server-rust",
-        "//src/server/agents/mcp:github",
-        "//src/server/ironclaw",
+        "//src/server:server",
     ],
     package_dir = "/usr/local/bin",
 )
@@ -132,7 +130,7 @@ sh_test(
         "docker-compose.yml",
     ]) + [
         ":server_load",
-        "//src/server:server-rust",
+        "//src/server:server",
     ],
     tags = [
         "manual",

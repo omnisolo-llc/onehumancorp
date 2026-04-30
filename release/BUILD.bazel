@@ -1,8 +1,8 @@
 # Cross-platform release packaging.
 #
-# Binary archives (ironclaw CLI + ohc server):
-#   bazelisk build //release:ironclaw-x86_64-unknown-linux-gnu
-#   bazelisk build //release:all_ironclaw_archives
+# Binary archives (ohc server):
+#   bazelisk build //release:ohc-x86_64-unknown-linux-gnu
+#   bazelisk build //release:all_ohc_archives
 #
 # Flutter mobile / desktop apps (require Flutter SDK on PATH):
 #   bazelisk run  //release:flutter-build-android-apk
@@ -23,108 +23,21 @@ load("@rules_pkg//pkg:mappings.bzl", "pkg_files", "strip_prefix")
 load("@rules_pkg//pkg:tar.bzl", "pkg_tar")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
-# ── Linux x86_64 ──────────────────────────────────────────────────────────────
-
-pkg_files(
-    name = "ironclaw_linux_amd64_files",
-    srcs = ["//src/server/ironclaw:ironclaw_linux_amd64"],
-    renames = {"//src/server/ironclaw:ironclaw_linux_amd64": "ironclaw"},
-    strip_prefix = strip_prefix.from_pkg(),
-)
-
-pkg_tar(
-    name = "ironclaw-x86_64-unknown-linux-gnu",
-    srcs = [":ironclaw_linux_amd64_files"],
-    extension = "tar.gz",
-    visibility = ["//visibility:public"],
-)
-
-# ── Linux aarch64 ─────────────────────────────────────────────────────────────
-
-pkg_files(
-    name = "ironclaw_linux_arm64_files",
-    srcs = ["//src/server/ironclaw:ironclaw_linux_arm64"],
-    renames = {"//src/server/ironclaw:ironclaw_linux_arm64": "ironclaw"},
-    strip_prefix = strip_prefix.from_pkg(),
-)
-
-pkg_tar(
-    name = "ironclaw-aarch64-unknown-linux-gnu",
-    srcs = [":ironclaw_linux_arm64_files"],
-    extension = "tar.gz",
-    visibility = ["//visibility:public"],
-)
-
-# ── macOS x86_64 (Intel) ──────────────────────────────────────────────────────
-
-pkg_files(
-    name = "ironclaw_darwin_amd64_files",
-    srcs = ["//src/server/ironclaw:ironclaw_darwin_amd64"],
-    renames = {"//src/server/ironclaw:ironclaw_darwin_amd64": "ironclaw"},
-    strip_prefix = strip_prefix.from_pkg(),
-)
-
-pkg_tar(
-    name = "ironclaw-x86_64-apple-darwin",
-    srcs = [":ironclaw_darwin_amd64_files"],
-    extension = "tar.gz",
-    visibility = ["//visibility:public"],
-)
-
-# ── macOS aarch64 (Apple Silicon) ─────────────────────────────────────────────
-
-pkg_files(
-    name = "ironclaw_darwin_arm64_files",
-    srcs = ["//src/server/ironclaw:ironclaw_darwin_arm64"],
-    renames = {"//src/server/ironclaw:ironclaw_darwin_arm64": "ironclaw"},
-    strip_prefix = strip_prefix.from_pkg(),
-)
-
-pkg_tar(
-    name = "ironclaw-aarch64-apple-darwin",
-    srcs = [":ironclaw_darwin_arm64_files"],
-    extension = "tar.gz",
-    visibility = ["//visibility:public"],
-)
-
-# ── Windows x86_64 ────────────────────────────────────────────────────────────
-
-pkg_files(
-    name = "ironclaw_windows_amd64_files",
-    srcs = ["//src/server/ironclaw:ironclaw_windows_amd64"],
-    renames = {"//src/server/ironclaw:ironclaw_windows_amd64": "ironclaw.exe"},
-    strip_prefix = strip_prefix.from_pkg(),
-)
-
-pkg_tar(
-    name = "ironclaw-x86_64-pc-windows-msvc",
-    srcs = [":ironclaw_windows_amd64_files"],
-    extension = "tar.gz",
-    visibility = ["//visibility:public"],
-)
-
 # ── Convenience alias ─────────────────────────────────────────────────────────
 # Build all platform archives in one shot.
 
 filegroup(
-    name = "all_ironclaw_archives",
+    name = "all_ohc_archives",
     srcs = [
-        ":ironclaw-aarch64-apple-darwin",
-        ":ironclaw-aarch64-unknown-linux-gnu",
-        ":ironclaw-x86_64-apple-darwin",
-        ":ironclaw-x86_64-pc-windows-msvc",
-        ":ironclaw-x86_64-unknown-linux-gnu",
+        ":ohc-x86_64-unknown-linux-gnu",
     ],
     visibility = ["//visibility:public"],
 )
 
-# ── Server (ohc) cross-platform packaging ─────────────────────────────────────
-# Mirrors the ironclaw layout for the backend server binary.
-
 pkg_files(
     name = "ohc_linux_amd64_files",
-    srcs = ["//src/server:ohc"],
-    renames = {"//src/server:ohc": "ohc"},
+    srcs = ["//src/server:server"],
+    renames = {"//src/server:server": "ohc"},
     strip_prefix = strip_prefix.from_pkg(),
     tags = ["manual"],
 )
