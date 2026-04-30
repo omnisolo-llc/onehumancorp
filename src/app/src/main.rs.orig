@@ -186,7 +186,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     ui.run()?;
-    
+
     Ok(())
 }
 
@@ -194,7 +194,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod e2e_tests {
     use super::*;
 
-    #[test]
+#[test]
     fn test_e2e_wizard_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping E2E test_e2e_wizard_flow because no display server is available.");
@@ -239,8 +239,8 @@ mod e2e_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    #[test]
+
+#[test]
     fn test_welcome_checklist_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_welcome_checklist_creation because no display server is available.");
@@ -249,7 +249,7 @@ mod tests {
         app::WelcomeChecklist::new().unwrap();
     }
 
-    #[test]
+#[test]
     fn test_login_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_login_creation because no display server is available.");
@@ -260,7 +260,7 @@ mod tests {
         assert_eq!(ui.get_password(), "");
     }
 
-    #[test]
+#[test]
     fn test_business_setup_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_business_setup_creation because no display server is available.");
@@ -271,7 +271,7 @@ mod tests {
         assert_eq!(ui.get_company_name(), "");
     }
 
-    #[test]
+#[test]
     fn test_agent_hire_next_button_disabled_by_default() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_agent_hire_next_button_disabled_by_default because no display server is available.");
@@ -283,7 +283,7 @@ mod tests {
         assert_eq!(ui.get_next_enabled(), false);
     }
 
-    #[test]
+#[test]
     fn test_agent_hire_next_button_enabled_after_role_selection() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_agent_hire_next_button_enabled_after_role_selection because no display server is available.");
@@ -295,7 +295,7 @@ mod tests {
         assert_eq!(ui.get_next_enabled(), true);
     }
 
-    #[test]
+#[test]
     fn test_landing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
             println!("Skipping test_landing_creation because no display server is available.");
@@ -305,92 +305,77 @@ mod tests {
         assert_eq!(ui.get_is_variant_b(), false);
     }
 
-    #[test]
+#[test]
     fn test_agents_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Agents::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_chat_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Chat::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_channels_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Channels::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_integrations_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Integrations::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_security_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Security::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_meetings_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Meetings::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_logs_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Logs::new().unwrap();
     }
-    #[test]
-    #[test]
-    fn test_pricing_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        app::Pricing::new().unwrap();
-    }
+#[test]
     #[test]
     fn test_pricing_select_plan() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::Pricing::new().unwrap();
+
         let plan_selected = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
         let plan_selected_clone = plan_selected.clone();
+
         ui.on_select_plan(move |plan| {
             *plan_selected_clone.borrow_mut() = plan.to_string();
         });
+
         ui.invoke_select_plan("Pro".into());
         assert_eq!(*plan_selected.borrow(), "Pro");
     }
-    #[test]
-    fn test_my_plan_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::MyPlan::new().unwrap();
-        ui.set_tier("Starter".into());
-        ui.set_total_actions("500".into());
-        assert_eq!(ui.get_tier(), "Starter");
-        assert_eq!(ui.get_total_actions(), "500");
+
+        app::Pricing::new().unwrap();
     }
-    #[test]
-    fn test_cost_dashboard_creation() {
-        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
-        let ui = app::CostDashboard::new().unwrap();
-        ui.set_total_spend("$50.00".into());
-        assert_eq!(ui.get_total_spend(), "$50.00");
-    }
-    #[test]
+#[test]
     fn test_scaling_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Scaling::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_swarm_memory_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::SwarmMemory::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_website_builder_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::WebsiteBuilder::new().unwrap();
     }
 
-    #[test]
+#[test]
     fn test_website_builder_viral_storefront_footer() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::WebsiteBuilder::new().unwrap();
@@ -399,12 +384,12 @@ mod tests {
     }
 
 
-    #[test]
+#[test]
     fn test_setup_wizard_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::SetupWizard::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
@@ -415,32 +400,32 @@ mod tests {
 mod docs_tests {
     use super::*;
 
-    #[test]
+#[test]
     fn test_help_center_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::HelpCenter::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_release_notes_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::ReleaseNotes::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_interactive_walkthrough_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::InteractiveWalkthrough::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_ai_help_chat_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::AiHelpChat::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_video_tutorials_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::VideoTutorials::new().unwrap();
     }
-    #[test]
+#[test]
     fn test_api_docs_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::ApiDocs::new().unwrap();
