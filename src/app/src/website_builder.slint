@@ -53,7 +53,7 @@ export component WebsiteBuilder inherits Window {
             Text { text: "Add your first product or service"; color: #1e293b; }
             LineEdit {
                 placeholder-text: "Product Name";
-                text: product_name;
+                text <=> product_name;
             }
             LineEdit {
                 placeholder-text: "Price";
