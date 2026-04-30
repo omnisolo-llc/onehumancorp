@@ -52,15 +52,9 @@ graph TD;
 
 | Directory | Language | Purpose |
 |-----------|----------|---------|
-| `src/app/` | **Flutter/Dart** | Primary client for web, iOS, Android, macOS, Windows, and Linux |
-| `src/server/` | **Go** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
-| `src/server/lib/` | **Go** | Shared backend support libraries used by benchmarks, integrations, and resilience flows |
-| `src/server/services/` | **Go** | Lightweight backend service packages kept alongside the server source tree |
-| `src/server/orchestration/` | **Go** | Agent hub, meeting rooms, task delegation, realtime transport |
-| `src/server/agents/` | **Go** | Agent provider registry, worker logic, and MCP bundles |
-| `src/server/checkpointer/` | **Go** | LangGraph checkpoint persistence |
-| `src/examples/` | **Go / YAML** | Example agent binaries and supporting assets |
-| `src/benchmarks/` | **Go** | Performance benchmarks for coordination and messaging helpers |
+| `src/app/` | **Rust/Slint** | Desktop UI app with 54 Slint components for web, desktop |
+| `src/server/` | **Rust** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
+| `src/agents/` | **Rust** | Built-in agent implementations |
 | `src/proto/` | **Protobuf** | gRPC service definitions |
 | `src/tests/` | **Python / Shell** | Repository-local validation helpers and test utilities |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
@@ -126,36 +120,34 @@ For API-only remote-client deployments, set `OHC_HEADLESS=true` on the server.
 ```bash
 # Build & Test the full system
 bazelisk build //...
-bazelisk test //...
+xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" bazelisk test //...
+
+# Run E2E tests (requires Docker)
+node scripts/run-playwright.mjs
 
 # Quick Local Dev (run these in separate terminals)
-bazelisk run //src/server:ohc
-bazelisk run //src/app:start
-
-# Standalone desktop source launcher
-bazelisk run //:desktop
-
-# Build the MkDocs site
-bazelisk run //:docs_build
-
-# Linux desktop/runtime packages
-bazelisk build //src/app:app_deb
-# Requires rpmbuild on the host
-bazelisk build //src/app:app_rpm
+bazelisk run //src/server:server
+bazelisk run //src/app:app
 ```
 
-### Flutter app
+### Slint UI Tests
+
+The `//src/app:app_test` target runs 27 headless component tests covering all Slint UI components (dashboard, login, wizard flows, agents, chat, channels, integrations, security, meetings, logs, pricing, scaling, swarm memory, website builder, setup wizard, task list, help center, release notes, tutorials, API docs).
+
+Tests require `xvfb` for headless display. In CI, xvfb is automatically installed.
+
+### Slint desktop app
 
 ```bash
-cd src/app
-flutter pub get
-flutter run -d macos    # or -d windows / -d android / -d ios / -d chrome
+bazelisk run //src/app:app
 ```
+
+The app connects to the server at `http://127.0.0.1:18789` by default.
 
 ### Server binary
 
 ```bash
-bazelisk run //src/server:ohc
+bazelisk run //src/server:server
 ```
 
 ## Configuration
@@ -200,14 +192,8 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 
 ### Build and Test
 - **Build all modules:** `bazelisk build //...`
-- **Run all tests:** `bazelisk test //...`
-- **Run the Go backend:** `bazelisk run //src/server:ohc`
-- **Serve the Bazel-built Flutter web app:** `bazelisk run //src/app:start`
-- **Launch standalone desktop mode:** `bazelisk run //:desktop`
+- **Run all tests (requires xvfb):** `xvfb-run --auto-servernum --server-args="-screen 0 1024x768x24" bazelisk test //...`
+- **Run E2E tests:** `node scripts/run-playwright.mjs`
+- **Run the server:** `bazelisk run //src/server:server`
+- **Launch the app:** `bazelisk run //src/app:app`
 - **Build the docs site:** `bazelisk run //:docs_build`
-- **Build Linux package artifacts:** `bazelisk build //src/app:app_deb` and `bazelisk build //src/app:app_rpm` (`app_rpm` requires `rpmbuild` on the host)
-- **Use mobile platform profiles:** `--config=android` and `--config=ios`
-- **Format Go code:** `gofmt -w ./...`
-- **Format frontend:** `cd src/app && flutter format .`
-- **Analyze Flutter app:** `cd src/app && flutter analyze`
-- **Preview the docs site:** `bazelisk run //:docs_serve`
