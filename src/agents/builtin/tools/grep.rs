@@ -6,7 +6,9 @@ use std::sync::Arc;
 
 use super::{Tool, ToolExecutor};
 
-struct GrepExecutor;
+struct GrepExecutor {
+    working_dir: Option<std::path::PathBuf>,
+}
 
 #[async_trait::async_trait]
 impl ToolExecutor for GrepExecutor {
@@ -29,7 +31,9 @@ impl ToolExecutor for GrepExecutor {
         .map_err(|e| format!("grep: invalid regex: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let mut results = Vec::new();
-        search_directory(path, &re, include_pattern.as_deref(), &mut results).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
+        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path).to_string_lossy().to_string() } else { path.to_string() };
+        search_directory(&actual_path, &re, include_pattern.as_deref(), &mut results).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if results.is_empty() {
             return Ok("No matches found.".to_string());
@@ -103,7 +107,7 @@ fn matches_include(filename: &str, include: &str) -> bool {
     filename.contains(include)
 }
 
-pub fn grep_tool() -> Tool {
+pub fn grep_tool(working_dir: Option<std::path::PathBuf>) -> Tool {
     Tool {
         name: "Grep".to_string(),
         description: "Search for a regex pattern in files under a directory. Returns file:line:content matches.".to_string(),
@@ -130,6 +134,6 @@ pub fn grep_tool() -> Tool {
             },
             "required": ["pattern"]
         }),
-        execute: Arc::new(GrepExecutor),
+        execute: Arc::new(GrepExecutor { working_dir }),
     }
 }
