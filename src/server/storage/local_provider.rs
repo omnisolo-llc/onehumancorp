@@ -3,6 +3,8 @@ use chrono::{DateTime, Utc};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use super::provider::{BlobMetadata, Provider};
 
 pub struct LocalProvider {
@@ -13,6 +15,8 @@ impl LocalProvider {
     pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
         let abs_path = fs::canonicalize(base_path)?;
         fs::create_dir_all(&abs_path)?;
+        #[cfg(unix)]
+        fs::set_permissions(&abs_path, fs::Permissions::from_mode(0o700))?;
         Ok(LocalProvider { base_path: abs_path })
     }
 

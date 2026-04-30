@@ -423,6 +423,19 @@ impl Store {
                 if self.is_revoked(&data.claims.jti) {
                     return Err("token revoked".to_string());
                 }
+
+                // Explicitly check if user exists and is active
+                {
+                    let users = self.users.read().unwrap();
+                    if let Some(user) = users.get(&data.claims.sub) {
+                        if !user.active {
+                            return Err("user inactive or deleted".to_string());
+                        }
+                    } else {
+                        return Err("user inactive or deleted".to_string());
+                    }
+                }
+
                 Ok(data.claims)
             }
             Err(e) => {
