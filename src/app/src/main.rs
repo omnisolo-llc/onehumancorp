@@ -56,6 +56,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let setup_wizard_ui = app::SetupWizard::new()?;
+    let setup_wizard_handle = setup_wizard_ui.as_weak();
+
+    setup_wizard_ui.on_launch({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = std::collections::HashMap::from([
+                ("business_type".to_string(), ui.get_business_type().to_string()),
+                ("company_name".to_string(), ui.get_company_name().to_string()),
+                ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                ("admin_email".to_string(), ui.get_admin_email().to_string()),
+            ]);
+
+            let handle_clone = ui_handle.clone();
+
+            tokio::spawn(async move {
+                match HubServiceClient::connect("http://127.0.0.1:18789").await {
+                    Ok(mut client) => {
+                        let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest {
+                            state,
+                        });
+                        if let Err(e) = client.save_wizard_state(request).await {
+                            println!("Failed to save wizard state: {:?}", e);
+                        } else {
+                            println!("Wizard state saved to backend.");
+                            slint::invoke_from_event_loop(move || {
+                                if let Some(_ui) = handle_clone.upgrade() {
+                                    // Done launching!
+                                }
+                            }).unwrap();
+                        }
+                    }
+                    Err(e) => {
+                        println!("Could not connect to server: {:?}", e);
+                    }
+                }
+            });
+        }
+    });
+
     let ui = app::BusinessSetup::new()?;
     let ui_handle = ui.as_weak();
 
@@ -294,6 +342,31 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::SetupWizard::new().unwrap();
     }
+
+    #[test]
+    fn test_e2e_prompt_tuning_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::PromptTuning::new().unwrap();
+
+        // Step 0: Tone -> Step 1
+        assert_eq!(ui.get_step(), 0);
+        ui.set_tone("Concise".into());
+        ui.set_step(1);
+
+        // Step 1: Focus -> Step 2
+        ui.set_focus_only_business(true);
+        ui.set_focus_avoid_competitors(true);
+        ui.set_step(2);
+
+        // Step 2: Examples -> Step 3
+        ui.set_step(3);
+
+        // Verify state
+        assert_eq!(ui.get_tone(), "Concise");
+        assert_eq!(ui.get_focus_only_business(), true);
+        assert_eq!(ui.get_focus_avoid_competitors(), true);
+    }
+
     #[test]
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
@@ -304,6 +377,66 @@ mod tests {
 #[cfg(test)]
 mod docs_tests {
     use super::*;
+
+    #[test]
+    fn test_e2e_setup_wizard_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::SetupWizard::new().unwrap();
+
+        // Step 0: Welcome -> Step 1
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_next_step();
+
+        // Step 1: Type -> Step 2
+        ui.invoke_select_business_type("Online Store".into());
+
+        // Step 2: Name -> Step 3
+        ui.set_company_name("My E2E Store".into());
+        ui.invoke_next_step();
+
+        // Step 3: What do you sell -> Step 4
+        ui.invoke_toggle_sell_physical();
+        ui.invoke_next_step();
+
+        // Step 4: Payments -> Step 5
+        ui.invoke_select_payment_pref("online".into());
+
+        // Step 5: Admin -> Step 6
+        ui.set_admin_email("admin@e2e.test".into());
+        ui.invoke_next_step();
+
+        // Final state verification
+        assert_eq!(ui.get_company_name(), "My E2E Store");
+        assert_eq!(ui.get_business_type(), "Online Store");
+        assert_eq!(ui.get_admin_email(), "admin@e2e.test");
+        assert_eq!(ui.get_payment_pref(), "online");
+        assert_eq!(ui.get_sell_physical(), true);
+    }
+
+    #[test]
+    fn test_e2e_website_builder_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::WebsiteBuilder::new().unwrap();
+
+        assert_eq!(ui.get_step(), 0);
+        ui.set_selected_template("E-commerce".into());
+        ui.set_step(1);
+
+        ui.set_primary_color("#34C759".into());
+        ui.set_step(2);
+
+        ui.set_product_name("My Custom Product".into());
+        ui.set_step(3);
+
+        ui.set_domain_choice("custom".into());
+        ui.set_step(4);
+
+        assert_eq!(ui.get_step(), 4);
+        assert_eq!(ui.get_selected_template(), "E-commerce");
+        assert_eq!(ui.get_primary_color(), "#34C759");
+        assert_eq!(ui.get_product_name(), "My Custom Product");
+        assert_eq!(ui.get_domain_choice(), "custom");
+    }
 
     #[test]
     fn test_help_center_creation() {
