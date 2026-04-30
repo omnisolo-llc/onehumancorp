@@ -1,4 +1,7 @@
 pub mod store;
+pub mod metrics;
+
+
 use crate::db::DB;
 use std::sync::Arc;
 use sqlx::Row;
@@ -126,6 +129,10 @@ impl AutoDreamWorker {
     }
 
     async fn process_db_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let start_time = std::time::Instant::now();
+        let mut processed_count = 0.0;
+        let mut error_count = 0.0;
+
         let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
             .fetch_all(&db.pool)
             .await?;
@@ -149,16 +156,34 @@ impl AutoDreamWorker {
                         .bind(&session_id)
                         .execute(&db.pool)
                         .await?;
+                    processed_count += 1.0;
                 }
                 Err(e) => {
                     println!("AutoDreamWorker: failed to embed session {}: {}", session_id, e);
+                    error_count += 1.0;
                 }
             }
         }
+
+        let mode = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string());
+        let mode_str = if mode == "true" { "standalone" } else { "cloud" };
+
+        metrics::record_autodream_batch(
+            &db.pool,
+            mode_str,
+            processed_count,
+            start_time.elapsed().as_millis() as f32,
+            error_count,
+        ).await;
+
         Ok(())
     }
 
     async fn process_fs_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let start_time = std::time::Instant::now();
+        let mut processed_count = 0.0;
+        let mut error_count = 0.0;
+
         let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
         
@@ -184,17 +209,35 @@ impl AutoDreamWorker {
                         db.insert_agent_memory(&mem_id, "system", "fs-agent", &content, &emb_str).await?;
                         
                         tokio::fs::remove_file(path).await?;
+                        processed_count += 1.0;
                     }
                     Err(e) => {
                         println!("AutoDreamWorker: failed to embed fs memory {:?}: {}", path, e);
+                        error_count += 1.0;
                     }
                 }
             }
         }
+
+        let mode = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string());
+        let mode_str = if mode == "true" { "standalone" } else { "cloud" };
+
+        metrics::record_autodream_batch(
+            &db.pool,
+            mode_str,
+            processed_count,
+            start_time.elapsed().as_millis() as f32,
+            error_count,
+        ).await;
+
         Ok(())
     }
 
     async fn consolidate_agent_task_memories(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let start_time = std::time::Instant::now();
+        let mut processed_count = 0.0;
+        let mut error_count = 0.0;
+
         let memory_dir = std::path::Path::new(".agent-task/memory");
 
         if !memory_dir.exists() {
@@ -229,13 +272,27 @@ impl AutoDreamWorker {
                         let path_clone = path.clone();
                         tokio::fs::remove_file(path).await?;
                         println!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
+                        processed_count += 1.0;
                     }
                     Err(e) => {
                         println!("AutoDreamWorker: failed to embed agent-task memory {:?}: {}", path, e);
+                        error_count += 1.0;
                     }
                 }
             }
         }
+
+        let mode = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string());
+        let mode_str = if mode == "true" { "standalone" } else { "cloud" };
+
+        metrics::record_autodream_batch(
+            &db.pool,
+            mode_str,
+            processed_count,
+            start_time.elapsed().as_millis() as f32,
+            error_count,
+        ).await;
+
         Ok(())
     }
 

@@ -515,32 +515,49 @@ impl TaskQueueService {
     }
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at")
+        let res = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC FOR UPDATE SKIP LOCKED LIMIT 1) RETURNING id, organization_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at")
             .bind(agent_id)
             .fetch_optional(&self.pool)
-            .await?;
+            .await;
             
-        if let Some(row) = row {
-            let payload_str: String = row.get("payload");
-            let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
-            let deps_str: String = row.get("dependencies");
-            let dependencies: serde_json::Value = serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
-            
-            Ok(Some(SharedTaskModel {
-                id: row.get("id"),
-                organization_id: row.get("organization_id"),
-                parent_id: row.get("parent_id"),
-                epic_id: row.get("epic_id"),
-                title: row.get("title"),
-                status: row.get("status"),
-                assigned_agent: row.get("assigned_agent"),
-                payload,
-                dependencies,
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-            }))
-        } else {
-            Ok(None)
+        match res {
+            Ok(Some(row)) => {
+                let payload_str: String = row.get("payload");
+                let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+                let deps_str: String = row.get("dependencies");
+                let dependencies: serde_json::Value = serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
+
+                Ok(Some(SharedTaskModel {
+                    id: row.get("id"),
+                    organization_id: row.get("organization_id"),
+                    parent_id: row.get("parent_id"),
+                    epic_id: row.get("epic_id"),
+                    title: row.get("title"),
+                    status: row.get("status"),
+                    assigned_agent: row.get("assigned_agent"),
+                    payload,
+                    dependencies,
+                    created_at: row.get("created_at"),
+                    updated_at: row.get("updated_at"),
+                }))
+            }
+            Ok(None) => Ok(None),
+            Err(e) => {
+                if let sqlx::Error::Database(db_err) = &e {
+                    if db_err.message().contains("could not obtain lock") || db_err.message().contains("deadlock detected") || db_err.message().contains("database is locked") {
+                        let mode = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "false".to_string());
+                        let mode_str = if mode == "true" { "standalone" } else { "cloud" };
+                        let _ = crate::telemetry::buffer_metric(
+                            &self.pool,
+                            "ohc_task_claim_contention_total",
+                            "counter",
+                            1.0,
+                            serde_json::json!({"mode": mode_str}),
+                        ).await;
+                    }
+                }
+                Err(e)
+            }
         }
     }
 
