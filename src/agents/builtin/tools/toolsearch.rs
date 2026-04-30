@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -10,10 +11,10 @@ impl ToolExecutor for ToolSearchExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let query = args["query"]
             .as_str()
-            .ok_or("toolsearch: query is required")?
+            .ok_or_else(|| ToolError::LlmRecoverable("toolsearch: query is required".to_string()))?
             .to_lowercase();
 
         let all_tools = &[
