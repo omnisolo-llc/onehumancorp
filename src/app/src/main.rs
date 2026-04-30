@@ -174,8 +174,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         } else {
                             println!("Wizard state saved to backend.");
                             slint::invoke_from_event_loop(move || {
-                                if let Some(_ui) = handle_clone.upgrade() {
-                                    // Done launching!
+                                if let Some(ui) = handle_clone.upgrade() {
+                                    ui.hide().unwrap();
+
+                                    let dashboard = app::Dashboard::new().unwrap();
+                                    dashboard.on_open_referrals(move || {
+                                        let referrals_ui = app::Referrals::new().unwrap();
+                                        referrals_ui.on_generate_link({
+                                            let ui_handle = referrals_ui.as_weak();
+                                            move || {
+                                                let value = ui_handle.clone();
+                                                if let Some(_ui) = ui_handle.upgrade() {
+                                                    // Simulated backend call for credit attribution/generation (would use gRPC GenerateReferralLink)
+                                                    let backend_future = async move {
+                                                        match HubServiceClient::connect("http://127.0.0.1:18789").await {
+                                                            Ok(mut client) => {
+                                                                let req = tonic::Request::new(ohc::orchestration::GenerateReferralLinkRequest {
+                                                                    user_id: "NEW_USER".into(),
+                                                                });
+                                                                if let Ok(resp) = client.generate_referral_link(req).await {
+                                                                    let link = resp.into_inner().referral_link;
+                                                                    let _ = slint::invoke_from_event_loop(move || {
+                                                                        if let Some(ui) = value.upgrade() {
+                                                                            ui.set_generated_link(link.into());
+                                                                        }
+                                                                    });
+                                                                }
+                                                            }
+                                                            Err(_) => {}
+                                                        }
+                                                    };
+                                                    tokio::spawn(backend_future);
+                                                }
+                                            }
+                                        });
+                                        referrals_ui.show().unwrap();
+                                    });
+                                    dashboard.show().unwrap();
                                 }
                             }).unwrap();
                         }
@@ -644,6 +679,47 @@ mod docs_tests {
     }
 
     #[test]
+    fn test_e2e_referral_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let login_ui = app::Login::new().unwrap();
+        let login_successful = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let login_successful_clone = login_successful.clone();
+
+        login_ui.on_login(move |email, password| {
+            assert_eq!(email, "test@example.com");
+            assert_eq!(password, "password123");
+            *login_successful_clone.borrow_mut() = true;
+        });
+
+        login_ui.invoke_login("test@example.com".into(), "password123".into());
+        assert!(*login_successful.borrow(), "User login should be successful");
+
+        let dashboard_ui = app::Dashboard::new().unwrap();
+        let referrals_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let referrals_opened_clone = referrals_opened.clone();
+
+        dashboard_ui.on_open_referrals(move || {
+            *referrals_opened_clone.borrow_mut() = true;
+            let referrals_ui = app::Referrals::new().unwrap();
+
+            referrals_ui.on_generate_link({
+                let ui_handle = referrals_ui.as_weak();
+                move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_generated_link("https://ohc.com/ref/E2E_USER".into());
+                    }
+                }
+            });
+            referrals_ui.invoke_generate_link();
+            assert_eq!(referrals_ui.get_generated_link(), "https://ohc.com/ref/E2E_USER");
+        });
+
+        dashboard_ui.invoke_open_referrals();
+        assert!(*referrals_opened.borrow(), "Referrals should be opened from Dashboard");
+    }
+
+    #[test]
     fn test_e2e_grow_business_flow() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         let ui = app::GrowBusiness::new().unwrap();
@@ -694,6 +770,7 @@ mod dashboard_docs_tests {
         // Ensure callbacks can be set
         ui.on_open_help_center(move || {});
         ui.on_open_ai_chat(move || {});
+        ui.on_open_referrals(move || {});
     }
 
     #[test]
@@ -742,6 +819,28 @@ mod dashboard_docs_tests {
         });
         dashboard_ui.invoke_open_ai_chat();
         assert!(*ai_chat_opened.borrow(), "AI Help Chat should be opened from Dashboard");
+
+        // 4b. Test opening Referrals from Dashboard
+        let referrals_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let referrals_opened_clone = referrals_opened.clone();
+        dashboard_ui.on_open_referrals(move || {
+            *referrals_opened_clone.borrow_mut() = true;
+            let referrals_ui = app::Referrals::new().unwrap();
+
+            // test Generate Link logic
+            referrals_ui.on_generate_link({
+                let ui_handle = referrals_ui.as_weak();
+                move || {
+                    if let Some(ui) = ui_handle.upgrade() {
+                        ui.set_generated_link("https://ohc.com/ref/E2E_USER".into());
+                    }
+                }
+            });
+            referrals_ui.invoke_generate_link();
+            assert_eq!(referrals_ui.get_generated_link(), "https://ohc.com/ref/E2E_USER");
+        });
+        dashboard_ui.invoke_open_referrals();
+        assert!(*referrals_opened.borrow(), "Referrals should be opened from Dashboard");
 
         // 5. Test Interactive Walkthrough
         let _walkthrough = app::InteractiveWalkthrough::new().unwrap();

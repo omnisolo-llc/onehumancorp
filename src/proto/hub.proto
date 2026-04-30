@@ -223,6 +223,8 @@ service HubService {
   rpc AcceptInvite(AcceptInviteRequest) returns (AcceptInviteResponse);
   rpc GetMeetings(EmptyRequest) returns (GetMeetingsResponse);
   rpc StartOnboarding(StartOnboardingRequest) returns (StartOnboardingResponse);
+  rpc GenerateReferralLink(GenerateReferralLinkRequest) returns (GenerateReferralLinkResponse);
+  rpc GetReferralStatus(GetReferralStatusRequest) returns (GetReferralStatusResponse);
 }
 
 message StartOnboardingRequest {
@@ -1515,4 +1517,23 @@ service McpService {
   rpc InvokeTool(McpInvokeRequest) returns (McpInvokeResponse);
   rpc SyncMissions(SyncMissionsRequest) returns (EmptyResponse);
   rpc SyncContext(SyncContextRequest) returns (EmptyResponse);
+}
+
+
+message GenerateReferralLinkRequest {
+  string user_id = 1;
+}
+
+message GenerateReferralLinkResponse {
+  string referral_link = 1;
+}
+
+message GetReferralStatusRequest {
+  string user_id = 1;
+}
+
+message GetReferralStatusResponse {
+  int32 total_clicks = 1;
+  int32 conversions = 2;
+  repeated Referral clicks_details = 3;
 }

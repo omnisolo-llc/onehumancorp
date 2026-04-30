@@ -16,7 +16,9 @@ export component Referrals inherits Window {
     background: #f8fafc;
 
     in property <[UiReferral]> referrals;
+    in-out property <string> generated_link: "";
     callback refresh();
+    callback generate_link();
 
     VerticalBox {
         spacing: 20px;
@@ -28,6 +30,38 @@ export component Referrals inherits Window {
             Button { 
                 text: "Refresh"; 
                 clicked => { refresh(); }
+            }
+        }
+
+        VerticalBox {
+            spacing: 8px;
+            padding: 16px;
+            Rectangle {
+                background: @linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+                border-radius: 8px;
+                VerticalBox {
+                    padding: 16px;
+                    spacing: 8px;
+                    Text {
+                        text: "Share OHC with a friend, both get 1 month free Pro!";
+                        color: white;
+                        font-weight: 700;
+                        font-size: 16px;
+                        wrap: word-wrap;
+                    }
+                    HorizontalBox {
+                        Button {
+                            text: "Generate Link";
+                            clicked => { generate_link(); }
+                        }
+                        Rectangle {}
+                        if generated_link != "" : Text {
+                            text: generated_link;
+                            color: white;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
             }
         }
 

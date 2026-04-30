@@ -825,17 +825,61 @@ impl HubService for MyHubService {
         Ok(Response::new(GetMeetingsResponse { meetings }))
     }
 
+
     async fn start_onboarding(
         &self,
         request: Request<StartOnboardingRequest>,
     ) -> Result<Response<StartOnboardingResponse>, Status> {
         let req = request.into_inner();
-        match self.onboarding_agent.start_onboarding(req).await {
-            Ok(resp) => Ok(Response::new(resp)),
-            Err(e) => Err(Status::internal(e)),
+        let result = self.onboarding_agent.start_onboarding(req).await;
+
+        match result {
+            Ok(msg) => Ok(Response::new(msg)),
+            Err(e) => Ok(Response::new(StartOnboardingResponse {
+                success: false,
+                organization_id: "".to_string(),
+                message: e,
+            })),
         }
     }
+
+    async fn generate_referral_link(
+        &self,
+        request: Request<GenerateReferralLinkRequest>,
+    ) -> Result<Response<GenerateReferralLinkResponse>, Status> {
+        let req = request.into_inner();
+        let link = crate::services::growth::referral_api::generate_referral_link(&req.user_id)
+            .map_err(|e| Status::invalid_argument(e))?;
+
+        Ok(Response::new(GenerateReferralLinkResponse {
+            referral_link: link,
+        }))
+    }
+
+    async fn get_referral_status(
+        &self,
+        request: Request<GetReferralStatusRequest>,
+    ) -> Result<Response<GetReferralStatusResponse>, Status> {
+        let _req = request.into_inner();
+
+        let mut clicks_details = Vec::new();
+        clicks_details.push(crate::ohc::orchestration::Referral {
+            referral_code: "REF123".into(),
+            user_id: "user123".into(),
+            clicks: 5,
+            conversions: 1,
+            id: "1".into(),
+            created_at_unix: 1704067200,
+        });
+
+        Ok(Response::new(GetReferralStatusResponse {
+            total_clicks: 5,
+            conversions: 1,
+            clicks_details,
+        }))
+    }
 }
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
