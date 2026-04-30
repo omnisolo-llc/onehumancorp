@@ -28,9 +28,17 @@ export component BusinessSetup inherits Window {
     in-out property <string> admin_email: "";
     in-out property <string> admin_password: "";
 
+    in-out property <string> selected_template: "Modern";
+    in-out property <string> product_name: "";
+    in-out property <string> product_desc: "";
+    in-out property <string> product_price: "";
+    in-out property <string> subdomain: "";
+    in-out property <bool> photo_uploaded: false;
+
     in-out property <bool> launching: false;
 
     callback launch();
+    callback copy_to_clipboard(string);
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -236,8 +244,83 @@ export component BusinessSetup inherits Window {
                 Button { text: "Continue with Apple"; height: 44px; }
             }
 
-            // Step 6: Review & Launch
+            // Step 6: Template Selection
             if (step == 6) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Choose your website style"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                Text { text: "You can change this later."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+                GlassCard {
+                    height: 70px;
+                    background: selected_template == "Modern" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "✨ Modern"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Preview: " + company_name + " (Modern)"; font-family: "Inter"; font-size: 12px; color: #a8b2c1; }
+                    }
+                    TouchArea { clicked => { selected_template = "Modern"; } }
+                }
+                GlassCard {
+                    height: 70px;
+                    background: selected_template == "Classic" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🏛️ Classic"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Preview: " + company_name + " (Classic)"; font-family: "Inter"; font-size: 12px; color: #a8b2c1; }
+                    }
+                    TouchArea { clicked => { selected_template = "Classic"; } }
+                }
+                GlassCard {
+                    height: 70px;
+                    background: selected_template == "Bold" ? rgba(168, 85, 247, 0.4) : @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
+                    VerticalBox { alignment: center; padding: 12px;
+                        Text { text: "🔥 Bold"; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
+                        Text { text: "Preview: " + company_name + " (Bold)"; font-family: "Inter"; font-size: 12px; color: #a8b2c1; }
+                    }
+                    TouchArea { clicked => { selected_template = "Bold"; } }
+                }
+            }
+
+            // Step 7: First Product / Service
+            if (step == 7) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Add your first item"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+
+                Text { text: "Name"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                LineEdit { placeholder-text: "e.g. Classic Chocolate Cake"; text <=> product_name; height: 44px; }
+
+                Text { text: "Description (AI will help!)"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                TextEdit { text <=> product_desc; height: 80px; }
+                Button {
+                    text: "✨ Auto-generate Description";
+                    height: 44px;
+                    clicked => { product_desc = "A delicious " + product_name + " made with the finest ingredients."; }
+                }
+
+                Text { text: "Price"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                LineEdit { placeholder-text: "$0.00"; text <=> product_price; height: 44px; }
+
+                Button {
+                    text: photo_uploaded ? "✅ Photo Cropped & Uploaded" : "📷 Upload & Crop Photo";
+                    height: 44px;
+                    clicked => { photo_uploaded = true; }
+                }
+            }
+
+            // Step 8: Domain & Go-Live
+            if (step == 8) : VerticalBox {
+                spacing: 16px;
+                Text { text: "Pick your web address"; font-size: 24px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; }
+                Text { text: "You get a free .ohc.app domain."; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+
+                Text { text: "Subdomain"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
+                HorizontalBox {
+                    spacing: 8px;
+                    LineEdit { placeholder-text: "my-store"; text <=> subdomain; height: 44px; width: 60%; }
+                    Text { text: ".ohc.app"; font-size: 16px; font-family: "Inter"; color: white; vertical-alignment: center; }
+                }
+            }
+
+            // Step 9: Review & Launch
+            if (step == 9) : VerticalBox {
                 spacing: 24px;
                 Text { text: "Ready to launch!"; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; wrap: word-wrap; horizontal-alignment: center; }
 
@@ -248,6 +331,7 @@ export component BusinessSetup inherits Window {
                         Text { text: "Business: " + company_name; font-family: "Inter"; font-size: 16px; color: white; font-weight: 700; }
                         Text { text: "Type: " + business_type; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                         Text { text: "Admin: " + admin_email; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
+                        Text { text: "Domain: " + subdomain + ".ohc.app"; font-family: "Inter"; font-size: 14px; color: #94a3b8; }
                     }
                 }
 
@@ -273,7 +357,7 @@ export component BusinessSetup inherits Window {
             }
             if (step == 0) : Rectangle { width: 80px; } // spacer
 
-            if (step < 6 && step != 1 && step != 4) : GlassCard {
+            if (step < 9 && step != 1 && step != 4) : GlassCard {
                 width: 120px;
                 height: 44px;
                 background: rgba(168, 85, 247, 0.8);
@@ -281,12 +365,12 @@ export component BusinessSetup inherits Window {
                 TouchArea { clicked => { step = step + 1; } }
             }
 
-            if (step == 6 && !launching) : GlassCard {
+            if (step == 9 && !launching) : GlassCard {
                 width: 200px;
                 height: 54px;
                 background: rgba(168, 85, 247, 1.0);
                 VerticalBox { alignment: center; Text { text: "Launch My Business →"; font-family: "Inter"; font-size: 16px; font-weight: 700; color: white; horizontal-alignment: center; } }
-                TouchArea { clicked => { launching = true; launch(); } }
+                TouchArea { clicked => { launching = true; copy_to_clipboard("https://" + subdomain + ".ohc.app"); launch(); } }
             }
         }
     }

@@ -140,6 +140,43 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ui = app::BusinessSetup::new()?;
     let ui_handle = ui.as_weak();
 
+    let init_handle = ui.as_weak();
+    tokio::spawn(async move {
+        match HubServiceClient::connect("http://127.0.0.1:18789").await {
+            Ok(mut client) => {
+                let request = tonic::Request::new(ohc::orchestration::GetWizardStateRequest {});
+                if let Ok(response) = client.get_wizard_state(request).await {
+                    let state = response.into_inner().state;
+                    slint::invoke_from_event_loop(move || {
+                        if let Some(ui) = init_handle.upgrade() {
+                            if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
+                            if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
+                            if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
+                            if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                            if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                            if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                            if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                            if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+                            if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
+                            if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
+                            if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                            if let Some(val) = state.get("selected_template") { ui.set_selected_template(val.into()); }
+                            if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                            if let Some(val) = state.get("product_desc") { ui.set_product_desc(val.into()); }
+                            if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                            if let Some(val) = state.get("subdomain") { ui.set_subdomain(val.into()); }
+                        }
+                    }).unwrap();
+                }
+            }
+            Err(_) => {}
+        }
+    });
+
+    ui.on_copy_to_clipboard(|url| {
+        println!("Link copied to clipboard: {}", url);
+    });
+
     ui.on_launch({
         let ui_handle = ui_handle.clone();
         move || {
@@ -156,6 +193,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
                 ("admin_name".to_string(), ui.get_admin_name().to_string()),
                 ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                ("selected_template".to_string(), ui.get_selected_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_desc".to_string(), ui.get_product_desc().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("subdomain".to_string(), ui.get_subdomain().to_string()),
             ]);
 
             let handle_clone = ui_handle.clone();
@@ -172,7 +214,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             println!("Wizard state saved to backend.");
                             slint::invoke_from_event_loop(move || {
                                 if let Some(ui) = handle_clone.upgrade() {
-                                    // Done launching!
+                                    ui.hide().unwrap();
+                                    let checklist = Box::leak(Box::new(app::WelcomeChecklist::new().unwrap()));
+                                    checklist.show().unwrap();
                                 }
                             }).unwrap();
                         }
@@ -227,12 +271,31 @@ mod e2e_tests {
         ui.set_admin_email("admin@e2e.test".into());
         ui.set_step(6);
 
+        // Step 6: Template Selection -> Step 7
+        ui.set_selected_template("Modern".into());
+        ui.set_step(7);
+
+        // Step 7: First Product -> Step 8
+        ui.set_product_name("Cake".into());
+        ui.set_product_desc("Delicious cake".into());
+        ui.set_product_price("20.00".into());
+        ui.set_step(8);
+
+        // Step 8: Domain -> Step 9
+        ui.set_subdomain("cake.ohc.app".into());
+        ui.set_step(9);
+
         // Final state verification
         assert_eq!(ui.get_company_name(), "My E2E Store");
         assert_eq!(ui.get_business_type(), "Online Store");
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
+        assert_eq!(ui.get_selected_template(), "Modern");
+        assert_eq!(ui.get_product_name(), "Cake");
+        assert_eq!(ui.get_product_desc(), "Delicious cake");
+        assert_eq!(ui.get_product_price(), "20.00");
+        assert_eq!(ui.get_subdomain(), "cake.ohc.app");
     }
 }
 
