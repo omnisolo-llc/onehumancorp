@@ -29,6 +29,8 @@ mod domain;
 pub mod pricing;
 pub mod analytics;
 pub mod telemetry;
+#[cfg(test)]
+mod telemetry_test;
 pub mod chaos;
 pub mod integrations;
 pub mod utils;
@@ -870,6 +872,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Start AutoDream worker
     let autodream_worker = autodream::AutoDreamWorker::new(db.clone());
     autodream_worker.start();
+
+    // Start Telemetry Sync Daemon (if in standalone mode)
+    if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+        let telemetry_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::new(db.pool.clone(), cloud_url);
+        telemetry_daemon.start();
+    }
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
