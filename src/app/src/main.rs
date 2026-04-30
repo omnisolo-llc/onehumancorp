@@ -829,6 +829,30 @@ mod docs_tests {
 
         let ui = app::WebsiteBuilder::new().unwrap();
 
+        let publish_success = std::rc::Rc::new(std::cell::RefCell::new(false));
+        let publish_success_clone = publish_success.clone();
+
+        ui.on_publish_site(move |template, color, product, price, description, domain| {
+            assert_eq!(template, "E-commerce");
+            assert_eq!(color, "#34C759");
+            assert_eq!(product, "My Custom Product");
+            assert_eq!(price, "19.99");
+            assert_eq!(description, "A great custom product.");
+            assert_eq!(domain, "custom");
+            *publish_success_clone.borrow_mut() = true;
+        });
+
+        let copied_link = std::rc::Rc::new(std::cell::RefCell::new(String::new()));
+        let copied_link_clone = copied_link.clone();
+        ui.on_copy_to_clipboard(move |link| {
+            *copied_link_clone.borrow_mut() = link.to_string();
+        });
+
+        ui.on_upload_logo(|| {});
+        ui.on_generate_logo(|| {});
+        ui.on_generate_description(|| {});
+        ui.on_upload_photo(|| {});
+
         assert_eq!(ui.get_step(), 0);
         ui.set_selected_template("E-commerce".into());
         ui.set_step(1);
@@ -837,16 +861,32 @@ mod docs_tests {
         ui.set_step(2);
 
         ui.set_product_name("My Custom Product".into());
+        ui.set_product_price("19.99".into());
+        ui.set_product_description("A great custom product.".into());
         ui.set_step(3);
 
         ui.set_domain_choice("custom".into());
         ui.set_step(4);
 
-        assert_eq!(ui.get_step(), 4);
         assert_eq!(ui.get_selected_template(), "E-commerce");
         assert_eq!(ui.get_primary_color(), "#34C759");
         assert_eq!(ui.get_product_name(), "My Custom Product");
         assert_eq!(ui.get_domain_choice(), "custom");
+
+        ui.set_is_publishing(true);
+        ui.invoke_publish_site(
+            ui.get_selected_template(),
+            ui.get_primary_color(),
+            ui.get_product_name(),
+            ui.get_product_price(),
+            ui.get_product_description(),
+            ui.get_domain_choice()
+        );
+        assert!(ui.get_is_publishing(), "Should be publishing");
+        assert!(*publish_success.borrow(), "Publish should have been called");
+
+        ui.invoke_copy_to_clipboard("https://mybusiness.ohc.app".into());
+        assert_eq!(*copied_link.borrow(), "https://mybusiness.ohc.app");
     }
 
     #[test]
