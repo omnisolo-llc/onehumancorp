@@ -68,11 +68,8 @@ cargo_build_script(
 rust_binary(
     name = "app-rust",
     srcs = [
-        "src/agent.rs",
-        "src/api_service.rs",
-        "src/local_manager.rs",
-        "src/desktop_platform.rs",
         "src/main.rs",
+        "src/tooltip_registry.rs",
     ],
     data = [
         "src/agent_config.slint",
@@ -151,11 +148,8 @@ exports_files([
 rust_test(
     name = "app_test",
     srcs = [
-        "src/agent.rs",
-        "src/api_service.rs",
-        "src/local_manager.rs",
-        "src/desktop_platform.rs",
         "src/main.rs",
+        "src/tooltip_registry.rs",
     ],
     crate_root = "src/main.rs",
     data = [
