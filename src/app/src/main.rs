@@ -424,6 +424,49 @@ mod tests {
     }
 
     #[test]
+    fn test_e2e_agent_config_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::AgentConfig::new().unwrap();
+
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_invoke_select_agent("Customer Support".into());
+        ui.invoke_invoke_next_step();
+
+        assert_eq!(ui.get_step(), 1);
+        ui.invoke_toggle_reply();
+        ui.invoke_toggle_social();
+        ui.invoke_invoke_next_step();
+
+        assert_eq!(ui.get_step(), 2);
+        ui.invoke_invoke_select_frequency("Daily".into());
+        ui.invoke_invoke_next_step();
+
+        assert_eq!(ui.get_step(), 3);
+        assert_eq!(ui.get_selected_agent(), "Customer Support");
+        assert_eq!(ui.get_frequency(), "Daily");
+        assert_eq!(ui.get_can_reply(), true);
+        assert_eq!(ui.get_can_social(), true);
+    }
+
+    #[test]
+    fn test_e2e_grow_business_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::GrowBusiness::new().unwrap();
+
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_invoke_select_strategy("Run your first email campaign".into());
+        ui.invoke_invoke_next_step();
+
+        assert_eq!(ui.get_step(), 1);
+        ui.invoke_toggle_advanced();
+        assert_eq!(ui.get_is_advanced(), true);
+        ui.invoke_invoke_next_step();
+
+        assert_eq!(ui.get_step(), 2);
+        assert_eq!(ui.get_selected_strategy(), "Run your first email campaign");
+    }
+
+    #[test]
     fn test_task_list_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::TaskList::new().unwrap();
@@ -433,15 +476,52 @@ mod tests {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::FixAgent::new().unwrap();
     }
+
+    #[test]
+    fn test_e2e_fix_agent_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::FixAgent::new().unwrap();
+
+        assert_eq!(ui.get_step(), 0);
+        ui.invoke_invoke_view_suggested_fix();
+
+        assert_eq!(ui.get_step(), 1);
+        ui.invoke_invoke_apply();
+
+        assert_eq!(ui.get_step(), 2);
+    }
+
     #[test]
     fn test_upgrade_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Upgrade::new().unwrap();
     }
+
+    #[test]
+    fn test_e2e_upgrade_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Upgrade::new().unwrap();
+
+        assert_eq!(ui.get_done(), false);
+        ui.invoke_invoke_upgrade();
+        assert_eq!(ui.get_done(), true);
+    }
+
     #[test]
     fn test_billing_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Billing::new().unwrap();
+    }
+
+    #[test]
+    fn test_e2e_billing_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+        let ui = app::Billing::new().unwrap();
+
+        ui.on_invoke_add_credits(move || {
+            // Simulated payment/credits handler
+        });
+        ui.invoke_invoke_add_credits();
     }
     #[test]
     fn test_grow_business_creation() {

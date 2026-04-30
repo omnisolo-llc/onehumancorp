@@ -5,8 +5,13 @@ export component FixAgent inherits Window {
     height: 400px;
     title: "Agent Diagnostics";
 
-    property <int> step: 0;
-    property <bool> is_applying: false;
+    in-out property <int> step: 0;
+    in-out property <bool> is_applying: false;
+    callback invoke_apply();
+    callback invoke_view_suggested_fix();
+
+    invoke_apply => { is_applying = true; step = 2; is_applying = false; }
+    invoke_view_suggested_fix => { step = 1; }
 
     background: #f8fafc;
 
@@ -20,7 +25,7 @@ export component FixAgent inherits Window {
         if (step == 0) : VerticalBox {
             spacing: 10px;
             Text { text: "We detected a connection timeout with the primary database. The agent was unable to read the required state."; color: #1e293b; wrap: word-wrap; }
-            Button { text: "View Suggested Fix"; clicked => { step = 1; } }
+            Button { text: "View Suggested Fix"; clicked => { invoke_view_suggested_fix(); } }
         }
 
         if (step == 1) : VerticalBox {
@@ -51,9 +56,12 @@ export component Upgrade inherits Window {
     height: 400px;
     title: "Platform Upgrade";
 
-    property <int> progress: 0;
-    property <bool> is_upgrading: false;
-    property <bool> done: false;
+    in-out property <int> progress: 0;
+    in-out property <bool> is_upgrading: false;
+    in-out property <bool> done: false;
+    callback invoke_upgrade();
+
+    invoke_upgrade => { is_upgrading = true; done = true; is_upgrading = false; }
 
     background: #f8fafc;
 
@@ -67,7 +75,7 @@ export component Upgrade inherits Window {
         if (!is_upgrading && !done) : VerticalBox {
             spacing: 10px;
             Text { text: "What's new:\n• Improved agent reasoning\n• 2x faster orchestration\n• New observability metrics"; color: #1e293b; }
-            Button { text: "Upgrade in 1 click"; clicked => { is_upgrading = true; /* simulate */ done = true; is_upgrading = false; } }
+            Button { text: "Upgrade in 1 click"; clicked => { invoke_upgrade(); } }
         }
 
         if (is_upgrading) : VerticalBox {
@@ -97,6 +105,8 @@ export component Billing inherits Window {
     width: 500px;
     height: 400px;
     title: "Billing & Credits";
+
+    callback invoke_add_credits();
 
     background: #f8fafc;
 

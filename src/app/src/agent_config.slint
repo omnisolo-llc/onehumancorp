@@ -6,12 +6,23 @@ export component AgentConfig inherits Window {
     title: "Configure AI Agent";
 
     callback activate_agent(string, bool, bool, string);
+    callback invoke_next_step();
+    callback invoke_select_agent(string);
+    callback invoke_select_frequency(string);
+    callback toggle_reply();
+    callback toggle_social();
 
-    property <int> step: 0;
-    property <string> selected_agent: "";
-    property <bool> can_reply: false;
-    property <bool> can_social: false;
-    property <string> frequency: "Daily";
+    invoke_next_step => { step = step + 1; }
+    invoke_select_agent(a) => { selected_agent = a; }
+    invoke_select_frequency(f) => { frequency = f; }
+    toggle_reply => { can_reply = !can_reply; }
+    toggle_social => { can_social = !can_social; }
+
+    in-out property <int> step: 0;
+    in-out property <string> selected_agent: "";
+    in-out property <bool> can_reply: false;
+    in-out property <bool> can_social: false;
+    in-out property <string> frequency: "Daily";
 
     background: #f8fafc;
 
@@ -28,8 +39,8 @@ export component AgentConfig inherits Window {
             
             HorizontalBox {
                 spacing: 10px;
-                Button { text: "Customer Support"; clicked => { selected_agent = "Customer Support"; } }
-                Button { text: "Social Media Manager"; clicked => { selected_agent = "Social Media Manager"; } }
+                Button { text: "Customer Support"; clicked => { invoke_select_agent("Customer Support"); } }
+                Button { text: "Social Media Manager"; clicked => { invoke_select_agent("Social Media Manager"); } }
             }
             Text { text: "Selected: " + selected_agent; color: #a855f7; }
         }
@@ -41,11 +52,11 @@ export component AgentConfig inherits Window {
             
             HorizontalBox {
                 Text { text: "Reply to customer messages"; color: #1e293b; }
-                CheckBox { checked: can_reply; toggled => { can_reply = !can_reply; } }
+                CheckBox { checked: can_reply; toggled => { toggle_reply(); } }
             }
             HorizontalBox {
                 Text { text: "Post to Instagram & Facebook"; color: #1e293b; }
-                CheckBox { checked: can_social; toggled => { can_social = !can_social; } }
+                CheckBox { checked: can_social; toggled => { toggle_social(); } }
             }
         }
 
@@ -57,9 +68,9 @@ export component AgentConfig inherits Window {
             
             HorizontalBox {
                 alignment: center;
-                Button { text: "Weekly"; clicked => { frequency = "Weekly"; } }
-                Button { text: "Daily"; clicked => { frequency = "Daily"; } }
-                Button { text: "Hourly"; clicked => { frequency = "Hourly"; } }
+                Button { text: "Weekly"; clicked => { invoke_select_frequency("Weekly"); } }
+                Button { text: "Daily"; clicked => { invoke_select_frequency("Daily"); } }
+                Button { text: "Hourly"; clicked => { invoke_select_frequency("Hourly"); } }
             }
         }
 
