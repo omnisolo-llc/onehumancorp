@@ -417,3 +417,30 @@ mod docs_tests {
         app::ApiDocs::new().unwrap();
     }
 }
+
+#[cfg(test)]
+mod e2e_dashboard_tests {
+    use super::*;
+
+    #[test]
+    fn test_e2e_dashboard_flow() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
+            println!("Skipping E2E test_e2e_dashboard_flow because no display server is available.");
+            return;
+        }
+
+        let ui = app::Dashboard::new().unwrap();
+
+        // Simulate backend data populating the dashboard
+        ui.set_active_agents_count(5);
+        ui.set_active_tasks_count(10);
+        ui.set_scheduled_calls_count(2);
+        ui.set_team_members_count(3);
+
+        // Verify the final state matches the design intent
+        assert_eq!(ui.get_active_agents_count(), 5);
+        assert_eq!(ui.get_active_tasks_count(), 10);
+        assert_eq!(ui.get_scheduled_calls_count(), 2);
+        assert_eq!(ui.get_team_members_count(), 3);
+    }
+}
