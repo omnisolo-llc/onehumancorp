@@ -37,6 +37,8 @@ actions:
           - "*"
     steps:
       - run: |
+          sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends npm
+      - run: |
           /usr/bin/npm install --frozen-lockfile
       - run: |
           /usr/bin/npx playwright install --with-deps chromium
