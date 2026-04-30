@@ -20,6 +20,7 @@ impl SyncService for MySyncService {
         request: Request<HybridSyncMissionsRequest>,
     ) -> Result<Response<HybridSyncMissionsResponse>, Status> {
         let md = request.metadata().clone();
+        let md = request.metadata().clone();
         let req = request.into_inner();
         let payloads = req.payloads;
 
@@ -80,6 +81,7 @@ impl SyncService for MySyncService {
         &self,
         request: Request<PowerSyncPushRequest>,
     ) -> Result<Response<PowerSyncPushResponse>, Status> {
+        let md = request.metadata().clone();
         let req = request.into_inner();
         println!("PowerSync received push payload: {}", req.payload);
 
@@ -102,9 +104,16 @@ impl SyncService for MySyncService {
         &self,
         request: Request<SyncMcpDeltasRequest>,
     ) -> Result<Response<SyncMcpDeltasResponse>, Status> {
+        let md = request.metadata().clone();
         let req = request.into_inner();
         let deltas = req.deltas;
-        let tenant_id = req.tenant_id;
+        let tenant_id = if req.tenant_id.is_empty() {
+            let spiffe_id_str = md.get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
+            let parsed = crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
+            parsed.0
+        } else {
+            req.tenant_id
+        };
 
         if deltas.is_empty() {
             return Ok(Response::new(SyncMcpDeltasResponse {
@@ -155,6 +164,7 @@ impl SyncService for MySyncService {
         &self,
         request: Request<SyncEscalationRequest>,
     ) -> Result<Response<SyncEscalationResponse>, Status> {
+        let md = request.metadata().clone();
         let req = request.into_inner();
         let payloads = req.payloads;
 
@@ -254,7 +264,8 @@ mod tests {
     async fn test_sync_mcp_deltas_empty() {
         let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
-        let req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
+        let mut req = Request::new(SyncMcpDeltasRequest { tenant_id: "org1".to_string(), deltas: vec![] });
+        req.metadata_mut().insert("x-spiffe-id", "spiffe://example.org/org1/agent1".parse().unwrap());
         let resp = service.sync_mcp_deltas(req).await.unwrap();
         assert_eq!(resp.get_ref().status, "success");
         assert_eq!(resp.get_ref().synced_count, 0);
