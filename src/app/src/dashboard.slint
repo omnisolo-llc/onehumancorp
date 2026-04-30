@@ -6,6 +6,12 @@ export struct UiRoleCount {
     count: int,
 }
 
+export struct UiAgentAction {
+    id: string,
+    description: string,
+    status: string,
+}
+
 export component Dashboard inherits Window {
     width: 800px;
     height: 800px;
@@ -20,6 +26,7 @@ export component Dashboard inherits Window {
 
     in property <[UiRoleCount]> role_counts;
     in property <[UiMeshMessage]> mesh_messages;
+    in property <[UiAgentAction]> agent_actions;
 
     VerticalBox {
         spacing: 20px;
@@ -109,6 +116,27 @@ export component Dashboard inherits Window {
                     Button { text: "-"; }
                     Text { text: role_count.count; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
                     Button { text: "+"; }
+                }
+            }
+        }
+
+        // Agent Actions Today
+        Text { text: "Agent Actions Today"; font-size: 20px; font-weight: 700; color: #1e293b; }
+
+        VerticalBox {
+            spacing: 10px;
+
+            for action in agent_actions : Rectangle {
+                background: white;
+                border-color: #e2e8f0;
+                border-width: 1px;
+                border-radius: 8px;
+
+                HorizontalBox {
+                    padding: 16px;
+                    Text { text: action.description; color: #1e293b; wrap: word-wrap; }
+                    Rectangle {}
+                    Text { text: action.status; color: #a855f7; horizontal-alignment: right; }
                 }
             }
         }

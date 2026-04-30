@@ -35,6 +35,27 @@ impl MyAgentManagerService {
         }
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
+        let recent_tasks = self.hub.task_manager().get_recent_completed_tasks(5);
+        let recent_actions: Vec<AgentAction> = recent_tasks.into_iter().map(|task| {
+            let agent_id = task.assigned_agent_id.unwrap_or_else(|| "unknown".to_string());
+            let agent_name = self.hub.get_agents().into_iter()
+                .find(|a| a.id == agent_id)
+                .map(|a| a.name)
+                .unwrap_or_else(|| "Agent".to_string());
+
+            let desc = format!("{} completed task: {}", agent_name, task.title);
+
+            AgentAction {
+                id: task.id,
+                agent_id,
+                agent_name,
+                action_type: "task_completion".to_string(),
+                description: desc,
+                status: task.status,
+                created_at_unix: task.updated_at.timestamp(),
+            }
+        }).collect();
+
         DashboardSnapshot {
             meetings,
             costs: Some(costs),
@@ -43,6 +64,7 @@ impl MyAgentManagerService {
             task_queue: vec![],
             queue_length: 0,
             updated_at_unix: Utc::now().timestamp(),
+            recent_actions,
         }
     }
 }

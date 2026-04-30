@@ -150,6 +150,18 @@ impl TaskManager {
         Err("task not found".to_string())
     }
 
+    pub fn get_recent_completed_tasks(&self, limit: usize) -> Vec<SharedTask> {
+        let tasks = self.tasks.read().unwrap();
+        let mut completed_tasks: Vec<SharedTask> = tasks.values()
+            .filter(|t| t.status == "COMPLETED")
+            .cloned()
+            .collect();
+
+        completed_tasks.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        completed_tasks.truncate(limit);
+        completed_tasks
+    }
+
     pub fn poll_tasks(&self, agent_id: &str, limit: usize) -> Vec<SharedTask> {
         let mut tasks = self.tasks.write().unwrap();
         let mut claimed_tasks = Vec::new();
@@ -240,5 +252,41 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_str(&fetched.payload).unwrap();
         assert_eq!(payload["result"], "Success result");
         assert!(payload["completed_at"].is_string());
+    }
+
+    #[test]
+    fn test_get_recent_completed_tasks() {
+        let (tx, _) = tokio::sync::mpsc::channel(100);
+        let tm = TaskManager::new(tx);
+
+        let task1 = tm.create_task("org1".to_string(), "mission1".to_string(), "Task 1".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+        let task2 = tm.create_task("org1".to_string(), "mission2".to_string(), "Task 2".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+        let task3 = tm.create_task("org1".to_string(), "mission3".to_string(), "Task 3".to_string(), "Description".to_string(), "P1".to_string()).unwrap();
+
+        tm.claim_task(&task1.id, "agent1".to_string()).unwrap();
+        tm.claim_task(&task2.id, "agent1".to_string()).unwrap();
+
+        tm.complete_task(&task1.id, "agent1", "Success".to_string()).unwrap();
+        tm.complete_task(&task2.id, "agent1", "Success".to_string()).unwrap();
+
+        let recent = tm.get_recent_completed_tasks(5);
+        assert_eq!(recent.len(), 2);
+
+        let recent_limited = tm.get_recent_completed_tasks(1);
+        assert_eq!(recent_limited.len(), 1);
+
+        let mut found1 = false;
+        let mut found2 = false;
+        let mut found3 = false;
+
+        for t in &recent {
+            if t.id == task1.id { found1 = true; }
+            if t.id == task2.id { found2 = true; }
+            if t.id == task3.id { found3 = true; }
+        }
+
+        assert!(found1);
+        assert!(found2);
+        assert!(!found3); // task 3 is pending, not completed
     }
 }

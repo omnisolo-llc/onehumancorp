@@ -1106,6 +1106,16 @@ message Summary {
   int64 total_tokens = 2;
 }
 
+message AgentAction {
+  string id = 1;
+  string agent_id = 2;
+  string agent_name = 3;
+  string action_type = 4;
+  string description = 5;
+  string status = 6;
+  int64 created_at_unix = 7;
+}
+
 message DashboardSnapshot {
   repeated MeetingRoom meetings = 1;
   Summary costs = 2;
@@ -1114,6 +1124,7 @@ message DashboardSnapshot {
   repeated SharedTask task_queue = 5;
   int32 queue_length = 6;
   int64 updated_at_unix = 7;
+  repeated AgentAction recent_actions = 8;
 }
 
 message HireAgentRequest {

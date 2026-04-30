@@ -19,6 +19,16 @@ message StatusCount {
   uint32 count = 2;
 }
 
+message AgentAction {
+  string id = 1;
+  string agent_id = 2;
+  string agent_name = 3;
+  string action_type = 4;
+  string description = 5;
+  string status = 6;
+  int64 created_at_unix = 7;
+}
+
 message DashboardSnapshot {
   ohc.organization.Organization organization = 1;
   repeated ohc.agent.Agent agents = 2;
@@ -26,6 +36,7 @@ message DashboardSnapshot {
   ohc.billing.CostSummary cost_summary = 4;
   repeated StatusCount statuses = 5;
   string updated_at = 6;
+  repeated AgentAction recent_actions = 7;
 }
 
 message GetDashboardRequest {

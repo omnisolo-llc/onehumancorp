@@ -19,6 +19,18 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct AgentAction {
+    id: String,
+    agent_id: String,
+    agent_name: String,
+    action_type: String,
+    description: String,
+    status: String,
+    created_at_unix: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct DashboardSnapshot {
     organization: Organization,
     meetings: Vec<serde_json::Value>,
@@ -28,6 +40,8 @@ struct DashboardSnapshot {
     statuses: Vec<StatusBucket>,
     updated_at: String,
     hybrid_health: Option<HybridHealth>,
+    #[serde(default)]
+    recent_actions: Vec<AgentAction>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -314,6 +328,23 @@ mod tests {
     fn test_chat_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
         app::Chat::new().unwrap();
+    }
+
+    #[test]
+    fn test_dashboard_creation_with_agent_actions() {
+        if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() { return; }
+
+        let ui = app::Dashboard::new().unwrap();
+
+        let rc = std::rc::Rc::new(slint::VecModel::from(vec![
+            app::UiAgentAction {
+                id: "1".into(),
+                description: "The Ambassador drafted 3 replies to Instagram DMs".into(),
+                status: "COMPLETED".into(),
+            },
+        ]));
+
+        ui.set_agent_actions(rc.into());
     }
     #[test]
     fn test_channels_creation() {
