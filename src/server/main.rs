@@ -132,6 +132,7 @@ pub mod ohc {
 }
 
 use ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use ohc::orchestration::growth_service_server::{GrowthService as GrowthServiceTrait, GrowthServiceServer};
 use ohc::orchestration::*;
 
 use std::sync::Arc;
@@ -883,6 +884,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
+    let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone());
     let store = std::sync::Arc::new(auth::Store::new());
     
     // Start AutoDream worker
@@ -941,6 +943,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Server::builder()
         .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
         .add_service(crate::ohc::orchestration::auth_service_server::AuthServiceServer::new(store))
+        .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .serve(addr)
         .await?;
 
