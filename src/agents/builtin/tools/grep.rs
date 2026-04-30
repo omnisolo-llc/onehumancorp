@@ -1,3 +1,4 @@
+use ohc_builtin_agent_core::types::ToolError;
 use async_recursion::async_recursion;
 use regex::Regex;
 use serde_json::{json, Value};
@@ -12,10 +13,10 @@ impl ToolExecutor for GrepExecutor {
     async fn execute(
         &self,
         args: Value,
-    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<String, ToolError> {
         let pattern = args["pattern"]
             .as_str()
-            .ok_or("grep: pattern is required")?;
+            .ok_or_else(|| ToolError::LlmRecoverable("grep: pattern is required".to_string()))?;
         let path = args["path"].as_str().unwrap_or(".");
         let case_insensitive = args["case_insensitive"].as_bool().unwrap_or(false);
         let include_pattern = args["include"].as_str().map(str::to_string);
@@ -25,10 +26,10 @@ impl ToolExecutor for GrepExecutor {
         } else {
             Regex::new(pattern)
         }
-        .map_err(|e| format!("grep: invalid regex: {}", e))?;
+        .map_err(|e| format!("grep: invalid regex: {}", e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let mut results = Vec::new();
-        search_directory(path, &re, include_pattern.as_deref(), &mut results).await?;
+        search_directory(path, &re, include_pattern.as_deref(), &mut results).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         if results.is_empty() {
             return Ok("No matches found.".to_string());
@@ -51,17 +52,17 @@ async fn search_directory(
     include: Option<&str>,
     results: &mut Vec<String>,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let mut entries = tokio::fs::read_dir(dir).await?;
+    let mut entries = tokio::fs::read_dir(dir).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
     while let Ok(Some(entry)) = entries.next_entry().await {
         let path = entry.path();
-        let meta = entry.metadata().await?;
+        let meta = entry.metadata().await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         if meta.is_dir() {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             // Skip hidden and build directories
             if name.starts_with('.') || name == "target" || name == "node_modules" {
                 continue;
             }
-            search_directory(&path.to_string_lossy(), re, include, results).await?;
+            search_directory(&path.to_string_lossy(), re, include, results).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         } else if meta.is_file() {
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             if let Some(inc) = include {
