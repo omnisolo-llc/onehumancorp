@@ -83,6 +83,7 @@ rust_test(
         "@crates//:ed25519-dalek",
         "@crates//:flate2",
         "@crates//:futures",
+        "@crates//:futures-util",
         "@crates//:hex",
         "@crates//:hmac",
         "@crates//:jsonwebtoken",
