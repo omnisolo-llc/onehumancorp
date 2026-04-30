@@ -74,12 +74,16 @@ impl TaskManager {
         let mut tasks = self.tasks.write().unwrap();
         tasks.insert(id, task.clone());
         
+        self.emit_event("task_created", &task.clone());
+
         Ok(task)
     }
 
     pub fn insert_task(&self, task: SharedTask) {
         let mut tasks = self.tasks.write().unwrap();
-        tasks.insert(task.id.clone(), task);
+        tasks.insert(task.id.clone(), task.clone());
+
+        self.emit_event("task_inserted", &task);
     }
 
     pub fn get_task(&self, task_id: &str) -> Result<SharedTask, String> {
@@ -92,6 +96,7 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             task.status = new_status;
             task.updated_at = Utc::now();
+            self.emit_event("task_status_updated", &task.clone());
             Ok(())
         } else {
             Err("task not found".to_string())
@@ -105,6 +110,7 @@ impl TaskManager {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
+                self.emit_event("task_claimed", &task.clone());
                 return Ok(Some(task.clone()));
             }
         }
@@ -117,6 +123,7 @@ impl TaskManager {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
                 task.updated_at = Utc::now();
+                self.emit_event("task_reviewed", &task.clone());
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -142,6 +149,7 @@ impl TaskManager {
                 
                 task.payload = payload_map.to_string();
                 task.updated_at = Utc::now();
+                self.emit_event("task_completed", &task.clone());
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -160,6 +168,7 @@ impl TaskManager {
                 task.assigned_agent_id = Some(agent_id.to_string());
                 task.updated_at = Utc::now();
                 claimed_tasks.push(task.clone());
+                self.emit_event("task_polled", &task.clone());
                 
                 if claimed_tasks.len() >= limit {
                     break;
@@ -168,6 +177,14 @@ impl TaskManager {
         }
         
         claimed_tasks
+    }
+
+    fn emit_event(&self, action: &str, task: &SharedTask) {
+        let payload = serde_json::json!({
+            "action": action,
+            "task": task
+        });
+        let _ = self.event_tx.try_send(payload);
     }
 }
 

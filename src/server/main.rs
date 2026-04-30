@@ -723,6 +723,10 @@ impl HubService for MyHubService {
         &self,
         request: Request<EventStreamRequest>,
     ) -> Result<Response<Self::StreamMeshEventsStream>, Status> {
+        let meter = opentelemetry::global::meter("ohc_telemetry");
+        let counter = meter.u64_counter("mesh_stream_mesh_events").build();
+        counter.add(1, &[]);
+
         let req = request.into_inner();
         if req.topic.is_empty() {
             return Err(Status::invalid_argument("topic is required"));
@@ -743,6 +747,10 @@ impl HubService for MyHubService {
         &self,
         request: Request<PublishTeammateMeshEventRequest>,
     ) -> Result<Response<PublishMessageResponse>, Status> {
+        let meter = opentelemetry::global::meter("ohc_telemetry");
+        let counter = meter.u64_counter("mesh_publish_teammate_mesh_event").build();
+        counter.add(1, &[]);
+
         let req = request.into_inner();
         if req.channel.is_empty() {
             return Err(Status::invalid_argument("channel is required"));
@@ -763,6 +771,10 @@ impl HubService for MyHubService {
         &self,
         request: Request<EventStreamRequest>,
     ) -> Result<Response<Self::StreamTeammateMeshStream>, Status> {
+        let meter = opentelemetry::global::meter("ohc_telemetry");
+        let counter = meter.u64_counter("mesh_stream_teammate_mesh").build();
+        counter.add(1, &[]);
+
         let req = request.into_inner();
         if req.topic.is_empty() {
             return Err(Status::invalid_argument("topic is required"));
@@ -846,7 +858,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = axum::Router::new()
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler))
-        .with_state(mesh_transport);
+        .with_state(mesh_transport.clone());
 
     let mesh_addr: std::net::SocketAddr = "[::1]:8081".parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
@@ -859,9 +871,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start event log worker
     let hub_clone = hub.clone();
+    let mesh_transport_clone = mesh_transport.clone();
     tokio::spawn(async move {
         while let Some(raw_event) = event_rx.recv().await {
             let event = hub_clone.sanitize_hub_event(raw_event);
+
+            let teammate_event = crate::ohc::orchestration::TeammateMeshEvent {
+                agent_id: "system".to_string(),
+                action: event.r#type.clone(),
+                status: "broadcast".to_string(),
+                payload: event.payload.clone().into_bytes(),
+            };
+            let mesh_msg = crate::mesh::transport::Message {
+                topic: "mesh:tasks".to_string(),
+                payload: serde_json::to_string(&teammate_event).unwrap().into_bytes(),
+            };
+            let _ = mesh_transport_clone.publish("mesh:tasks", mesh_msg).await;
             hub_clone.append_recent_event(event);
         }
     });

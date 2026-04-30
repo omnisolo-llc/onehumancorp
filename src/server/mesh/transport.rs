@@ -3,6 +3,8 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, Mutex};
 use std::collections::HashMap;
 
+use opentelemetry::global;
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Message {
     pub topic: String,
@@ -30,6 +32,10 @@ impl MemoryTransport {
 #[async_trait]
 impl MeshTransport for MemoryTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        let meter = global::meter("ohc_telemetry");
+        let counter = meter.u64_counter("mesh_published_messages").build();
+        counter.add(1, &[]);
+
         let subs = self.subs.lock().await;
         if let Some(tx) = subs.get(topic) {
             let _ = tx.send(message);
@@ -47,7 +53,12 @@ impl MeshTransport for MemoryTransport {
         let mut rx = tx.subscribe();
 
         let worker = tokio::spawn(async move {
+            let meter = global::meter("ohc_telemetry");
+            let counter = meter.u64_counter("mesh_received_messages").build();
+            let latency_histogram = meter.f64_histogram("mesh_received_latency").build();
+
             while let Ok(msg) = rx.recv().await {
+                counter.add(1, &[]);
                 handler(msg);
             }
         });
@@ -80,6 +91,10 @@ impl RedisTransport {
 #[async_trait]
 impl MeshTransport for RedisTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
+        let meter = global::meter("ohc_telemetry");
+        let counter = meter.u64_counter("mesh_published_messages").build();
+        counter.add(1, &[]);
+
         use redis::AsyncCommands;
         let payload = serde_json::to_string(&message).map_err(|e| e.to_string())?;
         let mut conn = self.publish_conn.lock().await;
@@ -90,14 +105,20 @@ impl MeshTransport for RedisTransport {
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         use tokio_stream::StreamExt;
 
-        let conn = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
-        let mut pubsub = conn.into_pubsub();
+        // Need to open a new connection for pubsub as multiplexed connection can't be used for pubsub
+        let pubsub_conn = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
+        let mut pubsub = pubsub_conn.into_pubsub();
         pubsub.subscribe(topic).await.map_err(|e| e.to_string())?;
 
         let mut stream = pubsub.into_on_message();
 
         let worker = tokio::spawn(async move {
+            let meter = global::meter("ohc_telemetry");
+            let counter = meter.u64_counter("mesh_received_messages").build();
+            let latency_histogram = meter.f64_histogram("mesh_received_latency").build();
+
             while let Some(msg) = stream.next().await {
+                counter.add(1, &[]);
                 if let Ok(payload_str) = msg.get_payload::<String>() {
                     if let Ok(message) = serde_json::from_str::<Message>(&payload_str) {
                         handler(message);
@@ -164,6 +185,45 @@ mod tests {
         cancel();
     }
 
+
+    #[tokio::test]
+    async fn test_memory_transport_multiple_subscribers() {
+        let transport = MemoryTransport::new();
+        let received1 = Arc::new(AtomicBool::new(false));
+        let received2 = Arc::new(AtomicBool::new(false));
+        let r1 = received1.clone();
+        let r2 = received2.clone();
+
+        let handler1 = Box::new(move |msg: Message| {
+            if msg.topic == "test_multi" && msg.payload == b"hello" {
+                r1.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let handler2 = Box::new(move |msg: Message| {
+            if msg.topic == "test_multi" && msg.payload == b"hello" {
+                r2.store(true, Ordering::SeqCst);
+            }
+        });
+
+        let cancel1 = transport.subscribe("test_multi", handler1).await.unwrap();
+        let cancel2 = transport.subscribe("test_multi", handler2).await.unwrap();
+
+        let msg = Message {
+            topic: "test_multi".to_string(),
+            payload: b"hello".to_vec(),
+        };
+
+        transport.publish("test_multi", msg).await.unwrap();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        assert!(received1.load(Ordering::SeqCst));
+        assert!(received2.load(Ordering::SeqCst));
+
+        cancel1();
+        cancel2();
+    }
+
     #[tokio::test]
     async fn test_create_transport_standalone() {
         let transport = create_transport(None, true).await;
@@ -183,7 +243,6 @@ mod tests {
         };
         assert!(transport.publish("test_fallback", msg).await.is_ok());
     }
-}
 
     #[tokio::test]
     async fn test_redis_transport() {
@@ -195,7 +254,7 @@ mod tests {
         }
 
         let client = redis::Client::open(redis_url).unwrap();
-        if client.get_async_connection().await.is_err() {
+        if client.get_multiplexed_async_connection().await.is_err() {
             return;
         }
 
@@ -225,3 +284,4 @@ mod tests {
         assert!(received.load(Ordering::SeqCst));
         cancel();
     }
+}
