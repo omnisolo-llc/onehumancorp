@@ -20,7 +20,6 @@ impl SyncService for MySyncService {
         request: Request<HybridSyncMissionsRequest>,
     ) -> Result<Response<HybridSyncMissionsResponse>, Status> {
         let md = request.metadata().clone();
-        let md = request.metadata().clone();
         let req = request.into_inner();
         let payloads = req.payloads;
 
@@ -43,20 +42,39 @@ impl SyncService for MySyncService {
             let status = if p.status.is_empty() {
                 "PENDING".to_string()
             } else {
-                p.status
+                p.status.clone()
             };
 
             let force_local = md.get("x-ohc-conflict-resolution")
                 .map(|v| v.to_str().unwrap_or_default() == "force-local")
                 .unwrap_or(false);
 
-            match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
-                Ok(_) => {
-                    synced_count += 1;
+            // Attempt to check if mission exists and only update if changed or force_local
+            let existing: Option<(String, String)> = sqlx::query_as("SELECT status, payload::text FROM missions WHERE id = $1")
+                .bind(&p.id)
+                .fetch_optional(&self.pool)
+                .await
+                .unwrap_or(None);
+
+            let should_update = match existing {
+                Some((ext_status, ext_payload)) => {
+                    force_local || (ext_status != status || ext_payload != p.payload)
                 }
-                Err(e) => {
-                    eprintln!("failed to upsert mission from sync daemon: id={}, error={}", p.id, e);
+                None => true,
+            };
+
+            if should_update {
+                match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
+                    Ok(_) => {
+                        synced_count += 1;
+                    }
+                    Err(e) => {
+                        eprintln!("failed to upsert mission from sync daemon: id={}, error={}", p.id, e);
+                    }
                 }
+            } else {
+                // Already synced, but counts towards success to be idempotent
+                synced_count += 1;
             }
         }
 

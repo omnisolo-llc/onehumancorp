@@ -39,10 +39,10 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
 
     let mut send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            if let Ok(json) = serde_json::to_string(&msg) {
-                if sender.send(WsMessage::Text(json.into())).await.is_err() {
-                    break;
-                }
+            let bytes = msg.to_bytes();
+            let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &bytes);
+            if sender.send(WsMessage::Text(b64.into())).await.is_err() {
+                break;
             }
         }
     });
@@ -52,8 +52,10 @@ async fn handle_socket(socket: WebSocket, transport: Arc<dyn MeshTransport>, cha
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             if let WsMessage::Text(text) = msg {
-                if let Ok(mesh_msg) = serde_json::from_str::<MeshMessage>(&text) {
-                    let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
+                if let Ok(bytes) = base64::Engine::decode(&base64::engine::general_purpose::STANDARD, text.as_bytes()) {
+                    if let Ok(mesh_msg) = MeshMessage::from_bytes(&bytes) {
+                        let _ = transport_clone.publish(&channel_clone, mesh_msg).await;
+                    }
                 }
             }
         }
@@ -109,7 +111,7 @@ mod tests {
             topic: "test_chan".to_string(),
             payload: b"ws_test".to_vec(),
         };
-        let json = serde_json::to_string(&test_msg).unwrap();
+        let json = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, test_msg.to_bytes());
         ws_stream.send(TungsteniteMessage::Text(json.into())).await.unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
@@ -125,7 +127,7 @@ mod tests {
         for _ in 0..2 {
             if let Some(Ok(msg)) = ws_stream.next().await {
                 if let TungsteniteMessage::Text(text) = msg {
-                    let received_mesh_msg: MeshMessage = serde_json::from_str(&text).unwrap();
+                    let received_mesh_msg = MeshMessage::from_bytes(&base64::Engine::decode(&base64::engine::general_purpose::STANDARD, text.as_bytes()).unwrap()).unwrap();
                     if received_mesh_msg.payload == b"srv_test" {
                         assert_eq!(received_mesh_msg.topic, "test_chan");
                         found = true;
