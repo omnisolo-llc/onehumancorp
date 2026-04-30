@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("App starting...");
 
     tokio::spawn(async move {
-        match HubServiceClient::connect("http://127.0.0.1:18789").await {
+        match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
             Ok(mut client) => {
                 println!("Connected to server!");
                 let request = tonic::Request::new(RegisterAgentRequest {
@@ -47,6 +47,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
 
+    let init_ui_handle = setup_wizard_handle.clone();
+    tokio::spawn(async move {
+        if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+            if let Ok(resp) = client.get_wizard_state(tonic::Request::new(ohc::orchestration::GetWizardStateRequest {})).await {
+                let state = resp.into_inner().state;
+                slint::invoke_from_event_loop(move || {
+                    if let Some(ui) = init_ui_handle.upgrade() {
+                        if let Some(step_str) = state.get("step") {
+                            if let Ok(step) = step_str.parse::<i32>() {
+                                ui.set_step(step);
+                            }
+                        }
+                        if let Some(val) = state.get("business_type") { ui.set_business_type(val.into()); }
+                        if let Some(val) = state.get("company_name") { ui.set_company_name(val.into()); }
+                        if let Some(val) = state.get("company_description") { ui.set_company_description(val.into()); }
+                        if let Some(val) = state.get("sell_physical") { ui.set_sell_physical(val == "true"); }
+                        if let Some(val) = state.get("sell_digital") { ui.set_sell_digital(val == "true"); }
+                        if let Some(val) = state.get("sell_services") { ui.set_sell_services(val == "true"); }
+                        if let Some(val) = state.get("sell_food") { ui.set_sell_food(val == "true"); }
+                        if let Some(val) = state.get("sell_subscriptions") { ui.set_sell_subscriptions(val == "true"); }
+                        if let Some(val) = state.get("payment_pref") { ui.set_payment_pref(val.into()); }
+                        if let Some(val) = state.get("admin_name") { ui.set_admin_name(val.into()); }
+                        if let Some(val) = state.get("admin_email") { ui.set_admin_email(val.into()); }
+                        if let Some(val) = state.get("website_template") { ui.set_website_template(val.into()); }
+                        if let Some(val) = state.get("product_name") { ui.set_product_name(val.into()); }
+                        if let Some(val) = state.get("product_price") { ui.set_product_price(val.into()); }
+                        if let Some(val) = state.get("domain_choice") { ui.set_domain_choice(val.into()); }
+                    }
+                }).unwrap();
+            }
+        }
+    });
+
+    setup_wizard_ui.on_save_state({
+        let ui_handle = setup_wizard_handle.clone();
+        move || {
+            let ui = ui_handle.unwrap();
+            let state = std::collections::HashMap::from([
+                ("step".to_string(), ui.get_step().to_string()),
+                ("business_type".to_string(), ui.get_business_type().to_string()),
+                ("company_name".to_string(), ui.get_company_name().to_string()),
+                ("company_description".to_string(), ui.get_company_description().to_string()),
+                ("sell_physical".to_string(), ui.get_sell_physical().to_string()),
+                ("sell_digital".to_string(), ui.get_sell_digital().to_string()),
+                ("sell_services".to_string(), ui.get_sell_services().to_string()),
+                ("sell_food".to_string(), ui.get_sell_food().to_string()),
+                ("sell_subscriptions".to_string(), ui.get_sell_subscriptions().to_string()),
+                ("payment_pref".to_string(), ui.get_payment_pref().to_string()),
+                ("admin_name".to_string(), ui.get_admin_name().to_string()),
+                ("admin_email".to_string(), ui.get_admin_email().to_string()),
+                ("website_template".to_string(), ui.get_website_template().to_string()),
+                ("product_name".to_string(), ui.get_product_name().to_string()),
+                ("product_price".to_string(), ui.get_product_price().to_string()),
+                ("domain_choice".to_string(), ui.get_domain_choice().to_string()),
+            ]);
+
+            tokio::spawn(async move {
+                if let Ok(mut client) = HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
+                    let request = tonic::Request::new(ohc::orchestration::SaveWizardStateRequest { state });
+                    let _ = client.save_wizard_state(request).await;
+                }
+            });
+        }
+    });
+
     let referrals_ui = app::Referrals::new()?;
     let referrals_handle = referrals_ui.as_weak();
 
@@ -55,7 +120,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let handle = ui_handle.clone();
             tokio::spawn(async move {
-                match GrowthServiceClient::connect("http://127.0.0.1:18789").await {
+                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let response = client.get_referrals(tonic::Request::new(ohc::orchestration::EmptyRequest {})).await;
                         if let Ok(resp) = response {
@@ -87,7 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         move || {
             let handle = ui_handle.clone();
             tokio::spawn(async move {
-                match GrowthServiceClient::connect("http://127.0.0.1:18789").await {
+                match GrowthServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let req = ohc::orchestration::CreateReferralRequest {
                             user_id: "current_user".to_string(), // In production, use actual user_id
@@ -152,7 +217,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
 
             tokio::spawn(async move {
-                match HubServiceClient::connect("http://127.0.0.1:18789").await {
+                match HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".to_string())).await {
                     Ok(mut client) => {
                         let onboarding_request = tonic::Request::new(ohc::orchestration::StartOnboardingRequest {
                             business_type: req_business_type,
