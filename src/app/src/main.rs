@@ -44,8 +44,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let login_ui = app::Login::new()?;
+    let login_ui_handle = login_ui.as_weak();
+
     let setup_wizard_ui = app::SetupWizard::new()?;
     let setup_wizard_handle = setup_wizard_ui.as_weak();
+
+    let _ = setup_wizard_ui.hide();
+
+    let setup_wizard_ui_from_login = setup_wizard_handle.clone();
+    login_ui.on_start_setup_wizard({
+        let login_handle = login_ui_handle.clone();
+        move || {
+            if let Some(ui) = login_handle.upgrade() {
+                let _ = ui.hide();
+            }
+            if let Some(wizard) = setup_wizard_ui_from_login.upgrade() {
+                let _ = wizard.show();
+            }
+        }
+    });
 
     let init_ui_handle = setup_wizard_handle.clone();
     tokio::spawn(async move {
@@ -295,7 +313,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    setup_wizard_ui.run()?;
+    login_ui.run()?;
     
     Ok(())
 }
@@ -749,7 +767,8 @@ mod docs_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        let ui = app::SetupWizard::new().unwrap();
+        login_ui.invoke_start_setup_wizard();
+        let ui = app::SetupWizard::new().unwrap(); // Simulate that SetupWizard is now open
 
         // Step 0: Welcome -> Step 1
         assert_eq!(ui.get_step(), 0);
