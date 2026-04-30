@@ -1,6 +1,11 @@
 # Release Notes
 
 
+## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
+- Scaling (Cloud): Implement Harness Upgrade (Guardrails & Safety, Agent Loop Capabilities, Concurrent Tool Execution, Granular Capability ACLs, and 4-types of Error Handling with Compounding Error Prevention), add hybrid latency benchmarks, implement Omni-Context Sub-agent Routing in Rust, restore MCP execution logic in server_old, fix RBAC for promtail, fix broken bazel targets, and configure cli_test with hermetic vitest runner.
+- Privacy/Offline (Standalone): Consolidate API Playbook, add architecture design for multi-tenant SaaS tier, add Business Journey Architecture research report, simplify language in Walkthrough, and redesign Dashboard and Business Setup with Mobile-first and glassmorphism.
+
+
 ## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
 - Scaling (Cloud): Implement Harness Upgrade with 4-types of Error Handling and Compounding Error Prevention, add cost dashboard and plan UI features, enforce premium dashboard aesthetics and optimize K8s autoscaling, and implement Business Setup Wizard UI with progressive disclosure.
 - Privacy/Offline (Standalone): No specific privacy/offline changes in this release.

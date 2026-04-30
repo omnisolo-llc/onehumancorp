@@ -1,5 +1,23 @@
 # OHC Hybrid Agentic OS - Changelog
 
+## v0.4.9 (Cloud) / v0.4.9+1 (Standalone)
+### Cloud Scaling Improvements
+- Implement Harness Upgrade: Guardrails & Safety, Agent Loop Capabilities, Concurrent Tool Execution, Granular Capability ACLs, and 4-types of Error Handling with Compounding Error Prevention.
+- Add hybrid latency benchmarks for cloud and standalone mode.
+- Implement Omni-Context Sub-agent Routing in Rust.
+- Restore MCP execution logic and tool tests in server_old.
+- Fix RBAC for promtail and revert aggressive resource limits.
+- Fix broken bazel targets to use src/server_old paths.
+- Configure cli_test with hermetic vitest runner.
+
+### Privacy/Offline Improvements
+- Consolidate API Playbook and fix link references (#8645).
+- Add architecture design for multi-tenant SaaS tier.
+- Add Business Journey Architecture research report.
+- Simplify language in Walkthrough.
+- Mobile-first and glassmorphism redesign for Dashboard and Business Setup.
+
+
 ## v0.4.8 (Cloud) / v0.4.8+1 (Standalone)
 ### Cloud Scaling Improvements
 - Implement Harness Upgrade with 4-types of Error Handling and Compounding Error Prevention.
