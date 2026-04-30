@@ -37,9 +37,11 @@ actions:
           - "*"
     steps:
       - run: |
-          curl -fsSL https://nodejs.org/dist/v18.20.0/node-v18.20.0-linux-x64.tar.gz | sudo tar -xzf - -C /usr/local --strip-components=1
+          curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
       - run: |
-          npm install --frozen-lockfile
+          export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && nvm install 24 && nvm use 24
+      - run: |
+          export NVM_DIR="$HOME/.nvm" && . "$NVM_DIR/nvm.sh" && npm install --frozen-lockfile
       - run: |
           npx playwright install --with-deps chromium
       - run: |
