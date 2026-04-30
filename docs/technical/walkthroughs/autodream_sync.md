@@ -32,6 +32,6 @@ The sync daemon relies on internal APIs to safely transmit vectorized data.
 - **Endpoint:** `POST /api/v1/autodream/sync`
 - **Purpose:** Transmit batch updates from local nodes to the cloud hub.
 
-For full API specifications, please refer to the [API Playbook](../api/playbook.md).
+For full API specifications, please refer to the [API Playbook](../../api/playbook.md).
 
 </div>

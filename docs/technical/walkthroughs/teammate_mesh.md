@@ -55,7 +55,7 @@ This ensures agents remain performant and focused on their specific tasks withou
 
 ## 4. Next Steps
 
-- Explore the [API Playbook](../api/playbook.md) for concrete payload structures.
+- Explore the [API Playbook](../../api/playbook.md) for concrete payload structures.
 - Return to the [Help Portal](help_portal.md) to discover other hybrid architecture concepts.
 
 </div>
