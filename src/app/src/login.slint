@@ -10,6 +10,8 @@ export component Login inherits Window {
     property <bool> loading: false;
     property <bool> is_sign_up: false;
     property <string> error_message: "";
+    in-out property <bool> show_verification: false;
+    in-out property <string> verification_message: "";
 
     in-out property <string> username: "";
     in-out property <string> password: "";
@@ -17,6 +19,7 @@ export component Login inherits Window {
     callback login(string, string);
     callback oauth_login(string);
     callback open_settings();
+    callback resend_verification(string);
 
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
@@ -62,6 +65,16 @@ export component Login inherits Window {
                 PasswordInput {
                     placeholder-text: "Password";
                     text <=> password;
+                }
+
+                if (show_verification) : VerticalBox {
+                    spacing: 8px;
+                    alignment: center;
+                    Text { text: verification_message; color: #10b981; horizontal-alignment: center; font-family: "Inter"; }
+                    Button {
+                        text: "Resend Verification Email";
+                        clicked => { resend_verification(username); }
+                    }
                 }
 
                 if (error_message != "") : Text {
