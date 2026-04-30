@@ -80,6 +80,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let req_product_price = product_price.to_string();
             let req_domain_choice = domain_choice.to_string();
 
+            let mut req_selling_categories = Vec::new();
+            if ui.get_sell_physical() { req_selling_categories.push("physical".to_string()); }
+            if ui.get_sell_digital() { req_selling_categories.push("digital".to_string()); }
+            if ui.get_sell_services() { req_selling_categories.push("services".to_string()); }
+            if ui.get_sell_food() { req_selling_categories.push("food".to_string()); }
+            if ui.get_sell_subscriptions() { req_selling_categories.push("subscriptions".to_string()); }
+
             tokio::spawn(async move {
                 match HubServiceClient::connect("http://127.0.0.1:18789").await {
                     Ok(mut client) => {
@@ -89,7 +96,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                             company_description: req_company_description,
                             payment_pref: req_payment_pref,
                             admin_email: req_admin_email,
-                            selling_categories: vec![], // Populated in full implementation
+                            selling_categories: req_selling_categories,
                             website_template: req_website_template,
                             first_product_name: req_product_name,
                             first_product_price: req_product_price,
@@ -210,6 +217,10 @@ mod e2e_tests {
         assert_eq!(ui.get_admin_email(), "admin@e2e.test");
         assert_eq!(ui.get_payment_pref(), "online");
         assert_eq!(ui.get_sell_physical(), true);
+        assert_eq!(ui.get_sell_digital(), false);
+        assert_eq!(ui.get_sell_services(), false);
+        assert_eq!(ui.get_sell_food(), false);
+        assert_eq!(ui.get_sell_subscriptions(), false);
         assert_eq!(ui.get_website_template(), "Modern");
         assert_eq!(ui.get_product_name(), "My First Product");
         assert_eq!(ui.get_product_price(), "10.00");
