@@ -12,7 +12,7 @@ export component Dashboard inherits Window {
     height: 800px;
     title: "Dashboard";
 
-    background: #f8fafc;
+    background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     in property <int> active_agents_count: 0;
     in property <int> active_tasks_count: 0;
@@ -41,7 +41,7 @@ export component Dashboard inherits Window {
 
         // Header
         HorizontalBox {
-            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: #1e293b; }
+            Text { text: "Dashboard"; font-size: 28px; font-weight: 700; color: white; }
             Rectangle {}
             Button { text: "Ask anything"; clicked => { open_ai_chat(); } }
             Button { text: "?"; clicked => { open_help_center(); } }
@@ -53,16 +53,16 @@ export component Dashboard inherits Window {
             spacing: 16px;
 
             Rectangle {
-                background: white;
-                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
-                border-radius: 8px;
+                border-radius: 12px;
                 width: 180px;
 
                 touch-agents := TouchArea {
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Active Agents"; color: #64748b; }
+                        Text { text: "Active Agents"; color: #a8b2c1; }
                         Text { text: active_agents_count; font-size: 32px; font-weight: 700; color: #a855f7; }
                     }
                 }
@@ -74,16 +74,16 @@ export component Dashboard inherits Window {
                 }
             }
             Rectangle {
-                background: white;
-                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
-                border-radius: 8px;
+                border-radius: 12px;
                 width: 180px;
 
                 touch-tasks := TouchArea {
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Active Tasks"; color: #64748b; }
+                        Text { text: "Active Tasks"; color: #a8b2c1; }
                         Text { text: active_tasks_count; font-size: 32px; font-weight: 700; color: #06b6d4; }
                     }
                 }
@@ -95,16 +95,16 @@ export component Dashboard inherits Window {
                 }
             }
             Rectangle {
-                background: white;
-                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
-                border-radius: 8px;
+                border-radius: 12px;
                 width: 180px;
 
                 touch-calls := TouchArea {
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Scheduled Calls"; color: #64748b; }
+                        Text { text: "Scheduled Calls"; color: #a8b2c1; }
                         Text { text: scheduled_calls_count; font-size: 32px; font-weight: 700; color: #10b981; }
                     }
                 }
@@ -116,16 +116,16 @@ export component Dashboard inherits Window {
                 }
             }
             Rectangle {
-                background: white;
-                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
-                border-radius: 8px;
+                border-radius: 12px;
                 width: 180px;
 
                 touch-team := TouchArea {
                     VerticalBox {
                         padding: 16px;
-                        Text { text: "Team Members"; color: #64748b; }
+                        Text { text: "Team Members"; color: #a8b2c1; }
                         Text { text: team_members_count; font-size: 32px; font-weight: 700; color: #f59e0b; }
                     }
                 }
@@ -143,23 +143,23 @@ export component Dashboard inherits Window {
         }
 
         // Company Structure
-        Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: #1e293b; }
+        Text { text: "Company Structure"; font-size: 20px; font-weight: 700; color: white; }
         
         VerticalBox {
             spacing: 10px;
             
             for role_count in role_counts : Rectangle {
-                background: white;
-                border-color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.1);
                 border-width: 1px;
-                border-radius: 8px;
+                border-radius: 12px;
                 
                 HorizontalBox {
                     padding: 16px;
-                    Text { text: role_count.role; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                    Text { text: role_count.role; font-weight: 700; color: white; horizontal-alignment: center; }
                     Rectangle {}
                     Button { text: "-"; }
-                    Text { text: role_count.count; font-weight: 700; color: #1e293b; horizontal-alignment: center; }
+                    Text { text: role_count.count; font-weight: 700; color: white; horizontal-alignment: center; }
                     Button { text: "+"; }
                 }
             }

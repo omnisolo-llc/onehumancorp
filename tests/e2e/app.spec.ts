@@ -10,6 +10,13 @@ test.describe('Dashboard', () => {
     await page.goto('/');
     await expect(page.locator('nav')).toBeVisible();
   });
+
+  test('should display key business metrics on dashboard', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('text=Total Revenue')).toBeVisible();
+    await expect(page.locator('text=Active Orders')).toBeVisible();
+    await expect(page.locator('text=Customer Messages')).toBeVisible();
+  });
 });
 
 test.describe('Business Setup Wizard', () => {
