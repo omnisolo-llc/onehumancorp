@@ -17,13 +17,40 @@ impl OnboardingAgent {
         let business_type = req.business_type.clone();
         let company_name = req.company_name.clone();
 
-        self.generate_initial_products(&org_id, &business_type).await?;
+        if !req.first_product_name.is_empty() {
+             self.create_product(&org_id, &req.first_product_name, &req.first_product_price, &business_type).await?;
+        } else {
+             self.generate_initial_products(&org_id, &business_type).await?;
+        }
 
         Ok(StartOnboardingResponse {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
             organization_id: org_id,
         })
+    }
+
+    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, business_type: &str) -> Result<(), String> {
+        let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
+        let strategy = match business_type {
+            "Service Business" => "booking",
+            _ => "physical",
+        };
+
+        let id = format!("prod-{}", uuid::Uuid::new_v4());
+        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            .bind(id)
+            .bind(org_id)
+            .bind(name)
+            .bind("Added during onboarding")
+            .bind(price_cents)
+            .bind(strategy)
+            .bind(json!({}))
+            .execute(&self.db.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
     }
 
     async fn generate_initial_products(&self, org_id: &str, business_type: &str) -> Result<(), String> {
@@ -105,6 +132,10 @@ mod tests {
             selling_categories: vec![],
             payment_pref: "online".to_string(),
             admin_email: "admin@test.com".to_string(),
+            website_template: "Modern".to_string(),
+            first_product_name: "Cake".to_string(),
+            first_product_price: "25.00".to_string(),
+            domain_choice: "subdomain".to_string(),
         };
 
         let res = agent.start_onboarding(req).await;
