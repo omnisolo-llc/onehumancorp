@@ -111,10 +111,11 @@ pub fn websearch_tool() -> Tool {
             "required": ["query"]
         }),
         execute: Arc::new(WebSearchExecutor {
-            client: Client::builder()
+            client: reqwest::Client::builder()
                 .timeout(std::time::Duration::from_secs(15))
                 .build()
                 .unwrap(),
         }),
+        is_mutating: false,
     }
 }

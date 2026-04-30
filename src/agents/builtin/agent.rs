@@ -282,82 +282,71 @@ impl Agent {
 
             // Execute tool calls and collect results.
             let mut tool_results: Vec<ToolResult> = Vec::new();
+
+            let mut read_only_calls = Vec::new();
+            let mut mutating_calls = Vec::new();
+
             for tc in &tool_calls {
-                // OpenAI Mechanic: Tool Guardrails
-                if let Some(guard_cfg) = &cfg.guardrails {
-                    if let Err(e) = crate::guardrails::check_tool(&tc, guard_cfg) {
-                        on_event(AgentEvent::TaskError { error: e.clone() });
-                        return Err(e.into()); // Tripwire: halt the loop immediately
-                    }
+                let is_mutating = self.tools.iter().find(|t| t.name == tc.name).map(|t| t.is_mutating).unwrap_or(false);
+                if is_mutating {
+                    mutating_calls.push(tc.clone());
+                } else {
+                    read_only_calls.push(tc.clone());
                 }
-
-                let mut retry_count = 0;
-                let max_retries = 3;
-                let mut content = String::new();
-                let mut error = String::new();
-
-                loop {
-                    let result = self.execute_tool(&tc).await;
-                    match result {
-                        Ok(r) => {
-                            self.progress.record_tool_use();
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: r.clone(),
-                                iteration,
-                            });
-                            content = r;
-                            break;
-                        }
-                        Err(ToolError::Transient(msg)) => {
-                            if retry_count < max_retries {
-                                retry_count += 1;
-                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                                tokio::time::sleep(backoff).await;
-                                continue;
-                            } else {
-                                let err = format!("Transient error after retries: {}", msg);
-                                on_event(AgentEvent::ToolCall {
-                                    name: tc.name.clone(),
-                                    args_json: tc.arguments.to_string(),
-                                    result: format!("Error: {}", err),
-                                    iteration,
-                                });
-                                error = err;
-                                break;
-                            }
-                        }
-                        Err(ToolError::LlmRecoverable(msg)) => {
-                            let err = format!("LLM Recoverable error: {}", msg);
-                            on_event(AgentEvent::ToolCall {
-                                name: tc.name.clone(),
-                                args_json: tc.arguments.to_string(),
-                                result: format!("Error: {}", err),
-                                iteration,
-                            });
-                            // Return the raw error as a ToolMessage directly to the model so it can self-correct
-                            error = err;
-                            break;
-                        }
-                        Err(ToolError::UserFixable(msg)) => {
-                            let err = format!("User intervention required: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                        Err(ToolError::Fatal(msg)) => {
-                            let err = format!("Fatal tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                    }
-                }
-                tool_results.push(ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content,
-                    error,
-                });
             }
+
+            // Execute read-only tools concurrently
+            let mut ro_futures = Vec::new();
+            for tc in &read_only_calls {
+                ro_futures.push(self.execute_tool_with_retries(tc, cfg, iteration));
+            }
+
+            let ro_results = futures::future::join_all(ro_futures).await;
+
+            for (tc, res) in read_only_calls.iter().zip(ro_results) {
+                match res {
+                    Ok((content, error, events)) => {
+                        for e in events {
+                            on_event(e);
+                        }
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error,
+                        });
+                    }
+                    Err((e, events)) => {
+                        for ev in events {
+                            on_event(ev);
+                        }
+                        return Err(e);
+                    }
+                }
+            }
+
+            // Execute mutating tools serially
+            for tc in &mutating_calls {
+                match self.execute_tool_with_retries(tc, cfg, iteration).await {
+                    Ok((content, error, events)) => {
+                        for e in events {
+                            on_event(e);
+                        }
+                        tool_results.push(ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content,
+                            error,
+                        });
+                    }
+                    Err((e, events)) => {
+                        for ev in events {
+                            on_event(ev);
+                        }
+                        return Err(e);
+                    }
+                }
+            }
+
+
 
             if cfg.enable_observation_masking {
                 // JetBrains Observation Masking: Hide the raw output of old tools from the prompt,
@@ -393,6 +382,86 @@ impl Agent {
             content: last_assistant_content.clone(),
         });
         Ok(last_assistant_content)
+    }
+
+
+    async fn execute_tool_with_retries(
+        &self,
+        tc: &ToolCall,
+        cfg: &AgentRunConfig,
+        iteration: i32,
+    ) -> Result<(String, String, Vec<AgentEvent>), (Box<dyn std::error::Error + Send + Sync>, Vec<AgentEvent>)> {
+        let mut events = Vec::new();
+        // OpenAI Mechanic: Tool Guardrails
+        if let Some(guard_cfg) = &cfg.guardrails {
+            if let Err(e) = crate::guardrails::check_tool(tc, guard_cfg) {
+                events.push(AgentEvent::TaskError { error: e.clone() });
+                return Err((e.into(), events)); // Tripwire: halt the loop immediately
+            }
+        }
+
+        let mut retry_count = 0;
+        let max_retries = 3;
+        let mut content = String::new();
+        let mut error = String::new();
+
+        loop {
+            let result = self.execute_tool(tc).await;
+            match result {
+                Ok(r) => {
+                    self.progress.record_tool_use();
+                    events.push(AgentEvent::ToolCall {
+                        name: tc.name.clone(),
+                        args_json: tc.arguments.to_string(),
+                        result: r.clone(),
+                        iteration,
+                    });
+                    content = r;
+                    break;
+                }
+                Err(ToolError::Transient(msg)) => {
+                    if retry_count < max_retries {
+                        retry_count += 1;
+                        let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
+                        tokio::time::sleep(backoff).await;
+                        continue;
+                    } else {
+                        let err = format!("Transient error after retries: {}", msg);
+                        events.push(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", err),
+                            iteration,
+                        });
+                        error = err;
+                        break;
+                    }
+                }
+                Err(ToolError::LlmRecoverable(msg)) => {
+                    let err = format!("LLM Recoverable error: {}", msg);
+                    events.push(AgentEvent::ToolCall {
+                        name: tc.name.clone(),
+                        args_json: tc.arguments.to_string(),
+                        result: format!("Error: {}", err),
+                        iteration,
+                    });
+                    // Return the raw error as a ToolMessage directly to the model so it can self-correct
+                    error = err;
+                    break;
+                }
+                Err(ToolError::UserFixable(msg)) => {
+                    let err = format!("User intervention required: {}", msg);
+                    events.push(AgentEvent::TaskError { error: err.clone() });
+                    return Err((err.into(), events));
+                }
+                Err(ToolError::Fatal(msg)) => {
+                    let err = format!("Fatal tool error: {}", msg);
+                    events.push(AgentEvent::TaskError { error: err.clone() });
+                    return Err((err.into(), events));
+                }
+            }
+        }
+        Ok((content, error, events))
     }
 
     async fn execute_tool(
@@ -485,6 +554,7 @@ mod tests {
             description: "test".to_string(),
             parameters: Value::Null,
             execute: Arc::new(MockToolExecutor),
+            is_mutating: false,
         }];
 
         let agent = Agent::new(client, tools);
@@ -544,12 +614,14 @@ mod tests {
                 description: "test".to_string(),
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
+            is_mutating: false,
             },
             Tool {
                 name: "safe_tool".to_string(),
                 description: "test".to_string(),
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
+            is_mutating: false,
             },
         ];
 
@@ -592,6 +664,7 @@ mod tests {
                 description: "test".to_string(),
                 parameters: Value::Null,
                 execute: Arc::new(MockToolExecutor),
+            is_mutating: false,
             },
         ]);
 

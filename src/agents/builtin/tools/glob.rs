@@ -56,5 +56,6 @@ pub fn glob_tool() -> Tool {
             "required": ["pattern"]
         }),
         execute: Arc::new(GlobExecutor),
+        is_mutating: false,
     }
 }

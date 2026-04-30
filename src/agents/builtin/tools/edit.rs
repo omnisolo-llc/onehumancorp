@@ -74,5 +74,6 @@ pub fn edit_tool() -> Tool {
             "required": ["path", "old_str", "new_str"]
         }),
         execute: Arc::new(EditExecutor),
+        is_mutating: true,
     }
 }
