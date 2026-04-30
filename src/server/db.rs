@@ -200,6 +200,13 @@ mod autodream_db_tests {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
             .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    Ok(true)
+                })
+            })
             .connect_lazy(database_url)
             .unwrap();
 
@@ -210,5 +217,26 @@ mod autodream_db_tests {
         let result = db.get_completed_tasks().await;
         // Since test db is likely unmigrated/empty, we expect either an Ok(empty) or an Error
         assert!(result.is_ok() || result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_tenant_isolation_setup() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let database_url = "postgres://postgres:postgres@localhost:5432/test";
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .before_acquire(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("SET app.current_tenant = 'system'").await?;
+                    Ok(true)
+                })
+            })
+            .connect_lazy(database_url)
+            .unwrap();
+        // Just checking configuration parses ok for multitenancy logic
+        let _ = pool;
     }
 }

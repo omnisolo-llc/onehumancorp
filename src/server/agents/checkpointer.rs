@@ -201,7 +201,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_pg_checkpointer_save_and_load() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let saver = PgCheckpointer::new(pool);
         
         let cp = Checkpoint {
@@ -220,7 +220,7 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn test_pg_checkpointer_list_checkpoints() {
-        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new().before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = 'system'").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
         let saver = PgCheckpointer::new(pool);
         
         let res = saver.list_checkpoints("thread-list").await;
