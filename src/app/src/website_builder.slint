@@ -7,11 +7,11 @@ export component WebsiteBuilder inherits Window {
 
     callback publish_site(string, string, string, string);
 
-    property <int> step: 0;
-    property <string> selected_template: "";
-    property <string> primary_color: "#FF3B30";
-    property <string> product_name: "";
-    property <string> domain_choice: "subdomain";
+    in-out property <int> step: 0;
+    in-out property <string> selected_template: "";
+    in-out property <string> primary_color: "#FF3B30";
+    in-out property <string> product_name: "";
+    in-out property <string> domain_choice: "subdomain";
 
     background: #f8fafc;
 

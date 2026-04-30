@@ -8,9 +8,6 @@ pub mod ohc {
     }
 }
 
-pub mod agent;
-pub mod local_manager;
-pub mod api_service;
 pub mod tooltip_registry;
 use slint::ComponentHandle;
 

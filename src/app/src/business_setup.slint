@@ -229,10 +229,6 @@ export component BusinessSetup inherits Window {
                 Text { text: "Password"; font-size: 14px; font-family: "Inter"; color: #94a3b8; }
                 LineEdit { input-type: password; text <=> admin_password; height: 44px; }
 
-                HorizontalBox {
-                    alignment: center;
-                    Text { text: "Strength: " + (admin_password.length > 8 ? "Strong" : "Weak"); font-size: 12px; font-family: "Inter"; color: admin_password.length > 8 ? #4ade80 : #f43f5e; }
-                }
 
                 Text { text: "OR"; font-size: 14px; font-family: "Inter"; color: #94a3b8; horizontal-alignment: center; }
 
