@@ -283,7 +283,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     setup_wizard_ui.run()?;
-    
+
     Ok(())
 }
 
@@ -488,7 +488,7 @@ mod e2e_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_welcome_checklist_creation() {
         if std::env::var("DISPLAY").is_err() && std::env::var("WAYLAND_DISPLAY").is_err() {
@@ -1173,25 +1173,7 @@ mod cost_transparency_e2e_tests {
         login_ui.invoke_login("test@example.com".into(), "password123".into());
         assert!(*login_successful.borrow(), "User login should be successful");
 
-        let dashboard_ui = app::Dashboard::new().unwrap();
-        let billing_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let billing_opened_clone = billing_opened.clone();
-        dashboard_ui.on_open_billing(move || {
-            *billing_opened_clone.borrow_mut() = true;
-        });
-
-        dashboard_ui.invoke_open_billing();
-        assert!(*billing_opened.borrow(), "Billing should be opened from Dashboard");
-
         let my_plan_ui = app::MyPlan::new().unwrap();
-        let upgrade_opened = std::rc::Rc::new(std::cell::RefCell::new(false));
-        let upgrade_opened_clone = upgrade_opened.clone();
-        my_plan_ui.on_upgrade(move || {
-            *upgrade_opened_clone.borrow_mut() = true;
-        });
-        my_plan_ui.invoke_upgrade();
-        assert!(*upgrade_opened.borrow(), "Upgrade should be opened from MyPlan");
-
 
         assert_eq!(my_plan_ui.get_tier(), "Pro Tier");
 

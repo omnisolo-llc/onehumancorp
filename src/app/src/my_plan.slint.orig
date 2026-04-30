@@ -13,8 +13,6 @@ export component MyPlan inherits Window {
     in-out property <string> limit_storage: "10.0 GB";
     in-out property <string> estimated_bill: "$124.50";
 
-    callback upgrade();
-
     background: @linear-gradient(135deg, #0D0D1A 0%, #1A1A33 100%);
 
     VerticalBox {
@@ -27,13 +25,13 @@ export component MyPlan inherits Window {
             border-color: #e2e8f0;
             border-width: 1px;
             border-radius: 8px;
-            
+
             VerticalBox {
                 padding: 16px;
                 spacing: 8px;
                 Text { text: "Current Plan"; font-family: "Inter"; color: #94a3b8; }
                 Text { text: tier; font-size: 28px; font-family: "Outfit"; font-weight: 700; color: white; }
-                Button { text: "Upgrade"; clicked => { upgrade(); } }
+                Button { text: "Upgrade"; }
             }
         }
 
@@ -41,7 +39,7 @@ export component MyPlan inherits Window {
             border-color: #e2e8f0;
             border-width: 1px;
             border-radius: 8px;
-            
+
             VerticalBox {
                 padding: 16px;
                 spacing: 8px;
