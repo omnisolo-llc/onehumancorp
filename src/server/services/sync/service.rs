@@ -214,18 +214,7 @@ mod tests {
     #[tokio::test]
     async fn test_hybrid_sync_missions_empty() {
         // We can test empty payloads without DB!
-        let pool = sqlx::PgPool::connect("postgres://postgres:postgres@localhost:5432/ohc").await.unwrap_or_else(|_| {
-            // Fallback or skip if no DB.
-            // Since we can't easily skip in Rust without specific crates or flags,
-            // we just use a dummy pool that will fail if used.
-            // But for empty payloads, it shouldn't be used!
-            // So we can just use a dummy pool!
-            // Wait, connecting to invalid URL will fail.
-            // Let's just use a dummy pool if we can create one without connecting.
-            // `PgPoolOptions::new().connect_lazy("...")` is lazy! So it won't fail on creation!
-            // That is perfect for this test!
-            sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap()
-        });
+        let pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://localhost/dummy").unwrap();
         let service = MySyncService::new(pool);
         let req = Request::new(HybridSyncMissionsRequest { payloads: vec![] });
         let resp = service.hybrid_sync_missions(req).await.unwrap();
